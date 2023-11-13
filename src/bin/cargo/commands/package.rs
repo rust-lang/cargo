@@ -24,7 +24,7 @@ pub fn cli() -> Command {
             "allow-dirty",
             "Allow dirty working directories to be packaged",
         ))
-        .arg_quiet()
+        .arg_silent_suggestion()
         .arg_package_spec_no_all(
             "Package(s) to assemble",
             "Assemble all packages in the workspace",

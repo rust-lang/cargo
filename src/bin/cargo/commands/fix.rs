@@ -28,7 +28,7 @@ pub fn cli() -> Command {
         ))
         .arg_ignore_rust_version()
         .arg_message_format()
-        .arg_quiet()
+        .arg_silent_suggestion()
         .arg_package_spec(
             "Package(s) to fix",
             "Fix all packages in the workspace",
@@ -41,9 +41,9 @@ pub fn cli() -> Command {
             "Fix only the specified example",
             "Fix all examples",
             "Fix only the specified test target",
-            "Fix all tests",
+            "Fix all test targets",
             "Fix only the specified bench target",
-            "Fix all benches",
+            "Fix all bench targets",
             "Fix all targets (default)",
         )
         .arg_features()

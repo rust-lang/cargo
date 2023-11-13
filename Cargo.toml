@@ -73,6 +73,8 @@ pretty_assertions = "1.4.0"
 proptest = "1.3.1"
 pulldown-cmark = { version = "0.9.3", default-features = false }
 rand = "0.8.5"
+regex = "1.9.3"
+rusqlite = { version = "0.29.0", features = ["bundled"] }
 rustfix = "0.6.1"
 same-file = "1.0.6"
 security-framework = "2.9.2"
@@ -85,6 +87,7 @@ serde_json = "1.0.108"
 sha1 = "0.10.6"
 sha2 = "0.10.8"
 shell-escape = "0.1.5"
+supports-hyperlinks = "2.1.0"
 snapbox = { version = "0.4.14", features = ["diff", "path"] }
 syn = { version = "2.0.38", features = ["extra-traits", "full"] }
 tar = { version = "0.4.40", default-features = false }
@@ -127,9 +130,6 @@ anyhow.workspace = true
 base64.workspace = true
 bytesize.workspace = true
 cargo-credential.workspace = true
-cargo-credential-libsecret.workspace = true
-cargo-credential-macos-keychain.workspace = true
-cargo-credential-wincred.workspace = true
 cargo-platform.workspace = true
 cargo-util.workspace = true
 clap = { workspace = true, features = ["wrap_help"] }
@@ -164,6 +164,8 @@ pasetors.workspace = true
 pathdiff.workspace = true
 pulldown-cmark.workspace = true
 rand.workspace = true
+regex.workspace = true
+rusqlite.workspace = true
 rustfix.workspace = true
 semver.workspace = true
 serde = { workspace = true, features = ["derive"] }
@@ -173,6 +175,7 @@ serde_ignored.workspace = true
 serde_json = { workspace = true, features = ["raw_value"] }
 sha1.workspace = true
 shell-escape.workspace = true
+supports-hyperlinks.workspace = true
 syn.workspace = true
 tar.workspace = true
 tempfile.workspace = true
@@ -187,8 +190,17 @@ unicode-xid.workspace = true
 url.workspace = true
 walkdir.workspace = true
 
+[target.'cfg(target_os = "linux")'.dependencies]
+cargo-credential-libsecret.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+cargo-credential-macos-keychain.workspace = true
+
 [target.'cfg(not(windows))'.dependencies]
 openssl = { workspace = true, optional = true }
+
+[target.'cfg(windows)'.dependencies]
+cargo-credential-wincred.workspace = true
 
 [target.'cfg(windows)'.dependencies.windows-sys]
 workspace = true

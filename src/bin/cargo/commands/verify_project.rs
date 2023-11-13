@@ -6,7 +6,7 @@ use std::process;
 pub fn cli() -> Command {
     subcommand("verify-project")
         .about("Check correctness of crate manifest")
-        .arg_quiet()
+        .arg_silent_suggestion()
         .arg_manifest_path()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help verify-project</>` for more detailed information.\n"

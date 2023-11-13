@@ -12,7 +12,7 @@ use serde::ser;
 
 use crate::core::SourceId;
 use crate::util::interning::InternedString;
-use crate::util::{CargoResult, ToSemver};
+use crate::util::CargoResult;
 
 static PACKAGE_ID_CACHE: OnceLock<Mutex<HashSet<&'static PackageIdInner>>> = OnceLock::new();
 
@@ -82,7 +82,7 @@ impl<'de> de::Deserialize<'de> for PackageId {
         let (field, rest) = rest
             .split_once(' ')
             .ok_or_else(|| de::Error::custom("invalid serialized PackageId"))?;
-        let version = field.to_semver().map_err(de::Error::custom)?;
+        let version = field.parse().map_err(de::Error::custom)?;
 
         let url =
             strip_parens(rest).ok_or_else(|| de::Error::custom("invalid serialized PackageId"))?;
@@ -123,12 +123,12 @@ impl Hash for PackageId {
 }
 
 impl PackageId {
-    pub fn new<T: ToSemver>(
+    pub fn new(
         name: impl Into<InternedString>,
-        version: T,
+        version: &str,
         sid: SourceId,
     ) -> CargoResult<PackageId> {
-        let v = version.to_semver()?;
+        let v = version.parse()?;
         Ok(PackageId::pure(name.into(), v, sid))
     }
 

@@ -1,5 +1,6 @@
 //! Tests for the `cargo clean` command.
 
+use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
     basic_bin_manifest, basic_manifest, git, main_file, project, project_in, rustc_host,
@@ -805,15 +806,6 @@ fn clean_dry_run() {
         .file("src/lib.rs", "")
         .build();
 
-    let ls_r = || -> Vec<_> {
-        let mut file_list: Vec<_> = walkdir::WalkDir::new(p.build_dir())
-            .into_iter()
-            .filter_map(|e| e.map(|e| e.path().to_owned()).ok())
-            .collect();
-        file_list.sort();
-        file_list
-    };
-
     // Start with no files.
     p.cargo("clean --dry-run")
         .with_stdout("")
@@ -823,7 +815,7 @@ fn clean_dry_run() {
         )
         .run();
     p.cargo("check").run();
-    let before = ls_r();
+    let before = p.build_dir().ls_r();
     p.cargo("clean --dry-run")
         .with_stderr(
             "[SUMMARY] [..] files, [..] total\n\
@@ -831,7 +823,7 @@ fn clean_dry_run() {
         )
         .run();
     // Verify it didn't delete anything.
-    let after = ls_r();
+    let after = p.build_dir().ls_r();
     assert_eq!(before, after);
     let expected = cargo::util::iter_join(before.iter().map(|p| p.to_str().unwrap()), "\n");
     eprintln!("{expected}");
@@ -852,5 +844,31 @@ fn doc_with_package_selection() {
     p.cargo("clean --doc -p foo")
         .with_status(101)
         .with_stderr("error: --doc cannot be used with -p")
+        .run();
+}
+
+#[cargo_test]
+fn quiet_does_not_show_summary() {
+    // Checks that --quiet works with `cargo clean`, since there was a
+    // subtle issue with how the flag is defined as a global flag.
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check").run();
+    p.cargo("clean --quiet --dry-run")
+        .with_stdout("")
+        .with_stderr("")
+        .run();
+    // Verify exact same command without -q would actually display something.
+    p.cargo("clean --dry-run")
+        .with_stdout("")
+        .with_stderr(
+            "\
+[SUMMARY] [..] files, [..] total
+[WARNING] no files deleted due to --dry-run
+",
+        )
         .run();
 }

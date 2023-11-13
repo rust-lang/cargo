@@ -339,18 +339,21 @@ impl<'cfg> Timings<'cfg> {
             include_str!("timings.js")
         )?;
         drop(f);
-        let msg = format!(
-            "report saved to {}",
-            std::env::current_dir()
-                .unwrap_or_default()
-                .join(&filename)
-                .display()
-        );
+
         let unstamped_filename = timings_path.join("cargo-timing.html");
         paths::link_or_copy(&filename, &unstamped_filename)?;
-        self.config
-            .shell()
-            .status_with_color("Timing", msg, &style::NOTE)?;
+
+        let mut shell = self.config.shell();
+        let timing_path = std::env::current_dir().unwrap_or_default().join(&filename);
+        let link = shell.err_file_hyperlink(&timing_path);
+        let msg = format!(
+            "report saved to {}{}{}",
+            link.open(),
+            timing_path.display(),
+            link.close()
+        );
+        shell.status_with_color("Timing", msg, &style::NOTE)?;
+
         Ok(())
     }
 
@@ -380,14 +383,7 @@ impl<'cfg> Timings<'cfg> {
             .unwrap_or_else(|_| "n/a".into());
         let rustc_info = render_rustc_info(bcx);
         let error_msg = match error {
-            Some(e) => format!(
-                r#"\
-  <tr>
-    <td class="error-text">Error:</td><td>{}</td>
-  </tr>
-"#,
-                e
-            ),
+            Some(e) => format!(r#"<tr><td class="error-text">Error:</td><td>{e}</td></tr>"#),
             None => "".to_string(),
         };
         write!(

@@ -19,7 +19,7 @@ pub fn cli() -> Command {
         .arg_index("Registry index URL to yank from")
         .arg_registry("Registry to yank from")
         .arg(opt("token", "API token to use when authenticating").value_name("TOKEN"))
-        .arg_quiet()
+        .arg_silent_suggestion()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help yank</>` for more detailed information.\n"
         ))

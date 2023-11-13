@@ -6,8 +6,7 @@ use anyhow::format_err;
 use cargo::core::{GitReference, SourceId, Workspace};
 use cargo::ops;
 use cargo::util::IntoUrl;
-use cargo::util::ToSemver;
-use cargo::util::VersionReqExt;
+use cargo::util_semver::VersionExt;
 use cargo::CargoResult;
 use itertools::Itertools;
 use semver::VersionReq;
@@ -77,7 +76,7 @@ pub fn cli() -> Command {
         ))
         .arg_ignore_rust_version()
         .arg_message_format()
-        .arg_quiet()
+        .arg_silent_suggestion()
         .arg_targets_bins_examples(
             "Install only the specified binary",
             "Install all binaries",
@@ -264,8 +263,8 @@ fn parse_semver_flag(v: &str) -> CargoResult<VersionReq> {
             ),
         }
     } else {
-        match v.to_semver() {
-            Ok(v) => Ok(VersionReq::exact(&v)),
+        match v.trim().parse::<semver::Version>() {
+            Ok(v) => Ok(v.to_exact_req()),
             Err(e) => {
                 let mut msg = e.to_string();
 

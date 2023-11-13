@@ -87,11 +87,11 @@ pub fn print_available_binaries(ws: &Workspace<'_>, options: &CompileOptions) ->
 }
 
 pub fn print_available_benches(ws: &Workspace<'_>, options: &CompileOptions) -> CargoResult<()> {
-    print_available_targets(Target::is_bench, ws, options, "--bench", "benches")
+    print_available_targets(Target::is_bench, ws, options, "--bench", "bench targets")
 }
 
 pub fn print_available_tests(ws: &Workspace<'_>, options: &CompileOptions) -> CargoResult<()> {
-    print_available_targets(Target::is_test, ws, options, "--test", "tests")
+    print_available_targets(Target::is_test, ws, options, "--test", "test targets")
 }
 
 /// The path that we pass to rustc is actually fairly important because it will

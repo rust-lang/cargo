@@ -1,2 +1,2 @@
     Removing docopt from build-dependencies
-error: the dependency `docopt` could not be found in `build-dependencies`.
+error: the dependency `docopt` could not be found in `build-dependencies`; it is present in `dependencies`

@@ -68,6 +68,7 @@ use std::time::Instant;
 
 use self::ConfigValue as CV;
 use crate::core::compiler::rustdoc::RustdocExternMap;
+use crate::core::global_cache_tracker::{DeferredGlobalLastUse, GlobalCacheTracker};
 use crate::core::shell::Verbosity;
 use crate::core::{features, CliUnstable, Shell, SourceId, Workspace, WorkspaceRootConfig};
 use crate::ops::RegistryCredentialConfig;
@@ -76,7 +77,6 @@ use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::errors::CargoResult;
 use crate::util::network::http::configure_http_handle;
 use crate::util::network::http::http_handle;
-use crate::util::toml as cargo_toml;
 use crate::util::{internal, CanonicalUrl};
 use crate::util::{try_canonicalize, validate_package_name};
 use crate::util::{Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
@@ -245,6 +245,8 @@ pub struct Config {
     pub nightly_features_allowed: bool,
     /// WorkspaceRootConfigs that have been found
     pub ws_roots: RefCell<HashMap<PathBuf, WorkspaceRootConfig>>,
+    global_cache_tracker: LazyCell<RefCell<GlobalCacheTracker>>,
+    deferred_global_last_use: LazyCell<RefCell<DeferredGlobalLastUse>>,
 }
 
 impl Config {
@@ -318,6 +320,8 @@ impl Config {
             env_config: LazyCell::new(),
             nightly_features_allowed: matches!(&*features::channel(), "nightly" | "dev"),
             ws_roots: RefCell::new(HashMap::new()),
+            global_cache_tracker: LazyCell::new(),
+            deferred_global_last_use: LazyCell::new(),
         }
     }
 
@@ -1032,6 +1036,9 @@ impl Config {
 
         self.shell().set_verbosity(verbosity);
         self.shell().set_color_choice(color)?;
+        if let Some(hyperlinks) = term.hyperlinks {
+            self.shell().set_hyperlinks(hyperlinks)?;
+        }
         self.progress_config = term.progress.unwrap_or_default();
         self.extra_verbose = extra_verbose;
         self.frozen = frozen;
@@ -1195,7 +1202,7 @@ impl Config {
         }
         let contents = fs::read_to_string(path)
             .with_context(|| format!("failed to read configuration file `{}`", path.display()))?;
-        let toml = cargo_toml::parse_document(&contents, path, self).with_context(|| {
+        let toml = parse_document(&contents, path, self).with_context(|| {
             format!("could not parse TOML configuration in `{}`", path.display())
         })?;
         let def = match why_load {
@@ -1917,6 +1924,25 @@ impl Config {
     ) -> CargoResult<Option<CacheLock<'_>>> {
         self.package_cache_lock.try_lock(self, mode)
     }
+
+    /// Returns a reference to the shared [`GlobalCacheTracker`].
+    ///
+    /// The package cache lock must be held to call this function (and to use
+    /// it in general).
+    pub fn global_cache_tracker(&self) -> CargoResult<RefMut<'_, GlobalCacheTracker>> {
+        let tracker = self.global_cache_tracker.try_borrow_with(|| {
+            Ok::<_, anyhow::Error>(RefCell::new(GlobalCacheTracker::new(self)?))
+        })?;
+        Ok(tracker.borrow_mut())
+    }
+
+    /// Returns a reference to the shared [`DeferredGlobalLastUse`].
+    pub fn deferred_global_last_use(&self) -> CargoResult<RefMut<'_, DeferredGlobalLastUse>> {
+        let deferred = self.deferred_global_last_use.try_borrow_with(|| {
+            Ok::<_, anyhow::Error>(RefCell::new(DeferredGlobalLastUse::new()))
+        })?;
+        Ok(deferred.borrow_mut())
+    }
 }
 
 /// Internal error for serde errors.
@@ -2246,7 +2272,7 @@ pub fn save_credentials(
         )
     })?;
 
-    let mut toml = cargo_toml::parse_document(&contents, file.path(), cfg)?;
+    let mut toml = parse_document(&contents, file.path(), cfg)?;
 
     // Move the old token location to the new one.
     if let Some(token) = toml.remove("token") {
@@ -2560,6 +2586,7 @@ struct TermConfig {
     verbose: Option<bool>,
     quiet: Option<bool>,
     color: Option<String>,
+    hyperlinks: Option<bool>,
     #[serde(default)]
     #[serde(deserialize_with = "progress_or_string")]
     progress: Option<ProgressConfig>,
@@ -2711,6 +2738,11 @@ impl EnvConfigValue {
 }
 
 pub type EnvConfig = HashMap<String, EnvConfigValue>;
+
+fn parse_document(toml: &str, _file: &Path, _config: &Config) -> CargoResult<toml::Table> {
+    // At the moment, no compatibility checks are needed.
+    toml.parse().map_err(Into::into)
+}
 
 /// A type to deserialize a list of strings from a toml file.
 ///

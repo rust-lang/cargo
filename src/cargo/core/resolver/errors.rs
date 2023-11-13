@@ -4,7 +4,8 @@ use std::task::Poll;
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::sources::source::QueryKind;
 use crate::util::edit_distance::edit_distance;
-use crate::util::{Config, OptVersionReq, VersionExt};
+use crate::util::{Config, OptVersionReq};
+use crate::util_semver::VersionExt;
 use anyhow::Error;
 
 use super::context::Context;

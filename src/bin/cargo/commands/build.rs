@@ -10,7 +10,7 @@ pub fn cli() -> Command {
         .arg_ignore_rust_version()
         .arg_future_incompat_report()
         .arg_message_format()
-        .arg_quiet()
+        .arg_silent_suggestion()
         .arg_package_spec(
             "Package to build (see `cargo help pkgid`)",
             "Build all packages in the workspace",
@@ -23,9 +23,9 @@ pub fn cli() -> Command {
             "Build only the specified example",
             "Build all examples",
             "Build only the specified test target",
-            "Build all tests",
+            "Build all test targets",
             "Build only the specified bench target",
-            "Build all benches",
+            "Build all bench targets",
             "Build all targets",
         )
         .arg_features()

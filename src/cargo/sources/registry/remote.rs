@@ -1,5 +1,6 @@
 //! Access to a Git index based registry. See [`RemoteRegistry`] for details.
 
+use crate::core::global_cache_tracker;
 use crate::core::{GitReference, PackageId, SourceId};
 use crate::sources::git;
 use crate::sources::git::fetch::RemoteKind;
@@ -47,6 +48,7 @@ use tracing::{debug, trace};
 ///
 /// [`HttpRegistry`]: super::http_remote::HttpRegistry
 pub struct RemoteRegistry<'cfg> {
+    name: InternedString,
     /// Path to the registry index (`$CARGO_HOME/registry/index/$REG-HASH`).
     index_path: Filesystem,
     /// Path to the cache of `.crate` files (`$CARGO_HOME/registry/cache/$REG-HASH`).
@@ -87,6 +89,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
     ///   registry index are stored. Expect to be unique.
     pub fn new(source_id: SourceId, config: &'cfg Config, name: &str) -> RemoteRegistry<'cfg> {
         RemoteRegistry {
+            name: name.into(),
             index_path: config.registry_index_path().join(name),
             cache_path: config.registry_cache_path().join(name),
             source_id,
@@ -211,6 +214,11 @@ impl<'cfg> RemoteRegistry<'cfg> {
 impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     fn prepare(&self) -> CargoResult<()> {
         self.repo()?;
+        self.config
+            .deferred_global_last_use()?
+            .mark_registry_index_used(global_cache_tracker::RegistryIndex {
+                encoded_registry_name: self.name,
+            });
         Ok(())
     }
 
@@ -403,6 +411,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         download::download(
             &self.cache_path,
             &self.config,
+            self.name,
             pkg,
             checksum,
             registry_config,
@@ -415,7 +424,14 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         checksum: &str,
         data: &[u8],
     ) -> CargoResult<File> {
-        download::finish_download(&self.cache_path, &self.config, pkg, checksum, data)
+        download::finish_download(
+            &self.cache_path,
+            &self.config,
+            self.name.clone(),
+            pkg,
+            checksum,
+            data,
+        )
     }
 
     fn is_crate_downloaded(&self, pkg: PackageId) -> bool {

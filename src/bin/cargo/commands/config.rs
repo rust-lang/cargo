@@ -31,9 +31,13 @@ pub fn cli() -> Command {
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    config
-        .cli_unstable()
-        .fail_if_stable_command(config, "config", 9301)?;
+    config.cli_unstable().fail_if_stable_command(
+        config,
+        "config",
+        9301,
+        "unstable-options",
+        config.cli_unstable().unstable_options,
+    )?;
     match args.subcommand() {
         Some(("get", args)) => {
             let opts = cargo_config::GetOptions {

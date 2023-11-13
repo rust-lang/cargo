@@ -396,7 +396,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
 * `CARGO_PKG_<var>` --- The package information variables, with the same names and values as are [provided during crate building][variables set for crates].
 
 [`tracing`]: https://docs.rs/tracing
-[debug logging]: https://doc.crates.io/contrib/architecture/console.html#debug-logging
+[debug logging]: https://doc.crates.io/contrib/implementation/debugging.html#logging
 [unix-like platforms]: ../../reference/conditional-compilation.html#unix-and-windows
 [windows-like platforms]: ../../reference/conditional-compilation.html#unix-and-windows
 [target family]: ../../reference/conditional-compilation.html#target_family

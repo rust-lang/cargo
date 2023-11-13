@@ -10,7 +10,7 @@ pub fn cli() -> Command {
         .arg_ignore_rust_version()
         .arg_future_incompat_report()
         .arg_message_format()
-        .arg_quiet()
+        .arg_silent_suggestion()
         .arg_package_spec(
             "Package(s) to check",
             "Check all packages in the workspace",
@@ -23,9 +23,9 @@ pub fn cli() -> Command {
             "Check only the specified example",
             "Check all examples",
             "Check only the specified test target",
-            "Check all tests",
+            "Check all test targets",
             "Check only the specified bench target",
-            "Check all benches",
+            "Check all bench targets",
             "Check all targets",
         )
         .arg_features()

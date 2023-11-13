@@ -8,8 +8,8 @@ Options:
       --document-private-items  Document private items
       --ignore-rust-version     Ignore `rust-version` specification in packages
       --message-format <FMT>    Error format
-  -q, --quiet                   Do not print cargo log messages
   -v, --verbose...              Use verbose output (-vv very verbose/build.rs output)
+  -q, --quiet                   Do not print cargo log messages
       --color <WHEN>            Coloring: auto, always, never
       --config <KEY=VALUE>      Override a configuration value
   -Z <FLAG>                     Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for

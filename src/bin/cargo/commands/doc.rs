@@ -18,7 +18,7 @@ pub fn cli() -> Command {
         .arg(flag("document-private-items", "Document private items"))
         .arg_ignore_rust_version()
         .arg_message_format()
-        .arg_quiet()
+        .arg_silent_suggestion()
         .arg_package_spec(
             "Package to document",
             "Document all packages in the workspace",

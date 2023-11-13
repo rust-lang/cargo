@@ -153,6 +153,7 @@ pub fn compile_ws<'a>(
         unit_graph::emit_serialized_unit_graph(&bcx.roots, &bcx.unit_graph, ws.config())?;
         return Compilation::new(&bcx);
     }
+    crate::core::gc::auto_gc(bcx.config);
     let _p = profile::start("compiling");
     let cx = Context::new(&bcx)?;
     cx.compile(exec)
@@ -493,7 +494,7 @@ pub fn create_bcx<'a, 'cfg>(
                 continue;
             };
 
-            let req = version.caret_req();
+            let req = version.to_caret_req();
             if req.matches(&untagged_version) {
                 continue;
             }

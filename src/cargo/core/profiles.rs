@@ -27,9 +27,9 @@ use crate::core::resolver::features::FeaturesFor;
 use crate::core::Feature;
 use crate::core::{PackageId, PackageIdSpec, Resolve, Shell, Target, Workspace};
 use crate::util::interning::InternedString;
-use crate::util::toml::TomlTrimPaths;
-use crate::util::toml::TomlTrimPathsValue;
-use crate::util::toml::{
+use crate::util::toml::schema::TomlTrimPaths;
+use crate::util::toml::schema::TomlTrimPathsValue;
+use crate::util::toml::schema::{
     ProfilePackageSpec, StringOrBool, TomlDebugInfo, TomlProfile, TomlProfiles,
 };
 use crate::util::{closest_msg, config, CargoResult, Config};

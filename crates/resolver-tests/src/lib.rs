@@ -12,7 +12,7 @@ use std::task::Poll;
 use std::time::Instant;
 
 use cargo::core::dependency::DepKind;
-use cargo::core::resolver::{self, ResolveOpts, VersionPreferences};
+use cargo::core::resolver::{self, ResolveOpts, VersionOrdering, VersionPreferences};
 use cargo::core::Resolve;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
 use cargo::core::{GitReference, SourceId};
@@ -190,15 +190,17 @@ pub fn resolve_with_config_raw(
     .unwrap();
     let opts = ResolveOpts::everything();
     let start = Instant::now();
-    let max_rust_version = None;
+    let mut version_prefs = VersionPreferences::default();
+    if config.cli_unstable().minimal_versions {
+        version_prefs.version_ordering(VersionOrdering::MinimumVersionsFirst)
+    }
     let resolve = resolver::resolve(
         &[(summary, opts)],
         &[],
         &mut registry,
-        &VersionPreferences::default(),
+        &version_prefs,
         Some(config),
         true,
-        max_rust_version,
     );
 
     // The largest test in our suite takes less then 30 sec.
@@ -982,14 +984,17 @@ fn meta_test_multiple_versions_strategy() {
 
 /// Assert `xs` contains `elems`
 #[track_caller]
-pub fn assert_contains<A: PartialEq>(xs: &[A], elems: &[A]) {
+pub fn assert_contains<A: PartialEq + std::fmt::Debug>(xs: &[A], elems: &[A]) {
     for elem in elems {
-        assert!(xs.contains(elem));
+        assert!(
+            xs.contains(elem),
+            "missing element\nset: {xs:?}\nmissing: {elem:?}"
+        );
     }
 }
 
 #[track_caller]
-pub fn assert_same<A: PartialEq>(a: &[A], b: &[A]) {
-    assert_eq!(a.len(), b.len());
+pub fn assert_same<A: PartialEq + std::fmt::Debug>(a: &[A], b: &[A]) {
+    assert_eq!(a.len(), b.len(), "not equal\n{a:?}\n{b:?}");
     assert_contains(b, a);
 }

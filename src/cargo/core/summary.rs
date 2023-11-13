@@ -431,6 +431,9 @@ impl fmt::Display for FeatureValue {
 pub type FeatureMap = BTreeMap<InternedString, Vec<FeatureValue>>;
 
 fn validate_feature_name(pkg_id: PackageId, name: &str) -> CargoResult<()> {
+    if name.is_empty() {
+        bail!("feature name cannot be empty");
+    }
     let mut chars = name.chars();
     if let Some(ch) = chars.next() {
         if !(unicode_xid::UnicodeXID::is_xid_start(ch) || ch == '_' || ch.is_digit(10)) {
@@ -448,7 +451,7 @@ fn validate_feature_name(pkg_id: PackageId, name: &str) -> CargoResult<()> {
         if !(unicode_xid::UnicodeXID::is_xid_continue(ch) || ch == '-' || ch == '+' || ch == '.') {
             bail!(
                 "invalid character `{}` in feature `{}` in package {}, \
-                characters must be Unicode XID characters, `+`, or `.` \
+                characters must be Unicode XID characters, '-', `+`, or `.` \
                 (numbers, `+`, `-`, `_`, `.`, or most letters)",
                 ch,
                 name,
@@ -488,5 +491,6 @@ mod tests {
         assert!(validate_feature_name(pkg_id, "?foo").is_err());
         assert!(validate_feature_name(pkg_id, "ⒶⒷⒸ").is_err());
         assert!(validate_feature_name(pkg_id, "a¼").is_err());
+        assert!(validate_feature_name(pkg_id, "").is_err());
     }
 }

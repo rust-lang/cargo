@@ -195,7 +195,7 @@ pub const SEE_CHANNELS: &str =
 /// [`LATEST_STABLE`]: Edition::LATEST_STABLE
 /// [this example]: https://github.com/rust-lang/cargo/blob/3ebb5f15a940810f250b68821149387af583a79e/src/doc/src/reference/unstable.md?plain=1#L1238-L1264
 /// [`is_stable`]: Edition::is_stable
-/// [`TomlManifest::to_real_manifest`]: crate::util::toml::TomlManifest::to_real_manifest
+/// [`TomlManifest::to_real_manifest`]: crate::util::toml::schema::TomlManifest::to_real_manifest
 /// [`features!`]: macro.features.html
 #[derive(Clone, Copy, Debug, Hash, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Edition {
@@ -741,6 +741,7 @@ unstable_cli_options!(
     doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
     features: Option<Vec<String>>  = (HIDDEN),
+    gc: bool = ("Track cache usage and \"garbage collect\" unused files"),
     gitoxide: Option<GitoxideFeatures> = ("Use gitoxide for the given git interactions, or all of them if no argument is given"),
     host_config: bool = ("Enable the [host] section in the .cargo/config.toml file"),
     lints: bool = ("Pass `[lints]` to the linting tools"),
@@ -1077,6 +1078,7 @@ impl CliUnstable {
             "direct-minimal-versions" => self.direct_minimal_versions = parse_empty(k, v)?,
             "doctest-xcompile" => self.doctest_xcompile = parse_empty(k, v)?,
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
+            "gc" => self.gc = parse_empty(k, v)?,
             "gitoxide" => {
                 self.gitoxide = v.map_or_else(
                     || Ok(Some(GitoxideFeatures::all())),
@@ -1114,7 +1116,17 @@ impl CliUnstable {
     /// Generates an error if `-Z unstable-options` was not used for a new,
     /// unstable command-line flag.
     pub fn fail_if_stable_opt(&self, flag: &str, issue: u32) -> CargoResult<()> {
-        if !self.unstable_options {
+        self.fail_if_stable_opt_custom_z(flag, issue, "unstable-options", self.unstable_options)
+    }
+
+    pub fn fail_if_stable_opt_custom_z(
+        &self,
+        flag: &str,
+        issue: u32,
+        z_name: &str,
+        enabled: bool,
+    ) -> CargoResult<()> {
+        if !enabled {
             let see = format!(
                 "See https://github.com/rust-lang/cargo/issues/{issue} for more \
                  information about the `{flag}` flag."
@@ -1123,7 +1135,7 @@ impl CliUnstable {
             let channel = channel();
             if channel == "nightly" || channel == "dev" {
                 bail!(
-                    "the `{flag}` flag is unstable, pass `-Z unstable-options` to enable it\n\
+                    "the `{flag}` flag is unstable, pass `-Z {z_name}` to enable it\n\
                      {see}"
                 );
             } else {
@@ -1145,8 +1157,10 @@ impl CliUnstable {
         config: &Config,
         command: &str,
         issue: u32,
+        z_name: &str,
+        enabled: bool,
     ) -> CargoResult<()> {
-        if self.unstable_options {
+        if enabled {
             return Ok(());
         }
         let see = format!(
@@ -1156,10 +1170,9 @@ impl CliUnstable {
         );
         if config.nightly_features_allowed {
             bail!(
-                "the `cargo {}` command is unstable, pass `-Z unstable-options` to enable it\n\
-                 {}",
-                command,
-                see
+                "the `cargo {command}` command is unstable, pass `-Z {z_name}` \
+                 to enable it\n\
+                 {see}",
             );
         } else {
             bail!(

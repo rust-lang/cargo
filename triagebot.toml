@@ -201,7 +201,6 @@ trigger_files = ["src/cargo/util/auth/"]
 trigger_files = [
   "crates/semver-check",
   "src/cargo/util/semver_ext.rs",
-  "src/cargo/util/to_semver.rs",
 ]
 
 [autolabel."A-source-replacement"]

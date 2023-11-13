@@ -30,7 +30,7 @@ pub fn cli() -> Command {
         .arg_future_incompat_report()
         .arg_ignore_rust_version()
         .arg_message_format()
-        .arg_quiet()
+        .arg_silent_suggestion()
         .arg_package("Package to build")
         .arg_targets_all(
             "Build only this package's library",
@@ -39,9 +39,9 @@ pub fn cli() -> Command {
             "Build only the specified example",
             "Build all examples",
             "Build only the specified test target",
-            "Build all tests",
+            "Build all test targets",
             "Build only the specified bench target",
-            "Build all benches",
+            "Build all bench targets",
             "Build all targets",
         )
         .arg_features()

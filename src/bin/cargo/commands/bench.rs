@@ -24,7 +24,7 @@ pub fn cli() -> Command {
         ))
         .arg_ignore_rust_version()
         .arg_message_format()
-        .arg_quiet()
+        .arg_silent_suggestion()
         .arg_package_spec(
             "Package to run benchmarks for",
             "Benchmark all packages in the workspace",
@@ -37,9 +37,9 @@ pub fn cli() -> Command {
             "Benchmark only the specified example",
             "Benchmark all examples",
             "Benchmark only the specified test target",
-            "Benchmark all tests",
+            "Benchmark all test targets",
             "Benchmark only the specified bench target",
-            "Benchmark all benches",
+            "Benchmark all bench targets",
             "Benchmark all targets",
         )
         .arg_features()

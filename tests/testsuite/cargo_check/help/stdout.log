@@ -6,8 +6,8 @@ Options:
       --ignore-rust-version     Ignore `rust-version` specification in packages
       --future-incompat-report  Outputs a future incompatibility report at the end of the build
       --message-format <FMT>    Error format
-  -q, --quiet                   Do not print cargo log messages
   -v, --verbose...              Use verbose output (-vv very verbose/build.rs output)
+  -q, --quiet                   Do not print cargo log messages
       --color <WHEN>            Coloring: auto, always, never
       --config <KEY=VALUE>      Override a configuration value
   -Z <FLAG>                     Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for
@@ -26,9 +26,9 @@ Target Selection:
       --bin [<NAME>]      Check only the specified binary
       --examples          Check all examples
       --example [<NAME>]  Check only the specified example
-      --tests             Check all tests
+      --tests             Check all test targets
       --test [<NAME>]     Check only the specified test target
-      --benches           Check all benches
+      --benches           Check all bench targets
       --bench [<NAME>]    Check only the specified bench target
       --all-targets       Check all targets
 

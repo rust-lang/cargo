@@ -36,6 +36,37 @@ Caused by:
 }
 
 #[cargo_test]
+fn empty_feature_name() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [features]
+                "" = []
+            "#,
+        )
+        .file("src/main.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[..]`
+
+Caused by:
+  feature name cannot be empty
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn same_name() {
     // Feature with the same name as a dependency.
     let p = project()
@@ -2045,7 +2076,7 @@ error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   invalid character `&` in feature `a&b` in package foo v0.1.0 ([ROOT]/foo), \
-  characters must be Unicode XID characters, `+`, or `.` \
+  characters must be Unicode XID characters, '-', `+`, or `.` \
   (numbers, `+`, `-`, `_`, `.`, or most letters)
 ",
         )

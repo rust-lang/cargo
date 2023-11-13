@@ -6,7 +6,6 @@ use cargo_credential::Secret;
 pub fn cli() -> Command {
     subcommand("owner")
         .about("Manage the owners of a crate on the registry")
-        .arg_quiet()
         .arg(Arg::new("crate").hide(true))
         .arg_required_else_help(true)
         .args_conflicts_with_subcommands(true)
@@ -78,6 +77,7 @@ pub fn cli() -> Command {
         .arg_index("Registry index URL to modify owners for")
         .arg_registry("Registry to modify owners for")
         .arg(opt("token", "API token to use when authenticating").value_name("TOKEN"))
+        .arg_silent_suggestion()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help owner</>` for more detailed information.\n"
         ))

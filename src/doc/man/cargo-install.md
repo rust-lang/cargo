@@ -90,7 +90,7 @@ will be used, beginning discovery at `$PATH/.cargo/config.toml`.
 
 {{#option "`--vers` _version_" "`--version` _version_" }}
 Specify a version to install. This may be a [version
-requirement](../reference/specifying-dependencies.md), like `~1.2`, to have Cargo
+requirement](../reference/specifying-dependencies.html), like `~1.2`, to have Cargo
 select the newest version from the given requirement. If the version does not
 have a requirement operator (such as `^` or `~`), then it must be in the form
 _MAJOR.MINOR.PATCH_, and will install exactly that version; it is *not*

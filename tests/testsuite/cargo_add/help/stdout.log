@@ -45,11 +45,11 @@ Options:
   -n, --dry-run
           Don't actually write the manifest
 
-  -q, --quiet
-          Do not print cargo log messages
-
   -v, --verbose...
           Use verbose output (-vv very verbose/build.rs output)
+
+  -q, --quiet
+          Do not print cargo log messages
 
       --color <WHEN>
           Coloring: auto, always, never

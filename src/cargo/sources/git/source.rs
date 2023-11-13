@@ -1,5 +1,6 @@
 //! See [GitSource].
 
+use crate::core::global_cache_tracker;
 use crate::core::GitReference;
 use crate::core::SourceId;
 use crate::core::{Dependency, Package, PackageId, Summary};
@@ -11,6 +12,7 @@ use crate::sources::PathSource;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::hex::short_hash;
+use crate::util::interning::InternedString;
 use crate::util::Config;
 use anyhow::Context;
 use cargo_util::paths::exclude_from_backups_and_indexing;
@@ -74,9 +76,10 @@ pub struct GitSource<'cfg> {
     source_id: SourceId,
     /// The underlying path source to discover packages inside the Git repository.
     path_source: Option<PathSource<'cfg>>,
+    short_id: Option<InternedString>,
     /// The identifier of this source for Cargo's Git cache directory.
     /// See [`ident`] for more.
-    ident: String,
+    ident: InternedString,
     config: &'cfg Config,
     /// Disables status messages.
     quiet: bool,
@@ -104,7 +107,8 @@ impl<'cfg> GitSource<'cfg> {
             locked_rev,
             source_id,
             path_source: None,
-            ident,
+            short_id: None,
+            ident: ident.into(),
             config,
             quiet: false,
         };
@@ -126,6 +130,17 @@ impl<'cfg> GitSource<'cfg> {
             self.block_until_ready()?;
         }
         self.path_source.as_mut().unwrap().read_packages()
+    }
+
+    fn mark_used(&self, size: Option<u64>) -> CargoResult<()> {
+        self.config
+            .deferred_global_last_use()?
+            .mark_git_checkout_used(global_cache_tracker::GitCheckout {
+                encoded_git_name: self.ident,
+                short_name: self.short_id.expect("update before download"),
+                size,
+            });
+        Ok(())
     }
 }
 
@@ -200,6 +215,7 @@ impl<'cfg> Source for GitSource<'cfg> {
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
         if self.path_source.is_some() {
+            self.mark_used(None)?;
             return Ok(());
         }
 
@@ -290,8 +306,16 @@ impl<'cfg> Source for GitSource<'cfg> {
         let path_source = PathSource::new_recursive(&checkout_path, source_id, self.config);
 
         self.path_source = Some(path_source);
+        self.short_id = Some(short_id.as_str().into());
         self.locked_rev = Some(actual_rev);
-        self.path_source.as_mut().unwrap().update()
+        self.path_source.as_mut().unwrap().update()?;
+
+        // Hopefully this shouldn't incur too much of a performance hit since
+        // most of this should already be in cache since it was just
+        // extracted.
+        let size = global_cache_tracker::du_git_checkout(&checkout_path)?;
+        self.mark_used(Some(size))?;
+        Ok(())
     }
 
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
@@ -300,6 +324,7 @@ impl<'cfg> Source for GitSource<'cfg> {
             id,
             self.remote
         );
+        self.mark_used(None)?;
         self.path_source
             .as_mut()
             .expect("BUG: `update()` must be called before `get()`")

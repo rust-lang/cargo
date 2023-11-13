@@ -94,7 +94,7 @@ OPTIONS
    Install Options
        --vers version, --version version
            Specify a version to install. This may be a version requirement
-           <https://doc.rust-lang.org/cargo/reference/specifying-dependencies.md>,
+           <https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html>,
            like ~1.2, to have Cargo select the newest version from the given
            requirement. If the version does not have a requirement operator
            (such as ^ or ~), then it must be in the form MAJOR.MINOR.PATCH, and
