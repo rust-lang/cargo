@@ -315,10 +315,10 @@ syntax](../../reference/conditional-compilation.html) will be used to define
 these sections:
 
 ```toml
-[target.'cfg(windows)'.dependencies]
+[target.'cfg(target_os = "windows")'.dependencies]
 winhttp = "0.4.0"
 
-[target.'cfg(unix)'.dependencies]
+[target.'cfg(target_os = "unix")'.dependencies]
 openssl = "1.0.1"
 
 [target.'cfg(target_arch = "x86")'.dependencies]
@@ -404,7 +404,7 @@ You can also have target-specific development dependencies by using
 example:
 
 ```toml
-[target.'cfg(unix)'.dev-dependencies]
+[target.'cfg(target_os = "unix")'.dev-dependencies]
 mio = "0.0.1"
 ```
 
@@ -431,7 +431,7 @@ You can also have target-specific build dependencies by using
 example:
 
 ```toml
-[target.'cfg(unix)'.build-dependencies]
+[target.'cfg(target_os = "unix")'.build-dependencies]
 cc = "1.0.3"
 ```
 
