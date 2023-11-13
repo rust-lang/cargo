@@ -1,5 +1,34 @@
 # Changelog
 
+## Cargo 1.76 (2024-02-08)
+[6790a512...HEAD](https://github.com/rust-lang/cargo/compare/6790a512...HEAD)
+
+### Added
+
+### Changed
+
+### Fixed
+
+### Nightly only
+
+- 🔥 The `-Zgc` flag enables garbage collection for deleting old, unused files
+  in cargo's cache. That is, downloaded source files and registry index under
+  the `CARGO_HOME` directory.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#gc)
+  [#12634](https://github.com/rust-lang/cargo/pull/12634)
+  [#12958](https://github.com/rust-lang/cargo/pull/12958)
+
+### Documentation
+
+### Internal
+
+- Refactored `Cargo.toml` parsing code in preparation of extracting an offical schema API.
+  [#12954](https://github.com/rust-lang/cargo/pull/12954)
+  [#12960](https://github.com/rust-lang/cargo/pull/12960)
+  [#12961](https://github.com/rust-lang/cargo/pull/12961)
+- Fixed `--quiet` being used with nested subcommands.
+  [#12959](https://github.com/rust-lang/cargo/pull/12959)
+
 ## Cargo 1.75 (2023-12-28)
 [59596f0f...rust-1.75.0](https://github.com/rust-lang/cargo/compare/59596f0f...rust-1.75.0)
 
@@ -80,8 +109,8 @@
 - Added `Edition2024` unstable feature.
   [docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#edition-2024)
   [#12771](https://github.com/rust-lang/cargo/pull/12771)
-- 🔥 The `-Ztrim-paths` feature adds a new profile setting (among other things)
-  to control how paths are sanitized in the resulting binary.
+- 🔥 The `-Ztrim-paths` feature adds a new profile setting to control how paths
+  are sanitized in the resulting binary.
   ([RFC 3127](https://github.com/rust-lang/rfcs/blob/master/text/3127-trim-paths.md))
   ([docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#profile-trim-paths-option))
   [#12625](https://github.com/rust-lang/cargo/pull/12625)
