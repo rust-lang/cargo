@@ -501,7 +501,7 @@ impl schema::TomlManifest {
         let version = package
             .version
             .clone()
-            .map(|version| version.resolve("version", || inherit()?.version()))
+            .map(|version| version.inherit_with("version", || inherit()?.version()))
             .transpose()?;
 
         package.version = version.clone().map(schema::InheritableField::Value);
@@ -515,7 +515,7 @@ impl schema::TomlManifest {
 
         let edition = if let Some(edition) = package.edition.clone() {
             let edition: Edition = edition
-                .resolve("edition", || inherit()?.edition())?
+                .inherit_with("edition", || inherit()?.edition())?
                 .parse()
                 .with_context(|| "failed to parse the `edition` key")?;
             package.edition = Some(schema::InheritableField::Value(edition.to_string()));
@@ -542,7 +542,7 @@ impl schema::TomlManifest {
         let rust_version = if let Some(rust_version) = &package.rust_version {
             let rust_version = rust_version
                 .clone()
-                .resolve("rust_version", || inherit()?.rust_version())?;
+                .inherit_with("rust_version", || inherit()?.rust_version())?;
             let req = rust_version.to_caret_req();
             if let Some(first_version) = edition.first_version() {
                 let unsupported =
@@ -661,7 +661,7 @@ impl schema::TomlManifest {
             for (n, v) in dependencies.iter() {
                 let resolved = v
                     .clone()
-                    .resolve_with_self(n, |dep| dep.resolve(n, inheritable, cx))?;
+                    .inherit_with(n, |dep| dep.inherit_with(n, inheritable, cx))?;
                 let dep = resolved.to_dependency(n, cx, kind)?;
                 let name_in_toml = dep.name_in_toml().as_str();
                 validate_package_name(name_in_toml, "dependency name", "")?;
@@ -718,7 +718,7 @@ impl schema::TomlManifest {
         let lints = me
             .lints
             .clone()
-            .map(|mw| mw.resolve(|| inherit()?.lints()))
+            .map(|mw| mw.inherit_with(|| inherit()?.lints()))
             .transpose()?;
         let lints = verify_lints(lints)?;
         let default = schema::TomlLints::default();
@@ -799,13 +799,13 @@ impl schema::TomlManifest {
         let exclude = package
             .exclude
             .clone()
-            .map(|mw| mw.resolve("exclude", || inherit()?.exclude()))
+            .map(|mw| mw.inherit_with("exclude", || inherit()?.exclude()))
             .transpose()?
             .unwrap_or_default();
         let include = package
             .include
             .clone()
-            .map(|mw| mw.resolve("include", || inherit()?.include()))
+            .map(|mw| mw.inherit_with("include", || inherit()?.include()))
             .transpose()?
             .unwrap_or_default();
         let empty_features = BTreeMap::new();
@@ -832,70 +832,70 @@ impl schema::TomlManifest {
             description: package
                 .description
                 .clone()
-                .map(|mw| mw.resolve("description", || inherit()?.description()))
+                .map(|mw| mw.inherit_with("description", || inherit()?.description()))
                 .transpose()?,
             homepage: package
                 .homepage
                 .clone()
-                .map(|mw| mw.resolve("homepage", || inherit()?.homepage()))
+                .map(|mw| mw.inherit_with("homepage", || inherit()?.homepage()))
                 .transpose()?,
             documentation: package
                 .documentation
                 .clone()
-                .map(|mw| mw.resolve("documentation", || inherit()?.documentation()))
+                .map(|mw| mw.inherit_with("documentation", || inherit()?.documentation()))
                 .transpose()?,
             readme: readme_for_package(
                 package_root,
                 package
                     .readme
                     .clone()
-                    .map(|mw| mw.resolve("readme", || inherit()?.readme(package_root)))
+                    .map(|mw| mw.inherit_with("readme", || inherit()?.readme(package_root)))
                     .transpose()?
                     .as_ref(),
             ),
             authors: package
                 .authors
                 .clone()
-                .map(|mw| mw.resolve("authors", || inherit()?.authors()))
+                .map(|mw| mw.inherit_with("authors", || inherit()?.authors()))
                 .transpose()?
                 .unwrap_or_default(),
             license: package
                 .license
                 .clone()
-                .map(|mw| mw.resolve("license", || inherit()?.license()))
+                .map(|mw| mw.inherit_with("license", || inherit()?.license()))
                 .transpose()?,
             license_file: package
                 .license_file
                 .clone()
-                .map(|mw| mw.resolve("license", || inherit()?.license_file(package_root)))
+                .map(|mw| mw.inherit_with("license", || inherit()?.license_file(package_root)))
                 .transpose()?,
             repository: package
                 .repository
                 .clone()
-                .map(|mw| mw.resolve("repository", || inherit()?.repository()))
+                .map(|mw| mw.inherit_with("repository", || inherit()?.repository()))
                 .transpose()?,
             keywords: package
                 .keywords
                 .clone()
-                .map(|mw| mw.resolve("keywords", || inherit()?.keywords()))
+                .map(|mw| mw.inherit_with("keywords", || inherit()?.keywords()))
                 .transpose()?
                 .unwrap_or_default(),
             categories: package
                 .categories
                 .clone()
-                .map(|mw| mw.resolve("categories", || inherit()?.categories()))
+                .map(|mw| mw.inherit_with("categories", || inherit()?.categories()))
                 .transpose()?
                 .unwrap_or_default(),
             badges: me
                 .badges
                 .clone()
-                .map(|mw| mw.resolve("badges", || inherit()?.badges()))
+                .map(|mw| mw.inherit_with("badges", || inherit()?.badges()))
                 .transpose()?
                 .unwrap_or_default(),
             links: package.links.clone(),
             rust_version: package
                 .rust_version
-                .map(|mw| mw.resolve("rust-version", || inherit()?.rust_version()))
+                .map(|mw| mw.inherit_with("rust-version", || inherit()?.rust_version()))
                 .transpose()?,
         };
         package.description = metadata
@@ -956,10 +956,11 @@ impl schema::TomlManifest {
             profiles.validate(cli_unstable, &features, &mut warnings)?;
         }
 
-        let publish = package
-            .publish
-            .clone()
-            .map(|publish| publish.resolve("publish", || inherit()?.publish()).unwrap());
+        let publish = package.publish.clone().map(|publish| {
+            publish
+                .inherit_with("publish", || inherit()?.publish())
+                .unwrap()
+        });
 
         package.publish = publish.clone().map(|p| schema::InheritableField::Value(p));
 
@@ -1540,7 +1541,7 @@ impl schema::TomlPackage {
 }
 
 impl<T> schema::InheritableField<T> {
-    fn resolve<'a>(
+    fn inherit_with<'a>(
         self,
         label: &str,
         get_ws_inheritable: impl FnOnce() -> CargoResult<T>,
@@ -1564,7 +1565,7 @@ impl<T> schema::InheritableField<T> {
 }
 
 impl schema::InheritableDependency {
-    fn resolve_with_self<'a>(
+    fn inherit_with<'a>(
         self,
         label: &str,
         get_ws_inheritable: impl FnOnce(&schema::TomlInheritedDependency) -> CargoResult<TomlDependency>,
@@ -1583,7 +1584,7 @@ impl schema::InheritableDependency {
 }
 
 impl schema::TomlInheritedDependency {
-    fn resolve<'a>(
+    fn inherit_with<'a>(
         &self,
         name: &str,
         inheritable: impl FnOnce() -> CargoResult<&'a schema::InheritableFields>,
@@ -2243,7 +2244,7 @@ impl schema::TomlProfile {
 }
 
 impl schema::InheritableLints {
-    fn resolve<'a>(
+    fn inherit_with<'a>(
         self,
         get_ws_inheritable: impl FnOnce() -> CargoResult<schema::TomlLints>,
     ) -> CargoResult<schema::TomlLints> {
