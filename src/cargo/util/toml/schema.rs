@@ -83,7 +83,7 @@ pub struct TomlWorkspace {
     pub metadata: Option<toml::Value>,
 
     // Properties that can be inherited by members.
-    pub package: Option<InheritableFields>,
+    pub package: Option<InheritablePackage>,
     pub dependencies: Option<BTreeMap<String, TomlDependency>>,
     pub lints: Option<TomlLints>,
 }
@@ -91,14 +91,7 @@ pub struct TomlWorkspace {
 /// A group of fields that are inheritable by members of the workspace
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct InheritableFields {
-    // We use skip here since it will never be present when deserializing
-    // and we don't want it present when serializing
-    #[serde(skip)]
-    pub dependencies: Option<BTreeMap<String, TomlDependency>>,
-    #[serde(skip)]
-    pub lints: Option<TomlLints>,
-
+pub struct InheritablePackage {
     pub version: Option<semver::Version>,
     pub authors: Option<Vec<String>>,
     pub description: Option<String>,
@@ -116,10 +109,6 @@ pub struct InheritableFields {
     pub exclude: Option<Vec<String>>,
     pub include: Option<Vec<String>>,
     pub rust_version: Option<RustVersion>,
-    // We use skip here since it will never be present when deserializing
-    // and we don't want it present when serializing
-    #[serde(skip)]
-    pub _ws_root: PathBuf,
 }
 
 /// Represents the `package`/`project` sections of a `Cargo.toml`.

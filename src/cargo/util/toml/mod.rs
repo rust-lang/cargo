@@ -380,7 +380,7 @@ impl schema::TomlManifest {
             config: &Config,
             resolved_path: &Path,
             workspace_config: &WorkspaceConfig,
-        ) -> CargoResult<schema::InheritableFields> {
+        ) -> CargoResult<InheritableFields> {
             match workspace_config {
                 WorkspaceConfig::Root(root) => Ok(root.inheritable().clone()),
                 WorkspaceConfig::Member {
@@ -446,12 +446,14 @@ impl schema::TomlManifest {
 
         let workspace_config = match (me.workspace.as_ref(), package.workspace.as_ref()) {
             (Some(toml_config), None) => {
-                let mut inheritable = toml_config.package.clone().unwrap_or_default();
-                inheritable.update_ws_path(package_root.to_path_buf());
-                inheritable.update_deps(toml_config.dependencies.clone());
                 let lints = toml_config.lints.clone();
                 let lints = verify_lints(lints)?;
-                inheritable.update_lints(lints);
+                let inheritable = InheritableFields {
+                    package: toml_config.package.clone(),
+                    dependencies: toml_config.dependencies.clone(),
+                    lints,
+                    _ws_root: package_root.to_path_buf(),
+                };
                 if let Some(ws_deps) = &inheritable.dependencies {
                     for (name, dep) in ws_deps {
                         unused_dep_keys(
@@ -494,7 +496,7 @@ impl schema::TomlManifest {
 
         let resolved_path = package_root.join("Cargo.toml");
 
-        let inherit_cell: LazyCell<schema::InheritableFields> = LazyCell::new();
+        let inherit_cell: LazyCell<InheritableFields> = LazyCell::new();
         let inherit =
             || inherit_cell.try_borrow_with(|| get_ws(config, &resolved_path, &workspace_config));
 
@@ -645,7 +647,7 @@ impl schema::TomlManifest {
             new_deps: Option<&BTreeMap<String, schema::InheritableDependency>>,
             kind: Option<DepKind>,
             workspace_config: &WorkspaceConfig,
-            inherit_cell: &LazyCell<schema::InheritableFields>,
+            inherit_cell: &LazyCell<InheritableFields>,
         ) -> CargoResult<Option<BTreeMap<String, schema::InheritableDependency>>> {
             let Some(dependencies) = new_deps else {
                 return Ok(None);
@@ -1164,12 +1166,14 @@ impl schema::TomlManifest {
             .transpose()?;
         let workspace_config = match me.workspace {
             Some(ref toml_config) => {
-                let mut inheritable = toml_config.package.clone().unwrap_or_default();
-                inheritable.update_ws_path(root.to_path_buf());
-                inheritable.update_deps(toml_config.dependencies.clone());
                 let lints = toml_config.lints.clone();
                 let lints = verify_lints(lints)?;
-                inheritable.update_lints(lints);
+                let inheritable = InheritableFields {
+                    package: toml_config.package.clone(),
+                    dependencies: toml_config.dependencies.clone(),
+                    lints,
+                    _ws_root: root.to_path_buf(),
+                };
                 let ws_root_config = WorkspaceRootConfig::new(
                     root,
                     &toml_config.members,
@@ -1363,7 +1367,7 @@ fn unused_dep_keys(
 fn inheritable_from_path(
     config: &Config,
     workspace_path: PathBuf,
-) -> CargoResult<schema::InheritableFields> {
+) -> CargoResult<InheritableFields> {
     // Workspace path should have Cargo.toml at the end
     let workspace_path_root = workspace_path.parent().unwrap();
 
@@ -1446,13 +1450,13 @@ fn unique_build_targets(
 }
 
 /// Defines simple getter methods for inheritable fields.
-macro_rules! inheritable_field_getter {
+macro_rules! package_field_getter {
     ( $(($key:literal, $field:ident -> $ret:ty),)* ) => (
         $(
-            #[doc = concat!("Gets the field `workspace.", $key, "`.")]
+            #[doc = concat!("Gets the field `workspace.package", $key, "`.")]
             fn $field(&self) -> CargoResult<$ret> {
-                let Some(val) = &self.$field else  {
-                    bail!("`workspace.{}` was not defined", $key);
+                let Some(val) = self.package.as_ref().and_then(|p| p.$field.as_ref()) else  {
+                    bail!("`workspace.package.{}` was not defined", $key);
                 };
                 Ok(val.clone())
             }
@@ -1460,25 +1464,35 @@ macro_rules! inheritable_field_getter {
     )
 }
 
-impl schema::InheritableFields {
-    inheritable_field_getter! {
+/// A group of fields that are inheritable by members of the workspace
+#[derive(Clone, Debug, Default)]
+pub struct InheritableFields {
+    package: Option<schema::InheritablePackage>,
+    dependencies: Option<BTreeMap<String, schema::TomlDependency>>,
+    lints: Option<schema::TomlLints>,
+
+    // Bookkeeping to help when resolving values from above
+    _ws_root: PathBuf,
+}
+
+impl InheritableFields {
+    package_field_getter! {
         // Please keep this list lexicographically ordered.
-        ("lints",                 lints         -> schema::TomlLints),
-        ("package.authors",       authors       -> Vec<String>),
-        ("package.badges",        badges        -> BTreeMap<String, BTreeMap<String, String>>),
-        ("package.categories",    categories    -> Vec<String>),
-        ("package.description",   description   -> String),
-        ("package.documentation", documentation -> String),
-        ("package.edition",       edition       -> String),
-        ("package.exclude",       exclude       -> Vec<String>),
-        ("package.homepage",      homepage      -> String),
-        ("package.include",       include       -> Vec<String>),
-        ("package.keywords",      keywords      -> Vec<String>),
-        ("package.license",       license       -> String),
-        ("package.publish",       publish       -> schema::VecStringOrBool),
-        ("package.repository",    repository    -> String),
-        ("package.rust-version",  rust_version  -> RustVersion),
-        ("package.version",       version       -> semver::Version),
+        ("authors",       authors       -> Vec<String>),
+        ("badges",        badges        -> BTreeMap<String, BTreeMap<String, String>>),
+        ("categories",    categories    -> Vec<String>),
+        ("description",   description   -> String),
+        ("documentation", documentation -> String),
+        ("edition",       edition       -> String),
+        ("exclude",       exclude       -> Vec<String>),
+        ("homepage",      homepage      -> String),
+        ("include",       include       -> Vec<String>),
+        ("keywords",      keywords      -> Vec<String>),
+        ("license",       license       -> String),
+        ("publish",       publish       -> schema::VecStringOrBool),
+        ("repository",    repository    -> String),
+        ("rust-version",  rust_version  -> RustVersion),
+        ("version",       version       -> semver::Version),
     }
 
     /// Gets a workspace dependency with the `name`.
@@ -1500,9 +1514,17 @@ impl schema::InheritableFields {
         Ok(dep)
     }
 
+    /// Gets the field `workspace.lint`.
+    fn lints(&self) -> CargoResult<schema::TomlLints> {
+        let Some(val) = &self.lints else {
+            bail!("`workspace.lints` was not defined");
+        };
+        Ok(val.clone())
+    }
+
     /// Gets the field `workspace.package.license-file`.
     fn license_file(&self, package_root: &Path) -> CargoResult<String> {
-        let Some(license_file) = &self.license_file else {
+        let Some(license_file) = self.package.as_ref().and_then(|p| p.license_file.as_ref()) else {
             bail!("`workspace.package.license-file` was not defined");
         };
         resolve_relative_path("license-file", &self._ws_root, package_root, license_file)
@@ -1510,7 +1532,10 @@ impl schema::InheritableFields {
 
     /// Gets the field `workspace.package.readme`.
     fn readme(&self, package_root: &Path) -> CargoResult<schema::StringOrBool> {
-        let Some(readme) = readme_for_package(self._ws_root.as_path(), self.readme.as_ref()) else {
+        let Some(readme) = readme_for_package(
+            self._ws_root.as_path(),
+            self.package.as_ref().and_then(|p| p.readme.as_ref()),
+        ) else {
             bail!("`workspace.package.readme` was not defined");
         };
         resolve_relative_path("readme", &self._ws_root, package_root, &readme)
@@ -1519,18 +1544,6 @@ impl schema::InheritableFields {
 
     fn ws_root(&self) -> &PathBuf {
         &self._ws_root
-    }
-
-    fn update_deps(&mut self, deps: Option<BTreeMap<String, schema::TomlDependency>>) {
-        self.dependencies = deps;
-    }
-
-    fn update_lints(&mut self, lints: Option<schema::TomlLints>) {
-        self.lints = lints;
-    }
-
-    fn update_ws_path(&mut self, ws_root: PathBuf) {
-        self._ws_root = ws_root;
     }
 }
 
@@ -1587,7 +1600,7 @@ impl schema::TomlInheritedDependency {
     fn inherit_with<'a>(
         &self,
         name: &str,
-        inheritable: impl FnOnce() -> CargoResult<&'a schema::InheritableFields>,
+        inheritable: impl FnOnce() -> CargoResult<&'a InheritableFields>,
         cx: &mut Context<'_, '_>,
     ) -> CargoResult<schema::TomlDependency> {
         fn default_features_msg(label: &str, ws_def_feat: Option<bool>, cx: &mut Context<'_, '_>) {
