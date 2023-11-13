@@ -174,15 +174,15 @@ pub struct TomlPackage {
 /// An enum that allows for inheriting keys from a workspace in a Cargo.toml.
 #[derive(Serialize, Copy, Clone, Debug)]
 #[serde(untagged)]
-pub enum InheritableField<T, W> {
+pub enum InheritableField<T> {
     /// The type that that is used when not inheriting from a workspace.
     Value(T),
     /// The type when inheriting from a workspace.
-    Inherit(W),
+    Inherit(TomlInheritedField),
 }
 
 //. This already has a `Deserialize` impl from version_trim_whitespace
-pub type InheritableSemverVersion = InheritableField<semver::Version, TomlInheritedField>;
+pub type InheritableSemverVersion = InheritableField<semver::Version>;
 impl<'de> de::Deserialize<'de> for InheritableSemverVersion {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
@@ -201,7 +201,7 @@ impl<'de> de::Deserialize<'de> for InheritableSemverVersion {
     }
 }
 
-pub type InheritableString = InheritableField<String, TomlInheritedField>;
+pub type InheritableString = InheritableField<String>;
 impl<'de> de::Deserialize<'de> for InheritableString {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
@@ -236,7 +236,7 @@ impl<'de> de::Deserialize<'de> for InheritableString {
     }
 }
 
-pub type InheritableRustVersion = InheritableField<RustVersion, TomlInheritedField>;
+pub type InheritableRustVersion = InheritableField<RustVersion>;
 impl<'de> de::Deserialize<'de> for InheritableRustVersion {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
@@ -272,7 +272,7 @@ impl<'de> de::Deserialize<'de> for InheritableRustVersion {
     }
 }
 
-pub type InheritableVecString = InheritableField<Vec<String>, TomlInheritedField>;
+pub type InheritableVecString = InheritableField<Vec<String>>;
 impl<'de> de::Deserialize<'de> for InheritableVecString {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
@@ -307,7 +307,7 @@ impl<'de> de::Deserialize<'de> for InheritableVecString {
     }
 }
 
-pub type InheritableStringOrBool = InheritableField<StringOrBool, TomlInheritedField>;
+pub type InheritableStringOrBool = InheritableField<StringOrBool>;
 impl<'de> de::Deserialize<'de> for InheritableStringOrBool {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
@@ -351,7 +351,7 @@ impl<'de> de::Deserialize<'de> for InheritableStringOrBool {
     }
 }
 
-pub type InheritableVecStringOrBool = InheritableField<VecStringOrBool, TomlInheritedField>;
+pub type InheritableVecStringOrBool = InheritableField<VecStringOrBool>;
 impl<'de> de::Deserialize<'de> for InheritableVecStringOrBool {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
@@ -395,8 +395,7 @@ impl<'de> de::Deserialize<'de> for InheritableVecStringOrBool {
     }
 }
 
-pub type InheritableBtreeMap =
-    InheritableField<BTreeMap<String, BTreeMap<String, String>>, TomlInheritedField>;
+pub type InheritableBtreeMap = InheritableField<BTreeMap<String, BTreeMap<String, String>>>;
 
 impl<'de> de::Deserialize<'de> for InheritableBtreeMap {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>

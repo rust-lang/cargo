@@ -1539,19 +1539,7 @@ impl schema::TomlPackage {
     }
 }
 
-/// This Trait exists to make [`schema::InheritableField::Inherit`] generic. It makes deserialization of
-/// [`schema::InheritableField`] much easier, as well as making error messages for
-/// [`schema::InheritableField::resolve`] much nicer
-///
-/// Implementors should have a field `workspace` with the type of `bool`. It is used to ensure
-/// `workspace` is not `false` in a `Cargo.toml`
-pub trait WorkspaceInherit {
-    /// This is the workspace table that is being inherited from.
-    /// For example `[workspace.dependencies]` would be the table "dependencies"
-    fn inherit_toml_table(&self) -> &str;
-}
-
-impl<T, W: WorkspaceInherit> schema::InheritableField<T, W> {
+impl<T> schema::InheritableField<T> {
     fn resolve<'a>(
         self,
         label: &str,
@@ -1559,10 +1547,9 @@ impl<T, W: WorkspaceInherit> schema::InheritableField<T, W> {
     ) -> CargoResult<T> {
         match self {
             schema::InheritableField::Value(value) => Ok(value),
-            schema::InheritableField::Inherit(w) => get_ws_inheritable().with_context(|| {
+            schema::InheritableField::Inherit(_) => get_ws_inheritable().with_context(|| {
                 format!(
-                "error inheriting `{label}` from workspace root manifest's `workspace.{}.{label}`",
-                w.inherit_toml_table(),
+                "error inheriting `{label}` from workspace root manifest's `workspace.package.{label}`",
             )
             }),
         }
@@ -1573,12 +1560,6 @@ impl<T, W: WorkspaceInherit> schema::InheritableField<T, W> {
             schema::InheritableField::Inherit(_) => None,
             schema::InheritableField::Value(defined) => Some(defined),
         }
-    }
-}
-
-impl WorkspaceInherit for schema::TomlInheritedField {
-    fn inherit_toml_table(&self) -> &str {
-        "package"
     }
 }
 
