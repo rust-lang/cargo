@@ -1091,11 +1091,8 @@ rustdns.workspace = true
     p.cargo("update -p rootcrate")
         .with_stderr(&format!(
             "\
-[UPDATING] git repository `{}`
 [UPDATING] rootcrate v2.29.8 ([CWD]/rootcrate) -> v2.29.81
-[UPDATING] rustdns v0.5.0 ([..]) -> [..]
 [UPDATING] subcrate v2.29.8 ([CWD]/subcrate) -> v2.29.81",
-            git_project.url(),
         ))
         .run();
 }
@@ -1182,11 +1179,8 @@ rustdns.workspace = true
     p.cargo("update -p crate2")
         .with_stderr(&format!(
             "\
-[UPDATING] git repository `{}`
 [UPDATING] crate1 v2.29.8 ([CWD]/crate1) -> v2.29.81
-[UPDATING] crate2 v2.29.8 ([CWD]/crate2) -> v2.29.81
-[UPDATING] rustdns v0.5.0 ([..]) -> [..]",
-            git_project.url(),
+[UPDATING] crate2 v2.29.8 ([CWD]/crate2) -> v2.29.81",
         ))
         .run();
 }
