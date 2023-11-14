@@ -3162,10 +3162,10 @@ src/main.rs
 fn include_files_called_target_git() {
     // https://github.com/rust-lang/cargo/issues/12790
     // files and folders called "target" should be included, unless they're the actual target directory
-    let (p, repo) = git::new_repo("target_uncommitted", |p| init_and_add_inner_target(p));
+    let (p, repo) = git::new_repo("foo", |p| init_and_add_inner_target(p));
     // add target folder but not committed.
-    let _ = fs::create_dir_all(&repo.workdir().unwrap().join("target/foo.txt")).unwrap();
-
+    _ = fs::create_dir(p.build_dir()).unwrap();
+    _ = fs::write(p.build_dir().join("foo.txt"), "").unwrap();
     p.cargo("package -l")
         .with_stdout(
             "\
@@ -3183,9 +3183,8 @@ src/main.rs
         .run();
 
     // if target is committed, it should be include.
-    let p = git::new("target_committed", |p| {
-        init_and_add_inner_target(p).file("target/foo.txt", "")
-    });
+    git::add(&repo);
+    git::commit(&repo);
     p.cargo("package -l")
         .with_stdout(
             "\
