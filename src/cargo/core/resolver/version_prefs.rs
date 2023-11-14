@@ -58,10 +58,10 @@ impl VersionPreferences {
     ///
     /// Sort order:
     /// 1. Preferred packages
-    /// 2. `first_version`, falling back to [`VersionPreferences::version_ordering`] when `None`
+    /// 2. [`VersionPreferences::max_rust_version`]
+    /// 3. `first_version`, falling back to [`VersionPreferences::version_ordering`] when `None`
     ///
     /// Filtering:
-    /// - [`VersionPreferences::max_rust_version`]
     /// - `first_version`
     pub fn sort_summaries(
         &self,
@@ -76,15 +76,21 @@ impl VersionPreferences {
                     .map(|deps| deps.iter().any(|d| d.matches_id(*pkg_id)))
                     .unwrap_or(false)
         };
-        if self.max_rust_version.is_some() {
-            summaries.retain(|s| s.rust_version() <= self.max_rust_version.as_ref());
-        }
         summaries.sort_unstable_by(|a, b| {
             let prefer_a = should_prefer(&a.package_id());
             let prefer_b = should_prefer(&b.package_id());
             let previous_cmp = prefer_a.cmp(&prefer_b).reverse();
             if previous_cmp != Ordering::Equal {
                 return previous_cmp;
+            }
+
+            if self.max_rust_version.is_some() {
+                let msrv_a = a.rust_version() <= self.max_rust_version.as_ref();
+                let msrv_b = b.rust_version() <= self.max_rust_version.as_ref();
+                let msrv_cmp = msrv_a.cmp(&msrv_b).reverse();
+                if msrv_cmp != Ordering::Equal {
+                    return msrv_cmp;
+                }
             }
 
             let cmp = a.version().cmp(b.version());
@@ -236,14 +242,14 @@ mod test {
         vp.sort_summaries(&mut summaries, None);
         assert_eq!(
             describe(&summaries),
-            "foo/1.2.3, foo/1.1.0, foo/1.0.9".to_string()
+            "foo/1.2.3, foo/1.1.0, foo/1.0.9, foo/1.2.4".to_string()
         );
 
         vp.version_ordering(VersionOrdering::MinimumVersionsFirst);
         vp.sort_summaries(&mut summaries, None);
         assert_eq!(
             describe(&summaries),
-            "foo/1.0.9, foo/1.1.0, foo/1.2.3".to_string()
+            "foo/1.0.9, foo/1.1.0, foo/1.2.3, foo/1.2.4".to_string()
         );
     }
 }
