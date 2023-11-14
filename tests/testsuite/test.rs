@@ -3556,6 +3556,34 @@ fn cyclic_dev() {
 }
 
 #[cargo_test]
+fn cyclical_dep_with_missing_feature() {
+    // Checks for error handling when a cyclical dev-dependency specify a
+    // feature that doesn't exist.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dev-dependencies]
+                foo = { path = ".", features = ["missing"] }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "thread 'main' panicked at src/cargo/util/graph.rs:149:20:
+the only path was a cycle, no dependency graph has this shape
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn publish_a_crate_without_tests() {
     Package::new("testless", "0.1.0")
         .file(

@@ -165,8 +165,12 @@ impl<'s, N: Eq + Ord + Clone + 's, E: Default + Clone + 's> Graph<N, E> {
                 ));
             }
             let last = result.last().unwrap().0;
-            // fixme: this may sometimes be wrong when there are cycles.
-            if !fn_edge(&self, last).next().is_none() {
+            let set: Vec<_> = result.iter().map(|(k, _)| k).collect();
+            if !fn_edge(&self, last)
+                .filter(|(e, _)| !set.contains(&e))
+                .next()
+                .is_none()
+            {
                 self.print_for_test();
                 unreachable!("The last element in the path should not have outgoing edges");
             }
@@ -186,6 +190,14 @@ fn path_to_case() {
         new.path_to_bottom(&2),
         vec![(&2, None), (&0, Some(&())), (&3, Some(&()))]
     );
+}
+
+#[test]
+fn path_to_self() {
+    // Extracted from #12941
+    let mut new: Graph<i32, ()> = Graph::new();
+    new.link(0, 0);
+    assert_eq!(new.path_to_bottom(&0), vec![(&0, None)]);
 }
 
 impl<N: Eq + Ord + Clone, E: Default + Clone> Default for Graph<N, E> {
