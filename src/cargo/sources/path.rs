@@ -328,7 +328,12 @@ impl<'cfg> PathSource<'cfg> {
 
             match file_path.file_name().and_then(|s| s.to_str()) {
                 // The `target` directory is never included.
-                Some("target") => continue,
+                Some("target") => {
+                    // Only filter out target if its in the package root.
+                    if file_path.parent().unwrap() == pkg_path {
+                        continue;
+                    }
+                }
 
                 // Keep track of all sub-packages found and also strip out all
                 // matches we've found so far. Note, though, that if we find
