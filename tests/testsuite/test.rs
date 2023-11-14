@@ -3576,9 +3576,14 @@ fn cyclical_dep_with_missing_feature() {
     p.cargo("check")
         .with_status(101)
         .with_stderr(
-            "thread 'main' panicked at src/cargo/util/graph.rs:149:20:
-the only path was a cycle, no dependency graph has this shape
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
+            "error: failed to select a version for `foo`.
+    ... required by package `foo v0.1.0 ([..]/foo)`
+versions that meet the requirements `*` are: 0.1.0
+
+the package `foo` depends on `foo`, with features: `missing` but `foo` does not have these features.
+
+
+failed to select a version for `foo` which could resolve this conflict",
         )
         .run();
 }

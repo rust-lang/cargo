@@ -128,30 +128,32 @@ impl<'s, N: Eq + Ord + Clone + 's, E: Default + Clone + 's> Graph<N, E> {
     {
         let mut back_link = BTreeMap::new();
         let mut queue = VecDeque::from([pkg]);
-        let mut bottom = None;
+        let mut last = pkg;
 
         while let Some(p) = queue.pop_front() {
-            bottom = Some(p);
+            last = p;
+            let mut out_edges = true;
             for (child, edge) in fn_edge(&self, p) {
-                bottom = None;
+                out_edges = false;
                 back_link.entry(child).or_insert_with(|| {
                     queue.push_back(child);
                     (p, edge)
                 });
             }
-            if bottom.is_some() {
+            if out_edges {
                 break;
             }
         }
 
         let mut result = Vec::new();
-        let mut next =
-            bottom.expect("the only path was a cycle, no dependency graph has this shape");
+        let mut next = last;
         while let Some((p, e)) = back_link.remove(&next) {
             result.push((next, Some(e)));
             next = p;
         }
-        result.push((next, None));
+        if result.iter().all(|(n, _)| n != &next) {
+            result.push((next, None));
+        }
         result.reverse();
         #[cfg(debug_assertions)]
         {
@@ -197,7 +199,7 @@ fn path_to_self() {
     // Extracted from #12941
     let mut new: Graph<i32, ()> = Graph::new();
     new.link(0, 0);
-    assert_eq!(new.path_to_bottom(&0), vec![(&0, None)]);
+    assert_eq!(new.path_to_bottom(&0), vec![(&0, Some(&()))]);
 }
 
 impl<N: Eq + Ord + Clone, E: Default + Clone> Default for Graph<N, E> {
