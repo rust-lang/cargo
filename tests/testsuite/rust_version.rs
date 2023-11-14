@@ -333,6 +333,61 @@ fn dependency_rust_version_older_and_newer_than_package() {
 }
 
 #[cargo_test]
+fn dependency_rust_version_backtracking() {
+    Package::new("has-rust-version", "1.6.0")
+        .rust_version("1.65.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+    Package::new("no-rust-version", "2.1.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+    Package::new("no-rust-version", "2.2.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .dep("has-rust-version", "1.6.0")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            rust-version = "1.60.0"
+            [dependencies]
+            no-rust-version = "2"
+        "#,
+        )
+        .file("src/main.rs", "fn main(){}")
+        .build();
+
+    p.cargo("check --ignore-rust-version")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] no-rust-version v2.1.0 (registry `dummy-registry`)
+[CHECKING] no-rust-version v2.1.0
+[CHECKING] [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+    p.cargo("check")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .with_stderr(
+            "\
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn workspace_with_mixed_rust_version() {
     Package::new("bar", "1.4.0")
         .rust_version("1.45.0")
