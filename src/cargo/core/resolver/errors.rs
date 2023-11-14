@@ -140,9 +140,9 @@ pub(super) fn activation_error(
                     msg.push_str("` as well:\n");
                     msg.push_str(&describe_path_in_context(cx, p));
                     msg.push_str("\nOnly one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. ");
-                    msg.push_str("Try to adjust your dependencies so that only one package uses the links ='");
-                    msg.push_str(&*dep.package_name());
-                    msg.push_str("' value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.");
+                    msg.push_str("Try to adjust your dependencies so that only one package uses the `links = \"");
+                    msg.push_str(link);
+                    msg.push_str("\"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.");
                 }
                 ConflictReason::MissingFeatures(features) => {
                     msg.push_str("\n\nthe package `");
