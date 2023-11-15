@@ -2167,8 +2167,11 @@ fn doc_lib_true() {
 
     p.cargo("doc -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .env("CARGO_LOG", "cargo::ops::cargo_rustc::fingerprint")
-        .with_stdout("")
+        .with_stderr(
+            "\
+[FINISHED] [..]
+[GENERATED] [CWD]/target/doc/foo/index.html",
+        )
         .run();
 
     assert!(p.root().join("target/doc").is_dir());

@@ -1433,7 +1433,7 @@ fn test_then_build() {
         .with_stdout_contains("running 0 tests")
         .run();
 
-    p.cargo("build").with_stdout("").run();
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -2423,7 +2423,7 @@ fn dylib_doctest2() {
         )
         .build();
 
-    p.cargo("test").with_stdout("").run();
+    p.cargo("test").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]

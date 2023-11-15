@@ -305,7 +305,7 @@ fn transitive() {
         )
         .run();
 
-    p.cargo("check").with_stdout("").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -354,7 +354,7 @@ fn persists_across_rebuilds() {
         )
         .run();
 
-    p.cargo("check").with_stdout("").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -530,7 +530,7 @@ fn override_adds_some_deps() {
         )
         .run();
 
-    p.cargo("check").with_stdout("").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 
     Package::new("baz", "0.1.2").publish();
     p.cargo("update")
@@ -550,7 +550,7 @@ fn override_adds_some_deps() {
         )
         .run();
 
-    p.cargo("check").with_stdout("").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -601,8 +601,8 @@ fn locked_means_locked_yes_no_seriously_i_mean_locked() {
 
     p.cargo("check").run();
 
-    p.cargo("check").with_stdout("").run();
-    p.cargo("check").with_stdout("").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
