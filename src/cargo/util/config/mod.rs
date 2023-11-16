@@ -1200,6 +1200,8 @@ impl Config {
                 path.display()
             );
         }
+        tracing::debug!(?path, ?why_load, includes, "load config from file");
+
         let contents = fs::read_to_string(path)
             .with_context(|| format!("failed to read configuration file `{}`", path.display()))?;
         let toml = parse_document(&contents, path, self).with_context(|| {
