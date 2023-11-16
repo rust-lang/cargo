@@ -416,7 +416,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-util"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "anyhow",
  "core-foundation",
