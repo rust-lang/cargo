@@ -55,7 +55,19 @@ src/main.rs
 ",
         )
         .run();
-    p.cargo("package").with_stdout("").run();
+    p.cargo("package")
+        .with_stderr(
+            "\
+[WARNING] manifest has no documentation[..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
+",
+        )
+        .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
     validate_crate_contents(
@@ -696,6 +708,7 @@ fn ignore_nested() {
             authors = []
             license = "MIT"
             description = "foo"
+            homepage = "https://example.com/"
         "#;
     let main_rs = r#"
             fn main() { println!("hello"); }
@@ -712,8 +725,6 @@ fn ignore_nested() {
     p.cargo("package")
         .with_stderr(
             "\
-[WARNING] manifest has no documentation[..]
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
@@ -733,7 +744,17 @@ src/main.rs
 ",
         )
         .run();
-    p.cargo("package").with_stdout("").run();
+    p.cargo("package")
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
+",
+        )
+        .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
     validate_crate_contents(
@@ -2731,6 +2752,7 @@ fn basic_filesizes() {
                 exclude = ["*.txt"]
                 license = "MIT"
                 description = "foo"
+                homepage = "https://example.com/"
             "#;
     let main_rs_contents = r#"fn main() { println!("🦀"); }"#;
     let cargo_toml_contents = format!(
@@ -2741,6 +2763,7 @@ version = "0.0.1"
 authors = []
 exclude = ["*.txt"]
 description = "foo"
+homepage = "https://example.com/"
 license = "MIT"
 "#,
         cargo::core::package::MANIFEST_PREAMBLE
@@ -2776,7 +2799,17 @@ src/main.rs
 ",
         )
         .run();
-    p.cargo("package").with_stdout("").run();
+    p.cargo("package")
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.0.1 [..]
+[VERIFYING] foo v0.0.1 [..]
+[COMPILING] foo v0.0.1 [..]
+[FINISHED] [..]
+[PACKAGED] 4 files[..]
+",
+        )
+        .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
     let compressed_size = f.metadata().unwrap().len();
@@ -2803,6 +2836,7 @@ fn larger_filesizes() {
                 authors = []
                 license = "MIT"
                 description = "foo"
+                documentation = "https://example.com/"
             "#;
     let lots_of_crabs = std::iter::repeat("🦀").take(1337).collect::<String>();
     let main_rs_contents = format!(r#"fn main() {{ println!("{}"); }}"#, lots_of_crabs);
@@ -2821,6 +2855,7 @@ name = "foo"
 version = "0.0.1"
 authors = []
 description = "foo"
+documentation = "https://example.com/"
 license = "MIT"
 "#,
         cargo::core::package::MANIFEST_PREAMBLE
@@ -2858,7 +2893,17 @@ src/main.rs
 ",
         )
         .run();
-    p.cargo("package").with_stdout("").run();
+    p.cargo("package")
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.0.1 [..]
+[VERIFYING] foo v0.0.1 [..]
+[COMPILING] foo v0.0.1 [..]
+[FINISHED] [..]
+[PACKAGED] 5 files, [..]
+",
+        )
+        .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
     let compressed_size = f.metadata().unwrap().len();
@@ -2896,6 +2941,7 @@ fn symlink_filesizes() {
                 authors = []
                 license = "MIT"
                 description = "foo"
+                homepage = "https://example.com/"
             "#;
     let lots_of_crabs = std::iter::repeat("🦀").take(1337).collect::<String>();
     let main_rs_contents = format!(r#"fn main() {{ println!("{}"); }}"#, lots_of_crabs);
@@ -2914,6 +2960,7 @@ name = "foo"
 version = "0.0.1"
 authors = []
 description = "foo"
+homepage = "https://example.com/"
 license = "MIT"
 "#,
         cargo::core::package::MANIFEST_PREAMBLE
@@ -2956,7 +3003,17 @@ src/main.rs.bak
 ",
         )
         .run();
-    p.cargo("package").with_stdout("").run();
+    p.cargo("package")
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.0.1 [..]
+[VERIFYING] foo v0.0.1 [..]
+[COMPILING] foo v0.0.1 [..]
+[FINISHED] [..]
+[PACKAGED] 7 files, [..]
+",
+        )
+        .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
     let compressed_size = f.metadata().unwrap().len();
@@ -3032,7 +3089,19 @@ src/main.rs
 ",
         )
         .run();
-    p.cargo("package").with_stdout("").run();
+    p.cargo("package")
+        .with_stderr(
+            "\
+[WARNING] manifest has no documentation[..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
+",
+        )
+        .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
     validate_crate_contents(
@@ -3086,7 +3155,19 @@ src/main.rs
 ",
         )
         .run();
-    p.cargo("package").with_stdout("").run();
+    p.cargo("package")
+        .with_stderr(
+            "\
+[WARNING] manifest has no documentation[..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
+",
+        )
+        .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
     validate_crate_contents(

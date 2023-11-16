@@ -34,7 +34,10 @@ fn different_dir() {
     p.cargo("build").run();
     assert!(p.build_dir().is_dir());
 
-    p.cargo("clean").cwd("src").with_stdout("").run();
+    p.cargo("clean")
+        .cwd("src")
+        .with_stderr("[REMOVED] [..]")
+        .run();
     assert!(!p.build_dir().is_dir());
 }
 
@@ -82,7 +85,7 @@ fn clean_multiple_packages() {
 
     p.cargo("clean -p d1 -p d2")
         .cwd("src")
-        .with_stdout("")
+        .with_stderr("[REMOVED] [..]")
         .run();
     assert!(p.bin("foo").is_file());
     assert!(!d1_path.is_file());
@@ -227,7 +230,9 @@ fn clean_release() {
     p.cargo("build --release").run();
 
     p.cargo("clean -p foo").run();
-    p.cargo("build --release").with_stdout("").run();
+    p.cargo("build --release")
+        .with_stderr("[FINISHED] [..]")
+        .run();
 
     p.cargo("clean -p foo --release").run();
     p.cargo("build --release")
@@ -355,7 +360,7 @@ fn clean_git() {
         .build();
 
     p.cargo("build").run();
-    p.cargo("clean -p dep").with_stdout("").run();
+    p.cargo("clean -p dep").with_stderr("[REMOVED] [..]").run();
     p.cargo("build").run();
 }
 
@@ -380,7 +385,7 @@ fn registry() {
     Package::new("bar", "0.1.0").publish();
 
     p.cargo("build").run();
-    p.cargo("clean -p bar").with_stdout("").run();
+    p.cargo("clean -p bar").with_stderr("[REMOVED] [..]").run();
     p.cargo("build").run();
 }
 

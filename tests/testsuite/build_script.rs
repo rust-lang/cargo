@@ -3245,7 +3245,6 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
         .run();
 
     p.cargo("build -v")
-        .env("CARGO_LOG", "cargo::ops::cargo_rustc::fingerprint=info")
         .with_stderr(
             "\
 [FRESH] foo v0.5.0 ([..])

@@ -75,7 +75,14 @@ fn doc_twice() {
         )
         .run();
 
-    p.cargo("doc").with_stdout("").run();
+    p.cargo("doc")
+        .with_stderr(
+            "\
+[FINISHED] [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
+",
+        )
+        .run();
 }
 
 #[cargo_test]
@@ -118,9 +125,14 @@ fn doc_deps() {
     assert_eq!(p.glob("target/debug/**/*.rlib").count(), 0);
     assert_eq!(p.glob("target/debug/deps/libbar-*.rmeta").count(), 1);
 
+    // Make sure it doesn't recompile.
     p.cargo("doc")
-        .env("CARGO_LOG", "cargo::ops::cargo_rustc::fingerprint")
-        .with_stdout("")
+        .with_stderr(
+            "\
+[FINISHED] [..]
+[GENERATED] [CWD]/target/doc/foo/index.html
+",
+        )
         .run();
 
     assert!(p.root().join("target/doc").is_dir());

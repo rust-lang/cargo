@@ -456,7 +456,7 @@ fn env_rustflags_no_recompile() {
     p.cargo("check").env("RUSTFLAGS", "--cfg foo").run();
     p.cargo("check")
         .env("RUSTFLAGS", "--cfg foo")
-        .with_stdout("")
+        .with_stderr("[FINISHED] [..]")
         .run();
 }
 
@@ -944,7 +944,7 @@ fn build_rustflags_no_recompile() {
     p.cargo("check").env("RUSTFLAGS", "--cfg foo").run();
     p.cargo("check")
         .env("RUSTFLAGS", "--cfg foo")
-        .with_stdout("")
+        .with_stderr("[FINISHED] [..]")
         .run();
 }
 
