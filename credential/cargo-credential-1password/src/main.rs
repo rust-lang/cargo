@@ -82,6 +82,10 @@ impl OnePasswordKeychain {
         }
         let mut cmd = Command::new("op");
         cmd.args(["signin", "--raw"]);
+        if let Some(account) = &self.account {
+            cmd.arg("--account");
+            cmd.arg(account);
+        }
         cmd.stdout(Stdio::piped());
         let mut child = cmd
             .spawn()
