@@ -551,7 +551,7 @@ This is short-hand for:
 unsafe_code = { level = "forbid", priority = 0 }
 ```
 
-`level` corresponds to the lint levels in `rustc`:
+`level` corresponds to the [lint levels](https://doc.rust-lang.org/rustc/lints/levels.html) in `rustc`:
 - `forbid`
 - `deny`
 - `warn`
