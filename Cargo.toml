@@ -106,6 +106,20 @@ varisat = "0.2.2"
 walkdir = "2.4.0"
 windows-sys = "0.48"
 
+[workspace.lints.rust]
+rust_2018_idioms = "warn" # TODO: could this be removed?
+
+[workspace.lints.rustdoc]
+private_intra_doc_links = "allow"
+
+[workspace.lints.clippy]
+all = { level = "allow", priority = -1 }
+dbg_macro = "warn"
+disallowed_methods = "warn"
+print_stderr = "warn"
+print_stdout = "warn"
+self_named_module_files = "warn"
+
 [package]
 name = "cargo"
 version = "0.77.0"
@@ -234,3 +248,6 @@ vendored-openssl = ["openssl/vendored"]
 vendored-libgit2 = ["libgit2-sys/vendored"]
 # This is primarily used by rust-lang/rust distributing cargo the executable.
 all-static = ['vendored-openssl', 'curl/static-curl', 'curl/force-system-lib-on-osx']
+
+[lints]
+workspace = true

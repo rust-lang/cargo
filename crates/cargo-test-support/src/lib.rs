@@ -2,7 +2,9 @@
 //!
 //! See <https://rust-lang.github.io/cargo/contrib/> for a guide on writing tests.
 
-#![allow(clippy::all)]
+#![allow(clippy::disallowed_methods)]
+#![allow(clippy::print_stderr)]
+#![allow(clippy::print_stdout)]
 
 use std::env;
 use std::ffi::OsStr;

@@ -1,5 +1,7 @@
 //! Cargo registry macos keychain credential process.
 
+#![allow(clippy::print_stderr)]
+
 #[cfg(target_os = "macos")]
 mod macos {
     use cargo_credential::{

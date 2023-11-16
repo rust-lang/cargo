@@ -1,3 +1,5 @@
+#![allow(clippy::disallowed_methods)]
+
 use cargo::Config;
 use std::fs;
 use std::path::{Path, PathBuf};

@@ -1,5 +1,7 @@
 //! Miscellaneous support code used by Cargo.
 
+#![allow(clippy::disallowed_methods)]
+
 pub use self::read2::read2;
 pub use du::du;
 pub use process_builder::ProcessBuilder;

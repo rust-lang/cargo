@@ -1,6 +1,6 @@
-// See src/cargo/lib.rs for notes on these lint settings.
-#![warn(rust_2018_idioms)]
-#![allow(clippy::all)]
+#![allow(clippy::disallowed_methods)]
+#![allow(clippy::print_stderr)]
+#![allow(clippy::print_stdout)]
 
 #[macro_use]
 extern crate cargo_test_macro;

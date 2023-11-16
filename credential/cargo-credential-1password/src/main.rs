@@ -1,5 +1,8 @@
 //! Cargo registry 1password credential process.
 
+#![allow(clippy::disallowed_methods)]
+#![allow(clippy::print_stderr)]
+
 use cargo_credential::{
     Action, CacheControl, Credential, CredentialResponse, Error, RegistryInfo, Secret,
 };

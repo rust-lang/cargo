@@ -1,6 +1,4 @@
-#![warn(rust_2018_idioms)] // while we're getting used to 2018
-#![allow(clippy::all)]
-#![warn(clippy::disallowed_methods)]
+#![allow(clippy::self_named_module_files)] // false positive in `commands/build.rs`
 
 use cargo::util::network::http::http_handle;
 use cargo::util::network::http::needs_custom_http_transport;
