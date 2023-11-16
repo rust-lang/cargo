@@ -14,4 +14,4 @@ website](https://1password.com/downloads/command-line/).
   run `op vault list`.
 
 [1password]: https://1password.com/
-[credential provider]: https://doc.rust-lang.org/nightly/cargo/reference/registry-authentication.html
+[credential provider]: https://doc.rust-lang.org/stable/cargo/reference/registry-authentication.html
