@@ -662,6 +662,15 @@ fn prepare_rustc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilde
     let mut base = cx
         .compilation
         .rustc_process(unit, is_primary, is_workspace)?;
+    build_base_args(cx, &mut base, unit)?;
+
+    base.inherit_jobserver(&cx.jobserver);
+    build_deps_args(&mut base, cx, unit)?;
+    add_cap_lints(cx.bcx, unit, &mut base);
+    base.args(cx.bcx.rustflags_args(unit));
+    if cx.bcx.config.cli_unstable().binary_dep_depinfo {
+        base.arg("-Z").arg("binary-dep-depinfo");
+    }
 
     if is_primary {
         base.env("CARGO_PRIMARY_PACKAGE", "1");
@@ -672,14 +681,6 @@ fn prepare_rustc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilde
         base.env("CARGO_TARGET_TMPDIR", tmp.display().to_string());
     }
 
-    base.inherit_jobserver(&cx.jobserver);
-    build_base_args(cx, &mut base, unit)?;
-    build_deps_args(&mut base, cx, unit)?;
-    add_cap_lints(cx.bcx, unit, &mut base);
-    base.args(cx.bcx.rustflags_args(unit));
-    if cx.bcx.config.cli_unstable().binary_dep_depinfo {
-        base.arg("-Z").arg("binary-dep-depinfo");
-    }
     Ok(base)
 }
 
