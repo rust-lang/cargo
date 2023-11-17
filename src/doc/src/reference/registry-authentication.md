@@ -103,7 +103,7 @@ Install the provider with `cargo install cargo-credential-1password`
 In the config, add to (or create) `registry.global-credential-providers`:
 ```toml
 [registry]
-global-credential-providers = ["cargo:token", "cargo-credential-1password --email you@example.com"]
+global-credential-providers = ["cargo:token", "cargo-credential-1password --account my.1password.com"]
 ```
 
 The values in `global-credential-providers` are split on spaces into path and command-line arguments. To
