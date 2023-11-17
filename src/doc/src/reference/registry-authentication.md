@@ -75,7 +75,7 @@ Any password manager with libsecret support can be used to view stored tokens.
 The following are a few examples (non-exhaustive):
 
 - [GNOME Keyring](https://wiki.gnome.org/Projects/GnomeKeyring)
-- [KDE Wallet Manager](https://apps.kde.org/en-gb/kwalletmanager5/) (since KDE Frameworks 5.97.0)
+- [KDE Wallet Manager](https://apps.kde.org/kwalletmanager5/) (since KDE Frameworks 5.97.0)
 - [KeePassXC](https://keepassxc.org/) (since 2.5.0)
 
 ### `cargo:token-from-stdout <command> <args>`
