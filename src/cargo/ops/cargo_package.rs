@@ -439,7 +439,7 @@ fn warn_custom_build_file_not_in_package(
         "the source file of {:?} target `{}` doesn't appear to be a path inside of the package.\n\
         It is at {}, whereas the root the package is {}.\n\
         This may cause issue during packaging, as modules resolution and resources included via macros are often relative to the path of source files.\n\
-        Please update the `build` setting in the manifest at `{}` and point to a path inside the root of the package.\n",
+        Please update the `build` setting in the manifest at `{}` and point to a path inside the root of the package.",
         target.kind(), target.name(), path.display(), pkg.root().display(),  pkg.manifest_path().display()
     );
 
