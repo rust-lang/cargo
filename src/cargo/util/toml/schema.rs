@@ -31,20 +31,20 @@ pub struct TomlManifest {
     pub example: Option<Vec<TomlExampleTarget>>,
     pub test: Option<Vec<TomlTestTarget>>,
     pub bench: Option<Vec<TomlTestTarget>>,
-    pub dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
-    pub dev_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    pub dependencies: Option<BTreeMap<String, InheritableDependency>>,
+    pub dev_dependencies: Option<BTreeMap<String, InheritableDependency>>,
     #[serde(rename = "dev_dependencies")]
-    pub dev_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
-    pub build_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    pub dev_dependencies2: Option<BTreeMap<String, InheritableDependency>>,
+    pub build_dependencies: Option<BTreeMap<String, InheritableDependency>>,
     #[serde(rename = "build_dependencies")]
-    pub build_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    pub build_dependencies2: Option<BTreeMap<String, InheritableDependency>>,
     pub features: Option<BTreeMap<String, Vec<String>>>,
     pub target: Option<BTreeMap<String, TomlPlatform>>,
     pub replace: Option<BTreeMap<String, TomlDependency>>,
     pub patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
     pub workspace: Option<TomlWorkspace>,
-    pub badges: Option<MaybeWorkspaceBtreeMap>,
-    pub lints: Option<MaybeWorkspaceLints>,
+    pub badges: Option<InheritableBtreeMap>,
+    pub lints: Option<InheritableLints>,
 }
 
 impl TomlManifest {
@@ -56,13 +56,13 @@ impl TomlManifest {
         self.package.as_ref().or(self.project.as_ref())
     }
 
-    pub fn dev_dependencies(&self) -> Option<&BTreeMap<String, MaybeWorkspaceDependency>> {
+    pub fn dev_dependencies(&self) -> Option<&BTreeMap<String, InheritableDependency>> {
         self.dev_dependencies
             .as_ref()
             .or(self.dev_dependencies2.as_ref())
     }
 
-    pub fn build_dependencies(&self) -> Option<&BTreeMap<String, MaybeWorkspaceDependency>> {
+    pub fn build_dependencies(&self) -> Option<&BTreeMap<String, InheritableDependency>> {
         self.build_dependencies
             .as_ref()
             .or(self.build_dependencies2.as_ref())
@@ -83,7 +83,7 @@ pub struct TomlWorkspace {
     pub metadata: Option<toml::Value>,
 
     // Properties that can be inherited by members.
-    pub package: Option<InheritableFields>,
+    pub package: Option<InheritablePackage>,
     pub dependencies: Option<BTreeMap<String, TomlDependency>>,
     pub lints: Option<TomlLints>,
 }
@@ -91,14 +91,7 @@ pub struct TomlWorkspace {
 /// A group of fields that are inheritable by members of the workspace
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct InheritableFields {
-    // We use skip here since it will never be present when deserializing
-    // and we don't want it present when serializing
-    #[serde(skip)]
-    pub dependencies: Option<BTreeMap<String, TomlDependency>>,
-    #[serde(skip)]
-    pub lints: Option<TomlLints>,
-
+pub struct InheritablePackage {
     pub version: Option<semver::Version>,
     pub authors: Option<Vec<String>>,
     pub description: Option<String>,
@@ -116,10 +109,6 @@ pub struct InheritableFields {
     pub exclude: Option<Vec<String>>,
     pub include: Option<Vec<String>>,
     pub rust_version: Option<RustVersion>,
-    // We use skip here since it will never be present when deserializing
-    // and we don't want it present when serializing
-    #[serde(skip)]
-    pub _ws_root: PathBuf,
 }
 
 /// Represents the `package`/`project` sections of a `Cargo.toml`.
@@ -131,19 +120,19 @@ pub struct InheritableFields {
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlPackage {
-    pub edition: Option<MaybeWorkspaceString>,
-    pub rust_version: Option<MaybeWorkspaceRustVersion>,
+    pub edition: Option<InheritableString>,
+    pub rust_version: Option<InheritableRustVersion>,
     pub name: String,
-    pub version: Option<MaybeWorkspaceSemverVersion>,
-    pub authors: Option<MaybeWorkspaceVecString>,
+    pub version: Option<InheritableSemverVersion>,
+    pub authors: Option<InheritableVecString>,
     pub build: Option<StringOrBool>,
     pub metabuild: Option<StringOrVec>,
     pub default_target: Option<String>,
     pub forced_target: Option<String>,
     pub links: Option<String>,
-    pub exclude: Option<MaybeWorkspaceVecString>,
-    pub include: Option<MaybeWorkspaceVecString>,
-    pub publish: Option<MaybeWorkspaceVecStringOrBool>,
+    pub exclude: Option<InheritableVecString>,
+    pub include: Option<InheritableVecString>,
+    pub publish: Option<InheritableVecStringOrBool>,
     pub workspace: Option<String>,
     pub im_a_teapot: Option<bool>,
     pub autobins: Option<bool>,
@@ -153,15 +142,15 @@ pub struct TomlPackage {
     pub default_run: Option<String>,
 
     // Package metadata.
-    pub description: Option<MaybeWorkspaceString>,
-    pub homepage: Option<MaybeWorkspaceString>,
-    pub documentation: Option<MaybeWorkspaceString>,
-    pub readme: Option<MaybeWorkspaceStringOrBool>,
-    pub keywords: Option<MaybeWorkspaceVecString>,
-    pub categories: Option<MaybeWorkspaceVecString>,
-    pub license: Option<MaybeWorkspaceString>,
-    pub license_file: Option<MaybeWorkspaceString>,
-    pub repository: Option<MaybeWorkspaceString>,
+    pub description: Option<InheritableString>,
+    pub homepage: Option<InheritableString>,
+    pub documentation: Option<InheritableString>,
+    pub readme: Option<InheritableStringOrBool>,
+    pub keywords: Option<InheritableVecString>,
+    pub categories: Option<InheritableVecString>,
+    pub license: Option<InheritableString>,
+    pub license_file: Option<InheritableString>,
+    pub repository: Option<InheritableString>,
     pub resolver: Option<String>,
 
     pub metadata: Option<toml::Value>,
@@ -174,16 +163,16 @@ pub struct TomlPackage {
 /// An enum that allows for inheriting keys from a workspace in a Cargo.toml.
 #[derive(Serialize, Copy, Clone, Debug)]
 #[serde(untagged)]
-pub enum MaybeWorkspace<T, W> {
-    /// The "defined" type, or the type that that is used when not inheriting from a workspace.
-    Defined(T),
+pub enum InheritableField<T> {
+    /// The type that that is used when not inheriting from a workspace.
+    Value(T),
     /// The type when inheriting from a workspace.
-    Workspace(W),
+    Inherit(TomlInheritedField),
 }
 
 //. This already has a `Deserialize` impl from version_trim_whitespace
-pub type MaybeWorkspaceSemverVersion = MaybeWorkspace<semver::Version, TomlWorkspaceField>;
-impl<'de> de::Deserialize<'de> for MaybeWorkspaceSemverVersion {
+pub type InheritableSemverVersion = InheritableField<semver::Version>;
+impl<'de> de::Deserialize<'de> for InheritableSemverVersion {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
@@ -192,17 +181,17 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceSemverVersion {
             .expecting("SemVer version")
             .string(
                 |value| match value.trim().parse().map_err(de::Error::custom) {
-                    Ok(parsed) => Ok(MaybeWorkspace::Defined(parsed)),
+                    Ok(parsed) => Ok(InheritableField::Value(parsed)),
                     Err(e) => Err(e),
                 },
             )
-            .map(|value| value.deserialize().map(MaybeWorkspace::Workspace))
+            .map(|value| value.deserialize().map(InheritableField::Inherit))
             .deserialize(d)
     }
 }
 
-pub type MaybeWorkspaceString = MaybeWorkspace<String, TomlWorkspaceField>;
-impl<'de> de::Deserialize<'de> for MaybeWorkspaceString {
+pub type InheritableString = InheritableField<String>;
+impl<'de> de::Deserialize<'de> for InheritableString {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
@@ -210,7 +199,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceString {
         struct Visitor;
 
         impl<'de> de::Visitor<'de> for Visitor {
-            type Value = MaybeWorkspaceString;
+            type Value = InheritableString;
 
             fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
                 f.write_str("a string or workspace")
@@ -220,7 +209,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceString {
             where
                 E: de::Error,
             {
-                Ok(MaybeWorkspaceString::Defined(value))
+                Ok(InheritableString::Value(value))
             }
 
             fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
@@ -228,7 +217,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceString {
                 V: de::MapAccess<'de>,
             {
                 let mvd = de::value::MapAccessDeserializer::new(map);
-                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
+                TomlInheritedField::deserialize(mvd).map(InheritableField::Inherit)
             }
         }
 
@@ -236,8 +225,8 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceString {
     }
 }
 
-pub type MaybeWorkspaceRustVersion = MaybeWorkspace<RustVersion, TomlWorkspaceField>;
-impl<'de> de::Deserialize<'de> for MaybeWorkspaceRustVersion {
+pub type InheritableRustVersion = InheritableField<RustVersion>;
+impl<'de> de::Deserialize<'de> for InheritableRustVersion {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
@@ -245,7 +234,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceRustVersion {
         struct Visitor;
 
         impl<'de> de::Visitor<'de> for Visitor {
-            type Value = MaybeWorkspaceRustVersion;
+            type Value = InheritableRustVersion;
 
             fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
                 f.write_str("a semver or workspace")
@@ -256,7 +245,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceRustVersion {
                 E: de::Error,
             {
                 let value = value.parse::<RustVersion>().map_err(|e| E::custom(e))?;
-                Ok(MaybeWorkspaceRustVersion::Defined(value))
+                Ok(InheritableRustVersion::Value(value))
             }
 
             fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
@@ -264,7 +253,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceRustVersion {
                 V: de::MapAccess<'de>,
             {
                 let mvd = de::value::MapAccessDeserializer::new(map);
-                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
+                TomlInheritedField::deserialize(mvd).map(InheritableField::Inherit)
             }
         }
 
@@ -272,8 +261,8 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceRustVersion {
     }
 }
 
-pub type MaybeWorkspaceVecString = MaybeWorkspace<Vec<String>, TomlWorkspaceField>;
-impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecString {
+pub type InheritableVecString = InheritableField<Vec<String>>;
+impl<'de> de::Deserialize<'de> for InheritableVecString {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
@@ -281,7 +270,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecString {
         struct Visitor;
 
         impl<'de> de::Visitor<'de> for Visitor {
-            type Value = MaybeWorkspaceVecString;
+            type Value = InheritableVecString;
 
             fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
                 f.write_str("a vector of strings or workspace")
@@ -291,7 +280,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecString {
                 A: de::SeqAccess<'de>,
             {
                 let seq = de::value::SeqAccessDeserializer::new(v);
-                Vec::deserialize(seq).map(MaybeWorkspace::Defined)
+                Vec::deserialize(seq).map(InheritableField::Value)
             }
 
             fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
@@ -299,7 +288,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecString {
                 V: de::MapAccess<'de>,
             {
                 let mvd = de::value::MapAccessDeserializer::new(map);
-                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
+                TomlInheritedField::deserialize(mvd).map(InheritableField::Inherit)
             }
         }
 
@@ -307,8 +296,8 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecString {
     }
 }
 
-pub type MaybeWorkspaceStringOrBool = MaybeWorkspace<StringOrBool, TomlWorkspaceField>;
-impl<'de> de::Deserialize<'de> for MaybeWorkspaceStringOrBool {
+pub type InheritableStringOrBool = InheritableField<StringOrBool>;
+impl<'de> de::Deserialize<'de> for InheritableStringOrBool {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
@@ -316,7 +305,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceStringOrBool {
         struct Visitor;
 
         impl<'de> de::Visitor<'de> for Visitor {
-            type Value = MaybeWorkspaceStringOrBool;
+            type Value = InheritableStringOrBool;
 
             fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
                 f.write_str("a string, a bool, or workspace")
@@ -327,7 +316,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceStringOrBool {
                 E: de::Error,
             {
                 let b = de::value::BoolDeserializer::new(v);
-                StringOrBool::deserialize(b).map(MaybeWorkspace::Defined)
+                StringOrBool::deserialize(b).map(InheritableField::Value)
             }
 
             fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
@@ -335,7 +324,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceStringOrBool {
                 E: de::Error,
             {
                 let string = de::value::StringDeserializer::new(v);
-                StringOrBool::deserialize(string).map(MaybeWorkspace::Defined)
+                StringOrBool::deserialize(string).map(InheritableField::Value)
             }
 
             fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
@@ -343,7 +332,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceStringOrBool {
                 V: de::MapAccess<'de>,
             {
                 let mvd = de::value::MapAccessDeserializer::new(map);
-                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
+                TomlInheritedField::deserialize(mvd).map(InheritableField::Inherit)
             }
         }
 
@@ -351,8 +340,8 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceStringOrBool {
     }
 }
 
-pub type MaybeWorkspaceVecStringOrBool = MaybeWorkspace<VecStringOrBool, TomlWorkspaceField>;
-impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecStringOrBool {
+pub type InheritableVecStringOrBool = InheritableField<VecStringOrBool>;
+impl<'de> de::Deserialize<'de> for InheritableVecStringOrBool {
     fn deserialize<D>(d: D) -> Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
@@ -360,7 +349,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecStringOrBool {
         struct Visitor;
 
         impl<'de> de::Visitor<'de> for Visitor {
-            type Value = MaybeWorkspaceVecStringOrBool;
+            type Value = InheritableVecStringOrBool;
 
             fn expecting(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
                 f.write_str("a boolean, a vector of strings, or workspace")
@@ -371,7 +360,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecStringOrBool {
                 E: de::Error,
             {
                 let b = de::value::BoolDeserializer::new(v);
-                VecStringOrBool::deserialize(b).map(MaybeWorkspace::Defined)
+                VecStringOrBool::deserialize(b).map(InheritableField::Value)
             }
 
             fn visit_seq<A>(self, v: A) -> Result<Self::Value, A::Error>
@@ -379,7 +368,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecStringOrBool {
                 A: de::SeqAccess<'de>,
             {
                 let seq = de::value::SeqAccessDeserializer::new(v);
-                VecStringOrBool::deserialize(seq).map(MaybeWorkspace::Defined)
+                VecStringOrBool::deserialize(seq).map(InheritableField::Value)
             }
 
             fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
@@ -387,7 +376,7 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecStringOrBool {
                 V: de::MapAccess<'de>,
             {
                 let mvd = de::value::MapAccessDeserializer::new(map);
-                TomlWorkspaceField::deserialize(mvd).map(MaybeWorkspace::Workspace)
+                TomlInheritedField::deserialize(mvd).map(InheritableField::Inherit)
             }
         }
 
@@ -395,33 +384,32 @@ impl<'de> de::Deserialize<'de> for MaybeWorkspaceVecStringOrBool {
     }
 }
 
-pub type MaybeWorkspaceBtreeMap =
-    MaybeWorkspace<BTreeMap<String, BTreeMap<String, String>>, TomlWorkspaceField>;
+pub type InheritableBtreeMap = InheritableField<BTreeMap<String, BTreeMap<String, String>>>;
 
-impl<'de> de::Deserialize<'de> for MaybeWorkspaceBtreeMap {
+impl<'de> de::Deserialize<'de> for InheritableBtreeMap {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
     {
         let value = serde_value::Value::deserialize(deserializer)?;
 
-        if let Ok(w) = TomlWorkspaceField::deserialize(
+        if let Ok(w) = TomlInheritedField::deserialize(
             serde_value::ValueDeserializer::<D::Error>::new(value.clone()),
         ) {
             return if w.workspace {
-                Ok(MaybeWorkspace::Workspace(w))
+                Ok(InheritableField::Inherit(w))
             } else {
                 Err(de::Error::custom("`workspace` cannot be false"))
             };
         }
         BTreeMap::deserialize(serde_value::ValueDeserializer::<D::Error>::new(value))
-            .map(MaybeWorkspace::Defined)
+            .map(InheritableField::Value)
     }
 }
 
 #[derive(Deserialize, Serialize, Copy, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
-pub struct TomlWorkspaceField {
+pub struct TomlInheritedField {
     #[serde(deserialize_with = "bool_no_false")]
     pub workspace: bool,
 }
@@ -435,42 +423,49 @@ fn bool_no_false<'de, D: de::Deserializer<'de>>(deserializer: D) -> Result<bool,
     }
 }
 
-pub type MaybeWorkspaceDependency = MaybeWorkspace<TomlDependency, TomlWorkspaceDependency>;
+#[derive(Serialize, Clone, Debug)]
+#[serde(untagged)]
+pub enum InheritableDependency {
+    /// The type that that is used when not inheriting from a workspace.
+    Value(TomlDependency),
+    /// The type when inheriting from a workspace.
+    Inherit(TomlInheritedDependency),
+}
 
-impl MaybeWorkspaceDependency {
+impl InheritableDependency {
     pub fn unused_keys(&self) -> Vec<String> {
         match self {
-            MaybeWorkspaceDependency::Defined(d) => d.unused_keys(),
-            MaybeWorkspaceDependency::Workspace(w) => w._unused_keys.keys().cloned().collect(),
+            InheritableDependency::Value(d) => d.unused_keys(),
+            InheritableDependency::Inherit(w) => w._unused_keys.keys().cloned().collect(),
         }
     }
 }
 
-impl<'de> de::Deserialize<'de> for MaybeWorkspaceDependency {
+impl<'de> de::Deserialize<'de> for InheritableDependency {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
     {
         let value = serde_value::Value::deserialize(deserializer)?;
 
-        if let Ok(w) = TomlWorkspaceDependency::deserialize(serde_value::ValueDeserializer::<
+        if let Ok(w) = TomlInheritedDependency::deserialize(serde_value::ValueDeserializer::<
             D::Error,
         >::new(value.clone()))
         {
             return if w.workspace {
-                Ok(MaybeWorkspace::Workspace(w))
+                Ok(InheritableDependency::Inherit(w))
             } else {
                 Err(de::Error::custom("`workspace` cannot be false"))
             };
         }
         TomlDependency::deserialize(serde_value::ValueDeserializer::<D::Error>::new(value))
-            .map(MaybeWorkspace::Defined)
+            .map(InheritableDependency::Value)
     }
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
-pub struct TomlWorkspaceDependency {
+pub struct TomlInheritedDependency {
     pub workspace: bool,
     pub features: Option<Vec<String>>,
     pub default_features: Option<bool>,
@@ -485,7 +480,7 @@ pub struct TomlWorkspaceDependency {
     pub _unused_keys: BTreeMap<String, toml::Value>,
 }
 
-impl TomlWorkspaceDependency {
+impl TomlInheritedDependency {
     pub fn default_features(&self) -> Option<bool> {
         self.default_features.or(self.default_features2)
     }
@@ -996,23 +991,23 @@ impl TomlTarget {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlPlatform {
-    pub dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
-    pub build_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    pub dependencies: Option<BTreeMap<String, InheritableDependency>>,
+    pub build_dependencies: Option<BTreeMap<String, InheritableDependency>>,
     #[serde(rename = "build_dependencies")]
-    pub build_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
-    pub dev_dependencies: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    pub build_dependencies2: Option<BTreeMap<String, InheritableDependency>>,
+    pub dev_dependencies: Option<BTreeMap<String, InheritableDependency>>,
     #[serde(rename = "dev_dependencies")]
-    pub dev_dependencies2: Option<BTreeMap<String, MaybeWorkspaceDependency>>,
+    pub dev_dependencies2: Option<BTreeMap<String, InheritableDependency>>,
 }
 
 impl TomlPlatform {
-    pub fn dev_dependencies(&self) -> Option<&BTreeMap<String, MaybeWorkspaceDependency>> {
+    pub fn dev_dependencies(&self) -> Option<&BTreeMap<String, InheritableDependency>> {
         self.dev_dependencies
             .as_ref()
             .or(self.dev_dependencies2.as_ref())
     }
 
-    pub fn build_dependencies(&self) -> Option<&BTreeMap<String, MaybeWorkspaceDependency>> {
+    pub fn build_dependencies(&self) -> Option<&BTreeMap<String, InheritableDependency>> {
         self.build_dependencies
             .as_ref()
             .or(self.build_dependencies2.as_ref())
@@ -1022,7 +1017,7 @@ impl TomlPlatform {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(expecting = "a lints table")]
 #[serde(rename_all = "kebab-case")]
-pub struct MaybeWorkspaceLints {
+pub struct InheritableLints {
     #[serde(skip_serializing_if = "is_false")]
     #[serde(deserialize_with = "bool_no_false", default)]
     pub workspace: bool,
