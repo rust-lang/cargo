@@ -10,7 +10,7 @@ provider is used if no providers are configured.
 
 Cargo also includes platform-specific providers that use the operating system to securely store
 tokens. The `cargo:token` provider is also included which stores credentials in unencrypted plain
-text in the [credentials](config.md#credentials) file. 
+text in the [credentials](config.md#credentials) file.
 
 ## Recommended configuration
 It's recommended to configure a global credential provider list in `$CARGO_HOME/config.toml`
@@ -71,8 +71,12 @@ The Keychain Access app can be used to view stored tokens.
 ### `cargo:libsecret`
 Uses [libsecret](https://wiki.gnome.org/Projects/Libsecret) to store tokens.
 
-On GNOME, credentials can be viewed using [GNOME Keyring](https://wiki.gnome.org/Projects/GnomeKeyring)
-applications.
+Any password manager with libsecret support can be used to view stored tokens.
+The following are a few examples (non-exhaustive):
+
+- [GNOME Keyring](https://wiki.gnome.org/Projects/GnomeKeyring)
+- [KDE Wallet Manager](https://apps.kde.org/kwalletmanager5/) (since KDE Frameworks 5.97.0)
+- [KeePassXC](https://keepassxc.org/) (since 2.5.0)
 
 ### `cargo:token-from-stdout <command> <args>`
 Launch a subprocess that returns a token on stdout. Newlines will be trimmed.
