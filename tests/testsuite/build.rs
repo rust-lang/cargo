@@ -1584,7 +1584,7 @@ fn crate_env_vars() {
                 }
 
                 #[test]
-                fn env() {
+                fn unit_env_cargo_target_tmpdir() {
                     // Check that CARGO_TARGET_TMPDIR isn't set for unit tests
                     assert!(option_env!("CARGO_TARGET_TMPDIR").is_none());
                     env::var("CARGO_TARGET_TMPDIR").unwrap_err();
@@ -1612,7 +1612,7 @@ fn crate_env_vars() {
             "tests/env.rs",
             r#"
                 #[test]
-                fn env() {
+                fn integration_env_cargo_target_tmpdir() {
                     foo::check_tmpdir(option_env!("CARGO_TARGET_TMPDIR"));
                 }
             "#,
@@ -1627,7 +1627,7 @@ fn crate_env_vars() {
                 use test::Bencher;
 
                 #[bench]
-                fn env(_: &mut Bencher) {
+                fn bench_env_cargo_target_tmpdir(_: &mut Bencher) {
                     foo::check_tmpdir(option_env!("CARGO_TARGET_TMPDIR"));
                 }
             "#,
