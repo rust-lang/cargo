@@ -1,0 +1,68 @@
+{
+  "message": "expected one of `,`, `.`, `?`, `}`, or an operator, found `=>`",
+  "code": null,
+  "level": "error",
+  "spans": [
+    {
+      "file_name": "./tests/everything/handle-insert-only.rs",
+      "byte_start": 163,
+      "byte_end": 165,
+      "line_start": 6,
+      "line_end": 6,
+      "column_start": 18,
+      "column_end": 20,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "        &Some(x) => x,",
+          "highlight_start": 18,
+          "highlight_end": 20
+        }
+      ],
+      "label": "expected one of `,`, `.`, `?`, `}`, or an operator here",
+      "suggested_replacement": null,
+      "expansion": null
+    }
+  ],
+  "children": [
+    {
+      "message": "missing a comma here to end this `match` arm",
+      "code": null,
+      "level": "help",
+      "spans": [
+        {
+          "file_name": "./tests/everything/handle-insert-only.rs",
+          "byte_start": 145,
+          "byte_end": 145,
+          "line_start": 5,
+          "line_end": 5,
+          "column_start": 19,
+          "column_end": 19,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "        &None => 1",
+              "highlight_start": 19,
+              "highlight_end": 19
+            }
+          ],
+          "label": null,
+          "suggested_replacement": ",",
+          "suggestion_applicability": "Unspecified",
+          "expansion": null
+        }
+      ],
+      "children": [],
+      "rendered": null
+    }
+  ],
+  "rendered": "error: expected one of `,`, `.`, `?`, `}`, or an operator, found `=>`\n --> ./tests/everything/handle-insert-only.rs:6:18\n  |\n5 |         &None => 1\n  |                   - help: missing a comma here to end this `match` arm\n6 |         &Some(x) => x,\n  |                  ^^ expected one of `,`, `.`, `?`, `}`, or an operator here\n\n"
+}
+{
+  "message": "aborting due to previous error",
+  "code": null,
+  "level": "error",
+  "spans": [],
+  "children": [],
+  "rendered": "error: aborting due to previous error\n\n"
+}
