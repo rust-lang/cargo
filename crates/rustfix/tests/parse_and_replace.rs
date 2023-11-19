@@ -1,7 +1,6 @@
 #![cfg(not(windows))] // TODO: should fix these tests on Windows
 
 use anyhow::{anyhow, ensure, Context, Error};
-use log::{debug, info, warn};
 use rustfix::apply_suggestions;
 use std::collections::HashSet;
 use std::env;
@@ -10,6 +9,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Output;
 use tempfile::tempdir;
+use tracing::{debug, info, warn};
 
 mod fixmode {
     pub const EVERYTHING: &str = "yolo";
@@ -237,13 +237,13 @@ fn assert_fixtures(dir: &str, mode: &str) {
 
 #[test]
 fn everything() {
-    let _ = env_logger::try_init();
+    tracing_subscriber::fmt::init();
     assert_fixtures("./tests/everything", fixmode::EVERYTHING);
 }
 
 #[test]
 #[ignore = "Requires custom rustc build"]
 fn edition() {
-    let _ = env_logger::try_init();
+    tracing_subscriber::fmt::init();
     assert_fixtures("./tests/edition", fixmode::EDITION);
 }

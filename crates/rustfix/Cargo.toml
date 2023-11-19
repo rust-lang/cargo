@@ -19,17 +19,16 @@ exclude = [
 
 [dependencies]
 anyhow.workspace = true
-log = "0.4.1"
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
+tracing.workspace = true
 
 [dev-dependencies]
 duct = "0.9"
-env_logger = "0.5.0-rc.1"
-log = "0.4.1"
 proptest = "0.7.0"
 similar = "0.4.0"
 tempfile.workspace = true
+tracing-subscriber.workspace = true
 
 [lints]
 workspace = true

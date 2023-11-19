@@ -103,8 +103,7 @@ impl Data {
                 .iter()
                 .position(|p| !p.data.is_inserted() && p.start <= range.start && p.end >= range.end)
                 .ok_or_else(|| {
-                    use log::Level::Debug;
-                    if log_enabled!(Debug) {
+                    if tracing::enabled!(tracing::Level::DEBUG) {
                         let slices = self
                             .parts
                             .iter()
@@ -120,9 +119,11 @@ impl Data {
                                 )
                             })
                             .collect::<Vec<_>>();
-                        debug!(
+                        tracing::debug!(
                             "no single slice covering {}..{}, current slices: {:?}",
-                            range.start, range.end, slices,
+                            range.start,
+                            range.end,
+                            slices,
                         );
                     }
 
