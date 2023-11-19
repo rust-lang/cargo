@@ -5,8 +5,8 @@ use cargo_test_support::compare::assert_match_exact;
 use cargo_test_support::git::{self, init};
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{Dependency, Package};
+use cargo_test_support::tools;
 use cargo_test_support::{basic_manifest, is_nightly, project, Project};
-use cargo_test_support::{tools, wrapped_clippy_driver};
 
 #[cargo_test]
 fn do_not_fix_broken_builds() {
@@ -193,7 +193,7 @@ fn broken_clippy_fixes_backed_out() {
         .env("__CARGO_FIX_YOLO", "1")
         .env("RUSTC", p.root().join("foo/target/debug/foo"))
         //  We can't use `clippy` so we use a `rustc` workspace wrapper instead
-        .env("RUSTC_WORKSPACE_WRAPPER", wrapped_clippy_driver())
+        .env("RUSTC_WORKSPACE_WRAPPER", tools::wrapped_clippy_driver())
         .with_stderr_contains(
             "warning: failed to automatically apply fixes suggested by rustc \
              to crate `bar`\n\
