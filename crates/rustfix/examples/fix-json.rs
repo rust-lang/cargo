@@ -1,3 +1,5 @@
+#![allow(clippy::disallowed_methods, clippy::print_stdout, clippy::print_stderr)]
+
 use anyhow::Error;
 use std::io::{stdin, BufReader, Read};
 use std::{collections::HashMap, collections::HashSet, env, fs};
