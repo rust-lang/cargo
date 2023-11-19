@@ -1,7 +1,3 @@
-#[cfg(test)]
-#[macro_use]
-extern crate proptest;
-
 use std::collections::HashSet;
 use std::ops::Range;
 
