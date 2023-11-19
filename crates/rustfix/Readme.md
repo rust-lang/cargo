@@ -5,31 +5,12 @@
 
 Rustfix is a library defining useful structures that represent fix suggestions from rustc.
 
-## Current status
+This is a low-level library. You pass it the JSON output from `rustc`, and you can then use it to apply suggestions to in-memory strings. This library doesn't execute commands, or read or write from the filesystem.
 
-Currently, rustfix is split into two crates:
+If you are looking for the [`cargo fix`] implementation, the core of it is located in [`cargo::ops::fix`].
 
-- `rustfix`, a library for consuming and applying suggestions in the format that `rustc` outputs (this crate)
-- `cargo-fix`, a binary that works as cargo subcommand and that end users will use to fix their code (maintained in the [cargo](https://github.com/rust-lang/cargo/blob/master/src/bin/cargo/commands/fix.rs) repo).
-
-
-The library (and therefore this repo) is considered largely feature-complete. This is because:
-* There is no compiler or even rust-specific logic here
-* New lints and suggestions come from the Rust compiler (and external lints, like [clippy]).
-* `rustfix` doesn't touch the filesystem to implement fixes, or read from disk
-
-[clippy]: https://github.com/rust-lang-nursery/rust-clippy
-
-## Installation
-
-`cargo fix` is a built-in command in Cargo since Rust 1.29. There is no need to install it separately from crates.io.
-
-To use the rustfix library for use in your own fix project, add it to your `Cargo.toml`.
-
-## Using `cargo fix --edition` to transition to Rust 2021
-
-Instructions on how to use this tool to transition a crate to Rust 2021 can be
-found [in the Rust Edition Guide.](https://rust-lang-nursery.github.io/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html)
+[`cargo fix`]: https://doc.rust-lang.org/cargo/commands/cargo-fix.html
+[`cargo::ops::fix`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/ops/fix.rs
 
 ## License
 
