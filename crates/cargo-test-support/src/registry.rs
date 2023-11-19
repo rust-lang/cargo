@@ -1564,6 +1564,9 @@ impl Package {
             "#,
                 target, kind, dep.name, dep.vers
             ));
+            if dep.optional {
+                manifest.push_str("optional = true\n");
+            }
             if let Some(artifact) = &dep.artifact {
                 manifest.push_str(&format!("artifact = \"{}\"\n", artifact));
             }
