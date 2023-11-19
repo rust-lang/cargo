@@ -29,8 +29,7 @@ fn compile(file: &Path, mode: &str) -> Result<Output, Error> {
 
     let mut args: Vec<OsString> = vec![
         file.into(),
-        "--error-format=pretty-json".into(),
-        "-Zunstable-options".into(),
+        "--error-format=json".into(),
         "--emit=metadata".into(),
         "--crate-name=rustfix_test".into(),
         "--out-dir".into(),
