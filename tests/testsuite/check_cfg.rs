@@ -184,10 +184,12 @@ fn features_fingerprint() {
 
     p.cargo("check -v -Zcheck-cfg")
         .masquerade_as_nightly_cargo(&["check-cfg"])
-        // this is a bug, rustc should be called again
-        .with_stderr_does_not_contain("[..]rustc[..]")
-        // and should show a warning from the unexpected_cfgs lint
-        .with_stderr_does_not_contain("[..]unexpected_cfgs[..]")
+        // we check that the fingerprint is indeed dirty
+        .with_stderr_contains("[..]Dirty[..]the list of declared features changed")
+        // that is cause rustc to be called again with the new check-cfg args
+        .with_stderr_contains(x!("rustc" => "cfg" of "feature" with "f_a"))
+        // and that we indeed found a new warning from the unexpected_cfgs lint
+        .with_stderr_contains("[..]unexpected_cfgs[..]")
         .run();
 }
 
