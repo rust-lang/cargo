@@ -1,5 +1,3 @@
-#![warn(rust_2018_idioms)]
-
 #[macro_use]
 extern crate log;
 #[cfg(test)]
