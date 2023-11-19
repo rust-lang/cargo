@@ -7,6 +7,7 @@ use std::sync::OnceLock;
 
 static ECHO_WRAPPER: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
 static ECHO: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
+static CLIPPY_DRIVER: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
 
 /// Returns the path to an executable that works as a wrapper around rustc.
 ///
@@ -106,4 +107,35 @@ pub fn echo_subcommand() -> Project {
         .build();
     p.cargo("build").run();
     p
+}
+
+/// A wrapper around `rustc` instead of calling `clippy`.
+pub fn wrapped_clippy_driver() -> PathBuf {
+    let mut lock = CLIPPY_DRIVER
+        .get_or_init(|| Default::default())
+        .lock()
+        .unwrap();
+    if let Some(path) = &*lock {
+        return path.clone();
+    }
+    let clippy_driver = project()
+        .at(paths::global_root().join("clippy-driver"))
+        .file("Cargo.toml", &basic_manifest("clippy-driver", "0.0.1"))
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                let mut args = std::env::args_os();
+                let _me = args.next().unwrap();
+                let rustc = args.next().unwrap();
+                let status = std::process::Command::new(rustc).args(args).status().unwrap();
+                std::process::exit(status.code().unwrap_or(1));
+            }
+            "#,
+        )
+        .build();
+    clippy_driver.cargo("build").run();
+    let path = clippy_driver.bin("clippy-driver");
+    *lock = Some(path.clone());
+    path
 }

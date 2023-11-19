@@ -6,8 +6,8 @@ use crate::messages::raw_rustc_output;
 use cargo_test_support::install::exe;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
+use cargo_test_support::tools;
 use cargo_test_support::{basic_bin_manifest, basic_manifest, git, project};
-use cargo_test_support::{tools, wrapped_clippy_driver};
 
 #[cargo_test]
 fn check_success() {
@@ -1432,7 +1432,7 @@ fn check_fixable_warning_for_clippy() {
 
     foo.cargo("check")
         // We can't use `clippy` so we use a `rustc` workspace wrapper instead
-        .env("RUSTC_WORKSPACE_WRAPPER", wrapped_clippy_driver())
+        .env("RUSTC_WORKSPACE_WRAPPER", tools::wrapped_clippy_driver())
         .with_stderr_contains("[..] (run `cargo clippy --fix --lib -p foo` to apply 1 suggestion)")
         .run();
 }
