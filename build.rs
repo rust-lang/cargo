@@ -50,6 +50,14 @@ fn commit_info() {
     if !Path::new(".git").exists() {
         return;
     }
+
+    // Var set by bootstrap whenever omit-git-hash is enabled in rust-lang/rust's config.toml.
+    println!("cargo:rerun-if-env-changed=CFG_OMIT_GIT_HASH");
+    #[allow(clippy::disallowed_methods)]
+    if std::env::var_os("CFG_OMIT_GIT_HASH").is_some() {
+        return;
+    }
+
     let output = match Command::new("git")
         .arg("log")
         .arg("-1")
