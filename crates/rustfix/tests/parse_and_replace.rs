@@ -7,7 +7,7 @@ use std::env;
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Output;
+use std::process::{Command, Output};
 use tempfile::tempdir;
 use tracing::{debug, info, warn};
 
@@ -40,13 +40,11 @@ fn compile(file: &Path, mode: &str) -> Result<Output, Error> {
         args.push("--edition=2018".into());
     }
 
-    let res = duct::cmd(env::var_os("RUSTC").unwrap_or("rustc".into()), &args)
+    let res = Command::new(env::var_os("RUSTC").unwrap_or("rustc".into()))
+        .args(&args)
         .env("CLIPPY_DISABLE_DOCS_LINKS", "true")
         .env_remove("RUST_LOG")
-        .stdout_capture()
-        .stderr_capture()
-        .unchecked()
-        .run()?;
+        .output()?;
 
     Ok(res)
 }

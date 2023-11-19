@@ -24,7 +24,6 @@ serde_json.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]
-duct = "0.9"
 proptest.workspace = true
 similar = "0.4.0"
 tempfile.workspace = true
