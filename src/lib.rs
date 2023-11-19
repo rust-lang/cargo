@@ -239,11 +239,8 @@ impl CodeFix {
     pub fn apply(&mut self, suggestion: &Suggestion) -> Result<(), Error> {
         for sol in &suggestion.solutions {
             for r in &sol.replacements {
-                self.data.replace_range(
-                    r.snippet.range.start,
-                    r.snippet.range.end.saturating_sub(1),
-                    r.replacement.as_bytes(),
-                )?;
+                self.data
+                    .replace_range(r.snippet.range.clone(), r.replacement.as_bytes())?;
             }
         }
         Ok(())
