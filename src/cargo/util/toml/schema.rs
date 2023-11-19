@@ -170,6 +170,15 @@ pub enum InheritableField<T> {
     Inherit(TomlInheritedField),
 }
 
+impl<T> InheritableField<T> {
+    pub fn as_value(&self) -> Option<&T> {
+        match self {
+            InheritableField::Inherit(_) => None,
+            InheritableField::Value(defined) => Some(defined),
+        }
+    }
+}
+
 //. This already has a `Deserialize` impl from version_trim_whitespace
 pub type InheritableSemverVersion = InheritableField<semver::Version>;
 impl<'de> de::Deserialize<'de> for InheritableSemverVersion {
