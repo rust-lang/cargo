@@ -105,7 +105,7 @@ windows-sys = "0.48"
 
 [package]
 name = "cargo"
-version = "0.75.0"
+version = "0.75.1"
 edition.workspace = true
 license.workspace = true
 homepage = "https://crates.io"
