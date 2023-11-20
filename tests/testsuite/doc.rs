@@ -1698,6 +1698,7 @@ fn doc_message_format() {
             r#"
             {
                 "message": {
+                    "$message_type": "diagnostic",
                     "children": "{...}",
                     "code": "{...}",
                     "level": "error",
