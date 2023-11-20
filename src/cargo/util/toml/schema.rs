@@ -170,6 +170,15 @@ pub enum InheritableField<T> {
     Inherit(TomlInheritedField),
 }
 
+impl<T> InheritableField<T> {
+    pub fn as_value(&self) -> Option<&T> {
+        match self {
+            InheritableField::Inherit(_) => None,
+            InheritableField::Value(defined) => Some(defined),
+        }
+    }
+}
+
 //. This already has a `Deserialize` impl from version_trim_whitespace
 pub type InheritableSemverVersion = InheritableField<semver::Version>;
 impl<'de> de::Deserialize<'de> for InheritableSemverVersion {
@@ -411,7 +420,19 @@ impl<'de> de::Deserialize<'de> for InheritableBtreeMap {
 #[serde(rename_all = "kebab-case")]
 pub struct TomlInheritedField {
     #[serde(deserialize_with = "bool_no_false")]
-    pub workspace: bool,
+    workspace: bool,
+}
+
+impl TomlInheritedField {
+    pub fn new() -> Self {
+        TomlInheritedField { workspace: true }
+    }
+}
+
+impl Default for TomlInheritedField {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 fn bool_no_false<'de, D: de::Deserializer<'de>>(deserializer: D) -> Result<bool, D::Error> {

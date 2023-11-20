@@ -1568,13 +1568,6 @@ impl<T> schema::InheritableField<T> {
             }),
         }
     }
-
-    fn as_value(&self) -> Option<&T> {
-        match self {
-            schema::InheritableField::Inherit(_) => None,
-            schema::InheritableField::Value(defined) => Some(defined),
-        }
-    }
 }
 
 impl schema::InheritableDependency {
