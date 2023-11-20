@@ -3306,55 +3306,45 @@ fn init_and_add_inner_target(p: ProjectBuilder) -> ProjectBuilder {
 }
 
 #[cargo_test]
-fn custom_build_warning() {
+fn build_script_outside_pkg_root() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-        [package]
-        name = "foo"
-        version = "0.0.1"
-        license = "MIT"
-        description = "foo"
-        authors = []
-        build = "../t_custom_build/custom_build.rs"
-        "#,
+    [package]
+    name = "foo"
+    version = "0.0.1"
+    license = "MIT"
+    description = "foo"
+    authors = []
+    build = "../t_custom_build/custom_build.rs"
+    "#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
-    p.cargo("package -l")
-        .with_stderr(format!(
-            "\
+    let mut expect_msg = String::from("\
 warning: manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-warning: build `{}/../t_custom_build/custom_build.rs` does not appear to exist.
-Please update the build setting in the manifest at `{}/Cargo.toml`
-This may become a hard error in the future.
-",
-            p.root().display(),
-            p.root().display()
-        ))
-        .run();
+error: the source file of \"custom-build\" target `build-script-custom_build` doesn't appear to exist.
+This may cause issue during packaging, as modules resolution and resources included via macros are often relative to the path of source files.
+Please update the `build` setting in the manifest at `[CWD]/Cargo.toml` and point to a path inside the root of the package.
+");
+    // custom_build.rs does not exist
+    p.cargo("package -l").with_stderr(&expect_msg).run();
 
-    // crate custom_build.rs outside the package root
+    // custom_build.rs outside the package root
     let custom_build_root = p.root().parent().unwrap().join("t_custom_build");
     _ = fs::create_dir(&custom_build_root).unwrap();
     _ = fs::write(&custom_build_root.join("custom_build.rs"), "fn main() {}");
-
-    p.cargo("package -l")
-        .with_stderr(format!(
-            "\
+    expect_msg = format!(
+        "\
 warning: manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-warning: the source file of \"custom-build\" target `build-script-custom_build` doesn't appear to be a path inside of the package.
-It is at {}/t_custom_build/custom_build.rs, whereas the root the package is {}.
+error: the source file of \"custom-build\" target `build-script-custom_build` doesn't appear to be a path inside of the package.
+It is at `{}/t_custom_build/custom_build.rs`, whereas the root the package is `[CWD]`.
 This may cause issue during packaging, as modules resolution and resources included via macros are often relative to the path of source files.
-Please update the `build` setting in the manifest at `{}/Cargo.toml` and point to a path inside the root of the package.
-",
-p.root().parent().unwrap().display(),
-            p.root().display(),
-            p.root().display()
-        ))
-        .run();
+Please update the `build` setting in the manifest at `[CWD]/Cargo.toml` and point to a path inside the root of the package.
+", p.root().parent().unwrap().display());
+    p.cargo("package -l").with_stderr(&expect_msg).run();
     _ = fs::remove_dir_all(&custom_build_root).unwrap();
 }

@@ -342,15 +342,9 @@ fn build_ar_list(
         if let Some(custome_build_path) = t.src_path().path() {
             let abs_custome_build_path =
                 paths::normalize_path(&pkg.root().join(custome_build_path));
-            if abs_custome_build_path.is_file() {
-                if !abs_custome_build_path
-                    .ancestors()
-                    .any(|ancestor| ancestor == pkg.root())
-                {
-                    warn_custom_build_file_not_in_package(pkg, &abs_custome_build_path, t, &ws)?
-                }
-            } else {
-                warn_on_nonexistent_file(&pkg, &custome_build_path, "build", &ws)?
+            if !abs_custome_build_path.is_file() || !abs_custome_build_path.starts_with(pkg.root())
+            {
+                error_custom_build_file_not_in_package(pkg, &abs_custome_build_path, t, &ws)?
             }
         }
     }
@@ -429,21 +423,33 @@ fn warn_on_nonexistent_file(
     ))
 }
 
-fn warn_custom_build_file_not_in_package(
+fn error_custom_build_file_not_in_package(
     pkg: &Package,
     path: &Path,
     target: &Target,
     ws: &Workspace<'_>,
 ) -> CargoResult<()> {
+    let tip = {
+        if path.is_file() {
+            format!("the source file of {:?} target `{}` doesn't appear to be a path inside of the package.\n\
+            It is at `{}`, whereas the root the package is `{}`.\n",
+            target.kind(), target.name(), path.display(), pkg.root().display()
+            )
+        } else {
+            format!(
+                "the source file of {:?} target `{}` doesn't appear to exist.\n",
+                target.kind(),
+                target.name()
+            )
+        }
+    };
     let msg = format!(
-        "the source file of {:?} target `{}` doesn't appear to be a path inside of the package.\n\
-        It is at {}, whereas the root the package is {}.\n\
+        "{}\
         This may cause issue during packaging, as modules resolution and resources included via macros are often relative to the path of source files.\n\
         Please update the `build` setting in the manifest at `{}` and point to a path inside the root of the package.",
-        target.kind(), target.name(), path.display(), pkg.root().display(),  pkg.manifest_path().display()
+        tip,  pkg.manifest_path().display()
     );
-
-    ws.config().shell().warn(&msg)
+    ws.config().shell().error(&msg)
 }
 
 /// Construct `Cargo.lock` for the package to be published.
