@@ -166,6 +166,7 @@ fn bump_check(args: &clap::ArgMatches, config: &cargo::util::Config) -> CargoRes
         let mut cmd = ProcessBuilder::new("cargo");
         cmd.arg("semver-checks")
             .arg("--workspace")
+            .args(&["--exclude", "rustfix"]) // FIXME: Remove once 1.76 is stable
             .arg("--baseline-rev")
             .arg(referenced_commit.id().to_string());
         config.shell().status("Running", &cmd)?;
