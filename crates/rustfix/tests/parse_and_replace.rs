@@ -95,7 +95,7 @@ fn read_file(path: &Path) -> Result<String, Error> {
 }
 
 fn diff(expected: &str, actual: &str) -> String {
-    use similar::text::{ChangeTag, TextDiff};
+    use similar::{ChangeTag, TextDiff};
     use std::fmt::Write;
 
     let mut res = String::new();

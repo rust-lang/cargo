@@ -25,7 +25,7 @@ tracing.workspace = true
 
 [dev-dependencies]
 proptest.workspace = true
-similar = "0.4.0"
+similar = "2.2.1"
 tempfile.workspace = true
 tracing-subscriber.workspace = true
 

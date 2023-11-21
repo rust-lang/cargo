@@ -2891,7 +2891,7 @@ dependencies = [
  "proptest",
  "serde",
  "serde_json",
- "similar 0.4.0",
+ "similar",
  "tempfile",
  "tracing",
  "tracing-subscriber",
@@ -3129,12 +3129,6 @@ dependencies = [
 
 [[package]]
 name = "similar"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "823f59ff8efe59c4cf706349651b0e19dd6f501fdf3521666fbe498e8d18d0ec"
-
-[[package]]
-name = "similar"
 version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "420acb44afdae038210c99e69aae24109f32f15500aa708e81d46c9f29d55fcf"
@@ -3168,7 +3162,7 @@ dependencies = [
  "escargot",
  "filetime",
  "normalize-line-endings",
- "similar 2.2.1",
+ "similar",
  "snapbox-macros",
  "tempfile",
  "walkdir",
