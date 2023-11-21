@@ -344,7 +344,7 @@ fn build_ar_list(
                 paths::normalize_path(&pkg.root().join(custome_build_path));
             if !abs_custome_build_path.is_file() || !abs_custome_build_path.starts_with(pkg.root())
             {
-                error_custom_build_file_not_in_package(pkg, &abs_custome_build_path, t, &ws)?
+                error_custom_build_file_not_in_package(pkg, &abs_custome_build_path, t)?;
             }
         }
     }
@@ -427,20 +427,16 @@ fn error_custom_build_file_not_in_package(
     pkg: &Package,
     path: &Path,
     target: &Target,
-    ws: &Workspace<'_>,
-) -> CargoResult<()> {
+) -> CargoResult<Vec<ArchiveFile>> {
     let tip = {
+        let description_name = target.description_named();
         if path.is_file() {
-            format!("the source file of {:?} target `{}` doesn't appear to be a path inside of the package.\n\
+            format!("the source file of `{description_name}` doesn't appear to be a path inside of the package.\n\
             It is at `{}`, whereas the root the package is `{}`.\n",
-            target.kind(), target.name(), path.display(), pkg.root().display()
+            path.display(), pkg.root().display()
             )
         } else {
-            format!(
-                "the source file of {:?} target `{}` doesn't appear to exist.\n",
-                target.kind(),
-                target.name()
-            )
+            format!("the source file of `{description_name}` doesn't appear to exist.\n",)
         }
     };
     let msg = format!(
@@ -449,7 +445,7 @@ fn error_custom_build_file_not_in_package(
         Please update the `build` setting in the manifest at `{}` and point to a path inside the root of the package.",
         tip,  pkg.manifest_path().display()
     );
-    ws.config().shell().error(&msg)
+    anyhow::bail!(msg)
 }
 
 /// Construct `Cargo.lock` for the package to be published.
