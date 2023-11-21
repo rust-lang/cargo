@@ -1,3 +1,23 @@
+//! Library for applying diagnostic suggestions to source code.
+//!
+//! This is a low-level library. You pass it the JSON output from `rustc`, and
+//! you can then use it to apply suggestions to in-memory strings. This
+//! library doesn't execute commands, or read or write from the filesystem.
+//!
+//! If you are looking for the [`cargo fix`] implementation, the core of it is
+//! located in [`cargo::ops::fix`].
+//!
+//! [`cargo fix`]: https://doc.rust-lang.org/cargo/commands/cargo-fix.html
+//! [`cargo::ops::fix`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/ops/fix.rs
+//!
+//! The general outline of how to use this library is:
+//!
+//! 1. Call `rustc` and collect the JSON data.
+//! 2. Pass the json data to [`get_suggestions_from_json`].
+//! 3. Create a [`CodeFix`] with the source of a file to modify.
+//! 4. Call [`CodeFix::apply`] to apply a change.
+//! 5. Write the source back to disk.
+
 use std::collections::HashSet;
 use std::ops::Range;
 
