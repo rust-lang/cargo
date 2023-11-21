@@ -33,10 +33,9 @@ relevant are:
 * [`rust-lang/crates.io`] --- Home for the [crates.io] website.
 
 Issues with [`cargo fix`] can be tricky to know where they should be filed,
-since the fixes are driven by `rustc`, processed by [`rustfix`], and the
-front-interface is implemented in Cargo. Feel free to file in the Cargo issue
-tracker, and it will get moved to one of the other issue trackers if
-necessary.
+since the fixes are driven by `rustc`, and the front-interface is implemented
+in Cargo. Feel free to file in the Cargo issue tracker, and it will get moved
+to the [`rust-lang/rust`] issue tracker if necessary.
 
 [Process]: process/index.md
 [security policy]: https://www.rust-lang.org/security.html
@@ -51,7 +50,6 @@ necessary.
 [`rustup`]: https://rust-lang.github.io/rustup/
 [`rust-lang/crates.io`]: https://github.com/rust-lang/crates.io
 [crates.io]: https://crates.io/
-[`rustfix`]: https://github.com/rust-lang/rustfix/
 [`cargo fix`]: https://doc.rust-lang.org/cargo/commands/cargo-fix.html
 
 ## Issue labels
