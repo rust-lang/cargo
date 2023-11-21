@@ -1,0 +1,70 @@
+{
+  "message": "unused variable: `x`",
+  "code": {
+    "code": "unused_variables",
+    "explanation": null
+  },
+  "level": "warning",
+  "spans": [
+    {
+      "file_name": "replace-only-one-char.rs",
+      "byte_start": 20,
+      "byte_end": 21,
+      "line_start": 2,
+      "line_end": 2,
+      "column_start": 9,
+      "column_end": 10,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "    let x = 42;",
+          "highlight_start": 9,
+          "highlight_end": 10
+        }
+      ],
+      "label": null,
+      "suggested_replacement": null,
+      "expansion": null
+    }
+  ],
+  "children": [
+    {
+      "message": "#[warn(unused_variables)] on by default",
+      "code": null,
+      "level": "note",
+      "spans": [],
+      "children": [],
+      "rendered": null
+    },
+    {
+      "message": "consider using `_x` instead",
+      "code": null,
+      "level": "help",
+      "spans": [
+        {
+          "file_name": "replace-only-one-char.rs",
+          "byte_start": 20,
+          "byte_end": 21,
+          "line_start": 2,
+          "line_end": 2,
+          "column_start": 9,
+          "column_end": 10,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "    let x = 42;",
+              "highlight_start": 9,
+              "highlight_end": 10
+            }
+          ],
+          "label": null,
+          "suggested_replacement": "_x",
+          "expansion": null
+        }
+      ],
+      "children": [],
+      "rendered": null
+    }
+  ],
+  "rendered": "warning: unused variable: `x`\n --> replace-only-one-char.rs:2:9\n  |\n2 |     let x = 42;\n  |         ^ help: consider using `_x` instead\n  |\n  = note: #[warn(unused_variables)] on by default\n\n"
+}

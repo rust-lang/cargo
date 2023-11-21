@@ -1,0 +1,70 @@
+{
+  "message": "cannot assign to captured outer variable in an `FnMut` closure",
+  "code": {
+    "code": "E0594",
+    "explanation": null
+  },
+  "level": "error",
+  "spans": [
+    {
+      "file_name": "./tests/everything/closure-immutable-outer-variable.rs",
+      "byte_start": 615,
+      "byte_end": 624,
+      "line_start": 19,
+      "line_end": 19,
+      "column_start": 26,
+      "column_end": 35,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "    foo(Box::new(move || y = false) as Box<_>); //~ ERROR cannot assign to captured outer variable",
+          "highlight_start": 26,
+          "highlight_end": 35
+        }
+      ],
+      "label": null,
+      "suggested_replacement": null,
+      "expansion": null
+    }
+  ],
+  "children": [
+    {
+      "message": "consider making `y` mutable",
+      "code": null,
+      "level": "help",
+      "spans": [
+        {
+          "file_name": "./tests/everything/closure-immutable-outer-variable.rs",
+          "byte_start": 580,
+          "byte_end": 581,
+          "line_start": 18,
+          "line_end": 18,
+          "column_start": 9,
+          "column_end": 10,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "    let y = true;",
+              "highlight_start": 9,
+              "highlight_end": 10
+            }
+          ],
+          "label": null,
+          "suggested_replacement": "mut y",
+          "expansion": null
+        }
+      ],
+      "children": [],
+      "rendered": null
+    }
+  ],
+  "rendered": "error[E0594]: cannot assign to captured outer variable in an `FnMut` closure\n  --> ./tests/everything/closure-immutable-outer-variable.rs:19:26\n   |\n18 |     let y = true;\n   |         - help: consider making `y` mutable: `mut y`\n19 |     foo(Box::new(move || y = false) as Box<_>); //~ ERROR cannot assign to captured outer variable\n   |                          ^^^^^^^^^\n\nIf you want more information on this error, try using \"rustc --explain E0594\"\n"
+}
+{
+  "message": "aborting due to previous error",
+  "code": null,
+  "level": "error",
+  "spans": [],
+  "children": [],
+  "rendered": "error: aborting due to previous error\n\n"
+}

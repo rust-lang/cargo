@@ -1,0 +1,33 @@
+[package]
+name = "rustfix"
+version = "0.6.2"
+authors = [
+    "Pascal Hertleif <killercup@gmail.com>",
+    "Oliver Schneider <oli-obk@users.noreply.github.com>",
+]
+rust-version = "1.70.0"  # MSRV:3
+edition.workspace = true
+license.workspace = true
+homepage = "https://github.com/rust-lang/cargo"
+repository = "https://github.com/rust-lang/cargo"
+description = "Automatically apply the suggestions made by rustc"
+documentation = "https://docs.rs/rustfix"
+exclude = [
+    "examples/*",
+    "tests/*",
+]
+
+[dependencies]
+anyhow.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+similar = "2.2.1"
+tempfile.workspace = true
+tracing-subscriber.workspace = true
+
+[lints]
+workspace = true

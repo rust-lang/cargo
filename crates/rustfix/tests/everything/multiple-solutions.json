@@ -1,0 +1,114 @@
+{
+  "message": "unused imports: `HashMap`, `VecDeque`",
+  "code": {
+    "code": "unused_imports",
+    "explanation": null
+  },
+  "level": "warning",
+  "spans": [
+    {
+      "file_name": "src/main.rs",
+      "byte_start": 23,
+      "byte_end": 30,
+      "line_start": 1,
+      "line_end": 1,
+      "column_start": 24,
+      "column_end": 31,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "use std::collections::{HashMap, HashSet, VecDeque};",
+          "highlight_start": 24,
+          "highlight_end": 31
+        }
+      ],
+      "label": null,
+      "suggested_replacement": null,
+      "suggestion_applicability": null,
+      "expansion": null
+    },
+    {
+      "file_name": "src/main.rs",
+      "byte_start": 41,
+      "byte_end": 49,
+      "line_start": 1,
+      "line_end": 1,
+      "column_start": 42,
+      "column_end": 50,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "use std::collections::{HashMap, HashSet, VecDeque};",
+          "highlight_start": 42,
+          "highlight_end": 50
+        }
+      ],
+      "label": null,
+      "suggested_replacement": null,
+      "suggestion_applicability": null,
+      "expansion": null
+    }
+  ],
+  "children": [
+    {
+      "message": "#[warn(unused_imports)] on by default",
+      "code": null,
+      "level": "note",
+      "spans": [],
+      "children": [],
+      "rendered": null
+    },
+    {
+      "message": "remove the unused imports",
+      "code": null,
+      "level": "help",
+      "spans": [
+        {
+          "file_name": "src/main.rs",
+          "byte_start": 23,
+          "byte_end": 32,
+          "line_start": 1,
+          "line_end": 1,
+          "column_start": 24,
+          "column_end": 33,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "use std::collections::{HashMap, HashSet, VecDeque};",
+              "highlight_start": 24,
+              "highlight_end": 33
+            }
+          ],
+          "label": null,
+          "suggested_replacement": "",
+          "suggestion_applicability": "MachineApplicable",
+          "expansion": null
+        },
+        {
+          "file_name": "src/main.rs",
+          "byte_start": 39,
+          "byte_end": 49,
+          "line_start": 1,
+          "line_end": 1,
+          "column_start": 40,
+          "column_end": 50,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "use std::collections::{HashMap, HashSet, VecDeque};",
+              "highlight_start": 40,
+              "highlight_end": 50
+            }
+          ],
+          "label": null,
+          "suggested_replacement": "",
+          "suggestion_applicability": "MachineApplicable",
+          "expansion": null
+        }
+      ],
+      "children": [],
+      "rendered": null
+    }
+  ],
+  "rendered": "warning: unused imports: `HashMap`, `VecDeque`\n --> src/main.rs:1:24\n  |\n1 | use std::collections::{HashMap, HashSet, VecDeque};\n  |                        ^^^^^^^           ^^^^^^^^\n  |\n  = note: #[warn(unused_imports)] on by default\nhelp: remove the unused imports\n  |\n1 | use std::collections::{HashSet};\n  |                       --     --\n\n"
+}

@@ -1,0 +1,218 @@
+{
+  "message": "mismatched types",
+  "code": {
+    "code": "E0308",
+    "explanation": "\nThis error occurs when the compiler was unable to infer the concrete type of a\nvariable. It can occur for several cases, the most common of which is a\nmismatch in the expected type that the compiler inferred for a variable's\ninitializing expression, and the actual type explicitly assigned to the\nvariable.\n\nFor example:\n\n```compile_fail,E0308\nlet x: i32 = \"I am not a number!\";\n//     ~~~   ~~~~~~~~~~~~~~~~~~~~\n//      |             |\n//      |    initializing expression;\n//      |    compiler infers type `&str`\n//      |\n//    type `i32` assigned to variable `x`\n```\n"
+  },
+  "level": "error",
+  "spans": [
+    {
+      "file_name": "./tests/everything/str-lit-type-mismatch.rs",
+      "byte_start": 499,
+      "byte_end": 504,
+      "line_start": 13,
+      "line_end": 13,
+      "column_start": 20,
+      "column_end": 25,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "    let x: &[u8] = \"foo\"; //~ ERROR mismatched types",
+          "highlight_start": 20,
+          "highlight_end": 25
+        }
+      ],
+      "label": "expected slice, found str",
+      "suggested_replacement": null,
+      "expansion": null
+    }
+  ],
+  "children": [
+    {
+      "message": "expected type `&[u8]`\n   found type `&'static str`",
+      "code": null,
+      "level": "note",
+      "spans": [],
+      "children": [],
+      "rendered": null
+    },
+    {
+      "message": "consider adding a leading `b`",
+      "code": null,
+      "level": "help",
+      "spans": [
+        {
+          "file_name": "./tests/everything/str-lit-type-mismatch.rs",
+          "byte_start": 499,
+          "byte_end": 504,
+          "line_start": 13,
+          "line_end": 13,
+          "column_start": 20,
+          "column_end": 25,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "    let x: &[u8] = \"foo\"; //~ ERROR mismatched types",
+              "highlight_start": 20,
+              "highlight_end": 25
+            }
+          ],
+          "label": null,
+          "suggested_replacement": "b\"foo\"",
+          "expansion": null
+        }
+      ],
+      "children": [],
+      "rendered": null
+    }
+  ],
+  "rendered": "error[E0308]: mismatched types\n  --> ./tests/everything/str-lit-type-mismatch.rs:13:20\n   |\n13 |     let x: &[u8] = \"foo\"; //~ ERROR mismatched types\n   |                    ^^^^^\n   |                    |\n   |                    expected slice, found str\n   |                    help: consider adding a leading `b`: `b\"foo\"`\n   |\n   = note: expected type `&[u8]`\n              found type `&'static str`\n\nIf you want more information on this error, try using \"rustc --explain E0308\"\n"
+}
+{
+  "message": "mismatched types",
+  "code": {
+    "code": "E0308",
+    "explanation": "\nThis error occurs when the compiler was unable to infer the concrete type of a\nvariable. It can occur for several cases, the most common of which is a\nmismatch in the expected type that the compiler inferred for a variable's\ninitializing expression, and the actual type explicitly assigned to the\nvariable.\n\nFor example:\n\n```compile_fail,E0308\nlet x: i32 = \"I am not a number!\";\n//     ~~~   ~~~~~~~~~~~~~~~~~~~~\n//      |             |\n//      |    initializing expression;\n//      |    compiler infers type `&str`\n//      |\n//    type `i32` assigned to variable `x`\n```\n"
+  },
+  "level": "error",
+  "spans": [
+    {
+      "file_name": "./tests/everything/str-lit-type-mismatch.rs",
+      "byte_start": 555,
+      "byte_end": 561,
+      "line_start": 14,
+      "line_end": 14,
+      "column_start": 23,
+      "column_end": 29,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "    let y: &[u8; 4] = \"baaa\"; //~ ERROR mismatched types",
+          "highlight_start": 23,
+          "highlight_end": 29
+        }
+      ],
+      "label": "expected array of 4 elements, found str",
+      "suggested_replacement": null,
+      "expansion": null
+    }
+  ],
+  "children": [
+    {
+      "message": "expected type `&[u8; 4]`\n   found type `&'static str`",
+      "code": null,
+      "level": "note",
+      "spans": [],
+      "children": [],
+      "rendered": null
+    },
+    {
+      "message": "consider adding a leading `b`",
+      "code": null,
+      "level": "help",
+      "spans": [
+        {
+          "file_name": "./tests/everything/str-lit-type-mismatch.rs",
+          "byte_start": 555,
+          "byte_end": 561,
+          "line_start": 14,
+          "line_end": 14,
+          "column_start": 23,
+          "column_end": 29,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "    let y: &[u8; 4] = \"baaa\"; //~ ERROR mismatched types",
+              "highlight_start": 23,
+              "highlight_end": 29
+            }
+          ],
+          "label": null,
+          "suggested_replacement": "b\"baaa\"",
+          "expansion": null
+        }
+      ],
+      "children": [],
+      "rendered": null
+    }
+  ],
+  "rendered": "error[E0308]: mismatched types\n  --> ./tests/everything/str-lit-type-mismatch.rs:14:23\n   |\n14 |     let y: &[u8; 4] = \"baaa\"; //~ ERROR mismatched types\n   |                       ^^^^^^\n   |                       |\n   |                       expected array of 4 elements, found str\n   |                       help: consider adding a leading `b`: `b\"baaa\"`\n   |\n   = note: expected type `&[u8; 4]`\n              found type `&'static str`\n\nIf you want more information on this error, try using \"rustc --explain E0308\"\n"
+}
+{
+  "message": "mismatched types",
+  "code": {
+    "code": "E0308",
+    "explanation": "\nThis error occurs when the compiler was unable to infer the concrete type of a\nvariable. It can occur for several cases, the most common of which is a\nmismatch in the expected type that the compiler inferred for a variable's\ninitializing expression, and the actual type explicitly assigned to the\nvariable.\n\nFor example:\n\n```compile_fail,E0308\nlet x: i32 = \"I am not a number!\";\n//     ~~~   ~~~~~~~~~~~~~~~~~~~~\n//      |             |\n//      |    initializing expression;\n//      |    compiler infers type `&str`\n//      |\n//    type `i32` assigned to variable `x`\n```\n"
+  },
+  "level": "error",
+  "spans": [
+    {
+      "file_name": "./tests/everything/str-lit-type-mismatch.rs",
+      "byte_start": 608,
+      "byte_end": 614,
+      "line_start": 15,
+      "line_end": 15,
+      "column_start": 19,
+      "column_end": 25,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "    let z: &str = b\"foo\"; //~ ERROR mismatched types",
+          "highlight_start": 19,
+          "highlight_end": 25
+        }
+      ],
+      "label": "expected str, found array of 3 elements",
+      "suggested_replacement": null,
+      "expansion": null
+    }
+  ],
+  "children": [
+    {
+      "message": "expected type `&str`\n   found type `&'static [u8; 3]`",
+      "code": null,
+      "level": "note",
+      "spans": [],
+      "children": [],
+      "rendered": null
+    },
+    {
+      "message": "consider removing the leading `b`",
+      "code": null,
+      "level": "help",
+      "spans": [
+        {
+          "file_name": "./tests/everything/str-lit-type-mismatch.rs",
+          "byte_start": 608,
+          "byte_end": 614,
+          "line_start": 15,
+          "line_end": 15,
+          "column_start": 19,
+          "column_end": 25,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "    let z: &str = b\"foo\"; //~ ERROR mismatched types",
+              "highlight_start": 19,
+              "highlight_end": 25
+            }
+          ],
+          "label": null,
+          "suggested_replacement": "\"foo\"",
+          "expansion": null
+        }
+      ],
+      "children": [],
+      "rendered": null
+    }
+  ],
+  "rendered": "error[E0308]: mismatched types\n  --> ./tests/everything/str-lit-type-mismatch.rs:15:19\n   |\n15 |     let z: &str = b\"foo\"; //~ ERROR mismatched types\n   |                   ^^^^^^\n   |                   |\n   |                   expected str, found array of 3 elements\n   |                   help: consider removing the leading `b`: `\"foo\"`\n   |\n   = note: expected type `&str`\n              found type `&'static [u8; 3]`\n\nIf you want more information on this error, try using \"rustc --explain E0308\"\n"
+}
+{
+  "message": "aborting due to 3 previous errors",
+  "code": null,
+  "level": "error",
+  "spans": [],
+  "children": [],
+  "rendered": "error: aborting due to 3 previous errors\n\n"
+}
