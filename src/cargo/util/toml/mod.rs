@@ -1656,7 +1656,17 @@ impl schema::TomlInheritedDependency {
                     if let Some(public) = self.public {
                         d.public = Some(public);
                     }
-                    d.add_features(self.features.clone());
+                    d.features = match (d.features.clone(), self.features.clone()) {
+                        (Some(dep_feat), Some(inherit_feat)) => Some(
+                            dep_feat
+                                .into_iter()
+                                .chain(inherit_feat)
+                                .collect::<Vec<String>>(),
+                        ),
+                        (Some(dep_fet), None) => Some(dep_fet),
+                        (None, Some(inherit_feat)) => Some(inherit_feat),
+                        (None, None) => None,
+                    };
                     d.optional = self.optional;
                     schema::TomlDependency::Detailed(d)
                 }
@@ -1712,20 +1722,6 @@ impl<P: ResolveToPath + Clone> schema::TomlDependency<P> {
 }
 
 impl schema::TomlDetailedDependency {
-    fn add_features(&mut self, features: Option<Vec<String>>) {
-        self.features = match (self.features.clone(), features.clone()) {
-            (Some(dep_feat), Some(inherit_feat)) => Some(
-                dep_feat
-                    .into_iter()
-                    .chain(inherit_feat)
-                    .collect::<Vec<String>>(),
-            ),
-            (Some(dep_fet), None) => Some(dep_fet),
-            (None, Some(inherit_feat)) => Some(inherit_feat),
-            (None, None) => None,
-        };
-    }
-
     fn resolve_path(
         &mut self,
         name: &str,
