@@ -1576,6 +1576,24 @@ impl<T> schema::InheritableField<T> {
     }
 }
 
+impl schema::InheritableLints {
+    fn inherit_with<'a>(
+        self,
+        get_ws_inheritable: impl FnOnce() -> CargoResult<schema::TomlLints>,
+    ) -> CargoResult<schema::TomlLints> {
+        if self.workspace {
+            if !self.lints.is_empty() {
+                anyhow::bail!("cannot override `workspace.lints` in `lints`, either remove the overrides or `lints.workspace = true` and manually specify the lints");
+            }
+            get_ws_inheritable().with_context(|| {
+                "error inheriting `lints` from workspace root manifest's `workspace.lints`"
+            })
+        } else {
+            Ok(self.lints)
+        }
+    }
+}
+
 impl schema::InheritableDependency {
     fn inherit_with<'a>(
         self,
@@ -2139,24 +2157,6 @@ fn validate_profile_override(profile: &schema::TomlProfile, which: &str) -> Carg
         bail!("`rpath` may not be specified in a `{}` profile", which)
     }
     Ok(())
-}
-
-impl schema::InheritableLints {
-    fn inherit_with<'a>(
-        self,
-        get_ws_inheritable: impl FnOnce() -> CargoResult<schema::TomlLints>,
-    ) -> CargoResult<schema::TomlLints> {
-        if self.workspace {
-            if !self.lints.is_empty() {
-                anyhow::bail!("cannot override `workspace.lints` in `lints`, either remove the overrides or `lints.workspace = true` and manually specify the lints");
-            }
-            get_ws_inheritable().with_context(|| {
-                "error inheriting `lints` from workspace root manifest's `workspace.lints`"
-            })
-        } else {
-            Ok(self.lints)
-        }
-    }
 }
 
 pub trait ResolveToPath {
