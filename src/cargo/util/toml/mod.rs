@@ -503,7 +503,7 @@ impl schema::TomlManifest {
         let version = package
             .version
             .clone()
-            .map(|version| version.inherit_with("version", || inherit()?.version()))
+            .map(|version| field_inherit_with(version, "version", || inherit()?.version()))
             .transpose()?;
 
         package.version = version.clone().map(schema::InheritableField::Value);
@@ -517,8 +517,7 @@ impl schema::TomlManifest {
         );
 
         let edition = if let Some(edition) = package.edition.clone() {
-            let edition: Edition = edition
-                .inherit_with("edition", || inherit()?.edition())?
+            let edition: Edition = field_inherit_with(edition, "edition", || inherit()?.edition())?
                 .parse()
                 .with_context(|| "failed to parse the `edition` key")?;
             package.edition = Some(schema::InheritableField::Value(edition.to_string()));
@@ -543,9 +542,9 @@ impl schema::TomlManifest {
         }
 
         let rust_version = if let Some(rust_version) = &package.rust_version {
-            let rust_version = rust_version
-                .clone()
-                .inherit_with("rust_version", || inherit()?.rust_version())?;
+            let rust_version = field_inherit_with(rust_version.clone(), "rust_version", || {
+                inherit()?.rust_version()
+            })?;
             let req = rust_version.to_caret_req();
             if let Some(first_version) = edition.first_version() {
                 let unsupported =
@@ -800,13 +799,13 @@ impl schema::TomlManifest {
         let exclude = package
             .exclude
             .clone()
-            .map(|mw| mw.inherit_with("exclude", || inherit()?.exclude()))
+            .map(|mw| field_inherit_with(mw, "exclude", || inherit()?.exclude()))
             .transpose()?
             .unwrap_or_default();
         let include = package
             .include
             .clone()
-            .map(|mw| mw.inherit_with("include", || inherit()?.include()))
+            .map(|mw| field_inherit_with(mw, "include", || inherit()?.include()))
             .transpose()?
             .unwrap_or_default();
         let empty_features = BTreeMap::new();
@@ -833,70 +832,72 @@ impl schema::TomlManifest {
             description: package
                 .description
                 .clone()
-                .map(|mw| mw.inherit_with("description", || inherit()?.description()))
+                .map(|mw| field_inherit_with(mw, "description", || inherit()?.description()))
                 .transpose()?,
             homepage: package
                 .homepage
                 .clone()
-                .map(|mw| mw.inherit_with("homepage", || inherit()?.homepage()))
+                .map(|mw| field_inherit_with(mw, "homepage", || inherit()?.homepage()))
                 .transpose()?,
             documentation: package
                 .documentation
                 .clone()
-                .map(|mw| mw.inherit_with("documentation", || inherit()?.documentation()))
+                .map(|mw| field_inherit_with(mw, "documentation", || inherit()?.documentation()))
                 .transpose()?,
             readme: readme_for_package(
                 package_root,
                 package
                     .readme
                     .clone()
-                    .map(|mw| mw.inherit_with("readme", || inherit()?.readme(package_root)))
+                    .map(|mw| field_inherit_with(mw, "readme", || inherit()?.readme(package_root)))
                     .transpose()?
                     .as_ref(),
             ),
             authors: package
                 .authors
                 .clone()
-                .map(|mw| mw.inherit_with("authors", || inherit()?.authors()))
+                .map(|mw| field_inherit_with(mw, "authors", || inherit()?.authors()))
                 .transpose()?
                 .unwrap_or_default(),
             license: package
                 .license
                 .clone()
-                .map(|mw| mw.inherit_with("license", || inherit()?.license()))
+                .map(|mw| field_inherit_with(mw, "license", || inherit()?.license()))
                 .transpose()?,
             license_file: package
                 .license_file
                 .clone()
-                .map(|mw| mw.inherit_with("license", || inherit()?.license_file(package_root)))
+                .map(|mw| {
+                    field_inherit_with(mw, "license", || inherit()?.license_file(package_root))
+                })
                 .transpose()?,
             repository: package
                 .repository
                 .clone()
-                .map(|mw| mw.inherit_with("repository", || inherit()?.repository()))
+                .map(|mw| field_inherit_with(mw, "repository", || inherit()?.repository()))
                 .transpose()?,
             keywords: package
                 .keywords
                 .clone()
-                .map(|mw| mw.inherit_with("keywords", || inherit()?.keywords()))
+                .map(|mw| field_inherit_with(mw, "keywords", || inherit()?.keywords()))
                 .transpose()?
                 .unwrap_or_default(),
             categories: package
                 .categories
                 .clone()
-                .map(|mw| mw.inherit_with("categories", || inherit()?.categories()))
+                .map(|mw| field_inherit_with(mw, "categories", || inherit()?.categories()))
                 .transpose()?
                 .unwrap_or_default(),
             badges: me
                 .badges
                 .clone()
-                .map(|mw| mw.inherit_with("badges", || inherit()?.badges()))
+                .map(|mw| field_inherit_with(mw, "badges", || inherit()?.badges()))
                 .transpose()?
                 .unwrap_or_default(),
             links: package.links.clone(),
             rust_version: package
                 .rust_version
-                .map(|mw| mw.inherit_with("rust-version", || inherit()?.rust_version()))
+                .map(|mw| field_inherit_with(mw, "rust-version", || inherit()?.rust_version()))
                 .transpose()?,
         };
         package.description = metadata
@@ -958,9 +959,7 @@ impl schema::TomlManifest {
         }
 
         let publish = package.publish.clone().map(|publish| {
-            publish
-                .inherit_with("publish", || inherit()?.publish())
-                .unwrap()
+            field_inherit_with(publish, "publish", || inherit()?.publish()).unwrap()
         });
 
         package.publish = publish.clone().map(|p| schema::InheritableField::Value(p));
@@ -1559,13 +1558,12 @@ impl InheritableFields {
     }
 }
 
-impl<T> schema::InheritableField<T> {
-    fn inherit_with<'a>(
-        self,
-        label: &str,
-        get_ws_inheritable: impl FnOnce() -> CargoResult<T>,
-    ) -> CargoResult<T> {
-        match self {
+fn field_inherit_with<'a, T>(
+    field: schema::InheritableField<T>,
+    label: &str,
+    get_ws_inheritable: impl FnOnce() -> CargoResult<T>,
+) -> CargoResult<T> {
+    match field {
             schema::InheritableField::Value(value) => Ok(value),
             schema::InheritableField::Inherit(_) => get_ws_inheritable().with_context(|| {
                 format!(
@@ -1573,7 +1571,6 @@ impl<T> schema::InheritableField<T> {
             )
             }),
         }
-    }
 }
 
 impl schema::InheritableLints {
