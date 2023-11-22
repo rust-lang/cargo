@@ -508,11 +508,12 @@ impl schema::TomlManifest {
 
         package.version = version.clone().map(schema::InheritableField::Value);
 
-        let pkgid = package.to_package_id(
-            source_id,
+        let pkgid = PackageId::pure(
+            package.name.as_str().into(),
             version
                 .clone()
                 .unwrap_or_else(|| semver::Version::new(0, 0, 0)),
+            source_id,
         );
 
         let edition = if let Some(edition) = package.edition.clone() {
@@ -1542,12 +1543,6 @@ impl InheritableFields {
 
     fn ws_root(&self) -> &PathBuf {
         &self._ws_root
-    }
-}
-
-impl schema::TomlPackage {
-    fn to_package_id(&self, source_id: SourceId, version: semver::Version) -> PackageId {
-        PackageId::pure(self.name.as_str().into(), version, source_id)
     }
 }
 
