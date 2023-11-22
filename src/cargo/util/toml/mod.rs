@@ -1657,7 +1657,7 @@ impl schema::TomlInheritedDependency {
                         d.public = Some(public);
                     }
                     d.add_features(self.features.clone());
-                    d.update_optional(self.optional);
+                    d.optional = self.optional;
                     schema::TomlDependency::Detailed(d)
                 }
             }
@@ -1724,10 +1724,6 @@ impl schema::TomlDetailedDependency {
             (None, Some(inherit_feat)) => Some(inherit_feat),
             (None, None) => None,
         };
-    }
-
-    fn update_optional(&mut self, optional: Option<bool>) {
-        self.optional = optional;
     }
 
     fn resolve_path(
