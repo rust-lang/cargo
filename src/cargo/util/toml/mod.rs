@@ -661,9 +661,7 @@ impl schema::TomlManifest {
 
             let mut deps: BTreeMap<String, schema::InheritableDependency> = BTreeMap::new();
             for (n, v) in dependencies.iter() {
-                let resolved = v
-                    .clone()
-                    .inherit_with(n, |dep| dep.inherit_with(n, inheritable, cx))?;
+                let resolved = v.clone().inherit_with(n, inheritable, cx)?;
                 let dep = resolved.to_dependency(n, cx, kind)?;
                 let name_in_toml = dep.name_in_toml().as_str();
                 validate_package_name(name_in_toml, "dependency name", "")?;
@@ -1573,15 +1571,16 @@ impl<T> schema::InheritableField<T> {
 impl schema::InheritableDependency {
     fn inherit_with<'a>(
         self,
-        label: &str,
-        get_ws_inheritable: impl FnOnce(&schema::TomlInheritedDependency) -> CargoResult<TomlDependency>,
+        name: &str,
+        inheritable: impl FnOnce() -> CargoResult<&'a InheritableFields>,
+        cx: &mut Context<'_, '_>,
     ) -> CargoResult<TomlDependency> {
         match self {
             schema::InheritableDependency::Value(value) => Ok(value),
             schema::InheritableDependency::Inherit(w) => {
-                get_ws_inheritable(&w).with_context(|| {
+                w.inherit_with(name, inheritable, cx).with_context(|| {
                     format!(
-                        "error inheriting `{label}` from workspace root manifest's `workspace.dependencies.{label}`",
+                        "error inheriting `{name}` from workspace root manifest's `workspace.dependencies.{name}`",
                     )
                 })
             }
