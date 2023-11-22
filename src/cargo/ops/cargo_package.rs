@@ -431,12 +431,12 @@ fn error_custom_build_file_not_in_package(
     let tip = {
         let description_name = target.description_named();
         if path.is_file() {
-            format!("the source file of `{description_name}` doesn't appear to be a path inside of the package.\n\
+            format!("the source file of {description_name} doesn't appear to be a path inside of the package.\n\
             It is at `{}`, whereas the root the package is `{}`.\n",
             path.display(), pkg.root().display()
             )
         } else {
-            format!("the source file of `{description_name}` doesn't appear to exist.\n",)
+            format!("the source file of {description_name} doesn't appear to exist.\n",)
         }
     };
     let msg = format!(
