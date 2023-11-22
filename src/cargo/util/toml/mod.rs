@@ -1514,7 +1514,14 @@ impl InheritableFields {
         };
         let mut dep = dep.clone();
         if let schema::TomlDependency::Detailed(detailed) = &mut dep {
-            detailed.resolve_path(name, self.ws_root(), package_root)?;
+            if let Some(rel_path) = &detailed.path {
+                detailed.path = Some(resolve_relative_path(
+                    name,
+                    self.ws_root(),
+                    package_root,
+                    rel_path,
+                )?);
+            }
         }
         Ok(dep)
     }
@@ -1718,25 +1725,6 @@ impl<P: ResolveToPath + Clone> schema::TomlDependency<P> {
             .to_dependency(name, cx, kind),
             schema::TomlDependency::Detailed(ref details) => details.to_dependency(name, cx, kind),
         }
-    }
-}
-
-impl schema::TomlDetailedDependency {
-    fn resolve_path(
-        &mut self,
-        name: &str,
-        root_path: &Path,
-        package_root: &Path,
-    ) -> CargoResult<()> {
-        if let Some(rel_path) = &self.path {
-            self.path = Some(resolve_relative_path(
-                name,
-                root_path,
-                package_root,
-                rel_path,
-            )?)
-        }
-        Ok(())
     }
 }
 
