@@ -3,7 +3,7 @@
 use std::cell::RefCell;
 use std::cmp::PartialEq;
 use std::cmp::{max, min};
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 use std::fmt::Write;
 use std::rc::Rc;
@@ -70,33 +70,6 @@ pub fn resolve_and_validated(
             let out = resolve.sort();
             assert_eq!(out.len(), used.len());
 
-            let mut pub_deps: HashMap<PackageId, HashSet<_>> = HashMap::new();
-            for &p in out.iter() {
-                // make the list of `p` public dependencies
-                let mut self_pub_dep = HashSet::new();
-                self_pub_dep.insert(p);
-                for (dp, deps) in resolve.deps(p) {
-                    if deps.iter().any(|d| d.is_public()) {
-                        self_pub_dep.extend(pub_deps[&dp].iter().cloned())
-                    }
-                }
-                pub_deps.insert(p, self_pub_dep);
-
-                // check if `p` has a public dependencies conflicts
-                let seen_dep: BTreeSet<_> = resolve
-                    .deps(p)
-                    .flat_map(|(dp, _)| pub_deps[&dp].iter().cloned())
-                    .collect();
-                let seen_dep: Vec<_> = seen_dep.iter().collect();
-                for a in seen_dep.windows(2) {
-                    if a[0].name() == a[1].name() {
-                        panic!(
-                            "the package {:?} can publicly see {:?} and {:?}",
-                            p, a[0], a[1]
-                        )
-                    }
-                }
-            }
             let sat_resolve = sat_resolve.unwrap_or_else(|| SatResolve::new(registry));
             if !sat_resolve.sat_is_valid_solution(&out) {
                 panic!(
@@ -201,7 +174,6 @@ pub fn resolve_with_config_raw(
         &mut registry,
         &version_prefs,
         Some(config),
-        true,
     );
 
     // The largest test in our suite takes less then 30 sec.
