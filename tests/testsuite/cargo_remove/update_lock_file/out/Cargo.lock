@@ -36,13 +36,13 @@ checksum = "84949cb53285a6c481d0133065a7b669871acfd9e20f273f4ce1283c309775d5"
 name = "semver"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3031434e07edc922bf1b8262f075fac1522694f17b1ee7ad314c4cabd5d2723f"
+checksum = "106bee742e3199d9e59f4269e458dfc825c1b4648c483b1c2b7a45cd2610a308"
 
 [[package]]
 name = "serde"
 version = "1.0.90"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75d9264696ebbf5315a6b068e9910c4df9274365afac2d88abf66525df660218"
+checksum = "be7d269f612a60e3c2c4a4a120e2d878a3f3298a5285eda6e95453905a107d9a"
 
 [[package]]
 name = "toml"
