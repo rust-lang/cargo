@@ -718,7 +718,7 @@ impl schema::TomlManifest {
         let lints = me
             .lints
             .clone()
-            .map(|mw| mw.inherit_with(|| inherit()?.lints()))
+            .map(|mw| lints_inherit_with(mw, || inherit()?.lints()))
             .transpose()?;
         let lints = verify_lints(lints)?;
         let default = schema::TomlLints::default();
@@ -1573,21 +1573,19 @@ fn field_inherit_with<'a, T>(
         }
 }
 
-impl schema::InheritableLints {
-    fn inherit_with<'a>(
-        self,
-        get_ws_inheritable: impl FnOnce() -> CargoResult<schema::TomlLints>,
-    ) -> CargoResult<schema::TomlLints> {
-        if self.workspace {
-            if !self.lints.is_empty() {
-                anyhow::bail!("cannot override `workspace.lints` in `lints`, either remove the overrides or `lints.workspace = true` and manually specify the lints");
-            }
-            get_ws_inheritable().with_context(|| {
-                "error inheriting `lints` from workspace root manifest's `workspace.lints`"
-            })
-        } else {
-            Ok(self.lints)
+fn lints_inherit_with(
+    lints: schema::InheritableLints,
+    get_ws_inheritable: impl FnOnce() -> CargoResult<schema::TomlLints>,
+) -> CargoResult<schema::TomlLints> {
+    if lints.workspace {
+        if !lints.lints.is_empty() {
+            anyhow::bail!("cannot override `workspace.lints` in `lints`, either remove the overrides or `lints.workspace = true` and manually specify the lints");
         }
+        get_ws_inheritable().with_context(|| {
+            "error inheriting `lints` from workspace root manifest's `workspace.lints`"
+        })
+    } else {
+        Ok(lints.lints)
     }
 }
 
