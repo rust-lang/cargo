@@ -1331,7 +1331,13 @@ fn lints_to_rustflags(lints: &schema::TomlLints) -> Vec<String> {
         .iter()
         .flat_map(|(tool, lints)| {
             lints.iter().map(move |(name, config)| {
-                let flag = config.level().flag();
+                let flag = match config.level() {
+                    schema::TomlLintLevel::Forbid => "--forbid",
+                    schema::TomlLintLevel::Deny => "--deny",
+                    schema::TomlLintLevel::Warn => "--warn",
+                    schema::TomlLintLevel::Allow => "--allow",
+                };
+
                 let option = if tool == "rust" {
                     format!("{flag}={name}")
                 } else {
@@ -2257,17 +2263,6 @@ impl schema::InheritableLints {
             })
         } else {
             Ok(self.lints)
-        }
-    }
-}
-
-impl schema::TomlLintLevel {
-    fn flag(&self) -> &'static str {
-        match self {
-            Self::Forbid => "--forbid",
-            Self::Deny => "--deny",
-            Self::Warn => "--warn",
-            Self::Allow => "--allow",
         }
     }
 }
