@@ -2,7 +2,9 @@
 //!
 //! See <https://rust-lang.github.io/cargo/contrib/> for a guide on writing tests.
 
-#![allow(clippy::all)]
+#![allow(clippy::disallowed_methods)]
+#![allow(clippy::print_stderr)]
+#![allow(clippy::print_stdout)]
 
 use std::env;
 use std::ffi::OsStr;
@@ -519,29 +521,6 @@ pub fn main_file(println: &str, deps: &[&str]) -> String {
 
 pub fn cargo_exe() -> PathBuf {
     snapbox::cmd::cargo_bin("cargo")
-}
-
-/// A wrapper around `rustc` instead of calling `clippy`.
-pub fn wrapped_clippy_driver() -> PathBuf {
-    let clippy_driver = project()
-        .at(paths::global_root().join("clippy-driver"))
-        .file("Cargo.toml", &basic_manifest("clippy-driver", "0.0.1"))
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-                let mut args = std::env::args_os();
-                let _me = args.next().unwrap();
-                let rustc = args.next().unwrap();
-                let status = std::process::Command::new(rustc).args(args).status().unwrap();
-                std::process::exit(status.code().unwrap_or(1));
-            }
-            "#,
-        )
-        .build();
-    clippy_driver.cargo("build").run();
-
-    clippy_driver.bin("clippy-driver")
 }
 
 /// This is the raw output from the process.

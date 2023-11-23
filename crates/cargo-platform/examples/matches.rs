@@ -1,6 +1,8 @@
 //! This example demonstrates how to filter a Platform based on the current
 //! host target.
 
+#![allow(clippy::print_stdout)]
+
 use cargo_platform::{Cfg, Platform};
 use std::process::Command;
 use std::str::FromStr;

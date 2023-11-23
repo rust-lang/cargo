@@ -3,11 +3,12 @@ use std::fmt::{self, Debug, Formatter};
 use std::path::{Path, PathBuf};
 use std::task::Poll;
 
-use crate::core::{Dependency, Package, PackageId, SourceId, Summary};
+use crate::core::{Dependency, Package, PackageId, SourceId};
 use crate::ops;
 use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
+use crate::sources::IndexSummary;
 use crate::util::{internal, CargoResult, Config};
 use anyhow::Context as _;
 use cargo_util::paths;
@@ -327,7 +328,12 @@ impl<'cfg> PathSource<'cfg> {
 
             match file_path.file_name().and_then(|s| s.to_str()) {
                 // The `target` directory is never included.
-                Some("target") => continue,
+                Some("target") => {
+                    // Only filter out target if its in the package root.
+                    if file_path.parent().unwrap() == pkg_path {
+                        continue;
+                    }
+                }
 
                 // Keep track of all sub-packages found and also strip out all
                 // matches we've found so far. Note, though, that if we find
@@ -542,7 +548,7 @@ impl<'cfg> Source for PathSource<'cfg> {
         &mut self,
         dep: &Dependency,
         kind: QueryKind,
-        f: &mut dyn FnMut(Summary),
+        f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
         self.update()?;
         for s in self.packages.iter().map(|p| p.summary()) {
@@ -551,7 +557,7 @@ impl<'cfg> Source for PathSource<'cfg> {
                 QueryKind::Fuzzy => true,
             };
             if matched {
-                f(s.clone())
+                f(IndexSummary::Candidate(s.clone()))
             }
         }
         Poll::Ready(Ok(()))

@@ -551,7 +551,7 @@ This is short-hand for:
 unsafe_code = { level = "forbid", priority = 0 }
 ```
 
-`level` corresponds to the lint levels in `rustc`:
+`level` corresponds to the [lint levels](https://doc.rust-lang.org/rustc/lints/levels.html) in `rustc`:
 - `forbid`
 - `deny`
 - `warn`
@@ -575,6 +575,11 @@ unsafe_code = "forbid"
 [lints.clippy]
 enum_glob_use = "deny"
 ```
+
+Generally, these will only affect local development of the current package.
+Cargo only applies these to the current package and not to dependencies.
+As for dependents, Cargo suppresses lints from non-path dependencies with features like
+[`--cap-lints`](../../rustc/lints/levels.html#capping-lints).
 
 ## The `[badges]` section
 

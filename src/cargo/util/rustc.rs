@@ -83,14 +83,20 @@ impl Rustc {
             )
         })?;
         let commit_hash = extract("commit-hash: ").ok().map(|hash| {
-            debug_assert!(
-                hash.chars().all(|ch| ch.is_ascii_hexdigit()),
-                "commit hash must be a hex string, got: {hash:?}"
-            );
-            debug_assert!(
-                hash.len() == 40 || hash.len() == 64,
-                "hex string must be generated from sha1 or sha256 (i.e., it must be 40 or 64 characters long)\ngot: {hash:?}"
-            );
+            // Possible commit-hash values from rustc are SHA hex string and "unknown". See:
+            // * https://github.com/rust-lang/rust/blob/531cb83fc/src/bootstrap/src/utils/channel.rs#L73
+            // * https://github.com/rust-lang/rust/blob/531cb83fc/compiler/rustc_driver_impl/src/lib.rs#L911-L913
+            #[cfg(debug_assertions)]
+            if hash != "unknown" {
+                debug_assert!(
+                    hash.chars().all(|ch| ch.is_ascii_hexdigit()),
+                    "commit hash must be a hex string, got: {hash:?}"
+                );
+                debug_assert!(
+                    hash.len() == 40 || hash.len() == 64,
+                    "hex string must be generated from sha1 or sha256 (i.e., it must be 40 or 64 characters long)\ngot: {hash:?}"
+                );
+            }
             hash.to_string()
         });
 

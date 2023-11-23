@@ -13,6 +13,8 @@
 //! - `dont-deny`: By default tests have a `#![deny(warnings)]`. This option
 //!   avoids this attribute. Note that `#![allow(unused)]` is always added.
 
+#![allow(clippy::print_stderr)]
+
 use std::error::Error;
 use std::fs;
 use std::path::Path;

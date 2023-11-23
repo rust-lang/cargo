@@ -3,6 +3,8 @@
 //! Use the MDMAN_BLESS environment variable to automatically update the
 //! expected output.
 
+#![allow(clippy::disallowed_methods)]
+
 use mdman::{Format, ManMap};
 use pretty_assertions::assert_eq;
 use std::path::PathBuf;

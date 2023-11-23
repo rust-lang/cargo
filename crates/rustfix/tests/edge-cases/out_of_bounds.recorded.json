@@ -1,0 +1,43 @@
+{
+  "message": "unterminated double quote string",
+  "code": null,
+  "level": "error",
+  "spans": [
+    {
+      "file_name": "./tests/everything/tab_2.rs",
+      "byte_start": 485,
+      "byte_end": 526,
+      "line_start": 12,
+      "line_end": 13,
+      "column_start": 7,
+      "column_end": 3,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "    \"\"\"; //~ ERROR unterminated double quote",
+          "highlight_start": 7,
+          "highlight_end": 45
+        },
+        {
+          "text": "}",
+          "highlight_start": 1,
+          "highlight_end": 3
+        }
+      ],
+      "label": null,
+      "suggested_replacement": null,
+      "suggestion_applicability": null,
+      "expansion": null
+    }
+  ],
+  "children": [],
+  "rendered": "error: unterminated double quote string\n  --> ./tests/everything/tab_2.rs:12:7\n   |\n12 |       \"\"\"; //~ ERROR unterminated double quote\n   |  _______^\n13 | | }\n   | |__^\n\n"
+}
+{
+  "message": "aborting due to previous error",
+  "code": null,
+  "level": "error",
+  "spans": [],
+  "children": [],
+  "rendered": "error: aborting due to previous error\n\n"
+}

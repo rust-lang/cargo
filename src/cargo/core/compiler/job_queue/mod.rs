@@ -3,7 +3,7 @@
 //! ## Overview
 //!
 //! This module implements a job queue. A job here represents a unit of work,
-//! which is roughly a rusc invocation, a build script run, or just a no-op.
+//! which is roughly a rustc invocation, a build script run, or just a no-op.
 //! The job queue primarily handles the following things:
 //!
 //! * Spawns concurrent jobs. Depending on its [`Freshness`], a job could be

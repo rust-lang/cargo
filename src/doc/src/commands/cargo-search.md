@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-search --- Search packages in crates.io
+cargo-search --- Search packages in the registry. Default registry is crates.io
 
 ## SYNOPSIS
 
@@ -131,4 +131,5 @@ details on environment variables that Cargo reads.
        cargo search serde
 
 ## SEE ALSO
+
 [cargo(1)](cargo.html), [cargo-install(1)](cargo-install.html), [cargo-publish(1)](cargo-publish.html)

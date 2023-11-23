@@ -552,7 +552,11 @@ where
             Poll::Pending => source.block_until_ready()?,
         }
     };
-    match deps.iter().max_by_key(|p| p.package_id()) {
+    match deps
+        .iter()
+        .map(|s| s.as_summary())
+        .max_by_key(|p| p.package_id())
+    {
         Some(summary) => {
             if let (Some(current), Some(msrv)) = (current_rust_version, summary.rust_version()) {
                 let msrv_req = msrv.to_caret_req();
@@ -571,6 +575,7 @@ where
                         };
                         if let Some(alt) = msrv_deps
                             .iter()
+                            .map(|s| s.as_summary())
                             .filter(|summary| {
                                 summary
                                     .rust_version()

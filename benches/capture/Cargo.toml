@@ -12,3 +12,6 @@ cargo_metadata.workspace = true
 flate2.workspace = true
 tar.workspace = true
 toml.workspace = true
+
+[lints]
+workspace = true

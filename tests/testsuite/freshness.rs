@@ -34,7 +34,7 @@ fn modifying_and_moving() {
         )
         .run();
 
-    p.cargo("build").with_stdout("").run();
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
     p.root().move_into_the_past();
     p.root().join("target").move_into_the_past();
 
@@ -223,7 +223,7 @@ fn changing_lib_features_caches_targets() {
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
         .run();
 
-    p.cargo("build").with_stdout("").run();
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
 
     p.cargo("build --features foo")
         .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
@@ -666,7 +666,7 @@ fn rerun_if_changed_in_dep() {
         .build();
 
     p.cargo("build").run();
-    p.cargo("build").with_stdout("").run();
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]

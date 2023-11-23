@@ -1433,7 +1433,7 @@ fn test_then_build() {
         .with_stdout_contains("running 0 tests")
         .run();
 
-    p.cargo("build").with_stdout("").run();
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -2423,7 +2423,7 @@ fn dylib_doctest2() {
         )
         .build();
 
-    p.cargo("test").with_stdout("").run();
+    p.cargo("test").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -3553,6 +3553,39 @@ fn cyclic_dev() {
         .build();
 
     p.cargo("test --workspace").run();
+}
+
+#[cargo_test]
+fn cyclical_dep_with_missing_feature() {
+    // Checks for error handling when a cyclical dev-dependency specify a
+    // feature that doesn't exist.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dev-dependencies]
+                foo = { path = ".", features = ["missing"] }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "error: failed to select a version for `foo`.
+    ... required by package `foo v0.1.0 ([..]/foo)`
+versions that meet the requirements `*` are: 0.1.0
+
+the package `foo` depends on `foo`, with features: `missing` but `foo` does not have these features.
+
+
+failed to select a version for `foo` which could resolve this conflict",
+        )
+        .run();
 }
 
 #[cargo_test]

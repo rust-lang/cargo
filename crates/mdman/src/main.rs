@@ -1,3 +1,5 @@
+#![allow(clippy::print_stderr)]
+
 use anyhow::{bail, format_err, Context, Error};
 use mdman::{Format, ManMap};
 use std::collections::HashMap;

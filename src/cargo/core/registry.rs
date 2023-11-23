@@ -7,6 +7,7 @@ use crate::sources::config::SourceConfigMap;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::sources::source::SourceMap;
+use crate::sources::IndexSummary;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{CanonicalUrl, Config};
@@ -23,10 +24,14 @@ pub trait Registry {
         &mut self,
         dep: &Dependency,
         kind: QueryKind,
-        f: &mut dyn FnMut(Summary),
+        f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>>;
 
-    fn query_vec(&mut self, dep: &Dependency, kind: QueryKind) -> Poll<CargoResult<Vec<Summary>>> {
+    fn query_vec(
+        &mut self,
+        dep: &Dependency,
+        kind: QueryKind,
+    ) -> Poll<CargoResult<Vec<IndexSummary>>> {
         let mut ret = Vec::new();
         self.query(dep, kind, &mut |s| ret.push(s)).map_ok(|()| ret)
     }
@@ -337,6 +342,8 @@ impl<'cfg> PackageRegistry<'cfg> {
                     }
                 };
 
+                let summaries = summaries.into_iter().map(|s| s.into_summary()).collect();
+
                 let (summary, should_unlock) =
                     match summary_for_patch(orig_patch, &locked, summaries, source) {
                         Poll::Ready(x) => x,
@@ -481,13 +488,15 @@ impl<'cfg> PackageRegistry<'cfg> {
         Ok(())
     }
 
-    fn query_overrides(&mut self, dep: &Dependency) -> Poll<CargoResult<Option<Summary>>> {
+    fn query_overrides(&mut self, dep: &Dependency) -> Poll<CargoResult<Option<IndexSummary>>> {
         for &s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
             let dep = Dependency::new_override(dep.package_name(), s);
-            let mut results = ready!(src.query_vec(&dep, QueryKind::Exact))?;
-            if !results.is_empty() {
-                return Poll::Ready(Ok(Some(results.remove(0))));
+
+            let mut results = None;
+            ready!(src.query(&dep, QueryKind::Exact, &mut |s| results = Some(s)))?;
+            if results.is_some() {
+                return Poll::Ready(Ok(results));
             }
         }
         Poll::Ready(Ok(None))
@@ -575,7 +584,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
         &mut self,
         dep: &Dependency,
         kind: QueryKind,
-        f: &mut dyn FnMut(Summary),
+        f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
         assert!(self.patches_locked);
         let (override_summary, n, to_warn) = {
@@ -607,9 +616,9 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
             if patches.len() == 1 && dep.is_locked() {
                 let patch = patches.remove(0);
                 match override_summary {
-                    Some(summary) => (summary, 1, Some(patch)),
+                    Some(summary) => (summary, 1, Some(IndexSummary::Candidate(patch))),
                     None => {
-                        f(patch);
+                        f(IndexSummary::Candidate(patch));
                         return Poll::Ready(Ok(()));
                     }
                 }
@@ -646,7 +655,7 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                     // everything upstairs after locking the summary
                     (None, Some(source)) => {
                         for patch in patches.iter() {
-                            f(patch.clone());
+                            f(IndexSummary::Candidate(patch.clone()));
                         }
 
                         // Our sources shouldn't ever come back to us with two
@@ -658,14 +667,18 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                         // already selected, then we skip this `summary`.
                         let locked = &self.locked;
                         let all_patches = &self.patches_available;
-                        let callback = &mut |summary: Summary| {
+                        let callback = &mut |summary: IndexSummary| {
                             for patch in patches.iter() {
                                 let patch = patch.package_id().version();
                                 if summary.package_id().version() == patch {
                                     return;
                                 }
                             }
-                            f(lock(locked, all_patches, summary))
+                            f(IndexSummary::Candidate(lock(
+                                locked,
+                                all_patches,
+                                summary.into_summary(),
+                            )))
                         };
                         return source.query(dep, kind, callback);
                     }
@@ -702,9 +715,12 @@ impl<'cfg> Registry for PackageRegistry<'cfg> {
                 "found an override with a non-locked list"
             )));
         } else if let Some(summary) = to_warn {
-            self.warn_bad_override(&override_summary, &summary)?;
+            self.warn_bad_override(override_summary.as_summary(), summary.as_summary())?;
         }
-        f(self.lock(override_summary));
+        f(IndexSummary::Candidate(
+            self.lock(override_summary.into_summary()),
+        ));
+
         Poll::Ready(Ok(()))
     }
 
@@ -887,6 +903,8 @@ fn summary_for_patch(
                 Vec::new()
             });
 
+        let orig_matches = orig_matches.into_iter().map(|s| s.into_summary()).collect();
+
         let summary = ready!(summary_for_patch(orig_patch, &None, orig_matches, source))?;
 
         // The unlocked version found a match. This returns a value to
@@ -907,7 +925,7 @@ fn summary_for_patch(
         });
     let mut vers = name_summaries
         .iter()
-        .map(|summary| summary.version())
+        .map(|summary| summary.as_summary().version())
         .collect::<Vec<_>>();
     let found = match vers.len() {
         0 => format!(""),

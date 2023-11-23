@@ -26,7 +26,7 @@ fn case() {
         .current_dir(cwd)
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .assert()
-        .code(101)
+        .code(0)
         .stdout_matches_path(curr_dir!().join("stdout.log"))
         .stderr_matches_path(curr_dir!().join("stderr.log"));
 

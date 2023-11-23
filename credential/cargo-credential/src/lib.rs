@@ -37,6 +37,9 @@
 #![doc = include_str!("../examples/file-provider.rs")]
 //! ```
 
+#![allow(clippy::print_stderr)]
+#![allow(clippy::print_stdout)]
+
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, io};
 use time::OffsetDateTime;

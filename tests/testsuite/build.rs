@@ -2959,12 +2959,12 @@ fn freshness_ignores_excluded() {
 
     // Smoke test to make sure it doesn't compile again
     println!("first pass");
-    foo.cargo("build").with_stdout("").run();
+    foo.cargo("build").with_stderr("[FINISHED] [..]").run();
 
     // Modify an ignored file and make sure we don't rebuild
     println!("second pass");
     foo.change_file("src/bar.rs", "");
-    foo.cargo("build").with_stdout("").run();
+    foo.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -3064,7 +3064,7 @@ fn recompile_space_in_name() {
         .build();
     foo.cargo("build").run();
     foo.root().move_into_the_past();
-    foo.cargo("build").with_stdout("").run();
+    foo.cargo("build").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cfg(unix)]

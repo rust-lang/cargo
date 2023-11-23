@@ -18,6 +18,8 @@
 //! `CARGO_RUN_BUILD_STD_TESTS` env var to be set to actually run these tests.
 //! Otherwise the tests are skipped.
 
+#![allow(clippy::disallowed_methods)]
+
 use cargo_test_support::*;
 use std::env;
 use std::path::Path;

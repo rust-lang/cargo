@@ -11,7 +11,7 @@ fn no_deps() {
         .file("src/a.rs", "")
         .build();
 
-    p.cargo("fetch").with_stdout("").run();
+    p.cargo("fetch").with_stderr("").run();
 }
 
 #[cargo_test]

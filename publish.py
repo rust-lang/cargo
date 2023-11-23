@@ -21,6 +21,7 @@ TO_PUBLISH = [
     'credential/cargo-credential-wincred',
     'credential/cargo-credential-1password',
     'credential/cargo-credential-macos-keychain',
+    'crates/rustfix',
     'crates/cargo-platform',
     'crates/cargo-util',
     'crates/crates-io',

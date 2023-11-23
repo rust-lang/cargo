@@ -1,4 +1,4 @@
-Search packages in crates.io
+Search packages in the registry. Default registry is crates.io
 
 Usage: cargo[EXE] search [OPTIONS] [QUERY]...
 

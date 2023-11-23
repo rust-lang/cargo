@@ -627,7 +627,14 @@ fn cyclic_feature2() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("check").with_stdout("").run();
+    p.cargo("check")
+        .with_stderr(
+            "\
+[CHECKING] foo [..]
+[FINISHED] [..]
+",
+        )
+        .run();
 }
 
 #[cargo_test]
@@ -1047,8 +1054,8 @@ fn no_rebuild_when_frobbing_default_feature() {
         .build();
 
     p.cargo("check").run();
-    p.cargo("check").with_stdout("").run();
-    p.cargo("check").with_stdout("").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -1098,8 +1105,8 @@ fn unions_work_with_no_default_features() {
         .build();
 
     p.cargo("check").run();
-    p.cargo("check").with_stdout("").run();
-    p.cargo("check").with_stdout("").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]

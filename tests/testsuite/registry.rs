@@ -549,7 +549,7 @@ fn lockfile_locks() {
     p.root().move_into_the_past();
     Package::new("bar", "0.0.2").publish();
 
-    p.cargo("check").with_stdout("").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -602,7 +602,7 @@ fn lockfile_locks_transitively() {
     Package::new("baz", "0.0.2").publish();
     Package::new("bar", "0.0.2").dep("baz", "*").publish();
 
-    p.cargo("check").with_stdout("").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]
@@ -739,7 +739,7 @@ fn yanks_in_lockfiles_are_ok() {
 
     Package::new("bar", "0.0.1").yanked(true).publish();
 
-    p.cargo("check").with_stdout("").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 
     p.cargo("update")
         .with_status(101)
@@ -792,7 +792,7 @@ fn yanks_in_lockfiles_are_ok_for_other_update() {
     Package::new("bar", "0.0.1").yanked(true).publish();
     Package::new("baz", "0.0.1").publish();
 
-    p.cargo("check").with_stdout("").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 
     Package::new("baz", "0.0.2").publish();
 
@@ -868,7 +868,18 @@ fn yanks_in_lockfiles_are_ok_with_new_dep() {
         "#,
     );
 
-    p.cargo("check").with_stdout("").run();
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] baz v0.0.1 (registry `dummy-registry`)
+[CHECKING] baz v0.0.1
+[CHECKING] foo v0.0.1 [..]
+[FINISHED] [..]
+",
+        )
+        .run();
 }
 
 #[cargo_test]
@@ -1272,7 +1283,7 @@ fn git_and_registry_dep() {
     p.root().move_into_the_past();
 
     println!("second");
-    p.cargo("check").with_stdout("").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 }
 
 #[cargo_test]

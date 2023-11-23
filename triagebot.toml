@@ -262,6 +262,7 @@ trigger_files = [
     "src/bin/cargo/commands/fix.rs",
     "src/cargo/ops/fix.rs",
     "src/cargo/util/lockserver.rs",
+    "crates/rustfix/",
 ]
 
 [autolabel."Command-generate-lockfile"]

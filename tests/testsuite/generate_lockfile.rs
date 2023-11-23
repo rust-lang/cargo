@@ -161,13 +161,13 @@ fn cargo_update_generate_lockfile() {
 
     let lockfile = p.root().join("Cargo.lock");
     assert!(!lockfile.is_file());
-    p.cargo("update").with_stdout("").run();
+    p.cargo("update").with_stderr("").run();
     assert!(lockfile.is_file());
 
     fs::remove_file(p.root().join("Cargo.lock")).unwrap();
 
     assert!(!lockfile.is_file());
-    p.cargo("update").with_stdout("").run();
+    p.cargo("update").with_stderr("").run();
     assert!(lockfile.is_file());
 }
 

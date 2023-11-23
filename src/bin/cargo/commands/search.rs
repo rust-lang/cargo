@@ -6,7 +6,7 @@ use cargo::ops;
 
 pub fn cli() -> Command {
     subcommand("search")
-        .about("Search packages in crates.io")
+        .about("Search packages in the registry. Default registry is crates.io")
         .arg(Arg::new("query").value_name("QUERY").num_args(0..))
         .arg(
             opt(

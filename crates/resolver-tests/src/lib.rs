@@ -1,4 +1,4 @@
-#![allow(clippy::all)]
+#![allow(clippy::print_stderr)]
 
 use std::cell::RefCell;
 use std::cmp::PartialEq;
@@ -17,6 +17,7 @@ use cargo::core::Resolve;
 use cargo::core::{Dependency, PackageId, Registry, Summary};
 use cargo::core::{GitReference, SourceId};
 use cargo::sources::source::QueryKind;
+use cargo::sources::IndexSummary;
 use cargo::util::{CargoResult, Config, Graph, IntoUrl, RustVersion};
 
 use proptest::collection::{btree_map, vec};
@@ -131,7 +132,7 @@ pub fn resolve_with_config_raw(
             &mut self,
             dep: &Dependency,
             kind: QueryKind,
-            f: &mut dyn FnMut(Summary),
+            f: &mut dyn FnMut(IndexSummary),
         ) -> Poll<CargoResult<()>> {
             for summary in self.list.iter() {
                 let matched = match kind {
@@ -140,7 +141,7 @@ pub fn resolve_with_config_raw(
                 };
                 if matched {
                     self.used.insert(summary.package_id());
-                    f(summary.clone());
+                    f(IndexSummary::Candidate(summary.clone()));
                 }
             }
             Poll::Ready(Ok(()))

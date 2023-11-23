@@ -202,7 +202,7 @@ use tracing::debug;
 
 use crate::core::dependency::Dependency;
 use crate::core::global_cache_tracker;
-use crate::core::{Package, PackageId, SourceId, Summary};
+use crate::core::{Package, PackageId, SourceId};
 use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
@@ -437,6 +437,7 @@ pub enum MaybeLock {
 mod download;
 mod http_remote;
 mod index;
+pub use index::IndexSummary;
 mod local;
 mod remote;
 
@@ -730,7 +731,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         &mut self,
         dep: &Dependency,
         kind: QueryKind,
-        f: &mut dyn FnMut(Summary),
+        f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
         let mut req = dep.version_req().clone();
 
@@ -756,7 +757,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
                     if dep.matches(s.as_summary()) {
                         // We are looking for a package from a lock file so we do not care about yank
                         called = true;
-                        f(s.into_summary());
+                        f(s);
                     }
                 },))?;
             if called {
@@ -781,7 +782,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
                     if matched
                         && (!s.is_yanked() || self.yanked_whitelist.contains(&s.package_id()))
                     {
-                        f(s.into_summary());
+                        f(s);
                         called = true;
                     }
                 }))?;
@@ -806,9 +807,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
                     }
                     any_pending |= self
                         .index
-                        .query_inner(name_permutation, &req, &mut *self.ops, &mut |s| {
-                            f(s.into_summary());
-                        })?
+                        .query_inner(name_permutation, &req, &mut *self.ops, f)?
                         .is_pending();
                 }
             }

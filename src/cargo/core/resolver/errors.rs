@@ -140,9 +140,9 @@ pub(super) fn activation_error(
                     msg.push_str("` as well:\n");
                     msg.push_str(&describe_path_in_context(cx, p));
                     msg.push_str("\nOnly one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. ");
-                    msg.push_str("Try to adjust your dependencies so that only one package uses the links ='");
-                    msg.push_str(&*dep.package_name());
-                    msg.push_str("' value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.");
+                    msg.push_str("Try to adjust your dependencies so that only one package uses the `links = \"");
+                    msg.push_str(link);
+                    msg.push_str("\"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.");
                 }
                 ConflictReason::MissingFeatures(features) => {
                     msg.push_str("\n\nthe package `");
@@ -228,7 +228,7 @@ pub(super) fn activation_error(
     let mut new_dep = dep.clone();
     new_dep.set_version_req(OptVersionReq::Any);
 
-    let mut candidates = loop {
+    let candidates = loop {
         match registry.query_vec(&new_dep, QueryKind::Exact) {
             Poll::Ready(Ok(candidates)) => break candidates,
             Poll::Ready(Err(e)) => return to_resolve_err(e),
@@ -238,6 +238,8 @@ pub(super) fn activation_error(
             },
         }
     };
+
+    let mut candidates: Vec<_> = candidates.into_iter().map(|s| s.into_summary()).collect();
 
     candidates.sort_unstable_by(|a, b| b.version().cmp(a.version()));
 
@@ -303,7 +305,7 @@ pub(super) fn activation_error(
     } else {
         // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
         // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
-        let mut candidates = loop {
+        let candidates = loop {
             match registry.query_vec(&new_dep, QueryKind::Fuzzy) {
                 Poll::Ready(Ok(candidates)) => break candidates,
                 Poll::Ready(Err(e)) => return to_resolve_err(e),
@@ -313,6 +315,8 @@ pub(super) fn activation_error(
                 },
             }
         };
+
+        let mut candidates: Vec<_> = candidates.into_iter().map(|s| s.into_summary()).collect();
 
         candidates.sort_unstable_by_key(|a| a.name());
         candidates.dedup_by(|a, b| a.name() == b.name());

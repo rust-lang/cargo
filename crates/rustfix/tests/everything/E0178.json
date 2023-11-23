@@ -1,0 +1,70 @@
+{
+  "message": "expected a path on the left-hand side of `+`, not `&'a Foo`",
+  "code": {
+    "code": "E0178",
+    "explanation": "\nIn types, the `+` type operator has low precedence, so it is often necessary\nto use parentheses.\n\nFor example:\n\n```compile_fail,E0178\ntrait Foo {}\n\nstruct Bar<'a> {\n    w: &'a Foo + Copy,   // error, use &'a (Foo + Copy)\n    x: &'a Foo + 'a,     // error, use &'a (Foo + 'a)\n    y: &'a mut Foo + 'a, // error, use &'a mut (Foo + 'a)\n    z: fn() -> Foo + 'a, // error, use fn() -> (Foo + 'a)\n}\n```\n\nMore details can be found in [RFC 438].\n\n[RFC 438]: https://github.com/rust-lang/rfcs/pull/438\n"
+  },
+  "level": "error",
+  "spans": [
+    {
+      "file_name": "./tests/everything/E0178.rs",
+      "byte_start": 60,
+      "byte_end": 74,
+      "line_start": 6,
+      "line_end": 6,
+      "column_start": 8,
+      "column_end": 22,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "    w: &'a Foo + Send,",
+          "highlight_start": 8,
+          "highlight_end": 22
+        }
+      ],
+      "label": null,
+      "suggested_replacement": null,
+      "expansion": null
+    }
+  ],
+  "children": [
+    {
+      "message": "try adding parentheses",
+      "code": null,
+      "level": "help",
+      "spans": [
+        {
+          "file_name": "./tests/everything/E0178.rs",
+          "byte_start": 60,
+          "byte_end": 74,
+          "line_start": 6,
+          "line_end": 6,
+          "column_start": 8,
+          "column_end": 22,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "    w: &'a Foo + Send,",
+              "highlight_start": 8,
+              "highlight_end": 22
+            }
+          ],
+          "label": null,
+          "suggested_replacement": "&'a (Foo + Send)",
+          "expansion": null
+        }
+      ],
+      "children": [],
+      "rendered": null
+    }
+  ],
+  "rendered": "error[E0178]: expected a path on the left-hand side of `+`, not `&'a Foo`\n --> ./tests/everything/E0178.rs:6:8\n  |\n6 |     w: &'a Foo + Send,\n  |        ^^^^^^^^^^^^^^ help: try adding parentheses: `&'a (Foo + Send)`\n\nIf you want more information on this error, try using \"rustc --explain E0178\"\n"
+}
+{
+  "message": "aborting due to previous error",
+  "code": null,
+  "level": "error",
+  "spans": [],
+  "children": [],
+  "rendered": "error: aborting due to previous error\n\n"
+}
