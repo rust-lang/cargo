@@ -42,6 +42,16 @@ Options:
       --ignore-rust-version
           Ignore `rust-version` specification in packages (unstable)
 
+      --public
+          Mark the dependency as public
+          
+          The dependnecy will be visible in both of your crate and outside.
+
+      --no-public
+          Mark the dependency as private
+          
+          The dependnecy will be only visible in your crate other than outside.
+
   -n, --dry-run
           Don't actually write the manifest
 
