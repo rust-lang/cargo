@@ -661,7 +661,7 @@ impl schema::TomlManifest {
 
             let mut deps: BTreeMap<String, schema::InheritableDependency> = BTreeMap::new();
             for (n, v) in dependencies.iter() {
-                let resolved = v.clone().inherit_with(n, inheritable, cx)?;
+                let resolved = dependency_inherit_with(v.clone(), n, inheritable, cx)?;
                 let dep = resolved.to_dependency(n, cx, kind)?;
                 let name_in_toml = dep.name_in_toml().as_str();
                 validate_package_name(name_in_toml, "dependency name", "")?;
@@ -1589,110 +1589,109 @@ fn lints_inherit_with(
     }
 }
 
-impl schema::InheritableDependency {
-    fn inherit_with<'a>(
-        self,
-        name: &str,
-        inheritable: impl FnOnce() -> CargoResult<&'a InheritableFields>,
-        cx: &mut Context<'_, '_>,
-    ) -> CargoResult<TomlDependency> {
-        match self {
+fn dependency_inherit_with<'a>(
+    dependency: schema::InheritableDependency,
+    name: &str,
+    inheritable: impl FnOnce() -> CargoResult<&'a InheritableFields>,
+    cx: &mut Context<'_, '_>,
+) -> CargoResult<TomlDependency> {
+    match dependency {
             schema::InheritableDependency::Value(value) => Ok(value),
             schema::InheritableDependency::Inherit(w) => {
-                w.inherit_with(name, inheritable, cx).with_context(|| {
+                inner_dependency_inherit_with(w, name, inheritable, cx).with_context(|| {
                     format!(
                         "error inheriting `{name}` from workspace root manifest's `workspace.dependencies.{name}`",
                     )
                 })
             }
         }
-    }
 }
 
-impl schema::TomlInheritedDependency {
-    fn inherit_with<'a>(
-        &self,
-        name: &str,
-        inheritable: impl FnOnce() -> CargoResult<&'a InheritableFields>,
-        cx: &mut Context<'_, '_>,
-    ) -> CargoResult<schema::TomlDependency> {
-        fn default_features_msg(label: &str, ws_def_feat: Option<bool>, cx: &mut Context<'_, '_>) {
-            let ws_def_feat = match ws_def_feat {
-                Some(true) => "true",
-                Some(false) => "false",
-                None => "not specified",
-            };
-            cx.warnings.push(format!(
-                "`default-features` is ignored for {label}, since `default-features` was \
+fn inner_dependency_inherit_with<'a>(
+    dependency: schema::TomlInheritedDependency,
+    name: &str,
+    inheritable: impl FnOnce() -> CargoResult<&'a InheritableFields>,
+    cx: &mut Context<'_, '_>,
+) -> CargoResult<schema::TomlDependency> {
+    fn default_features_msg(label: &str, ws_def_feat: Option<bool>, cx: &mut Context<'_, '_>) {
+        let ws_def_feat = match ws_def_feat {
+            Some(true) => "true",
+            Some(false) => "false",
+            None => "not specified",
+        };
+        cx.warnings.push(format!(
+            "`default-features` is ignored for {label}, since `default-features` was \
                 {ws_def_feat} for `workspace.dependencies.{label}`, \
                 this could become a hard error in the future"
-            ))
-        }
-        if self.default_features.is_some() && self.default_features2.is_some() {
-            warn_on_deprecated("default-features", name, "dependency", cx.warnings);
-        }
-        inheritable()?.get_dependency(name, cx.root).map(|d| {
-            match d {
-                schema::TomlDependency::Simple(s) => {
-                    if let Some(false) = self.default_features() {
-                        default_features_msg(name, None, cx);
-                    }
-                    if self.optional.is_some() || self.features.is_some() || self.public.is_some() {
-                        schema::TomlDependency::Detailed(schema::TomlDetailedDependency {
-                            version: Some(s),
-                            optional: self.optional,
-                            features: self.features.clone(),
-                            public: self.public,
-                            ..Default::default()
-                        })
-                    } else {
-                        schema::TomlDependency::Simple(s)
-                    }
+        ))
+    }
+    if dependency.default_features.is_some() && dependency.default_features2.is_some() {
+        warn_on_deprecated("default-features", name, "dependency", cx.warnings);
+    }
+    inheritable()?.get_dependency(name, cx.root).map(|d| {
+        match d {
+            schema::TomlDependency::Simple(s) => {
+                if let Some(false) = dependency.default_features() {
+                    default_features_msg(name, None, cx);
                 }
-                schema::TomlDependency::Detailed(d) => {
-                    let mut d = d.clone();
-                    match (self.default_features(), d.default_features()) {
-                        // member: default-features = true and
-                        // workspace: default-features = false should turn on
-                        // default-features
-                        (Some(true), Some(false)) => {
-                            d.default_features = Some(true);
-                        }
-                        // member: default-features = false and
-                        // workspace: default-features = true should ignore member
-                        // default-features
-                        (Some(false), Some(true)) => {
-                            default_features_msg(name, Some(true), cx);
-                        }
-                        // member: default-features = false and
-                        // workspace: dep = "1.0" should ignore member default-features
-                        (Some(false), None) => {
-                            default_features_msg(name, None, cx);
-                        }
-                        _ => {}
-                    }
-                    // Inherit the workspace configuration for `public` unless
-                    // it's explicitly specified for this dependency.
-                    if let Some(public) = self.public {
-                        d.public = Some(public);
-                    }
-                    d.features = match (d.features.clone(), self.features.clone()) {
-                        (Some(dep_feat), Some(inherit_feat)) => Some(
-                            dep_feat
-                                .into_iter()
-                                .chain(inherit_feat)
-                                .collect::<Vec<String>>(),
-                        ),
-                        (Some(dep_fet), None) => Some(dep_fet),
-                        (None, Some(inherit_feat)) => Some(inherit_feat),
-                        (None, None) => None,
-                    };
-                    d.optional = self.optional;
-                    schema::TomlDependency::Detailed(d)
+                if dependency.optional.is_some()
+                    || dependency.features.is_some()
+                    || dependency.public.is_some()
+                {
+                    schema::TomlDependency::Detailed(schema::TomlDetailedDependency {
+                        version: Some(s),
+                        optional: dependency.optional,
+                        features: dependency.features.clone(),
+                        public: dependency.public,
+                        ..Default::default()
+                    })
+                } else {
+                    schema::TomlDependency::Simple(s)
                 }
             }
-        })
-    }
+            schema::TomlDependency::Detailed(d) => {
+                let mut d = d.clone();
+                match (dependency.default_features(), d.default_features()) {
+                    // member: default-features = true and
+                    // workspace: default-features = false should turn on
+                    // default-features
+                    (Some(true), Some(false)) => {
+                        d.default_features = Some(true);
+                    }
+                    // member: default-features = false and
+                    // workspace: default-features = true should ignore member
+                    // default-features
+                    (Some(false), Some(true)) => {
+                        default_features_msg(name, Some(true), cx);
+                    }
+                    // member: default-features = false and
+                    // workspace: dep = "1.0" should ignore member default-features
+                    (Some(false), None) => {
+                        default_features_msg(name, None, cx);
+                    }
+                    _ => {}
+                }
+                // Inherit the workspace configuration for `public` unless
+                // it's explicitly specified for this dependency.
+                if let Some(public) = dependency.public {
+                    d.public = Some(public);
+                }
+                d.features = match (d.features.clone(), dependency.features.clone()) {
+                    (Some(dep_feat), Some(inherit_feat)) => Some(
+                        dep_feat
+                            .into_iter()
+                            .chain(inherit_feat)
+                            .collect::<Vec<String>>(),
+                    ),
+                    (Some(dep_fet), None) => Some(dep_fet),
+                    (None, Some(inherit_feat)) => Some(inherit_feat),
+                    (None, None) => None,
+                };
+                d.optional = dependency.optional;
+                schema::TomlDependency::Detailed(d)
+            }
+        }
+    })
 }
 
 impl<P: ResolveToPath + Clone> schema::TomlDependency<P> {
