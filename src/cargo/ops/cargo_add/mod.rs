@@ -244,6 +244,9 @@ pub struct DepOp {
     /// Whether dependency is optional
     pub optional: Option<bool>,
 
+    /// Whether dependency is public
+    pub public: Option<bool>,
+
     /// Registry for looking up dependency version
     pub registry: Option<String>,
 
@@ -758,6 +761,13 @@ fn populate_dependency(mut dependency: Dependency, arg: &DepOp) -> Dependency {
             dependency.optional = None;
         }
     }
+    if let Some(value) = arg.public {
+        if value {
+            dependency.public = Some(true);
+        } else {
+            dependency.public = None;
+        }
+    }
     if let Some(value) = arg.default_features {
         if value {
             dependency.default_features = None;
@@ -944,6 +954,9 @@ fn print_action_msg(shell: &mut Shell, dep: &DependencyUI, section: &[String]) -
     write!(message, " to")?;
     if dep.optional().unwrap_or(false) {
         write!(message, " optional")?;
+    }
+    if dep.public().unwrap_or(false) {
+        write!(message, " public")?;
     }
     let section = if section.len() == 1 {
         section[0].clone()
