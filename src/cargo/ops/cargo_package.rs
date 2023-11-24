@@ -7,6 +7,7 @@ use std::sync::Arc;
 use std::task::Poll;
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
+use crate::core::manifest::Target;
 use crate::core::resolver::CliFeatures;
 use crate::core::{registry::PackageRegistry, resolver::HasDevUnits};
 use crate::core::{Feature, Shell, Verbosity, Workspace};
@@ -331,6 +332,23 @@ fn build_ar_list(
             warn_on_nonexistent_file(&pkg, &readme_path, "readme", &ws)?;
         }
     }
+
+    for t in pkg
+        .manifest()
+        .targets()
+        .iter()
+        .filter(|t| t.is_custom_build())
+    {
+        if let Some(custome_build_path) = t.src_path().path() {
+            let abs_custome_build_path =
+                paths::normalize_path(&pkg.root().join(custome_build_path));
+            if !abs_custome_build_path.is_file() || !abs_custome_build_path.starts_with(pkg.root())
+            {
+                error_custom_build_file_not_in_package(pkg, &abs_custome_build_path, t)?;
+            }
+        }
+    }
+
     result.sort_unstable_by(|a, b| a.rel_path.cmp(&b.rel_path));
 
     Ok(result)
@@ -403,6 +421,31 @@ fn warn_on_nonexistent_file(
         rel_msg,
         pkg.manifest_path().display()
     ))
+}
+
+fn error_custom_build_file_not_in_package(
+    pkg: &Package,
+    path: &Path,
+    target: &Target,
+) -> CargoResult<Vec<ArchiveFile>> {
+    let tip = {
+        let description_name = target.description_named();
+        if path.is_file() {
+            format!("the source file of {description_name} doesn't appear to be a path inside of the package.\n\
+            It is at `{}`, whereas the root the package is `{}`.\n",
+            path.display(), pkg.root().display()
+            )
+        } else {
+            format!("the source file of {description_name} doesn't appear to exist.\n",)
+        }
+    };
+    let msg = format!(
+        "{}\
+        This may cause issue during packaging, as modules resolution and resources included via macros are often relative to the path of source files.\n\
+        Please update the `build` setting in the manifest at `{}` and point to a path inside the root of the package.",
+        tip,  pkg.manifest_path().display()
+    );
+    anyhow::bail!(msg)
 }
 
 /// Construct `Cargo.lock` for the package to be published.
