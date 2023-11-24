@@ -1,5 +1,4 @@
 #![allow(clippy::disallowed_methods, clippy::print_stdout, clippy::print_stderr)]
-#![cfg(not(windows))] // TODO: should fix these tests on Windows
 
 use anyhow::{anyhow, ensure, Context, Error};
 use rustfix::apply_suggestions;
