@@ -1,14 +1,15 @@
 //! Library for applying diagnostic suggestions to source code.
 //!
-//! This is a low-level library. You pass it the JSON output from `rustc`, and
-//! you can then use it to apply suggestions to in-memory strings. This
-//! library doesn't execute commands, or read or write from the filesystem.
+//! This is a low-level library. You pass it the [JSON output] from `rustc`,
+//! and you can then use it to apply suggestions to in-memory strings.
+//! This library doesn't execute commands, or read or write from the filesystem.
 //!
 //! If you are looking for the [`cargo fix`] implementation, the core of it is
 //! located in [`cargo::ops::fix`].
 //!
 //! [`cargo fix`]: https://doc.rust-lang.org/cargo/commands/cargo-fix.html
 //! [`cargo::ops::fix`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/ops/fix.rs
+//! [JSON output]: diagnostics
 //!
 //! The general outline of how to use this library is:
 //!
@@ -16,7 +17,7 @@
 //! 2. Pass the json data to [`get_suggestions_from_json`].
 //! 3. Create a [`CodeFix`] with the source of a file to modify.
 //! 4. Call [`CodeFix::apply`] to apply a change.
-//! 5. Write the source back to disk.
+//! 5. Call [`CodeFix::finish`] to get the result and write it back to disk.
 
 use std::collections::HashSet;
 use std::ops::Range;
@@ -27,12 +28,20 @@ pub mod diagnostics;
 use crate::diagnostics::{Diagnostic, DiagnosticSpan};
 mod replace;
 
+/// A filter to control which suggestion should be applied.
 #[derive(Debug, Clone, Copy)]
 pub enum Filter {
+    /// For [`diagnostics::Applicability::MachineApplicable`] only.
     MachineApplicableOnly,
+    /// Everything is included. YOLO!
     Everything,
 }
 
+/// Collects code [`Suggestion`]s from one or more compiler diagnostic lines.
+///
+/// Fails if any of diagnostic line `input` is not a valid [`Diagnostic`] JSON.
+///
+/// * `only` --- only diagnostics with code in a set of error codes would be collected.
 pub fn get_suggestions_from_json<S: ::std::hash::BuildHasher>(
     input: &str,
     only: &HashSet<String, S>,
@@ -70,20 +79,24 @@ impl std::fmt::Display for LineRange {
     }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 /// An error/warning and possible solutions for fixing it
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Suggestion {
     pub message: String,
     pub snippets: Vec<Snippet>,
     pub solutions: Vec<Solution>,
 }
 
+/// Solution to a diagnostic item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Solution {
+    /// The error message of the diagnostic item.
     pub message: String,
+    /// Possible solutions to fix the error.
     pub replacements: Vec<Replacement>,
 }
 
+/// Represents code that will get replaced.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Snippet {
     pub file_name: String,
@@ -95,12 +108,16 @@ pub struct Snippet {
     pub text: (String, String, String),
 }
 
+/// Represents a replacement of a `snippet`.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Replacement {
+    /// Code snippet that gets replaced.
     pub snippet: Snippet,
+    /// The replacement of the snippet.
     pub replacement: String,
 }
 
+/// Parses a [`Snippet`] from a diagnostic span item.
 fn parse_snippet(span: &DiagnosticSpan) -> Option<Snippet> {
     // unindent the snippet
     let indent = span
@@ -168,6 +185,7 @@ fn parse_snippet(span: &DiagnosticSpan) -> Option<Snippet> {
     })
 }
 
+/// Converts a [`DiagnosticSpan`] into a [`Replacement`].
 fn collect_span(span: &DiagnosticSpan) -> Option<Replacement> {
     let snippet = parse_snippet(span)?;
     let replacement = span.suggested_replacement.clone()?;
@@ -177,6 +195,9 @@ fn collect_span(span: &DiagnosticSpan) -> Option<Replacement> {
     })
 }
 
+/// Collects code [`Suggestion`]s from a single compiler diagnostic line.
+///
+/// * `only` --- only diagnostics with code in a set of error codes would be collected.
 pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
     diagnostic: &Diagnostic,
     only: &HashSet<String, S>,
@@ -237,17 +258,26 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
     }
 }
 
+/// Represents a code fix. This doesn't write to disks but is only in memory.
+///
+/// The general way to use this is:
+///
+/// 1. Feeds the source of a file to [`CodeFix::new`].
+/// 2. Calls [`CodeFix::apply`] to apply suggestions to the source code.
+/// 3. Calls [`CodeFix::finish`] to get the "fixed" code.
 pub struct CodeFix {
     data: replace::Data,
 }
 
 impl CodeFix {
+    /// Creates a `CodeFix` with the source of a file to modify.
     pub fn new(s: &str) -> CodeFix {
         CodeFix {
             data: replace::Data::new(s.as_bytes()),
         }
     }
 
+    /// Applies a suggestion to the code.
     pub fn apply(&mut self, suggestion: &Suggestion) -> Result<(), Error> {
         for sol in &suggestion.solutions {
             for r in &sol.replacements {
@@ -258,11 +288,13 @@ impl CodeFix {
         Ok(())
     }
 
+    /// Gets the result of the "fixed" code.
     pub fn finish(&self) -> Result<String, Error> {
         Ok(String::from_utf8(self.data.to_vec())?)
     }
 }
 
+/// Applies multiple `suggestions` to the given `code`.
 pub fn apply_suggestions(code: &str, suggestions: &[Suggestion]) -> Result<String, Error> {
     let mut fix = CodeFix::new(code);
     for suggestion in suggestions.iter().rev() {
