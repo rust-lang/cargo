@@ -11,9 +11,9 @@ pub fn cli() -> Command {
         .args_conflicts_with_subcommands(true)
         .override_usage(
             "\
-       cargo owner add    <OWNER_NAME> [CRATE_NAME] [OPTIONS]
-       cargo owner remove <OWNER_NAME> [CRATE_NAME] [OPTIONS]
-       cargo owner list   [CRATE_NAME] [OPTIONS]",
+       cargo[EXE] owner add    <OWNER_NAME> [CRATE_NAME] [OPTIONS]
+       cargo[EXE] owner remove <OWNER_NAME> [CRATE_NAME] [OPTIONS]
+       cargo[EXE] owner list   [CRATE_NAME] [OPTIONS]",
         )
         .arg(
             multi_opt(
