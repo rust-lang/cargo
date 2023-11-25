@@ -456,7 +456,7 @@ fn env_rustflags_no_recompile() {
     p.cargo("check").env("RUSTFLAGS", "--cfg foo").run();
     p.cargo("check")
         .env("RUSTFLAGS", "--cfg foo")
-        .with_stdout("")
+        .with_stderr("[FINISHED] [..]")
         .run();
 }
 
@@ -944,7 +944,7 @@ fn build_rustflags_no_recompile() {
     p.cargo("check").env("RUSTFLAGS", "--cfg foo").run();
     p.cargo("check")
         .env("RUSTFLAGS", "--cfg foo")
-        .with_stdout("")
+        .with_stderr("[FINISHED] [..]")
         .run();
 }
 
@@ -1658,7 +1658,7 @@ fn host_config_rustflags_with_target() {
     // regression test for https://github.com/rust-lang/cargo/issues/10206
     let p = project()
         .file("src/lib.rs", "")
-        .file("build.rs.rs", "fn main() { assert!(cfg!(foo)); }")
+        .file("build.rs", "fn main() { assert!(cfg!(foo)); }")
         .file(".cargo/config.toml", "target-applies-to-host = false")
         .build();
 

@@ -1,7 +1,8 @@
-use crate::core::{Dependency, Package, PackageId, SourceId, Summary};
+use crate::core::{Dependency, Package, PackageId, SourceId};
 use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
+use crate::sources::IndexSummary;
 use crate::util::errors::CargoResult;
 use std::task::Poll;
 
@@ -59,14 +60,14 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
         &mut self,
         dep: &Dependency,
         kind: QueryKind,
-        f: &mut dyn FnMut(Summary),
+        f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
         let (replace_with, to_replace) = (self.replace_with, self.to_replace);
         let dep = dep.clone().map_source(to_replace, replace_with);
 
         self.inner
             .query(&dep, kind, &mut |summary| {
-                f(summary.map_source(replace_with, to_replace))
+                f(summary.map_summary(|s| s.map_source(replace_with, to_replace)))
             })
             .map_err(|e| {
                 e.context(format!(

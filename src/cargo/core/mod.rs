@@ -14,7 +14,6 @@ pub use self::workspace::{
     find_workspace_root, resolve_relative_path, MaybePackage, Workspace, WorkspaceConfig,
     WorkspaceRootConfig,
 };
-pub use crate::util::toml::schema::InheritableFields;
 
 pub mod compiler;
 pub mod dependency;

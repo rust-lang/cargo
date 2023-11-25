@@ -178,6 +178,8 @@ fn changing_spec_rebuilds() {
 }
 
 #[cargo_test(nightly, reason = "requires features no_core, lang_items")]
+// This is randomly crashing in lld. See https://github.com/rust-lang/rust/issues/115985
+#[cfg_attr(all(windows, target_env = "gnu"), ignore = "windows-gnu lld crashing")]
 fn changing_spec_relearns_crate_types() {
     // Changing the .json file will invalidate the cache of crate types.
     let p = project()

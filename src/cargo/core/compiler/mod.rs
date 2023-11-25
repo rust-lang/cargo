@@ -1243,24 +1243,31 @@ fn trim_paths_args(
 fn check_cfg_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
     if cx.bcx.config.cli_unstable().check_cfg {
         // This generate something like this:
-        //  - cfg(feature, values())
+        //  - cfg()
         //  - cfg(feature, values("foo", "bar"))
         //
         // NOTE: Despite only explicitly specifying `feature`, well known names and values
         // are implicitly enabled when one or more `--check-cfg` argument is passed.
+        // NOTE: Never generate a empty `values()` since it would mean that it's possible
+        // to have `cfg(feature)` without a feature name which is impossible.
 
         let gross_cap_estimation = unit.pkg.summary().features().len() * 7 + 25;
         let mut arg_feature = OsString::with_capacity(gross_cap_estimation);
-        arg_feature.push("cfg(feature, values(");
-        for (i, feature) in unit.pkg.summary().features().keys().enumerate() {
-            if i != 0 {
-                arg_feature.push(", ");
+
+        arg_feature.push("cfg(");
+        if !unit.pkg.summary().features().is_empty() {
+            arg_feature.push("feature, values(");
+            for (i, feature) in unit.pkg.summary().features().keys().enumerate() {
+                if i != 0 {
+                    arg_feature.push(", ");
+                }
+                arg_feature.push("\"");
+                arg_feature.push(feature);
+                arg_feature.push("\"");
             }
-            arg_feature.push("\"");
-            arg_feature.push(feature);
-            arg_feature.push("\"");
+            arg_feature.push(")");
         }
-        arg_feature.push("))");
+        arg_feature.push(")");
 
         vec![
             OsString::from("-Zunstable-options"),

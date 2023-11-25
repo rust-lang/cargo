@@ -83,7 +83,12 @@ fn cargo_compile_with_nested_deps_shorthand() {
     p.process(&p.bin("foo")).with_stdout("test passed\n").run();
 
     println!("cleaning");
-    p.cargo("clean -v").with_stdout("").run();
+    p.cargo("clean -v")
+        .with_stderr(
+            "[REMOVING] [CWD]/target\n\
+             [REMOVED] [..]",
+        )
+        .run();
     println!("building baz");
     p.cargo("build -p baz")
         .with_stderr(
@@ -350,7 +355,7 @@ fn deep_dependencies_trigger_rebuild() {
              in [..]\n",
         )
         .run();
-    p.cargo("check").with_stdout("").run();
+    p.cargo("check").with_stderr("[FINISHED] [..]").run();
 
     // Make sure an update to baz triggers a rebuild of bar
     //
@@ -437,7 +442,7 @@ fn no_rebuild_two_deps() {
         )
         .run();
     assert!(p.bin("foo").is_file());
-    p.cargo("build").with_stdout("").run();
+    p.cargo("build").with_stderr("[FINISHED] [..]").run();
     assert!(p.bin("foo").is_file());
 }
 

@@ -6,7 +6,8 @@ use std::task::Poll;
 
 use crate::core::package::PackageSet;
 use crate::core::SourceId;
-use crate::core::{Dependency, Package, PackageId, Summary};
+use crate::core::{Dependency, Package, PackageId};
+use crate::sources::IndexSummary;
 use crate::util::{CargoResult, Config};
 
 /// An abstraction of different sources of Cargo packages.
@@ -36,11 +37,11 @@ pub trait Source {
         self.source_id()
     }
 
-    /// Returns whether or not this source will return [`Summary`] items with
+    /// Returns whether or not this source will return [`IndexSummary`] items with
     /// checksums listed.
     fn supports_checksums(&self) -> bool;
 
-    /// Returns whether or not this source will return [`Summary`] items with
+    /// Returns whether or not this source will return [`IndexSummary`] items with
     /// the `precise` field in the [`SourceId`] listed.
     fn requires_precise(&self) -> bool;
 
@@ -50,17 +51,21 @@ pub trait Source {
     /// wait until package information become available. Otherwise any query
     /// may return a [`Poll::Pending`].
     ///
-    /// The `f` argument is expected to get called when any [`Summary`] becomes available.
+    /// The `f` argument is expected to get called when any [`IndexSummary`] becomes available.
     fn query(
         &mut self,
         dep: &Dependency,
         kind: QueryKind,
-        f: &mut dyn FnMut(Summary),
+        f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>>;
 
-    /// Gathers the result from [`Source::query`] as a list of [`Summary`] items
+    /// Gathers the result from [`Source::query`] as a list of [`IndexSummary`] items
     /// when they become available.
-    fn query_vec(&mut self, dep: &Dependency, kind: QueryKind) -> Poll<CargoResult<Vec<Summary>>> {
+    fn query_vec(
+        &mut self,
+        dep: &Dependency,
+        kind: QueryKind,
+    ) -> Poll<CargoResult<Vec<IndexSummary>>> {
         let mut ret = Vec::new();
         self.query(dep, kind, &mut |s| ret.push(s)).map_ok(|_| ret)
     }
@@ -215,7 +220,7 @@ impl<'a, T: Source + ?Sized + 'a> Source for Box<T> {
         &mut self,
         dep: &Dependency,
         kind: QueryKind,
-        f: &mut dyn FnMut(Summary),
+        f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
         (**self).query(dep, kind, f)
     }
@@ -287,7 +292,7 @@ impl<'a, T: Source + ?Sized + 'a> Source for &'a mut T {
         &mut self,
         dep: &Dependency,
         kind: QueryKind,
-        f: &mut dyn FnMut(Summary),
+        f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
         (**self).query(dep, kind, f)
     }

@@ -348,7 +348,7 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
     for (pkg_id, summaries) in summaries {
         let mut updated_versions: Vec<_> = summaries
             .iter()
-            .map(|summary| summary.version())
+            .map(|summary| summary.as_summary().version())
             .filter(|version| *version > pkg_id.version())
             .collect();
         updated_versions.sort();

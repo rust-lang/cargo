@@ -61,6 +61,10 @@ Members are given privileges, such as:
 The team meets on a weekly basis on a video chat.
 If you are interested in participating, feel free to contact us on [Zulip].
 
+Minutes for all meetings are recorded on [HackMD][meeting-minutes].
+
+[meeting-minutes]: https://hackmd.io/team/rust-cargo-team?nav=overview&tags=%5B%22meetings%22%5D
+
 ### Becoming a member
 
 A contributor can become a member of the Cargo Team by requesting a review or being nominated by one of the existing members.
@@ -70,6 +74,27 @@ The team lead or another member of the team will also confirm with the moderatio
 Contributors who wish to join the team should exhibit an interest in carrying the design principles of Cargo and participate in some of the activities listed above in [Membership Expectations](#membership-expectations).
 
 Members may leave at any time, preferably by letting the team know ahead of time.
+
+## Team resources
+
+### Zulip
+
+The Cargo team has several streams on Zulip:
+
+- [`#t-cargo`](https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo) --- General public channel for discussing any topics related to Cargo.
+- [`#t-cargo/build-integration`](https://rust-lang.zulipchat.com/#narrow/stream/334885-t-cargo.2Fbuild-integration) --- Discussions about integration with build systems.
+- [`#t-cargo/PubGrub`](https://rust-lang.zulipchat.com/#narrow/stream/260232-t-cargo.2FPubGrub) --- Discussions about the [PubGrub](https://github.com/pubgrub-rs/pubgrub) project.
+
+The following are private streams for the Cargo team. The team should avoid using this unless necessary (for example, discussing a security issue or team and meeting organization).
+
+- [`#t-cargo/private`](https://rust-lang.zulipchat.com/#narrow/stream/296752-t-cargo.2Fprivate) --- Private channel for discussions among the team.
+- [`#t-cargo/meetings`](https://rust-lang.zulipchat.com/#narrow/stream/364532-t-cargo.2Fmeetings) --- Private channel for discussions about team meetings, including non-members who regularly attend the meetings.
+
+### HackMD
+
+The Cargo team has a shared, public workspace on HackMD at <https://hackmd.io/team/rust-cargo-team> for drafting documents and recording meeting minutes.
+
+Since this HackMD workspace is using the free service, it does not support private documents. If you need to draft a private document, create it in your personal workspace and use private channels to share the link.
 
 ## Decision process
 

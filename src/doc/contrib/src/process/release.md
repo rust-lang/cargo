@@ -146,10 +146,9 @@ Cargo team, or the Release team) should publish it manually using `cargo
 publish`.
 
 Some packages are not published automatically because they are not part of the
-Rust release train. These currently include all of the [`credential`] packages
-and the [`home`] package. These are published manually on an as-needed or
-as-requested basis by whoever has permissions (currently [@ehuss] or the
-Release/Infra team).
+Rust release train. This currently only includes the [`home`] package. These
+are published manually on an as-needed or as-requested basis by whoever has
+permissions (currently [@ehuss] or the Release/Infra team).
 
 In the future, these manual publishing options should be integrated with
 GitHub Actions so that any team member can trigger them. Likely that should
@@ -158,7 +157,6 @@ Secrets, and setting up GitHub Actions workflows with the appropriate
 permissions which can be manually triggered to launch a release.
 
 [`home`]: https://github.com/rust-lang/cargo/tree/master/crates/home
-[`credential`]: https://github.com/rust-lang/cargo/tree/master/credential
 [`publish.py` script]: https://github.com/rust-lang/cargo/blob/master/publish.py
 
 ## Beta backports

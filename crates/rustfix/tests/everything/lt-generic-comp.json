@@ -1,0 +1,87 @@
+{
+  "message": "`<` is interpreted as a start of generic arguments for `u32`, not a comparison",
+  "code": null,
+  "level": "error",
+  "spans": [
+    {
+      "file_name": "./tests/everything/lt-generic-comp.rs",
+      "byte_start": 49,
+      "byte_end": 50,
+      "line_start": 4,
+      "line_end": 4,
+      "column_start": 19,
+      "column_end": 20,
+      "is_primary": false,
+      "text": [
+        {
+          "text": "    if x as u32 < 4 {",
+          "highlight_start": 19,
+          "highlight_end": 20
+        }
+      ],
+      "label": "interpreted as generic arguments",
+      "suggested_replacement": null,
+      "expansion": null
+    },
+    {
+      "file_name": "./tests/everything/lt-generic-comp.rs",
+      "byte_start": 47,
+      "byte_end": 48,
+      "line_start": 4,
+      "line_end": 4,
+      "column_start": 17,
+      "column_end": 18,
+      "is_primary": true,
+      "text": [
+        {
+          "text": "    if x as u32 < 4 {",
+          "highlight_start": 17,
+          "highlight_end": 18
+        }
+      ],
+      "label": "not interpreted as comparison",
+      "suggested_replacement": null,
+      "expansion": null
+    }
+  ],
+  "children": [
+    {
+      "message": "try comparing the cast value",
+      "code": null,
+      "level": "help",
+      "spans": [
+        {
+          "file_name": "./tests/everything/lt-generic-comp.rs",
+          "byte_start": 38,
+          "byte_end": 46,
+          "line_start": 4,
+          "line_end": 4,
+          "column_start": 8,
+          "column_end": 16,
+          "is_primary": true,
+          "text": [
+            {
+              "text": "    if x as u32 < 4 {",
+              "highlight_start": 8,
+              "highlight_end": 16
+            }
+          ],
+          "label": null,
+          "suggested_replacement": "(x as u32)",
+          "expansion": null
+        }
+      ],
+      "children": [],
+      "rendered": null
+    }
+  ],
+  "rendered": "error: `<` is interpreted as a start of generic arguments for `u32`, not a comparison\n --> ./tests/everything/lt-generic-comp.rs:4:17\n  |\n4 |     if x as u32 < 4 {\n  |        -------- ^ - interpreted as generic arguments\n  |        |        |\n  |        |        not interpreted as comparison\n  |        help: try comparing the cast value: `(x as u32)`\n\n"
+}
+{
+  "message": "aborting due to previous error",
+  "code": null,
+  "level": "error",
+  "spans": [],
+  "children": [],
+  "rendered": "error: aborting due to previous error\n\n"
+}

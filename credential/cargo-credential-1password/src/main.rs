@@ -1,5 +1,8 @@
 //! Cargo registry 1password credential process.
 
+#![allow(clippy::disallowed_methods)]
+#![allow(clippy::print_stderr)]
+
 use cargo_credential::{
     Action, CacheControl, Credential, CredentialResponse, Error, RegistryInfo, Secret,
 };
@@ -79,6 +82,10 @@ impl OnePasswordKeychain {
         }
         let mut cmd = Command::new("op");
         cmd.args(["signin", "--raw"]);
+        if let Some(account) = &self.account {
+            cmd.arg("--account");
+            cmd.arg(account);
+        }
         cmd.stdout(Stdio::piped());
         let mut child = cmd
             .spawn()

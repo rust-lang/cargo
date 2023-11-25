@@ -1,6 +1,6 @@
 [package]
 name = "crates-io"
-version = "0.39.1"
+version = "0.39.2"
 rust-version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -20,3 +20,6 @@ serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 thiserror.workspace = true
 url.workspace = true
+
+[lints]
+workspace = true

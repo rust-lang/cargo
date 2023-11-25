@@ -1523,6 +1523,30 @@ impl Package {
             manifest.push_str(&format!("rust-version = \"{}\"", version));
         }
 
+        if !self.features.is_empty() {
+            let features: Vec<String> = self
+                .features
+                .iter()
+                .map(|(feature, features)| {
+                    if features.is_empty() {
+                        format!("{} = []", feature)
+                    } else {
+                        format!(
+                            "{} = [{}]",
+                            feature,
+                            features
+                                .iter()
+                                .map(|s| format!("\"{}\"", s))
+                                .collect::<Vec<_>>()
+                                .join(", ")
+                        )
+                    }
+                })
+                .collect();
+
+            manifest.push_str(&format!("\n[features]\n{}", features.join("\n")));
+        }
+
         for dep in self.deps.iter() {
             let target = match dep.target {
                 None => String::new(),
@@ -1540,6 +1564,9 @@ impl Package {
             "#,
                 target, kind, dep.name, dep.vers
             ));
+            if dep.optional {
+                manifest.push_str("optional = true\n");
+            }
             if let Some(artifact) = &dep.artifact {
                 manifest.push_str(&format!("artifact = \"{}\"\n", artifact));
             }

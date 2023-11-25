@@ -10,3 +10,6 @@ publish = false
 
 [dependencies]
 tempfile.workspace = true
+
+[lints]
+workspace = true

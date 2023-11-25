@@ -134,9 +134,14 @@ Run with 'cargo -Z [FLAG] [COMMAND]'",
                 "Formats all bin and lib files of the current crate using rustfmt.",
             ),
         ]);
-        drop_println!(config, "Installed Commands:");
+        drop_println!(
+            config,
+            color_print::cstr!("<green,bold>Installed Commands:</>")
+        );
         for (name, command) in list_commands(config) {
             let known_external_desc = known_external_command_descriptions.get(name.as_str());
+            let literal = style::LITERAL.render();
+            let reset = anstyle::Reset.render();
             match command {
                 CommandInfo::BuiltIn { about } => {
                     assert!(
@@ -145,22 +150,21 @@ Run with 'cargo -Z [FLAG] [COMMAND]'",
                     );
                     let summary = about.unwrap_or_default();
                     let summary = summary.lines().next().unwrap_or(&summary); // display only the first line
-                    drop_println!(config, "    {:<20} {}", name, summary);
+                    drop_println!(config, "    {literal}{name:<20}{reset} {summary}");
                 }
                 CommandInfo::External { path } => {
                     if let Some(desc) = known_external_desc {
-                        drop_println!(config, "    {:<20} {}", name, desc);
+                        drop_println!(config, "    {literal}{name:<20}{reset} {desc}");
                     } else if is_verbose {
-                        drop_println!(config, "    {:<20} {}", name, path.display());
+                        drop_println!(config, "    {literal}{name:<20}{reset} {}", path.display());
                     } else {
-                        drop_println!(config, "    {}", name);
+                        drop_println!(config, "    {literal}{name}{reset}");
                     }
                 }
                 CommandInfo::Alias { target } => {
                     drop_println!(
                         config,
-                        "    {:<20} alias: {}",
-                        name,
+                        "    {literal}{name:<20}{reset} alias: {}",
                         target.iter().join(" ")
                     );
                 }

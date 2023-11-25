@@ -591,15 +591,36 @@ fn find_json_mismatch_r<'a>(
                 .next()
         }
         (&Object(ref l), &Object(ref r)) => {
-            let same_keys = l.len() == r.len() && l.keys().all(|k| r.contains_key(k));
-            if !same_keys {
-                return Some((expected, actual));
-            }
+            let mut expected_entries = l.iter();
+            let mut actual_entries = r.iter();
 
-            l.values()
-                .zip(r.values())
-                .filter_map(|(l, r)| find_json_mismatch_r(l, r, cwd))
-                .next()
+            // Compilers older than 1.76 do not produce $message_type.
+            // Treat it as optional for now.
+            let mut expected_entries_without_message_type;
+            let expected_entries: &mut dyn Iterator<Item = _> =
+                if l.contains_key("$message_type") && !r.contains_key("$message_type") {
+                    expected_entries_without_message_type =
+                        expected_entries.filter(|entry| entry.0 != "$message_type");
+                    &mut expected_entries_without_message_type
+                } else {
+                    &mut expected_entries
+                };
+
+            loop {
+                match (expected_entries.next(), actual_entries.next()) {
+                    (None, None) => return None,
+                    (Some((expected_key, expected_value)), Some((actual_key, actual_value)))
+                        if expected_key == actual_key =>
+                    {
+                        if let mismatch @ Some(_) =
+                            find_json_mismatch_r(expected_value, actual_value, cwd)
+                        {
+                            return mismatch;
+                        }
+                    }
+                    _ => return Some((expected, actual)),
+                }
+            }
         }
         (&Null, &Null) => None,
         // Magic string literal `"{...}"` acts as wildcard for any sub-JSON.

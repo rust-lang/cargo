@@ -1,7 +1,8 @@
 CARGO-SEARCH(1)
 
 NAME
-       cargo-search — Search packages in crates.io
+       cargo-search — Search packages in the registry. Default registry is
+       crates.io
 
 SYNOPSIS
        cargo search [options] [query…]

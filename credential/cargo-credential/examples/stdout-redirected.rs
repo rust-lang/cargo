@@ -1,5 +1,8 @@
 //! Provider used for testing redirection of stdout.
 
+#![allow(clippy::print_stderr)]
+#![allow(clippy::print_stdout)]
+
 use cargo_credential::{Action, Credential, CredentialResponse, Error, RegistryInfo};
 
 struct MyCredential;

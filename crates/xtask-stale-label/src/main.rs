@@ -10,6 +10,8 @@
 //!         Probably autofix them in the future.
 //! ```
 
+#![allow(clippy::print_stderr)]
+
 use std::fmt::Write as _;
 use std::path::PathBuf;
 use std::process;
