@@ -70,6 +70,11 @@
 //!   This is not directly depended upon with a `path` dependency; cargo uses the version from crates.io.
 //!   It is intended to be versioned and published independently of Rust's release system.
 //!   Whenever a change needs to be made, bump the version in Cargo.toml and `cargo publish` it manually, and then update cargo's `Cargo.toml` to depend on the new version.
+//! - [`rustfix`](https://crates.io/crates/rustfix)
+//!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/rustfix)):
+//!   This defines structures that represent fix suggestions from rustc,
+//!   as well as generates "fixed" code from suggestions.
+//!   Operations in `rustfix` are all in memory and won't write to disks.
 //! - [`cargo-test-support`](https://github.com/rust-lang/cargo/tree/master/crates/cargo-test-support)
 //!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/cargo_test_support/index.html)):
 //!   This contains a variety of code to support writing tests

@@ -5,10 +5,14 @@
 use anyhow::{anyhow, ensure, Error};
 use std::rc::Rc;
 
+/// Indicates the change state of a [`Span`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum State {
+    /// The initial state. No change applied.
     Initial,
+    /// Has been replaced.
     Replaced(Rc<[u8]>),
+    /// Has been inserted.
     Inserted(Rc<[u8]>),
 }
 
@@ -18,19 +22,23 @@ impl State {
     }
 }
 
+/// Span with a change [`State`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Span {
     /// Start of this span in parent data
     start: usize,
     /// up to end excluding
     end: usize,
+    /// Whether the span is inserted, replaced or still fresh.
     data: State,
 }
 
 /// A container that allows easily replacing chunks of its data
 #[derive(Debug, Clone, Default)]
 pub struct Data {
+    /// Original data.
     original: Vec<u8>,
+    /// [`Span`]s covering the full range of the original data.
     parts: Vec<Span>,
 }
 
