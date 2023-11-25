@@ -35,44 +35,43 @@ pub fn cli() -> Command {
         )
         .arg(flag("list", "List owners of a crate").short('l').hide(true))
         .subcommands([
-            add_registry_args(
-                Command::new("add")
-                    .about("Name of a user or team to invite as an owner")
-                    .args([
-                        Arg::new("add")
-                            .required(true)
-                            .value_delimiter(',')
-                            .value_name("OWNER_NAME")
-                            .help("Name of the owner you want to invite"),
-                        Arg::new("crate")
-                            .value_name("CRATE_NAME")
-                            .help("Crate name that you want to manage the owner"),
-                    ]),
-            )
-            .override_usage("cargo owner add <OWNER_NAME> [CRATE_NAME] [OPTIONS]"),
-            add_registry_args(
-                Command::new("remove")
-                    .about("Name of a user or team to remove as an owner")
-                    .args([
-                        Arg::new("remove")
-                            .required(true)
-                            .value_delimiter(',')
-                            .value_name("OWNER_NAME")
-                            .help("Name of the owner you want to remove"),
-                        Arg::new("crate")
-                            .value_name("CRATE_NAME")
-                            .help("Crate name that you want to manage the owner"),
-                    ]),
-            )
-            .override_usage("cargo owner remove <OWNER_NAME> [CRATE_NAME] [OPTIONS]"),
-            add_registry_args(
-                Command::new("list").about("List owners of a crate").arg(
+            Command::new("add")
+                .about("Name of a user or team to invite as an owner")
+                .args([
+                    Arg::new("add")
+                        .required(true)
+                        .value_delimiter(',')
+                        .value_name("OWNER_NAME")
+                        .help("Name of the owner you want to invite"),
+                    Arg::new("crate")
+                        .value_name("CRATE_NAME")
+                        .help("Crate name that you want to manage the owner"),
+                ])
+                .args(&add_registry_args())
+                .override_usage("cargo owner add <OWNER_NAME> [CRATE_NAME] [OPTIONS]"),
+            Command::new("remove")
+                .about("Name of a user or team to remove as an owner")
+                .args([
+                    Arg::new("remove")
+                        .required(true)
+                        .value_delimiter(',')
+                        .value_name("OWNER_NAME")
+                        .help("Name of the owner you want to remove"),
+                    Arg::new("crate")
+                        .value_name("CRATE_NAME")
+                        .help("Crate name that you want to manage the owner"),
+                ])
+                .args(&add_registry_args())
+                .override_usage("cargo owner remove <OWNER_NAME> [CRATE_NAME] [OPTIONS]"),
+            Command::new("list")
+                .about("List owners of a crate")
+                .arg(
                     Arg::new("crate")
                         .value_name("CRATE_NAME")
                         .help("Crate name which you want to list all owner names"),
-                ),
-            )
-            .override_usage("cargo owner list [CRATE_NAME] [OPTIONS]"),
+                )
+                .args(&add_registry_args())
+                .override_usage("cargo owner list [CRATE_NAME] [OPTIONS]"),
         ])
         .arg_index("Registry index URL to modify owners for")
         .arg_registry("Registry to modify owners for")
@@ -83,11 +82,14 @@ pub fn cli() -> Command {
         ))
 }
 
-fn add_registry_args(command: Command) -> Command {
-    command
-        .arg_index("Registry index URL to modify owners for")
-        .arg_registry("Registry to modify owners for")
-        .arg(opt("token", "API token to use when authenticating").value_name("TOKEN"))
+fn add_registry_args() -> [Arg; 3] {
+    [
+        opt("index", "Registry index URL to modify owners for")
+            .value_name("INDEX")
+            .conflicts_with("registry"),
+        opt("registry", "Registry to modify owners for").value_name("REGISTRY"),
+        opt("token", "API token to use when authenticating").value_name("TOKEN"),
+    ]
 }
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
@@ -107,10 +109,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             false,
         ),
         Some(("list", _)) => (None, None, true),
-        Some((name, _)) => {
-            unreachable!("{name} is not a subcommand of cargo owner, please enter `cargo owner --help` for help.")
-        }
-        None => (
+        _ => (
             args.get_many::<String>("add")
                 .map(|xs| xs.cloned().collect::<Vec<String>>()),
             args.get_many::<String>("remove")
@@ -121,16 +120,30 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
     let common_args = args.subcommand().map(|(_, args)| args).unwrap_or(args);
 
+    if (to_add.clone(), to_remove.clone(), list) == (None, None, false) {
+        return Err(CliError::new(
+            anyhow::format_err!(
+                " please enter correct subcommand or parameter.\n            
+enter `cargo owner --help` for help."
+            ),
+            101,
+        ));
+    }
+
     let opts = OwnersOptions {
         krate: common_args.clone().get_one::<String>("crate").cloned(),
         token: common_args
             .get_one::<String>("token")
             .cloned()
             .map(Secret::from),
-        reg_or_index: args.registry_or_index(config)?,
-        to_add: to_add,
-        to_remove: to_remove,
-        list: list,
+        reg_or_index: args
+            .subcommand()
+            .map_or(args.registry_or_index(config), |v| {
+                v.1.registry_or_index(config)
+            })?,
+        to_add,
+        to_remove,
+        list,
     };
 
     ops::modify_owners(config, &opts)?;

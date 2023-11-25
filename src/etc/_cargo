@@ -217,9 +217,12 @@ _cargo() {
                 owner)
                     _arguments -s -S $common $registry \
                         '(-a --add)'{-a,--add}'[specify name of a user or team to invite as an owner]:name' \
+                        '(add)'{add}'[specify name of a user or team to invite as an owner]:name' \
                         '--index=[specify registry index]:index' \
                         '(-l --list)'{-l,--list}'[list owners of a crate]' \
+                        '(list)'{list}'[list owners of a crate]' \
                         '(-r --remove)'{-r,--remove}'[specify name of a user or team to remove as an owner]:name' \
+                        '(remove)'{remove}'[specify name of a user or team to remove as an owner]:name' \
                         '--token=[specify API token to use when authenticating]:token' \
                         '*: :_guard "^-*" "crate"'
                         ;;
