@@ -62,6 +62,17 @@ The package name will be exposed as feature of your crate.")
 The package will be removed from your features.")
                 .conflicts_with("dev")
                 .overrides_with("optional"),
+            flag("public", "Mark the dependency as public")
+                .long_help("Mark the dependency as public
+
+The dependnecy will be visible in both of your crate and outside."),
+            flag("no-public", "Mark the dependency as private")
+                .conflicts_with("dev")
+                .conflicts_with("build")
+                .overrides_with("public")
+                .long_help("Mark the dependency as private
+
+The dependnecy will be only visible in your crate other than outside."),
             clap::Arg::new("rename")
                 .long("rename")
                 .action(ArgAction::Set)
@@ -76,18 +87,6 @@ Example uses:
                 "ignore-rust-version",
                 "Ignore `rust-version` specification in packages (unstable)"
             ),
-            flag("public", "Mark the dependency as public")
-                .long_help("Mark the dependency as public
-
-The dependnecy will be visible in both of your crate and outside."),
-            flag("no-public", "Mark the dependency as private")
-                .conflicts_with("dev")
-                .long_help("Mark the dependency as private
-
-The dependnecy will be only visible in your crate other than outside.")
-                .conflicts_with("dev")
-                .overrides_with("public"),
-
         ])
         .arg_manifest_path_without_unsupported_path_tip()
         .arg_package("Package to modify")

@@ -32,16 +32,6 @@ Options:
           
           The package will be removed from your features.
 
-      --rename <NAME>
-          Rename the dependency
-          
-          Example uses:
-          - Depending on multiple versions of a crate
-          - Depend on crates with the same name from different registries
-
-      --ignore-rust-version
-          Ignore `rust-version` specification in packages (unstable)
-
       --public
           Mark the dependency as public
           
@@ -51,6 +41,16 @@ Options:
           Mark the dependency as private
           
           The dependnecy will be only visible in your crate other than outside.
+
+      --rename <NAME>
+          Rename the dependency
+          
+          Example uses:
+          - Depending on multiple versions of a crate
+          - Depend on crates with the same name from different registries
+
+      --ignore-rust-version
+          Ignore `rust-version` specification in packages (unstable)
 
   -n, --dry-run
           Don't actually write the manifest

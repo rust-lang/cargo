@@ -51,13 +51,13 @@ impl Dependency {
         Self {
             name: name.into(),
             optional: None,
+            public: None,
             features: None,
             default_features: None,
             inherited_features: None,
             source: None,
             registry: None,
             rename: None,
-            public: None,
         }
     }
 
@@ -338,14 +338,14 @@ impl Dependency {
 
             let dep = Self {
                 name,
-                rename,
-                source: Some(source),
-                registry,
-                default_features,
-                features,
                 optional,
                 public,
+                features,
+                default_features,
                 inherited_features: None,
+                source: Some(source),
+                registry,
+                rename,
             };
             Ok(dep)
         } else {
