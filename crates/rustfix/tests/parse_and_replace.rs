@@ -13,7 +13,6 @@ use tracing::{debug, info, warn};
 
 mod fixmode {
     pub const EVERYTHING: &str = "yolo";
-    pub const EDITION: &str = "edition";
 }
 
 mod settings {
@@ -23,10 +22,10 @@ mod settings {
     pub const RECORD_FIXED_RUST: &str = "RUSTFIX_TEST_RECORD_FIXED_RUST";
 }
 
-fn compile(file: &Path, mode: &str) -> Result<Output, Error> {
+fn compile(file: &Path) -> Result<Output, Error> {
     let tmp = tempdir()?;
 
-    let mut args: Vec<OsString> = vec![
+    let args: Vec<OsString> = vec![
         file.into(),
         "--error-format=json".into(),
         "--emit=metadata".into(),
@@ -34,10 +33,6 @@ fn compile(file: &Path, mode: &str) -> Result<Output, Error> {
         "--out-dir".into(),
         tmp.path().into(),
     ];
-
-    if mode == fixmode::EDITION {
-        args.push("--edition=2018".into());
-    }
 
     let res = Command::new(env::var_os("RUSTC").unwrap_or("rustc".into()))
         .args(&args)
@@ -48,8 +43,8 @@ fn compile(file: &Path, mode: &str) -> Result<Output, Error> {
     Ok(res)
 }
 
-fn compile_and_get_json_errors(file: &Path, mode: &str) -> Result<String, Error> {
-    let res = compile(file, mode)?;
+fn compile_and_get_json_errors(file: &Path) -> Result<String, Error> {
+    let res = compile(file)?;
     let stderr = String::from_utf8(res.stderr)?;
     if stderr.contains("is only accepted on the nightly compiler") {
         panic!("rustfix tests require a nightly compiler");
@@ -65,8 +60,8 @@ fn compile_and_get_json_errors(file: &Path, mode: &str) -> Result<String, Error>
     }
 }
 
-fn compiles_without_errors(file: &Path, mode: &str) -> Result<(), Error> {
-    let res = compile(file, mode)?;
+fn compiles_without_errors(file: &Path) -> Result<(), Error> {
+    let res = compile(file)?;
 
     match res.status.code() {
         Some(0) => Ok(()),
@@ -139,8 +134,8 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
 
     debug!("next up: {:?}", file);
     let code = read_file(file).context(format!("could not read {}", file.display()))?;
-    let errors = compile_and_get_json_errors(file, mode)
-        .context(format!("could compile {}", file.display()))?;
+    let errors =
+        compile_and_get_json_errors(file).context(format!("could compile {}", file.display()))?;
     let suggestions =
         rustfix::get_suggestions_from_json(&errors, &HashSet::new(), filter_suggestions)
             .context("could not load suggestions")?;
@@ -190,7 +185,7 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
         diff(fixed.trim(), expected_fixed.trim())
     );
 
-    compiles_without_errors(&fixed_file, mode)?;
+    compiles_without_errors(&fixed_file)?;
 
     Ok(())
 }
@@ -236,11 +231,4 @@ fn assert_fixtures(dir: &str, mode: &str) {
 fn everything() {
     tracing_subscriber::fmt::init();
     assert_fixtures("./tests/everything", fixmode::EVERYTHING);
-}
-
-#[test]
-#[ignore = "Requires custom rustc build"]
-fn edition() {
-    tracing_subscriber::fmt::init();
-    assert_fixtures("./tests/edition", fixmode::EDITION);
 }

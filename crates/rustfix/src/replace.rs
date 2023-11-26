@@ -320,18 +320,16 @@ mod tests {
 
     proptest! {
         #[test]
-        #[ignore]
         fn new_to_vec_roundtrip(ref s in "\\PC*") {
             assert_eq!(s.as_bytes(), Data::new(s.as_bytes()).to_vec().as_slice());
         }
 
         #[test]
-        #[ignore]
         fn replace_random_chunks(
             ref data in "\\PC*",
             ref replacements in prop::collection::vec(
                 (any::<::std::ops::Range<usize>>(), any::<Vec<u8>>()),
-                1..1337,
+                1..100,
             )
         ) {
             let mut d = Data::new(data.as_bytes());
