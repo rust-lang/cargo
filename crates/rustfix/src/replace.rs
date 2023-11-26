@@ -2,8 +2,9 @@
 //! replacement of parts of its content, with the ability to prevent changing
 //! the same parts multiple times.
 
-use anyhow::{anyhow, ensure, Error};
 use std::rc::Rc;
+
+use crate::error::Error;
 
 /// Indicates the change state of a [`Span`].
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -77,22 +78,13 @@ impl Data {
         range: std::ops::Range<usize>,
         data: &[u8],
     ) -> Result<(), Error> {
-        let exclusive_end = range.end;
+        if range.start > range.end {
+            return Err(Error::InvalidRange(range));
+        }
 
-        ensure!(
-            range.start <= exclusive_end,
-            "Invalid range {}..{}, start is larger than end",
-            range.start,
-            range.end
-        );
-
-        ensure!(
-            exclusive_end <= self.original.len(),
-            "Invalid range {}..{} given, original data is only {} byte long",
-            range.start,
-            range.end,
-            self.original.len()
-        );
+        if range.end > self.original.len() {
+            return Err(Error::DataLengthExceeded(range, self.original.len()));
+        }
 
         let insert_only = range.start == range.end;
 
@@ -106,42 +98,35 @@ impl Data {
         // the whole chunk. As an optimization and without loss of generality we
         // don't add empty parts.
         let new_parts = {
-            let index_of_part_to_split = self
-                .parts
-                .iter()
-                .position(|p| !p.data.is_inserted() && p.start <= range.start && p.end >= range.end)
-                .ok_or_else(|| {
-                    if tracing::enabled!(tracing::Level::DEBUG) {
-                        let slices = self
-                            .parts
-                            .iter()
-                            .map(|p| {
-                                (
-                                    p.start,
-                                    p.end,
-                                    match p.data {
-                                        State::Initial => "initial",
-                                        State::Replaced(..) => "replaced",
-                                        State::Inserted(..) => "inserted",
-                                    },
-                                )
-                            })
-                            .collect::<Vec<_>>();
-                        tracing::debug!(
-                            "no single slice covering {}..{}, current slices: {:?}",
-                            range.start,
-                            range.end,
-                            slices,
-                        );
-                    }
-
-                    anyhow!(
-                        "Could not replace range {}..{} in file \
-                         -- maybe parts of it were already replaced?",
+            let Some(index_of_part_to_split) = self.parts.iter().position(|p| {
+                !p.data.is_inserted() && p.start <= range.start && p.end >= range.end
+            }) else {
+                if tracing::enabled!(tracing::Level::DEBUG) {
+                    let slices = self
+                        .parts
+                        .iter()
+                        .map(|p| {
+                            (
+                                p.start,
+                                p.end,
+                                match p.data {
+                                    State::Initial => "initial",
+                                    State::Replaced(..) => "replaced",
+                                    State::Inserted(..) => "inserted",
+                                },
+                            )
+                        })
+                        .collect::<Vec<_>>();
+                    tracing::debug!(
+                        "no single slice covering {}..{}, current slices: {:?}",
                         range.start,
                         range.end,
-                    )
-                })?;
+                        slices,
+                    );
+                }
+
+                return Err(Error::MaybeAlreadyReplaced(range));
+            };
 
             let part_to_split = &self.parts[index_of_part_to_split];
 
@@ -161,10 +146,9 @@ impl Data {
                 }
             }
 
-            ensure!(
-                part_to_split.data == State::Initial,
-                "Cannot replace slice of data that was already replaced"
-            );
+            if part_to_split.data != State::Initial {
+                return Err(Error::AlreadyReplaced);
+            }
 
             let mut new_parts = Vec::with_capacity(self.parts.len() + 2);
 
@@ -293,21 +277,25 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Cannot replace slice of data that was already replaced")]
     fn replace_overlapping_stuff_errs() {
         let mut d = Data::new(b"foo bar baz");
 
         d.replace_range(4..7, b"lol").unwrap();
         assert_eq!("foo lol baz", str(&d.to_vec()));
 
-        d.replace_range(4..7, b"lol2").unwrap();
+        assert!(matches!(
+            d.replace_range(4..7, b"lol2").unwrap_err(),
+            Error::AlreadyReplaced,
+        ));
     }
 
     #[test]
-    #[should_panic(expected = "original data is only 3 byte long")]
     fn broken_replacements() {
         let mut d = Data::new(b"foo");
-        d.replace_range(4..8, b"lol").unwrap();
+        assert!(matches!(
+            d.replace_range(4..8, b"lol").unwrap_err(),
+            Error::DataLengthExceeded(std::ops::Range { start: 4, end: 8 }, 3),
+        ));
     }
 
     #[test]
