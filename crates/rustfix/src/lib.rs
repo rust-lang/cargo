@@ -22,11 +22,13 @@
 use std::collections::HashSet;
 use std::ops::Range;
 
-use anyhow::Error;
-
 pub mod diagnostics;
-use crate::diagnostics::{Diagnostic, DiagnosticSpan};
+mod error;
 mod replace;
+
+use diagnostics::Diagnostic;
+use diagnostics::DiagnosticSpan;
+pub use error::Error;
 
 /// A filter to control which suggestion should be applied.
 #[derive(Debug, Clone, Copy)]
