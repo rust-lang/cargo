@@ -120,6 +120,9 @@ fn read_manifest_from_str(
             if dep.is_optional() {
                 bail!("{name} is optional, but workspace dependencies cannot be optional",);
             }
+            if dep.is_public() {
+                bail!("{name} is public, but workspace dependencies cannot be public",);
+            }
         }
     }
     return if manifest.project.is_some() || manifest.package.is_some() {
@@ -1663,11 +1666,6 @@ fn inner_dependency_inherit_with<'a>(
                         default_features_msg(name, None, cx);
                     }
                     _ => {}
-                }
-                // Inherit the workspace configuration for `public` unless
-                // it's explicitly specified for this dependency.
-                if let Some(public) = dependency.public {
-                    d.public = Some(public);
                 }
                 d.features = match (d.features.clone(), dependency.features.clone()) {
                     (Some(dep_feat), Some(inherit_feat)) => Some(
