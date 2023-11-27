@@ -9,5 +9,4 @@ name = "cargo-list-test-fixture"
 version = "0.0.0"
 
 [dependencies]
-my-package1 = { version = "99999.0.0", public = true }
-my-package2 = { version = "0.4.1", public = true }
+my-package = { version = "0.1.0", public = true }
