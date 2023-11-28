@@ -319,7 +319,7 @@ fn main() {
 
 #### Minor: `repr(C)` add enum variant {#repr-c-enum-variant-new}
 
-It is usually safe to add variants to a `repr(C)` enum, if the enum uses `non_exhastive`.
+It is usually safe to add variants to a `repr(C)` enum, if the enum uses `non_exhaustive`.
 See [enum-variant-new](#enum-variant-new) for more discussion.
 
 Note that this may be a breaking change since it changes the size and alignment of the type.
