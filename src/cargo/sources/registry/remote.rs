@@ -48,6 +48,8 @@ use tracing::{debug, trace};
 ///
 /// [`HttpRegistry`]: super::http_remote::HttpRegistry
 pub struct RemoteRegistry<'cfg> {
+    /// The name of this source, a unique string (across all sources) used as
+    /// the directory name where its cached content is stored.
     name: InternedString,
     /// Path to the registry index (`$CARGO_HOME/registry/index/$REG-HASH`).
     index_path: Filesystem,

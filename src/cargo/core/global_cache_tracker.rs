@@ -154,43 +154,53 @@ type Timestamp = u64;
 /// The key for a registry index entry stored in the database.
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct RegistryIndex {
+    /// A unique name of the registry source.
     pub encoded_registry_name: InternedString,
 }
 
 /// The key for a registry `.crate` entry stored in the database.
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct RegistryCrate {
+    /// A unique name of the registry source.
     pub encoded_registry_name: InternedString,
+    /// The filename of the compressed crate, like `foo-1.2.3.crate`.
     pub crate_filename: InternedString,
+    /// The size of the `.crate` file.
     pub size: u64,
 }
 
 /// The key for a registry src directory entry stored in the database.
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct RegistrySrc {
+    /// A unique name of the registry source.
     pub encoded_registry_name: InternedString,
+    /// The directory name of the extracted source, like `foo-1.2.3`.
     pub package_dir: InternedString,
-    // Total size of the src directory in bytes.
-    //
-    // This can be None when the size is unknown. For example, when the src
-    // directory already exists on disk, and we just want to update the
-    // last-use timestamp. We don't want to take the expense of computing disk
-    // usage unless necessary. `populate_untracked_src` will handle any actual
-    // NULL values in the database, which can happen when the src directory is
-    // created by an older version of cargo that did not track sizes.
+    /// Total size of the src directory in bytes.
+    ///
+    /// This can be None when the size is unknown. For example, when the src
+    /// directory already exists on disk, and we just want to update the
+    /// last-use timestamp. We don't want to take the expense of computing disk
+    /// usage unless necessary. [`GlobalCacheTracker::populate_untracked`]
+    /// will handle any actual NULL values in the database, which can happen
+    /// when the src directory is created by an older version of cargo that
+    /// did not track sizes.
     pub size: Option<u64>,
 }
 
 /// The key for a git db entry stored in the database.
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct GitDb {
+    /// A unique name of the git database.
     pub encoded_git_name: InternedString,
 }
 
 /// The key for a git checkout entry stored in the database.
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct GitCheckout {
+    /// A unique name of the git database.
     pub encoded_git_name: InternedString,
+    /// A unique name of the checkout without the database.
     pub short_name: InternedString,
     /// Total size of the checkout directory.
     ///

@@ -240,6 +240,8 @@ struct LockMetadata {
 ///
 /// For general concepts of registries, see the [module-level documentation](crate::sources::registry).
 pub struct RegistrySource<'cfg> {
+    /// A unique name of the source (typically used as the directory name
+    /// where its cached content is stored).
     name: InternedString,
     /// The unique identifier of this source.
     source_id: SourceId,
@@ -444,6 +446,11 @@ mod remote;
 /// Generates a unique name for [`SourceId`] to have a unique path to put their
 /// index files.
 fn short_name(id: SourceId, is_shallow: bool) -> String {
+    // CAUTION: This should not change between versions. If you change how
+    // this is computed, it will orphan previously cached data, forcing the
+    // cache to be rebuilt and potentially wasting significant disk space. If
+    // you change it, be cautious of the impact. See `test_cratesio_hash` for
+    // a similar discussion.
     let hash = hex::short_hash(&id);
     let ident = id.url().host_str().unwrap_or("").to_string();
     let mut name = format!("{}-{}", ident, hash);
