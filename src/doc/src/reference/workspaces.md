@@ -227,7 +227,7 @@ rand.workspace = true
 
 The `workspace.lints` table is where you define lint configuration to be inherited by members of a workspace.
 
-Specifying a workspace lint configuration is similar to package lints.
+Specifying a workspace lint configuration is similar to [package lints](manifest.md#the-lints-section).
 
 Example:
 
