@@ -185,6 +185,10 @@ The `rust-version` may be ignored using the `--ignore-rust-version` option.
 Setting the `rust-version` key in `[package]` will affect all targets/crates in
 the package, including test suites, benchmarks, binaries, examples, etc.
 
+To find the minimum `rust-version` compatible with your project, you can use third-party tools like [`cargo-msrv`](https://crates.io/crates/cargo-msrv).
+
+When used on packages that get published, we recommend [verifying the `rust-version`](../guide/continuous-integration.md#verifying-rust-version).
+
 ### The `description` field
 
 The description is a short blurb about the package. [crates.io] will display
