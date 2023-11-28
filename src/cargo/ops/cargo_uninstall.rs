@@ -146,11 +146,13 @@ fn uninstall_pkgid(
         }
         tracker.remove(pkgid, &bins);
     }
-    tracker.save()?;
+
     for bin in to_remove {
         config.shell().status("Removing", bin.display())?;
         paths::remove_file(bin)?;
     }
 
+    // Only Save the tracker when remove Bin successfully.
+    tracker.save()?;
     Ok(())
 }
