@@ -84,12 +84,37 @@ impl VersionPreferences {
                 return previous_cmp;
             }
 
-            if self.max_rust_version.is_some() {
-                let msrv_a = a.rust_version() <= self.max_rust_version.as_ref();
-                let msrv_b = b.rust_version() <= self.max_rust_version.as_ref();
-                let msrv_cmp = msrv_a.cmp(&msrv_b).reverse();
-                if msrv_cmp != Ordering::Equal {
-                    return msrv_cmp;
+            if let Some(max_rust_version) = &self.max_rust_version {
+                match (a.rust_version(), b.rust_version()) {
+                    // Fallback
+                    (None, None) => {}
+                    (Some(a), Some(b)) if a == b => {}
+                    // Primary comparison
+                    (Some(a), Some(b)) => {
+                        let a_is_compat = a <= max_rust_version;
+                        let b_is_compat = b <= max_rust_version;
+                        match (a_is_compat, b_is_compat) {
+                            (true, true) => {}   // fallback
+                            (false, false) => {} // fallback
+                            (true, false) => return Ordering::Less,
+                            (false, true) => return Ordering::Greater,
+                        }
+                    }
+                    // Prioritize `None` over incompatible
+                    (None, Some(b)) => {
+                        if b <= max_rust_version {
+                            return Ordering::Greater;
+                        } else {
+                            return Ordering::Less;
+                        }
+                    }
+                    (Some(a), None) => {
+                        if a <= max_rust_version {
+                            return Ordering::Less;
+                        } else {
+                            return Ordering::Greater;
+                        }
+                    }
                 }
             }
 
@@ -232,8 +257,11 @@ mod test {
         vp.max_rust_version(Some("1.50".parse().unwrap()));
 
         let mut summaries = vec![
-            summ("foo", "1.2.4", Some("1.60")),
-            summ("foo", "1.2.3", Some("1.50")),
+            summ("foo", "1.2.4", None),
+            summ("foo", "1.2.3", Some("1.60")),
+            summ("foo", "1.2.2", None),
+            summ("foo", "1.2.1", Some("1.50")),
+            summ("foo", "1.2.0", None),
             summ("foo", "1.1.0", Some("1.40")),
             summ("foo", "1.0.9", None),
         ];
@@ -242,14 +270,16 @@ mod test {
         vp.sort_summaries(&mut summaries, None);
         assert_eq!(
             describe(&summaries),
-            "foo/1.2.3, foo/1.1.0, foo/1.0.9, foo/1.2.4".to_string()
+            "foo/1.2.1, foo/1.1.0, foo/1.2.4, foo/1.2.2, foo/1.2.0, foo/1.0.9, foo/1.2.3"
+                .to_string()
         );
 
         vp.version_ordering(VersionOrdering::MinimumVersionsFirst);
         vp.sort_summaries(&mut summaries, None);
         assert_eq!(
             describe(&summaries),
-            "foo/1.0.9, foo/1.1.0, foo/1.2.3, foo/1.2.4".to_string()
+            "foo/1.1.0, foo/1.2.1, foo/1.0.9, foo/1.2.0, foo/1.2.2, foo/1.2.4, foo/1.2.3"
+                .to_string()
         );
     }
 }
