@@ -267,8 +267,8 @@ fn remap_path_scope() {
 [..]thread '[..]' panicked at [..]src/main.rs:3:[..]",
         )
         .with_stderr_contains("remap to /rustc/<hash>")
-        .with_stderr_contains("[..]at std-0.0.0/src/[..]")
+        .with_stderr_contains("[..]at /rustc/[..]/library/std/src/[..]")
         .with_stderr_contains("[..]at src/main.rs:3[..]")
-        .with_stderr_contains("[..]at core-0.0.0/src/[..]")
+        .with_stderr_contains("[..]at /rustc/[..]/library/core/src/[..]")
         .run();
 }
