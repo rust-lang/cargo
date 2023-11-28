@@ -76,7 +76,17 @@ pub struct GitSource<'cfg> {
     /// The unique identifier of this source.
     source_id: SourceId,
     /// The underlying path source to discover packages inside the Git repository.
+    ///
+    /// This gets set to `Some` after the git repo has been checked out
+    /// (automatically handled via [`GitSource::block_until_ready`]).
     path_source: Option<PathSource<'cfg>>,
+    /// A short string that uniquely identifies the version of the checkout.
+    ///
+    /// This is typically a 7-character string of the OID hash, automatically
+    /// increasing in size if it is ambiguous.
+    ///
+    /// This is set to `Some` after the git repo has been checked out
+    /// (automatically handled via [`GitSource::block_until_ready`]).
     short_id: Option<InternedString>,
     /// The identifier of this source for Cargo's Git cache directory.
     /// See [`ident`] for more.

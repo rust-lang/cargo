@@ -245,7 +245,10 @@ pub struct Config {
     pub nightly_features_allowed: bool,
     /// WorkspaceRootConfigs that have been found
     pub ws_roots: RefCell<HashMap<PathBuf, WorkspaceRootConfig>>,
+    /// The global cache tracker is a database used to track disk cache usage.
     global_cache_tracker: LazyCell<RefCell<GlobalCacheTracker>>,
+    /// A cache of modifications to make to [`Config::global_cache_tracker`],
+    /// saved to disk in a batch to improve performance.
     deferred_global_last_use: LazyCell<RefCell<DeferredGlobalLastUse>>,
 }
 

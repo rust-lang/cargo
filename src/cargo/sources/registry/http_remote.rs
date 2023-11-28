@@ -54,6 +54,8 @@ const UNKNOWN: &'static str = "Unknown";
 ///
 /// [RFC 2789]: https://github.com/rust-lang/rfcs/pull/2789
 pub struct HttpRegistry<'cfg> {
+    /// The name of this source, a unique string (across all sources) used as
+    /// the directory name where its cached content is stored.
     name: InternedString,
     /// Path to the registry index (`$CARGO_HOME/registry/index/$REG-HASH`).
     ///
