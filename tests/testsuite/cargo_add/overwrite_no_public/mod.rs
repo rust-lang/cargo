@@ -14,7 +14,7 @@ fn case() {
 
     snapbox::cmd::Command::cargo_ui()
         .arg("add")
-        .arg_line("my-package@0.1.0 --no-public")
+        .arg_line("my-package --no-public")
         .current_dir(cwd)
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .assert()

@@ -63,6 +63,8 @@ The package will be removed from your features.")
                 .conflicts_with("dev")
                 .overrides_with("optional"),
             flag("public", "Mark the dependency as public")
+                .conflicts_with("dev")
+                .conflicts_with("build")
                 .long_help("Mark the dependency as public
 
 The dependnecy will be visible in both of your crate and outside."),
