@@ -1730,255 +1730,259 @@ impl<P: ResolveToPath + Clone> schema::TomlDependency<P> {
         kind: Option<DepKind>,
     ) -> CargoResult<Dependency> {
         match *self {
-            schema::TomlDependency::Simple(ref version) => schema::TomlDetailedDependency::<P> {
-                version: Some(version.clone()),
-                ..Default::default()
+            schema::TomlDependency::Simple(ref version) => detailed_dep_to_dependency(
+                &schema::TomlDetailedDependency::<P> {
+                    version: Some(version.clone()),
+                    ..Default::default()
+                },
+                name,
+                cx,
+                kind,
+            ),
+            schema::TomlDependency::Detailed(ref details) => {
+                detailed_dep_to_dependency(details, name, cx, kind)
             }
-            .to_dependency(name, cx, kind),
-            schema::TomlDependency::Detailed(ref details) => details.to_dependency(name, cx, kind),
         }
     }
 }
 
-impl<P: ResolveToPath + Clone> schema::TomlDetailedDependency<P> {
-    fn to_dependency(
-        &self,
-        name_in_toml: &str,
-        cx: &mut Context<'_, '_>,
-        kind: Option<DepKind>,
-    ) -> CargoResult<Dependency> {
-        if self.version.is_none() && self.path.is_none() && self.git.is_none() {
-            let msg = format!(
-                "dependency ({}) specified without \
+fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
+    orig: &schema::TomlDetailedDependency<P>,
+    name_in_toml: &str,
+    cx: &mut Context<'_, '_>,
+    kind: Option<DepKind>,
+) -> CargoResult<Dependency> {
+    if orig.version.is_none() && orig.path.is_none() && orig.git.is_none() {
+        let msg = format!(
+            "dependency ({}) specified without \
                  providing a local path, Git repository, version, or \
                  workspace dependency to use. This will be considered an \
                  error in future versions",
-                name_in_toml
-            );
-            cx.warnings.push(msg);
-        }
+            name_in_toml
+        );
+        cx.warnings.push(msg);
+    }
 
-        if let Some(version) = &self.version {
-            if version.contains('+') {
-                cx.warnings.push(format!(
-                    "version requirement `{}` for dependency `{}` \
+    if let Some(version) = &orig.version {
+        if version.contains('+') {
+            cx.warnings.push(format!(
+                "version requirement `{}` for dependency `{}` \
                      includes semver metadata which will be ignored, removing the \
                      metadata is recommended to avoid confusion",
-                    version, name_in_toml
-                ));
+                version, name_in_toml
+            ));
+        }
+    }
+
+    if orig.git.is_none() {
+        let git_only_keys = [
+            (&orig.branch, "branch"),
+            (&orig.tag, "tag"),
+            (&orig.rev, "rev"),
+        ];
+
+        for &(key, key_name) in &git_only_keys {
+            if key.is_some() {
+                bail!(
+                    "key `{}` is ignored for dependency ({}).",
+                    key_name,
+                    name_in_toml
+                );
             }
         }
+    }
 
-        if self.git.is_none() {
-            let git_only_keys = [
-                (&self.branch, "branch"),
-                (&self.tag, "tag"),
-                (&self.rev, "rev"),
-            ];
-
-            for &(key, key_name) in &git_only_keys {
-                if key.is_some() {
-                    bail!(
-                        "key `{}` is ignored for dependency ({}).",
-                        key_name,
-                        name_in_toml
-                    );
-                }
-            }
-        }
-
-        // Early detection of potentially misused feature syntax
-        // instead of generating a "feature not found" error.
-        if let Some(features) = &self.features {
-            for feature in features {
-                if feature.contains('/') {
-                    bail!(
-                        "feature `{}` in dependency `{}` is not allowed to contain slashes\n\
+    // Early detection of potentially misused feature syntax
+    // instead of generating a "feature not found" error.
+    if let Some(features) = &orig.features {
+        for feature in features {
+            if feature.contains('/') {
+                bail!(
+                    "feature `{}` in dependency `{}` is not allowed to contain slashes\n\
                          If you want to enable features of a transitive dependency, \
                          the direct dependency needs to re-export those features from \
                          the `[features]` table.",
-                        feature,
-                        name_in_toml
-                    );
-                }
-                if feature.starts_with("dep:") {
-                    bail!(
-                        "feature `{}` in dependency `{}` is not allowed to use explicit \
+                    feature,
+                    name_in_toml
+                );
+            }
+            if feature.starts_with("dep:") {
+                bail!(
+                    "feature `{}` in dependency `{}` is not allowed to use explicit \
                         `dep:` syntax\n\
                          If you want to enable an optional dependency, specify the name \
                          of the optional dependency without the `dep:` prefix, or specify \
                          a feature from the dependency's `[features]` table that enables \
                          the optional dependency.",
-                        feature,
-                        name_in_toml
-                    );
-                }
+                    feature,
+                    name_in_toml
+                );
             }
         }
+    }
 
-        let new_source_id = match (
-            self.git.as_ref(),
-            self.path.as_ref(),
-            self.registry.as_ref(),
-            self.registry_index.as_ref(),
-        ) {
-            (Some(_), _, Some(_), _) | (Some(_), _, _, Some(_)) => bail!(
-                "dependency ({}) specification is ambiguous. \
+    let new_source_id = match (
+        orig.git.as_ref(),
+        orig.path.as_ref(),
+        orig.registry.as_ref(),
+        orig.registry_index.as_ref(),
+    ) {
+        (Some(_), _, Some(_), _) | (Some(_), _, _, Some(_)) => bail!(
+            "dependency ({}) specification is ambiguous. \
                  Only one of `git` or `registry` is allowed.",
-                name_in_toml
-            ),
-            (_, _, Some(_), Some(_)) => bail!(
-                "dependency ({}) specification is ambiguous. \
+            name_in_toml
+        ),
+        (_, _, Some(_), Some(_)) => bail!(
+            "dependency ({}) specification is ambiguous. \
                  Only one of `registry` or `registry-index` is allowed.",
-                name_in_toml
-            ),
-            (Some(git), maybe_path, _, _) => {
-                if maybe_path.is_some() {
-                    bail!(
-                        "dependency ({}) specification is ambiguous. \
+            name_in_toml
+        ),
+        (Some(git), maybe_path, _, _) => {
+            if maybe_path.is_some() {
+                bail!(
+                    "dependency ({}) specification is ambiguous. \
                          Only one of `git` or `path` is allowed.",
-                        name_in_toml
-                    );
-                }
+                    name_in_toml
+                );
+            }
 
-                let n_details = [&self.branch, &self.tag, &self.rev]
-                    .iter()
-                    .filter(|d| d.is_some())
-                    .count();
+            let n_details = [&orig.branch, &orig.tag, &orig.rev]
+                .iter()
+                .filter(|d| d.is_some())
+                .count();
 
-                if n_details > 1 {
-                    bail!(
-                        "dependency ({}) specification is ambiguous. \
+            if n_details > 1 {
+                bail!(
+                    "dependency ({}) specification is ambiguous. \
                          Only one of `branch`, `tag` or `rev` is allowed.",
-                        name_in_toml
-                    );
-                }
+                    name_in_toml
+                );
+            }
 
-                let reference = self
-                    .branch
-                    .clone()
-                    .map(GitReference::Branch)
-                    .or_else(|| self.tag.clone().map(GitReference::Tag))
-                    .or_else(|| self.rev.clone().map(GitReference::Rev))
-                    .unwrap_or(GitReference::DefaultBranch);
-                let loc = git.into_url()?;
+            let reference = orig
+                .branch
+                .clone()
+                .map(GitReference::Branch)
+                .or_else(|| orig.tag.clone().map(GitReference::Tag))
+                .or_else(|| orig.rev.clone().map(GitReference::Rev))
+                .unwrap_or(GitReference::DefaultBranch);
+            let loc = git.into_url()?;
 
-                if let Some(fragment) = loc.fragment() {
-                    let msg = format!(
-                        "URL fragment `#{}` in git URL is ignored for dependency ({}). \
+            if let Some(fragment) = loc.fragment() {
+                let msg = format!(
+                    "URL fragment `#{}` in git URL is ignored for dependency ({}). \
                         If you were trying to specify a specific git revision, \
                         use `rev = \"{}\"` in the dependency declaration.",
-                        fragment, name_in_toml, fragment
-                    );
-                    cx.warnings.push(msg)
-                }
-
-                SourceId::for_git(&loc, reference)?
-            }
-            (None, Some(path), _, _) => {
-                let path = path.resolve(cx.config);
-                cx.nested_paths.push(path.clone());
-                // If the source ID for the package we're parsing is a path
-                // source, then we normalize the path here to get rid of
-                // components like `..`.
-                //
-                // The purpose of this is to get a canonical ID for the package
-                // that we're depending on to ensure that builds of this package
-                // always end up hashing to the same value no matter where it's
-                // built from.
-                if cx.source_id.is_path() {
-                    let path = cx.root.join(path);
-                    let path = paths::normalize_path(&path);
-                    SourceId::for_path(&path)?
-                } else {
-                    cx.source_id
-                }
-            }
-            (None, None, Some(registry), None) => SourceId::alt_registry(cx.config, registry)?,
-            (None, None, None, Some(registry_index)) => {
-                let url = registry_index.into_url()?;
-                SourceId::for_registry(&url)?
-            }
-            (None, None, None, None) => SourceId::crates_io(cx.config)?,
-        };
-
-        let (pkg_name, explicit_name_in_toml) = match self.package {
-            Some(ref s) => (&s[..], Some(name_in_toml)),
-            None => (name_in_toml, None),
-        };
-
-        let version = self.version.as_deref();
-        let mut dep = Dependency::parse(pkg_name, version, new_source_id)?;
-        if self.default_features.is_some() && self.default_features2.is_some() {
-            warn_on_deprecated("default-features", name_in_toml, "dependency", cx.warnings);
-        }
-        dep.set_features(self.features.iter().flatten())
-            .set_default_features(self.default_features().unwrap_or(true))
-            .set_optional(self.optional.unwrap_or(false))
-            .set_platform(cx.platform.clone());
-        if let Some(registry) = &self.registry {
-            let registry_id = SourceId::alt_registry(cx.config, registry)?;
-            dep.set_registry_id(registry_id);
-        }
-        if let Some(registry_index) = &self.registry_index {
-            let url = registry_index.into_url()?;
-            let registry_id = SourceId::for_registry(&url)?;
-            dep.set_registry_id(registry_id);
-        }
-
-        if let Some(kind) = kind {
-            dep.set_kind(kind);
-        }
-        if let Some(name_in_toml) = explicit_name_in_toml {
-            dep.set_explicit_name_in_toml(name_in_toml);
-        }
-
-        if let Some(p) = self.public {
-            cx.features.require(Feature::public_dependency())?;
-
-            if dep.kind() != DepKind::Normal {
-                bail!("'public' specifier can only be used on regular dependencies, not {:?} dependencies", dep.kind());
+                    fragment, name_in_toml, fragment
+                );
+                cx.warnings.push(msg)
             }
 
-            dep.set_public(p);
+            SourceId::for_git(&loc, reference)?
         }
-
-        if let (Some(artifact), is_lib, target) = (
-            self.artifact.as_ref(),
-            self.lib.unwrap_or(false),
-            self.target.as_deref(),
-        ) {
-            if cx.config.cli_unstable().bindeps {
-                let artifact = Artifact::parse(&artifact.0, is_lib, target)?;
-                if dep.kind() != DepKind::Build
-                    && artifact.target() == Some(ArtifactTarget::BuildDependencyAssumeTarget)
-                {
-                    bail!(
-                        r#"`target = "target"` in normal- or dev-dependencies has no effect ({})"#,
-                        name_in_toml
-                    );
-                }
-                dep.set_artifact(artifact)
+        (None, Some(path), _, _) => {
+            let path = path.resolve(cx.config);
+            cx.nested_paths.push(path.clone());
+            // If the source ID for the package we're parsing is a path
+            // source, then we normalize the path here to get rid of
+            // components like `..`.
+            //
+            // The purpose of this is to get a canonical ID for the package
+            // that we're depending on to ensure that builds of this package
+            // always end up hashing to the same value no matter where it's
+            // built from.
+            if cx.source_id.is_path() {
+                let path = cx.root.join(path);
+                let path = paths::normalize_path(&path);
+                SourceId::for_path(&path)?
             } else {
-                bail!("`artifact = …` requires `-Z bindeps` ({})", name_in_toml);
-            }
-        } else if self.lib.is_some() || self.target.is_some() {
-            for (is_set, specifier) in [
-                (self.lib.is_some(), "lib"),
-                (self.target.is_some(), "target"),
-            ] {
-                if !is_set {
-                    continue;
-                }
-                bail!(
-                    "'{}' specifier cannot be used without an 'artifact = …' value ({})",
-                    specifier,
-                    name_in_toml
-                )
+                cx.source_id
             }
         }
-        Ok(dep)
+        (None, None, Some(registry), None) => SourceId::alt_registry(cx.config, registry)?,
+        (None, None, None, Some(registry_index)) => {
+            let url = registry_index.into_url()?;
+            SourceId::for_registry(&url)?
+        }
+        (None, None, None, None) => SourceId::crates_io(cx.config)?,
+    };
+
+    let (pkg_name, explicit_name_in_toml) = match orig.package {
+        Some(ref s) => (&s[..], Some(name_in_toml)),
+        None => (name_in_toml, None),
+    };
+
+    let version = orig.version.as_deref();
+    let mut dep = Dependency::parse(pkg_name, version, new_source_id)?;
+    if orig.default_features.is_some() && orig.default_features2.is_some() {
+        warn_on_deprecated("default-features", name_in_toml, "dependency", cx.warnings);
     }
+    dep.set_features(orig.features.iter().flatten())
+        .set_default_features(orig.default_features().unwrap_or(true))
+        .set_optional(orig.optional.unwrap_or(false))
+        .set_platform(cx.platform.clone());
+    if let Some(registry) = &orig.registry {
+        let registry_id = SourceId::alt_registry(cx.config, registry)?;
+        dep.set_registry_id(registry_id);
+    }
+    if let Some(registry_index) = &orig.registry_index {
+        let url = registry_index.into_url()?;
+        let registry_id = SourceId::for_registry(&url)?;
+        dep.set_registry_id(registry_id);
+    }
+
+    if let Some(kind) = kind {
+        dep.set_kind(kind);
+    }
+    if let Some(name_in_toml) = explicit_name_in_toml {
+        dep.set_explicit_name_in_toml(name_in_toml);
+    }
+
+    if let Some(p) = orig.public {
+        cx.features.require(Feature::public_dependency())?;
+
+        if dep.kind() != DepKind::Normal {
+            bail!("'public' specifier can only be used on regular dependencies, not {:?} dependencies", dep.kind());
+        }
+
+        dep.set_public(p);
+    }
+
+    if let (Some(artifact), is_lib, target) = (
+        orig.artifact.as_ref(),
+        orig.lib.unwrap_or(false),
+        orig.target.as_deref(),
+    ) {
+        if cx.config.cli_unstable().bindeps {
+            let artifact = Artifact::parse(&artifact.0, is_lib, target)?;
+            if dep.kind() != DepKind::Build
+                && artifact.target() == Some(ArtifactTarget::BuildDependencyAssumeTarget)
+            {
+                bail!(
+                    r#"`target = "target"` in normal- or dev-dependencies has no effect ({})"#,
+                    name_in_toml
+                );
+            }
+            dep.set_artifact(artifact)
+        } else {
+            bail!("`artifact = …` requires `-Z bindeps` ({})", name_in_toml);
+        }
+    } else if orig.lib.is_some() || orig.target.is_some() {
+        for (is_set, specifier) in [
+            (orig.lib.is_some(), "lib"),
+            (orig.target.is_some(), "target"),
+        ] {
+            if !is_set {
+                continue;
+            }
+            bail!(
+                "'{}' specifier cannot be used without an 'artifact = …' value ({})",
+                specifier,
+                name_in_toml
+            )
+        }
+    }
+    Ok(dep)
 }
 
 /// Checks syntax validity and unstable feature gate for each profile.
