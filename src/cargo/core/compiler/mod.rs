@@ -1214,8 +1214,6 @@ fn trim_paths_args(
         }
         remap
     };
-    cmd.arg(sysroot_remap);
-
     let package_remap = {
         let pkg_root = unit.pkg.root();
         let ws_root = cx.bcx.ws.root();
@@ -1242,7 +1240,11 @@ fn trim_paths_args(
         }
         remap
     };
+
+    // Order of `--remap-path-prefix` flags is important for `-Zbuild-std`.
+    // We want to show `/rustc/<hash>/library/std` instead of `std-0.0.0`.
     cmd.arg(package_remap);
+    cmd.arg(sysroot_remap);
 
     Ok(())
 }

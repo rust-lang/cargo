@@ -229,3 +229,46 @@ fn custom_test_framework() {
         .build_std_arg("core")
         .run();
 }
+
+// Fixing rust-lang/rust#117839.
+// on macOS it never gets remapped.
+// Might be a separate issue, so only run on Linux.
+#[cargo_test(build_std_real)]
+#[cfg(target_os = "linux")]
+fn remap_path_scope() {
+    let p = project()
+        .file(
+            "src/main.rs",
+            "
+                fn main() {
+                    panic!(\"remap to /rustc/<hash>\");
+                }
+            ",
+        )
+        .file(
+            ".cargo/config.toml",
+            "
+                [profile.release]
+                debug = \"line-tables-only\"
+            ",
+        )
+        .build();
+
+    p.cargo("run --release -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .env("RUST_BACKTRACE", "1")
+        .build_std()
+        .target_host()
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+[FINISHED] release [optimized + debuginfo] [..]
+[RUNNING] [..]
+[..]thread '[..]' panicked at [..]src/main.rs:3:[..]",
+        )
+        .with_stderr_contains("remap to /rustc/<hash>")
+        .with_stderr_contains("[..]at /rustc/[..]/library/std/src/[..]")
+        .with_stderr_contains("[..]at src/main.rs:3[..]")
+        .with_stderr_contains("[..]at /rustc/[..]/library/core/src/[..]")
+        .run();
+}
