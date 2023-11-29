@@ -147,12 +147,14 @@ fn uninstall_pkgid(
         tracker.remove(pkgid, &bins);
     }
 
+    // This should have been handled last, but now restore it to reproduce the problem on the Windows platform.
+    // See issue #3364.
+    tracker.save()?;
+
     for bin in to_remove {
         config.shell().status("Removing", bin.display())?;
         paths::remove_file(bin)?;
     }
 
-    // Only Save the tracker when remove Bin successfully.
-    tracker.save()?;
     Ok(())
 }

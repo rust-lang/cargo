@@ -2507,3 +2507,83 @@ fn install_incompat_msrv() {
 ")
         .with_status(101).run();
 }
+
+#[cfg(windows)]
+#[cargo_test]
+fn uninstall_running_binary() {
+    Package::new("foo", "0.0.1")
+        .file("src/lib.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+    [package]
+    name = "foo"
+    version = "0.0.1"
+    
+    [[bin]]
+    name = "foo"
+    path = "src/main.rs"
+"#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+        use std::{{thread, time}}; 
+        fn main() {
+            println!("start longrunning job.");
+            thread::sleep(time::Duration::from_secs(3));
+            println!("end longrunning job.");
+        }
+"#,
+        )
+        .publish();
+
+    cargo_process("install foo")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+
+    use cargo_util::ProcessBuilder;
+    use std::thread;
+    let foo_bin = cargo_test_support::install::cargo_home()
+        .join("bin")
+        .join(cargo_test_support::install::exe("foo"));
+
+    let t = thread::spawn(|| ProcessBuilder::new(foo_bin).exec().unwrap());
+
+    cargo_process("uninstall foo")
+        .with_status(101)
+        .with_stderr_contains("[ERROR] failed to remove file `[CWD]/home/.cargo/bin/foo[EXE]`")
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+
+    t.join().unwrap();
+    cargo_process("uninstall foo")
+        .with_stderr("[REMOVING] [CWD]/home/.cargo/bin/foo[EXE]")
+        .run();
+    cargo_process("install foo")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .run();
+}
