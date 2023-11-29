@@ -64,7 +64,6 @@ use crate::core::resolver::{
     self, HasDevUnits, Resolve, ResolveOpts, ResolveVersion, VersionOrdering, VersionPreferences,
 };
 use crate::core::summary::Summary;
-use crate::core::Feature;
 use crate::core::{GitReference, PackageId, PackageIdSpec, PackageSet, SourceId, Workspace};
 use crate::ops;
 use crate::sources::PathSource;
@@ -512,9 +511,6 @@ pub fn resolve_with_previous<'cfg>(
         registry,
         &version_prefs,
         Some(ws.config()),
-        ws.unstable_features()
-            .require(Feature::public_dependency())
-            .is_ok(),
     )?;
     let patches: Vec<_> = registry
         .patches()

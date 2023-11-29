@@ -3,7 +3,7 @@
 use std::cell::RefCell;
 use std::cmp::PartialEq;
 use std::cmp::{max, min};
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 use std::fmt::Write;
 use std::rc::Rc;
@@ -18,7 +18,7 @@ use cargo::core::{Dependency, PackageId, Registry, Summary};
 use cargo::core::{GitReference, SourceId};
 use cargo::sources::source::QueryKind;
 use cargo::sources::IndexSummary;
-use cargo::util::{CargoResult, Config, Graph, IntoUrl, RustVersion};
+use cargo::util::{CargoResult, Config, IntoUrl, RustVersion};
 
 use proptest::collection::{btree_map, vec};
 use proptest::prelude::*;
@@ -70,33 +70,6 @@ pub fn resolve_and_validated(
             let out = resolve.sort();
             assert_eq!(out.len(), used.len());
 
-            let mut pub_deps: HashMap<PackageId, HashSet<_>> = HashMap::new();
-            for &p in out.iter() {
-                // make the list of `p` public dependencies
-                let mut self_pub_dep = HashSet::new();
-                self_pub_dep.insert(p);
-                for (dp, deps) in resolve.deps(p) {
-                    if deps.iter().any(|d| d.is_public()) {
-                        self_pub_dep.extend(pub_deps[&dp].iter().cloned())
-                    }
-                }
-                pub_deps.insert(p, self_pub_dep);
-
-                // check if `p` has a public dependencies conflicts
-                let seen_dep: BTreeSet<_> = resolve
-                    .deps(p)
-                    .flat_map(|(dp, _)| pub_deps[&dp].iter().cloned())
-                    .collect();
-                let seen_dep: Vec<_> = seen_dep.iter().collect();
-                for a in seen_dep.windows(2) {
-                    if a[0].name() == a[1].name() {
-                        panic!(
-                            "the package {:?} can publicly see {:?} and {:?}",
-                            p, a[0], a[1]
-                        )
-                    }
-                }
-            }
             let sat_resolve = sat_resolve.unwrap_or_else(|| SatResolve::new(registry));
             if !sat_resolve.sat_is_valid_solution(&out) {
                 panic!(
@@ -201,7 +174,6 @@ pub fn resolve_with_config_raw(
         &mut registry,
         &version_prefs,
         Some(config),
-        true,
     );
 
     // The largest test in our suite takes less then 30 sec.
@@ -295,7 +267,7 @@ impl SatResolve {
         );
 
         // no two semver compatible versions of the same package
-        let by_activations_keys = sat_at_most_one_by_key(
+        sat_at_most_one_by_key(
             &mut cnf,
             var_for_is_packages_used
                 .iter()
@@ -313,119 +285,22 @@ impl SatResolve {
 
         let empty_vec = vec![];
 
-        let mut graph: Graph<PackageId, ()> = Graph::new();
-
-        let mut version_selected_for: HashMap<
-            PackageId,
-            HashMap<Dependency, HashMap<_, varisat::Var>>,
-        > = HashMap::new();
         // active packages need each of there `deps` to be satisfied
         for p in registry.iter() {
-            graph.add(p.package_id());
             for dep in p.dependencies() {
-                // This can more easily be written as:
-                // !is_active(p) or one of the things that match dep is_active
-                // All the complexity, from here to the end, is to support public and private dependencies!
-                let mut by_key: HashMap<_, Vec<varisat::Lit>> = HashMap::new();
-                for &m in by_name
+                let mut matches: Vec<varisat::Lit> = by_name
                     .get(dep.package_name().as_str())
                     .unwrap_or(&empty_vec)
                     .iter()
                     .filter(|&p| dep.matches_id(*p))
-                {
-                    graph.link(p.package_id(), m);
-                    by_key
-                        .entry(m.as_activations_key())
-                        .or_default()
-                        .push(var_for_is_packages_used[&m].positive());
-                }
-                let keys: HashMap<_, _> = by_key.keys().map(|&k| (k, cnf.new_var())).collect();
-
-                // if `p` is active then we need to select one of the keys
-                let matches: Vec<_> = keys
-                    .values()
-                    .map(|v| v.positive())
-                    .chain(Some(var_for_is_packages_used[&p.package_id()].negative()))
+                    .map(|p| var_for_is_packages_used[&p].positive())
                     .collect();
+                // ^ the `dep` is satisfied or `p` is not active
+                matches.push(var_for_is_packages_used[&p.package_id()].negative());
                 cnf.add_clause(&matches);
-
-                // if a key is active then we need to select one of the versions
-                for (key, vars) in by_key.iter() {
-                    let mut matches = vars.clone();
-                    matches.push(keys[key].negative());
-                    cnf.add_clause(&matches);
-                }
-
-                version_selected_for
-                    .entry(p.package_id())
-                    .or_default()
-                    .insert(dep.clone(), keys);
             }
         }
 
-        let topological_order = graph.sort();
-
-        // we already ensure there is only one version for each `activations_key` so we can think of
-        // `publicly_exports` as being in terms of a set of `activations_key`s
-        let mut publicly_exports: HashMap<_, HashMap<_, varisat::Var>> = HashMap::new();
-
-        for &key in by_activations_keys.keys() {
-            // everything publicly depends on itself
-            let var = publicly_exports
-                .entry(key)
-                .or_default()
-                .entry(key)
-                .or_insert_with(|| cnf.new_var());
-            cnf.add_clause(&[var.positive()]);
-        }
-
-        // if a `dep` is public then `p` `publicly_exports` all the things that the selected version `publicly_exports`
-        for &p in topological_order.iter() {
-            if let Some(deps) = version_selected_for.get(&p) {
-                let mut p_exports = publicly_exports.remove(&p.as_activations_key()).unwrap();
-                for (_, versions) in deps.iter().filter(|(d, _)| d.is_public()) {
-                    for (ver, sel) in versions {
-                        for (&export_pid, &export_var) in publicly_exports[ver].iter() {
-                            let our_var =
-                                p_exports.entry(export_pid).or_insert_with(|| cnf.new_var());
-                            cnf.add_clause(&[
-                                sel.negative(),
-                                export_var.negative(),
-                                our_var.positive(),
-                            ]);
-                        }
-                    }
-                }
-                publicly_exports.insert(p.as_activations_key(), p_exports);
-            }
-        }
-
-        // we already ensure there is only one version for each `activations_key` so we can think of
-        // `can_see` as being in terms of a set of `activations_key`s
-        // and if `p` `publicly_exports` `export` then it `can_see` `export`
-        let mut can_see: HashMap<_, HashMap<_, varisat::Var>> = HashMap::new();
-
-        // if `p` has a `dep` that selected `ver` then it `can_see` all the things that the selected version `publicly_exports`
-        for (&p, deps) in version_selected_for.iter() {
-            let p_can_see = can_see.entry(p).or_default();
-            for (_, versions) in deps.iter() {
-                for (&ver, sel) in versions {
-                    for (&export_pid, &export_var) in publicly_exports[&ver].iter() {
-                        let our_var = p_can_see.entry(export_pid).or_insert_with(|| cnf.new_var());
-                        cnf.add_clause(&[
-                            sel.negative(),
-                            export_var.negative(),
-                            our_var.positive(),
-                        ]);
-                    }
-                }
-            }
-        }
-
-        // a package `can_see` only one version by each name
-        for (_, see) in can_see.iter() {
-            sat_at_most_one_by_key(&mut cnf, see.iter().map(|((name, _, _), &v)| (name, v)));
-        }
         let mut solver = varisat::Solver::new();
         solver.add_formula(&cnf);
 
@@ -644,10 +519,9 @@ pub fn dep(name: &str) -> Dependency {
 pub fn dep_req(name: &str, req: &str) -> Dependency {
     Dependency::parse(name, Some(req), registry_loc()).unwrap()
 }
-pub fn dep_req_kind(name: &str, req: &str, kind: DepKind, public: bool) -> Dependency {
+pub fn dep_req_kind(name: &str, req: &str, kind: DepKind) -> Dependency {
     let mut dep = dep_req(name, req);
     dep.set_kind(kind);
-    dep.set_public(public);
     dep
 }
 
@@ -740,8 +614,8 @@ fn meta_test_deep_pretty_print_registry() {
                 pkg!(("bar", "2.0.0") => [dep_req("baz", "=1.0.1")]),
                 pkg!(("baz", "1.0.2") => [dep_req("other", "2")]),
                 pkg!(("baz", "1.0.1")),
-                pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", DepKind::Build, false)]),
-                pkg!(("cat", "1.0.3") => [dep_req_kind("other", "2", DepKind::Development, false)]),
+                pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", DepKind::Build)]),
+                pkg!(("cat", "1.0.3") => [dep_req_kind("other", "2", DepKind::Development)]),
                 pkg!(("dep_req", "1.0.0")),
                 pkg!(("dep_req", "2.0.0")),
             ])
@@ -804,14 +678,7 @@ pub fn registry_strategy(
     let max_deps = max_versions * (max_crates * (max_crates - 1)) / shrinkage;
 
     let raw_version_range = (any::<Index>(), any::<Index>());
-    let raw_dependency = (
-        any::<Index>(),
-        any::<Index>(),
-        raw_version_range,
-        0..=1,
-        Just(false),
-        // TODO: ^ this needs to be set back to `any::<bool>()` and work before public & private dependencies can stabilize
-    );
+    let raw_dependency = (any::<Index>(), any::<Index>(), raw_version_range, 0..=1);
 
     fn order_index(a: Index, b: Index, size: usize) -> (usize, usize) {
         let (a, b) = (a.index(size), b.index(size));
@@ -838,7 +705,7 @@ pub fn registry_strategy(
                     .collect();
                 let len_all_pkgid = list_of_pkgid.len();
                 let mut dependency_by_pkgid = vec![vec![]; len_all_pkgid];
-                for (a, b, (c, d), k, p) in raw_dependencies {
+                for (a, b, (c, d), k) in raw_dependencies {
                     let (a, b) = order_index(a, b, len_all_pkgid);
                     let (a, b) = if reverse_alphabetical { (b, a) } else { (a, b) };
                     let ((dep_name, _), _) = list_of_pkgid[a];
@@ -868,7 +735,6 @@ pub fn registry_strategy(
                             // => DepKind::Development, // Development has no impact so don't gen
                             _ => panic!("bad index for DepKind"),
                         },
-                        p && k == 0,
                     ))
                 }
 
