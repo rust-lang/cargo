@@ -422,7 +422,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                     };
                     let errors = match output_options.errors_seen {
                         0 => String::new(),
-                        1 => " due to previous error".to_string(),
+                        1 => " due to 1 previous error".to_string(),
                         count => format!(" due to {} previous errors", count),
                     };
                     let name = descriptive_pkg_name(&name, &target, &mode);

@@ -804,7 +804,7 @@ fn short_message_format() {
         .with_stderr_contains(
             "\
 src/lib.rs:1:27: error[E0308]: mismatched types
-error: could not compile `foo` (lib) due to previous error
+error: could not compile `foo` (lib) due to 1 previous error
 ",
         )
         .run();
@@ -1250,7 +1250,7 @@ fn check_fixable_error_no_fix() {
 [CHECKING] foo v0.0.1 ([..])
 {}\
 [WARNING] `foo` (lib) generated 1 warning
-[ERROR] could not compile `foo` (lib) due to previous error; 1 warning emitted
+[ERROR] could not compile `foo` (lib) due to 1 previous error; 1 warning emitted
 ",
         rustc_message
     );
