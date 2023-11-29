@@ -662,7 +662,7 @@ impl schema::TomlManifest {
             let mut deps: BTreeMap<String, schema::InheritableDependency> = BTreeMap::new();
             for (n, v) in dependencies.iter() {
                 let resolved = dependency_inherit_with(v.clone(), n, inheritable, cx)?;
-                let dep = resolved.to_dependency(n, cx, kind)?;
+                let dep = dep_to_dependency(&resolved, n, cx, kind)?;
                 let name_in_toml = dep.name_in_toml().as_str();
                 validate_package_name(name_in_toml, "dependency name", "")?;
                 let kind_name = match kind {
@@ -1228,7 +1228,7 @@ impl schema::TomlManifest {
                 );
             }
 
-            let mut dep = replacement.to_dependency(spec.name(), cx, None)?;
+            let mut dep = dep_to_dependency(replacement, spec.name(), cx, None)?;
             let version = spec.version().ok_or_else(|| {
                 anyhow!(
                     "replacements must specify a version \
@@ -1274,7 +1274,7 @@ impl schema::TomlManifest {
                             dep.unused_keys(),
                             &mut cx.warnings,
                         );
-                        dep.to_dependency(name, cx, None)
+                        dep_to_dependency(dep, name, cx, None)
                     })
                     .collect::<CargoResult<Vec<_>>>()?,
             );
@@ -1707,7 +1707,8 @@ impl<P: ResolveToPath + Clone> schema::TomlDependency<P> {
         features: &Features,
         kind: Option<DepKind>,
     ) -> CargoResult<Dependency> {
-        self.to_dependency(
+        dep_to_dependency(
+            self,
             name,
             &mut Context {
                 deps: &mut Vec::new(),
@@ -1722,26 +1723,26 @@ impl<P: ResolveToPath + Clone> schema::TomlDependency<P> {
             kind,
         )
     }
+}
 
-    fn to_dependency(
-        &self,
-        name: &str,
-        cx: &mut Context<'_, '_>,
-        kind: Option<DepKind>,
-    ) -> CargoResult<Dependency> {
-        match *self {
-            schema::TomlDependency::Simple(ref version) => detailed_dep_to_dependency(
-                &schema::TomlDetailedDependency::<P> {
-                    version: Some(version.clone()),
-                    ..Default::default()
-                },
-                name,
-                cx,
-                kind,
-            ),
-            schema::TomlDependency::Detailed(ref details) => {
-                detailed_dep_to_dependency(details, name, cx, kind)
-            }
+fn dep_to_dependency<P: ResolveToPath + Clone>(
+    orig: &schema::TomlDependency<P>,
+    name: &str,
+    cx: &mut Context<'_, '_>,
+    kind: Option<DepKind>,
+) -> CargoResult<Dependency> {
+    match *orig {
+        schema::TomlDependency::Simple(ref version) => detailed_dep_to_dependency(
+            &schema::TomlDetailedDependency::<P> {
+                version: Some(version.clone()),
+                ..Default::default()
+            },
+            name,
+            cx,
+            kind,
+        ),
+        schema::TomlDependency::Detailed(ref details) => {
+            detailed_dep_to_dependency(details, name, cx, kind)
         }
     }
 }
