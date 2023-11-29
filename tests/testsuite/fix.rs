@@ -110,6 +110,7 @@ fn rustc_shim_for_cargo_fix() -> Project {
                     }
                     let status = Command::new("rustc")
                         .args(env::args().skip(1))
+                        .env_remove("CARGO_MAKEFLAGS")
                         .status()
                         .expect("failed to run rustc");
                     process::exit(status.code().unwrap_or(2));
