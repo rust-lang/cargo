@@ -519,10 +519,9 @@ pub fn dep(name: &str) -> Dependency {
 pub fn dep_req(name: &str, req: &str) -> Dependency {
     Dependency::parse(name, Some(req), registry_loc()).unwrap()
 }
-pub fn dep_req_kind(name: &str, req: &str, kind: DepKind, public: bool) -> Dependency {
+pub fn dep_req_kind(name: &str, req: &str, kind: DepKind) -> Dependency {
     let mut dep = dep_req(name, req);
     dep.set_kind(kind);
-    dep.set_public(public);
     dep
 }
 
@@ -615,8 +614,8 @@ fn meta_test_deep_pretty_print_registry() {
                 pkg!(("bar", "2.0.0") => [dep_req("baz", "=1.0.1")]),
                 pkg!(("baz", "1.0.2") => [dep_req("other", "2")]),
                 pkg!(("baz", "1.0.1")),
-                pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", DepKind::Build, false)]),
-                pkg!(("cat", "1.0.3") => [dep_req_kind("other", "2", DepKind::Development, false)]),
+                pkg!(("cat", "1.0.2") => [dep_req_kind("other", "2", DepKind::Build)]),
+                pkg!(("cat", "1.0.3") => [dep_req_kind("other", "2", DepKind::Development)]),
                 pkg!(("dep_req", "1.0.0")),
                 pkg!(("dep_req", "2.0.0")),
             ])
@@ -679,14 +678,7 @@ pub fn registry_strategy(
     let max_deps = max_versions * (max_crates * (max_crates - 1)) / shrinkage;
 
     let raw_version_range = (any::<Index>(), any::<Index>());
-    let raw_dependency = (
-        any::<Index>(),
-        any::<Index>(),
-        raw_version_range,
-        0..=1,
-        Just(false),
-        // TODO: ^ this needs to be set back to `any::<bool>()` and work before public & private dependencies can stabilize
-    );
+    let raw_dependency = (any::<Index>(), any::<Index>(), raw_version_range, 0..=1);
 
     fn order_index(a: Index, b: Index, size: usize) -> (usize, usize) {
         let (a, b) = (a.index(size), b.index(size));
@@ -713,7 +705,7 @@ pub fn registry_strategy(
                     .collect();
                 let len_all_pkgid = list_of_pkgid.len();
                 let mut dependency_by_pkgid = vec![vec![]; len_all_pkgid];
-                for (a, b, (c, d), k, p) in raw_dependencies {
+                for (a, b, (c, d), k) in raw_dependencies {
                     let (a, b) = order_index(a, b, len_all_pkgid);
                     let (a, b) = if reverse_alphabetical { (b, a) } else { (a, b) };
                     let ((dep_name, _), _) = list_of_pkgid[a];
@@ -743,7 +735,6 @@ pub fn registry_strategy(
                             // => DepKind::Development, // Development has no impact so don't gen
                             _ => panic!("bad index for DepKind"),
                         },
-                        p,
                     ))
                 }
 
