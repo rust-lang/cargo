@@ -353,6 +353,8 @@ let out_dir = env::var("OUT_DIR").unwrap();
     * `CARGO_CFG_TARGET_POINTER_WIDTH=64` --- The CPU [pointer width].
     * `CARGO_CFG_TARGET_ENDIAN=little` --- The CPU [target endianness].
     * `CARGO_CFG_TARGET_FEATURE=mmx,sse` --- List of CPU [target features] enabled.
+  > Note that different [target triples][Target Triple] have different sets of `cfg` values,
+  > hence variables present in one target triple might not be available in the other.
 * `OUT_DIR` --- the folder in which all output and intermediate artifacts should
               be placed. This folder is inside the build directory for the
               package being built, and it is unique for the package in question.
