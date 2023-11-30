@@ -2530,9 +2530,7 @@ fn uninstall_running_binary() {
             r#"
         use std::{{thread, time}}; 
         fn main() {
-            println!("start longrunning job.");
             thread::sleep(time::Duration::from_secs(3));
-            println!("end longrunning job.");
         }
 "#,
         )

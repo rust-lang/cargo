@@ -6,7 +6,6 @@ use crate::util::errors::CargoResult;
 use crate::util::Config;
 use crate::util::Filesystem;
 use anyhow::bail;
-use cargo_util::paths;
 use std::collections::BTreeSet;
 use std::env;
 
@@ -103,7 +102,6 @@ fn uninstall_pkgid(
     bins: &[String],
     config: &Config,
 ) -> CargoResult<()> {
-    let mut to_remove = Vec::new();
     let installed = match tracker.installed_bins(pkgid) {
         Some(bins) => bins.clone(),
         None => bail!("package `{}` is not installed", pkgid),
@@ -137,11 +135,13 @@ fn uninstall_pkgid(
         }
     }
 
-    if bins.is_empty() {
-        to_remove = installed.iter().collect();
-    } else {
-        to_remove = bins.iter().collect();
-    }
+    let to_remove: Vec<&String> = {
+        if bins.is_empty() {
+            installed.iter().collect()
+        } else {
+            bins.iter().collect()
+        }
+    };
 
     for bin in to_remove {
         let bin_path = dst.join(bin);
