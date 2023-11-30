@@ -138,22 +138,15 @@ fn uninstall_pkgid(
     }
 
     if bins.is_empty() {
-        to_remove.extend(installed.iter().map(|b| dst.join(b)));
-        tracker.remove(pkgid, &installed);
+        to_remove = installed.iter().collect();
     } else {
-        for bin in bins.iter() {
-            to_remove.push(dst.join(bin));
-        }
-        tracker.remove(pkgid, &bins);
+        to_remove = bins.iter().collect();
     }
 
-    // This should have been handled last, but now restore it to reproduce the problem on the Windows platform.
-    // See issue #3364.
-    tracker.save()?;
-
     for bin in to_remove {
-        config.shell().status("Removing", bin.display())?;
-        paths::remove_file(bin)?;
+        let bin_path = dst.join(bin);
+        config.shell().status("Removing", bin_path.display())?;
+        tracker.remove_bin_then_save(pkgid, bin, &bin_path)?;
     }
 
     Ok(())
