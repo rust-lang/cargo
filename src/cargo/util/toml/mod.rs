@@ -1694,35 +1694,33 @@ fn inner_dependency_inherit_with<'a>(
     })
 }
 
-impl<P: ResolveToPath + Clone> schema::TomlDependency<P> {
-    pub(crate) fn to_dependency_split(
-        &self,
-        name: &str,
-        source_id: SourceId,
-        nested_paths: &mut Vec<PathBuf>,
-        config: &Config,
-        warnings: &mut Vec<String>,
-        platform: Option<Platform>,
-        root: &Path,
-        features: &Features,
-        kind: Option<DepKind>,
-    ) -> CargoResult<Dependency> {
-        dep_to_dependency(
-            self,
-            name,
-            &mut Context {
-                deps: &mut Vec::new(),
-                source_id,
-                nested_paths,
-                config,
-                warnings,
-                platform,
-                root,
-                features,
-            },
-            kind,
-        )
-    }
+pub(crate) fn to_dependency<P: ResolveToPath + Clone>(
+    dep: &schema::TomlDependency<P>,
+    name: &str,
+    source_id: SourceId,
+    nested_paths: &mut Vec<PathBuf>,
+    config: &Config,
+    warnings: &mut Vec<String>,
+    platform: Option<Platform>,
+    root: &Path,
+    features: &Features,
+    kind: Option<DepKind>,
+) -> CargoResult<Dependency> {
+    dep_to_dependency(
+        dep,
+        name,
+        &mut Context {
+            deps: &mut Vec::new(),
+            source_id,
+            nested_paths,
+            config,
+            warnings,
+            platform,
+            root,
+            features,
+        },
+        kind,
+    )
 }
 
 fn dep_to_dependency<P: ResolveToPath + Clone>(

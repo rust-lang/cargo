@@ -437,7 +437,8 @@ impl<'cfg> Workspace<'cfg> {
                 url,
                 deps.iter()
                     .map(|(name, dep)| {
-                        dep.to_dependency_split(
+                        crate::util::toml::to_dependency(
+                            dep,
                             name,
                             source,
                             &mut nested_paths,
