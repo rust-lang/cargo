@@ -12,7 +12,6 @@ use crate::CargoResult;
 /// This can be a
 /// - Name (e.g. `docopt`)
 /// - Name and a version req (e.g. `docopt@^0.8`)
-/// - Path
 #[derive(Debug)]
 pub struct CrateSpec {
     /// Crate name
