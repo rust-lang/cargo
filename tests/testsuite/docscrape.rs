@@ -48,6 +48,84 @@ fn basic() {
     assert!(p.build_dir().join("doc/src/ex/ex.rs.html").exists());
 }
 
+// This test ensures that even if there is no `[workspace]` in the top-level `Cargo.toml` file, the
+// dependencies will get their examples scraped and that they appear in the generated documentation.
+#[cargo_test(nightly, reason = "-Zrustdoc-scrape-examples is unstable")]
+fn scrape_examples_for_non_workspace_reexports() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+                authors = []
+
+                [dependencies]
+                a = { path = "crates/a" }
+            "#,
+        )
+        .file("src/lib.rs", "pub use a::*;")
+        // Example
+        .file(
+            "examples/one.rs",
+            r#"use foo::*;
+fn main() {
+    let foo = Foo::new("yes".into());
+    foo.maybe();
+}"#,
+        )
+        // `a` crate
+        .file(
+            "crates/a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                authors = []
+        "#,
+        )
+        .file(
+            "crates/a/src/lib.rs",
+            r#"
+#[derive(Debug)]
+pub struct Foo {
+    foo: String,
+    yes: bool,
+}
+
+impl Foo {
+    pub fn new(foo: String) -> Self {
+        Self { foo, yes: true }
+    }
+
+    pub fn maybe(&self) {
+        if self.yes {
+            println!("{}", self.foo)
+        }
+    }
+}"#,
+        )
+        .build();
+
+    p.cargo("doc -Zunstable-options -Zrustdoc-scrape-examples --no-deps")
+        .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
+        .with_stderr_unordered(
+            "\
+[CHECKING] a v0.0.1 ([CWD]/crates/a)
+[CHECKING] foo v0.0.1 ([CWD])
+[SCRAPING] foo v0.0.1 ([CWD])
+[DOCUMENTING] foo v0.0.1 ([CWD])
+[FINISHED] [..]
+[GENERATED] [CWD]/target/doc/foo/index.html",
+        )
+        .run();
+
+    let doc_html = p.read_file("target/doc/foo/struct.Foo.html");
+    assert!(doc_html.contains("Examples found in repository"));
+}
+
 #[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
 fn avoid_build_script_cycle() {
     let p = project()

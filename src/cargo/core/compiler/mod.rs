@@ -743,7 +743,7 @@ fn prepare_rustdoc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuil
             .arg(scrape_output_path(cx, unit)?);
 
         // Only scrape example for items from crates in the workspace, to reduce generated file size
-        for pkg in cx.bcx.ws.members() {
+        for pkg in cx.bcx.packages.packages() {
             let names = pkg
                 .targets()
                 .iter()
