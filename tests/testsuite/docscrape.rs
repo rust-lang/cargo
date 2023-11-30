@@ -48,9 +48,8 @@ fn basic() {
     assert!(p.build_dir().join("doc/src/ex/ex.rs.html").exists());
 }
 
-// This test ensures that if there is no `[workspace]` in the top-level `Cargo.toml` file, the
-// dependencies will not get their examples scraped and that they appear in the generated
-// documentation.
+// This test ensures that even if there is no `[workspace]` in the top-level `Cargo.toml` file, the
+// dependencies will get their examples scraped and that they appear in the generated documentation.
 #[cargo_test(nightly, reason = "-Zrustdoc-scrape-examples is unstable")]
 fn scrape_examples_for_non_workspace_reexports() {
     let p = project()
@@ -124,7 +123,7 @@ impl Foo {
         .run();
 
     let doc_html = p.read_file("target/doc/foo/struct.Foo.html");
-    assert!(!doc_html.contains("Examples found in repository"));
+    assert!(doc_html.contains("Examples found in repository"));
 }
 
 #[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]
