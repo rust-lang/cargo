@@ -5,7 +5,7 @@ name = "cargo-list-test-fixture"
 version = "0.0.0"
 
 [dependencies]
-a1 = { package = "versioned-package", version = "0.1.1", optional = true }
+my-package1 = { version = "99999.0.0", optional = true }
 
 [features]
-a1 = ["dep:a1"]
+default = ["dep:my-package1"]
