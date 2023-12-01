@@ -4,7 +4,7 @@ pub use self::manifest::{EitherManifest, VirtualManifest};
 pub use self::manifest::{Manifest, Target, TargetKind};
 pub use self::package::{Package, PackageSet};
 pub use self::package_id::PackageId;
-pub use self::package_id_spec::PackageIdSpec;
+pub use self::package_id_spec::{PackageIdSpec, PackageIdSpecQuery};
 pub use self::registry::Registry;
 pub use self::resolver::{Resolve, ResolveVersion};
 pub use self::shell::{Shell, Verbosity};

@@ -85,19 +85,6 @@ impl PackageIdSpec {
         })
     }
 
-    /// Roughly equivalent to `PackageIdSpec::parse(spec)?.query(i)`
-    pub fn query_str<I>(spec: &str, i: I) -> CargoResult<PackageId>
-    where
-        I: IntoIterator<Item = PackageId>,
-    {
-        let i: Vec<_> = i.into_iter().collect();
-        let spec = PackageIdSpec::parse(spec).with_context(|| {
-            let suggestion = edit_distance::closest_msg(spec, i.iter(), |id| id.name().as_str());
-            format!("invalid package ID specification: `{}`{}", spec, suggestion)
-        })?;
-        spec.query(i)
-    }
-
     /// Convert a `PackageId` to a `PackageIdSpec`, which will have both the `PartialVersion` and `Url`
     /// fields filled in.
     pub fn from_package_id(package_id: PackageId) -> PackageIdSpec {
@@ -221,9 +208,94 @@ impl PackageIdSpec {
     pub fn set_kind(&mut self, kind: SourceKind) {
         self.kind = Some(kind);
     }
+}
+
+fn strip_url_protocol(url: &Url) -> Url {
+    // Ridiculous hoop because `Url::set_scheme` errors when changing to http/https
+    let raw = url.to_string();
+    raw.split_once('+').unwrap().1.parse().unwrap()
+}
+
+impl fmt::Display for PackageIdSpec {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut printed_name = false;
+        match self.url {
+            Some(ref url) => {
+                if let Some(protocol) = self.kind.as_ref().and_then(|k| k.protocol()) {
+                    write!(f, "{protocol}+")?;
+                }
+                write!(f, "{}", url)?;
+                if let Some(SourceKind::Git(git_ref)) = self.kind.as_ref() {
+                    if let Some(pretty) = git_ref.pretty_ref(true) {
+                        write!(f, "?{}", pretty)?;
+                    }
+                }
+                if url.path_segments().unwrap().next_back().unwrap() != &*self.name {
+                    printed_name = true;
+                    write!(f, "#{}", self.name)?;
+                }
+            }
+            None => {
+                printed_name = true;
+                write!(f, "{}", self.name)?;
+            }
+        }
+        if let Some(ref v) = self.version {
+            write!(f, "{}{}", if printed_name { "@" } else { "#" }, v)?;
+        }
+        Ok(())
+    }
+}
+
+impl ser::Serialize for PackageIdSpec {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        self.to_string().serialize(s)
+    }
+}
+
+impl<'de> de::Deserialize<'de> for PackageIdSpec {
+    fn deserialize<D>(d: D) -> Result<PackageIdSpec, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let string = String::deserialize(d)?;
+        PackageIdSpec::parse(&string).map_err(de::Error::custom)
+    }
+}
+
+pub trait PackageIdSpecQuery {
+    /// Roughly equivalent to `PackageIdSpec::parse(spec)?.query(i)`
+    fn query_str<I>(spec: &str, i: I) -> CargoResult<PackageId>
+    where
+        I: IntoIterator<Item = PackageId>;
 
     /// Checks whether the given `PackageId` matches the `PackageIdSpec`.
-    pub fn matches(&self, package_id: PackageId) -> bool {
+    fn matches(&self, package_id: PackageId) -> bool;
+
+    /// Checks a list of `PackageId`s to find 1 that matches this `PackageIdSpec`. If 0, 2, or
+    /// more are found, then this returns an error.
+    fn query<I>(&self, i: I) -> CargoResult<PackageId>
+    where
+        I: IntoIterator<Item = PackageId>;
+}
+
+impl PackageIdSpecQuery for PackageIdSpec {
+    fn query_str<I>(spec: &str, i: I) -> CargoResult<PackageId>
+    where
+        I: IntoIterator<Item = PackageId>,
+    {
+        let i: Vec<_> = i.into_iter().collect();
+        let spec = PackageIdSpec::parse(spec).with_context(|| {
+            let suggestion = edit_distance::closest_msg(spec, i.iter(), |id| id.name().as_str());
+            format!("invalid package ID specification: `{}`{}", spec, suggestion)
+        })?;
+        spec.query(i)
+    }
+
+    fn matches(&self, package_id: PackageId) -> bool {
         if self.name() != package_id.name().as_str() {
             return false;
         }
@@ -249,9 +321,7 @@ impl PackageIdSpec {
         true
     }
 
-    /// Checks a list of `PackageId`s to find 1 that matches this `PackageIdSpec`. If 0, 2, or
-    /// more are found, then this returns an error.
-    pub fn query<I>(&self, i: I) -> CargoResult<PackageId>
+    fn query<I>(&self, i: I) -> CargoResult<PackageId>
     where
         I: IntoIterator<Item = PackageId>,
     {
@@ -342,65 +412,10 @@ impl PackageIdSpec {
     }
 }
 
-fn strip_url_protocol(url: &Url) -> Url {
-    // Ridiculous hoop because `Url::set_scheme` errors when changing to http/https
-    let raw = url.to_string();
-    raw.split_once('+').unwrap().1.parse().unwrap()
-}
-
-impl fmt::Display for PackageIdSpec {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut printed_name = false;
-        match self.url {
-            Some(ref url) => {
-                if let Some(protocol) = self.kind.as_ref().and_then(|k| k.protocol()) {
-                    write!(f, "{protocol}+")?;
-                }
-                write!(f, "{}", url)?;
-                if let Some(SourceKind::Git(git_ref)) = self.kind.as_ref() {
-                    if let Some(pretty) = git_ref.pretty_ref(true) {
-                        write!(f, "?{}", pretty)?;
-                    }
-                }
-                if url.path_segments().unwrap().next_back().unwrap() != &*self.name {
-                    printed_name = true;
-                    write!(f, "#{}", self.name)?;
-                }
-            }
-            None => {
-                printed_name = true;
-                write!(f, "{}", self.name)?;
-            }
-        }
-        if let Some(ref v) = self.version {
-            write!(f, "{}{}", if printed_name { "@" } else { "#" }, v)?;
-        }
-        Ok(())
-    }
-}
-
-impl ser::Serialize for PackageIdSpec {
-    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        self.to_string().serialize(s)
-    }
-}
-
-impl<'de> de::Deserialize<'de> for PackageIdSpec {
-    fn deserialize<D>(d: D) -> Result<PackageIdSpec, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        let string = String::deserialize(d)?;
-        PackageIdSpec::parse(&string).map_err(de::Error::custom)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::PackageIdSpec;
+    use super::PackageIdSpecQuery;
     use crate::core::{GitReference, PackageId, SourceId, SourceKind};
     use url::Url;
 

@@ -1,6 +1,6 @@
 use super::encode::Metadata;
 use crate::core::dependency::DepKind;
-use crate::core::{Dependency, PackageId, PackageIdSpec, Summary, Target};
+use crate::core::{Dependency, PackageId, PackageIdSpec, PackageIdSpecQuery, Summary, Target};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::Graph;

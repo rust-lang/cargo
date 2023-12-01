@@ -1,6 +1,6 @@
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::{CliFeatures, HasDevUnits};
-use crate::core::{PackageId, PackageIdSpec};
+use crate::core::{PackageId, PackageIdSpec, PackageIdSpecQuery};
 use crate::core::{Resolve, SourceId, Workspace};
 use crate::ops;
 use crate::util::cache_lock::CacheLockMode;

@@ -1,5 +1,5 @@
 use crate::core::PackageId;
-use crate::core::{PackageIdSpec, SourceId};
+use crate::core::{PackageIdSpec, PackageIdSpecQuery, SourceId};
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;

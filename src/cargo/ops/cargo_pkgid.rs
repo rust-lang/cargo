@@ -1,4 +1,4 @@
-use crate::core::{PackageIdSpec, Workspace};
+use crate::core::{PackageIdSpec, PackageIdSpecQuery, Workspace};
 use crate::ops;
 use crate::util::CargoResult;
 
