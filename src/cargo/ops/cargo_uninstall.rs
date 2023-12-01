@@ -135,18 +135,18 @@ fn uninstall_pkgid(
         }
     }
 
-    let to_remove: Vec<&String> = {
+    let to_remove = {
         if bins.is_empty() {
-            installed.iter().collect()
+            installed
         } else {
-            bins.iter().collect()
+            bins
         }
     };
 
     for bin in to_remove {
-        let bin_path = dst.join(bin);
+        let bin_path = dst.join(&bin);
         config.shell().status("Removing", bin_path.display())?;
-        tracker.remove_bin_then_save(pkgid, bin, &bin_path)?;
+        tracker.remove_bin_then_save(pkgid, &bin, &bin_path)?;
     }
 
     Ok(())

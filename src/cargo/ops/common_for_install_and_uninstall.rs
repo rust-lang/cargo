@@ -321,7 +321,7 @@ impl InstallTracker {
         self.v2.remove(pkg_id, bins);
     }
 
-    /// Remove a bin after it successfully had been removed in disk and the save the tracker at last.
+    /// Remove a bin after it successfully had been removed in disk and then save the tracker at last.
     pub fn remove_bin_then_save(
         &mut self,
         pkg_id: PackageId,
