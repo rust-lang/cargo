@@ -95,7 +95,7 @@ tempfile = "3.8.1"
 thiserror = "1.0.50"
 time = { version = "0.3", features = ["parsing", "formatting", "serde"] }
 toml = "0.8.6"
-toml_edit = { version = "0.20.7", features = ["serde"] }
+toml_edit = { version = "0.21.0", features = ["serde"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 unicase = "2.7.0"
