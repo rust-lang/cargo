@@ -7,6 +7,7 @@ use std::rc::Rc;
 use std::task::Poll;
 
 use anyhow::{bail, format_err, Context as _};
+use cargo_util::paths;
 use ops::FilterRule;
 use serde::{Deserialize, Serialize};
 
@@ -319,6 +320,20 @@ impl InstallTracker {
         self.v1.remove(pkg_id, bins);
         self.v2.remove(pkg_id, bins);
     }
+
+    /// Remove a bin after it successfully had been removed in disk and then save the tracker at last.
+    pub fn remove_bin_then_save(
+        &mut self,
+        pkg_id: PackageId,
+        bin: &str,
+        bin_path: &PathBuf,
+    ) -> CargoResult<()> {
+        paths::remove_file(bin_path)?;
+        self.v1.remove_bin(pkg_id, bin);
+        self.v2.remove_bin(pkg_id, bin);
+        self.save()?;
+        Ok(())
+    }
 }
 
 impl CrateListingV1 {
@@ -354,6 +369,17 @@ impl CrateListingV1 {
         for bin in bins {
             installed.get_mut().remove(bin);
         }
+        if installed.get().is_empty() {
+            installed.remove();
+        }
+    }
+
+    fn remove_bin(&mut self, pkg_id: PackageId, bin: &str) {
+        let mut installed = match self.v1.entry(pkg_id) {
+            btree_map::Entry::Occupied(e) => e,
+            btree_map::Entry::Vacant(..) => panic!("v1 unexpected missing `{}`", pkg_id),
+        };
+        installed.get_mut().remove(bin);
         if installed.get().is_empty() {
             installed.remove();
         }
@@ -463,6 +489,17 @@ impl CrateListingV2 {
         for bin in bins {
             info_entry.get_mut().bins.remove(bin);
         }
+        if info_entry.get().bins.is_empty() {
+            info_entry.remove();
+        }
+    }
+
+    fn remove_bin(&mut self, pkg_id: PackageId, bin: &str) {
+        let mut info_entry = match self.installs.entry(pkg_id) {
+            btree_map::Entry::Occupied(e) => e,
+            btree_map::Entry::Vacant(..) => panic!("v1 unexpected missing `{}`", pkg_id),
+        };
+        info_entry.get_mut().bins.remove(bin);
         if info_entry.get().bins.is_empty() {
             info_entry.remove();
         }

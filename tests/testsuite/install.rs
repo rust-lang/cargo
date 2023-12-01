@@ -3,6 +3,7 @@
 use std::fs::{self, OpenOptions};
 use std::io::prelude::*;
 use std::path::Path;
+use std::thread;
 
 use cargo_test_support::compare;
 use cargo_test_support::cross_compile;
@@ -11,10 +12,10 @@ use cargo_test_support::registry::{self, registry_path, Package};
 use cargo_test_support::{
     basic_manifest, cargo_process, no_such_file_err_msg, project, project_in, symlink_supported, t,
 };
-use cargo_util::ProcessError;
+use cargo_util::{ProcessBuilder, ProcessError};
 
 use cargo_test_support::install::{
-    assert_has_installed_exe, assert_has_not_installed_exe, cargo_home,
+    assert_has_installed_exe, assert_has_not_installed_exe, cargo_home, exe,
 };
 use cargo_test_support::paths::{self, CargoPathExt};
 use std::env;
@@ -2506,4 +2507,101 @@ fn install_incompat_msrv() {
 `foo 0.1.0` supports rustc 1.30
 ")
         .with_status(101).run();
+}
+
+fn assert_tracker_noexistence(key: &str) {
+    let v1_data: toml::Value =
+        toml::from_str(&fs::read_to_string(cargo_home().join(".crates.toml")).unwrap()).unwrap();
+    let v2_data: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(cargo_home().join(".crates2.json")).unwrap())
+            .unwrap();
+
+    assert!(v1_data["v1"].get(key).is_none());
+    assert!(v2_data["installs"][key].is_null());
+}
+
+#[cargo_test]
+fn uninstall_running_binary() {
+    Package::new("foo", "0.0.1")
+        .file("src/lib.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+    [package]
+    name = "foo"
+    version = "0.0.1"
+    
+    [[bin]]
+    name = "foo"
+    path = "src/main.rs"
+"#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+        use std::{{thread, time}}; 
+        fn main() {
+            thread::sleep(time::Duration::from_secs(3));
+        }
+"#,
+        )
+        .publish();
+
+    cargo_process("install foo")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+
+    let foo_bin = cargo_home().join("bin").join(exe("foo"));
+    let t = thread::spawn(|| ProcessBuilder::new(foo_bin).exec().unwrap());
+    let key = "foo 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)";
+
+    #[cfg(windows)]
+    {
+        cargo_process("uninstall foo")
+            .with_status(101)
+            .with_stderr_contains("[ERROR] failed to remove file `[CWD]/home/.cargo/bin/foo[EXE]`")
+            .run();
+        t.join().unwrap();
+        cargo_process("uninstall foo")
+            .with_stderr("[REMOVING] [CWD]/home/.cargo/bin/foo[EXE]")
+            .run();
+    };
+
+    #[cfg(not(windows))]
+    {
+        cargo_process("uninstall foo")
+            .with_stderr("[REMOVING] [CWD]/home/.cargo/bin/foo[EXE]")
+            .run();
+        t.join().unwrap();
+    };
+
+    assert_has_not_installed_exe(cargo_home(), "foo");
+    assert_tracker_noexistence(key);
+
+    cargo_process("install foo")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+[FINISHED] release [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .run();
 }
