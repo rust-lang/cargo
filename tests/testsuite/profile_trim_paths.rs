@@ -612,3 +612,69 @@ fn custom_build_env_var_trim_paths() {
             .run();
     }
 }
+
+#[cfg(unix)]
+#[cargo_test(requires_lldb, nightly, reason = "-Zremap-path-scope is unstable")]
+fn lldb_works_after_trimmed() {
+    use cargo_test_support::compare::match_contains;
+
+    let run_lldb = |path| {
+        std::process::Command::new("lldb")
+            .args(["-o", "breakpoint set --file src/main.rs --line 4"])
+            .args(["-o", "run"])
+            .args(["-o", "continue"])
+            .args(["-o", "exit"])
+            .arg("--no-use-colors")
+            .arg(path)
+            .output()
+            .expect("lldb works")
+    };
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [profile.dev]
+                trim-paths = "object"
+           "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {
+                    let msg = "Hello, Ferris!";
+                    println!("{msg}");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build --verbose -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .with_stderr_contains(
+            "\
+[RUNNING] `rustc [..]\
+    -Zremap-path-scope=object \
+    --remap-path-prefix=[CWD]= \
+    --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]",
+        )
+        .run();
+
+    let bin_path = p.bin("foo");
+    assert!(bin_path.is_file());
+    let stdout = String::from_utf8(run_lldb(bin_path).stdout).unwrap();
+    match_contains("[..]stopped[..]", &stdout, None).unwrap();
+    match_contains("[..]stop reason = breakpoint[..]", &stdout, None).unwrap();
+    match_contains(
+        "\
+(lldb) continue
+Hello, Ferris!",
+        &stdout,
+        None,
+    )
+    .unwrap();
+}
