@@ -88,7 +88,7 @@ impl<'de> de::Deserialize<'de> for PackageId {
             strip_parens(rest).ok_or_else(|| de::Error::custom("invalid serialized PackageId"))?;
         let source_id = SourceId::from_url(url).map_err(de::Error::custom)?;
 
-        Ok(PackageId::pure(name, version, source_id))
+        Ok(PackageId::new(name, version, source_id))
     }
 }
 
@@ -129,10 +129,10 @@ impl PackageId {
         sid: SourceId,
     ) -> CargoResult<PackageId> {
         let v = version.parse()?;
-        Ok(PackageId::pure(name.into(), v, sid))
+        Ok(PackageId::new(name.into(), v, sid))
     }
 
-    pub fn pure(name: InternedString, version: semver::Version, source_id: SourceId) -> PackageId {
+    pub fn new(name: InternedString, version: semver::Version, source_id: SourceId) -> PackageId {
         let inner = PackageIdInner {
             name,
             version,
@@ -161,7 +161,7 @@ impl PackageId {
     }
 
     pub fn with_source_id(self, source: SourceId) -> PackageId {
-        PackageId::pure(self.inner.name, self.inner.version.clone(), source)
+        PackageId::new(self.inner.name, self.inner.version.clone(), source)
     }
 
     pub fn map_source(self, to_replace: SourceId, replace_with: SourceId) -> Self {
