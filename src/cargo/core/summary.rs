@@ -474,7 +474,7 @@ mod tests {
     fn valid_feature_names() {
         let loc = CRATES_IO_INDEX.into_url().unwrap();
         let source_id = SourceId::for_registry(&loc).unwrap();
-        let pkg_id = PackageId::new("foo", "1.0.0", source_id).unwrap();
+        let pkg_id = PackageId::try_new("foo", "1.0.0", source_id).unwrap();
 
         assert!(validate_feature_name(pkg_id, "c++17").is_ok());
         assert!(validate_feature_name(pkg_id, "128bit").is_ok());

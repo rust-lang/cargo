@@ -139,7 +139,7 @@ mod test {
     fn pkgid(name: &str, version: &str) -> PackageId {
         let src_id =
             SourceId::from_url("registry+https://github.com/rust-lang/crates.io-index").unwrap();
-        PackageId::new(name, version, src_id).unwrap()
+        PackageId::try_new(name, version, src_id).unwrap()
     }
 
     fn dep(name: &str, version: &str) -> Dependency {

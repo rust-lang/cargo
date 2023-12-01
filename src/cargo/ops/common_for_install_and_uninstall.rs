@@ -650,7 +650,7 @@ cannot install package `{name} {ver}`, it requires rustc {msrv} or newer, while 
             let is_yanked: bool = if dep.version_req().is_exact() {
                 let version: String = dep.version_req().to_string();
                 if let Ok(pkg_id) =
-                    PackageId::new(dep.package_name(), &version[1..], source.source_id())
+                    PackageId::try_new(dep.package_name(), &version[1..], source.source_id())
                 {
                     source.invalidate_cache();
                     loop {

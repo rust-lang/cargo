@@ -123,7 +123,7 @@ impl Hash for PackageId {
 }
 
 impl PackageId {
-    pub fn new(
+    pub fn try_new(
         name: impl Into<InternedString>,
         version: &str,
         sid: SourceId,
@@ -242,16 +242,17 @@ mod tests {
         let loc = CRATES_IO_INDEX.into_url().unwrap();
         let repo = SourceId::for_registry(&loc).unwrap();
 
-        assert!(PackageId::new("foo", "1.0", repo).is_err());
-        assert!(PackageId::new("foo", "1", repo).is_err());
-        assert!(PackageId::new("foo", "bar", repo).is_err());
-        assert!(PackageId::new("foo", "", repo).is_err());
+        assert!(PackageId::try_new("foo", "1.0", repo).is_err());
+        assert!(PackageId::try_new("foo", "1", repo).is_err());
+        assert!(PackageId::try_new("foo", "bar", repo).is_err());
+        assert!(PackageId::try_new("foo", "", repo).is_err());
     }
 
     #[test]
     fn display() {
         let loc = CRATES_IO_INDEX.into_url().unwrap();
-        let pkg_id = PackageId::new("foo", "1.0.0", SourceId::for_registry(&loc).unwrap()).unwrap();
+        let pkg_id =
+            PackageId::try_new("foo", "1.0.0", SourceId::for_registry(&loc).unwrap()).unwrap();
         assert_eq!("foo v1.0.0", pkg_id.to_string());
     }
 
@@ -259,8 +260,8 @@ mod tests {
     fn unequal_build_metadata() {
         let loc = CRATES_IO_INDEX.into_url().unwrap();
         let repo = SourceId::for_registry(&loc).unwrap();
-        let first = PackageId::new("foo", "0.0.1+first", repo).unwrap();
-        let second = PackageId::new("foo", "0.0.1+second", repo).unwrap();
+        let first = PackageId::try_new("foo", "0.0.1+first", repo).unwrap();
+        let second = PackageId::try_new("foo", "0.0.1+second", repo).unwrap();
         assert_ne!(first, second);
         assert_ne!(first.inner, second.inner);
     }

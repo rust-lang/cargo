@@ -419,14 +419,14 @@ impl ToPkgId for PackageId {
 
 impl<'a> ToPkgId for &'a str {
     fn to_pkgid(&self) -> PackageId {
-        PackageId::new(*self, "1.0.0", registry_loc()).unwrap()
+        PackageId::try_new(*self, "1.0.0", registry_loc()).unwrap()
     }
 }
 
 impl<T: AsRef<str>, U: AsRef<str>> ToPkgId for (T, U) {
     fn to_pkgid(&self) -> PackageId {
         let (name, vers) = self;
-        PackageId::new(name.as_ref(), vers.as_ref(), registry_loc()).unwrap()
+        PackageId::try_new(name.as_ref(), vers.as_ref(), registry_loc()).unwrap()
     }
 }
 
@@ -472,7 +472,7 @@ pub fn pkg_dep<T: ToPkgId>(name: T, dep: Vec<Dependency>) -> Summary {
 }
 
 pub fn pkg_id(name: &str) -> PackageId {
-    PackageId::new(name, "1.0.0", registry_loc()).unwrap()
+    PackageId::try_new(name, "1.0.0", registry_loc()).unwrap()
 }
 
 fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
@@ -480,7 +480,7 @@ fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
     let master = GitReference::Branch("master".to_string());
     let source_id = SourceId::for_git(&remote.unwrap(), master).unwrap();
 
-    PackageId::new(name, "1.0.0", source_id).unwrap()
+    PackageId::try_new(name, "1.0.0", source_id).unwrap()
 }
 
 pub fn pkg_loc(name: &str, loc: &str) -> Summary {
