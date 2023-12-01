@@ -557,6 +557,7 @@ pub struct Dependency {
     registry: Option<String>,
     package: Option<String>,
     optional: bool,
+    default_features: bool,
 }
 
 /// Entry with data that corresponds to [`tar::EntryType`].
@@ -1161,12 +1162,15 @@ fn save_new_crate(
                 "name": name,
                 "req": dep.version_req,
                 "features": dep.features,
-                "default_features": true,
+                "default_features": dep.default_features,
                 "target": dep.target,
                 "optional": dep.optional,
                 "kind": dep.kind,
                 "registry": dep.registry,
                 "package": package,
+                "artifact": dep.artifact,
+                "bindep_target": dep.bindep_target,
+                "lib": dep.lib,
             })
         })
         .collect::<Vec<_>>();
@@ -1179,7 +1183,7 @@ fn save_new_crate(
         new_crate.features,
         false,
         new_crate.links,
-        None,
+        new_crate.rust_version.as_deref(),
         None,
     );
 
@@ -1415,7 +1419,7 @@ impl Package {
                     "name": dep.name,
                     "req": dep.vers,
                     "features": dep.features,
-                    "default_features": true,
+                    "default_features": dep.default_features,
                     "target": dep.target,
                     "artifact": artifact,
                     "bindep_target": dep.bindep_target,
@@ -1580,6 +1584,21 @@ impl Package {
                 assert_eq!(registry, "alternative");
                 manifest.push_str(&format!("registry-index = \"{}\"", alt_registry_url()));
             }
+            if !dep.default_features {
+                manifest.push_str("default-features = false\n");
+            }
+            if !dep.features.is_empty() {
+                let mut features = String::new();
+                serde::Serialize::serialize(
+                    &dep.features,
+                    toml::ser::ValueSerializer::new(&mut features),
+                )
+                .unwrap();
+                manifest.push_str(&format!("features = {}\n", features));
+            }
+            if let Some(package) = &dep.package {
+                manifest.push_str(&format!("package = \"{}\"\n", package));
+            }
         }
         if self.proc_macro {
             manifest.push_str("[lib]\nproc-macro = true\n");
@@ -1658,6 +1677,7 @@ impl Dependency {
             package: None,
             optional: false,
             registry: None,
+            default_features: true,
         }
     }
 
@@ -1708,6 +1728,12 @@ impl Dependency {
     /// Changes this to an optional dependency.
     pub fn optional(&mut self, optional: bool) -> &mut Self {
         self.optional = optional;
+        self
+    }
+
+    /// Adds `default-features = false` if the argument is `false`.
+    pub fn default_features(&mut self, default_features: bool) -> &mut Self {
+        self.default_features = default_features;
         self
     }
 }
