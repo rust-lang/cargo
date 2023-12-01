@@ -15,6 +15,10 @@ pub enum DirtyReason {
         old: String,
         new: String,
     },
+    DeclaredFeaturesChanged {
+        old: String,
+        new: String,
+    },
     TargetConfigurationChanged,
     PathToSourceChanged,
     ProfileConfigurationChanged,
@@ -140,6 +144,9 @@ impl DirtyReason {
             DirtyReason::RustcChanged => s.dirty_because(unit, "the toolchain changed"),
             DirtyReason::FeaturesChanged { .. } => {
                 s.dirty_because(unit, "the list of features changed")
+            }
+            DirtyReason::DeclaredFeaturesChanged { .. } => {
+                s.dirty_because(unit, "the list of declared features changed")
             }
             DirtyReason::TargetConfigurationChanged => {
                 s.dirty_because(unit, "the target configuration changed")
