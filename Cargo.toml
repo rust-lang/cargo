@@ -69,7 +69,6 @@ pasetors = { version = "0.6.7", features = ["v3", "paserk", "std", "serde"] }
 pathdiff = "0.2"
 percent-encoding = "2.3"
 pkg-config = "0.3.27"
-pretty_assertions = "1.4.0"
 proptest = "1.4.0"
 pulldown-cmark = { version = "0.9.3", default-features = false }
 rand = "0.8.5"
