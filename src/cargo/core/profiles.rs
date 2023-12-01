@@ -32,6 +32,7 @@ use crate::util::toml::schema::TomlTrimPathsValue;
 use crate::util::toml::schema::{
     ProfilePackageSpec, StringOrBool, TomlDebugInfo, TomlProfile, TomlProfiles,
 };
+use crate::util::toml::validate_profile;
 use crate::util::{closest_msg, config, CargoResult, Config};
 use anyhow::{bail, Context as _};
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -1235,20 +1236,19 @@ fn get_config_profile(ws: &Workspace<'_>, name: &str) -> CargoResult<Option<Toml
         return Ok(None);
     };
     let mut warnings = Vec::new();
-    profile
-        .val
-        .validate(
-            name,
-            ws.config().cli_unstable(),
-            ws.unstable_features(),
-            &mut warnings,
+    validate_profile(
+        &profile.val,
+        name,
+        ws.config().cli_unstable(),
+        ws.unstable_features(),
+        &mut warnings,
+    )
+    .with_context(|| {
+        format!(
+            "config profile `{}` is not valid (defined in `{}`)",
+            name, profile.definition
         )
-        .with_context(|| {
-            format!(
-                "config profile `{}` is not valid (defined in `{}`)",
-                name, profile.definition
-            )
-        })?;
+    })?;
     for warning in warnings {
         ws.config().shell().warn(warning)?;
     }
