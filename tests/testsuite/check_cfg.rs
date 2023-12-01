@@ -142,6 +142,56 @@ fn features_with_namespaced_features() {
 }
 
 #[cargo_test(nightly, reason = "--check-cfg is unstable")]
+fn features_fingerprint() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [features]
+                f_a = []
+                f_b = []
+            "#,
+        )
+        .file("src/lib.rs", "#[cfg(feature = \"f_b\")] fn entry() {}")
+        .build();
+
+    p.cargo("check -v -Zcheck-cfg")
+        .masquerade_as_nightly_cargo(&["check-cfg"])
+        .with_stderr_contains(x!("rustc" => "cfg" of "feature" with "f_a" "f_b"))
+        .with_stderr_does_not_contain("[..]unexpected_cfgs[..]")
+        .run();
+
+    p.cargo("check -v -Zcheck-cfg")
+        .masquerade_as_nightly_cargo(&["check-cfg"])
+        .with_stderr_does_not_contain("[..]rustc[..]")
+        .run();
+
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [features]
+            f_a = []
+        "#,
+    );
+
+    p.cargo("check -v -Zcheck-cfg")
+        .masquerade_as_nightly_cargo(&["check-cfg"])
+        // this is a bug, rustc should be called again
+        .with_stderr_does_not_contain("[..]rustc[..]")
+        // and should show a warning from the unexpected_cfgs lint
+        .with_stderr_does_not_contain("[..]unexpected_cfgs[..]")
+        .run();
+}
+
+#[cargo_test(nightly, reason = "--check-cfg is unstable")]
 fn well_known_names_values() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
