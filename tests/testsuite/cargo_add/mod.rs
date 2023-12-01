@@ -12,6 +12,7 @@ mod deprecated_section;
 mod detect_workspace_inherit;
 mod detect_workspace_inherit_features;
 mod detect_workspace_inherit_optional;
+mod detect_workspace_inherit_public;
 mod dev;
 mod dev_build_conflict;
 mod dev_prefer_existing_version;
