@@ -2,9 +2,9 @@
 
 use cargo::core::{PackageIdSpec, Shell};
 use cargo::util::config::{self, Config, Definition, JobsConfig, SslVersionConfig, StringList};
-use cargo::util::toml::schema::TomlTrimPaths;
-use cargo::util::toml::schema::TomlTrimPathsValue;
-use cargo::util::toml::schema::{self as cargo_toml, TomlDebugInfo, VecStringOrBool as VSOB};
+use cargo::util_schemas::manifest::TomlTrimPaths;
+use cargo::util_schemas::manifest::TomlTrimPathsValue;
+use cargo::util_schemas::manifest::{self as cargo_toml, TomlDebugInfo, VecStringOrBool as VSOB};
 use cargo::CargoResult;
 use cargo_test_support::compare;
 use cargo_test_support::{panic_error, paths, project, symlink_supported, t};

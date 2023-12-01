@@ -93,9 +93,9 @@ use crate::core::{Feature, PackageId, Target, Verbosity};
 use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
-use crate::util::toml::schema::TomlDebugInfo;
-use crate::util::toml::schema::TomlTrimPaths;
 use crate::util::{add_path_args, internal, iter_join_onto, profile};
+use crate::util_schemas::manifest::TomlDebugInfo;
+use crate::util_schemas::manifest::TomlTrimPaths;
 use cargo_util::{paths, ProcessBuilder, ProcessError};
 use rustfix::diagnostics::Applicability;
 

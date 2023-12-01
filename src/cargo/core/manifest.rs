@@ -18,8 +18,8 @@ use crate::core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
 use crate::core::{Edition, Feature, Features, WorkspaceConfig};
 use crate::util::errors::*;
 use crate::util::interning::InternedString;
-use crate::util::toml::schema::{TomlManifest, TomlProfiles};
 use crate::util::{short_hash, Config, Filesystem, RustVersion};
+use crate::util_schemas::manifest::{TomlManifest, TomlProfiles};
 
 pub enum EitherManifest {
     Real(Manifest),
