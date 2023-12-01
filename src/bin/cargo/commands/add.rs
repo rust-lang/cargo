@@ -67,14 +67,14 @@ The package will be removed from your features.")
                 .conflicts_with("build")
                 .long_help("Mark the dependency as public
 
-The dependnecy will be visible in both of your crate and outside."),
+The dependency can be referenced in your library's public API."),
             flag("no-public", "Mark the dependency as private")
                 .conflicts_with("dev")
                 .conflicts_with("build")
                 .overrides_with("public")
                 .long_help("Mark the dependency as private
 
-The dependnecy will be only visible in your crate other than outside."),
+While you can use the crate in your implementation, it cannot be referenced in your public API."),
             clap::Arg::new("rename")
                 .long("rename")
                 .action(ArgAction::Set)

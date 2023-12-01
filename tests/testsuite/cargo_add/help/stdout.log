@@ -35,12 +35,13 @@ Options:
       --public
           Mark the dependency as public
           
-          The dependnecy will be visible in both of your crate and outside.
+          The dependency can be referenced in your library's public API.
 
       --no-public
           Mark the dependency as private
           
-          The dependnecy will be only visible in your crate other than outside.
+          While you can use the crate in your implementation, it cannot be referenced in your public
+          API.
 
       --rename <NAME>
           Rename the dependency

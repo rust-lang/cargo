@@ -1,9 +1,6 @@
 cargo-features = ["public-dependency"]
 [workspace]
 
-[lib]
-path = "../../add_basic.in/src/lib.rs"
-
 [package]
 name = "cargo-list-test-fixture"
 version = "0.0.0"
