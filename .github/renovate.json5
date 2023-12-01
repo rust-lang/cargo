@@ -66,6 +66,16 @@
       internalChecksFilter: 'strict',
       groupName: 'msrv',
     },
+    {
+      matchManagers: [
+        'cargo',
+      ],
+      matchPackageNames: [
+        'gix-features-for-configuration-only',
+        'gix',
+      ],
+      groupName: 'gix',
+    },
     // Goals:
     // - Rollup safe upgrades to reduce CI runner load
     // - Have lockfile and manifest in-sync (implicit rules)
