@@ -170,6 +170,25 @@ fn features_fingerprint() {
         .with_stderr_does_not_contain("[..]rustc[..]")
         .run();
 
+    // checking that re-ordering the features does not invalid the fingerprint
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [features]
+            f_b = []
+            f_a = []
+        "#,
+    );
+
+    p.cargo("check -v -Zcheck-cfg")
+        .masquerade_as_nightly_cargo(&["check-cfg"])
+        .with_stderr_does_not_contain("[..]rustc[..]")
+        .run();
+
     p.change_file(
         "Cargo.toml",
         r#"

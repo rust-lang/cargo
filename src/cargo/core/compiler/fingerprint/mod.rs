@@ -1443,7 +1443,9 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
         allow_features.hash(&mut config);
     }
     let compile_kind = unit.kind.fingerprint_hash();
-    let declared_features = unit.pkg.summary().features().keys().collect::<Vec<_>>();
+    let mut declared_features = unit.pkg.summary().features().keys().collect::<Vec<_>>();
+    declared_features.sort(); // to avoid useless rebuild if the user orders it's features
+                              // differently
     Ok(Fingerprint {
         rustc: util::hash_u64(&cx.bcx.rustc().verbose_version),
         target: util::hash_u64(&unit.target),
