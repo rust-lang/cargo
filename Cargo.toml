@@ -63,7 +63,7 @@ libloading = "0.8.1"
 memchr = "2.6.4"
 miow = "0.6.0"
 opener = "0.6.1"
-openssl ="0.10.57"
+openssl ="0.10.60"
 os_info = "3.7.0"
 pasetors = { version = "0.6.7", features = ["v3", "paserk", "std", "serde"] }
 pathdiff = "0.2"
