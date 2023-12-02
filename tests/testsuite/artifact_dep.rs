@@ -1497,6 +1497,55 @@ foo v0.0.0 ([CWD])
         )
         .run();
 }
+
+#[cargo_test]
+fn artifact_dep_target_specified() {
+    if cross_compile::disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
+                resolver = "2"
+
+                [dependencies]
+                bindep = { path = "bindep", artifact = "bin", target = "$TARGET" }
+            "#
+            .replace("$TARGET", target),
+        )
+        .file("src/lib.rs", "")
+        .file("bindep/Cargo.toml", &basic_manifest("bindep", "0.0.0"))
+        .file("bindep/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr_contains(
+            r#"[COMPILING] bindep v0.0.0 ([CWD]/bindep)
+[CHECKING] foo v0.0.0 ([CWD])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]"#,
+        )
+        .with_status(0)
+        .run();
+
+    p.cargo("tree -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stdout(
+            "\
+foo v0.0.0 ([CWD])
+└── bindep v0.0.0 ([CWD]/bindep)",
+        )
+        .with_status(0)
+        .run();
+}
+
 #[cargo_test]
 fn targets_are_picked_up_from_non_workspace_artifact_deps() {
     if cross_compile::disabled() {
