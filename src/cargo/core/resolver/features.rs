@@ -319,8 +319,30 @@ impl ResolvedFeatures {
         pkg_id: PackageId,
         features_for: FeaturesFor,
     ) -> Vec<InternedString> {
-        self.activated_features_int(pkg_id, features_for)
-            .expect("activated_features for invalid package")
+        if let Some(res) = self.activated_features_unverified(pkg_id, features_for) {
+            res
+        } else {
+            panic!(
+                "did not find features for ({pkg_id:?}, {features_for:?}) within activated_features:\n{:#?}",
+                self.activated_features.keys()
+            )
+        }
+    }
+
+    /// Variant of `activated_features` that returns `None` if this is
+    /// not a valid pkg_id/is_build combination. Used in places which do
+    /// not know which packages are activated (like `cargo clean`).
+    pub fn activated_features_unverified(
+        &self,
+        pkg_id: PackageId,
+        features_for: FeaturesFor,
+    ) -> Option<Vec<InternedString>> {
+        let fk = features_for.apply_opts(&self.opts);
+        if let Some(fs) = self.activated_features.get(&(pkg_id, fk)) {
+            Some(fs.iter().cloned().collect())
+        } else {
+            None
+        }
     }
 
     /// Returns if the given dependency should be included.
@@ -338,30 +360,6 @@ impl ResolvedFeatures {
             .get(&(pkg_id, key))
             .map(|deps| deps.contains(&dep_name))
             .unwrap_or(false)
-    }
-
-    /// Variant of `activated_features` that returns `None` if this is
-    /// not a valid pkg_id/is_build combination. Used in places which do
-    /// not know which packages are activated (like `cargo clean`).
-    pub fn activated_features_unverified(
-        &self,
-        pkg_id: PackageId,
-        features_for: FeaturesFor,
-    ) -> Option<Vec<InternedString>> {
-        self.activated_features_int(pkg_id, features_for).ok()
-    }
-
-    fn activated_features_int(
-        &self,
-        pkg_id: PackageId,
-        features_for: FeaturesFor,
-    ) -> CargoResult<Vec<InternedString>> {
-        let fk = features_for.apply_opts(&self.opts);
-        if let Some(fs) = self.activated_features.get(&(pkg_id, fk)) {
-            Ok(fs.iter().cloned().collect())
-        } else {
-            bail!("features did not find {:?} {:?}", pkg_id, fk)
-        }
     }
 
     /// Compares the result against the original resolver behavior.
