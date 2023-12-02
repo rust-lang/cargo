@@ -2522,28 +2522,32 @@ fn assert_tracker_noexistence(key: &str) {
 
 #[cargo_test]
 fn uninstall_running_binary() {
+    use std::io::Write;
+
     Package::new("foo", "0.0.1")
-        .file("src/lib.rs", "")
         .file(
             "Cargo.toml",
             r#"
-    [package]
-    name = "foo"
-    version = "0.0.1"
-    
-    [[bin]]
-    name = "foo"
-    path = "src/main.rs"
-"#,
+                [package]
+                name = "foo"
+                version = "0.0.1"
+            "#,
         )
         .file(
             "src/main.rs",
             r#"
-        use std::{{thread, time}}; 
-        fn main() {
-            thread::sleep(time::Duration::from_secs(3));
-        }
-"#,
+                use std::net::TcpStream;
+                use std::env::var;
+                use std::io::Read;
+                fn main() {
+                    for i in 0..2 {
+                        TcpStream::connect(&var("__ADDR__").unwrap()[..])
+                            .unwrap()
+                            .read_to_end(&mut Vec::new())
+                            .unwrap();
+                    }
+                }
+            "#,
         )
         .publish();
 
@@ -2565,15 +2569,26 @@ fn uninstall_running_binary() {
     assert_has_installed_exe(cargo_home(), "foo");
 
     let foo_bin = cargo_home().join("bin").join(exe("foo"));
-    let t = thread::spawn(|| ProcessBuilder::new(foo_bin).exec().unwrap());
+    let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let addr = l.local_addr().unwrap().to_string();
+    let t = thread::spawn(move || {
+        ProcessBuilder::new(foo_bin)
+            .env("__ADDR__", addr)
+            .exec()
+            .unwrap();
+    });
     let key = "foo 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)";
 
     #[cfg(windows)]
     {
+        // Ensure foo is running before the first `cargo uninstall` call
+        l.accept().unwrap().0.write_all(&[1]).unwrap();
         cargo_process("uninstall foo")
             .with_status(101)
             .with_stderr_contains("[ERROR] failed to remove file `[CWD]/home/.cargo/bin/foo[EXE]`")
             .run();
+        // Ensure foo is stopped before the second `cargo uninstall` call
+        l.accept().unwrap().0.write_all(&[1]).unwrap();
         t.join().unwrap();
         cargo_process("uninstall foo")
             .with_stderr("[REMOVING] [CWD]/home/.cargo/bin/foo[EXE]")
@@ -2582,9 +2597,12 @@ fn uninstall_running_binary() {
 
     #[cfg(not(windows))]
     {
+        // Ensure foo is running before the first `cargo uninstall` call
+        l.accept().unwrap().0.write_all(&[1]).unwrap();
         cargo_process("uninstall foo")
             .with_stderr("[REMOVING] [CWD]/home/.cargo/bin/foo[EXE]")
             .run();
+        l.accept().unwrap().0.write_all(&[1]).unwrap();
         t.join().unwrap();
     };
 
