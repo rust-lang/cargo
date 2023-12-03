@@ -6,7 +6,7 @@
   configMigration: true,
   dependencyDashboard: false,
   ignorePaths: [
-    "**/tests/**",
+    '**/tests/**',
   ],
   customManagers: [
     {
@@ -40,7 +40,7 @@
     {
       commitMessageTopic: 'MSRV (1 version)',
       matchManagers: [
-        'regex',
+        'custom.regex',
       ],
       matchPackageNames: [
         'MSRV:1',
@@ -53,12 +53,12 @@
     {
       commitMessageTopic: 'MSRV (3 versions)',
       matchManagers: [
-        'regex',
+        'custom.regex',
       ],
       matchPackageNames: [
         'MSRV:3',
       ],
-      "extractVersion": "^(?<version>\\d+\\.\\d+)",  // Drop the patch version
+      extractVersion: '^(?<version>\\d+\\.\\d+)',  // Drop the patch version
       schedule: [
         '* * * * *',
       ],
