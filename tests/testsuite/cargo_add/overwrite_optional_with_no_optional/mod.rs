@@ -7,17 +7,7 @@ use cargo_test_support::curr_dir;
 #[cargo_test]
 fn case() {
     cargo_test_support::registry::init();
-    for ver in [
-        "0.1.1+my-package",
-        "0.2.0+my-package",
-        "0.2.3+my-package",
-        "0.4.1+my-package",
-        "20.0.0+my-package",
-        "99999.0.0+my-package",
-        "99999.0.0-alpha.1+my-package",
-    ] {
-        cargo_test_support::registry::Package::new("my-package2", ver).publish();
-    }
+
     cargo_test_support::registry::Package::new("your-face", "99999.0.0+my-package")
         .feature("nose", &[])
         .feature("mouth", &[])
@@ -31,7 +21,7 @@ fn case() {
 
     snapbox::cmd::Command::cargo_ui()
         .arg("add")
-        .arg_line("your-face my-package2@0.4.1 --no-optional")
+        .arg_line("your-face --no-optional")
         .current_dir(cwd)
         .assert()
         .success()
