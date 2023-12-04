@@ -7,19 +7,7 @@ use cargo_test_support::curr_dir;
 #[cargo_test]
 fn case() {
     cargo_test_support::registry::init();
-    for name in ["my-package1", "my-package2"] {
-        for ver in [
-            "0.1.1+my-package",
-            "0.2.0+my-package",
-            "0.2.3+my-package",
-            "0.4.1+my-package",
-            "20.0.0+my-package",
-            "99999.0.0+my-package",
-            "99999.0.0-alpha.1+my-package",
-        ] {
-            cargo_test_support::registry::Package::new(name, ver).publish();
-        }
-    }
+    cargo_test_support::registry::Package::new("my-package", "0.1.0").publish();
 
     let project = Project::from_template(curr_dir!().join("in"));
     let project_root = project.root();
@@ -27,7 +15,7 @@ fn case() {
 
     snapbox::cmd::Command::cargo_ui()
         .arg("add")
-        .arg_line("my-package1 my-package2@0.4.1 --no-optional")
+        .arg_line("my-package --no-optional")
         .current_dir(cwd)
         .assert()
         .success()

@@ -87,6 +87,7 @@ mod overwrite_no_public;
 mod overwrite_no_public_with_public;
 mod overwrite_optional;
 mod overwrite_optional_with_no_optional;
+mod overwrite_optional_with_optional;
 mod overwrite_path_noop;
 mod overwrite_path_with_version;
 mod overwrite_preserves_inline_table;
