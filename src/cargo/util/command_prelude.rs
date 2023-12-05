@@ -7,11 +7,11 @@ use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
 use crate::util::is_rustup;
 use crate::util::restricted_names;
-use crate::util::toml::schema::StringOrVec;
 use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
     print_available_packages, print_available_tests,
 };
+use crate::util_schemas::manifest::StringOrVec;
 use crate::CargoResult;
 use anyhow::bail;
 use cargo_util::paths;

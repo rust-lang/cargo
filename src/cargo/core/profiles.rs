@@ -27,13 +27,13 @@ use crate::core::resolver::features::FeaturesFor;
 use crate::core::Feature;
 use crate::core::{PackageId, PackageIdSpec, Resolve, Shell, Target, Workspace};
 use crate::util::interning::InternedString;
-use crate::util::toml::schema::TomlTrimPaths;
-use crate::util::toml::schema::TomlTrimPathsValue;
-use crate::util::toml::schema::{
-    ProfilePackageSpec, StringOrBool, TomlDebugInfo, TomlProfile, TomlProfiles,
-};
 use crate::util::toml::validate_profile;
 use crate::util::{closest_msg, config, CargoResult, Config};
+use crate::util_schemas::manifest::TomlTrimPaths;
+use crate::util_schemas::manifest::TomlTrimPathsValue;
+use crate::util_schemas::manifest::{
+    ProfilePackageSpec, StringOrBool, TomlDebugInfo, TomlProfile, TomlProfiles,
+};
 use anyhow::{bail, Context as _};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::Hash;

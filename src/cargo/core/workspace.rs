@@ -22,11 +22,10 @@ use crate::sources::{PathSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::edit_distance;
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
-use crate::util::toml::{
-    read_manifest, schema::TomlDependency, schema::TomlProfiles, InheritableFields,
-};
+use crate::util::toml::{read_manifest, InheritableFields};
 use crate::util::RustVersion;
 use crate::util::{config::ConfigRelativePath, Config, Filesystem, IntoUrl};
+use crate::util_schemas::manifest::{TomlDependency, TomlProfiles};
 use cargo_util::paths;
 use cargo_util::paths::normalize_path;
 use pathdiff::diff_paths;

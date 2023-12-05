@@ -28,11 +28,10 @@ use crate::util::{
     self, config::ConfigRelativePath, validate_package_name, Config, IntoUrl, OptVersionReq,
     RustVersion,
 };
+use crate::util_schemas::manifest;
 
 mod embedded;
-pub mod schema;
 mod targets;
-use self::schema::TomlDependency;
 use self::targets::targets;
 
 /// Loads a `Cargo.toml` from a file on disk.
@@ -98,7 +97,7 @@ fn read_manifest_from_str(
 
     let mut unused = BTreeSet::new();
     let deserializer = toml::de::Deserializer::new(contents);
-    let manifest: schema::TomlManifest = serde_ignored::deserialize(deserializer, |path| {
+    let manifest: manifest::TomlManifest = serde_ignored::deserialize(deserializer, |path| {
         let mut key = String::new();
         stringify(&mut key, &path);
         unused.insert(key);
@@ -183,10 +182,10 @@ fn warn_on_deprecated(new_path: &str, name: &str, kind: &str, warnings: &mut Vec
 // - Path and git components of dependency specifications are removed.
 // - License path is updated to point within the package.
 pub fn prepare_for_publish(
-    me: &schema::TomlManifest,
+    me: &manifest::TomlManifest,
     ws: &Workspace<'_>,
     package_root: &Path,
-) -> CargoResult<schema::TomlManifest> {
+) -> CargoResult<manifest::TomlManifest> {
     let config = ws.config();
     let mut package = me.package().unwrap().clone();
     package.workspace = None;
@@ -219,7 +218,7 @@ pub fn prepare_for_publish(
         if abs_license_path.strip_prefix(package_root).is_err() {
             // This path points outside of the package root. `cargo package`
             // will copy it into the root, so adjust the path to this location.
-            package.license_file = Some(schema::InheritableField::Value(
+            package.license_file = Some(manifest::InheritableField::Value(
                 license_path
                     .file_name()
                     .unwrap()
@@ -235,14 +234,14 @@ pub fn prepare_for_publish(
             .as_value()
             .context("readme should have been resolved before `prepare_for_publish()`")?;
         match readme {
-            schema::StringOrBool::String(readme) => {
+            manifest::StringOrBool::String(readme) => {
                 let readme_path = Path::new(&readme);
                 let abs_readme_path = paths::normalize_path(&package_root.join(readme_path));
                 if abs_readme_path.strip_prefix(package_root).is_err() {
                     // This path points outside of the package root. `cargo package`
                     // will copy it into the root, so adjust the path to this location.
-                    package.readme = Some(schema::InheritableField::Value(
-                        schema::StringOrBool::String(
+                    package.readme = Some(manifest::InheritableField::Value(
+                        manifest::StringOrBool::String(
                             readme_path
                                 .file_name()
                                 .unwrap()
@@ -253,11 +252,11 @@ pub fn prepare_for_publish(
                     ));
                 }
             }
-            schema::StringOrBool::Bool(_) => {}
+            manifest::StringOrBool::Bool(_) => {}
         }
     }
-    let all = |_d: &schema::TomlDependency| true;
-    return Ok(schema::TomlManifest {
+    let all = |_d: &manifest::TomlDependency| true;
+    return Ok(manifest::TomlManifest {
         package: Some(package),
         project: None,
         profile: me.profile.clone(),
@@ -270,7 +269,7 @@ pub fn prepare_for_publish(
         dev_dependencies: map_deps(
             config,
             me.dev_dependencies(),
-            schema::TomlDependency::is_version_specified,
+            manifest::TomlDependency::is_version_specified,
         )?,
         dev_dependencies2: None,
         build_dependencies: map_deps(config, me.build_dependencies(), all)?,
@@ -282,12 +281,12 @@ pub fn prepare_for_publish(
                 .map(|(k, v)| {
                     Ok((
                         k.clone(),
-                        schema::TomlPlatform {
+                        manifest::TomlPlatform {
                             dependencies: map_deps(config, v.dependencies.as_ref(), all)?,
                             dev_dependencies: map_deps(
                                 config,
                                 v.dev_dependencies(),
-                                schema::TomlDependency::is_version_specified,
+                                manifest::TomlDependency::is_version_specified,
                             )?,
                             dev_dependencies2: None,
                             build_dependencies: map_deps(config, v.build_dependencies(), all)?,
@@ -311,14 +310,14 @@ pub fn prepare_for_publish(
 
     fn map_deps(
         config: &Config,
-        deps: Option<&BTreeMap<String, schema::InheritableDependency>>,
-        filter: impl Fn(&schema::TomlDependency) -> bool,
-    ) -> CargoResult<Option<BTreeMap<String, schema::InheritableDependency>>> {
+        deps: Option<&BTreeMap<String, manifest::InheritableDependency>>,
+        filter: impl Fn(&manifest::TomlDependency) -> bool,
+    ) -> CargoResult<Option<BTreeMap<String, manifest::InheritableDependency>>> {
         let Some(deps) = deps else { return Ok(None) };
         let deps = deps
             .iter()
             .filter(|(_k, v)| {
-                if let schema::InheritableDependency::Value(def) = v {
+                if let manifest::InheritableDependency::Value(def) = v {
                     filter(def)
                 } else {
                     false
@@ -331,10 +330,10 @@ pub fn prepare_for_publish(
 
     fn map_dependency(
         config: &Config,
-        dep: &schema::InheritableDependency,
-    ) -> CargoResult<schema::InheritableDependency> {
+        dep: &manifest::InheritableDependency,
+    ) -> CargoResult<manifest::InheritableDependency> {
         let dep = match dep {
-            schema::InheritableDependency::Value(schema::TomlDependency::Detailed(d)) => {
+            manifest::InheritableDependency::Value(manifest::TomlDependency::Detailed(d)) => {
                 let mut d = d.clone();
                 // Path dependencies become crates.io deps.
                 d.path.take();
@@ -349,21 +348,21 @@ pub fn prepare_for_publish(
                 }
                 Ok(d)
             }
-            schema::InheritableDependency::Value(schema::TomlDependency::Simple(s)) => {
-                Ok(schema::TomlDetailedDependency {
+            manifest::InheritableDependency::Value(manifest::TomlDependency::Simple(s)) => {
+                Ok(manifest::TomlDetailedDependency {
                     version: Some(s.clone()),
                     ..Default::default()
                 })
             }
             _ => unreachable!(),
         };
-        dep.map(schema::TomlDependency::Detailed)
-            .map(schema::InheritableDependency::Value)
+        dep.map(manifest::TomlDependency::Detailed)
+            .map(manifest::InheritableDependency::Value)
     }
 }
 
 pub fn to_real_manifest(
-    me: schema::TomlManifest,
+    me: manifest::TomlManifest,
     embedded: bool,
     source_id: SourceId,
     package_root: &Path,
@@ -499,7 +498,7 @@ pub fn to_real_manifest(
         .map(|version| field_inherit_with(version, "version", || inherit()?.version()))
         .transpose()?;
 
-    package.version = version.clone().map(schema::InheritableField::Value);
+    package.version = version.clone().map(manifest::InheritableField::Value);
 
     let pkgid = PackageId::pure(
         package.name.as_str().into(),
@@ -513,7 +512,7 @@ pub fn to_real_manifest(
         let edition: Edition = field_inherit_with(edition, "edition", || inherit()?.edition())?
             .parse()
             .with_context(|| "failed to parse the `edition` key")?;
-        package.edition = Some(schema::InheritableField::Value(edition.to_string()));
+        package.edition = Some(manifest::InheritableField::Value(edition.to_string()));
         edition
     } else {
         Edition::Edition2015
@@ -633,11 +632,11 @@ pub fn to_real_manifest(
 
     fn process_dependencies(
         cx: &mut Context<'_, '_>,
-        new_deps: Option<&BTreeMap<String, schema::InheritableDependency>>,
+        new_deps: Option<&BTreeMap<String, manifest::InheritableDependency>>,
         kind: Option<DepKind>,
         workspace_config: &WorkspaceConfig,
         inherit_cell: &LazyCell<InheritableFields>,
-    ) -> CargoResult<Option<BTreeMap<String, schema::InheritableDependency>>> {
+    ) -> CargoResult<Option<BTreeMap<String, manifest::InheritableDependency>>> {
         let Some(dependencies) = new_deps else {
             return Ok(None);
         };
@@ -648,7 +647,7 @@ pub fn to_real_manifest(
             })
         };
 
-        let mut deps: BTreeMap<String, schema::InheritableDependency> = BTreeMap::new();
+        let mut deps: BTreeMap<String, manifest::InheritableDependency> = BTreeMap::new();
         for (n, v) in dependencies.iter() {
             let resolved = dependency_inherit_with(v.clone(), n, inheritable, cx)?;
             let dep = dep_to_dependency(&resolved, n, cx, kind)?;
@@ -667,7 +666,7 @@ pub fn to_real_manifest(
             cx.deps.push(dep);
             deps.insert(
                 n.to_string(),
-                schema::InheritableDependency::Value(resolved.clone()),
+                manifest::InheritableDependency::Value(resolved.clone()),
             );
         }
         Ok(Some(deps))
@@ -710,10 +709,10 @@ pub fn to_real_manifest(
         .map(|mw| lints_inherit_with(mw, || inherit()?.lints()))
         .transpose()?;
     let lints = verify_lints(lints)?;
-    let default = schema::TomlLints::default();
+    let default = manifest::TomlLints::default();
     let rustflags = lints_to_rustflags(lints.as_ref().unwrap_or(&default));
 
-    let mut target: BTreeMap<String, schema::TomlPlatform> = BTreeMap::new();
+    let mut target: BTreeMap<String, manifest::TomlPlatform> = BTreeMap::new();
     for (name, platform) in me.target.iter().flatten() {
         cx.platform = {
             let platform: Platform = name.parse()?;
@@ -751,7 +750,7 @@ pub fn to_real_manifest(
         )?;
         target.insert(
             name.clone(),
-            schema::TomlPlatform {
+            manifest::TomlPlatform {
                 dependencies: deps,
                 build_dependencies: build_deps,
                 build_dependencies2: None,
@@ -890,54 +889,54 @@ pub fn to_real_manifest(
     package.description = metadata
         .description
         .clone()
-        .map(|description| schema::InheritableField::Value(description));
+        .map(|description| manifest::InheritableField::Value(description));
     package.homepage = metadata
         .homepage
         .clone()
-        .map(|homepage| schema::InheritableField::Value(homepage));
+        .map(|homepage| manifest::InheritableField::Value(homepage));
     package.documentation = metadata
         .documentation
         .clone()
-        .map(|documentation| schema::InheritableField::Value(documentation));
+        .map(|documentation| manifest::InheritableField::Value(documentation));
     package.readme = metadata
         .readme
         .clone()
-        .map(|readme| schema::InheritableField::Value(schema::StringOrBool::String(readme)));
+        .map(|readme| manifest::InheritableField::Value(manifest::StringOrBool::String(readme)));
     package.authors = package
         .authors
         .as_ref()
-        .map(|_| schema::InheritableField::Value(metadata.authors.clone()));
+        .map(|_| manifest::InheritableField::Value(metadata.authors.clone()));
     package.license = metadata
         .license
         .clone()
-        .map(|license| schema::InheritableField::Value(license));
+        .map(|license| manifest::InheritableField::Value(license));
     package.license_file = metadata
         .license_file
         .clone()
-        .map(|license_file| schema::InheritableField::Value(license_file));
+        .map(|license_file| manifest::InheritableField::Value(license_file));
     package.repository = metadata
         .repository
         .clone()
-        .map(|repository| schema::InheritableField::Value(repository));
+        .map(|repository| manifest::InheritableField::Value(repository));
     package.keywords = package
         .keywords
         .as_ref()
-        .map(|_| schema::InheritableField::Value(metadata.keywords.clone()));
+        .map(|_| manifest::InheritableField::Value(metadata.keywords.clone()));
     package.categories = package
         .categories
         .as_ref()
-        .map(|_| schema::InheritableField::Value(metadata.categories.clone()));
+        .map(|_| manifest::InheritableField::Value(metadata.categories.clone()));
     package.rust_version = rust_version
         .clone()
-        .map(|rv| schema::InheritableField::Value(rv));
+        .map(|rv| manifest::InheritableField::Value(rv));
     package.exclude = package
         .exclude
         .as_ref()
-        .map(|_| schema::InheritableField::Value(exclude.clone()));
+        .map(|_| manifest::InheritableField::Value(exclude.clone()));
     package.include = package
         .include
         .as_ref()
-        .map(|_| schema::InheritableField::Value(include.clone()));
+        .map(|_| manifest::InheritableField::Value(include.clone()));
 
     let profiles = me.profile.clone();
     if let Some(profiles) = &profiles {
@@ -950,12 +949,14 @@ pub fn to_real_manifest(
         .clone()
         .map(|publish| field_inherit_with(publish, "publish", || inherit()?.publish()).unwrap());
 
-    package.publish = publish.clone().map(|p| schema::InheritableField::Value(p));
+    package.publish = publish
+        .clone()
+        .map(|p| manifest::InheritableField::Value(p));
 
     let publish = match publish {
-        Some(schema::VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
-        Some(schema::VecStringOrBool::Bool(false)) => Some(vec![]),
-        Some(schema::VecStringOrBool::Bool(true)) => None,
+        Some(manifest::VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
+        Some(manifest::VecStringOrBool::Bool(false)) => Some(vec![]),
+        Some(manifest::VecStringOrBool::Bool(true)) => None,
         None => version.is_none().then_some(vec![]),
     };
 
@@ -996,7 +997,7 @@ pub fn to_real_manifest(
         .transpose()?
         .map(CompileKind::Target);
     let custom_metadata = package.metadata.clone();
-    let resolved_toml = schema::TomlManifest {
+    let resolved_toml = manifest::TomlManifest {
         cargo_features: me.cargo_features.clone(),
         package: Some(package.clone()),
         project: None,
@@ -1019,8 +1020,8 @@ pub fn to_real_manifest(
         badges: me
             .badges
             .as_ref()
-            .map(|_| schema::InheritableField::Value(metadata.badges.clone())),
-        lints: lints.map(|lints| schema::InheritableLints {
+            .map(|_| manifest::InheritableField::Value(metadata.badges.clone())),
+        lints: lints.map(|lints| manifest::InheritableLints {
             workspace: false,
             lints,
         }),
@@ -1075,7 +1076,7 @@ pub fn to_real_manifest(
 }
 
 fn to_virtual_manifest(
-    me: schema::TomlManifest,
+    me: manifest::TomlManifest,
     source_id: SourceId,
     root: &Path,
     config: &Config,
@@ -1194,7 +1195,7 @@ fn to_virtual_manifest(
 }
 
 fn replace(
-    me: &schema::TomlManifest,
+    me: &manifest::TomlManifest,
     cx: &mut Context<'_, '_>,
 ) -> CargoResult<Vec<(PackageIdSpec, Dependency)>> {
     if me.patch.is_some() && me.replace.is_some() {
@@ -1242,7 +1243,7 @@ fn replace(
 }
 
 fn patch(
-    me: &schema::TomlManifest,
+    me: &manifest::TomlManifest,
     cx: &mut Context<'_, '_>,
 ) -> CargoResult<HashMap<Url, Vec<Dependency>>> {
     let mut patch = HashMap::new();
@@ -1289,7 +1290,7 @@ struct Context<'a, 'b> {
     features: &'a Features,
 }
 
-fn verify_lints(lints: Option<schema::TomlLints>) -> CargoResult<Option<schema::TomlLints>> {
+fn verify_lints(lints: Option<manifest::TomlLints>) -> CargoResult<Option<manifest::TomlLints>> {
     let Some(lints) = lints else {
         return Ok(None);
     };
@@ -1320,16 +1321,16 @@ fn verify_lints(lints: Option<schema::TomlLints>) -> CargoResult<Option<schema::
     Ok(Some(lints))
 }
 
-fn lints_to_rustflags(lints: &schema::TomlLints) -> Vec<String> {
+fn lints_to_rustflags(lints: &manifest::TomlLints) -> Vec<String> {
     let mut rustflags = lints
         .iter()
         .flat_map(|(tool, lints)| {
             lints.iter().map(move |(name, config)| {
                 let flag = match config.level() {
-                    schema::TomlLintLevel::Forbid => "--forbid",
-                    schema::TomlLintLevel::Deny => "--deny",
-                    schema::TomlLintLevel::Warn => "--warn",
-                    schema::TomlLintLevel::Allow => "--allow",
+                    manifest::TomlLintLevel::Forbid => "--forbid",
+                    manifest::TomlLintLevel::Deny => "--deny",
+                    manifest::TomlLintLevel::Warn => "--warn",
+                    manifest::TomlLintLevel::Allow => "--allow",
                 };
 
                 let option = if tool == "rust" {
@@ -1393,17 +1394,17 @@ fn inheritable_from_path(
     }
 }
 
-/// Returns the name of the README file for a [`schema::TomlPackage`].
+/// Returns the name of the README file for a [`manifest::TomlPackage`].
 fn readme_for_package(
     package_root: &Path,
-    readme: Option<&schema::StringOrBool>,
+    readme: Option<&manifest::StringOrBool>,
 ) -> Option<String> {
     match &readme {
         None => default_readme_from_package_root(package_root),
         Some(value) => match value {
-            schema::StringOrBool::Bool(false) => None,
-            schema::StringOrBool::Bool(true) => Some("README.md".to_string()),
-            schema::StringOrBool::String(v) => Some(v.clone()),
+            manifest::StringOrBool::Bool(false) => None,
+            manifest::StringOrBool::Bool(true) => Some("README.md".to_string()),
+            manifest::StringOrBool::String(v) => Some(v.clone()),
         },
     }
 }
@@ -1466,9 +1467,9 @@ macro_rules! package_field_getter {
 /// A group of fields that are inheritable by members of the workspace
 #[derive(Clone, Debug, Default)]
 pub struct InheritableFields {
-    package: Option<schema::InheritablePackage>,
-    dependencies: Option<BTreeMap<String, schema::TomlDependency>>,
-    lints: Option<schema::TomlLints>,
+    package: Option<manifest::InheritablePackage>,
+    dependencies: Option<BTreeMap<String, manifest::TomlDependency>>,
+    lints: Option<manifest::TomlLints>,
 
     // Bookkeeping to help when resolving values from above
     _ws_root: PathBuf,
@@ -1488,7 +1489,7 @@ impl InheritableFields {
         ("include",       include       -> Vec<String>),
         ("keywords",      keywords      -> Vec<String>),
         ("license",       license       -> String),
-        ("publish",       publish       -> schema::VecStringOrBool),
+        ("publish",       publish       -> manifest::VecStringOrBool),
         ("repository",    repository    -> String),
         ("rust-version",  rust_version  -> RustVersion),
         ("version",       version       -> semver::Version),
@@ -1499,7 +1500,7 @@ impl InheritableFields {
         &self,
         name: &str,
         package_root: &Path,
-    ) -> CargoResult<schema::TomlDependency> {
+    ) -> CargoResult<manifest::TomlDependency> {
         let Some(deps) = &self.dependencies else {
             bail!("`workspace.dependencies` was not defined");
         };
@@ -1507,7 +1508,7 @@ impl InheritableFields {
             bail!("`dependency.{name}` was not found in `workspace.dependencies`");
         };
         let mut dep = dep.clone();
-        if let schema::TomlDependency::Detailed(detailed) = &mut dep {
+        if let manifest::TomlDependency::Detailed(detailed) = &mut dep {
             if let Some(rel_path) = &detailed.path {
                 detailed.path = Some(resolve_relative_path(
                     name,
@@ -1521,7 +1522,7 @@ impl InheritableFields {
     }
 
     /// Gets the field `workspace.lint`.
-    fn lints(&self) -> CargoResult<schema::TomlLints> {
+    fn lints(&self) -> CargoResult<manifest::TomlLints> {
         let Some(val) = &self.lints else {
             bail!("`workspace.lints` was not defined");
         };
@@ -1537,7 +1538,7 @@ impl InheritableFields {
     }
 
     /// Gets the field `workspace.package.readme`.
-    fn readme(&self, package_root: &Path) -> CargoResult<schema::StringOrBool> {
+    fn readme(&self, package_root: &Path) -> CargoResult<manifest::StringOrBool> {
         let Some(readme) = readme_for_package(
             self._ws_root.as_path(),
             self.package.as_ref().and_then(|p| p.readme.as_ref()),
@@ -1545,7 +1546,7 @@ impl InheritableFields {
             bail!("`workspace.package.readme` was not defined");
         };
         resolve_relative_path("readme", &self._ws_root, package_root, &readme)
-            .map(schema::StringOrBool::String)
+            .map(manifest::StringOrBool::String)
     }
 
     fn ws_root(&self) -> &PathBuf {
@@ -1554,13 +1555,13 @@ impl InheritableFields {
 }
 
 fn field_inherit_with<'a, T>(
-    field: schema::InheritableField<T>,
+    field: manifest::InheritableField<T>,
     label: &str,
     get_ws_inheritable: impl FnOnce() -> CargoResult<T>,
 ) -> CargoResult<T> {
     match field {
-            schema::InheritableField::Value(value) => Ok(value),
-            schema::InheritableField::Inherit(_) => get_ws_inheritable().with_context(|| {
+            manifest::InheritableField::Value(value) => Ok(value),
+            manifest::InheritableField::Inherit(_) => get_ws_inheritable().with_context(|| {
                 format!(
                 "error inheriting `{label}` from workspace root manifest's `workspace.package.{label}`",
             )
@@ -1569,9 +1570,9 @@ fn field_inherit_with<'a, T>(
 }
 
 fn lints_inherit_with(
-    lints: schema::InheritableLints,
-    get_ws_inheritable: impl FnOnce() -> CargoResult<schema::TomlLints>,
-) -> CargoResult<schema::TomlLints> {
+    lints: manifest::InheritableLints,
+    get_ws_inheritable: impl FnOnce() -> CargoResult<manifest::TomlLints>,
+) -> CargoResult<manifest::TomlLints> {
     if lints.workspace {
         if !lints.lints.is_empty() {
             anyhow::bail!("cannot override `workspace.lints` in `lints`, either remove the overrides or `lints.workspace = true` and manually specify the lints");
@@ -1585,14 +1586,14 @@ fn lints_inherit_with(
 }
 
 fn dependency_inherit_with<'a>(
-    dependency: schema::InheritableDependency,
+    dependency: manifest::InheritableDependency,
     name: &str,
     inheritable: impl FnOnce() -> CargoResult<&'a InheritableFields>,
     cx: &mut Context<'_, '_>,
-) -> CargoResult<TomlDependency> {
+) -> CargoResult<manifest::TomlDependency> {
     match dependency {
-            schema::InheritableDependency::Value(value) => Ok(value),
-            schema::InheritableDependency::Inherit(w) => {
+            manifest::InheritableDependency::Value(value) => Ok(value),
+            manifest::InheritableDependency::Inherit(w) => {
                 inner_dependency_inherit_with(w, name, inheritable, cx).with_context(|| {
                     format!(
                         "error inheriting `{name}` from workspace root manifest's `workspace.dependencies.{name}`",
@@ -1603,11 +1604,11 @@ fn dependency_inherit_with<'a>(
 }
 
 fn inner_dependency_inherit_with<'a>(
-    dependency: schema::TomlInheritedDependency,
+    dependency: manifest::TomlInheritedDependency,
     name: &str,
     inheritable: impl FnOnce() -> CargoResult<&'a InheritableFields>,
     cx: &mut Context<'_, '_>,
-) -> CargoResult<schema::TomlDependency> {
+) -> CargoResult<manifest::TomlDependency> {
     fn default_features_msg(label: &str, ws_def_feat: Option<bool>, cx: &mut Context<'_, '_>) {
         let ws_def_feat = match ws_def_feat {
             Some(true) => "true",
@@ -1625,7 +1626,7 @@ fn inner_dependency_inherit_with<'a>(
     }
     inheritable()?.get_dependency(name, cx.root).map(|d| {
         match d {
-            schema::TomlDependency::Simple(s) => {
+            manifest::TomlDependency::Simple(s) => {
                 if let Some(false) = dependency.default_features() {
                     default_features_msg(name, None, cx);
                 }
@@ -1633,7 +1634,7 @@ fn inner_dependency_inherit_with<'a>(
                     || dependency.features.is_some()
                     || dependency.public.is_some()
                 {
-                    schema::TomlDependency::Detailed(schema::TomlDetailedDependency {
+                    manifest::TomlDependency::Detailed(manifest::TomlDetailedDependency {
                         version: Some(s),
                         optional: dependency.optional,
                         features: dependency.features.clone(),
@@ -1641,10 +1642,10 @@ fn inner_dependency_inherit_with<'a>(
                         ..Default::default()
                     })
                 } else {
-                    schema::TomlDependency::Simple(s)
+                    manifest::TomlDependency::Simple(s)
                 }
             }
-            schema::TomlDependency::Detailed(d) => {
+            manifest::TomlDependency::Detailed(d) => {
                 let mut d = d.clone();
                 match (dependency.default_features(), d.default_features()) {
                     // member: default-features = true and
@@ -1683,14 +1684,14 @@ fn inner_dependency_inherit_with<'a>(
                     (None, None) => None,
                 };
                 d.optional = dependency.optional;
-                schema::TomlDependency::Detailed(d)
+                manifest::TomlDependency::Detailed(d)
             }
         }
     })
 }
 
 pub(crate) fn to_dependency<P: ResolveToPath + Clone>(
-    dep: &schema::TomlDependency<P>,
+    dep: &manifest::TomlDependency<P>,
     name: &str,
     source_id: SourceId,
     nested_paths: &mut Vec<PathBuf>,
@@ -1719,14 +1720,14 @@ pub(crate) fn to_dependency<P: ResolveToPath + Clone>(
 }
 
 fn dep_to_dependency<P: ResolveToPath + Clone>(
-    orig: &schema::TomlDependency<P>,
+    orig: &manifest::TomlDependency<P>,
     name: &str,
     cx: &mut Context<'_, '_>,
     kind: Option<DepKind>,
 ) -> CargoResult<Dependency> {
     match *orig {
-        schema::TomlDependency::Simple(ref version) => detailed_dep_to_dependency(
-            &schema::TomlDetailedDependency::<P> {
+        manifest::TomlDependency::Simple(ref version) => detailed_dep_to_dependency(
+            &manifest::TomlDetailedDependency::<P> {
                 version: Some(version.clone()),
                 ..Default::default()
             },
@@ -1734,14 +1735,14 @@ fn dep_to_dependency<P: ResolveToPath + Clone>(
             cx,
             kind,
         ),
-        schema::TomlDependency::Detailed(ref details) => {
+        manifest::TomlDependency::Detailed(ref details) => {
             detailed_dep_to_dependency(details, name, cx, kind)
         }
     }
 }
 
 fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
-    orig: &schema::TomlDetailedDependency<P>,
+    orig: &manifest::TomlDetailedDependency<P>,
     name_in_toml: &str,
     cx: &mut Context<'_, '_>,
     kind: Option<DepKind>,
@@ -1984,7 +1985,7 @@ fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
 /// It's a bit unfortunate both `-Z` flags and `cargo-features` are required,
 /// because profiles can now be set in either `Cargo.toml` or `config.toml`.
 fn validate_profiles(
-    profiles: &schema::TomlProfiles,
+    profiles: &manifest::TomlProfiles,
     cli_unstable: &CliUnstable,
     features: &Features,
     warnings: &mut Vec<String>,
@@ -1997,7 +1998,7 @@ fn validate_profiles(
 
 /// Checks stytax validity and unstable feature gate for a given profile.
 pub fn validate_profile(
-    root: &schema::TomlProfile,
+    root: &manifest::TomlProfile,
     name: &str,
     cli_unstable: &CliUnstable,
     features: &Features,
@@ -2071,7 +2072,7 @@ pub fn validate_profile(
         }
     }
 
-    if let Some(schema::StringOrBool::String(arg)) = &root.lto {
+    if let Some(manifest::StringOrBool::String(arg)) = &root.lto {
         if arg == "true" || arg == "false" {
             bail!(
                 "`lto` setting of string `\"{arg}\"` for `{name}` profile is not \
@@ -2088,7 +2089,7 @@ pub fn validate_profile(
 ///
 /// This is a shallow check, which is reused for the profile itself and any overrides.
 fn validate_profile_layer(
-    profile: &schema::TomlProfile,
+    profile: &manifest::TomlProfile,
     name: &str,
     cli_unstable: &CliUnstable,
     features: &Features,
@@ -2132,7 +2133,7 @@ fn validate_profile_layer(
 }
 
 /// Validation that is specific to an override.
-fn validate_profile_override(profile: &schema::TomlProfile, which: &str) -> CargoResult<()> {
+fn validate_profile_override(profile: &manifest::TomlProfile, which: &str) -> CargoResult<()> {
     if profile.package.is_some() {
         bail!("package-specific profiles cannot be nested");
     }
