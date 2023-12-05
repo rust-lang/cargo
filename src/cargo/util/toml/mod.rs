@@ -118,10 +118,7 @@ fn read_manifest_from_str(
     {
         for (name, dep) in deps {
             if dep.is_optional() {
-                bail!(
-                    "{} is optional, but workspace dependencies cannot be optional",
-                    name
-                );
+                bail!("{name} is optional, but workspace dependencies cannot be optional",);
             }
         }
     }
