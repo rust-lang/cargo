@@ -181,7 +181,22 @@ impl PackageIdSpec {
         }
 
         if let Some(u) = &self.url {
-            if u != package_id.source_id().url() {
+            let package_base_url = format!(
+                "{}://{}",
+                u.scheme(),
+                u.host_str().expect("package spec url should have a host")
+            );
+            let source_id = package_id.source_id();
+            let source_id_url = source_id.url();
+            let source_id_base_url = format!(
+                "{}://{}",
+                source_id_url.scheme(),
+                source_id_url
+                    .host_str()
+                    .expect("source id url should have a host")
+            );
+            // Examine only the base URL, as the package spec URL might include a package name within its path.
+            if package_base_url != source_id_base_url {
                 return false;
             }
         }
@@ -551,11 +566,10 @@ mod tests {
         assert!(PackageIdSpec::parse("https://example.com#foo@1.2")
             .unwrap()
             .matches(foo));
-        // FIXME: The two tests below need to be corrected or adjusted - they should be passing.
-        assert!(!PackageIdSpec::parse("https://example.com/foo")
+        assert!(PackageIdSpec::parse("https://example.com/foo")
             .unwrap()
             .matches(foo));
-        assert!(!PackageIdSpec::parse("https://example.com/foo#1.2.3")
+        assert!(PackageIdSpec::parse("https://example.com/foo#1.2.3")
             .unwrap()
             .matches(foo));
         assert!(!PackageIdSpec::parse("https://bob.com#foo@1.2")
