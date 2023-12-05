@@ -35,6 +35,13 @@ Cargo requires the following tools and packages to build:
 The following are optional based on your platform and needs.
 
 * `pkg-config` — This is used to help locate system packages, such as `libssl` headers/libraries. This may not be required in all cases, such as using vendored OpenSSL, or on Windows.
+
+* SQLite — Only needed if the `vendored-sqlite` Cargo feature is not used.
+
+  This requires the development headers, which can be obtained from the `libsqlite3-dev` package on Ubuntu or `sqlite-devel` with yum or the `sqlite3` package from Homebrew on macOS.
+
+  If using the `vendored-sqlite` Cargo feature, then a static copy of SQLite will be built from source instead of using the system SQLite.
+
 * OpenSSL — Only needed on Unix-like systems and only if the `vendored-openssl` Cargo feature is not used.
 
   This requires the development headers, which can be obtained from the `libssl-dev` package on Ubuntu or `openssl-devel` with apk or yum or the `openssl` package from Homebrew on macOS.
