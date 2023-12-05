@@ -551,6 +551,13 @@ mod tests {
         assert!(PackageIdSpec::parse("https://example.com#foo@1.2")
             .unwrap()
             .matches(foo));
+        // FIXME: The two tests below need to be corrected or adjusted - they should be passing.
+        assert!(!PackageIdSpec::parse("https://example.com/foo")
+            .unwrap()
+            .matches(foo));
+        assert!(!PackageIdSpec::parse("https://example.com/foo#1.2.3")
+            .unwrap()
+            .matches(foo));
         assert!(!PackageIdSpec::parse("https://bob.com#foo@1.2")
             .unwrap()
             .matches(foo));
