@@ -5,4 +5,5 @@
 //! Any logic for getting final semantics from these will likely need other tools to process, like
 //! `cargo metadata`.
 
+pub mod core;
 pub mod manifest;

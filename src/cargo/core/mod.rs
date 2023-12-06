@@ -8,12 +8,13 @@ pub use self::package_id_spec::{PackageIdSpec, PackageIdSpecQuery};
 pub use self::registry::Registry;
 pub use self::resolver::{Resolve, ResolveVersion};
 pub use self::shell::{Shell, Verbosity};
-pub use self::source_id::{GitReference, SourceId, SourceKind};
+pub use self::source_id::SourceId;
 pub use self::summary::{FeatureMap, FeatureValue, Summary};
 pub use self::workspace::{
     find_workspace_root, resolve_relative_path, MaybePackage, Workspace, WorkspaceConfig,
     WorkspaceRootConfig,
 };
+pub use crate::util_schemas::core::{GitReference, SourceKind};
 
 pub mod compiler;
 pub mod dependency;
