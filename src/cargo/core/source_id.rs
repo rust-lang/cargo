@@ -85,7 +85,7 @@ impl fmt::Display for Precise {
 /// The possible kinds of code source.
 /// Along with [`SourceIdInner`], this fully defines the source.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-enum SourceKind {
+pub enum SourceKind {
     /// A git repository.
     Git(GitReference),
     /// A local path.
@@ -371,6 +371,10 @@ impl SourceId {
         }
 
         Some(self.inner.url.to_file_path().unwrap())
+    }
+
+    pub fn kind(&self) -> &SourceKind {
+        &self.inner.kind
     }
 
     /// Returns `true` if this source is from a registry (either local or not).
@@ -748,7 +752,7 @@ impl SourceKind {
             SourceKind::Path => Some("path"),
             SourceKind::Git(_) => Some("git"),
             SourceKind::Registry => Some("registry"),
-            // Sparse registry URL already includes the `sparse+` prefix
+            // Sparse registry URL already includes the `sparse+` prefix, see `SourceId::new`
             SourceKind::SparseRegistry => None,
             SourceKind::LocalRegistry => Some("local-registry"),
             SourceKind::Directory => Some("directory"),

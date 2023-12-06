@@ -21,11 +21,13 @@ qualified with a version to make it unique, such as `regex@1.4.3`.
 The formal grammar for a Package Id Specification is:
 
 ```notrust
-spec := pkgname
-       | proto "://" hostname-and-path [ "#" ( pkgname | semver ) ]
+spec := pkgname |
+        [ kind "+" ] proto "://" hostname-and-path [ "?" query] [ "#" ( pkgname | semver ) ]
+query = ( "branch" | "tag" | "rev" ) "=" ref
 pkgname := name [ ("@" | ":" ) semver ]
 semver := digits [ "." digits [ "." digits [ "-" prerelease ] [ "+" build ]]]
 
+kind = "registry" | "git" | "file"
 proto := "http" | "git" | ...
 ```
 
@@ -38,28 +40,32 @@ that come from different sources such as different registries.
 
 The following are references to the `regex` package on `crates.io`:
 
-| Spec                                                        | Name    | Version |
-|:------------------------------------------------------------|:-------:|:-------:|
-| `regex`                                                     | `regex` | `*`     |
-| `regex@1.4`                                                 | `regex` | `1.4.*` |
-| `regex@1.4.3`                                               | `regex` | `1.4.3` |
-| `https://github.com/rust-lang/crates.io-index#regex`        | `regex` | `*`     |
-| `https://github.com/rust-lang/crates.io-index#regex@1.4.3`  | `regex` | `1.4.3` |
+| Spec                                                              | Name    | Version |
+|:------------------------------------------------------------------|:-------:|:-------:|
+| `regex`                                                           | `regex` | `*`     |
+| `regex@1.4`                                                       | `regex` | `1.4.*` |
+| `regex@1.4.3`                                                     | `regex` | `1.4.3` |
+| `https://github.com/rust-lang/crates.io-index#regex`              | `regex` | `*`     |
+| `https://github.com/rust-lang/crates.io-index#regex@1.4.3`        | `regex` | `1.4.3` |
+| `registry+https://github.com/rust-lang/crates.io-index#regex@1.4.3` | `regex` | `1.4.3` |
 
 The following are some examples of specs for several different git dependencies:
 
-| Spec                                                      | Name             | Version  |
-|:----------------------------------------------------------|:----------------:|:--------:|
-| `https://github.com/rust-lang/cargo#0.52.0`               | `cargo`          | `0.52.0` |
-| `https://github.com/rust-lang/cargo#cargo-platform@0.1.2` | <nobr>`cargo-platform`</nobr> | `0.1.2`  |
-| `ssh://git@github.com/rust-lang/regex.git#regex@1.4.3`    | `regex`          | `1.4.3`  |
+| Spec                                                       | Name             | Version  |
+|:-----------------------------------------------------------|:----------------:|:--------:|
+| `https://github.com/rust-lang/cargo#0.52.0`                | `cargo`          | `0.52.0` |
+| `https://github.com/rust-lang/cargo#cargo-platform@0.1.2`  | <nobr>`cargo-platform`</nobr> | `0.1.2`  |
+| `ssh://git@github.com/rust-lang/regex.git#regex@1.4.3`     | `regex`          | `1.4.3`  |
+| `git+ssh://git@github.com/rust-lang/regex.git#regex@1.4.3` | `regex`          | `1.4.3`  |
+| `git+ssh://git@github.com/rust-lang/regex.git?branch=dev#regex@1.4.3` | `regex`          | `1.4.3`  |
 
 Local packages on the filesystem can use `file://` URLs to reference them:
 
-| Spec                                   | Name  | Version |
-|:---------------------------------------|:-----:|:-------:|
-| `file:///path/to/my/project/foo`       | `foo` | `*`     |
-| `file:///path/to/my/project/foo#1.1.8` | `foo` | `1.1.8` |
+| Spec                                        | Name  | Version |
+|:--------------------------------------------|:-----:|:-------:|
+| `file:///path/to/my/project/foo`            | `foo` | `*`     |
+| `file:///path/to/my/project/foo#1.1.8`      | `foo` | `1.1.8` |
+| `path+file:///path/to/my/project/foo#1.1.8` | `foo` | `1.1.8` |
 
 ### Brevity of specifications
 
