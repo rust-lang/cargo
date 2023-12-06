@@ -534,6 +534,13 @@ impl TomlDependency {
         }
     }
 
+    pub fn is_public(&self) -> bool {
+        match self {
+            TomlDependency::Detailed(d) => d.public.unwrap_or(false),
+            TomlDependency::Simple(..) => false,
+        }
+    }
+
     pub fn unused_keys(&self) -> Vec<String> {
         match self {
             TomlDependency::Simple(_) => vec![],

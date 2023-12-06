@@ -199,7 +199,7 @@ Caused by:
 }
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
-fn workspace_dep_made_public() {
+fn workspace_pub_disallowed() {
     Package::new("foo1", "0.1.0")
         .file("src/lib.rs", "pub struct FromFoo;")
         .publish();
@@ -244,5 +244,14 @@ fn workspace_dep_made_public() {
 
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  foo2 is public, but workspace dependencies cannot be public
+",
+        )
         .run()
 }
