@@ -452,18 +452,35 @@ fn diagnostics_works() {
         .run();
 }
 
+#[cfg(target_os = "macos")]
+#[cargo_test(requires_nm, nightly, reason = "-Zremap-path-scope is unstable")]
+fn object_works() {
+    object_works_helper(|path| {
+        std::process::Command::new("nm")
+            .arg("-pa")
+            .arg(path)
+            .output()
+            .expect("nm works")
+            .stdout
+    })
+}
+
 #[cfg(target_os = "linux")]
 #[cargo_test(requires_readelf, nightly, reason = "-Zremap-path-scope is unstable")]
 fn object_works() {
-    use std::os::unix::ffi::OsStrExt;
-
-    let run_readelf = |path| {
+    object_works_helper(|path| {
         std::process::Command::new("readelf")
             .arg("-wi")
             .arg(path)
             .output()
             .expect("readelf works")
-    };
+            .stdout
+    })
+}
+
+#[cfg(unix)]
+fn object_works_helper(run: impl Fn(&std::path::Path) -> Vec<u8>) {
+    use std::os::unix::ffi::OsStrExt;
 
     let registry_src = paths::home().join(".cargo/registry/src");
     let pkg_remap = format!("{}/[..]/bar-0.0.1=bar-0.0.1", registry_src.display());
@@ -497,7 +514,7 @@ fn object_works() {
 
     let bin_path = p.bin("foo");
     assert!(bin_path.is_file());
-    let stdout = run_readelf(bin_path).stdout;
+    let stdout = run(&bin_path);
     // TODO: re-enable this check when rustc bootstrap disables remapping
     // <https://github.com/rust-lang/cargo/pull/12625#discussion_r1371714791>
     // assert!(memchr::memmem::find(&stdout, rust_src).is_some());
@@ -541,10 +558,34 @@ fn object_works() {
 
     let bin_path = p.bin("foo");
     assert!(bin_path.is_file());
-    let stdout = run_readelf(bin_path).stdout;
+    let stdout = run(&bin_path);
     assert!(memchr::memmem::find(&stdout, rust_src).is_none());
-    assert!(memchr::memmem::find(&stdout, registry_src_bytes).is_none());
-    assert!(memchr::memmem::find(&stdout, pkg_root).is_none());
+    if cfg!(target_os = "macos") {
+        for line in stdout.split(|c| c == &b'\n') {
+            let registry = memchr::memmem::find(line, registry_src_bytes).is_none();
+            let local = memchr::memmem::find(line, pkg_root).is_none();
+            if registry && local {
+                continue;
+            }
+
+            if memchr::memmem::find(line, b" OSO ").is_some() {
+                // `OSO` symbols can't be trimmed at this moment.
+                // See <https://github.com/rust-lang/rust/issues/116948#issuecomment-1793617018>
+                // TODO: Change to `is_none()` once the issue is resolved.
+                continue;
+            }
+
+            // on macOS `SO` symbols are embedded in final binaries and should be trimmed.
+            // See rust-lang/rust#117652.
+            assert!(
+                memchr::memmem::find(line, b" SO ").is_some(),
+                "untrimmed `SO` symbol found"
+            )
+        }
+    } else {
+        assert!(memchr::memmem::find(&stdout, registry_src_bytes).is_none());
+        assert!(memchr::memmem::find(&stdout, pkg_root).is_none());
+    }
 }
 
 // TODO: might want to move to test/testsuite/build_script.rs once stabilized.
