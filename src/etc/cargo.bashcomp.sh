@@ -209,12 +209,12 @@ _get_names_from_array()
 				line=${line##*=}
 				line=${line%%\"}
 				line=${line##*\"}
-				names+=($line)
+				names+=("$line")
 			fi
 		fi
 
 		last_line=$line
-	done < $manifest
+	done < "$manifest"
 	echo "${names[@]}"
 }
 
