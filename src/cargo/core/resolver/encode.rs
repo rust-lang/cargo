@@ -209,7 +209,7 @@ impl EncodableResolve {
                         debug!("path dependency now missing {} v{}", pkg.name, pkg.version);
                         continue;
                     }
-                    Some(&source) => PackageId::new(&pkg.name, &pkg.version, source)?,
+                    Some(&source) => PackageId::try_new(&pkg.name, &pkg.version, source)?,
                 };
 
                 // If a package has a checksum listed directly on it then record
@@ -365,7 +365,7 @@ impl EncodableResolve {
         let mut unused_patches = Vec::new();
         for pkg in self.patch.unused {
             let id = match pkg.source.as_deref().or_else(|| path_deps.get(&pkg.name)) {
-                Some(&src) => PackageId::new(&pkg.name, &pkg.version, src)?,
+                Some(&src) => PackageId::try_new(&pkg.name, &pkg.version, src)?,
                 None => continue,
             };
             unused_patches.push(id);

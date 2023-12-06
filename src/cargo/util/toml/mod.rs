@@ -500,7 +500,7 @@ pub fn to_real_manifest(
 
     package.version = version.clone().map(manifest::InheritableField::Value);
 
-    let pkgid = PackageId::pure(
+    let pkgid = PackageId::new(
         package.name.as_str().into(),
         version
             .clone()

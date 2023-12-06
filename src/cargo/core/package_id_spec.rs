@@ -714,7 +714,7 @@ mod tests {
         let url = Url::parse("https://example.com").unwrap();
         let sid = SourceId::for_registry(&url).unwrap();
 
-        let foo = PackageId::new("foo", "1.2.3", sid).unwrap();
+        let foo = PackageId::try_new("foo", "1.2.3", sid).unwrap();
         assert!(PackageIdSpec::parse("foo").unwrap().matches(foo));
         assert!(!PackageIdSpec::parse("bar").unwrap().matches(foo));
         assert!(PackageIdSpec::parse("foo:1.2.3").unwrap().matches(foo));
@@ -735,7 +735,7 @@ mod tests {
             .unwrap()
             .matches(foo));
 
-        let meta = PackageId::new("meta", "1.2.3+hello", sid).unwrap();
+        let meta = PackageId::try_new("meta", "1.2.3+hello", sid).unwrap();
         assert!(PackageIdSpec::parse("meta").unwrap().matches(meta));
         assert!(PackageIdSpec::parse("meta@1").unwrap().matches(meta));
         assert!(PackageIdSpec::parse("meta@1.2").unwrap().matches(meta));
@@ -750,7 +750,7 @@ mod tests {
             .unwrap()
             .matches(meta));
 
-        let pre = PackageId::new("pre", "1.2.3-alpha.0", sid).unwrap();
+        let pre = PackageId::try_new("pre", "1.2.3-alpha.0", sid).unwrap();
         assert!(PackageIdSpec::parse("pre").unwrap().matches(pre));
         assert!(!PackageIdSpec::parse("pre@1").unwrap().matches(pre));
         assert!(!PackageIdSpec::parse("pre@1.2").unwrap().matches(pre));
