@@ -4,9 +4,7 @@ use std::sync::Arc;
 use std::{env, fs};
 
 use crate::core::compiler::{CompileKind, DefaultExecutor, Executor, UnitOutput};
-use crate::core::{
-    Dependency, Edition, Package, PackageId, PackageIdSpec, SourceId, Target, Workspace,
-};
+use crate::core::{Dependency, Edition, Package, PackageId, SourceId, Target, Workspace};
 use crate::ops::{common_for_install_and_uninstall::*, FilterRule};
 use crate::ops::{CompileFilter, Packages};
 use crate::sources::source::Source;
@@ -206,7 +204,7 @@ impl<'cfg> InstallablePackage<'cfg> {
         // For cargo install tracking, we retain the source git url in `pkg`, but for the build spec
         // we need to unconditionally use `ws.current()` to correctly address the path where we
         // locally cloned that repo.
-        let pkgidspec = PackageIdSpec::from_package_id(ws.current()?.package_id());
+        let pkgidspec = ws.current()?.package_id().to_spec();
         opts.spec = Packages::Packages(vec![pkgidspec.to_string()]);
 
         if from_cwd {

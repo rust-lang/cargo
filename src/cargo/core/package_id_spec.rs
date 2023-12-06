@@ -109,15 +109,6 @@ impl PackageIdSpec {
         })
     }
 
-    /// Convert a `PackageId` to a `PackageIdSpec`, which will have both the `PartialVersion` and `Url`
-    /// fields filled in.
-    pub fn from_package_id(package_id: PackageId) -> PackageIdSpec {
-        PackageIdSpec::new(String::from(package_id.name().as_str()))
-            .with_version(package_id.version().clone().into())
-            .with_url(package_id.source_id().url().clone())
-            .with_kind(package_id.source_id().kind().clone())
-    }
-
     /// Tries to convert a valid `Url` to a `PackageIdSpec`.
     fn from_url(mut url: Url) -> CargoResult<PackageIdSpec> {
         let mut kind = None;
@@ -417,7 +408,7 @@ impl PackageIdSpecQuery for PackageIdSpec {
                 if version_cnt[id.version()] == 1 {
                     msg.push_str(&format!("\n  {}@{}", spec.name(), id.version()));
                 } else {
-                    msg.push_str(&format!("\n  {}", PackageIdSpec::from_package_id(*id)));
+                    msg.push_str(&format!("\n  {}", id.to_spec()));
                 }
             }
         }
