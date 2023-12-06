@@ -32,6 +32,30 @@ pub struct PackageIdSpec {
 }
 
 impl PackageIdSpec {
+    pub fn new(name: String) -> Self {
+        Self {
+            name,
+            version: None,
+            url: None,
+            kind: None,
+        }
+    }
+
+    pub fn with_version(mut self, version: PartialVersion) -> Self {
+        self.version = Some(version);
+        self
+    }
+
+    pub fn with_url(mut self, url: Url) -> Self {
+        self.url = Some(url);
+        self
+    }
+
+    pub fn with_kind(mut self, kind: SourceKind) -> Self {
+        self.kind = Some(kind);
+        self
+    }
+
     /// Parses a spec string and returns a `PackageIdSpec` if the string was valid.
     ///
     /// # Examples
@@ -88,12 +112,10 @@ impl PackageIdSpec {
     /// Convert a `PackageId` to a `PackageIdSpec`, which will have both the `PartialVersion` and `Url`
     /// fields filled in.
     pub fn from_package_id(package_id: PackageId) -> PackageIdSpec {
-        PackageIdSpec {
-            name: String::from(package_id.name().as_str()),
-            version: Some(package_id.version().clone().into()),
-            url: Some(package_id.source_id().url().clone()),
-            kind: Some(package_id.source_id().kind().clone()),
-        }
+        PackageIdSpec::new(String::from(package_id.name().as_str()))
+            .with_version(package_id.version().clone().into())
+            .with_url(package_id.source_id().url().clone())
+            .with_kind(package_id.source_id().kind().clone())
     }
 
     /// Tries to convert a valid `Url` to a `PackageIdSpec`.
@@ -341,26 +363,16 @@ impl PackageIdSpecQuery for PackageIdSpec {
                 }
             };
             if self.url.is_some() {
-                try_spec(
-                    PackageIdSpec {
-                        name: self.name.clone(),
-                        version: self.version.clone(),
-                        url: None,
-                        kind: None,
-                    },
-                    &mut suggestion,
-                );
+                let spec = PackageIdSpec::new(self.name.clone());
+                let spec = if let Some(version) = self.version.clone() {
+                    spec.with_version(version)
+                } else {
+                    spec
+                };
+                try_spec(spec, &mut suggestion);
             }
             if suggestion.is_empty() && self.version.is_some() {
-                try_spec(
-                    PackageIdSpec {
-                        name: self.name.clone(),
-                        version: None,
-                        url: None,
-                        kind: None,
-                    },
-                    &mut suggestion,
-                );
+                try_spec(PackageIdSpec::new(self.name.clone()), &mut suggestion);
             }
             if suggestion.is_empty() {
                 suggestion.push_str(&edit_distance::closest_msg(
