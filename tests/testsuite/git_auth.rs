@@ -105,11 +105,6 @@ fn setup_failed_auth_test() -> (SocketAddr, JoinHandle<()>, Arc<AtomicUsize>) {
 // Tests that HTTP auth is offered from `credential.helper`.
 #[cargo_test]
 fn http_auth_offered() {
-    // TODO: remove this once possible.
-    // See https://github.com/rust-lang/cargo/issues/11821
-    if cargo_uses_gitoxide() {
-        return;
-    }
     let (addr, t, connections) = setup_failed_auth_test();
     let p = project()
         .file(
@@ -139,7 +134,6 @@ fn http_auth_offered() {
     // This is a "contains" check because the last error differs by platform,
     // may span multiple lines, and isn't relevant to this test.
     p.cargo("check")
-        .env("GIX_CREDENTIALS_HELPER_STDERR", "0")
         .with_status(101)
         .with_stderr_contains(&format!(
             "\
@@ -373,11 +367,6 @@ Caused by:
 
 #[cargo_test]
 fn instead_of_url_printed() {
-    // TODO: remove this once possible.
-    // See https://github.com/rust-lang/cargo/issues/11821
-    if cargo_uses_gitoxide() {
-        return;
-    }
     let (addr, t, _connections) = setup_failed_auth_test();
     let config = paths::home().join(".gitconfig");
     let mut config = git2::Config::open(&config).unwrap();
@@ -404,7 +393,6 @@ fn instead_of_url_printed() {
         .build();
 
     p.cargo("check")
-        .env("GIX_CREDENTIALS_HELPER_STDERR", "0")
         .with_status(101)
         .with_stderr(&format!(
             "\
