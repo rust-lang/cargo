@@ -105,6 +105,11 @@ fn setup_failed_auth_test() -> (SocketAddr, JoinHandle<()>, Arc<AtomicUsize>) {
 // Tests that HTTP auth is offered from `credential.helper`.
 #[cargo_test]
 fn http_auth_offered() {
+    // TODO: remove this once possible.
+    // See https://github.com/rust-lang/cargo/issues/11821
+    if cargo_uses_gitoxide() {
+        return;
+    }
     let (addr, t, connections) = setup_failed_auth_test();
     let p = project()
         .file(
@@ -368,6 +373,11 @@ Caused by:
 
 #[cargo_test]
 fn instead_of_url_printed() {
+    // TODO: remove this once possible.
+    // See https://github.com/rust-lang/cargo/issues/11821
+    if cargo_uses_gitoxide() {
+        return;
+    }
     let (addr, t, _connections) = setup_failed_auth_test();
     let config = paths::home().join(".gitconfig");
     let mut config = git2::Config::open(&config).unwrap();
