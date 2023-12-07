@@ -48,12 +48,16 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::{Arc, Mutex};
 
+/// Deprecated: A build script instruction that tells Cargo to display a warning after the
+/// build script has finished running. Read [the doc] for more.
+///
+/// [the doc]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#cargo-warning
+const OLD_CARGO_WARNING_SYNTAX: &str = "cargo:warning=";
 /// A build script instruction that tells Cargo to display a warning after the
 /// build script has finished running. Read [the doc] for more.
 ///
 /// [the doc]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#cargo-warning
-const CARGO_WARNING: &str = "cargo:warning=";
-
+const NEW_CARGO_WARNING_SYNTAX: &str = "cargo::warning=";
 /// Contains the parsed output of a custom build script.
 #[derive(Clone, Debug, Hash, Default)]
 pub struct BuildOutput {
@@ -478,7 +482,10 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
         let output = cmd
             .exec_with_streaming(
                 &mut |stdout| {
-                    if let Some(warning) = stdout.strip_prefix(CARGO_WARNING) {
+                    if let Some(warning) = stdout
+                        .strip_prefix(OLD_CARGO_WARNING_SYNTAX)
+                        .or(stdout.strip_prefix(NEW_CARGO_WARNING_SYNTAX))
+                    {
                         warnings_in_case_of_panic.push(warning.to_owned());
                     }
                     if extra_verbose {
@@ -680,38 +687,76 @@ impl BuildOutput {
         let mut rerun_if_env_changed = Vec::new();
         let mut warnings = Vec::new();
         let whence = format!("build script of `{}`", pkg_descr);
+        // Old syntax:
+        //    cargo:rustc-flags=VALUE
+        //    cargo:KEY=VALUE (for other unreserved keys)
+        // New syntax:
+        //    cargo::rustc-flags=VALUE
+        //    cargo::metadata=KEY=VALUE (for other unreserved keys)
+        // Due to backwards compatibility, no new keys can be added to this old format.
+        const RESERVED_PREFIXES: &[&str] = &[
+            "rustc-flags=",
+            "rustc-link-lib=",
+            "rustc-link-search=",
+            "rustc-link-arg-cdylib=",
+            "rustc-link-arg-bins=",
+            "rustc-link-arg-bin=",
+            "rustc-link-arg-tests=",
+            "rustc-link-arg-benches=",
+            "rustc-link-arg-examples=",
+            "rustc-link-arg=",
+            "rustc-cfg=",
+            "rustc-check-cfg=",
+            "rustc-env=",
+            "warning=",
+            "rerun-if-changed=",
+            "rerun-if-env-changed=",
+        ];
+        const DOCS_LINK_SUGGESTION: &str = "See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
+                for more information about build script outputs.";
+
+        fn parse_directive<'a>(
+            whence: &str,
+            line: &str,
+            data: &'a str,
+        ) -> CargoResult<(&'a str, &'a str)> {
+            let mut iter = data.splitn(2, "=");
+            let key = iter.next();
+            let value = iter.next();
+            match (key, value) {
+                (Some(a), Some(b)) => Ok((a, b.trim_end())),
+                _ => bail!(
+                    "invalid output in {whence}: `{line}`\n\
+                    Expected a line with `cargo::KEY=VALUE` with an `=` character, \
+                    but none was found.\n\
+                    {DOCS_LINK_SUGGESTION}",
+                ),
+            }
+        }
 
         for line in input.split(|b| *b == b'\n') {
             let line = match str::from_utf8(line) {
                 Ok(line) => line.trim(),
                 Err(..) => continue,
             };
-            let data = match line.split_once(':') {
-                Some(("cargo", val)) => {
-                    if val.starts_with(":") {
-                        // Line started with `cargo::`.
-                        bail!("unsupported output in {whence}: `{line}`\n\
-                            Found a `cargo::key=value` build directive which is reserved for future use.\n\
-                            Either change the directive to `cargo:key=value` syntax (note the single `:`) or upgrade your version of Rust.\n\
-                            See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
-                            for more information about build script outputs.");
-                    }
-                    val
+            let (key, value) = if let Some(data) = line.strip_prefix("cargo::") {
+                // For instance, `cargo::rustc-flags=foo` or `cargo::metadata=foo=bar`.
+                parse_directive(whence.as_str(), line, data)?
+            } else if let Some(data) = line.strip_prefix("cargo:") {
+                // For instance, `cargo:rustc-flags=foo`.
+                if RESERVED_PREFIXES
+                    .iter()
+                    .any(|prefix| data.starts_with(prefix))
+                {
+                    parse_directive(whence.as_str(), line, data)?
+                } else {
+                    // For instance, `cargo:foo=bar`.
+                    ("metadata", data)
                 }
-                _ => continue,
+            } else {
+                // Skip this line since it doesn't start with "cargo:" or "cargo::".
+                continue;
             };
-
-            // getting the `key=value` part of the line
-            let (key, value) = match data.split_once('=') {
-                Some((a,b)) => (a, b.trim_end()),
-                // Line started with `cargo:` but didn't match `key=value`.
-                _ => bail!("invalid output in {}: `{}`\n\
-                    Expected a line with `cargo:key=value` with an `=` character, \
-                    but none was found.\n\
-                    See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
-                    for more information about build script outputs.", whence, line),
-            };
-
             // This will rewrite paths if the target directory has been moved.
             let value = value.replace(
                 script_out_dir_when_generated.to_str().unwrap(),
@@ -722,7 +767,7 @@ impl BuildOutput {
                 ($target_kind: expr, $is_target_kind: expr, $link_type: expr) => {
                     if !targets.iter().any(|target| $is_target_kind(target)) {
                         bail!(
-                            "invalid instruction `cargo:{}` from {}\n\
+                            "invalid instruction `cargo::{}` from {}\n\
                                 The package {} does not have a {} target.",
                             key,
                             whence,
@@ -746,7 +791,7 @@ impl BuildOutput {
                 "rustc-link-arg-cdylib" | "rustc-cdylib-link-arg" => {
                     if !targets.iter().any(|target| target.is_cdylib()) {
                         warnings.push(format!(
-                            "cargo:{} was specified in the build script of {}, \
+                            "cargo::{} was specified in the build script of {}, \
                              but that package does not contain a cdylib target\n\
                              \n\
                              Allowing this was an unintended change in the 1.50 \
@@ -764,8 +809,8 @@ impl BuildOutput {
                 "rustc-link-arg-bin" => {
                     let (bin_name, arg) = value.split_once('=').ok_or_else(|| {
                         anyhow::format_err!(
-                            "invalid instruction `cargo:{}={}` from {}\n\
-                                The instruction should have the form cargo:{}=BIN=ARG",
+                            "invalid instruction `cargo::{}={}` from {}\n\
+                                The instruction should have the form cargo::{}=BIN=ARG",
                             key,
                             value,
                             whence,
@@ -777,7 +822,7 @@ impl BuildOutput {
                         .any(|target| target.is_bin() && target.name() == bin_name)
                     {
                         bail!(
-                            "invalid instruction `cargo:{}` from {}\n\
+                            "invalid instruction `cargo::{}` from {}\n\
                                 The package {} does not have a bin target with the name `{}`.",
                             key,
                             whence,
@@ -807,7 +852,7 @@ impl BuildOutput {
                     if extra_check_cfg {
                         check_cfgs.push(value.to_string());
                     } else {
-                        warnings.push(format!("cargo:{} requires -Zcheck-cfg flag", key));
+                        warnings.push(format!("cargo::{} requires -Zcheck-cfg flag", key));
                     }
                 }
                 "rustc-env" => {
@@ -864,7 +909,15 @@ impl BuildOutput {
                 "warning" => warnings.push(value.to_string()),
                 "rerun-if-changed" => rerun_if_changed.push(PathBuf::from(value)),
                 "rerun-if-env-changed" => rerun_if_env_changed.push(value.to_string()),
-                _ => metadata.push((key.to_string(), value.to_string())),
+                "metadata" => {
+                    let (key, value) = parse_directive(whence.as_str(), line, &value)?;
+                    metadata.push((key.to_owned(), value.to_owned()));
+                }
+                _ => bail!(
+                    "invalid output in {whence}: `{line}`\n\
+                    Unknown key: `{key}`\n\
+                    {DOCS_LINK_SUGGESTION}",
+                ),
             }
         }
 
@@ -882,9 +935,9 @@ impl BuildOutput {
         })
     }
 
-    /// Parses [`cargo:rustc-flags`] instruction.
+    /// Parses [`cargo::rustc-flags`] instruction.
     ///
-    /// [`cargo:rustc-flags`]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#cargorustc-flagsflags
+    /// [`cargo::rustc-flags`]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#cargorustc-flagsflags
     pub fn parse_rustc_flags(
         value: &str,
         whence: &str,
@@ -930,9 +983,9 @@ impl BuildOutput {
         Ok((library_paths, library_links))
     }
 
-    /// Parses [`cargo:rustc-env`] instruction.
+    /// Parses [`cargo::rustc-env`] instruction.
     ///
-    /// [`cargo:rustc-env`]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#rustc-env
+    /// [`cargo::rustc-env`]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#rustc-env
     pub fn parse_rustc_env(value: &str, whence: &str) -> CargoResult<(String, String)> {
         match value.split_once('=') {
             Some((n, v)) => Ok((n.to_owned(), v.to_owned())),
