@@ -126,7 +126,7 @@ fn link_arg_missing_target() {
         .with_status(101)
         .with_stderr("\
 [COMPILING] foo [..]
-error: invalid instruction `cargo:rustc-link-arg-bins` from build script of `foo v0.0.1 ([ROOT]/foo)`
+error: invalid instruction `cargo::rustc-link-arg-bins` from build script of `foo v0.0.1 ([ROOT]/foo)`
 The package foo v0.0.1 ([ROOT]/foo) does not have a bin target.
 ")
         .run();
@@ -141,7 +141,7 @@ The package foo v0.0.1 ([ROOT]/foo) does not have a bin target.
         .with_stderr(
             "\
 [COMPILING] foo [..]
-error: invalid instruction `cargo:rustc-link-arg-bin` from build script of `foo v0.0.1 ([ROOT]/foo)`
+error: invalid instruction `cargo::rustc-link-arg-bin` from build script of `foo v0.0.1 ([ROOT]/foo)`
 The package foo v0.0.1 ([ROOT]/foo) does not have a bin target with the name `abc`.
 ",
         )
@@ -157,8 +157,8 @@ The package foo v0.0.1 ([ROOT]/foo) does not have a bin target with the name `ab
         .with_stderr(
             "\
 [COMPILING] foo [..]
-error: invalid instruction `cargo:rustc-link-arg-bin=abc` from build script of `foo v0.0.1 ([ROOT]/foo)`
-The instruction should have the form cargo:rustc-link-arg-bin=BIN=ARG
+error: invalid instruction `cargo::rustc-link-arg-bin=abc` from build script of `foo v0.0.1 ([ROOT]/foo)`
+The instruction should have the form cargo::rustc-link-arg-bin=BIN=ARG
 ",
         )
         .run();
@@ -204,7 +204,7 @@ fn cdylib_link_arg_transitive() {
 [COMPILING] bar v1.0.0 [..]
 [RUNNING] `rustc --crate-name build_script_build bar/build.rs [..]
 [RUNNING] `[..]build-script-build[..]
-warning: bar@1.0.0: cargo:rustc-link-arg-cdylib was specified in the build script of bar v1.0.0 \
+warning: bar@1.0.0: cargo::rustc-link-arg-cdylib was specified in the build script of bar v1.0.0 \
 ([ROOT]/foo/bar), but that package does not contain a cdylib target
 
 Allowing this was an unintended change in the 1.50 release, and may become an error in \
