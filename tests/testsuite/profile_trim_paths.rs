@@ -83,7 +83,7 @@ fn release_profile_default_to_object() {
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]\
     -Zremap-path-scope=object \
-    --remap-path-prefix=[CWD]= \
+    --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [FINISHED] release [..]",
         )
@@ -121,7 +121,7 @@ fn one_option() {
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]\
     -Zremap-path-scope={option} \
-    --remap-path-prefix=[CWD]= \
+    --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [FINISHED] dev [..]",
             ))
@@ -158,7 +158,7 @@ fn multiple_options() {
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]\
     -Zremap-path-scope=diagnostics,macro,object \
-    --remap-path-prefix=[CWD]= \
+    --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [FINISHED] dev [..]",
         )
@@ -193,7 +193,7 @@ fn profile_merge_works() {
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]\
     -Zremap-path-scope=diagnostics \
-    --remap-path-prefix=[CWD]= \
+    --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [FINISHED] custom [..]",
         )
@@ -243,7 +243,7 @@ fn registry_dependency() {
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]\
     -Zremap-path-scope=object \
-    --remap-path-prefix=[CWD]= \
+    --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [FINISHED] dev [..]
 [RUNNING] `target/debug/foo[EXE]`"
@@ -297,7 +297,7 @@ fn git_dependency() {
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]\
     -Zremap-path-scope=object \
-    --remap-path-prefix=[CWD]= \
+    --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [FINISHED] dev [..]
 [RUNNING] `target/debug/foo[EXE]`"
@@ -338,12 +338,12 @@ fn path_dependency() {
 [COMPILING] bar v0.0.1 ([..]/cocktail-bar)
 [RUNNING] `rustc [..]\
     -Zremap-path-scope=object \
-    --remap-path-prefix=[CWD]= \
+    --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]\
     -Zremap-path-scope=object \
-    --remap-path-prefix=[CWD]= \
+    --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [FINISHED] dev [..]
 [RUNNING] `target/debug/foo[EXE]`"
@@ -392,7 +392,7 @@ fn path_dependency_outside_workspace() {
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]\
     -Zremap-path-scope=object \
-    --remap-path-prefix=[CWD]= \
+    --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [FINISHED] dev [..]
 [RUNNING] `target/debug/foo[EXE]`"
@@ -446,7 +446,7 @@ fn diagnostics_works() {
             "\
 [RUNNING] [..]rustc [..]\
     -Zremap-path-scope=diagnostics \
-    --remap-path-prefix=[CWD]= \
+    --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]",
         )
         .run();
@@ -574,7 +574,7 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]-C split-debuginfo={split_debuginfo} [..]\
     -Zremap-path-scope=object \
-    --remap-path-prefix=[CWD]= \
+    --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [FINISHED] dev [..]",
         ))
@@ -737,7 +737,7 @@ fn lldb_works_after_trimmed() {
             "\
 [RUNNING] `rustc [..]\
     -Zremap-path-scope=object \
-    --remap-path-prefix=[CWD]= \
+    --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]",
         )
         .run();
