@@ -453,33 +453,65 @@ fn diagnostics_works() {
 }
 
 #[cfg(target_os = "macos")]
-#[cargo_test(requires_nm, nightly, reason = "-Zremap-path-scope is unstable")]
-fn object_works() {
-    object_works_helper(|path| {
+mod object_works {
+    use super::*;
+
+    fn inspect_debuginfo(path: &std::path::Path) -> Vec<u8> {
         std::process::Command::new("nm")
             .arg("-pa")
             .arg(path)
             .output()
             .expect("nm works")
             .stdout
-    })
+    }
+
+    #[cargo_test(requires_nm, nightly, reason = "-Zremap-path-scope is unstable")]
+    fn with_split_debuginfo_off() {
+        object_works_helper("off", inspect_debuginfo);
+    }
+
+    #[cargo_test(requires_nm, nightly, reason = "-Zremap-path-scope is unstable")]
+    fn with_split_debuginfo_packed() {
+        object_works_helper("packed", inspect_debuginfo);
+    }
+
+    #[cargo_test(requires_nm, nightly, reason = "-Zremap-path-scope is unstable")]
+    fn with_split_debuginfo_unpacked() {
+        object_works_helper("unpacked", inspect_debuginfo);
+    }
 }
 
 #[cfg(target_os = "linux")]
-#[cargo_test(requires_readelf, nightly, reason = "-Zremap-path-scope is unstable")]
-fn object_works() {
-    object_works_helper(|path| {
+mod object_works {
+    use super::*;
+
+    fn inspect_debuginfo(path: &std::path::Path) -> Vec<u8> {
         std::process::Command::new("readelf")
             .arg("-wi")
             .arg(path)
             .output()
             .expect("readelf works")
             .stdout
-    })
+    }
+
+    #[cargo_test(requires_readelf, nightly, reason = "-Zremap-path-scope is unstable")]
+    fn with_split_debuginfo_off() {
+        object_works_helper("off", inspect_debuginfo);
+    }
+
+    #[cargo_test(requires_readelf, nightly, reason = "-Zremap-path-scope is unstable")]
+    fn with_split_debuginfo_packed() {
+        object_works_helper("packed", inspect_debuginfo);
+    }
+
+    #[cargo_test(requires_readelf, nightly, reason = "-Zremap-path-scope is unstable")]
+    fn with_split_debuginfo_unpacked() {
+        object_works_helper("unpacked", inspect_debuginfo);
+    }
 }
 
 #[cfg(unix)]
-fn object_works_helper(run: impl Fn(&std::path::Path) -> Vec<u8>) {
+fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> Vec<u8>) {
     use std::os::unix::ffi::OsStrExt;
 
     let registry_src = paths::home().join(".cargo/registry/src");
@@ -495,14 +527,19 @@ fn object_works_helper(run: impl Fn(&std::path::Path) -> Vec<u8>) {
     let p = project()
         .file(
             "Cargo.toml",
-            r#"
+            &format!(
+                r#"
                 [package]
                 name = "foo"
                 version = "0.0.1"
 
                 [dependencies]
                 bar = "0.0.1"
-           "#,
+
+                [profile.dev]
+                split-debuginfo = "{split_debuginfo}"
+           "#
+            ),
         )
         .file("src/main.rs", "fn main() { bar::f(); }")
         .build();
@@ -530,12 +567,12 @@ fn object_works_helper(run: impl Fn(&std::path::Path) -> Vec<u8>) {
         .with_stderr(&format!(
             "\
 [COMPILING] bar v0.0.1
-[RUNNING] `rustc [..]\
+[RUNNING] `rustc [..]-C split-debuginfo={split_debuginfo} [..]\
     -Zremap-path-scope=object \
     --remap-path-prefix={pkg_remap} \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc [..]\
+[RUNNING] `rustc [..]-C split-debuginfo={split_debuginfo} [..]\
     -Zremap-path-scope=object \
     --remap-path-prefix=[CWD]= \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
@@ -547,31 +584,44 @@ fn object_works_helper(run: impl Fn(&std::path::Path) -> Vec<u8>) {
     assert!(bin_path.is_file());
     let stdout = run(&bin_path);
     assert!(memchr::memmem::find(&stdout, rust_src).is_none());
-    if cfg!(target_os = "macos") {
-        for line in stdout.split(|c| c == &b'\n') {
-            let registry = memchr::memmem::find(line, registry_src_bytes).is_none();
-            let local = memchr::memmem::find(line, pkg_root).is_none();
-            if registry && local {
-                continue;
-            }
+    for line in stdout.split(|c| c == &b'\n') {
+        let registry = memchr::memmem::find(line, registry_src_bytes).is_none();
+        let local = memchr::memmem::find(line, pkg_root).is_none();
+        if registry && local {
+            continue;
+        }
 
+        #[cfg(target_os = "macos")]
+        {
+            // `OSO` symbols can't be trimmed at this moment.
+            // See <https://github.com/rust-lang/rust/issues/116948#issuecomment-1793617018>
             if memchr::memmem::find(line, b" OSO ").is_some() {
-                // `OSO` symbols can't be trimmed at this moment.
-                // See <https://github.com/rust-lang/rust/issues/116948#issuecomment-1793617018>
-                // TODO: Change to `is_none()` once the issue is resolved.
                 continue;
             }
 
             // on macOS `SO` symbols are embedded in final binaries and should be trimmed.
             // See rust-lang/rust#117652.
-            assert!(
-                memchr::memmem::find(line, b" SO ").is_some(),
-                "untrimmed `SO` symbol found"
-            )
+            if memchr::memmem::find(line, b" SO ").is_some() {
+                continue;
+            }
         }
-    } else {
-        assert!(memchr::memmem::find(&stdout, registry_src_bytes).is_none());
-        assert!(memchr::memmem::find(&stdout, pkg_root).is_none());
+
+        #[cfg(target_os = "linux")]
+        {
+            // There is a bug in rustc `-Zremap-path-scope`.
+            // See rust-lang/rust/pull/118518
+            if memchr::memmem::find(line, b"DW_AT_comp_dir").is_some() {
+                continue;
+            }
+            if memchr::memmem::find(line, b"DW_AT_GNU_dwo_name").is_some() {
+                continue;
+            }
+        }
+
+        panic!(
+            "unexpected untrimmed symbol: {}",
+            String::from_utf8(line.into()).unwrap()
+        );
     }
 }
 
