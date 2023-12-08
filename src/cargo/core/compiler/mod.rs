@@ -1434,6 +1434,7 @@ pub fn extern_args(
                 .require(Feature::public_dependency())
                 .is_ok()
                 && !dep.public
+                && unit.target.is_lib()
             {
                 opts.push("priv");
                 *unstable_opts = true;

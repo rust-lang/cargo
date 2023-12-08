@@ -278,9 +278,14 @@ fn allow_priv_in_tests() {
 
     p.cargo("check --tests --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
-        .with_stderr_contains(
+        .with_stderr(
             "\
-tests/mod.rs:3:13: warning: type `FromPriv` from private dependency 'priv_dep' in public interface
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] priv_dep v0.1.0 ([..])
+[CHECKING] priv_dep v0.1.0
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run()
@@ -317,9 +322,14 @@ fn allow_priv_in_benchs() {
 
     p.cargo("check --benches --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
-        .with_stderr_contains(
+        .with_stderr(
             "\
-benches/mod.rs:3:13: warning: type `FromPriv` from private dependency 'priv_dep' in public interface
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] priv_dep v0.1.0 ([..])
+[CHECKING] priv_dep v0.1.0
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run()
@@ -357,9 +367,14 @@ fn allow_priv_in_bins() {
 
     p.cargo("check --bins --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
-        .with_stderr_contains(
+        .with_stderr(
             "\
-src/main.rs:3:13: warning: type `FromPriv` from private dependency 'priv_dep' in public interface
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] priv_dep v0.1.0 ([..])
+[CHECKING] priv_dep v0.1.0
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run()
@@ -397,9 +412,14 @@ fn allow_priv_in_examples() {
 
     p.cargo("check --examples --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
-        .with_stderr_contains(
+        .with_stderr(
             "\
-examples/lib.rs:3:13: warning: type `FromPriv` from private dependency 'priv_dep' in public interface
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] priv_dep v0.1.0 ([..])
+[CHECKING] priv_dep v0.1.0
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run()
