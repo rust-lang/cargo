@@ -96,7 +96,7 @@ fn rerun_if_env_or_file_changes() {
         .with_stderr("[FINISHED] [..]")
         .run();
     sleep_ms(1000);
-    p.change_file("foo", "");
+    p.change_file("foo", "// modified");
     p.cargo("check")
         .env("FOO", "bar")
         .with_stderr(

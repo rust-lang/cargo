@@ -3471,7 +3471,7 @@ fn rebuild_only_on_explicit_paths() {
 
     // random other files do not affect freshness
     println!("run baz");
-    p.change_file("baz", "");
+    p.change_file("baz", "// modified");
     p.cargo("build -v")
         .with_stderr(
             "\
@@ -3483,7 +3483,7 @@ fn rebuild_only_on_explicit_paths() {
 
     // but changing dependent files does
     println!("run foo change");
-    p.change_file("foo", "");
+    p.change_file("foo", "// modified");
     p.cargo("build -v")
         .with_stderr(
             "\
