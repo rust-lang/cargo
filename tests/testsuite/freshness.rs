@@ -1522,7 +1522,7 @@ fn bust_patched_dep() {
         sleep_ms(1000);
     }
 
-    p.change_file("reg1new/src/lib.rs", "");
+    p.change_file("reg1new/src/lib.rs", "// modified");
     if is_coarse_mtime() {
         sleep_ms(1000);
     }
