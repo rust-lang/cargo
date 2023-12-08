@@ -523,22 +523,9 @@ fn object_works_helper(run: impl Fn(&std::path::Path) -> Vec<u8>) {
 
     p.cargo("clean").run();
 
-    p.change_file(
-        "Cargo.toml",
-        r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-
-            [dependencies]
-            bar = "0.0.1"
-
-            [profile.dev]
-            trim-paths = "object"
-       "#,
-    );
-
     p.cargo("build --verbose -Ztrim-paths")
+        .arg("--config")
+        .arg(r#"profile.dev.trim-paths="object""#)
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_stderr(&format!(
             "\
