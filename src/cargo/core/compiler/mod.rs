@@ -1230,7 +1230,7 @@ fn trim_paths_args(
         // * path dependencies outside workspace root directory
         if is_local && pkg_root.strip_prefix(ws_root).is_ok() {
             remap.push(ws_root);
-            remap.push("="); // empty to remap to relative paths.
+            remap.push("=."); // remap to relative rustc work dir explicitly
         } else {
             remap.push(pkg_root);
             remap.push("=");
