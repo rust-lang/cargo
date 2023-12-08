@@ -5,11 +5,11 @@ use semver::Version;
 use serde::{de, ser};
 use url::Url;
 
-use crate::core::GitReference;
 use crate::core::PackageId;
-use crate::core::SourceKind;
 use crate::util::errors::CargoResult;
 use crate::util::{validate_package_name, IntoUrl};
+use crate::util_schemas::core::GitReference;
+use crate::util_schemas::core::SourceKind;
 use crate::util_semver::PartialVersion;
 
 /// Some or all of the data required to identify a package:
