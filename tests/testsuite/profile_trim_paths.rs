@@ -487,7 +487,8 @@ mod object_works {
 
     fn inspect_debuginfo(path: &std::path::Path) -> Vec<u8> {
         std::process::Command::new("readelf")
-            .arg("-wi")
+            .arg("--debug-dump=info")
+            .arg("--debug-dump=no-follow-links") // older version can't recognized but just a warning
             .arg(path)
             .output()
             .expect("readelf works")
