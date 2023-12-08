@@ -10,6 +10,7 @@ use std::sync::OnceLock;
 use serde::de;
 use serde::ser;
 
+use crate::core::PackageIdSpec;
 use crate::core::SourceId;
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
@@ -185,6 +186,15 @@ impl PackageId {
     /// Filename of the `.crate` tarball, e.g., `once_cell-1.18.0.crate`.
     pub fn tarball_name(&self) -> String {
         format!("{}-{}.crate", self.name(), self.version())
+    }
+
+    /// Convert a `PackageId` to a `PackageIdSpec`, which will have both the `PartialVersion` and `Url`
+    /// fields filled in.
+    pub fn to_spec(&self) -> PackageIdSpec {
+        PackageIdSpec::new(String::from(self.name().as_str()))
+            .with_version(self.version().clone().into())
+            .with_url(self.source_id().url().clone())
+            .with_kind(self.source_id().kind().clone())
     }
 }
 

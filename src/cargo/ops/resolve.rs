@@ -64,7 +64,9 @@ use crate::core::resolver::{
     self, HasDevUnits, Resolve, ResolveOpts, ResolveVersion, VersionOrdering, VersionPreferences,
 };
 use crate::core::summary::Summary;
-use crate::core::{GitReference, PackageId, PackageIdSpec, PackageSet, SourceId, Workspace};
+use crate::core::{
+    GitReference, PackageId, PackageIdSpec, PackageIdSpecQuery, PackageSet, SourceId, Workspace,
+};
 use crate::ops;
 use crate::sources::PathSource;
 use crate::util::cache_lock::CacheLockMode;

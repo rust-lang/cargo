@@ -15,7 +15,9 @@ use crate::core::features::Features;
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::CliFeatures;
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{Dependency, Edition, FeatureValue, PackageId, PackageIdSpec};
+use crate::core::{
+    Dependency, Edition, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery,
+};
 use crate::core::{EitherManifest, Package, SourceId, VirtualManifest};
 use crate::ops;
 use crate::sources::{PathSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
