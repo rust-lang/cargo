@@ -246,3 +246,161 @@ fn workspace_dep_made_public() {
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .run()
 }
+
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn allow_priv_in_tests() {
+    Package::new("priv_dep", "0.1.0")
+        .file("src/lib.rs", "pub struct FromPriv;")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["public-dependency"]
+
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies]
+                priv_dep = {version = "0.1.0", public = false}
+            "#,
+        )
+        .file(
+            "tests/mod.rs",
+            "
+            extern crate priv_dep;
+            pub fn use_priv(_: priv_dep::FromPriv) {}
+        ",
+        )
+        .build();
+
+    p.cargo("check --tests --message-format=short")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stderr_contains(
+            "\
+tests/mod.rs:3:13: warning: type `FromPriv` from private dependency 'priv_dep' in public interface
+",
+        )
+        .run()
+}
+
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn allow_priv_in_benchs() {
+    Package::new("priv_dep", "0.1.0")
+        .file("src/lib.rs", "pub struct FromPriv;")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["public-dependency"]
+
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies]
+                priv_dep = {version = "0.1.0", public = false}
+            "#,
+        )
+        .file(
+            "benches/mod.rs",
+            "
+            extern crate priv_dep;
+            pub fn use_priv(_: priv_dep::FromPriv) {}
+        ",
+        )
+        .build();
+
+    p.cargo("check --benches --message-format=short")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stderr_contains(
+            "\
+benches/mod.rs:3:13: warning: type `FromPriv` from private dependency 'priv_dep' in public interface
+",
+        )
+        .run()
+}
+
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn allow_priv_in_bins() {
+    Package::new("priv_dep", "0.1.0")
+        .file("src/lib.rs", "pub struct FromPriv;")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["public-dependency"]
+
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies]
+                priv_dep = {version = "0.1.0", public = false}
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            "
+            extern crate priv_dep;
+            pub fn use_priv(_: priv_dep::FromPriv) {}
+            fn main() {}
+        ",
+        )
+        .build();
+
+    p.cargo("check --bins --message-format=short")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stderr_contains(
+            "\
+src/main.rs:3:13: warning: type `FromPriv` from private dependency 'priv_dep' in public interface
+",
+        )
+        .run()
+}
+
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn allow_priv_in_examples() {
+    Package::new("priv_dep", "0.1.0")
+        .file("src/lib.rs", "pub struct FromPriv;")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["public-dependency"]
+
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies]
+                priv_dep = {version = "0.1.0", public = false}
+            "#,
+        )
+        .file(
+            "examples/lib.rs",
+            "
+            extern crate priv_dep;
+            pub fn use_priv(_: priv_dep::FromPriv) {}
+            fn main() {}
+        ",
+        )
+        .build();
+
+    p.cargo("check --examples --message-format=short")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stderr_contains(
+            "\
+examples/lib.rs:3:13: warning: type `FromPriv` from private dependency 'priv_dep' in public interface
+",
+        )
+        .run()
+}
