@@ -424,3 +424,49 @@ fn allow_priv_in_examples() {
         )
         .run()
 }
+
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn allow_priv_in_custom_build() {
+    Package::new("priv_dep", "0.1.0")
+        .file("src/lib.rs", "pub struct FromPriv;")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["public-dependency"]
+
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [build-dependencies]
+                priv_dep = "0.1.0"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            "
+            extern crate priv_dep;
+            pub fn use_priv(_: priv_dep::FromPriv) {}
+            fn main() {}
+        ",
+        )
+        .build();
+
+    p.cargo("check --all-targets --message-format=short")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] priv_dep v0.1.0 ([..])
+[COMPILING] priv_dep v0.1.0
+[COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run()
+}
