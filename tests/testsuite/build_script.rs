@@ -5169,7 +5169,7 @@ fn wrong_output() {
             "\
 [COMPILING] foo [..]
 error: invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo:example`
-Expected a line with `cargo::KEY=VALUE` with an `=` character, but none was found.
+Expected a line with `cargo::metadata=KEY=VALUE` with an `=` character, but none was found.
 See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
 for more information about build script outputs.
 ",

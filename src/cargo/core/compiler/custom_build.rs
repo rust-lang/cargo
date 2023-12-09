@@ -734,6 +734,25 @@ impl BuildOutput {
             }
         }
 
+        fn parse_metadata<'a>(
+            whence: &str,
+            line: &str,
+            data: &'a str,
+        ) -> CargoResult<(&'a str, &'a str)> {
+            let mut iter = data.splitn(2, "=");
+            let key = iter.next();
+            let value = iter.next();
+            match (key, value) {
+                (Some(a), Some(b)) => Ok((a, b.trim_end())),
+                _ => bail!(
+                    "invalid output in {whence}: `{line}`\n\
+                    Expected a line with `cargo::metadata=KEY=VALUE` with an `=` character, \
+                    but none was found.\n\
+                    {DOCS_LINK_SUGGESTION}",
+                ),
+            }
+        }
+
         for line in input.split(|b| *b == b'\n') {
             let line = match str::from_utf8(line) {
                 Ok(line) => line.trim(),
@@ -910,7 +929,7 @@ impl BuildOutput {
                 "rerun-if-changed" => rerun_if_changed.push(PathBuf::from(value)),
                 "rerun-if-env-changed" => rerun_if_env_changed.push(value.to_string()),
                 "metadata" => {
-                    let (key, value) = parse_directive(whence.as_str(), line, &value)?;
+                    let (key, value) = parse_metadata(whence.as_str(), line, &value)?;
                     metadata.push((key.to_owned(), value.to_owned()));
                 }
                 _ => bail!(
