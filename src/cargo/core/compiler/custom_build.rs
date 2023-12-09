@@ -719,6 +719,7 @@ impl BuildOutput {
             whence: &str,
             line: &str,
             data: &'a str,
+            old_syntax: bool,
         ) -> CargoResult<(&'a str, &'a str)> {
             let mut iter = data.splitn(2, "=");
             let key = iter.next();
@@ -727,9 +728,10 @@ impl BuildOutput {
                 (Some(a), Some(b)) => Ok((a, b.trim_end())),
                 _ => bail!(
                     "invalid output in {whence}: `{line}`\n\
-                    Expected a line with `cargo::KEY=VALUE` with an `=` character, \
+                    Expected a line with `{syntax}KEY=VALUE` with an `=` character, \
                     but none was found.\n\
                     {DOCS_LINK_SUGGESTION}",
+                    syntax = if old_syntax { "cargo:" } else { "cargo::" },
                 ),
             }
         }
@@ -738,6 +740,7 @@ impl BuildOutput {
             whence: &str,
             line: &str,
             data: &'a str,
+            old_syntax: bool,
         ) -> CargoResult<(&'a str, &'a str)> {
             let mut iter = data.splitn(2, "=");
             let key = iter.next();
@@ -746,9 +749,14 @@ impl BuildOutput {
                 (Some(a), Some(b)) => Ok((a, b.trim_end())),
                 _ => bail!(
                     "invalid output in {whence}: `{line}`\n\
-                    Expected a line with `cargo::metadata=KEY=VALUE` with an `=` character, \
+                    Expected a line with `{syntax}KEY=VALUE` with an `=` character, \
                     but none was found.\n\
                     {DOCS_LINK_SUGGESTION}",
+                    syntax = if old_syntax {
+                        "cargo:"
+                    } else {
+                        "cargo::metadata="
+                    },
                 ),
             }
         }
@@ -758,16 +766,18 @@ impl BuildOutput {
                 Ok(line) => line.trim(),
                 Err(..) => continue,
             };
+            let mut old_syntax = false;
             let (key, value) = if let Some(data) = line.strip_prefix("cargo::") {
                 // For instance, `cargo::rustc-flags=foo` or `cargo::metadata=foo=bar`.
-                parse_directive(whence.as_str(), line, data)?
+                parse_directive(whence.as_str(), line, data, old_syntax)?
             } else if let Some(data) = line.strip_prefix("cargo:") {
+                old_syntax = true;
                 // For instance, `cargo:rustc-flags=foo`.
                 if RESERVED_PREFIXES
                     .iter()
                     .any(|prefix| data.starts_with(prefix))
                 {
-                    parse_directive(whence.as_str(), line, data)?
+                    parse_directive(whence.as_str(), line, data, old_syntax)?
                 } else {
                     // For instance, `cargo:foo=bar`.
                     ("metadata", data)
@@ -782,12 +792,14 @@ impl BuildOutput {
                 script_out_dir.to_str().unwrap(),
             );
 
+            let syntax_prefix = if old_syntax { "cargo:" } else { "cargo::" };
             macro_rules! check_and_add_target {
                 ($target_kind: expr, $is_target_kind: expr, $link_type: expr) => {
                     if !targets.iter().any(|target| $is_target_kind(target)) {
                         bail!(
-                            "invalid instruction `cargo::{}` from {}\n\
+                            "invalid instruction `{}{}` from {}\n\
                                 The package {} does not have a {} target.",
+                            syntax_prefix,
                             key,
                             whence,
                             pkg_descr,
@@ -810,14 +822,14 @@ impl BuildOutput {
                 "rustc-link-arg-cdylib" | "rustc-cdylib-link-arg" => {
                     if !targets.iter().any(|target| target.is_cdylib()) {
                         warnings.push(format!(
-                            "cargo::{} was specified in the build script of {}, \
+                            "{}{} was specified in the build script of {}, \
                              but that package does not contain a cdylib target\n\
                              \n\
                              Allowing this was an unintended change in the 1.50 \
                              release, and may become an error in the future. \
                              For more information, see \
                              <https://github.com/rust-lang/cargo/issues/9562>.",
-                            key, pkg_descr
+                            syntax_prefix, key, pkg_descr
                         ));
                     }
                     linker_args.push((LinkArgTarget::Cdylib, value))
@@ -828,11 +840,13 @@ impl BuildOutput {
                 "rustc-link-arg-bin" => {
                     let (bin_name, arg) = value.split_once('=').ok_or_else(|| {
                         anyhow::format_err!(
-                            "invalid instruction `cargo::{}={}` from {}\n\
-                                The instruction should have the form cargo::{}=BIN=ARG",
+                            "invalid instruction `{}{}={}` from {}\n\
+                                The instruction should have the form {}{}=BIN=ARG",
+                            syntax_prefix,
                             key,
                             value,
                             whence,
+                            syntax_prefix,
                             key
                         )
                     })?;
@@ -841,8 +855,9 @@ impl BuildOutput {
                         .any(|target| target.is_bin() && target.name() == bin_name)
                     {
                         bail!(
-                            "invalid instruction `cargo::{}` from {}\n\
+                            "invalid instruction `{}{}` from {}\n\
                                 The package {} does not have a bin target with the name `{}`.",
+                            syntax_prefix,
                             key,
                             whence,
                             pkg_descr,
@@ -871,7 +886,10 @@ impl BuildOutput {
                     if extra_check_cfg {
                         check_cfgs.push(value.to_string());
                     } else {
-                        warnings.push(format!("cargo::{} requires -Zcheck-cfg flag", key));
+                        warnings.push(format!(
+                            "{}{} requires -Zcheck-cfg flag",
+                            syntax_prefix, key
+                        ));
                     }
                 }
                 "rustc-env" => {
@@ -929,7 +947,7 @@ impl BuildOutput {
                 "rerun-if-changed" => rerun_if_changed.push(PathBuf::from(value)),
                 "rerun-if-env-changed" => rerun_if_env_changed.push(value.to_string()),
                 "metadata" => {
-                    let (key, value) = parse_metadata(whence.as_str(), line, &value)?;
+                    let (key, value) = parse_metadata(whence.as_str(), line, &value, old_syntax)?;
                     metadata.push((key.to_owned(), value.to_owned()));
                 }
                 _ => bail!(

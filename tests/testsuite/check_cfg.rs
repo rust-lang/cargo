@@ -540,7 +540,7 @@ fn build_script_feature_gate() {
         .build();
 
     p.cargo("check")
-        .with_stderr_contains("warning[..]cargo::rustc-check-cfg requires -Zcheck-cfg flag")
+        .with_stderr_contains("warning[..]cargo:rustc-check-cfg requires -Zcheck-cfg flag")
         .with_status(0)
         .run();
 }
