@@ -916,6 +916,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "faster-hex"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2a2b11eda1d40935b26cf18f6833c526845ae8c41e58d09af6adeb6f0269183"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1337,11 +1346,11 @@ dependencies = [
 
 [[package]]
 name = "gix-hash"
-version = "0.13.2"
+version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99c1e554a87759e672c7d2e37211e761aa390c61ffcd3753a57c51173143f3cb"
+checksum = "1f8cf8c2266f63e582b7eb206799b63aa5fa68ee510ad349f637dfe2d0653de0"
 dependencies = [
- "faster-hex",
+ "faster-hex 0.9.0",
  "thiserror",
 ]
 
@@ -1370,9 +1379,9 @@ dependencies = [
 
 [[package]]
 name = "gix-index"
-version = "0.27.0"
+version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65ce8d03ec25de952be7d2a9adce2a4c2cb8f7fc2d4c25be91301be9707f380b"
+checksum = "f3f308f5cd2992e96a274b0d1931e9a0e44fdcba87695ead3f6df30d8a697e9c"
 dependencies = [
  "bitflags 2.4.1",
  "bstr",
@@ -1496,7 +1505,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03b9fcc4425bd64c585440d14e5d2405a399f323429401571ba56a2c6d111865"
 dependencies = [
  "bstr",
- "faster-hex",
+ "faster-hex 0.8.1",
  "gix-trace",
  "thiserror",
 ]
@@ -1508,7 +1517,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "50052c0f76c5af5acda41177fb55b60c1e484cc246ae919d8d21129cd1000a4e"
 dependencies = [
  "bstr",
- "faster-hex",
+ "faster-hex 0.8.1",
  "gix-trace",
  "thiserror",
 ]
