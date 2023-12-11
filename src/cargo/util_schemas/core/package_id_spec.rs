@@ -5,7 +5,6 @@ use semver::Version;
 use serde::{de, ser};
 use url::Url;
 
-use crate::core::PackageId;
 use crate::util::errors::CargoResult;
 use crate::util::{validate_package_name, IntoUrl};
 use crate::util_schemas::core::GitReference;
@@ -105,17 +104,6 @@ impl PackageIdSpec {
             url: None,
             kind: None,
         })
-    }
-
-    /// Convert a `PackageId` to a `PackageIdSpec`, which will have both the `PartialVersion` and `Url`
-    /// fields filled in.
-    pub fn from_package_id(package_id: PackageId) -> PackageIdSpec {
-        PackageIdSpec {
-            name: String::from(package_id.name().as_str()),
-            version: Some(package_id.version().clone().into()),
-            url: Some(package_id.source_id().url().clone()),
-            kind: Some(package_id.source_id().kind().clone()),
-        }
     }
 
     /// Tries to convert a valid `Url` to a `PackageIdSpec`.
