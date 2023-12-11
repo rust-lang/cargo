@@ -1122,6 +1122,9 @@ fn to_virtual_manifest(
     if me.badges.is_some() {
         bail!("this virtual manifest specifies a [badges] section, which is not allowed");
     }
+    if me.lints.is_some() {
+        bail!("this virtual manifest specifies a [lints] section, which is not allowed");
+    }
 
     let mut nested_paths = Vec::new();
     let mut warnings = Vec::new();

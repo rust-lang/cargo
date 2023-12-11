@@ -45,6 +45,7 @@ pub struct TomlManifest {
     pub workspace: Option<TomlWorkspace>,
     pub badges: Option<InheritableBtreeMap>,
     pub lints: Option<InheritableLints>,
+    // when adding new fields, be sure to check whether `to_virtual_manifest` should disallow them
 }
 
 impl TomlManifest {
