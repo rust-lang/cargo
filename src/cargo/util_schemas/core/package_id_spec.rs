@@ -98,6 +98,9 @@ impl PackageIdSpec {
             Some(version) => Some(version.parse::<PartialVersion>()?),
             None => None,
         };
+        if name.is_empty() {
+            bail!("package ID specification must have a name: `{spec}`");
+        }
         validate_package_name(name, "pkgid", "")?;
         Ok(PackageIdSpec {
             name: String::from(name),
@@ -597,6 +600,6 @@ mod tests {
             "sparse+https://github.com/rust-lang/cargo#0.52.0?branch=dev"
         )
         .is_err());
-        assert!(PackageIdSpec::parse("@1.2.3").is_ok());
+        assert!(PackageIdSpec::parse("@1.2.3").is_err());
     }
 }
