@@ -1,11 +1,11 @@
 use std::fmt;
 
 use anyhow::bail;
+use anyhow::Result;
 use semver::Version;
 use serde::{de, ser};
 use url::Url;
 
-use crate::util::errors::CargoResult;
 use crate::util::validate_package_name;
 use crate::util_schemas::core::GitReference;
 use crate::util_schemas::core::SourceKind;
@@ -73,7 +73,7 @@ impl PackageIdSpec {
     /// for spec in specs {
     ///     assert!(PackageIdSpec::parse(spec).is_ok());
     /// }
-    pub fn parse(spec: &str) -> CargoResult<PackageIdSpec> {
+    pub fn parse(spec: &str) -> Result<PackageIdSpec> {
         if spec.contains("://") {
             if let Ok(url) = Url::parse(spec) {
                 return PackageIdSpec::from_url(url);
@@ -107,7 +107,7 @@ impl PackageIdSpec {
     }
 
     /// Tries to convert a valid `Url` to a `PackageIdSpec`.
-    fn from_url(mut url: Url) -> CargoResult<PackageIdSpec> {
+    fn from_url(mut url: Url) -> Result<PackageIdSpec> {
         let mut kind = None;
         if let Some((kind_str, scheme)) = url.scheme().split_once('+') {
             match kind_str {
