@@ -15,8 +15,8 @@ use serde::ser;
 use serde::{Deserialize, Serialize};
 use serde_untagged::UntaggedEnumVisitor;
 
-use crate::util::RustVersion;
 use crate::util_schemas::core::PackageIdSpec;
+use crate::util_semver::PartialVersion;
 
 /// This type is used to deserialize `Cargo.toml` files.
 #[derive(Debug, Deserialize, Serialize)]
@@ -1206,6 +1206,51 @@ pub enum TomlLintLevel {
     Deny,
     Warn,
     Allow,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug, serde::Serialize)]
+#[serde(transparent)]
+pub struct RustVersion(PartialVersion);
+
+impl std::ops::Deref for RustVersion {
+    type Target = PartialVersion;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::str::FromStr for RustVersion {
+    type Err = anyhow::Error;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let partial = value.parse::<PartialVersion>()?;
+        if partial.pre.is_some() {
+            anyhow::bail!("unexpected prerelease field, expected a version like \"1.32\"")
+        }
+        if partial.build.is_some() {
+            anyhow::bail!("unexpected prerelease field, expected a version like \"1.32\"")
+        }
+        Ok(Self(partial))
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for RustVersion {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        UntaggedEnumVisitor::new()
+            .expecting("SemVer version")
+            .string(|value| value.parse().map_err(serde::de::Error::custom))
+            .deserialize(deserializer)
+    }
+}
+
+impl Display for RustVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
 }
 
 #[derive(Copy, Clone, Debug)]

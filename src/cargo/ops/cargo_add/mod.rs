@@ -35,7 +35,7 @@ use crate::util::toml_mut::dependency::WorkspaceSource;
 use crate::util::toml_mut::is_sorted;
 use crate::util::toml_mut::manifest::DepTable;
 use crate::util::toml_mut::manifest::LocalManifest;
-use crate::util::RustVersion;
+use crate::util_schemas::manifest::RustVersion;
 use crate::CargoResult;
 use crate::Config;
 use crate_spec::CrateSpec;

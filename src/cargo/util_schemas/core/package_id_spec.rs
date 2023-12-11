@@ -1,15 +1,14 @@
 use std::fmt;
 
 use anyhow::bail;
+use anyhow::Result;
 use semver::Version;
 use serde::{de, ser};
 use url::Url;
 
-use crate::core::GitReference;
-use crate::core::PackageId;
-use crate::core::SourceKind;
-use crate::util::errors::CargoResult;
-use crate::util::{validate_package_name, IntoUrl};
+use crate::util::validate_package_name;
+use crate::util_schemas::core::GitReference;
+use crate::util_schemas::core::SourceKind;
 use crate::util_semver::PartialVersion;
 
 /// Some or all of the data required to identify a package:
@@ -74,9 +73,9 @@ impl PackageIdSpec {
     /// for spec in specs {
     ///     assert!(PackageIdSpec::parse(spec).is_ok());
     /// }
-    pub fn parse(spec: &str) -> CargoResult<PackageIdSpec> {
+    pub fn parse(spec: &str) -> Result<PackageIdSpec> {
         if spec.contains("://") {
-            if let Ok(url) = spec.into_url() {
+            if let Ok(url) = Url::parse(spec) {
                 return PackageIdSpec::from_url(url);
             }
         } else if spec.contains('/') || spec.contains('\\') {
@@ -107,19 +106,8 @@ impl PackageIdSpec {
         })
     }
 
-    /// Convert a `PackageId` to a `PackageIdSpec`, which will have both the `PartialVersion` and `Url`
-    /// fields filled in.
-    pub fn from_package_id(package_id: PackageId) -> PackageIdSpec {
-        PackageIdSpec {
-            name: String::from(package_id.name().as_str()),
-            version: Some(package_id.version().clone().into()),
-            url: Some(package_id.source_id().url().clone()),
-            kind: Some(package_id.source_id().kind().clone()),
-        }
-    }
-
     /// Tries to convert a valid `Url` to a `PackageIdSpec`.
-    fn from_url(mut url: Url) -> CargoResult<PackageIdSpec> {
+    fn from_url(mut url: Url) -> Result<PackageIdSpec> {
         let mut kind = None;
         if let Some((kind_str, scheme)) = url.scheme().split_once('+') {
             match kind_str {
