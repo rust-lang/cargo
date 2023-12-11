@@ -597,5 +597,6 @@ mod tests {
             "sparse+https://github.com/rust-lang/cargo#0.52.0?branch=dev"
         )
         .is_err());
+        assert!(PackageIdSpec::parse("@1.2.3").is_ok());
     }
 }
