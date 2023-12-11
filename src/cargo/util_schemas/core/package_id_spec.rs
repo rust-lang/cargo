@@ -601,5 +601,6 @@ mod tests {
         )
         .is_err());
         assert!(PackageIdSpec::parse("@1.2.3").is_err());
+        assert!(PackageIdSpec::parse("registry+https://github.com").is_ok());
     }
 }
