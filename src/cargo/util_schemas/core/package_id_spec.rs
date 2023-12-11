@@ -6,7 +6,7 @@ use serde::{de, ser};
 use url::Url;
 
 use crate::util::errors::CargoResult;
-use crate::util::{validate_package_name, IntoUrl};
+use crate::util::validate_package_name;
 use crate::util_schemas::core::GitReference;
 use crate::util_schemas::core::SourceKind;
 use crate::util_semver::PartialVersion;
@@ -75,7 +75,7 @@ impl PackageIdSpec {
     /// }
     pub fn parse(spec: &str) -> CargoResult<PackageIdSpec> {
         if spec.contains("://") {
-            if let Ok(url) = spec.into_url() {
+            if let Ok(url) = Url::parse(spec) {
                 return PackageIdSpec::from_url(url);
             }
         } else if spec.contains('/') || spec.contains('\\') {
