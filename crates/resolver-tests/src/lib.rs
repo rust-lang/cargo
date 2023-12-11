@@ -18,7 +18,8 @@ use cargo::core::{Dependency, PackageId, Registry, Summary};
 use cargo::core::{GitReference, SourceId};
 use cargo::sources::source::QueryKind;
 use cargo::sources::IndexSummary;
-use cargo::util::{CargoResult, Config, IntoUrl, RustVersion};
+use cargo::util::{CargoResult, Config, IntoUrl};
+use cargo::util_schemas::manifest::RustVersion;
 
 use proptest::collection::{btree_map, vec};
 use proptest::prelude::*;

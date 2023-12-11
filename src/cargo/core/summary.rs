@@ -1,7 +1,7 @@
 use crate::core::{Dependency, PackageId, SourceId};
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
-use crate::util::RustVersion;
+use crate::util_schemas::manifest::RustVersion;
 use anyhow::bail;
 use semver::Version;
 use std::collections::{BTreeMap, HashMap, HashSet};

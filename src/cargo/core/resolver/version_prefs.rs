@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::core::{Dependency, PackageId, Summary};
 use crate::util::interning::InternedString;
-use crate::util::RustVersion;
+use crate::util_schemas::manifest::RustVersion;
 
 /// A collection of preferences for particular package versions.
 ///

@@ -26,9 +26,9 @@ use crate::util::interning::InternedString;
 use crate::util::restricted_names;
 use crate::util::{
     self, config::ConfigRelativePath, validate_package_name, Config, IntoUrl, OptVersionReq,
-    RustVersion,
 };
 use crate::util_schemas::manifest;
+use crate::util_schemas::manifest::RustVersion;
 
 mod embedded;
 mod targets;
