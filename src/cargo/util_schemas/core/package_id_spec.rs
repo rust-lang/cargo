@@ -197,6 +197,10 @@ impl PackageIdSpec {
                 None => (String::from(path_name), None),
             }
         };
+        if name.is_empty() {
+            bail!("package ID specification must have a name: `{url}`");
+        }
+        validate_package_name(name.as_str(), "pkgid", "")?;
         Ok(PackageIdSpec {
             name,
             version,
@@ -601,7 +605,7 @@ mod tests {
         )
         .is_err());
         assert!(PackageIdSpec::parse("@1.2.3").is_err());
-        assert!(PackageIdSpec::parse("registry+https://github.com").is_ok());
-        assert!(PackageIdSpec::parse("https://crates.io/1foo#1.2.3").is_ok())
+        assert!(PackageIdSpec::parse("registry+https://github.com").is_err());
+        assert!(PackageIdSpec::parse("https://crates.io/1foo#1.2.3").is_err())
     }
 }
