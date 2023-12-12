@@ -246,7 +246,7 @@ doc = false
 vendored-openssl = ["openssl/vendored"]
 vendored-libgit2 = ["libgit2-sys/vendored"]
 # This is primarily used by rust-lang/rust distributing cargo the executable.
-all-static = ['vendored-openssl', 'curl/static-curl', 'curl/force-system-lib-on-osx']
+all-static = ['vendored-openssl', 'curl/static-curl', 'curl/force-system-lib-on-osx', 'vendored-libgit2']
 
 [lints]
 workspace = true
