@@ -10,11 +10,13 @@ use std::fmt::{self, Display, Write};
 use std::path::PathBuf;
 use std::str;
 
+use anyhow::Result;
 use serde::de::{self, IntoDeserializer as _, Unexpected};
 use serde::ser;
 use serde::{Deserialize, Serialize};
 use serde_untagged::UntaggedEnumVisitor;
 
+use crate::util::restricted_names;
 use crate::util_schemas::core::PackageIdSpec;
 use crate::util_semver::PartialVersion;
 
@@ -38,7 +40,7 @@ pub struct TomlManifest {
     pub build_dependencies: Option<BTreeMap<String, InheritableDependency>>,
     #[serde(rename = "build_dependencies")]
     pub build_dependencies2: Option<BTreeMap<String, InheritableDependency>>,
-    pub features: Option<BTreeMap<String, Vec<String>>>,
+    pub features: Option<BTreeMap<FeatureName, Vec<String>>>,
     pub target: Option<BTreeMap<String, TomlPlatform>>,
     pub replace: Option<BTreeMap<String, TomlDependency>>,
     pub patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
@@ -69,7 +71,7 @@ impl TomlManifest {
             .or(self.build_dependencies2.as_ref())
     }
 
-    pub fn features(&self) -> Option<&BTreeMap<String, Vec<String>>> {
+    pub fn features(&self) -> Option<&BTreeMap<FeatureName, Vec<String>>> {
         self.features.as_ref()
     }
 }
@@ -1105,6 +1107,59 @@ impl TomlTarget {
         self.crate_type
             .as_ref()
             .or_else(|| self.crate_type2.as_ref())
+    }
+}
+
+#[derive(Serialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[serde(transparent)]
+pub struct FeatureName<T: AsRef<str> = String>(T);
+
+impl<T: AsRef<str>> FeatureName<T> {
+    pub fn new(name: T) -> Result<Self> {
+        restricted_names::validate_feature_name(name.as_ref(), "")?;
+        Ok(Self(name))
+    }
+
+    pub fn into_inner(self) -> T {
+        self.0
+    }
+}
+
+impl<T: AsRef<str>> std::convert::AsRef<str> for FeatureName<T> {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
+impl<T: AsRef<str>> std::ops::Deref for FeatureName<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<'a> std::str::FromStr for FeatureName<String> {
+    type Err = anyhow::Error;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        Self::new(value.to_owned())
+    }
+}
+
+impl<'de, T: AsRef<str> + serde::Deserialize<'de>> serde::Deserialize<'de> for FeatureName<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let inner = T::deserialize(deserializer)?;
+        FeatureName::new(inner).map_err(serde::de::Error::custom)
+    }
+}
+
+impl<T: AsRef<str>> Display for FeatureName<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.as_ref().fmt(f)
     }
 }
 

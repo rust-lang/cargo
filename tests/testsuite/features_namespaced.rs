@@ -439,6 +439,10 @@ fn crate_syntax_bad_name() {
 [ERROR] failed to parse manifest at [..]/foo/Cargo.toml`
 
 Caused by:
+  TOML parse error at line 10, column 17
+     |
+  10 |                 \"dep:bar\" = []
+     |                 ^^^^^^^^^
   feature named `dep:bar` is not allowed to start with `dep:`
 ",
         )
