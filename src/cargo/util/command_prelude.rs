@@ -11,6 +11,7 @@ use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
     print_available_packages, print_available_tests,
 };
+use crate::util_schemas::manifest::ProfileName;
 use crate::util_schemas::manifest::StringOrVec;
 use crate::CargoResult;
 use anyhow::bail;
@@ -605,7 +606,7 @@ Run `{cmd}` to see possible targets."
                 bail!("profile `doc` is reserved and not allowed to be explicitly specified")
             }
             (_, _, Some(name)) => {
-                restricted_names::validate_profile_name(name)?;
+                ProfileName::new(name)?;
                 name
             }
         };
