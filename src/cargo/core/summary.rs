@@ -1,7 +1,7 @@
 use crate::core::{Dependency, PackageId, SourceId};
 use crate::util::interning::InternedString;
-use crate::util::restricted_names::validate_feature_name;
 use crate::util::CargoResult;
+use crate::util_schemas::manifest::FeatureName;
 use crate::util_schemas::manifest::RustVersion;
 use anyhow::bail;
 use semver::Version;
@@ -191,7 +191,7 @@ fn build_feature_map(
 
     // Validate features are listed properly.
     for (feature, fvs) in &map {
-        validate_feature_name(feature)?;
+        FeatureName::new(feature)?;
         for fv in fvs {
             // Find data for the referenced dependency...
             let dep_data = {
