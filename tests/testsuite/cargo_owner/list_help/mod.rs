@@ -2,7 +2,7 @@ use cargo_test_support::curr_dir;
 use cargo_test_support::prelude::*;
 
 #[cargo_test]
-fn case() {
+fn list_case() {
     snapbox::cmd::Command::cargo_ui()
         .arg("owner")
         .arg("list")

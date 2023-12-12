@@ -1,6 +1,6 @@
 Name of a user or team to remove as an owner
 
-Usage: cargo owner remove <OWNER_NAME> [CRATE_NAME] [OPTIONS]
+Usage: cargo[EXE] owner remove <OWNER_NAME> [CRATE_NAME] [OPTIONS]
 
 Options:
       --crate <CRATE_NAME>   Crate name that you want to manage the owner

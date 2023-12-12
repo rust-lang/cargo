@@ -1,6 +1,6 @@
 Manage the owners of a crate on the registry
 
-Usage: cargo owner [OPTIONS]
+Usage: cargo[EXE] owner [OPTIONS]
        cargo owner add    <OWNER_NAME> [CRATE_NAME] [OPTIONS]
        cargo owner remove <OWNER_NAME> [CRATE_NAME] [OPTIONS]
        cargo owner list   [CRATE_NAME] [OPTIONS]
@@ -21,7 +21,7 @@ Manifest Options:
       --locked   Require Cargo.lock is up to date
       --offline  Run without accessing the network
 
-cargo owner add:
+cargo[EXE] owner add:
 Name of a user or team to invite as an owner
       --crate <CRATE_NAME>   Crate name that you want to manage the owner
       --index <INDEX>        Registry index URL to modify owners for
@@ -29,7 +29,7 @@ Name of a user or team to invite as an owner
       --token <TOKEN>        API token to use when authenticating
   -h, --help                 Print help
 
-cargo owner remove:
+cargo[EXE] owner remove:
 Name of a user or team to remove as an owner
       --crate <CRATE_NAME>   Crate name that you want to manage the owner
       --index <INDEX>        Registry index URL to modify owners for
@@ -37,7 +37,7 @@ Name of a user or team to remove as an owner
       --token <TOKEN>        API token to use when authenticating
   -h, --help                 Print help
 
-cargo owner list:
+cargo[EXE] owner list:
 List owners of a crate
       --crate <CRATE_NAME>   Crate name that you want to manage the owner
       --index <INDEX>        Registry index URL to modify owners for
