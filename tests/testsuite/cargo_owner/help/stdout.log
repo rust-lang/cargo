@@ -1,9 +1,9 @@
 Manage the owners of a crate on the registry
 
 Usage: cargo[EXE] owner [OPTIONS]
-       cargo owner add    <OWNER_NAME> [CRATE_NAME] [OPTIONS]
-       cargo owner remove <OWNER_NAME> [CRATE_NAME] [OPTIONS]
-       cargo owner list   [CRATE_NAME] [OPTIONS]
+       cargo[EXE] owner add    <OWNER_NAME> [CRATE_NAME] [OPTIONS]
+       cargo[EXE] owner remove <OWNER_NAME> [CRATE_NAME] [OPTIONS]
+       cargo[EXE] owner list   [CRATE_NAME] [OPTIONS]
 
 Options:
       --index <INDEX>        Registry index URL to modify owners for
