@@ -191,18 +191,6 @@ fn build_feature_map(
 
     // Validate features are listed properly.
     for (feature, fvs) in &map {
-        if feature.starts_with("dep:") {
-            bail!(
-                "feature named `{}` is not allowed to start with `dep:`",
-                feature
-            );
-        }
-        if feature.contains('/') {
-            bail!(
-                "feature named `{}` is not allowed to contain slashes",
-                feature
-            );
-        }
         validate_feature_name(pkg_id, feature)?;
         for fv in fvs {
             // Find data for the referenced dependency...
@@ -433,6 +421,13 @@ pub type FeatureMap = BTreeMap<InternedString, Vec<FeatureValue>>;
 fn validate_feature_name(pkg_id: PackageId, name: &str) -> CargoResult<()> {
     if name.is_empty() {
         bail!("feature name cannot be empty");
+    }
+
+    if name.starts_with("dep:") {
+        bail!("feature named `{name}` is not allowed to start with `dep:`",);
+    }
+    if name.contains('/') {
+        bail!("feature named `{name}` is not allowed to contain slashes",);
     }
     let mut chars = name.chars();
     if let Some(ch) = chars.next() {
