@@ -1,6 +1,5 @@
 //! Helpers for validating and checking names like package and crate names.
 
-use crate::core::PackageId;
 use crate::util::CargoResult;
 use anyhow::bail;
 use std::path::Path;
@@ -205,7 +204,7 @@ pub fn validate_profile_name(name: &str) -> CargoResult<()> {
     Ok(())
 }
 
-pub fn validate_feature_name(pkg_id: PackageId, name: &str) -> CargoResult<()> {
+pub fn validate_feature_name(name: &str, loc: impl std::fmt::Display) -> CargoResult<()> {
     if name.is_empty() {
         bail!("feature name cannot be empty");
     }
@@ -220,7 +219,7 @@ pub fn validate_feature_name(pkg_id: PackageId, name: &str) -> CargoResult<()> {
     if let Some(ch) = chars.next() {
         if !(unicode_xid::UnicodeXID::is_xid_start(ch) || ch == '_' || ch.is_digit(10)) {
             bail!(
-                "invalid character `{ch}` in feature `{name}` in package {pkg_id}, \
+                "invalid character `{ch}` in feature `{name}`{loc}, \
                 the first character must be a Unicode XID start character or digit \
                 (most letters or `_` or `0` to `9`)",
             );
@@ -229,7 +228,7 @@ pub fn validate_feature_name(pkg_id: PackageId, name: &str) -> CargoResult<()> {
     for ch in chars {
         if !(unicode_xid::UnicodeXID::is_xid_continue(ch) || ch == '-' || ch == '+' || ch == '.') {
             bail!(
-                "invalid character `{ch}` in feature `{name}` in package {pkg_id}, \
+                "invalid character `{ch}` in feature `{name}`{loc}, \
                 characters must be Unicode XID characters, '-', `+`, or `.` \
                 (numbers, `+`, `-`, `_`, `.`, or most letters)",
             );
@@ -241,32 +240,24 @@ pub fn validate_feature_name(pkg_id: PackageId, name: &str) -> CargoResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sources::CRATES_IO_INDEX;
-    use crate::util::into_url::IntoUrl;
-
-    use crate::core::SourceId;
 
     #[test]
     fn valid_feature_names() {
-        let loc = CRATES_IO_INDEX.into_url().unwrap();
-        let source_id = SourceId::for_registry(&loc).unwrap();
-        let pkg_id = PackageId::try_new("foo", "1.0.0", source_id).unwrap();
+        assert!(validate_feature_name("c++17", "").is_ok());
+        assert!(validate_feature_name("128bit", "").is_ok());
+        assert!(validate_feature_name("_foo", "").is_ok());
+        assert!(validate_feature_name("feat-name", "").is_ok());
+        assert!(validate_feature_name("feat_name", "").is_ok());
+        assert!(validate_feature_name("foo.bar", "").is_ok());
 
-        assert!(validate_feature_name(pkg_id, "c++17").is_ok());
-        assert!(validate_feature_name(pkg_id, "128bit").is_ok());
-        assert!(validate_feature_name(pkg_id, "_foo").is_ok());
-        assert!(validate_feature_name(pkg_id, "feat-name").is_ok());
-        assert!(validate_feature_name(pkg_id, "feat_name").is_ok());
-        assert!(validate_feature_name(pkg_id, "foo.bar").is_ok());
-
-        assert!(validate_feature_name(pkg_id, "+foo").is_err());
-        assert!(validate_feature_name(pkg_id, "-foo").is_err());
-        assert!(validate_feature_name(pkg_id, ".foo").is_err());
-        assert!(validate_feature_name(pkg_id, "foo:bar").is_err());
-        assert!(validate_feature_name(pkg_id, "foo?").is_err());
-        assert!(validate_feature_name(pkg_id, "?foo").is_err());
-        assert!(validate_feature_name(pkg_id, "ⒶⒷⒸ").is_err());
-        assert!(validate_feature_name(pkg_id, "a¼").is_err());
-        assert!(validate_feature_name(pkg_id, "").is_err());
+        assert!(validate_feature_name("+foo", "").is_err());
+        assert!(validate_feature_name("-foo", "").is_err());
+        assert!(validate_feature_name(".foo", "").is_err());
+        assert!(validate_feature_name("foo:bar", "").is_err());
+        assert!(validate_feature_name("foo?", "").is_err());
+        assert!(validate_feature_name("?foo", "").is_err());
+        assert!(validate_feature_name("ⒶⒷⒸ", "").is_err());
+        assert!(validate_feature_name("a¼", "").is_err());
+        assert!(validate_feature_name("", "").is_err());
     }
 }

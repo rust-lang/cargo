@@ -192,7 +192,7 @@ fn build_feature_map(
 
     // Validate features are listed properly.
     for (feature, fvs) in &map {
-        validate_feature_name(pkg_id, feature)?;
+        validate_feature_name(feature, format_args!(" in package {pkg_id}"))?;
         for fv in fvs {
             // Find data for the referenced dependency...
             let dep_data = {
