@@ -38,7 +38,7 @@ pub fn cli() -> Command {
                         .value_delimiter(',')
                         .value_name("OWNER_NAME")
                         .hide(true)
-                        .help("Name of the owner you want to invite")
+                        .help("Name of the owner you want to invite"),
                 )
                 .args(add_registry_args())
                 .override_usage(color_print::cstr!(
@@ -52,7 +52,7 @@ pub fn cli() -> Command {
                         .value_delimiter(',')
                         .value_name("OWNER_NAME")
                         .hide(true)
-                        .help("Name of the owner you want to remove")
+                        .help("Name of the owner you want to remove"),
                 )
                 .args(add_registry_args())
                 .override_usage(color_print::cstr!(
@@ -76,8 +76,7 @@ pub fn cli() -> Command {
 
 fn add_registry_args() -> [Arg; 4] {
     [
-        opt("crate", "Crate name that you want to manage the owner")
-            .value_name("CRATE_NAME"),
+        opt("crate", "Crate name that you want to manage the owner").value_name("CRATE_NAME"),
         opt("index", "Registry index URL to modify owners for")
             .value_name("INDEX")
             .conflicts_with("registry"),
