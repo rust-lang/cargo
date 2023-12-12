@@ -23,7 +23,6 @@ use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, Worksp
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
-use crate::util::restricted_names;
 use crate::util::{
     self, config::ConfigRelativePath, validate_package_name, Config, IntoUrl, OptVersionReq,
 };
@@ -2019,9 +2018,6 @@ pub fn validate_profile(
             )?;
         }
     }
-
-    // Profile name validation
-    restricted_names::validate_profile_name(name)?;
 
     if let Some(dir_name) = &root.dir_name {
         // This is disabled for now, as we would like to stabilize named

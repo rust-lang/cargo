@@ -641,10 +641,10 @@ impl<P: Clone> Default for TomlDetailedDependency<P> {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
-pub struct TomlProfiles(pub BTreeMap<String, TomlProfile>);
+pub struct TomlProfiles(pub BTreeMap<ProfileName, TomlProfile>);
 
 impl TomlProfiles {
-    pub fn get_all(&self) -> &BTreeMap<String, TomlProfile> {
+    pub fn get_all(&self) -> &BTreeMap<ProfileName, TomlProfile> {
         &self.0
     }
 
@@ -1112,6 +1112,65 @@ impl TomlTarget {
 
 #[derive(Serialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[serde(transparent)]
+pub struct ProfileName<T: AsRef<str> = String>(T);
+
+impl<T: AsRef<str>> ProfileName<T> {
+    pub fn new(name: T) -> Result<Self> {
+        restricted_names::validate_profile_name(name.as_ref())?;
+        Ok(Self(name))
+    }
+
+    pub fn into_inner(self) -> T {
+        self.0
+    }
+}
+
+impl<T: AsRef<str>> std::convert::AsRef<str> for ProfileName<T> {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
+impl<T: AsRef<str>> std::ops::Deref for ProfileName<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T: AsRef<str>> std::borrow::Borrow<str> for ProfileName<T> {
+    fn borrow(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
+impl<'a> std::str::FromStr for ProfileName<String> {
+    type Err = anyhow::Error;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        Self::new(value.to_owned())
+    }
+}
+
+impl<'de, T: AsRef<str> + serde::Deserialize<'de>> serde::Deserialize<'de> for ProfileName<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let inner = T::deserialize(deserializer)?;
+        ProfileName::new(inner).map_err(serde::de::Error::custom)
+    }
+}
+
+impl<T: AsRef<str>> Display for ProfileName<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.as_ref().fmt(f)
+    }
+}
+
+#[derive(Serialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[serde(transparent)]
 pub struct FeatureName<T: AsRef<str> = String>(T);
 
 impl<T: AsRef<str>> FeatureName<T> {
@@ -1136,6 +1195,12 @@ impl<T: AsRef<str>> std::ops::Deref for FeatureName<T> {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl<T: AsRef<str>> std::borrow::Borrow<str> for FeatureName<T> {
+    fn borrow(&self) -> &str {
+        self.0.as_ref()
     }
 }
 
