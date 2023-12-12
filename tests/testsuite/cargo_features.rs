@@ -296,7 +296,7 @@ fn allow_features_to_rustc() {
             "src/lib.rs",
             r#"
                 #![allow(internal_features)]
-                #![feature(test_2018_feature)]
+                #![feature(rustc_attrs)]
             "#,
         )
         .build();
@@ -307,7 +307,7 @@ fn allow_features_to_rustc() {
         .with_stderr_contains("[..]E0725[..]")
         .run();
 
-    p.cargo("-Zallow-features=test_2018_feature check")
+    p.cargo("-Zallow-features=rustc_attrs check")
         .masquerade_as_nightly_cargo(&["allow-features"])
         .with_stderr(
             "\
