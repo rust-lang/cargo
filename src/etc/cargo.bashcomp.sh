@@ -69,7 +69,10 @@ _cargo()
 	local opt__login="$opt_common $opt_lock --registry"
 	local opt__metadata="$opt_common $opt_feat $opt_mani $opt_lock --format-version=1 --no-deps --filter-platform"
 	local opt__new="$opt_common $opt_lock --vcs --bin --lib --name --edition --registry"
-	local opt__owner="$opt_common $opt_lock -a --add add -r --remove remove -l --list list --index --token --registry"
+	local opt__owner="$opt_common $opt_lock add remove list -a --add -r --remove -l --list --index --token --registry"
+	local opt__owner_add="$opt_common $opt_lock --crate --index --token --registry"
+	local opt__owner_remove="$opt_common $opt_lock --crate --index --token --registry"
+	local opt__owner_list="$opt_common $opt_lock --crate --index --token --registry"
 	local opt__package="$opt_common $opt_mani $opt_feat $opt_lock $opt_parallel --allow-dirty -l --list --no-verify --no-metadata --target --target-dir"
 	local opt__pkgid="$opt_common $opt_mani $opt_lock $opt_pkg"
 	local opt__publish="$opt_common $opt_mani $opt_feat $opt_lock $opt_parallel --allow-dirty --dry-run --token --no-verify --index --registry --target --target-dir"
@@ -209,12 +212,12 @@ _get_names_from_array()
 				line=${line##*=}
 				line=${line%%\"}
 				line=${line##*\"}
-				names+=($line)
+				names+=("$line")
 			fi
 		fi
 
 		last_line=$line
-	done < $manifest
+	done < "$manifest"
 	echo "${names[@]}"
 }
 

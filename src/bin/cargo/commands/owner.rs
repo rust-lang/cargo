@@ -6,15 +6,10 @@ use cargo_credential::Secret;
 pub fn cli() -> Command {
     subcommand("owner")
         .about("Manage the owners of a crate on the registry")
-        .arg(Arg::new("crate").hide(true))
         .arg_required_else_help(true)
         .args_conflicts_with_subcommands(true)
-        .override_usage(
-            "\
-       cargo[EXE] owner add    <OWNER_NAME> [CRATE_NAME] [OPTIONS]
-       cargo[EXE] owner remove <OWNER_NAME> [CRATE_NAME] [OPTIONS]
-       cargo[EXE] owner list   [CRATE_NAME] [OPTIONS]",
-        )
+        .flatten_help(true)
+        .arg(Arg::new("crate").hide(true))
         .arg(
             multi_opt(
                 "add",
@@ -37,41 +32,38 @@ pub fn cli() -> Command {
         .subcommands([
             Command::new("add")
                 .about("Name of a user or team to invite as an owner")
-                .args([
+                .arg(
                     Arg::new("add")
                         .required(true)
                         .value_delimiter(',')
                         .value_name("OWNER_NAME")
-                        .help("Name of the owner you want to invite"),
-                    Arg::new("crate")
-                        .value_name("CRATE_NAME")
-                        .help("Crate name that you want to manage the owner"),
-                ])
-                .args(&add_registry_args())
-                .override_usage("cargo owner add <OWNER_NAME> [CRATE_NAME] [OPTIONS]"),
+                        .hide(true)
+                        .help("Name of the owner you want to invite")
+                )
+                .args(add_registry_args())
+                .override_usage(color_print::cstr!(
+                    "<cyan,bold>cargo owner add    <<OWNER_NAME>> [CRATE_NAME] [OPTIONS]</>"
+                )),
             Command::new("remove")
                 .about("Name of a user or team to remove as an owner")
-                .args([
+                .arg(
                     Arg::new("remove")
                         .required(true)
                         .value_delimiter(',')
                         .value_name("OWNER_NAME")
-                        .help("Name of the owner you want to remove"),
-                    Arg::new("crate")
-                        .value_name("CRATE_NAME")
-                        .help("Crate name that you want to manage the owner"),
-                ])
-                .args(&add_registry_args())
-                .override_usage("cargo owner remove <OWNER_NAME> [CRATE_NAME] [OPTIONS]"),
+                        .hide(true)
+                        .help("Name of the owner you want to remove")
+                )
+                .args(add_registry_args())
+                .override_usage(color_print::cstr!(
+                    "<cyan,bold>cargo owner remove <<OWNER_NAME>> [CRATE_NAME] [OPTIONS]</>"
+                )),
             Command::new("list")
                 .about("List owners of a crate")
-                .arg(
-                    Arg::new("crate")
-                        .value_name("CRATE_NAME")
-                        .help("Crate name which you want to list all owner names"),
-                )
-                .args(&add_registry_args())
-                .override_usage("cargo owner list [CRATE_NAME] [OPTIONS]"),
+                .args(add_registry_args())
+                .override_usage(color_print::cstr!(
+                    "<cyan,bold>cargo owner list   [CRATE_NAME] [OPTIONS]</>"
+                )),
         ])
         .arg_index("Registry index URL to modify owners for")
         .arg_registry("Registry to modify owners for")
@@ -82,8 +74,10 @@ pub fn cli() -> Command {
         ))
 }
 
-fn add_registry_args() -> [Arg; 3] {
+fn add_registry_args() -> [Arg; 4] {
     [
+        opt("crate", "Crate name that you want to manage the owner")
+            .value_name("CRATE_NAME"),
         opt("index", "Registry index URL to modify owners for")
             .value_name("INDEX")
             .conflicts_with("registry"),
