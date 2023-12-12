@@ -220,24 +220,18 @@ pub fn validate_feature_name(pkg_id: PackageId, name: &str) -> CargoResult<()> {
     if let Some(ch) = chars.next() {
         if !(unicode_xid::UnicodeXID::is_xid_start(ch) || ch == '_' || ch.is_digit(10)) {
             bail!(
-                "invalid character `{}` in feature `{}` in package {}, \
+                "invalid character `{ch}` in feature `{name}` in package {pkg_id}, \
                 the first character must be a Unicode XID start character or digit \
                 (most letters or `_` or `0` to `9`)",
-                ch,
-                name,
-                pkg_id
             );
         }
     }
     for ch in chars {
         if !(unicode_xid::UnicodeXID::is_xid_continue(ch) || ch == '-' || ch == '+' || ch == '.') {
             bail!(
-                "invalid character `{}` in feature `{}` in package {}, \
+                "invalid character `{ch}` in feature `{name}` in package {pkg_id}, \
                 characters must be Unicode XID characters, '-', `+`, or `.` \
                 (numbers, `+`, `-`, `_`, `.`, or most letters)",
-                ch,
-                name,
-                pkg_id
             );
         }
     }
