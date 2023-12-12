@@ -1,6 +1,6 @@
 Name of a user or team to invite as an owner
 
-Usage: cargo[EXE] owner add    <OWNER_NAME> [CRATE_NAME] [OPTIONS]
+Usage: cargo owner add    <OWNER_NAME> [CRATE_NAME] [OPTIONS]
 
 Options:
       --crate <CRATE_NAME>   Crate name that you want to manage the owner
