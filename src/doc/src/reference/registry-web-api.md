@@ -10,7 +10,7 @@ visit the registry's website to obtain a token, and Cargo can store the token
 using the [`cargo login`] command, or by passing the token on the
 command-line.
 
-Responses use the 200 response code for success.
+Responses use a 2xx response code for success.
 Errors should use an appropriate response code, such as 404.
 Failure
 responses should have a JSON object with the following structure:
