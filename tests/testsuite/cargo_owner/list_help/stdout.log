@@ -1,6 +1,6 @@
 List owners of a crate
 
-Usage: cargo[EXE] owner list   [CRATE_NAME] [OPTIONS]
+Usage: cargo owner list   [CRATE_NAME] [OPTIONS]
 
 Options:
       --crate <CRATE_NAME>   Crate name that you want to manage the owner
