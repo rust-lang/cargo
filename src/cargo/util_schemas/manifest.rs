@@ -1116,7 +1116,7 @@ pub struct FeatureName<T: AsRef<str> = String>(T);
 
 impl<T: AsRef<str>> FeatureName<T> {
     pub fn new(name: T) -> Result<Self> {
-        restricted_names::validate_feature_name(name.as_ref(), "")?;
+        restricted_names::validate_feature_name(name.as_ref())?;
         Ok(Self(name))
     }
 

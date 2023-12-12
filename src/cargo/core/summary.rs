@@ -50,7 +50,7 @@ impl Summary {
                 )
             }
         }
-        let feature_map = build_feature_map(pkg_id, features, &dependencies)?;
+        let feature_map = build_feature_map(features, &dependencies)?;
         Ok(Summary {
             inner: Rc::new(Inner {
                 package_id: pkg_id,
@@ -141,7 +141,6 @@ impl Hash for Summary {
 /// Checks features for errors, bailing out a CargoResult:Err if invalid,
 /// and creates FeatureValues for each feature.
 fn build_feature_map(
-    pkg_id: PackageId,
     features: &BTreeMap<InternedString, Vec<InternedString>>,
     dependencies: &[Dependency],
 ) -> CargoResult<FeatureMap> {
@@ -192,7 +191,7 @@ fn build_feature_map(
 
     // Validate features are listed properly.
     for (feature, fvs) in &map {
-        validate_feature_name(feature, format_args!(" in package {pkg_id}"))?;
+        validate_feature_name(feature)?;
         for fv in fvs {
             // Find data for the referenced dependency...
             let dep_data = {

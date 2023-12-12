@@ -204,7 +204,7 @@ pub fn validate_profile_name(name: &str) -> CargoResult<()> {
     Ok(())
 }
 
-pub fn validate_feature_name(name: &str, loc: impl std::fmt::Display) -> CargoResult<()> {
+pub fn validate_feature_name(name: &str) -> CargoResult<()> {
     if name.is_empty() {
         bail!("feature name cannot be empty");
     }
@@ -219,7 +219,7 @@ pub fn validate_feature_name(name: &str, loc: impl std::fmt::Display) -> CargoRe
     if let Some(ch) = chars.next() {
         if !(unicode_xid::UnicodeXID::is_xid_start(ch) || ch == '_' || ch.is_digit(10)) {
             bail!(
-                "invalid character `{ch}` in feature `{name}`{loc}, \
+                "invalid character `{ch}` in feature `{name}`, \
                 the first character must be a Unicode XID start character or digit \
                 (most letters or `_` or `0` to `9`)",
             );
@@ -228,7 +228,7 @@ pub fn validate_feature_name(name: &str, loc: impl std::fmt::Display) -> CargoRe
     for ch in chars {
         if !(unicode_xid::UnicodeXID::is_xid_continue(ch) || ch == '-' || ch == '+' || ch == '.') {
             bail!(
-                "invalid character `{ch}` in feature `{name}`{loc}, \
+                "invalid character `{ch}` in feature `{name}`, \
                 characters must be Unicode XID characters, '-', `+`, or `.` \
                 (numbers, `+`, `-`, `_`, `.`, or most letters)",
             );
@@ -243,21 +243,21 @@ mod tests {
 
     #[test]
     fn valid_feature_names() {
-        assert!(validate_feature_name("c++17", "").is_ok());
-        assert!(validate_feature_name("128bit", "").is_ok());
-        assert!(validate_feature_name("_foo", "").is_ok());
-        assert!(validate_feature_name("feat-name", "").is_ok());
-        assert!(validate_feature_name("feat_name", "").is_ok());
-        assert!(validate_feature_name("foo.bar", "").is_ok());
+        assert!(validate_feature_name("c++17").is_ok());
+        assert!(validate_feature_name("128bit").is_ok());
+        assert!(validate_feature_name("_foo").is_ok());
+        assert!(validate_feature_name("feat-name").is_ok());
+        assert!(validate_feature_name("feat_name").is_ok());
+        assert!(validate_feature_name("foo.bar").is_ok());
 
-        assert!(validate_feature_name("+foo", "").is_err());
-        assert!(validate_feature_name("-foo", "").is_err());
-        assert!(validate_feature_name(".foo", "").is_err());
-        assert!(validate_feature_name("foo:bar", "").is_err());
-        assert!(validate_feature_name("foo?", "").is_err());
-        assert!(validate_feature_name("?foo", "").is_err());
-        assert!(validate_feature_name("ⒶⒷⒸ", "").is_err());
-        assert!(validate_feature_name("a¼", "").is_err());
-        assert!(validate_feature_name("", "").is_err());
+        assert!(validate_feature_name("+foo").is_err());
+        assert!(validate_feature_name("-foo").is_err());
+        assert!(validate_feature_name(".foo").is_err());
+        assert!(validate_feature_name("foo:bar").is_err());
+        assert!(validate_feature_name("foo?").is_err());
+        assert!(validate_feature_name("?foo").is_err());
+        assert!(validate_feature_name("ⒶⒷⒸ").is_err());
+        assert!(validate_feature_name("a¼").is_err());
+        assert!(validate_feature_name("").is_err());
     }
 }
