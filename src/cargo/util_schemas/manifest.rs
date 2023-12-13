@@ -1177,6 +1177,15 @@ impl<T: AsRef<str>> PackageName<T> {
     }
 }
 
+impl PackageName {
+    pub fn sanitize(name: impl AsRef<str>, placeholder: char) -> Self {
+        PackageName(restricted_names::sanitize_package_name(
+            name.as_ref(),
+            placeholder,
+        ))
+    }
+}
+
 str_newtype!(RegistryName);
 
 impl<T: AsRef<str>> RegistryName<T> {
