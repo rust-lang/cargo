@@ -1546,3 +1546,79 @@ or use environment variable CARGO_REGISTRY_TOKEN",
         )
         .run();
 }
+
+#[cargo_test]
+fn config_empty_registry_name() {
+    let _ = RegistryBuilder::new()
+        .no_configure_token()
+        .alternative()
+        .build();
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            "[registry.'']
+            ",
+        )
+        .build();
+
+    p.cargo("publish")
+        .arg("--registry")
+        .arg("")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] registry index was not found in any configuration: ``",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn empty_registry_flag() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("publish")
+        .arg("--registry")
+        .arg("")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] registry index was not found in any configuration: ``",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn empty_dependency_registry() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies]
+                bar = { version = "0.1.0", registry = "" }
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            extern crate bar;
+            pub fn f() { bar::bar(); }
+            ",
+        )
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  registry index was not found in any configuration: ``",
+        )
+        .run();
+}
