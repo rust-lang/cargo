@@ -21,7 +21,6 @@ pub(crate) use self::io::LimitErrorReader;
 pub use self::lockserver::{LockServer, LockServerClient, LockServerStarted};
 pub use self::progress::{Progress, ProgressStyle};
 pub use self::queue::Queue;
-pub use self::restricted_names::validate_package_name;
 pub use self::rustc::Rustc;
 pub use self::semver_ext::OptVersionReq;
 pub use self::vcs::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
