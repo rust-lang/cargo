@@ -1,6 +1,5 @@
 //! Crate name parsing.
 
-use anyhow::bail;
 use anyhow::Context as _;
 
 use super::Dependency;
@@ -29,9 +28,6 @@ impl CrateSpec {
             .map(|(n, v)| (n, Some(v)))
             .unwrap_or((pkg_id, None));
 
-        if name.is_empty() {
-            bail!("dependency name cannot be empty");
-        }
         validate_package_name(name, "dependency name", "")?;
 
         if let Some(version) = version {

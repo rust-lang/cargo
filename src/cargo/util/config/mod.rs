@@ -1551,9 +1551,6 @@ impl Config {
 
     /// Gets the index for a registry.
     pub fn get_registry_index(&self, registry: &str) -> CargoResult<Url> {
-        if registry.is_empty() {
-            bail!("registry name cannot be empty");
-        }
         validate_package_name(registry, "registry name", "")?;
         if let Some(index) = self.get_string(&format!("registries.{}.index", registry))? {
             self.resolve_registry_index(&index).with_context(|| {

@@ -833,9 +833,6 @@ Run `{cmd}` to see possible targets."
             (None, None) => config.default_registry()?.map(RegistryOrIndex::Registry),
             (None, Some(i)) => Some(RegistryOrIndex::Index(i.into_url()?)),
             (Some(r), None) => {
-                if r.is_empty() {
-                    bail!("registry name cannot be empty");
-                }
                 restricted_names::validate_package_name(r, "registry name", "")?;
                 Some(RegistryOrIndex::Registry(r.to_string()))
             }
@@ -851,9 +848,6 @@ Run `{cmd}` to see possible targets."
         match self._value_of("registry").map(|s| s.to_string()) {
             None => config.default_registry(),
             Some(registry) => {
-                if registry.is_empty() {
-                    bail!("registry name cannot be empty");
-                }
                 restricted_names::validate_package_name(&registry, "registry name", "")?;
                 Ok(Some(registry))
             }

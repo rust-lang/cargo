@@ -4,7 +4,7 @@ use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::toml_mut::is_sorted;
 use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
 use crate::util::{restricted_names, Config};
-use anyhow::{anyhow, bail, Context};
+use anyhow::{anyhow, Context};
 use cargo_util::paths::{self, write_atomic};
 use serde::de;
 use serde::Deserialize;
@@ -197,9 +197,6 @@ fn check_name(
         }
         help
     };
-    if name.is_empty() {
-        bail!("package name cannot be empty");
-    }
     restricted_names::validate_package_name(name, "package name", &bin_help())?;
 
     if restricted_names::is_keyword(name) {
