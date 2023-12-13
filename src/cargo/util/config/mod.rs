@@ -77,9 +77,10 @@ use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::errors::CargoResult;
 use crate::util::network::http::configure_http_handle;
 use crate::util::network::http::http_handle;
+use crate::util::try_canonicalize;
 use crate::util::{internal, CanonicalUrl};
-use crate::util::{try_canonicalize, validate_package_name};
 use crate::util::{Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
+use crate::util_schemas::manifest::RegistryName;
 use anyhow::{anyhow, bail, format_err, Context as _};
 use cargo_credential::Secret;
 use cargo_util::paths;
@@ -1551,7 +1552,7 @@ impl Config {
 
     /// Gets the index for a registry.
     pub fn get_registry_index(&self, registry: &str) -> CargoResult<Url> {
-        validate_package_name(registry, "registry name", "")?;
+        RegistryName::new(registry)?;
         if let Some(index) = self.get_string(&format!("registries.{}.index", registry))? {
             self.resolve_registry_index(&index).with_context(|| {
                 format!(
