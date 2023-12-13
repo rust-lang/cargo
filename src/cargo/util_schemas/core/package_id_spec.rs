@@ -97,6 +97,9 @@ impl PackageIdSpec {
             Some(version) => Some(version.parse::<PartialVersion>()?),
             None => None,
         };
+        if name.is_empty() {
+            bail!("package ID specification must have a name: `{spec}`");
+        }
         validate_package_name(name, "pkgid", "")?;
         Ok(PackageIdSpec {
             name: String::from(name),
@@ -182,6 +185,10 @@ impl PackageIdSpec {
                 None => (String::from(path_name), None),
             }
         };
+        if name.is_empty() {
+            bail!("package ID specification must have a name: `{url}`");
+        }
+        validate_package_name(name.as_str(), "pkgid", "")?;
         Ok(PackageIdSpec {
             name,
             version,
@@ -585,5 +592,8 @@ mod tests {
             "sparse+https://github.com/rust-lang/cargo#0.52.0?branch=dev"
         )
         .is_err());
+        assert!(PackageIdSpec::parse("@1.2.3").is_err());
+        assert!(PackageIdSpec::parse("registry+https://github.com").is_err());
+        assert!(PackageIdSpec::parse("https://crates.io/1foo#1.2.3").is_err())
     }
 }
