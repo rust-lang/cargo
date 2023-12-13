@@ -1568,7 +1568,7 @@ fn config_empty_registry_name() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] registry index was not found in any configuration: ``",
+[ERROR] registry name cannot be empty",
         )
         .run();
 }
@@ -1583,7 +1583,7 @@ fn empty_registry_flag() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] registry index was not found in any configuration: ``",
+[ERROR] registry name cannot be empty",
         )
         .run();
 }
@@ -1618,7 +1618,7 @@ fn empty_dependency_registry() {
 [ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  registry index was not found in any configuration: ``",
+  registry name cannot be empty",
         )
         .run();
 }
