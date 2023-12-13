@@ -97,9 +97,6 @@ impl PackageIdSpec {
             Some(version) => Some(version.parse::<PartialVersion>()?),
             None => None,
         };
-        if name.is_empty() {
-            bail!("package ID specification must have a name: `{spec}`");
-        }
         validate_package_name(name, "pkgid", "")?;
         Ok(PackageIdSpec {
             name: String::from(name),
@@ -185,9 +182,6 @@ impl PackageIdSpec {
                 None => (String::from(path_name), None),
             }
         };
-        if name.is_empty() {
-            bail!("package ID specification must have a name: `{url}`");
-        }
         validate_package_name(name.as_str(), "pkgid", "")?;
         Ok(PackageIdSpec {
             name,

@@ -480,10 +480,6 @@ pub fn to_real_manifest(
     };
 
     let package_name = package.name.trim();
-    if package_name.is_empty() {
-        bail!("package name cannot be an empty string")
-    }
-
     validate_package_name(package_name, "package name", "")?;
 
     let resolved_path = package_root.join("Cargo.toml");

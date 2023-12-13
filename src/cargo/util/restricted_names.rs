@@ -43,6 +43,10 @@ pub fn is_conflicting_artifact_name(name: &str) -> bool {
 /// elsewhere. `cargo new` has a few restrictions, such as checking for
 /// reserved names. crates.io has even more restrictions.
 pub fn validate_package_name(name: &str, what: &str, help: &str) -> CargoResult<()> {
+    if name.is_empty() {
+        bail!("{what} cannot be empty");
+    }
+
     let mut chars = name.chars();
     if let Some(ch) = chars.next() {
         if ch.is_digit(10) {
