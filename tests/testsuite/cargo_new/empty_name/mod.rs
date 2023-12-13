@@ -14,7 +14,7 @@ fn case() {
         .args(["foo", "--name", ""])
         .current_dir(cwd)
         .assert()
-        .success()
+        .failure()
         .stdout_matches_path(curr_dir!().join("stdout.log"))
         .stderr_matches_path(curr_dir!().join("stderr.log"));
 

@@ -1,7 +1,1 @@
-warning: compiling this new package may not work due to invalid workspace configuration
-
-failed to parse manifest at `[ROOT]/case/foo/Cargo.toml`
-
-Caused by:
-  package name cannot be an empty string
-     Created binary (application) `` package
+error: package name cannot be empty
