@@ -33,17 +33,17 @@ pub struct TomlManifest {
     pub example: Option<Vec<TomlExampleTarget>>,
     pub test: Option<Vec<TomlTestTarget>>,
     pub bench: Option<Vec<TomlTestTarget>>,
-    pub dependencies: Option<BTreeMap<String, InheritableDependency>>,
-    pub dev_dependencies: Option<BTreeMap<String, InheritableDependency>>,
+    pub dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
+    pub dev_dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
     #[serde(rename = "dev_dependencies")]
-    pub dev_dependencies2: Option<BTreeMap<String, InheritableDependency>>,
-    pub build_dependencies: Option<BTreeMap<String, InheritableDependency>>,
+    pub dev_dependencies2: Option<BTreeMap<PackageName, InheritableDependency>>,
+    pub build_dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
     #[serde(rename = "build_dependencies")]
-    pub build_dependencies2: Option<BTreeMap<String, InheritableDependency>>,
+    pub build_dependencies2: Option<BTreeMap<PackageName, InheritableDependency>>,
     pub features: Option<BTreeMap<FeatureName, Vec<String>>>,
     pub target: Option<BTreeMap<String, TomlPlatform>>,
     pub replace: Option<BTreeMap<String, TomlDependency>>,
-    pub patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
+    pub patch: Option<BTreeMap<String, BTreeMap<PackageName, TomlDependency>>>,
     pub workspace: Option<TomlWorkspace>,
     pub badges: Option<InheritableBtreeMap>,
     pub lints: Option<InheritableLints>,
@@ -59,13 +59,13 @@ impl TomlManifest {
         self.package.as_ref().or(self.project.as_ref())
     }
 
-    pub fn dev_dependencies(&self) -> Option<&BTreeMap<String, InheritableDependency>> {
+    pub fn dev_dependencies(&self) -> Option<&BTreeMap<PackageName, InheritableDependency>> {
         self.dev_dependencies
             .as_ref()
             .or(self.dev_dependencies2.as_ref())
     }
 
-    pub fn build_dependencies(&self) -> Option<&BTreeMap<String, InheritableDependency>> {
+    pub fn build_dependencies(&self) -> Option<&BTreeMap<PackageName, InheritableDependency>> {
         self.build_dependencies
             .as_ref()
             .or(self.build_dependencies2.as_ref())
@@ -87,7 +87,7 @@ pub struct TomlWorkspace {
 
     // Properties that can be inherited by members.
     pub package: Option<InheritablePackage>,
-    pub dependencies: Option<BTreeMap<String, TomlDependency>>,
+    pub dependencies: Option<BTreeMap<PackageName, TomlDependency>>,
     pub lints: Option<TomlLints>,
 }
 
@@ -125,7 +125,7 @@ pub struct InheritablePackage {
 pub struct TomlPackage {
     pub edition: Option<InheritableString>,
     pub rust_version: Option<InheritableRustVersion>,
-    pub name: String,
+    pub name: PackageName,
     pub version: Option<InheritableSemverVersion>,
     pub authors: Option<InheritableVecString>,
     pub build: Option<StringOrBool>,
@@ -592,7 +592,7 @@ pub struct TomlDetailedDependency<P: Clone = String> {
     pub default_features: Option<bool>,
     #[serde(rename = "default_features")]
     pub default_features2: Option<bool>,
-    pub package: Option<String>,
+    pub package: Option<PackageName>,
     pub public: Option<bool>,
 
     /// One or more of `bin`, `cdylib`, `staticlib`, `bin:<name>`.
@@ -1168,6 +1168,15 @@ macro_rules! str_newtype {
     };
 }
 
+str_newtype!(PackageName);
+
+impl<T: AsRef<str>> PackageName<T> {
+    pub fn new(name: T) -> Result<Self> {
+        restricted_names::validate_package_name(name.as_ref(), "package name", "")?;
+        Ok(Self(name))
+    }
+}
+
 str_newtype!(ProfileName);
 
 impl<T: AsRef<str>> ProfileName<T> {
@@ -1190,23 +1199,23 @@ impl<T: AsRef<str>> FeatureName<T> {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlPlatform {
-    pub dependencies: Option<BTreeMap<String, InheritableDependency>>,
-    pub build_dependencies: Option<BTreeMap<String, InheritableDependency>>,
+    pub dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
+    pub build_dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
     #[serde(rename = "build_dependencies")]
-    pub build_dependencies2: Option<BTreeMap<String, InheritableDependency>>,
-    pub dev_dependencies: Option<BTreeMap<String, InheritableDependency>>,
+    pub build_dependencies2: Option<BTreeMap<PackageName, InheritableDependency>>,
+    pub dev_dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
     #[serde(rename = "dev_dependencies")]
-    pub dev_dependencies2: Option<BTreeMap<String, InheritableDependency>>,
+    pub dev_dependencies2: Option<BTreeMap<PackageName, InheritableDependency>>,
 }
 
 impl TomlPlatform {
-    pub fn dev_dependencies(&self) -> Option<&BTreeMap<String, InheritableDependency>> {
+    pub fn dev_dependencies(&self) -> Option<&BTreeMap<PackageName, InheritableDependency>> {
         self.dev_dependencies
             .as_ref()
             .or(self.dev_dependencies2.as_ref())
     }
 
-    pub fn build_dependencies(&self) -> Option<&BTreeMap<String, InheritableDependency>> {
+    pub fn build_dependencies(&self) -> Option<&BTreeMap<PackageName, InheritableDependency>> {
         self.build_dependencies
             .as_ref()
             .or(self.build_dependencies2.as_ref())

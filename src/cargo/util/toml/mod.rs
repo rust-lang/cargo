@@ -23,9 +23,7 @@ use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, Worksp
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
-use crate::util::{
-    self, config::ConfigRelativePath, validate_package_name, Config, IntoUrl, OptVersionReq,
-};
+use crate::util::{self, config::ConfigRelativePath, Config, IntoUrl, OptVersionReq};
 use crate::util_schemas::manifest;
 use crate::util_schemas::manifest::RustVersion;
 
@@ -309,9 +307,9 @@ pub fn prepare_for_publish(
 
     fn map_deps(
         config: &Config,
-        deps: Option<&BTreeMap<String, manifest::InheritableDependency>>,
+        deps: Option<&BTreeMap<manifest::PackageName, manifest::InheritableDependency>>,
         filter: impl Fn(&manifest::TomlDependency) -> bool,
-    ) -> CargoResult<Option<BTreeMap<String, manifest::InheritableDependency>>> {
+    ) -> CargoResult<Option<BTreeMap<manifest::PackageName, manifest::InheritableDependency>>> {
         let Some(deps) = deps else { return Ok(None) };
         let deps = deps
             .iter()
@@ -479,7 +477,6 @@ pub fn to_real_manifest(
     };
 
     let package_name = package.name.trim();
-    validate_package_name(package_name, "package name", "")?;
 
     let resolved_path = package_root.join("Cargo.toml");
 
@@ -627,11 +624,11 @@ pub fn to_real_manifest(
 
     fn process_dependencies(
         cx: &mut Context<'_, '_>,
-        new_deps: Option<&BTreeMap<String, manifest::InheritableDependency>>,
+        new_deps: Option<&BTreeMap<manifest::PackageName, manifest::InheritableDependency>>,
         kind: Option<DepKind>,
         workspace_config: &WorkspaceConfig,
         inherit_cell: &LazyCell<InheritableFields>,
-    ) -> CargoResult<Option<BTreeMap<String, manifest::InheritableDependency>>> {
+    ) -> CargoResult<Option<BTreeMap<manifest::PackageName, manifest::InheritableDependency>>> {
         let Some(dependencies) = new_deps else {
             return Ok(None);
         };
@@ -642,12 +639,12 @@ pub fn to_real_manifest(
             })
         };
 
-        let mut deps: BTreeMap<String, manifest::InheritableDependency> = BTreeMap::new();
+        let mut deps: BTreeMap<manifest::PackageName, manifest::InheritableDependency> =
+            BTreeMap::new();
         for (n, v) in dependencies.iter() {
             let resolved = dependency_inherit_with(v.clone(), n, inheritable, cx)?;
             let dep = dep_to_dependency(&resolved, n, cx, kind)?;
             let name_in_toml = dep.name_in_toml().as_str();
-            validate_package_name(name_in_toml, "dependency name", "")?;
             let kind_name = match kind {
                 Some(k) => k.kind_table(),
                 None => "dependencies",
@@ -660,7 +657,7 @@ pub fn to_real_manifest(
             unused_dep_keys(name_in_toml, &table_in_toml, v.unused_keys(), cx.warnings);
             cx.deps.push(dep);
             deps.insert(
-                n.to_string(),
+                n.clone(),
                 manifest::InheritableDependency::Value(resolved.clone()),
             );
         }
@@ -1466,7 +1463,7 @@ macro_rules! package_field_getter {
 #[derive(Clone, Debug, Default)]
 pub struct InheritableFields {
     package: Option<manifest::InheritablePackage>,
-    dependencies: Option<BTreeMap<String, manifest::TomlDependency>>,
+    dependencies: Option<BTreeMap<manifest::PackageName, manifest::TomlDependency>>,
     lints: Option<manifest::TomlLints>,
 
     // Bookkeeping to help when resolving values from above

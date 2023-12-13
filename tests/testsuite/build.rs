@@ -460,6 +460,10 @@ fn cargo_compile_with_empty_package_name() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
+  TOML parse error at line 3, column 16
+    |
+  3 |         name = \"\"
+    |                ^^
   package name cannot be empty
 ",
         )
@@ -479,6 +483,10 @@ fn cargo_compile_with_invalid_package_name() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
+  TOML parse error at line 3, column 16
+    |
+  3 |         name = \"foo::bar\"
+    |                ^^^^^^^^^^
   invalid character `:` in package name: `foo::bar`, [..]
 ",
         )
@@ -1182,7 +1190,11 @@ fn cargo_compile_with_invalid_dep_rename() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  invalid character ` ` in dependency name: `haha this isn't a valid name 🐛`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
+  TOML parse error at line 7, column 17
+    |
+  7 |                 \"haha this isn't a valid name 🐛\" = { package = \"libc\", version = \"0.1\" }
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  invalid character ` ` in package name: `haha this isn't a valid name 🐛`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
 ",
         )
         .run();
