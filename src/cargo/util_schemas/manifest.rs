@@ -572,7 +572,7 @@ impl<'de, P: Deserialize<'de> + Clone> de::Deserialize<'de> for TomlDependency<P
 #[serde(rename_all = "kebab-case")]
 pub struct TomlDetailedDependency<P: Clone = String> {
     pub version: Option<String>,
-    pub registry: Option<String>,
+    pub registry: Option<RegistryName>,
     /// The URL of the `registry` field.
     /// This is an internal implementation detail. When Cargo creates a
     /// package, it replaces `registry` with `registry-index` so that the
@@ -1173,6 +1173,15 @@ str_newtype!(PackageName);
 impl<T: AsRef<str>> PackageName<T> {
     pub fn new(name: T) -> Result<Self> {
         restricted_names::validate_package_name(name.as_ref(), "package name", "")?;
+        Ok(Self(name))
+    }
+}
+
+str_newtype!(RegistryName);
+
+impl<T: AsRef<str>> RegistryName<T> {
+    pub fn new(name: T) -> Result<Self> {
+        restricted_names::validate_package_name(name.as_ref(), "registry name", "")?;
         Ok(Self(name))
     }
 }
