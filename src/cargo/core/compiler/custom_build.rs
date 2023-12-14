@@ -42,10 +42,11 @@ use crate::util::{internal, profile};
 use anyhow::{bail, Context as _};
 use cargo_platform::Cfg;
 use cargo_util::paths;
+use cargo_util_schemas::manifest::RustVersion;
 use std::collections::hash_map::{Entry, HashMap};
 use std::collections::{BTreeSet, HashSet};
 use std::path::{Path, PathBuf};
-use std::str;
+use std::str::{self, FromStr};
 use std::sync::{Arc, Mutex};
 
 /// Deprecated: A build script instruction that tells Cargo to display a warning after the
@@ -413,8 +414,10 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     let nightly_features_allowed = cx.bcx.config.nightly_features_allowed;
     let extra_check_cfg = cx.bcx.config.cli_unstable().check_cfg;
     let targets: Vec<Target> = unit.pkg.targets().to_vec();
+    let msrv = unit.pkg.rust_version().cloned();
     // Need a separate copy for the fresh closure.
     let targets_fresh = targets.clone();
+    let msrv_fresh = msrv.clone();
 
     let env_profile_name = unit.profile.name.to_uppercase();
     let built_with_debuginfo = cx
@@ -560,6 +563,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
             extra_check_cfg,
             nightly_features_allowed,
             &targets,
+            &msrv,
         )?;
 
         if json_messages {
@@ -588,6 +592,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
                 extra_check_cfg,
                 nightly_features_allowed,
                 &targets_fresh,
+                &msrv_fresh,
             )?,
         };
 
@@ -644,6 +649,7 @@ impl BuildOutput {
         extra_check_cfg: bool,
         nightly_features_allowed: bool,
         targets: &[Target],
+        msrv: &Option<RustVersion>,
     ) -> CargoResult<BuildOutput> {
         let contents = paths::read_bytes(path)?;
         BuildOutput::parse(
@@ -655,6 +661,7 @@ impl BuildOutput {
             extra_check_cfg,
             nightly_features_allowed,
             targets,
+            msrv,
         )
     }
 
@@ -675,6 +682,7 @@ impl BuildOutput {
         extra_check_cfg: bool,
         nightly_features_allowed: bool,
         targets: &[Target],
+        msrv: &Option<RustVersion>,
     ) -> CargoResult<BuildOutput> {
         let mut library_paths = Vec::new();
         let mut library_links = Vec::new();
@@ -714,6 +722,25 @@ impl BuildOutput {
         ];
         const DOCS_LINK_SUGGESTION: &str = "See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
                 for more information about build script outputs.";
+
+        fn check_minimum_supported_rust_version_for_new_syntax(
+            pkg_descr: &str,
+            msrv: &Option<RustVersion>,
+        ) -> CargoResult<()> {
+            let new_syntax_added_in = &RustVersion::from_str("1.77.0")?;
+
+            if let Some(msrv) = msrv {
+                if msrv < new_syntax_added_in {
+                    bail!(
+                        "the `cargo::` syntax for build script output instructions was added in \
+                        Rust 1.77.0, but the minimum supported Rust version of `{pkg_descr}` is {msrv}.\n\
+                        {DOCS_LINK_SUGGESTION}"
+                    );
+                }
+            }
+
+            Ok(())
+        }
 
         fn parse_directive<'a>(
             whence: &str,
@@ -768,6 +795,7 @@ impl BuildOutput {
             };
             let mut old_syntax = false;
             let (key, value) = if let Some(data) = line.strip_prefix("cargo::") {
+                check_minimum_supported_rust_version_for_new_syntax(pkg_descr, msrv)?;
                 // For instance, `cargo::rustc-flags=foo` or `cargo::metadata=foo=bar`.
                 parse_directive(whence.as_str(), line, data, old_syntax)?
             } else if let Some(data) = line.strip_prefix("cargo:") {
@@ -1220,6 +1248,7 @@ fn prev_build_output(cx: &mut Context<'_, '_>, unit: &Unit) -> (Option<BuildOutp
             cx.bcx.config.cli_unstable().check_cfg,
             cx.bcx.config.nightly_features_allowed,
             unit.pkg.targets(),
+            &unit.pkg.rust_version().cloned(),
         )
         .ok(),
         prev_script_out_dir,
