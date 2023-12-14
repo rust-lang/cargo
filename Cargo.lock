@@ -42,6 +42,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b46cbb362ab8752921c97e041f5e366ee6297bd428a31275b9fcf1e380f7299"
 
 [[package]]
+name = "annotate-snippets"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0a433302f833baa830c0092100c481c7ea768c5981a3c36f549517a502f246dd"
+dependencies = [
+ "anstyle",
+ "unicode-width",
+]
+
+[[package]]
 name = "anstream"
 version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -244,6 +254,7 @@ dependencies = [
 name = "cargo"
 version = "0.78.0"
 dependencies = [
+ "annotate-snippets",
  "anstream",
  "anstyle",
  "anyhow",

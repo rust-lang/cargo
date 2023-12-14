@@ -353,15 +353,13 @@ fn cargo_compile_with_invalid_manifest2() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  TOML parse error at line 3, column 23
-    |
-  3 |                 foo = bar
-    |                       ^
-  invalid string
-  expected `\"`, `'`
+[ERROR] invalid string
+expected `\"`, `'`
+ --> Cargo.toml:3:23
+  |
+3 |                 foo = bar
+  |                       ^
+  |
 ",
         )
         .run();
@@ -375,15 +373,13 @@ fn cargo_compile_with_invalid_manifest3() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  TOML parse error at line 1, column 5
-    |
-  1 | a = bar
-    |     ^
-  invalid string
-  expected `\"`, `'`
+[ERROR] invalid string
+expected `\"`, `'`
+ --> src/Cargo.toml:1:5
+  |
+1 | a = bar
+  |     ^
+  |
 ",
         )
         .run();
@@ -434,14 +430,12 @@ fn cargo_compile_with_invalid_version() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  TOML parse error at line 4, column 19
-    |
-  4 |         version = \"1.0\"
-    |                   ^^^^^
-  unexpected end of input while parsing minor version number
+[ERROR] unexpected end of input while parsing minor version number
+ --> Cargo.toml:4:19
+  |
+4 |         version = \"1.0\"
+  |                   ^^^^^
+  |
 ",
         )
         .run();
@@ -457,14 +451,12 @@ fn cargo_compile_with_empty_package_name() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  TOML parse error at line 3, column 16
-    |
-  3 |         name = \"\"
-    |                ^^
-  package name cannot be empty
+[ERROR] package name cannot be empty
+ --> Cargo.toml:3:16
+  |
+3 |         name = \"\"
+  |                ^^
+  |
 ",
         )
         .run();
@@ -480,14 +472,12 @@ fn cargo_compile_with_invalid_package_name() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  TOML parse error at line 3, column 16
-    |
-  3 |         name = \"foo::bar\"
-    |                ^^^^^^^^^^
-  invalid character `:` in package name: `foo::bar`, [..]
+[ERROR] invalid character `:` in package name: `foo::bar`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
+ --> Cargo.toml:3:16
+  |
+3 |         name = \"foo::bar\"
+  |                ^^^^^^^^^^
+  |
 ",
         )
         .run();
@@ -1187,14 +1177,12 @@ fn cargo_compile_with_invalid_dep_rename() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to parse manifest at `[..]`
-
-Caused by:
-  TOML parse error at line 7, column 17
-    |
-  7 |                 \"haha this isn't a valid name 🐛\" = { package = \"libc\", version = \"0.1\" }
-    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  invalid character ` ` in package name: `haha this isn't a valid name 🐛`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
+[ERROR] invalid character ` ` in package name: `haha this isn't a valid name 🐛`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
+ --> Cargo.toml:7:17
+  |
+7 |                 \"haha this isn't a valid name 🐛\" = { package = \"libc\", version = \"0.1\" }
+  |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
 ",
         )
         .run();

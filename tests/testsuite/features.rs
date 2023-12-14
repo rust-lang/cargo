@@ -57,14 +57,12 @@ fn empty_feature_name() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  TOML parse error at line 8, column 17
-    |
-  8 |                 \"\" = []
-    |                 ^^
-  feature name cannot be empty
+[ERROR] feature name cannot be empty
+ --> Cargo.toml:8:17
+  |
+8 |                 \"\" = []
+  |                 ^^
+  |
 ",
         )
         .run();
@@ -2056,16 +2054,12 @@ fn invalid_feature_names_error() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  TOML parse error at line 8, column 17
-    |
-  8 |                 \"+foo\" = []
-    |                 ^^^^^^
-  invalid character `+` in feature name: `+foo`, \
-  the first character must be a Unicode XID start character or digit \
-  (most letters or `_` or `0` to `9`)
+[ERROR] invalid character `+` in feature name: `+foo`, the first character must be a Unicode XID start character or digit (most letters or `_` or `0` to `9`)
+ --> Cargo.toml:8:17
+  |
+8 |                 \"+foo\" = []
+  |                 ^^^^^^
+  |
 ",
         )
         .run();
@@ -2087,16 +2081,12 @@ Caused by:
         .with_status(101)
         .with_stderr(
             "\
-error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  TOML parse error at line 8, column 13
-    |
-  8 |             \"a&b\" = []
-    |             ^^^^^
-  invalid character `&` in feature name: `a&b`, \
-  characters must be Unicode XID characters, '-', `+`, or `.` \
-  (numbers, `+`, `-`, `_`, `.`, or most letters)
+[ERROR] invalid character `&` in feature name: `a&b`, characters must be Unicode XID characters, '-', `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
+ --> Cargo.toml:8:13
+  |
+8 |             \"a&b\" = []
+  |             ^^^^^
+  |
 ",
         )
         .run();
@@ -2124,14 +2114,12 @@ fn invalid_feature_name_slash_error() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to parse manifest at `[CWD]/Cargo.toml`
-
-Caused by:
-  TOML parse error at line 7, column 17
-    |
-  7 |                 \"foo/bar\" = []
-    |                 ^^^^^^^^^
-  invalid character `/` in feature name: `foo/bar`, feature name is not allowed to contain slashes
+[ERROR] invalid character `/` in feature name: `foo/bar`, feature name is not allowed to contain slashes
+ --> Cargo.toml:7:17
+  |
+7 |                 \"foo/bar\" = []
+  |                 ^^^^^^^^^
+  |
 ",
         )
         .run();

@@ -2060,7 +2060,7 @@ fn git_install_reads_workspace_manifest() {
 
     cargo_process(&format!("install --git {}", p.url().to_string()))
         .with_status(101)
-        .with_stderr_contains("  invalid type: integer `3`[..]")
+        .with_stderr_contains("error: invalid type: integer `3`[..]")
         .run();
 }
 

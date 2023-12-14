@@ -712,16 +712,17 @@ fn bad_registry_name() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
-
-Caused by:
-  TOML parse error at line 7, column 17
-    |
-  7 |                 [dependencies.bar]
-    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  invalid character ` ` in registry name: `bad name`, [..]
+[ERROR] invalid character ` ` in registry name: `bad name`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
 
 
+ --> Cargo.toml:7:17
+  |
+7 |                   [dependencies.bar]
+  |  _________________^
+8 | |                 version = \"0.0.1\"
+9 | |                 registry = \"bad name\"
+  | |_____________________________________^
+  |
 ",
         )
         .run();
@@ -1622,16 +1623,14 @@ fn empty_dependency_registry() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
-
-Caused by:
-  TOML parse error at line 7, column 23
-    |
-  7 |                 bar = { version = \"0.1.0\", registry = \"\" }
-    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  registry name cannot be empty
+[ERROR] registry name cannot be empty
 
 
+ --> Cargo.toml:7:23
+  |
+7 |                 bar = { version = \"0.1.0\", registry = \"\" }
+  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
 ",
         )
         .run();
