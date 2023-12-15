@@ -7,9 +7,9 @@ use serde::{de, ser};
 use url::Url;
 
 use crate::util_schemas::core::GitReference;
+use crate::util_schemas::core::PartialVersion;
 use crate::util_schemas::core::SourceKind;
 use crate::util_schemas::manifest::PackageName;
-use crate::util_semver::PartialVersion;
 
 /// Some or all of the data required to identify a package:
 ///
