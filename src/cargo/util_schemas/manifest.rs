@@ -1122,7 +1122,7 @@ macro_rules! str_newtype {
             }
         }
 
-        impl<T: AsRef<str>> std::convert::AsRef<str> for $name<T> {
+        impl<T: AsRef<str>> AsRef<str> for $name<T> {
             fn as_ref(&self) -> &str {
                 self.0.as_ref()
             }
