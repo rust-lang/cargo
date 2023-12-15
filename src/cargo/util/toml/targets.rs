@@ -14,18 +14,18 @@ use std::collections::HashSet;
 use std::fs::{self, DirEntry};
 use std::path::{Path, PathBuf};
 
+use anyhow::Context as _;
+use cargo_util_schemas::manifest::{
+    PathValue, StringOrBool, StringOrVec, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
+    TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget,
+};
+
 use crate::core::compiler::rustdoc::RustdocScrapeExamples;
 use crate::core::compiler::CrateType;
 use crate::core::{Edition, Feature, Features, Target};
 use crate::util::errors::CargoResult;
 use crate::util::restricted_names;
 use crate::util::toml::warn_on_deprecated;
-use crate::util_schemas::manifest::{
-    PathValue, StringOrBool, StringOrVec, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
-    TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget,
-};
-
-use anyhow::Context as _;
 
 const DEFAULT_TEST_DIR_NAME: &'static str = "tests";
 const DEFAULT_BENCH_DIR_NAME: &'static str = "benches";

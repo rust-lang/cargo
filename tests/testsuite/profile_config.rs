@@ -1,9 +1,9 @@
 //! Tests for profiles defined in config files.
 
-use cargo::util_schemas::manifest::TomlDebugInfo;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, paths, project};
+use cargo_util_schemas::manifest::TomlDebugInfo;
 
 // TODO: this should be remove once -Zprofile-rustflags is stabilized
 #[cargo_test]

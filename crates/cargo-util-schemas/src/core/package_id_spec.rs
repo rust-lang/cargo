@@ -6,10 +6,10 @@ use semver::Version;
 use serde::{de, ser};
 use url::Url;
 
-use crate::util_schemas::core::GitReference;
-use crate::util_schemas::core::PartialVersion;
-use crate::util_schemas::core::SourceKind;
-use crate::util_schemas::manifest::PackageName;
+use crate::core::GitReference;
+use crate::core::PartialVersion;
+use crate::core::SourceKind;
+use crate::manifest::PackageName;
 
 /// Some or all of the data required to identify a package:
 ///
@@ -59,7 +59,7 @@ impl PackageIdSpec {
     /// Some examples of valid strings
     ///
     /// ```
-    /// use cargo::core::PackageIdSpec;
+    /// use cargo_util_schemas::core::PackageIdSpec;
     ///
     /// let specs = vec![
     ///     "https://crates.io/foo",
@@ -280,7 +280,7 @@ impl<'de> de::Deserialize<'de> for PackageIdSpec {
 #[cfg(test)]
 mod tests {
     use super::PackageIdSpec;
-    use crate::util_schemas::core::{GitReference, SourceKind};
+    use crate::core::{GitReference, SourceKind};
     use url::Url;
 
     #[test]

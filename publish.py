@@ -25,6 +25,7 @@ TO_PUBLISH = [
     'crates/cargo-platform',
     'crates/cargo-util',
     'crates/crates-io',
+    'crates/cargo-util-schemas',
     '.',
 ]
 

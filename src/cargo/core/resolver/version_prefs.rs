@@ -4,9 +4,10 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 
+use cargo_util_schemas::manifest::RustVersion;
+
 use crate::core::{Dependency, PackageId, Summary};
 use crate::util::interning::InternedString;
-use crate::util_schemas::manifest::RustVersion;
 
 /// A collection of preferences for particular package versions.
 ///

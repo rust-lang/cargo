@@ -1,7 +1,8 @@
 use anyhow::Context as _;
 
+use cargo_util_schemas::manifest::PackageName;
+
 use crate::util::restricted_names;
-use crate::util_schemas::manifest::PackageName;
 use crate::CargoResult;
 use crate::Config;
 

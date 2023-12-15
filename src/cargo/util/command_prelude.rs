@@ -11,12 +11,12 @@ use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
     print_available_packages, print_available_tests,
 };
-use crate::util_schemas::manifest::ProfileName;
-use crate::util_schemas::manifest::RegistryName;
-use crate::util_schemas::manifest::StringOrVec;
 use crate::CargoResult;
 use anyhow::bail;
 use cargo_util::paths;
+use cargo_util_schemas::manifest::ProfileName;
+use cargo_util_schemas::manifest::RegistryName;
+use cargo_util_schemas::manifest::StringOrVec;
 use clap::builder::UnknownArgumentValueParser;
 use std::ffi::{OsStr, OsString};
 use std::path::Path;

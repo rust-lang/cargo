@@ -72,8 +72,8 @@ use crate::sources::PathSource;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::{profile, CanonicalUrl};
-use crate::util_schemas::manifest::RustVersion;
 use anyhow::Context as _;
+use cargo_util_schemas::manifest::RustVersion;
 use std::collections::{HashMap, HashSet};
 use tracing::{debug, trace};
 

@@ -7,6 +7,8 @@ use std::str::{self, FromStr};
 use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
 use cargo_util::paths;
+use cargo_util_schemas::manifest;
+use cargo_util_schemas::manifest::RustVersion;
 use itertools::Itertools;
 use lazycell::LazyCell;
 use tracing::{debug, trace};
@@ -24,8 +26,6 @@ use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::{self, config::ConfigRelativePath, Config, IntoUrl, OptVersionReq};
-use crate::util_schemas::manifest;
-use crate::util_schemas::manifest::RustVersion;
 
 mod embedded;
 mod targets;
