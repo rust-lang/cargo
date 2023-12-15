@@ -44,11 +44,11 @@ use std::path::{Path, PathBuf};
 ///
 /// Returns the value of the `USERPROFILE` environment variable if it is set
 /// **and** it is not an empty string. Otherwise, it tries to determine the
-/// home directory by invoking the [`SHGetFolderPathW`][shgfp] function with
-/// [`CSIDL_PROFILE`][csidl].
+/// home directory by invoking the [`SHGetKnownFolderPath`][shgkfp] function with
+/// [`FOLDERID_Profile`][knownfolderid].
 ///
-/// [shgfp]: https://docs.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shgetfolderpathw
-/// [csidl]: https://learn.microsoft.com/en-us/windows/win32/shell/csidl
+/// [shgkfp]: https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shgetknownfolderpath
+/// [knownfolderid]: https://learn.microsoft.com/en-us/windows/win32/shell/knownfolderid
 ///
 /// # Examples
 ///
