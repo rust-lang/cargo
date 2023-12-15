@@ -4,6 +4,7 @@ use crate::core::global_cache_tracker;
 use crate::core::{GitReference, PackageId, SourceId};
 use crate::sources::git;
 use crate::sources::git::fetch::RemoteKind;
+use crate::sources::git::resolve_ref;
 use crate::sources::registry::download;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
@@ -149,7 +150,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
     fn head(&self) -> CargoResult<git2::Oid> {
         if self.head.get().is_none() {
             let repo = self.repo()?;
-            let oid = self.index_git_ref.resolve(repo)?;
+            let oid = resolve_ref(&self.index_git_ref, repo)?;
             self.head.set(Some(oid));
         }
         Ok(self.head.get().unwrap())
