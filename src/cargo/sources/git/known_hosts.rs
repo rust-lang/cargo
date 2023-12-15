@@ -538,7 +538,7 @@ fn user_known_host_location() -> Option<PathBuf> {
     // - OpenSSH (most unix platforms): Uses `pw->pw_dir` from `getpwuid()`.
     //
     // This doesn't do anything close to that. home_dir's behavior is:
-    // - Windows: $USERPROFILE, or SHGetFolderPathW()
+    // - Windows: $USERPROFILE, or SHGetKnownFolderPath()
     // - Unix: $HOME, or getpwuid_r()
     //
     // Since there is a mismatch here, the location returned here might be
