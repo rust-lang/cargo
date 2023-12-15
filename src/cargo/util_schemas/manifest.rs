@@ -1112,6 +1112,7 @@ impl TomlTarget {
 
 macro_rules! str_newtype {
     ($name:ident) => {
+        /// Verified string newtype
         #[derive(Serialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
         #[serde(transparent)]
         pub struct $name<T: AsRef<str> = String>(T);
@@ -1171,6 +1172,7 @@ macro_rules! str_newtype {
 str_newtype!(PackageName);
 
 impl<T: AsRef<str>> PackageName<T> {
+    /// Validated package name
     pub fn new(name: T) -> Result<Self> {
         restricted_names::validate_package_name(name.as_ref(), "package name", "")?;
         Ok(Self(name))
@@ -1178,6 +1180,9 @@ impl<T: AsRef<str>> PackageName<T> {
 }
 
 impl PackageName {
+    /// Coerce a value to be a validate package name
+    ///
+    /// Replaces invalid values with `placeholder`
     pub fn sanitize(name: impl AsRef<str>, placeholder: char) -> Self {
         PackageName(restricted_names::sanitize_package_name(
             name.as_ref(),
@@ -1189,6 +1194,7 @@ impl PackageName {
 str_newtype!(RegistryName);
 
 impl<T: AsRef<str>> RegistryName<T> {
+    /// Validated registry name
     pub fn new(name: T) -> Result<Self> {
         restricted_names::validate_package_name(name.as_ref(), "registry name", "")?;
         Ok(Self(name))
@@ -1198,6 +1204,7 @@ impl<T: AsRef<str>> RegistryName<T> {
 str_newtype!(ProfileName);
 
 impl<T: AsRef<str>> ProfileName<T> {
+    /// Validated profile name
     pub fn new(name: T) -> Result<Self> {
         restricted_names::validate_profile_name(name.as_ref())?;
         Ok(Self(name))
@@ -1207,6 +1214,7 @@ impl<T: AsRef<str>> ProfileName<T> {
 str_newtype!(FeatureName);
 
 impl<T: AsRef<str>> FeatureName<T> {
+    /// Validated feature name
     pub fn new(name: T) -> Result<Self> {
         restricted_names::validate_feature_name(name.as_ref())?;
         Ok(Self(name))
