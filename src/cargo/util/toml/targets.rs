@@ -127,7 +127,7 @@ pub(super) fn targets(
         // Verify names match available build deps.
         let bdeps = manifest.build_dependencies.as_ref();
         for name in &metabuild.0 {
-            if !bdeps.map_or(false, |bd| bd.contains_key(name)) {
+            if !bdeps.map_or(false, |bd| bd.contains_key(name.as_str())) {
                 anyhow::bail!(
                     "metabuild package `{}` must be specified in `build-dependencies`",
                     name

@@ -60,6 +60,10 @@ fn empty_feature_name() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
+  TOML parse error at line 8, column 17
+    |
+  8 |                 \"\" = []
+    |                 ^^
   feature name cannot be empty
 ",
         )
@@ -2055,7 +2059,11 @@ fn invalid_feature_names_error() {
 error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  invalid character `+` in feature `+foo` in package foo v0.1.0 ([ROOT]/foo), \
+  TOML parse error at line 8, column 17
+    |
+  8 |                 \"+foo\" = []
+    |                 ^^^^^^
+  invalid character `+` in feature `+foo`, \
   the first character must be a Unicode XID start character or digit \
   (most letters or `_` or `0` to `9`)
 ",
@@ -2082,7 +2090,11 @@ Caused by:
 error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  invalid character `&` in feature `a&b` in package foo v0.1.0 ([ROOT]/foo), \
+  TOML parse error at line 8, column 13
+    |
+  8 |             \"a&b\" = []
+    |             ^^^^^
+  invalid character `&` in feature `a&b`, \
   characters must be Unicode XID characters, '-', `+`, or `.` \
   (numbers, `+`, `-`, `_`, `.`, or most letters)
 ",
@@ -2115,6 +2127,10 @@ fn invalid_feature_name_slash_error() {
 error: failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
+  TOML parse error at line 7, column 17
+    |
+  7 |                 \"foo/bar\" = []
+    |                 ^^^^^^^^^
   feature named `foo/bar` is not allowed to contain slashes
 ",
         )

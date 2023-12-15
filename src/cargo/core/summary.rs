@@ -1,6 +1,7 @@
 use crate::core::{Dependency, PackageId, SourceId};
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
+use crate::util_schemas::manifest::FeatureName;
 use crate::util_schemas::manifest::RustVersion;
 use anyhow::bail;
 use semver::Version;
@@ -49,7 +50,7 @@ impl Summary {
                 )
             }
         }
-        let feature_map = build_feature_map(pkg_id, features, &dependencies)?;
+        let feature_map = build_feature_map(features, &dependencies)?;
         Ok(Summary {
             inner: Rc::new(Inner {
                 package_id: pkg_id,
@@ -140,7 +141,6 @@ impl Hash for Summary {
 /// Checks features for errors, bailing out a CargoResult:Err if invalid,
 /// and creates FeatureValues for each feature.
 fn build_feature_map(
-    pkg_id: PackageId,
     features: &BTreeMap<InternedString, Vec<InternedString>>,
     dependencies: &[Dependency],
 ) -> CargoResult<FeatureMap> {
@@ -191,19 +191,7 @@ fn build_feature_map(
 
     // Validate features are listed properly.
     for (feature, fvs) in &map {
-        if feature.starts_with("dep:") {
-            bail!(
-                "feature named `{}` is not allowed to start with `dep:`",
-                feature
-            );
-        }
-        if feature.contains('/') {
-            bail!(
-                "feature named `{}` is not allowed to contain slashes",
-                feature
-            );
-        }
-        validate_feature_name(pkg_id, feature)?;
+        FeatureName::new(feature)?;
         for fv in fvs {
             // Find data for the referenced dependency...
             let dep_data = {
@@ -429,68 +417,3 @@ impl fmt::Display for FeatureValue {
 }
 
 pub type FeatureMap = BTreeMap<InternedString, Vec<FeatureValue>>;
-
-fn validate_feature_name(pkg_id: PackageId, name: &str) -> CargoResult<()> {
-    if name.is_empty() {
-        bail!("feature name cannot be empty");
-    }
-    let mut chars = name.chars();
-    if let Some(ch) = chars.next() {
-        if !(unicode_xid::UnicodeXID::is_xid_start(ch) || ch == '_' || ch.is_digit(10)) {
-            bail!(
-                "invalid character `{}` in feature `{}` in package {}, \
-                the first character must be a Unicode XID start character or digit \
-                (most letters or `_` or `0` to `9`)",
-                ch,
-                name,
-                pkg_id
-            );
-        }
-    }
-    for ch in chars {
-        if !(unicode_xid::UnicodeXID::is_xid_continue(ch) || ch == '-' || ch == '+' || ch == '.') {
-            bail!(
-                "invalid character `{}` in feature `{}` in package {}, \
-                characters must be Unicode XID characters, '-', `+`, or `.` \
-                (numbers, `+`, `-`, `_`, `.`, or most letters)",
-                ch,
-                name,
-                pkg_id
-            );
-        }
-    }
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::sources::CRATES_IO_INDEX;
-    use crate::util::into_url::IntoUrl;
-
-    use crate::core::SourceId;
-
-    #[test]
-    fn valid_feature_names() {
-        let loc = CRATES_IO_INDEX.into_url().unwrap();
-        let source_id = SourceId::for_registry(&loc).unwrap();
-        let pkg_id = PackageId::try_new("foo", "1.0.0", source_id).unwrap();
-
-        assert!(validate_feature_name(pkg_id, "c++17").is_ok());
-        assert!(validate_feature_name(pkg_id, "128bit").is_ok());
-        assert!(validate_feature_name(pkg_id, "_foo").is_ok());
-        assert!(validate_feature_name(pkg_id, "feat-name").is_ok());
-        assert!(validate_feature_name(pkg_id, "feat_name").is_ok());
-        assert!(validate_feature_name(pkg_id, "foo.bar").is_ok());
-
-        assert!(validate_feature_name(pkg_id, "+foo").is_err());
-        assert!(validate_feature_name(pkg_id, "-foo").is_err());
-        assert!(validate_feature_name(pkg_id, ".foo").is_err());
-        assert!(validate_feature_name(pkg_id, "foo:bar").is_err());
-        assert!(validate_feature_name(pkg_id, "foo?").is_err());
-        assert!(validate_feature_name(pkg_id, "?foo").is_err());
-        assert!(validate_feature_name(pkg_id, "ⒶⒷⒸ").is_err());
-        assert!(validate_feature_name(pkg_id, "a¼").is_err());
-        assert!(validate_feature_name(pkg_id, "").is_err());
-    }
-}

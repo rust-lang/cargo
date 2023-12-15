@@ -1,6 +1,7 @@
 use anyhow::Context as _;
 
 use crate::util::restricted_names;
+use crate::util_schemas::manifest::PackageName;
 use crate::CargoResult;
 use crate::Config;
 
@@ -171,7 +172,7 @@ fn sanitize_name(name: &str) -> String {
         '-'
     };
 
-    let mut name = restricted_names::sanitize_package_name(name, placeholder);
+    let mut name = PackageName::sanitize(name, placeholder).into_inner();
 
     loop {
         if restricted_names::is_keyword(&name) {

@@ -10,12 +10,14 @@ use std::fmt::{self, Display, Write};
 use std::path::PathBuf;
 use std::str;
 
+use anyhow::Result;
 use serde::de::{self, IntoDeserializer as _, Unexpected};
 use serde::ser;
 use serde::{Deserialize, Serialize};
 use serde_untagged::UntaggedEnumVisitor;
 
 use crate::util_schemas::core::PackageIdSpec;
+use crate::util_schemas::restricted_names;
 use crate::util_semver::PartialVersion;
 
 /// This type is used to deserialize `Cargo.toml` files.
@@ -31,17 +33,17 @@ pub struct TomlManifest {
     pub example: Option<Vec<TomlExampleTarget>>,
     pub test: Option<Vec<TomlTestTarget>>,
     pub bench: Option<Vec<TomlTestTarget>>,
-    pub dependencies: Option<BTreeMap<String, InheritableDependency>>,
-    pub dev_dependencies: Option<BTreeMap<String, InheritableDependency>>,
+    pub dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
+    pub dev_dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
     #[serde(rename = "dev_dependencies")]
-    pub dev_dependencies2: Option<BTreeMap<String, InheritableDependency>>,
-    pub build_dependencies: Option<BTreeMap<String, InheritableDependency>>,
+    pub dev_dependencies2: Option<BTreeMap<PackageName, InheritableDependency>>,
+    pub build_dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
     #[serde(rename = "build_dependencies")]
-    pub build_dependencies2: Option<BTreeMap<String, InheritableDependency>>,
-    pub features: Option<BTreeMap<String, Vec<String>>>,
+    pub build_dependencies2: Option<BTreeMap<PackageName, InheritableDependency>>,
+    pub features: Option<BTreeMap<FeatureName, Vec<String>>>,
     pub target: Option<BTreeMap<String, TomlPlatform>>,
     pub replace: Option<BTreeMap<String, TomlDependency>>,
-    pub patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
+    pub patch: Option<BTreeMap<String, BTreeMap<PackageName, TomlDependency>>>,
     pub workspace: Option<TomlWorkspace>,
     pub badges: Option<InheritableBtreeMap>,
     pub lints: Option<InheritableLints>,
@@ -57,19 +59,19 @@ impl TomlManifest {
         self.package.as_ref().or(self.project.as_ref())
     }
 
-    pub fn dev_dependencies(&self) -> Option<&BTreeMap<String, InheritableDependency>> {
+    pub fn dev_dependencies(&self) -> Option<&BTreeMap<PackageName, InheritableDependency>> {
         self.dev_dependencies
             .as_ref()
             .or(self.dev_dependencies2.as_ref())
     }
 
-    pub fn build_dependencies(&self) -> Option<&BTreeMap<String, InheritableDependency>> {
+    pub fn build_dependencies(&self) -> Option<&BTreeMap<PackageName, InheritableDependency>> {
         self.build_dependencies
             .as_ref()
             .or(self.build_dependencies2.as_ref())
     }
 
-    pub fn features(&self) -> Option<&BTreeMap<String, Vec<String>>> {
+    pub fn features(&self) -> Option<&BTreeMap<FeatureName, Vec<String>>> {
         self.features.as_ref()
     }
 }
@@ -85,7 +87,7 @@ pub struct TomlWorkspace {
 
     // Properties that can be inherited by members.
     pub package: Option<InheritablePackage>,
-    pub dependencies: Option<BTreeMap<String, TomlDependency>>,
+    pub dependencies: Option<BTreeMap<PackageName, TomlDependency>>,
     pub lints: Option<TomlLints>,
 }
 
@@ -123,7 +125,7 @@ pub struct InheritablePackage {
 pub struct TomlPackage {
     pub edition: Option<InheritableString>,
     pub rust_version: Option<InheritableRustVersion>,
-    pub name: String,
+    pub name: PackageName,
     pub version: Option<InheritableSemverVersion>,
     pub authors: Option<InheritableVecString>,
     pub build: Option<StringOrBool>,
@@ -570,7 +572,7 @@ impl<'de, P: Deserialize<'de> + Clone> de::Deserialize<'de> for TomlDependency<P
 #[serde(rename_all = "kebab-case")]
 pub struct TomlDetailedDependency<P: Clone = String> {
     pub version: Option<String>,
-    pub registry: Option<String>,
+    pub registry: Option<RegistryName>,
     /// The URL of the `registry` field.
     /// This is an internal implementation detail. When Cargo creates a
     /// package, it replaces `registry` with `registry-index` so that the
@@ -590,7 +592,7 @@ pub struct TomlDetailedDependency<P: Clone = String> {
     pub default_features: Option<bool>,
     #[serde(rename = "default_features")]
     pub default_features2: Option<bool>,
-    pub package: Option<String>,
+    pub package: Option<PackageName>,
     pub public: Option<bool>,
 
     /// One or more of `bin`, `cdylib`, `staticlib`, `bin:<name>`.
@@ -639,10 +641,10 @@ impl<P: Clone> Default for TomlDetailedDependency<P> {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
-pub struct TomlProfiles(pub BTreeMap<String, TomlProfile>);
+pub struct TomlProfiles(pub BTreeMap<ProfileName, TomlProfile>);
 
 impl TomlProfiles {
-    pub fn get_all(&self) -> &BTreeMap<String, TomlProfile> {
+    pub fn get_all(&self) -> &BTreeMap<ProfileName, TomlProfile> {
         &self.0
     }
 
@@ -1108,27 +1110,138 @@ impl TomlTarget {
     }
 }
 
+macro_rules! str_newtype {
+    ($name:ident) => {
+        /// Verified string newtype
+        #[derive(Serialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        #[serde(transparent)]
+        pub struct $name<T: AsRef<str> = String>(T);
+
+        impl<T: AsRef<str>> $name<T> {
+            pub fn into_inner(self) -> T {
+                self.0
+            }
+        }
+
+        impl<T: AsRef<str>> AsRef<str> for $name<T> {
+            fn as_ref(&self) -> &str {
+                self.0.as_ref()
+            }
+        }
+
+        impl<T: AsRef<str>> std::ops::Deref for $name<T> {
+            type Target = T;
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+        impl<T: AsRef<str>> std::borrow::Borrow<str> for $name<T> {
+            fn borrow(&self) -> &str {
+                self.0.as_ref()
+            }
+        }
+
+        impl<'a> std::str::FromStr for $name<String> {
+            type Err = anyhow::Error;
+
+            fn from_str(value: &str) -> Result<Self, Self::Err> {
+                Self::new(value.to_owned())
+            }
+        }
+
+        impl<'de, T: AsRef<str> + serde::Deserialize<'de>> serde::Deserialize<'de> for $name<T> {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                let inner = T::deserialize(deserializer)?;
+                Self::new(inner).map_err(serde::de::Error::custom)
+            }
+        }
+
+        impl<T: AsRef<str>> Display for $name<T> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                self.0.as_ref().fmt(f)
+            }
+        }
+    };
+}
+
+str_newtype!(PackageName);
+
+impl<T: AsRef<str>> PackageName<T> {
+    /// Validated package name
+    pub fn new(name: T) -> Result<Self> {
+        restricted_names::validate_package_name(name.as_ref(), "package name", "")?;
+        Ok(Self(name))
+    }
+}
+
+impl PackageName {
+    /// Coerce a value to be a validate package name
+    ///
+    /// Replaces invalid values with `placeholder`
+    pub fn sanitize(name: impl AsRef<str>, placeholder: char) -> Self {
+        PackageName(restricted_names::sanitize_package_name(
+            name.as_ref(),
+            placeholder,
+        ))
+    }
+}
+
+str_newtype!(RegistryName);
+
+impl<T: AsRef<str>> RegistryName<T> {
+    /// Validated registry name
+    pub fn new(name: T) -> Result<Self> {
+        restricted_names::validate_package_name(name.as_ref(), "registry name", "")?;
+        Ok(Self(name))
+    }
+}
+
+str_newtype!(ProfileName);
+
+impl<T: AsRef<str>> ProfileName<T> {
+    /// Validated profile name
+    pub fn new(name: T) -> Result<Self> {
+        restricted_names::validate_profile_name(name.as_ref())?;
+        Ok(Self(name))
+    }
+}
+
+str_newtype!(FeatureName);
+
+impl<T: AsRef<str>> FeatureName<T> {
+    /// Validated feature name
+    pub fn new(name: T) -> Result<Self> {
+        restricted_names::validate_feature_name(name.as_ref())?;
+        Ok(Self(name))
+    }
+}
+
 /// Corresponds to a `target` entry, but `TomlTarget` is already used.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlPlatform {
-    pub dependencies: Option<BTreeMap<String, InheritableDependency>>,
-    pub build_dependencies: Option<BTreeMap<String, InheritableDependency>>,
+    pub dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
+    pub build_dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
     #[serde(rename = "build_dependencies")]
-    pub build_dependencies2: Option<BTreeMap<String, InheritableDependency>>,
-    pub dev_dependencies: Option<BTreeMap<String, InheritableDependency>>,
+    pub build_dependencies2: Option<BTreeMap<PackageName, InheritableDependency>>,
+    pub dev_dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
     #[serde(rename = "dev_dependencies")]
-    pub dev_dependencies2: Option<BTreeMap<String, InheritableDependency>>,
+    pub dev_dependencies2: Option<BTreeMap<PackageName, InheritableDependency>>,
 }
 
 impl TomlPlatform {
-    pub fn dev_dependencies(&self) -> Option<&BTreeMap<String, InheritableDependency>> {
+    pub fn dev_dependencies(&self) -> Option<&BTreeMap<PackageName, InheritableDependency>> {
         self.dev_dependencies
             .as_ref()
             .or(self.dev_dependencies2.as_ref())
     }
 
-    pub fn build_dependencies(&self) -> Option<&BTreeMap<String, InheritableDependency>> {
+    pub fn build_dependencies(&self) -> Option<&BTreeMap<PackageName, InheritableDependency>> {
         self.build_dependencies
             .as_ref()
             .or(self.build_dependencies2.as_ref())

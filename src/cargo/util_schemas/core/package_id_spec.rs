@@ -6,9 +6,9 @@ use semver::Version;
 use serde::{de, ser};
 use url::Url;
 
-use crate::util::validate_package_name;
 use crate::util_schemas::core::GitReference;
 use crate::util_schemas::core::SourceKind;
+use crate::util_schemas::manifest::PackageName;
 use crate::util_semver::PartialVersion;
 
 /// Some or all of the data required to identify a package:
@@ -97,7 +97,7 @@ impl PackageIdSpec {
             Some(version) => Some(version.parse::<PartialVersion>()?),
             None => None,
         };
-        validate_package_name(name, "pkgid", "")?;
+        PackageName::new(name)?;
         Ok(PackageIdSpec {
             name: String::from(name),
             version,
@@ -182,7 +182,7 @@ impl PackageIdSpec {
                 None => (String::from(path_name), None),
             }
         };
-        validate_package_name(name.as_str(), "pkgid", "")?;
+        PackageName::new(&name)?;
         Ok(PackageIdSpec {
             name,
             version,

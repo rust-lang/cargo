@@ -11,6 +11,8 @@ use crate::util::{
     print_available_benches, print_available_binaries, print_available_examples,
     print_available_packages, print_available_tests,
 };
+use crate::util_schemas::manifest::ProfileName;
+use crate::util_schemas::manifest::RegistryName;
 use crate::util_schemas::manifest::StringOrVec;
 use crate::CargoResult;
 use anyhow::bail;
@@ -605,7 +607,7 @@ Run `{cmd}` to see possible targets."
                 bail!("profile `doc` is reserved and not allowed to be explicitly specified")
             }
             (_, _, Some(name)) => {
-                restricted_names::validate_profile_name(name)?;
+                ProfileName::new(name)?;
                 name
             }
         };
@@ -833,7 +835,7 @@ Run `{cmd}` to see possible targets."
             (None, None) => config.default_registry()?.map(RegistryOrIndex::Registry),
             (None, Some(i)) => Some(RegistryOrIndex::Index(i.into_url()?)),
             (Some(r), None) => {
-                restricted_names::validate_package_name(r, "registry name", "")?;
+                RegistryName::new(r)?;
                 Some(RegistryOrIndex::Registry(r.to_string()))
             }
             (Some(_), Some(_)) => {
@@ -848,7 +850,7 @@ Run `{cmd}` to see possible targets."
         match self._value_of("registry").map(|s| s.to_string()) {
             None => config.default_registry(),
             Some(registry) => {
-                restricted_names::validate_package_name(&registry, "registry name", "")?;
+                RegistryName::new(&registry)?;
                 Ok(Some(registry))
             }
         }

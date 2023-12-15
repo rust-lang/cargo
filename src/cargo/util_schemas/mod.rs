@@ -7,3 +7,5 @@
 
 pub mod core;
 pub mod manifest;
+
+mod restricted_names;
