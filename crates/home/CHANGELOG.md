@@ -4,7 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## 0.5.6
+## 0.5.9 - 2023-12-15
+
+- Replace SHGetFolderPathW with SHGetKnownFolderPath
+  [#13173](https://github.com/rust-lang/cargo/pull/13173)
+- Update windows-sys to 0.52
+  [#13089](https://github.com/rust-lang/cargo/pull/13089)
+- Set MSRV to 1.70.0
+  [#12654](https://github.com/rust-lang/cargo/pull/12654)
 - Fixed & enhanced documentation.
   [#12047](https://github.com/rust-lang/cargo/pull/12047)
 
