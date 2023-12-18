@@ -1,8 +1,9 @@
-#![allow(clippy::disallowed_methods, clippy::print_stdout, clippy::print_stderr)]
+#![allow(clippy::print_stderr)]
 
-use anyhow::Error;
 use std::io::{stdin, BufReader, Read};
 use std::{collections::HashMap, collections::HashSet, env, fs};
+
+use anyhow::Error;
 
 fn main() -> Result<(), Error> {
     let suggestions_file = env::args().nth(1).expect("USAGE: fix-json <file or -->");
