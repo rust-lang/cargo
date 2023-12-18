@@ -4,8 +4,8 @@ version = "0.2.9"
 rust-version.workspace = true
 edition.workspace = true
 license.workspace = true
-homepage = "https://github.com/rust-lang/cargo"
-repository = "https://github.com/rust-lang/cargo"
+homepage.workspace = true
+repository.workspace = true
 description = "Miscellaneous support code used by Cargo."
 
 [dependencies]

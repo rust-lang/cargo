@@ -1,11 +1,11 @@
 [package]
 name = "cargo-util-schemas"
-version = "0.1.0"
+version = "0.1.1"
 rust-version.workspace = true
 edition.workspace = true
 license.workspace = true
-homepage = "https://github.com/rust-lang/cargo"
-repository = "https://github.com/rust-lang/cargo"
+homepage.workspace = true
+repository.workspace = true
 description = "Deserialization schemas for Cargo"
 
 [dependencies]

@@ -14,6 +14,8 @@ exclude = [
 rust-version = "1.73"  # MSRV:1
 edition = "2021"
 license = "MIT OR Apache-2.0"
+homepage = "https://github.com/rust-lang/cargo"
+repository = "https://github.com/rust-lang/cargo"
 
 [workspace.dependencies]
 anstream = "0.6.5"
@@ -126,8 +128,8 @@ version = "0.77.0"
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-homepage = "https://crates.io"
-repository = "https://github.com/rust-lang/cargo"
+homepage = "https://doc.rust-lang.org/cargo/index.html"
+repository.workspace = true
 documentation = "https://docs.rs/cargo"
 description = """
 Cargo, a package manager for Rust.
