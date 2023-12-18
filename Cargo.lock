@@ -335,7 +335,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-1password"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "cargo-credential",
  "serde",
@@ -437,7 +437,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-util-schemas"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "semver",
@@ -1914,7 +1914,7 @@ dependencies = [
 
 [[package]]
 name = "home"
-version = "0.5.9"
+version = "0.5.10"
 dependencies = [
  "windows-sys 0.52.0",
 ]

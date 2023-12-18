@@ -4,7 +4,8 @@ version = "0.39.2"
 rust-version.workspace = true
 edition.workspace = true
 license.workspace = true
-repository = "https://github.com/rust-lang/cargo"
+homepage.workspace = true
+repository.workspace = true
 description = """
 Helpers for interacting with crates.io
 """
