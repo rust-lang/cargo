@@ -30,6 +30,7 @@ cargo-platform = { path = "crates/cargo-platform", version = "0.1.4" }
 cargo-test-macro = { path = "crates/cargo-test-macro" }
 cargo-test-support = { path = "crates/cargo-test-support" }
 cargo-util = { version = "0.2.6", path = "crates/cargo-util" }
+cargo-util-schemas = { version = "0.1.0", path = "crates/cargo-util-schemas" }
 cargo_metadata = "0.18.1"
 clap = "4.4.10"
 color-print = "0.3.5"
@@ -144,6 +145,7 @@ base64.workspace = true
 bytesize.workspace = true
 cargo-credential.workspace = true
 cargo-platform.workspace = true
+cargo-util-schemas.workspace = true
 cargo-util.workspace = true
 clap = { workspace = true, features = ["wrap_help"] }
 color-print.workspace = true
@@ -183,7 +185,6 @@ rustfix.workspace = true
 semver.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde-untagged.workspace = true
-serde-value.workspace = true
 serde_ignored.workspace = true
 serde_json = { workspace = true, features = ["raw_value"] }
 sha1.workspace = true
@@ -199,7 +200,6 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 unicase.workspace = true
 unicode-width.workspace = true
-unicode-xid.workspace = true
 url.workspace = true
 walkdir.workspace = true
 

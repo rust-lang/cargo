@@ -62,6 +62,9 @@
 //! - [`cargo-util`](https://crates.io/crates/cargo-util)
 //!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/cargo_util)):
 //!   This contains general utility code that is shared between cargo and the testsuite
+//! - [`cargo-util-schemas`](https://crates.io/crates/cargo-util-schemas)
+//!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/cargo_util-schemas)):
+//!   This contains the serde schemas for cargo
 //! - [`crates-io`](https://crates.io/crates/crates-io)
 //!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/crates_io)):
 //!   This contains code for accessing the crates.io API.
@@ -98,7 +101,7 @@
 //! Files that interact with cargo include
 //!
 //! - Package
-//!   - `Cargo.toml`: User-written project manifest, loaded with [`util_schemas::manifest::TomlManifest`] and then
+//!   - `Cargo.toml`: User-written project manifest, loaded with [`util::toml::read_manifest`] and then
 //!     translated to [`core::manifest::Manifest`] which maybe stored in a [`core::Package`].
 //!     - This is editable with [`util::toml_mut::manifest::LocalManifest`]
 //!   - `Cargo.lock`: Generally loaded with [`ops::resolve_ws`] or a variant of it into a [`core::resolver::Resolve`]
@@ -152,8 +155,6 @@ pub mod core;
 pub mod ops;
 pub mod sources;
 pub mod util;
-pub mod util_schemas;
-pub mod util_semver;
 mod version;
 
 pub fn exit_with_error(err: CliError, shell: &mut Shell) -> ! {

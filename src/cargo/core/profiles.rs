@@ -31,12 +31,12 @@ use crate::core::{
 use crate::util::interning::InternedString;
 use crate::util::toml::validate_profile;
 use crate::util::{closest_msg, config, CargoResult, Config};
-use crate::util_schemas::manifest::TomlTrimPaths;
-use crate::util_schemas::manifest::TomlTrimPathsValue;
-use crate::util_schemas::manifest::{
+use anyhow::{bail, Context as _};
+use cargo_util_schemas::manifest::TomlTrimPaths;
+use cargo_util_schemas::manifest::TomlTrimPathsValue;
+use cargo_util_schemas::manifest::{
     ProfilePackageSpec, StringOrBool, TomlDebugInfo, TomlProfile, TomlProfiles,
 };
-use anyhow::{bail, Context as _};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::Hash;
 use std::{cmp, fmt, hash};

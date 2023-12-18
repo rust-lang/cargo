@@ -14,7 +14,7 @@ pub use self::workspace::{
     find_workspace_root, resolve_relative_path, MaybePackage, Workspace, WorkspaceConfig,
     WorkspaceRootConfig,
 };
-pub use crate::util_schemas::core::{GitReference, PackageIdSpec, SourceKind};
+pub use cargo_util_schemas::core::{GitReference, PackageIdSpec, SourceKind};
 
 pub mod compiler;
 pub mod dependency;

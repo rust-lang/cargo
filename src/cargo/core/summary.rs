@@ -1,9 +1,9 @@
 use crate::core::{Dependency, PackageId, SourceId};
 use crate::util::interning::InternedString;
 use crate::util::CargoResult;
-use crate::util_schemas::manifest::FeatureName;
-use crate::util_schemas::manifest::RustVersion;
 use anyhow::bail;
+use cargo_util_schemas::manifest::FeatureName;
+use cargo_util_schemas::manifest::RustVersion;
 use semver::Version;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;

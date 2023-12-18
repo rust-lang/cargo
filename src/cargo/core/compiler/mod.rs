@@ -94,9 +94,9 @@ use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
 use crate::util::{add_path_args, internal, iter_join_onto, profile};
-use crate::util_schemas::manifest::TomlDebugInfo;
-use crate::util_schemas::manifest::TomlTrimPaths;
 use cargo_util::{paths, ProcessBuilder, ProcessError};
+use cargo_util_schemas::manifest::TomlDebugInfo;
+use cargo_util_schemas::manifest::TomlTrimPaths;
 use rustfix::diagnostics::Applicability;
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";

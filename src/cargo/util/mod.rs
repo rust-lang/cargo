@@ -22,7 +22,7 @@ pub use self::lockserver::{LockServer, LockServerClient, LockServerStarted};
 pub use self::progress::{Progress, ProgressStyle};
 pub use self::queue::Queue;
 pub use self::rustc::Rustc;
-pub use self::semver_ext::OptVersionReq;
+pub use self::semver_ext::{OptVersionReq, VersionExt};
 pub use self::vcs::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
 pub use self::workspace::{
     add_path_args, path_args, print_available_benches, print_available_binaries,

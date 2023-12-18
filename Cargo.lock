@@ -257,6 +257,7 @@ dependencies = [
  "cargo-test-macro",
  "cargo-test-support",
  "cargo-util",
+ "cargo-util-schemas",
  "clap",
  "color-print",
  "crates-io",
@@ -297,7 +298,6 @@ dependencies = [
  "semver",
  "serde",
  "serde-untagged",
- "serde-value",
  "serde_ignored",
  "serde_json",
  "sha1",
@@ -314,7 +314,6 @@ dependencies = [
  "tracing-subscriber",
  "unicase",
  "unicode-width",
- "unicode-xid",
  "url",
  "walkdir",
  "windows-sys 0.52.0",
@@ -434,6 +433,20 @@ dependencies = [
  "tracing",
  "walkdir",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "cargo-util-schemas"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "semver",
+ "serde",
+ "serde-untagged",
+ "serde-value",
+ "toml",
+ "unicode-xid",
+ "url",
 ]
 
 [[package]]
@@ -2821,6 +2834,7 @@ version = "0.0.0"
 dependencies = [
  "cargo",
  "cargo-util",
+ "cargo-util-schemas",
  "proptest",
  "varisat",
 ]

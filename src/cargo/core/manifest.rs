@@ -6,6 +6,8 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use anyhow::Context as _;
+use cargo_util_schemas::manifest::RustVersion;
+use cargo_util_schemas::manifest::{TomlManifest, TomlProfiles};
 use semver::Version;
 use serde::ser;
 use serde::Serialize;
@@ -19,8 +21,6 @@ use crate::core::{Edition, Feature, Features, WorkspaceConfig};
 use crate::util::errors::*;
 use crate::util::interning::InternedString;
 use crate::util::{short_hash, Config, Filesystem};
-use crate::util_schemas::manifest::RustVersion;
-use crate::util_schemas::manifest::{TomlManifest, TomlProfiles};
 
 pub enum EitherManifest {
     Real(Manifest),

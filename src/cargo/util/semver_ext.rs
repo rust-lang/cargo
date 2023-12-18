@@ -1,8 +1,30 @@
 use std::fmt::{self, Display};
 
-use semver::{Op, Version, VersionReq};
+use semver::{Comparator, Op, Version, VersionReq};
 
-use crate::util_semver::VersionExt as _;
+pub trait VersionExt {
+    fn is_prerelease(&self) -> bool;
+
+    fn to_exact_req(&self) -> VersionReq;
+}
+
+impl VersionExt for Version {
+    fn is_prerelease(&self) -> bool {
+        !self.pre.is_empty()
+    }
+
+    fn to_exact_req(&self) -> VersionReq {
+        VersionReq {
+            comparators: vec![Comparator {
+                op: Op::Exact,
+                major: self.major,
+                minor: Some(self.minor),
+                patch: Some(self.patch),
+                pre: self.pre.clone(),
+            }],
+        }
+    }
+}
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub enum OptVersionReq {

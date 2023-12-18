@@ -16,9 +16,9 @@ use serde::ser;
 use serde::{Deserialize, Serialize};
 use serde_untagged::UntaggedEnumVisitor;
 
-use crate::util_schemas::core::PackageIdSpec;
-use crate::util_schemas::restricted_names;
-use crate::util_semver::PartialVersion;
+use crate::core::PackageIdSpec;
+use crate::core::PartialVersion;
+use crate::restricted_names;
 
 /// This type is used to deserialize `Cargo.toml` files.
 #[derive(Debug, Deserialize, Serialize)]

@@ -26,10 +26,10 @@ use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::toml::{read_manifest, InheritableFields};
 use crate::util::{config::ConfigRelativePath, Config, Filesystem, IntoUrl};
-use crate::util_schemas::manifest::RustVersion;
-use crate::util_schemas::manifest::{TomlDependency, TomlProfiles};
 use cargo_util::paths;
 use cargo_util::paths::normalize_path;
+use cargo_util_schemas::manifest::RustVersion;
+use cargo_util_schemas::manifest::{TomlDependency, TomlProfiles};
 use pathdiff::diff_paths;
 
 /// The core abstraction in Cargo for working with a workspace of crates.
