@@ -106,7 +106,7 @@ pub struct Snippet {
     pub range: Range<usize>,
     /// leading surrounding text, text to replace, trailing surrounding text
     ///
-    /// This split is useful for higlighting the part that gets replaced
+    /// This split is useful for highlighting the part that gets replaced
     pub text: (String, String, String),
 }
 
