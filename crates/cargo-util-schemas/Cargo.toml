@@ -9,7 +9,6 @@ repository.workspace = true
 description = "Deserialization schemas for Cargo"
 
 [dependencies]
-anyhow.workspace = true
 semver.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde-untagged.workspace = true
