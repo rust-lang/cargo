@@ -34,7 +34,7 @@ pub enum NameValidationError {
 /// level of sanity. Note that package names have other restrictions
 /// elsewhere. `cargo new` has a few restrictions, such as checking for
 /// reserved names. crates.io has even more restrictions.
-pub fn validate_package_name(name: &str, what: &'static str) -> Result<()> {
+pub(crate) fn validate_package_name(name: &str, what: &'static str) -> Result<()> {
     if name.is_empty() {
         return Err(NameValidationError::Empty(what));
     }
@@ -75,7 +75,7 @@ pub fn validate_package_name(name: &str, what: &'static str) -> Result<()> {
 }
 
 /// Ensure a package name is [valid][validate_package_name]
-pub fn sanitize_package_name(name: &str, placeholder: char) -> String {
+pub(crate) fn sanitize_package_name(name: &str, placeholder: char) -> String {
     let mut slug = String::new();
     let mut chars = name.chars();
     while let Some(ch) = chars.next() {
@@ -98,7 +98,7 @@ pub fn sanitize_package_name(name: &str, placeholder: char) -> String {
 }
 
 /// Validate dir-names and profile names according to RFC 2678.
-pub fn validate_profile_name(name: &str) -> Result<()> {
+pub(crate) fn validate_profile_name(name: &str) -> Result<()> {
     if let Some(ch) = name
         .chars()
         .find(|ch| !ch.is_alphanumeric() && *ch != '_' && *ch != '-')
@@ -164,7 +164,7 @@ pub fn validate_profile_name(name: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn validate_feature_name(name: &str) -> Result<()> {
+pub(crate) fn validate_feature_name(name: &str) -> Result<()> {
     let what = "feature name";
     if name.is_empty() {
         return Err(NameValidationError::Empty(what));
