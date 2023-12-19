@@ -34,7 +34,7 @@ pub enum NameValidationError {
 /// level of sanity. Note that package names have other restrictions
 /// elsewhere. `cargo new` has a few restrictions, such as checking for
 /// reserved names. crates.io has even more restrictions.
-pub fn validate_package_name(name: &str, what: &'static str, help: &str) -> Result<()> {
+pub fn validate_package_name(name: &str, what: &'static str) -> Result<()> {
     if name.is_empty() {
         return Err(NameValidationError::Empty(what));
     }

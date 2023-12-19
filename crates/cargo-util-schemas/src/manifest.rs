@@ -1176,7 +1176,7 @@ str_newtype!(PackageName);
 impl<T: AsRef<str>> PackageName<T> {
     /// Validated package name
     pub fn new(name: T) -> Result<Self, NameValidationError> {
-        restricted_names::validate_package_name(name.as_ref(), "package name", "")?;
+        restricted_names::validate_package_name(name.as_ref(), "package name")?;
         Ok(Self(name))
     }
 }
@@ -1198,7 +1198,7 @@ str_newtype!(RegistryName);
 impl<T: AsRef<str>> RegistryName<T> {
     /// Validated registry name
     pub fn new(name: T) -> Result<Self, NameValidationError> {
-        restricted_names::validate_package_name(name.as_ref(), "registry name", "")?;
+        restricted_names::validate_package_name(name.as_ref(), "registry name")?;
         Ok(Self(name))
     }
 }
