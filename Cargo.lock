@@ -444,6 +444,7 @@ dependencies = [
  "serde",
  "serde-untagged",
  "serde-value",
+ "thiserror",
  "toml",
  "unicode-xid",
  "url",
