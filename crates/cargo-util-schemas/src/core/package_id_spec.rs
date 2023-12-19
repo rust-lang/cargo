@@ -6,8 +6,10 @@ use url::Url;
 
 use crate::core::GitReference;
 use crate::core::PartialVersion;
+use crate::core::PartialVersionError;
 use crate::core::SourceKind;
 use crate::manifest::PackageName;
+use crate::restricted_names::NameValidationError;
 
 type Result<T> = std::result::Result<T, PackageIdSpecError>;
 
@@ -83,10 +85,11 @@ impl PackageIdSpec {
             if abs.exists() {
                 let maybe_url = Url::from_file_path(abs)
                     .map_or_else(|_| "a file:// URL".to_string(), |url| url.to_string());
-                return Err(PackageIdSpecError::MaybeFilePath {
+                return Err(ErrorKind::MaybeFilePath {
                     spec: spec.into(),
                     maybe_url,
-                });
+                }
+                .into());
             }
         }
         let mut parts = spec.splitn(2, [':', '@']);
@@ -117,14 +120,14 @@ impl PackageIdSpec {
                 }
                 "registry" => {
                     if url.query().is_some() {
-                        return Err(PackageIdSpecError::UnexpectedQueryString(url));
+                        return Err(ErrorKind::UnexpectedQueryString(url).into());
                     }
                     kind = Some(SourceKind::Registry);
                     url = strip_url_protocol(&url);
                 }
                 "sparse" => {
                     if url.query().is_some() {
-                        return Err(PackageIdSpecError::UnexpectedQueryString(url));
+                        return Err(ErrorKind::UnexpectedQueryString(url).into());
                     }
                     kind = Some(SourceKind::SparseRegistry);
                     // Leave `sparse` as part of URL, see `SourceId::new`
@@ -132,19 +135,19 @@ impl PackageIdSpec {
                 }
                 "path" => {
                     if url.query().is_some() {
-                        return Err(PackageIdSpecError::UnexpectedQueryString(url));
+                        return Err(ErrorKind::UnexpectedQueryString(url).into());
                     }
                     if scheme != "file" {
-                        return Err(PackageIdSpecError::UnsupportedPathPlusScheme(scheme.into()));
+                        return Err(ErrorKind::UnsupportedPathPlusScheme(scheme.into()).into());
                     }
                     kind = Some(SourceKind::Path);
                     url = strip_url_protocol(&url);
                 }
-                kind => return Err(PackageIdSpecError::UnsupportedProtocol(kind.into())),
+                kind => return Err(ErrorKind::UnsupportedProtocol(kind.into()).into()),
             }
         } else {
             if url.query().is_some() {
-                return Err(PackageIdSpecError::UnexpectedQueryString(url));
+                return Err(ErrorKind::UnexpectedQueryString(url).into());
             }
         }
 
@@ -153,7 +156,7 @@ impl PackageIdSpec {
 
         let (name, version) = {
             let Some(path_name) = url.path_segments().and_then(|mut p| p.next_back()) else {
-                return Err(PackageIdSpecError::MissingUrlPath(url));
+                return Err(ErrorKind::MissingUrlPath(url).into());
             };
             match frag {
                 Some(fragment) => match fragment.split_once([':', '@']) {
@@ -269,9 +272,26 @@ impl<'de> de::Deserialize<'de> for PackageIdSpec {
 }
 
 /// Error parsing a [`PackageIdSpec`].
+#[derive(Debug, thiserror::Error)]
+#[error(transparent)]
+pub struct PackageIdSpecError(#[from] ErrorKind);
+
+impl From<PartialVersionError> for PackageIdSpecError {
+    fn from(value: PartialVersionError) -> Self {
+        ErrorKind::PartialVersion(value).into()
+    }
+}
+
+impl From<NameValidationError> for PackageIdSpecError {
+    fn from(value: NameValidationError) -> Self {
+        ErrorKind::NameValidation(value).into()
+    }
+}
+
+/// Non-public error kind for [`PackageIdSpecError`].
 #[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
-pub enum PackageIdSpecError {
+enum ErrorKind {
     #[error("unsupported source protocol: {0}")]
     UnsupportedProtocol(String),
 

@@ -3,9 +3,14 @@
 type Result<T> = std::result::Result<T, NameValidationError>;
 
 /// Error validating names in Cargo.
+#[derive(Debug, thiserror::Error)]
+#[error(transparent)]
+pub struct NameValidationError(#[from] ErrorKind);
+
+/// Non-public error kind for [`NameValidationError`].
 #[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
-pub enum NameValidationError {
+enum ErrorKind {
     #[error("{0} cannot be empty")]
     Empty(&'static str),
 
@@ -36,39 +41,42 @@ pub enum NameValidationError {
 /// reserved names. crates.io has even more restrictions.
 pub(crate) fn validate_package_name(name: &str, what: &'static str) -> Result<()> {
     if name.is_empty() {
-        return Err(NameValidationError::Empty(what));
+        return Err(ErrorKind::Empty(what).into());
     }
 
     let mut chars = name.chars();
     if let Some(ch) = chars.next() {
         if ch.is_digit(10) {
             // A specific error for a potentially common case.
-            return Err(NameValidationError::InvalidCharacter {
+            return Err(ErrorKind::InvalidCharacter {
                 ch,
                 what,
                 name: name.into(),
                 reason: "the name cannot start with a digit",
-            });
+            }
+            .into());
         }
         if !(unicode_xid::UnicodeXID::is_xid_start(ch) || ch == '_') {
-            return Err(NameValidationError::InvalidCharacter {
+            return Err(ErrorKind::InvalidCharacter {
                 ch,
                 what,
                 name: name.into(),
                 reason: "the first character must be a Unicode XID start character \
                  (most letters or `_`)",
-            });
+            }
+            .into());
         }
     }
     for ch in chars {
         if !(unicode_xid::UnicodeXID::is_xid_continue(ch) || ch == '-') {
-            return Err(NameValidationError::InvalidCharacter {
+            return Err(ErrorKind::InvalidCharacter {
                 ch,
                 what,
                 name: name.into(),
                 reason: "characters must be Unicode XID characters \
                  (numbers, `-`, `_`, or most letters)",
-            });
+            }
+            .into());
         }
     }
     Ok(())
@@ -103,28 +111,31 @@ pub(crate) fn validate_profile_name(name: &str) -> Result<()> {
         .chars()
         .find(|ch| !ch.is_alphanumeric() && *ch != '_' && *ch != '-')
     {
-        return Err(NameValidationError::InvalidCharacter {
+        return Err(ErrorKind::InvalidCharacter {
             ch,
             what: "profile name",
             name: name.into(),
             reason: "allowed characters are letters, numbers, underscore, and hyphen",
-        });
+        }
+        .into());
     }
 
     let lower_name = name.to_lowercase();
     if lower_name == "debug" {
-        return Err(NameValidationError::ProfileNameReservedKeyword {
+        return Err(ErrorKind::ProfileNameReservedKeyword {
             name: name.into(),
             help: "To configure the default development profile, \
                 use the name `dev` as in [profile.dev]",
-        });
+        }
+        .into());
     }
     if lower_name == "build-override" {
-        return Err(NameValidationError::ProfileNameReservedKeyword {
+        return Err(ErrorKind::ProfileNameReservedKeyword {
             name: name.into(),
             help: "To configure build dependency settings, use [profile.dev.build-override] \
                  and [profile.release.build-override]",
-        });
+        }
+        .into());
     }
 
     // These are some arbitrary reservations. We have no plans to use
@@ -155,10 +166,11 @@ pub(crate) fn validate_profile_name(name: &str) -> Result<()> {
             | "uninstall"
     ) || lower_name.starts_with("cargo")
     {
-        return Err(NameValidationError::ProfileNameReservedKeyword {
+        return Err(ErrorKind::ProfileNameReservedKeyword {
             name: name.into(),
             help: "Please choose a different name.",
-        });
+        }
+        .into());
     }
 
     Ok(())
@@ -167,43 +179,44 @@ pub(crate) fn validate_profile_name(name: &str) -> Result<()> {
 pub(crate) fn validate_feature_name(name: &str) -> Result<()> {
     let what = "feature name";
     if name.is_empty() {
-        return Err(NameValidationError::Empty(what));
+        return Err(ErrorKind::Empty(what).into());
     }
 
     if name.starts_with("dep:") {
-        return Err(NameValidationError::FeatureNameStartsWithDepColon(
-            name.into(),
-        ));
+        return Err(ErrorKind::FeatureNameStartsWithDepColon(name.into()).into());
     }
     if name.contains('/') {
-        return Err(NameValidationError::InvalidCharacter {
+        return Err(ErrorKind::InvalidCharacter {
             ch: '/',
             what,
             name: name.into(),
             reason: "feature name is not allowed to contain slashes",
-        });
+        }
+        .into());
     }
     let mut chars = name.chars();
     if let Some(ch) = chars.next() {
         if !(unicode_xid::UnicodeXID::is_xid_start(ch) || ch == '_' || ch.is_digit(10)) {
-            return Err(NameValidationError::InvalidCharacter {
+            return Err(ErrorKind::InvalidCharacter {
                 ch,
                 what,
                 name: name.into(),
                 reason: "the first character must be a Unicode XID start character or digit \
                  (most letters or `_` or `0` to `9`)",
-            });
+            }
+            .into());
         }
     }
     for ch in chars {
         if !(unicode_xid::UnicodeXID::is_xid_continue(ch) || ch == '-' || ch == '+' || ch == '.') {
-            return Err(NameValidationError::InvalidCharacter {
+            return Err(ErrorKind::InvalidCharacter {
                 ch,
                 what,
                 name: name.into(),
                 reason: "characters must be Unicode XID characters, '-', `+`, or `.` \
                  (numbers, `+`, `-`, `_`, `.`, or most letters)",
-            });
+            }
+            .into());
         }
     }
     Ok(())

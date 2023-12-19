@@ -84,7 +84,7 @@ impl std::str::FromStr for PartialVersion {
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         if is_req(value) {
-            return Err(PartialVersionError::VersionReq);
+            return Err(ErrorKind::VersionReq.into());
         }
         match semver::Version::parse(value) {
             Ok(ver) => Ok(ver.into()),
@@ -92,11 +92,9 @@ impl std::str::FromStr for PartialVersion {
                 // HACK: Leverage `VersionReq` for partial version parsing
                 let mut version_req = match semver::VersionReq::parse(value) {
                     Ok(req) => req,
-                    Err(_) if value.contains('-') => return Err(PartialVersionError::Prerelease),
-                    Err(_) if value.contains('+') => {
-                        return Err(PartialVersionError::BuildMetadata)
-                    }
-                    Err(_) => return Err(PartialVersionError::Unexpected),
+                    Err(_) if value.contains('-') => return Err(ErrorKind::Prerelease.into()),
+                    Err(_) if value.contains('+') => return Err(ErrorKind::BuildMetadata.into()),
+                    Err(_) => return Err(ErrorKind::Unexpected.into()),
                 };
                 assert_eq!(version_req.comparators.len(), 1, "guaranteed by is_req");
                 let comp = version_req.comparators.pop().unwrap();
@@ -160,9 +158,14 @@ impl<'de> serde::Deserialize<'de> for PartialVersion {
 }
 
 /// Error parsing a [`PartialVersion`].
+#[derive(Debug, thiserror::Error)]
+#[error(transparent)]
+pub struct PartialVersionError(#[from] ErrorKind);
+
+/// Non-public error kind for [`PartialVersionError`].
 #[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
-pub enum PartialVersionError {
+enum ErrorKind {
     #[error("unexpected version requirement, expected a version like \"1.32\"")]
     VersionReq,
 

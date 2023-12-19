@@ -1339,12 +1339,13 @@ impl std::str::FromStr for RustVersion {
     type Err = RustVersionError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let partial = value.parse::<PartialVersion>()?;
+        let partial = value.parse::<PartialVersion>();
+        let partial = partial.map_err(RustVersionErrorKind::PartialVersion)?;
         if partial.pre.is_some() {
-            return Err(RustVersionError::Prerelease);
+            return Err(RustVersionErrorKind::Prerelease.into());
         }
         if partial.build.is_some() {
-            return Err(RustVersionError::BuildMetadata);
+            return Err(RustVersionErrorKind::BuildMetadata.into());
         }
         Ok(Self(partial))
     }
@@ -1368,10 +1369,15 @@ impl Display for RustVersion {
     }
 }
 
-/// Error parsing a [`PartialVersion`].
+/// Error parsing a [`RustVersion`].
+#[derive(Debug, thiserror::Error)]
+#[error(transparent)]
+pub struct RustVersionError(#[from] RustVersionErrorKind);
+
+/// Non-public error kind for [`RustVersionError`].
 #[non_exhaustive]
 #[derive(Debug, thiserror::Error)]
-pub enum RustVersionError {
+enum RustVersionErrorKind {
     #[error("unexpected prerelease field, expected a version like \"1.32\"")]
     Prerelease,
 
