@@ -18,6 +18,7 @@ use serde_untagged::UntaggedEnumVisitor;
 
 use crate::core::PackageIdSpec;
 use crate::core::PartialVersion;
+use crate::core::PartialVersionError;
 use crate::restricted_names;
 
 /// This type is used to deserialize `Cargo.toml` files.
@@ -1334,15 +1335,15 @@ impl std::ops::Deref for RustVersion {
 }
 
 impl std::str::FromStr for RustVersion {
-    type Err = anyhow::Error;
+    type Err = RustVersionError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let partial = value.parse::<PartialVersion>()?;
         if partial.pre.is_some() {
-            anyhow::bail!("unexpected prerelease field, expected a version like \"1.32\"")
+            return Err(RustVersionError::Prerelease);
         }
         if partial.build.is_some() {
-            anyhow::bail!("unexpected prerelease field, expected a version like \"1.32\"")
+            return Err(RustVersionError::BuildMetadata);
         }
         Ok(Self(partial))
     }
@@ -1364,6 +1365,20 @@ impl Display for RustVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
+}
+
+/// Error parsing a [`PartialVersion`].
+#[non_exhaustive]
+#[derive(Debug, thiserror::Error)]
+pub enum RustVersionError {
+    #[error("unexpected prerelease field, expected a version like \"1.32\"")]
+    Prerelease,
+
+    #[error("unexpected build field, expected a version like \"1.32\"")]
+    BuildMetadata,
+
+    #[error(transparent)]
+    PartialVersion(#[from] PartialVersionError),
 }
 
 #[derive(Copy, Clone, Debug)]
