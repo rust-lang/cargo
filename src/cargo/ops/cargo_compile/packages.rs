@@ -72,7 +72,7 @@ impl Packages {
                 let mut specs = packages
                     .iter()
                     .map(|p| PackageIdSpec::parse(p))
-                    .collect::<CargoResult<Vec<_>>>()?;
+                    .collect::<Result<Vec<_>, _>>()?;
                 if !patterns.is_empty() {
                     let matched_pkgs = ws
                         .members()

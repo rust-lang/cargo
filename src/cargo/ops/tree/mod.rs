@@ -186,7 +186,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         opts.invert
             .iter()
             .map(|p| PackageIdSpec::parse(p))
-            .collect::<CargoResult<Vec<PackageIdSpec>>>()?
+            .collect::<Result<Vec<PackageIdSpec>, _>>()?
     };
     let root_ids = ws_resolve.targeted_resolve.specs_to_ids(&root_specs)?;
     let root_indexes = graph.indexes_from_ids(&root_ids);
@@ -207,7 +207,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
     let pkgs_to_prune = opts
         .pkgs_to_prune
         .iter()
-        .map(|p| PackageIdSpec::parse(p))
+        .map(|p| PackageIdSpec::parse(p).map_err(Into::into))
         .map(|r| {
             // Provide an error message if pkgid is not within the resolved
             // dependencies graph.
