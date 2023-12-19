@@ -90,8 +90,7 @@ Caused by:
     |
   7 |                 [profile.'.release-lto']
     |                          ^^^^^^^^^^^^^^
-  invalid character `.` in profile name `.release-lto`
-  Allowed characters are letters, numbers, underscore, and hyphen.
+  invalid character `.` in profile name: `.release-lto`, allowed characters are letters, numbers, underscore, and hyphen
 ",
         )
         .run();

@@ -348,8 +348,7 @@ fn explicit_invalid_name_not_suggested() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] the name `10-invalid` cannot be used as a package name, \
-the name cannot start with a digit\n\
+[ERROR] invalid character `1` in package name: `10-invalid`, the name cannot start with a digit
 If you need a binary with the name \"10-invalid\", use a valid package name, \
 and set the binary name to be different from the package. \
 This can be done by setting the binary filename to `src/bin/10-invalid.rs` \

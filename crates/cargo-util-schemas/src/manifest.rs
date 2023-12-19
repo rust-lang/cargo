@@ -10,7 +10,6 @@ use std::fmt::{self, Display, Write};
 use std::path::PathBuf;
 use std::str;
 
-use anyhow::Result;
 use serde::de::{self, IntoDeserializer as _, Unexpected};
 use serde::ser;
 use serde::{Deserialize, Serialize};
@@ -20,6 +19,8 @@ use crate::core::PackageIdSpec;
 use crate::core::PartialVersion;
 use crate::core::PartialVersionError;
 use crate::restricted_names;
+
+pub use crate::restricted_names::NameValidationError;
 
 /// This type is used to deserialize `Cargo.toml` files.
 #[derive(Debug, Deserialize, Serialize)]
@@ -1145,7 +1146,7 @@ macro_rules! str_newtype {
         }
 
         impl<'a> std::str::FromStr for $name<String> {
-            type Err = anyhow::Error;
+            type Err = restricted_names::NameValidationError;
 
             fn from_str(value: &str) -> Result<Self, Self::Err> {
                 Self::new(value.to_owned())
@@ -1174,7 +1175,7 @@ str_newtype!(PackageName);
 
 impl<T: AsRef<str>> PackageName<T> {
     /// Validated package name
-    pub fn new(name: T) -> Result<Self> {
+    pub fn new(name: T) -> Result<Self, NameValidationError> {
         restricted_names::validate_package_name(name.as_ref(), "package name", "")?;
         Ok(Self(name))
     }
@@ -1196,7 +1197,7 @@ str_newtype!(RegistryName);
 
 impl<T: AsRef<str>> RegistryName<T> {
     /// Validated registry name
-    pub fn new(name: T) -> Result<Self> {
+    pub fn new(name: T) -> Result<Self, NameValidationError> {
         restricted_names::validate_package_name(name.as_ref(), "registry name", "")?;
         Ok(Self(name))
     }
@@ -1206,7 +1207,7 @@ str_newtype!(ProfileName);
 
 impl<T: AsRef<str>> ProfileName<T> {
     /// Validated profile name
-    pub fn new(name: T) -> Result<Self> {
+    pub fn new(name: T) -> Result<Self, NameValidationError> {
         restricted_names::validate_profile_name(name.as_ref())?;
         Ok(Self(name))
     }
@@ -1216,7 +1217,7 @@ str_newtype!(FeatureName);
 
 impl<T: AsRef<str>> FeatureName<T> {
     /// Validated feature name
-    pub fn new(name: T) -> Result<Self> {
+    pub fn new(name: T) -> Result<Self, NameValidationError> {
         restricted_names::validate_feature_name(name.as_ref())?;
         Ok(Self(name))
     }

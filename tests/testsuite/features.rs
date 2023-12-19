@@ -2063,7 +2063,7 @@ Caused by:
     |
   8 |                 \"+foo\" = []
     |                 ^^^^^^
-  invalid character `+` in feature `+foo`, \
+  invalid character `+` in feature name: `+foo`, \
   the first character must be a Unicode XID start character or digit \
   (most letters or `_` or `0` to `9`)
 ",
@@ -2094,7 +2094,7 @@ Caused by:
     |
   8 |             \"a&b\" = []
     |             ^^^^^
-  invalid character `&` in feature `a&b`, \
+  invalid character `&` in feature name: `a&b`, \
   characters must be Unicode XID characters, '-', `+`, or `.` \
   (numbers, `+`, `-`, `_`, `.`, or most letters)
 ",
@@ -2131,7 +2131,7 @@ Caused by:
     |
   7 |                 \"foo/bar\" = []
     |                 ^^^^^^^^^
-  feature named `foo/bar` is not allowed to contain slashes
+  invalid character `/` in feature name: `foo/bar`, feature name is not allowed to contain slashes
 ",
         )
         .run();
