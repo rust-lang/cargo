@@ -560,11 +560,10 @@ impl GlobalCacheTracker {
     ) -> CargoResult<()> {
         let _p = crate::util::profile::start("cleaning global cache files");
         let config = clean_ctx.config;
-        let base_git_path = config.git_path().into_path_unlocked();
         let base = BasePaths {
             index: config.registry_index_path().into_path_unlocked(),
-            git_db: base_git_path.join("db"),
-            git_co: base_git_path.join("checkouts"),
+            git_db: config.git_db_path().into_path_unlocked(),
+            git_co: config.git_checkouts_path().into_path_unlocked(),
             crate_dir: config.registry_cache_path().into_path_unlocked(),
             src: config.registry_source_path().into_path_unlocked(),
         };
