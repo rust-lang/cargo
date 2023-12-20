@@ -1,15 +1,17 @@
 use std::fmt;
 
-use anyhow::bail;
-use anyhow::Result;
 use semver::Version;
 use serde::{de, ser};
 use url::Url;
 
 use crate::core::GitReference;
 use crate::core::PartialVersion;
+use crate::core::PartialVersionError;
 use crate::core::SourceKind;
 use crate::manifest::PackageName;
+use crate::restricted_names::NameValidationError;
+
+type Result<T> = std::result::Result<T, PackageIdSpecError>;
 
 /// Some or all of the data required to identify a package:
 ///
@@ -83,12 +85,11 @@ impl PackageIdSpec {
             if abs.exists() {
                 let maybe_url = Url::from_file_path(abs)
                     .map_or_else(|_| "a file:// URL".to_string(), |url| url.to_string());
-                bail!(
-                    "package ID specification `{}` looks like a file path, \
-                    maybe try {}",
-                    spec,
-                    maybe_url
-                );
+                return Err(ErrorKind::MaybeFilePath {
+                    spec: spec.into(),
+                    maybe_url,
+                }
+                .into());
             }
         }
         let mut parts = spec.splitn(2, [':', '@']);
@@ -119,14 +120,14 @@ impl PackageIdSpec {
                 }
                 "registry" => {
                     if url.query().is_some() {
-                        bail!("cannot have a query string in a pkgid: {url}")
+                        return Err(ErrorKind::UnexpectedQueryString(url).into());
                     }
                     kind = Some(SourceKind::Registry);
                     url = strip_url_protocol(&url);
                 }
                 "sparse" => {
                     if url.query().is_some() {
-                        bail!("cannot have a query string in a pkgid: {url}")
+                        return Err(ErrorKind::UnexpectedQueryString(url).into());
                     }
                     kind = Some(SourceKind::SparseRegistry);
                     // Leave `sparse` as part of URL, see `SourceId::new`
@@ -134,19 +135,19 @@ impl PackageIdSpec {
                 }
                 "path" => {
                     if url.query().is_some() {
-                        bail!("cannot have a query string in a pkgid: {url}")
+                        return Err(ErrorKind::UnexpectedQueryString(url).into());
                     }
                     if scheme != "file" {
-                        anyhow::bail!("`path+{scheme}` is unsupported; `path+file` and `file` schemes are supported");
+                        return Err(ErrorKind::UnsupportedPathPlusScheme(scheme.into()).into());
                     }
                     kind = Some(SourceKind::Path);
                     url = strip_url_protocol(&url);
                 }
-                kind => anyhow::bail!("unsupported source protocol: {kind}"),
+                kind => return Err(ErrorKind::UnsupportedProtocol(kind.into()).into()),
             }
         } else {
             if url.query().is_some() {
-                bail!("cannot have a query string in a pkgid: {url}")
+                return Err(ErrorKind::UnexpectedQueryString(url).into());
             }
         }
 
@@ -154,16 +155,9 @@ impl PackageIdSpec {
         url.set_fragment(None);
 
         let (name, version) = {
-            let mut path = url
-                .path_segments()
-                .ok_or_else(|| anyhow::format_err!("pkgid urls must have a path: {}", url))?;
-            let path_name = path.next_back().ok_or_else(|| {
-                anyhow::format_err!(
-                    "pkgid urls must have at least one path \
-                     component: {}",
-                    url
-                )
-            })?;
+            let Some(path_name) = url.path_segments().and_then(|mut p| p.next_back()) else {
+                return Err(ErrorKind::MissingUrlPath(url).into());
+            };
             match frag {
                 Some(fragment) => match fragment.split_once([':', '@']) {
                     Some((name, part)) => {
@@ -259,7 +253,7 @@ impl fmt::Display for PackageIdSpec {
 }
 
 impl ser::Serialize for PackageIdSpec {
-    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    fn serialize<S>(&self, s: S) -> std::result::Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
     {
@@ -268,13 +262,56 @@ impl ser::Serialize for PackageIdSpec {
 }
 
 impl<'de> de::Deserialize<'de> for PackageIdSpec {
-    fn deserialize<D>(d: D) -> Result<PackageIdSpec, D::Error>
+    fn deserialize<D>(d: D) -> std::result::Result<PackageIdSpec, D::Error>
     where
         D: de::Deserializer<'de>,
     {
         let string = String::deserialize(d)?;
         PackageIdSpec::parse(&string).map_err(de::Error::custom)
     }
+}
+
+/// Error parsing a [`PackageIdSpec`].
+#[derive(Debug, thiserror::Error)]
+#[error(transparent)]
+pub struct PackageIdSpecError(#[from] ErrorKind);
+
+impl From<PartialVersionError> for PackageIdSpecError {
+    fn from(value: PartialVersionError) -> Self {
+        ErrorKind::PartialVersion(value).into()
+    }
+}
+
+impl From<NameValidationError> for PackageIdSpecError {
+    fn from(value: NameValidationError) -> Self {
+        ErrorKind::NameValidation(value).into()
+    }
+}
+
+/// Non-public error kind for [`PackageIdSpecError`].
+#[non_exhaustive]
+#[derive(Debug, thiserror::Error)]
+enum ErrorKind {
+    #[error("unsupported source protocol: {0}")]
+    UnsupportedProtocol(String),
+
+    #[error("`path+{0}` is unsupported; `path+file` and `file` schemes are supported")]
+    UnsupportedPathPlusScheme(String),
+
+    #[error("cannot have a query string in a pkgid: {0}")]
+    UnexpectedQueryString(Url),
+
+    #[error("pkgid urls must have at least one path component: {0}")]
+    MissingUrlPath(Url),
+
+    #[error("package ID specification `{spec}` looks like a file path, maybe try {maybe_url}")]
+    MaybeFilePath { spec: String, maybe_url: String },
+
+    #[error(transparent)]
+    NameValidation(#[from] crate::restricted_names::NameValidationError),
+
+    #[error(transparent)]
+    PartialVersion(#[from] crate::core::PartialVersionError),
 }
 
 #[cfg(test)]

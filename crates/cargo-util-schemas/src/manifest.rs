@@ -10,7 +10,6 @@ use std::fmt::{self, Display, Write};
 use std::path::PathBuf;
 use std::str;
 
-use anyhow::Result;
 use serde::de::{self, IntoDeserializer as _, Unexpected};
 use serde::ser;
 use serde::{Deserialize, Serialize};
@@ -18,7 +17,10 @@ use serde_untagged::UntaggedEnumVisitor;
 
 use crate::core::PackageIdSpec;
 use crate::core::PartialVersion;
+use crate::core::PartialVersionError;
 use crate::restricted_names;
+
+pub use crate::restricted_names::NameValidationError;
 
 /// This type is used to deserialize `Cargo.toml` files.
 #[derive(Debug, Deserialize, Serialize)]
@@ -1144,7 +1146,7 @@ macro_rules! str_newtype {
         }
 
         impl<'a> std::str::FromStr for $name<String> {
-            type Err = anyhow::Error;
+            type Err = restricted_names::NameValidationError;
 
             fn from_str(value: &str) -> Result<Self, Self::Err> {
                 Self::new(value.to_owned())
@@ -1173,8 +1175,8 @@ str_newtype!(PackageName);
 
 impl<T: AsRef<str>> PackageName<T> {
     /// Validated package name
-    pub fn new(name: T) -> Result<Self> {
-        restricted_names::validate_package_name(name.as_ref(), "package name", "")?;
+    pub fn new(name: T) -> Result<Self, NameValidationError> {
+        restricted_names::validate_package_name(name.as_ref(), "package name")?;
         Ok(Self(name))
     }
 }
@@ -1195,8 +1197,8 @@ str_newtype!(RegistryName);
 
 impl<T: AsRef<str>> RegistryName<T> {
     /// Validated registry name
-    pub fn new(name: T) -> Result<Self> {
-        restricted_names::validate_package_name(name.as_ref(), "registry name", "")?;
+    pub fn new(name: T) -> Result<Self, NameValidationError> {
+        restricted_names::validate_package_name(name.as_ref(), "registry name")?;
         Ok(Self(name))
     }
 }
@@ -1205,7 +1207,7 @@ str_newtype!(ProfileName);
 
 impl<T: AsRef<str>> ProfileName<T> {
     /// Validated profile name
-    pub fn new(name: T) -> Result<Self> {
+    pub fn new(name: T) -> Result<Self, NameValidationError> {
         restricted_names::validate_profile_name(name.as_ref())?;
         Ok(Self(name))
     }
@@ -1215,7 +1217,7 @@ str_newtype!(FeatureName);
 
 impl<T: AsRef<str>> FeatureName<T> {
     /// Validated feature name
-    pub fn new(name: T) -> Result<Self> {
+    pub fn new(name: T) -> Result<Self, NameValidationError> {
         restricted_names::validate_feature_name(name.as_ref())?;
         Ok(Self(name))
     }
@@ -1334,15 +1336,16 @@ impl std::ops::Deref for RustVersion {
 }
 
 impl std::str::FromStr for RustVersion {
-    type Err = anyhow::Error;
+    type Err = RustVersionError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let partial = value.parse::<PartialVersion>()?;
+        let partial = value.parse::<PartialVersion>();
+        let partial = partial.map_err(RustVersionErrorKind::PartialVersion)?;
         if partial.pre.is_some() {
-            anyhow::bail!("unexpected prerelease field, expected a version like \"1.32\"")
+            return Err(RustVersionErrorKind::Prerelease.into());
         }
         if partial.build.is_some() {
-            anyhow::bail!("unexpected prerelease field, expected a version like \"1.32\"")
+            return Err(RustVersionErrorKind::BuildMetadata.into());
         }
         Ok(Self(partial))
     }
@@ -1364,6 +1367,25 @@ impl Display for RustVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
+}
+
+/// Error parsing a [`RustVersion`].
+#[derive(Debug, thiserror::Error)]
+#[error(transparent)]
+pub struct RustVersionError(#[from] RustVersionErrorKind);
+
+/// Non-public error kind for [`RustVersionError`].
+#[non_exhaustive]
+#[derive(Debug, thiserror::Error)]
+enum RustVersionErrorKind {
+    #[error("unexpected prerelease field, expected a version like \"1.32\"")]
+    Prerelease,
+
+    #[error("unexpected build field, expected a version like \"1.32\"")]
+    BuildMetadata,
+
+    #[error(transparent)]
+    PartialVersion(#[from] PartialVersionError),
 }
 
 #[derive(Copy, Clone, Debug)]
