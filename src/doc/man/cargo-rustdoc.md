@@ -24,6 +24,7 @@ See <https://doc.rust-lang.org/rustdoc/index.html> for documentation on rustdoc
 flags.
 
 {{> description-one-target }}
+
 To pass flags to all rustdoc processes spawned by Cargo, use the
 `RUSTDOCFLAGS` [environment variable](../reference/environment-variables.html)
 or the `build.rustdocflags` [config value](../reference/config.html).

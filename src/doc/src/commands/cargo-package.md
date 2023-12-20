@@ -1,5 +1,4 @@
 # cargo-package(1)
-
 ## NAME
 
 cargo-package --- Assemble the local package into a distributable tarball
@@ -112,7 +111,6 @@ double quotes around each pattern.</dd>
 
 
 
-
 <dt class="option-term" id="option-cargo-package---exclude"><a class="option-anchor" href="#option-cargo-package---exclude"></a><code>--exclude</code> <em>SPEC</em>…</dt>
 <dd class="option-desc">Exclude the specified packages. Must be used in conjunction with the
 <code>--workspace</code> flag. This flag may be specified multiple times and supports
@@ -122,7 +120,6 @@ single quotes or double quotes around each pattern.</dd>
 
 
 </dl>
-
 
 ### Compilation Options
 
@@ -139,13 +136,11 @@ target artifacts are placed in a separate directory. See the
 <a href="../guide/build-cache.html">build cache</a> documentation for more details.</dd>
 
 
-
 <dt class="option-term" id="option-cargo-package---target-dir"><a class="option-anchor" href="#option-cargo-package---target-dir"></a><code>--target-dir</code> <em>directory</em></dt>
 <dd class="option-desc">Directory for all generated artifacts and intermediate files. May also be
 specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
 <code>build.target-dir</code> <a href="../reference/config.html">config value</a>.
 Defaults to <code>target</code> in the root of the workspace.</dd>
-
 
 
 </dl>
@@ -178,7 +173,6 @@ be specified multiple times, which enables all specified features.</dd>
 
 </dl>
 
-
 ### Manifest Options
 
 <dl>
@@ -186,7 +180,6 @@ be specified multiple times, which enables all specified features.</dd>
 <dt class="option-term" id="option-cargo-package---manifest-path"><a class="option-anchor" href="#option-cargo-package---manifest-path"></a><code>--manifest-path</code> <em>path</em></dt>
 <dd class="option-desc">Path to the <code>Cargo.toml</code> file. By default, Cargo searches for the
 <code>Cargo.toml</code> file in the current directory or any parent directory.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-package---frozen"><a class="option-anchor" href="#option-cargo-package---frozen"></a><code>--frozen</code></dt>
@@ -213,7 +206,6 @@ offline.</p>
 <p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</dd>
 
 
-
 </dl>
 
 ### Miscellaneous Options
@@ -228,7 +220,6 @@ parallel jobs to the number of logical CPUs plus provided value. If
 a string <code>default</code> is provided, it sets the value back to defaults.
 Should not be 0.</dd>
 
-
 <dt class="option-term" id="option-cargo-package---keep-going"><a class="option-anchor" href="#option-cargo-package---keep-going"></a><code>--keep-going</code></dt>
 <dd class="option-desc">Build as many crates in the dependency graph as possible, rather than aborting
 the build on the first one that fails to build.</p>
@@ -237,7 +228,6 @@ one of which fails to build, <code>cargo package -j1</code> may or may not build
 one that succeeds (depending on which one of the two builds Cargo picked to run
 first), whereas <code>cargo package -j1 --keep-going</code> would definitely run both
 builds, even if the one run first fails.</dd>
-
 
 </dl>
 
@@ -269,7 +259,6 @@ terminal.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
 <a href="../reference/config.html">config value</a>.</dd>
-
 
 </dl>
 
@@ -313,18 +302,15 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 
 </dl>
 
-
 ## ENVIRONMENT
 
 See [the reference](../reference/environment-variables.html) for
 details on environment variables that Cargo reads.
 
-
 ## EXIT STATUS
 
 * `0`: Cargo succeeded.
 * `101`: Cargo failed to complete.
-
 
 ## EXAMPLES
 

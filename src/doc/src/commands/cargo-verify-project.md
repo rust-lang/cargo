@@ -52,7 +52,6 @@ terminal.</li>
 <a href="../reference/config.html">config value</a>.</dd>
 
 
-
 </dl>
 
 ### Manifest Options
@@ -62,7 +61,6 @@ terminal.</li>
 <dt class="option-term" id="option-cargo-verify-project---manifest-path"><a class="option-anchor" href="#option-cargo-verify-project---manifest-path"></a><code>--manifest-path</code> <em>path</em></dt>
 <dd class="option-desc">Path to the <code>Cargo.toml</code> file. By default, Cargo searches for the
 <code>Cargo.toml</code> file in the current directory or any parent directory.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-verify-project---frozen"><a class="option-anchor" href="#option-cargo-verify-project---frozen"></a><code>--frozen</code></dt>
@@ -87,7 +85,6 @@ if there might be a newer version as indicated in the local copy of the index.
 See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
 offline.</p>
 <p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</dd>
-
 
 
 </dl>
@@ -132,12 +129,10 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 
 </dl>
 
-
 ## ENVIRONMENT
 
 See [the reference](../reference/environment-variables.html) for
 details on environment variables that Cargo reads.
-
 
 ## EXIT STATUS
 

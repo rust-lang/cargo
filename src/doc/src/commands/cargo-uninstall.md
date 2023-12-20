@@ -25,7 +25,6 @@ The installation root is determined, in order of precedence:
 - `CARGO_HOME` environment variable
 - `$HOME/.cargo`
 
-
 ## OPTIONS
 
 ### Install Options
@@ -78,7 +77,6 @@ terminal.</li>
 <a href="../reference/config.html">config value</a>.</dd>
 
 
-
 </dl>
 
 ### Common Options
@@ -121,18 +119,15 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 
 </dl>
 
-
 ## ENVIRONMENT
 
 See [the reference](../reference/environment-variables.html) for
 details on environment variables that Cargo reads.
 
-
 ## EXIT STATUS
 
 * `0`: Cargo succeeded.
 * `101`: Cargo failed to complete.
-
 
 ## EXAMPLES
 

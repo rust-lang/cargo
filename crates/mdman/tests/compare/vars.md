@@ -2,6 +2,7 @@
 
 {{*set foo="Bar"}}
 
+
 {{foo}}
 
 {{lower foo}}

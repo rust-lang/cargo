@@ -1,5 +1,4 @@
 # cargo-run(1)
-
 ## NAME
 
 cargo-run --- Run the current package
@@ -36,7 +35,6 @@ format.</dd>
 
 
 </dl>
-
 
 ### Target Selection
 
@@ -85,7 +83,6 @@ be specified multiple times, which enables all specified features.</dd>
 
 </dl>
 
-
 ### Compilation Options
 
 <dl>
@@ -101,12 +98,10 @@ target artifacts are placed in a separate directory. See the
 <a href="../guide/build-cache.html">build cache</a> documentation for more details.</dd>
 
 
-
 <dt class="option-term" id="option-cargo-run--r"><a class="option-anchor" href="#option-cargo-run--r"></a><code>-r</code></dt>
 <dt class="option-term" id="option-cargo-run---release"><a class="option-anchor" href="#option-cargo-run---release"></a><code>--release</code></dt>
 <dd class="option-desc">Run optimized artifacts with the <code>release</code> profile.
 See also the <code>--profile</code> option for choosing a specific profile by name.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-run---profile"><a class="option-anchor" href="#option-cargo-run---profile"></a><code>--profile</code> <em>name</em></dt>
@@ -114,11 +109,9 @@ See also the <code>--profile</code> option for choosing a specific profile by na
 See <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
 
 
-
 <dt class="option-term" id="option-cargo-run---ignore-rust-version"><a class="option-anchor" href="#option-cargo-run---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
 <dd class="option-desc">Run the target even if the selected Rust compiler is older than the
 required Rust version as configured in the project’s <code>rust-version</code> field.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-run---timings=fmts"><a class="option-anchor" href="#option-cargo-run---timings=fmts"></a><code>--timings=</code><em>fmts</em></dt>
@@ -139,7 +132,6 @@ information about timing information.</li>
 
 
 
-
 </dl>
 
 ### Output Options
@@ -150,7 +142,6 @@ information about timing information.</li>
 specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
 <code>build.target-dir</code> <a href="../reference/config.html">config value</a>.
 Defaults to <code>target</code> in the root of the workspace.</dd>
-
 
 </dl>
 
@@ -185,7 +176,6 @@ terminal.</li>
 <a href="../reference/config.html">config value</a>.</dd>
 
 
-
 <dt class="option-term" id="option-cargo-run---message-format"><a class="option-anchor" href="#option-cargo-run---message-format"></a><code>--message-format</code> <em>fmt</em></dt>
 <dd class="option-desc">The output format for diagnostic messages. Can be specified multiple times
 and consists of comma-separated values. Valid values:</p>
@@ -209,7 +199,6 @@ coming from rustc are still emitted. Cannot be used with <code>human</code> or <
 </ul></dd>
 
 
-
 </dl>
 
 ### Manifest Options
@@ -219,7 +208,6 @@ coming from rustc are still emitted. Cannot be used with <code>human</code> or <
 <dt class="option-term" id="option-cargo-run---manifest-path"><a class="option-anchor" href="#option-cargo-run---manifest-path"></a><code>--manifest-path</code> <em>path</em></dt>
 <dd class="option-desc">Path to the <code>Cargo.toml</code> file. By default, Cargo searches for the
 <code>Cargo.toml</code> file in the current directory or any parent directory.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-run---frozen"><a class="option-anchor" href="#option-cargo-run---frozen"></a><code>--frozen</code></dt>
@@ -244,7 +232,6 @@ if there might be a newer version as indicated in the local copy of the index.
 See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
 offline.</p>
 <p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</dd>
-
 
 
 </dl>
@@ -289,7 +276,6 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 
 </dl>
 
-
 ### Miscellaneous Options
 
 <dl>
@@ -302,7 +288,6 @@ parallel jobs to the number of logical CPUs plus provided value. If
 a string <code>default</code> is provided, it sets the value back to defaults.
 Should not be 0.</dd>
 
-
 <dt class="option-term" id="option-cargo-run---keep-going"><a class="option-anchor" href="#option-cargo-run---keep-going"></a><code>--keep-going</code></dt>
 <dd class="option-desc">Build as many crates in the dependency graph as possible, rather than aborting
 the build on the first one that fails to build.</p>
@@ -312,7 +297,6 @@ one that succeeds (depending on which one of the two builds Cargo picked to run
 first), whereas <code>cargo run -j1 --keep-going</code> would definitely run both
 builds, even if the one run first fails.</dd>
 
-
 </dl>
 
 ## ENVIRONMENT
@@ -320,12 +304,10 @@ builds, even if the one run first fails.</dd>
 See [the reference](../reference/environment-variables.html) for
 details on environment variables that Cargo reads.
 
-
 ## EXIT STATUS
 
 * `0`: Cargo succeeded.
 * `101`: Cargo failed to complete.
-
 
 ## EXAMPLES
 

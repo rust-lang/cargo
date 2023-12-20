@@ -49,7 +49,6 @@ man page:
 - Other helpers include:
     - `{{lower value}}` Converts the given value to lowercase.
 
-
 ## OPTIONS
 
 <dl>
