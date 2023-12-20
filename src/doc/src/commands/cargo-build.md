@@ -1,5 +1,4 @@
 # cargo-build(1)
-
 ## NAME
 
 cargo-build --- Compile the current package
@@ -42,10 +41,8 @@ double quotes around each pattern.</dd>
 <dd class="option-desc">Build all members in the workspace.</dd>
 
 
-
 <dt class="option-term" id="option-cargo-build---all"><a class="option-anchor" href="#option-cargo-build---all"></a><code>--all</code></dt>
 <dd class="option-desc">Deprecated alias for <code>--workspace</code>.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-build---exclude"><a class="option-anchor" href="#option-cargo-build---exclude"></a><code>--exclude</code> <em>SPEC</em>…</dt>
@@ -57,7 +54,6 @@ single quotes or double quotes around each pattern.</dd>
 
 
 </dl>
-
 
 ### Target Selection
 
@@ -73,7 +69,6 @@ The `CARGO_BIN_EXE_<name>`
 is set when the integration test is built so that it can use the
 [`env` macro](https://doc.rust-lang.org/std/macro.env.html) to locate the
 executable.
-
 
 Passing target selection flags will build only the specified
 targets. 
@@ -96,7 +91,6 @@ and supports common Unix glob patterns.</dd>
 
 <dt class="option-term" id="option-cargo-build---bins"><a class="option-anchor" href="#option-cargo-build---bins"></a><code>--bins</code></dt>
 <dd class="option-desc">Build all binary targets.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-build---example"><a class="option-anchor" href="#option-cargo-build---example"></a><code>--example</code> <em>name</em>…</dt>
@@ -144,7 +138,6 @@ manifest settings for the target.</dd>
 
 </dl>
 
-
 ### Feature Selection
 
 The feature flags allow you to control which features are enabled. When no
@@ -173,7 +166,6 @@ be specified multiple times, which enables all specified features.</dd>
 
 </dl>
 
-
 ### Compilation Options
 
 <dl>
@@ -189,12 +181,10 @@ target artifacts are placed in a separate directory. See the
 <a href="../guide/build-cache.html">build cache</a> documentation for more details.</dd>
 
 
-
 <dt class="option-term" id="option-cargo-build--r"><a class="option-anchor" href="#option-cargo-build--r"></a><code>-r</code></dt>
 <dt class="option-term" id="option-cargo-build---release"><a class="option-anchor" href="#option-cargo-build---release"></a><code>--release</code></dt>
 <dd class="option-desc">Build optimized artifacts with the <code>release</code> profile.
 See also the <code>--profile</code> option for choosing a specific profile by name.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-build---profile"><a class="option-anchor" href="#option-cargo-build---profile"></a><code>--profile</code> <em>name</em></dt>
@@ -202,11 +192,9 @@ See also the <code>--profile</code> option for choosing a specific profile by na
 See <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
 
 
-
 <dt class="option-term" id="option-cargo-build---ignore-rust-version"><a class="option-anchor" href="#option-cargo-build---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
 <dd class="option-desc">Build the target even if the selected Rust compiler is older than the
 required Rust version as configured in the project’s <code>rust-version</code> field.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-build---timings=fmts"><a class="option-anchor" href="#option-cargo-build---timings=fmts"></a><code>--timings=</code><em>fmts</em></dt>
@@ -227,7 +215,6 @@ information about timing information.</li>
 
 
 
-
 </dl>
 
 ### Output Options
@@ -238,7 +225,6 @@ information about timing information.</li>
 specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
 <code>build.target-dir</code> <a href="../reference/config.html">config value</a>.
 Defaults to <code>target</code> in the root of the workspace.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-build---out-dir"><a class="option-anchor" href="#option-cargo-build---out-dir"></a><code>--out-dir</code> <em>directory</em></dt>
@@ -281,7 +267,6 @@ terminal.</li>
 <a href="../reference/config.html">config value</a>.</dd>
 
 
-
 <dt class="option-term" id="option-cargo-build---message-format"><a class="option-anchor" href="#option-cargo-build---message-format"></a><code>--message-format</code> <em>fmt</em></dt>
 <dd class="option-desc">The output format for diagnostic messages. Can be specified multiple times
 and consists of comma-separated values. Valid values:</p>
@@ -305,7 +290,6 @@ coming from rustc are still emitted. Cannot be used with <code>human</code> or <
 </ul></dd>
 
 
-
 <dt class="option-term" id="option-cargo-build---build-plan"><a class="option-anchor" href="#option-cargo-build---build-plan"></a><code>--build-plan</code></dt>
 <dd class="option-desc">Outputs a series of JSON messages to stdout that indicate the commands to run
 the build.</p>
@@ -322,7 +306,6 @@ See <a href="https://github.com/rust-lang/cargo/issues/5579">https://github.com/
 <dt class="option-term" id="option-cargo-build---manifest-path"><a class="option-anchor" href="#option-cargo-build---manifest-path"></a><code>--manifest-path</code> <em>path</em></dt>
 <dd class="option-desc">Path to the <code>Cargo.toml</code> file. By default, Cargo searches for the
 <code>Cargo.toml</code> file in the current directory or any parent directory.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-build---frozen"><a class="option-anchor" href="#option-cargo-build---frozen"></a><code>--frozen</code></dt>
@@ -347,7 +330,6 @@ if there might be a newer version as indicated in the local copy of the index.
 See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
 offline.</p>
 <p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</dd>
-
 
 </dl>
 
@@ -391,7 +373,6 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 
 </dl>
 
-
 ### Miscellaneous Options
 
 <dl>
@@ -404,7 +385,6 @@ parallel jobs to the number of logical CPUs plus provided value. If
 a string <code>default</code> is provided, it sets the value back to defaults.
 Should not be 0.</dd>
 
-
 <dt class="option-term" id="option-cargo-build---keep-going"><a class="option-anchor" href="#option-cargo-build---keep-going"></a><code>--keep-going</code></dt>
 <dd class="option-desc">Build as many crates in the dependency graph as possible, rather than aborting
 the build on the first one that fails to build.</p>
@@ -414,12 +394,10 @@ one that succeeds (depending on which one of the two builds Cargo picked to run
 first), whereas <code>cargo build -j1 --keep-going</code> would definitely run both
 builds, even if the one run first fails.</dd>
 
-
 <dt class="option-term" id="option-cargo-build---future-incompat-report"><a class="option-anchor" href="#option-cargo-build---future-incompat-report"></a><code>--future-incompat-report</code></dt>
 <dd class="option-desc">Displays a future-incompat report for any future-incompatible warnings
 produced during execution of this command</p>
 <p>See <a href="cargo-report.html">cargo-report(1)</a></dd>
-
 
 </dl>
 
@@ -428,12 +406,10 @@ produced during execution of this command</p>
 See [the reference](../reference/environment-variables.html) for
 details on environment variables that Cargo reads.
 
-
 ## EXIT STATUS
 
 * `0`: Cargo succeeded.
 * `101`: Cargo failed to complete.
-
 
 ## EXAMPLES
 

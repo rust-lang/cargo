@@ -28,13 +28,11 @@ for copying into a `Cargo.toml` manifest.
 <dd class="option-desc">The URL of the registry index to use.</dd>
 
 
-
 <dt class="option-term" id="option-cargo-search---registry"><a class="option-anchor" href="#option-cargo-search---registry"></a><code>--registry</code> <em>registry</em></dt>
 <dd class="option-desc">Name of the registry to use. Registry names are defined in <a href="../reference/config.html">Cargo config
 files</a>. If not specified, the default registry is used,
 which is defined by the <code>registry.default</code> config key which defaults to
 <code>crates-io</code>.</dd>
-
 
 
 </dl>
@@ -67,7 +65,6 @@ terminal.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
 <a href="../reference/config.html">config value</a>.</dd>
-
 
 </dl>
 
@@ -111,18 +108,15 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 
 </dl>
 
-
 ## ENVIRONMENT
 
 See [the reference](../reference/environment-variables.html) for
 details on environment variables that Cargo reads.
 
-
 ## EXIT STATUS
 
 * `0`: Cargo succeeded.
 * `101`: Cargo failed to complete.
-
 
 ## EXAMPLES
 

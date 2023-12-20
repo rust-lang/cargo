@@ -1,5 +1,4 @@
 # cargo-tree(1)
-
 ## NAME
 
 cargo-tree --- Display a tree visualization of a dependency graph
@@ -204,7 +203,6 @@ double quotes around each pattern.</dd>
 
 
 
-
 <dt class="option-term" id="option-cargo-tree---exclude"><a class="option-anchor" href="#option-cargo-tree---exclude"></a><code>--exclude</code> <em>SPEC</em>…</dt>
 <dd class="option-desc">Exclude the specified packages. Must be used in conjunction with the
 <code>--workspace</code> flag. This flag may be specified multiple times and supports
@@ -215,7 +213,6 @@ single quotes or double quotes around each pattern.</dd>
 
 </dl>
 
-
 ### Manifest Options
 
 <dl>
@@ -223,7 +220,6 @@ single quotes or double quotes around each pattern.</dd>
 <dt class="option-term" id="option-cargo-tree---manifest-path"><a class="option-anchor" href="#option-cargo-tree---manifest-path"></a><code>--manifest-path</code> <em>path</em></dt>
 <dd class="option-desc">Path to the <code>Cargo.toml</code> file. By default, Cargo searches for the
 <code>Cargo.toml</code> file in the current directory or any parent directory.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-tree---frozen"><a class="option-anchor" href="#option-cargo-tree---frozen"></a><code>--frozen</code></dt>
@@ -248,7 +244,6 @@ if there might be a newer version as indicated in the local copy of the index.
 See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
 offline.</p>
 <p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</dd>
-
 
 
 </dl>
@@ -281,7 +276,6 @@ be specified multiple times, which enables all specified features.</dd>
 
 </dl>
 
-
 ### Display Options
 
 <dl>
@@ -311,7 +305,6 @@ terminal.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
 <a href="../reference/config.html">config value</a>.</dd>
-
 
 
 </dl>
@@ -356,18 +349,15 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 
 </dl>
 
-
 ## ENVIRONMENT
 
 See [the reference](../reference/environment-variables.html) for
 details on environment variables that Cargo reads.
 
-
 ## EXIT STATUS
 
 * `0`: Cargo succeeded.
 * `101`: Cargo failed to complete.
-
 
 ## EXAMPLES
 
