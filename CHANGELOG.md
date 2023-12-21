@@ -1,5 +1,34 @@
 # Changelog
 
+## Cargo 1.77 (2024-03-21)
+[1a2666dd...HEAD](https://github.com/rust-lang/cargo/compare/1a2666dd...HEAD)
+
+### Added
+
+### Changed
+
+- cargo-vendor: Hold the mutate exclusive lock when vendoring.
+  [#12509](https://github.com/rust-lang/cargo/pull/12509)
+
+### Fixed
+
+### Nightly only
+
+### Documentation
+
+### Internal
+
+- 🎉 New member crate [`cargo-util-schemas`](https://crates.io/crates/cargo-util-schemas)!
+  This contains low-level Cargo schema types, focusing on `serde` and `FromStr`
+  for use in reading files and parsing command-lines.
+  Any logic for getting final semantics from these will likely need other tools
+  to process, like `cargo metadata`.
+  The crates.io publish of this crate is the same as other members crates.
+  It follows Rust's [6-week release process](https://doc.crates.io/contrib/process/release.html#cratesio-publishing).
+  [#13178](https://github.com/rust-lang/cargo/pull/13178)
+  [#13185](https://github.com/rust-lang/cargo/pull/13185)
+  [#13186](https://github.com/rust-lang/cargo/pull/13186)
+
 ## Cargo 1.76 (2024-02-08)
 [6790a512...rust-1.76.0](https://github.com/rust-lang/cargo/compare/6790a512...rust-1.76.0)
 
