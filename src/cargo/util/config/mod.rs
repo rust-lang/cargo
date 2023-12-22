@@ -368,6 +368,18 @@ impl Config {
         self.home_path.join("git")
     }
 
+    /// Gets the directory of code sources Cargo checkouts from Git bare repos
+    /// (`<cargo_home>/git/checkouts`).
+    pub fn git_checkouts_path(&self) -> Filesystem {
+        self.git_path().join("checkouts")
+    }
+
+    /// Gets the directory for all Git bare repos Cargo clones
+    /// (`<cargo_home>/git/db`).
+    pub fn git_db_path(&self) -> Filesystem {
+        self.git_path().join("db")
+    }
+
     /// Gets the Cargo base directory for all registry information (`<cargo_home>/registry`).
     pub fn registry_base_path(&self) -> Filesystem {
         self.home_path.join("registry")

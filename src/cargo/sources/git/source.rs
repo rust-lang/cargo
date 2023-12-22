@@ -248,7 +248,8 @@ impl<'cfg> Source for GitSource<'cfg> {
         // exists.
         exclude_from_backups_and_indexing(&git_path);
 
-        let db_path = git_path.join("db").join(&self.ident);
+        let db_path = self.config.git_db_path().join(&self.ident);
+        let db_path = db_path.into_path_unlocked();
 
         let db = self.remote.db_at(&db_path).ok();
         let (db, actual_rev) = match (self.locked_rev, db) {
@@ -305,10 +306,12 @@ impl<'cfg> Source for GitSource<'cfg> {
         // Check out `actual_rev` from the database to a scoped location on the
         // filesystem. This will use hard links and such to ideally make the
         // checkout operation here pretty fast.
-        let checkout_path = git_path
-            .join("checkouts")
+        let checkout_path = self
+            .config
+            .git_checkouts_path()
             .join(&self.ident)
             .join(short_id.as_str());
+        let checkout_path = checkout_path.into_path_unlocked();
         db.copy_to(actual_rev, &checkout_path, self.config)?;
 
         let source_id = self
