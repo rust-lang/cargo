@@ -1255,14 +1255,25 @@ fn trim_paths_args(
 /// [`check-cfg`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#check-cfg
 fn check_cfg_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
     if cx.bcx.config.cli_unstable().check_cfg {
-        // This generate something like this:
-        //  - cfg()
-        //  - cfg(feature, values("foo", "bar"))
+        // The routine below generates the --check-cfg arguments. Our goals here are to
+        // enable the checking of conditionals and pass the list of declared features.
         //
-        // NOTE: Despite only explicitly specifying `feature`, well known names and values
-        // are implicitly enabled when one or more `--check-cfg` argument is passed.
-        // NOTE: Never generate a empty `values()` since it would mean that it's possible
-        // to have `cfg(feature)` without a feature name which is impossible.
+        // In the simplified case, it would resemble something like this:
+        //
+        //   --check-cfg=cfg() --check-cfg=cfg(feature, values(...))
+        //
+        // but having `cfg()` is redundant with the second argument (as well-known names
+        // and values are implicitly enabled when one or more `--check-cfg` argument is
+        // passed) so we don't emit it:
+        //
+        //   --check-cfg=cfg(feature, values(...))
+        //
+        // expect when there are no features declared, where we can't generate the
+        // `cfg(feature, values())` argument since it would mean that it is somehow
+        // possible to have a `#[cfg(feature)]` without a feature name, which is
+        // impossible and not what we want, so we just generate:
+        //
+        //   --check-cfg=cfg()
 
         let gross_cap_estimation = unit.pkg.summary().features().len() * 7 + 25;
         let mut arg_feature = OsString::with_capacity(gross_cap_estimation);
