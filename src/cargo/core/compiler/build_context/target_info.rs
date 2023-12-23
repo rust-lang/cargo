@@ -800,7 +800,6 @@ fn rustflags_from_target(
                         .as_ref()
                         .map(|rustflags| (key, &rustflags.val)),
                     // `target.cfg(…).rustdocflags` is currently not supported.
-                    // In fact, neither is `target.<triple>.rustdocflags`.
                     Flags::Rustdoc => None,
                 }
             })

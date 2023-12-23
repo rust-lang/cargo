@@ -177,13 +177,10 @@ fn target_triple_rustdocflags_works() {
         .with_stderr_contains("[RUNNING] `rustdoc[..]--cfg[..]foo[..]`")
         .run();
 
-    // target.triple.rustdocflags in config is not supported.
+    // target.triple.rustdocflags in config works
     p.cargo("doc -v")
         .arg("--config")
         .arg(format!("target.{host}.rustdocflags=['--cfg', 'foo']"))
-        .with_status(101)
-        .with_stderr(format!(
-            "[ERROR] expected a table, but found a array for `target.{host}.rustdocflags` in --config cli option"
-        ))
+        .with_stderr_contains("[RUNNING] `rustdoc[..]--cfg[..]foo[..]`")
         .run();
 }

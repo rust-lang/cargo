@@ -27,6 +27,8 @@ pub struct TargetConfig {
     pub runner: OptValue<PathAndArgs>,
     /// Additional rustc flags to pass.
     pub rustflags: OptValue<StringList>,
+    /// Additional rustdoc flags to pass.
+    pub rustdocflags: OptValue<StringList>,
     /// The path of the linker for this target.
     pub linker: OptValue<ConfigRelativePath>,
     /// Build script override for the given library name.
@@ -98,6 +100,7 @@ pub(super) fn load_host_triple(gctx: &GlobalContext, triple: &str) -> CargoResul
         Ok(TargetConfig {
             runner: None,
             rustflags: None,
+            rustdocflags: None,
             linker: None,
             links_overrides: BTreeMap::new(),
         })
@@ -118,6 +121,7 @@ fn load_config_table(gctx: &GlobalContext, prefix: &str) -> CargoResult<TargetCo
     // environment variables would not work.
     let runner: OptValue<PathAndArgs> = gctx.get(&format!("{}.runner", prefix))?;
     let rustflags: OptValue<StringList> = gctx.get(&format!("{}.rustflags", prefix))?;
+    let rustdocflags: OptValue<StringList> = gctx.get(&format!("{}.rustdocflags", prefix))?;
     let linker: OptValue<ConfigRelativePath> = gctx.get(&format!("{}.linker", prefix))?;
     // Links do not support environment variables.
     let target_key = ConfigKey::from_str(prefix);
@@ -128,6 +132,7 @@ fn load_config_table(gctx: &GlobalContext, prefix: &str) -> CargoResult<TargetCo
     Ok(TargetConfig {
         runner,
         rustflags,
+        rustdocflags,
         linker,
         links_overrides,
     })
@@ -144,7 +149,7 @@ fn parse_links_overrides(
         // Skip these keys, it shares the namespace with `TargetConfig`.
         match lib_name.as_str() {
             // `ar` is a historical thing.
-            "ar" | "linker" | "runner" | "rustflags" => continue,
+            "ar" | "linker" | "runner" | "rustflags" | "rustdocflags" => continue,
             _ => {}
         }
         let mut output = BuildOutput::default();
