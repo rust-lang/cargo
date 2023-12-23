@@ -698,6 +698,8 @@ impl Flags {
 /// For those artifacts, _only_ `host.*.rustflags` is respected, and no other configuration
 /// sources, _regardless of the value of `target-applies-to-host`_. This is counterintuitive, but
 /// necessary to retain backwards compatibility with older versions of Cargo.
+///
+/// Rules above also applies to rustdoc. Just the key would be `rustdocflags`/`RUSTDOCFLAGS`.
 fn extra_args(
     gctx: &GlobalContext,
     requested_kinds: &[CompileKind],
