@@ -21,7 +21,7 @@ pub struct TargetCfgConfig {
 }
 
 /// Config definition of a `[target]` table or `[host]`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct TargetConfig {
     /// Process to run as a wrapper for `cargo run`, `test`, and `bench` commands.
     pub runner: OptValue<PathAndArgs>,
@@ -97,13 +97,7 @@ pub(super) fn load_host_triple(gctx: &GlobalContext, triple: &str) -> CargoResul
         };
         load_config_table(gctx, &host_prefix)
     } else {
-        Ok(TargetConfig {
-            runner: None,
-            rustflags: None,
-            rustdocflags: None,
-            linker: None,
-            links_overrides: BTreeMap::new(),
-        })
+        Ok(TargetConfig::default())
     }
 }
 
