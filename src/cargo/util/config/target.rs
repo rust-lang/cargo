@@ -113,10 +113,10 @@ fn load_config_table(gctx: &GlobalContext, prefix: &str) -> CargoResult<TargetCo
     // because it causes serde to use `deserialize_map` which means the config
     // deserializer does not know which keys to deserialize, which means
     // environment variables would not work.
-    let runner: OptValue<PathAndArgs> = gctx.get(&format!("{}.runner", prefix))?;
-    let rustflags: OptValue<StringList> = gctx.get(&format!("{}.rustflags", prefix))?;
-    let rustdocflags: OptValue<StringList> = gctx.get(&format!("{}.rustdocflags", prefix))?;
-    let linker: OptValue<ConfigRelativePath> = gctx.get(&format!("{}.linker", prefix))?;
+    let runner: OptValue<PathAndArgs> = gctx.get(&format!("{prefix}.runner"))?;
+    let rustflags: OptValue<StringList> = gctx.get(&format!("{prefix}.rustflags"))?;
+    let rustdocflags: OptValue<StringList> = gctx.get(&format!("{prefix}.rustdocflags"))?;
+    let linker: OptValue<ConfigRelativePath> = gctx.get(&format!("{prefix}.linker"))?;
     // Links do not support environment variables.
     let target_key = ConfigKey::from_str(prefix);
     let links_overrides = match gctx.get_table(&target_key)? {
