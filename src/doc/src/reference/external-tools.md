@@ -205,22 +205,22 @@ may be found in [the chapter on build scripts](build-scripts.md).
     "reason": "build-script-executed",
     /* The Package ID, a unique identifier for referring to the package. */
     "package_id": "my-package 0.1.0 (path+file:///path/to/my-package)",
-    /* Array of libraries to link, as indicated by the `cargo:rustc-link-lib`
+    /* Array of libraries to link, as indicated by the `cargo::rustc-link-lib`
        instruction. Note that this may include a "KIND=" prefix in the string
        where KIND is the library kind.
     */
     "linked_libs": ["foo", "static=bar"],
     /* Array of paths to include in the library search path, as indicated by
-       the `cargo:rustc-link-search` instruction. Note that this may include a
+       the `cargo::rustc-link-search` instruction. Note that this may include a
        "KIND=" prefix in the string where KIND is the library kind.
     */
     "linked_paths": ["/some/path", "native=/another/path"],
-    /* Array of cfg values to enable, as indicated by the `cargo:rustc-cfg`
+    /* Array of cfg values to enable, as indicated by the `cargo::rustc-cfg`
        instruction.
     */
     "cfgs": ["cfg1", "cfg2=\"string\""],
     /* Array of [KEY, VALUE] arrays of environment variables to set, as
-       indicated by the `cargo:rustc-env` instruction.
+       indicated by the `cargo::rustc-env` instruction.
     */
     "env": [
         ["SOME_KEY", "some value"],

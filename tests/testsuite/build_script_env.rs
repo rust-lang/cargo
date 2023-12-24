@@ -12,7 +12,7 @@ fn rerun_if_env_changes() {
             "build.rs",
             r#"
                 fn main() {
-                    println!("cargo:rerun-if-env-changed=FOO");
+                    println!("cargo::rerun-if-env-changed=FOO");
                 }
             "#,
         )
@@ -66,8 +66,8 @@ fn rerun_if_env_or_file_changes() {
             "build.rs",
             r#"
                 fn main() {
-                    println!("cargo:rerun-if-env-changed=FOO");
-                    println!("cargo:rerun-if-changed=foo");
+                    println!("cargo::rerun-if-env-changed=FOO");
+                    println!("cargo::rerun-if-changed=foo");
                 }
             "#,
         )
@@ -112,7 +112,7 @@ fn rerun_if_env_or_file_changes() {
 fn rustc_bootstrap() {
     let build_rs = r#"
         fn main() {
-            println!("cargo:rustc-env=RUSTC_BOOTSTRAP=1");
+            println!("cargo::rustc-env=RUSTC_BOOTSTRAP=1");
         }
     "#;
     let p = project()

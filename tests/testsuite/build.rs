@@ -4161,7 +4161,7 @@ fn compiler_json_error_format() {
         )
         .file(
             "build.rs",
-            "fn main() { println!(\"cargo:rustc-cfg=xyz\") }",
+            "fn main() { println!(\"cargo::rustc-cfg=xyz\") }",
         )
         .file("src/main.rs", "fn main() { let unused = 92; }")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.5.0"))
@@ -5314,11 +5314,11 @@ fn deterministic_cfg_flags() {
             "build.rs",
             r#"
                 fn main() {
-                    println!("cargo:rustc-cfg=cfg_a");
-                    println!("cargo:rustc-cfg=cfg_b");
-                    println!("cargo:rustc-cfg=cfg_c");
-                    println!("cargo:rustc-cfg=cfg_d");
-                    println!("cargo:rustc-cfg=cfg_e");
+                    println!("cargo::rustc-cfg=cfg_a");
+                    println!("cargo::rustc-cfg=cfg_b");
+                    println!("cargo::rustc-cfg=cfg_c");
+                    println!("cargo::rustc-cfg=cfg_d");
+                    println!("cargo::rustc-cfg=cfg_e");
                 }
             "#,
         )

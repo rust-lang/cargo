@@ -343,7 +343,7 @@ fn build_script_feedback() {
         .file("src/main.rs", "fn main() {}")
         .file(
             "build.rs",
-            r#"fn main() { println!("cargo:rustc-check-cfg=cfg(foo)"); }"#,
+            r#"fn main() { println!("cargo::rustc-check-cfg=cfg(foo)"); }"#,
         )
         .build();
 
@@ -369,7 +369,7 @@ fn build_script_doc() {
         .file("src/main.rs", "fn main() {}")
         .file(
             "build.rs",
-            r#"fn main() { println!("cargo:rustc-check-cfg=cfg(foo)"); }"#,
+            r#"fn main() { println!("cargo::rustc-check-cfg=cfg(foo)"); }"#,
         )
         .build();
 
@@ -477,9 +477,9 @@ fn build_script_test() {
         )
         .file(
             "build.rs",
-            r#"fn main() { 
-                println!("cargo:rustc-check-cfg=cfg(foo)");
-                println!("cargo:rustc-cfg=foo");
+            r#"fn main() {
+                println!("cargo::rustc-check-cfg=cfg(foo)");
+                println!("cargo::rustc-cfg=foo");
             }"#,
         )
         .file(
@@ -531,16 +531,16 @@ fn build_script_feature_gate() {
         )
         .file(
             "build.rs",
-            r#"fn main() { 
-                println!("cargo:rustc-check-cfg=cfg(foo)");
-                println!("cargo:rustc-cfg=foo");
+            r#"fn main() {
+                println!("cargo::rustc-check-cfg=cfg(foo)");
+                println!("cargo::rustc-cfg=foo");
             }"#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("check")
-        .with_stderr_contains("warning[..]cargo:rustc-check-cfg requires -Zcheck-cfg flag")
+        .with_stderr_contains("warning[..]cargo::rustc-check-cfg requires -Zcheck-cfg flag")
         .with_status(0)
         .run();
 }
