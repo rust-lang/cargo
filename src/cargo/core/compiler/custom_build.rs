@@ -10,7 +10,7 @@
 //!   that would compile other Cargo targets. It will recursively creates units
 //!   of its dependencies. One biggest difference is that the [`Unit`] of
 //!   compiling a build script is flagged as [`TargetKind::CustomBuild`].
-//! * Build script executaion --- During the construction of the [`UnitGraph`],
+//! * Build script execution --- During the construction of the [`UnitGraph`],
 //!   Cargo inserts a [`Unit`] with [`CompileMode::RunCustomBuild`]. This unit
 //!   depends on the unit of compiling the associated build script, to ensure
 //!   the executable is available before running. The [`Work`] of running the
