@@ -64,13 +64,15 @@ impl PackageIdSpec {
     /// use cargo_util_schemas::core::PackageIdSpec;
     ///
     /// let specs = vec![
-    ///     "https://crates.io/foo",
-    ///     "https://crates.io/foo#1.2.3",
-    ///     "https://crates.io/foo#bar:1.2.3",
-    ///     "https://crates.io/foo#bar@1.2.3",
     ///     "foo",
+    ///     "foo@1.4",
+    ///     "foo@1.4.3",
     ///     "foo:1.2.3",
-    ///     "foo@1.2.3",
+    ///     "https://github.com/rust-lang/crates.io-index#foo",
+    ///     "https://github.com/rust-lang/crates.io-index#foo@1.4.3",
+    ///     "ssh://git@github.com/rust-lang/foo.git#foo@1.4.3",
+    ///     "file:///path/to/my/project/foo",
+    ///     "file:///path/to/my/project/foo#1.1.8"
     /// ];
     /// for spec in specs {
     ///     assert!(PackageIdSpec::parse(spec).is_ok());
