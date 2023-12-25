@@ -569,7 +569,7 @@ Rust's package manager
     <cyan,bold>update</>      Update dependencies listed in Cargo.lock
     <cyan,bold>search</>      Search registry for crates
     <cyan,bold>publish</>     Package and upload this package to the registry
-    <cyan,bold>install</>     Install a Rust binary. Default location is $HOME/.cargo/bin
+    <cyan,bold>install</>     Install a Rust binary
     <cyan,bold>uninstall</>   Uninstall a Rust binary
     <cyan>...</>         See all commands with <cyan,bold>--list</>
 

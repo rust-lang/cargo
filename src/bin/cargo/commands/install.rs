@@ -15,7 +15,7 @@ use cargo_util::paths;
 
 pub fn cli() -> Command {
     subcommand("install")
-        .about("Install a Rust binary. Default location is $HOME/.cargo/bin")
+        .about("Install a Rust binary")
         .arg(
             Arg::new("crate")
                 .value_name("CRATE[@<VER>]")

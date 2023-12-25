@@ -1,4 +1,4 @@
-Install a Rust binary. Default location is $HOME/.cargo/bin
+Install a Rust binary
 
 Usage: cargo[EXE] install [OPTIONS] [CRATE[@<VER>]]...
 
