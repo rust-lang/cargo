@@ -1286,7 +1286,8 @@ pub trait TestEnv: Sized {
             .env_remove("RUSTFLAGS")
             .env_remove("SSH_AUTH_SOCK") // ensure an outer agent is never contacted
             .env_remove("USER") // not set on some rust-lang docker images
-            .env_remove("XDG_CONFIG_HOME"); // see #2345
+            .env_remove("XDG_CONFIG_HOME") // see #2345
+            .env_remove("OUT_DIR"); // see #13204
         if cfg!(target_os = "macos") {
             // Work-around a bug in macOS 10.15, see `link_or_copy` for details.
             self = self.env("__CARGO_COPY_DONT_LINK_DO_NOT_USE_THIS", "1");
