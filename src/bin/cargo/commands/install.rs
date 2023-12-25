@@ -63,7 +63,7 @@ pub fn cli() -> Command {
                 .requires("git"),
         )
         .arg(
-            opt("path", "Filesystem path to local crate to install")
+            opt("path", "Filesystem path to local crate to install from")
                 .value_name("PATH")
                 .conflicts_with_all(&["git", "index", "registry"]),
         )

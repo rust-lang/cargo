@@ -114,7 +114,7 @@ OPTIONS
            Specific commit to use when installing from git.
 
        --path path
-           Filesystem path to local crate to install.
+           Filesystem path to local crate to install from.
 
        --list
            List all installed packages and their versions.

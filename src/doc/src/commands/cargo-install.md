@@ -117,7 +117,7 @@ treated as a caret requirement like Cargo dependencies are.</dd>
 
 
 <dt class="option-term" id="option-cargo-install---path"><a class="option-anchor" href="#option-cargo-install---path"></a><code>--path</code> <em>path</em></dt>
-<dd class="option-desc">Filesystem path to local crate to install.</dd>
+<dd class="option-desc">Filesystem path to local crate to install from.</dd>
 
 
 <dt class="option-term" id="option-cargo-install---list"><a class="option-anchor" href="#option-cargo-install---list"></a><code>--list</code></dt>

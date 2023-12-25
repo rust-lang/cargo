@@ -114,7 +114,7 @@ Specific commit to use when installing from git.
 {{/option}}
 
 {{#option "`--path` _path_" }}
-Filesystem path to local crate to install.
+Filesystem path to local crate to install from.
 {{/option}}
 
 {{#option "`--list`" }}
