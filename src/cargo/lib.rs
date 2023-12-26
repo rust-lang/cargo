@@ -63,7 +63,7 @@
 //!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/cargo_util)):
 //!   This contains general utility code that is shared between cargo and the testsuite
 //! - [`cargo-util-schemas`](https://crates.io/crates/cargo-util-schemas)
-//!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/cargo_util-schemas)):
+//!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/cargo_util_schemas)):
 //!   This contains the serde schemas for cargo
 //! - [`crates-io`](https://crates.io/crates/crates-io)
 //!   ([nightly docs](https://doc.rust-lang.org/nightly/nightly-rustc/crates_io)):
