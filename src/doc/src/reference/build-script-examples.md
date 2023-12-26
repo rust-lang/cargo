@@ -87,7 +87,7 @@ There’s a couple of points of note here:
   sources in `.cargo/registry` should be immutable. `cargo` won't allow such
   scripts when packaging.
 * This script is relatively simple as it just writes out a small generated file.
-  One could imagine that other more fanciful operations could take place such as
+  One could imagine that other more complex operations could take place such as
   generating a Rust module from a C header file or another language definition,
   for example.
 * The [`rerun-if-changed` instruction](build-scripts.md#rerun-if-changed)
