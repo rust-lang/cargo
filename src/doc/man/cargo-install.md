@@ -24,8 +24,8 @@ installed, and all executables are installed into the installation root's
 {{> description-install-root }}
 
 There are multiple sources from which a crate can be installed. The default
-location is crates.io but the `--git`, `--path`, and `--registry` flags can
-change this source. If the source contains more than one package (such as
+source location is crates.io but the `--git`, `--path`, and `--registry` flags
+can change this source. If the source contains more than one package (such as
 crates.io or a git repository with multiple crates) the _crate_ argument is
 required to indicate which crate should be installed.
 
@@ -114,7 +114,7 @@ Specific commit to use when installing from git.
 {{/option}}
 
 {{#option "`--path` _path_" }}
-Filesystem path to local crate to install.
+Filesystem path to local crate to install from.
 {{/option}}
 
 {{#option "`--list`" }}

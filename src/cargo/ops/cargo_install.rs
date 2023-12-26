@@ -210,14 +210,14 @@ impl<'cfg> InstallablePackage<'cfg> {
         if from_cwd {
             if pkg.manifest().edition() == Edition::Edition2015 {
                 config.shell().warn(
-                    "Using `cargo install` to install the binaries for the \
+                    "Using `cargo install` to install the binaries from the \
                      package in current working directory is deprecated, \
                      use `cargo install --path .` instead. \
                      Use `cargo build` if you want to simply build the package.",
                 )?
             } else {
                 bail!(
-                    "Using `cargo install` to install the binaries for the \
+                    "Using `cargo install` to install the binaries from the \
                      package in current working directory is no longer supported, \
                      use `cargo install --path .` instead. \
                      Use `cargo build` if you want to simply build the package."

@@ -15,7 +15,7 @@ use cargo_util::paths;
 
 pub fn cli() -> Command {
     subcommand("install")
-        .about("Install a Rust binary. Default location is $HOME/.cargo/bin")
+        .about("Install a Rust binary")
         .arg(
             Arg::new("crate")
                 .value_name("CRATE[@<VER>]")
@@ -63,7 +63,7 @@ pub fn cli() -> Command {
                 .requires("git"),
         )
         .arg(
-            opt("path", "Filesystem path to local crate to install")
+            opt("path", "Filesystem path to local crate to install from")
                 .value_name("PATH")
                 .conflicts_with_all(&["git", "index", "registry"]),
         )

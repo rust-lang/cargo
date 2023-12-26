@@ -1,4 +1,4 @@
-Install a Rust binary. Default location is $HOME/.cargo/bin
+Install a Rust binary
 
 Usage: cargo[EXE] install [OPTIONS] [CRATE[@<VER>]]...
 
@@ -13,7 +13,7 @@ Options:
       --branch <BRANCH>       Branch to use when installing from git
       --tag <TAG>             Tag to use when installing from git
       --rev <SHA>             Specific commit to use when installing from git
-      --path <PATH>           Filesystem path to local crate to install
+      --path <PATH>           Filesystem path to local crate to install from
       --root <DIR>            Directory to install packages into
   -f, --force                 Force overwriting existing crates or binaries
       --no-track              Do not save tracking information

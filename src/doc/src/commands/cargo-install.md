@@ -26,8 +26,8 @@ The installation root is determined, in order of precedence:
 - `$HOME/.cargo`
 
 There are multiple sources from which a crate can be installed. The default
-location is crates.io but the `--git`, `--path`, and `--registry` flags can
-change this source. If the source contains more than one package (such as
+source location is crates.io but the `--git`, `--path`, and `--registry` flags
+can change this source. If the source contains more than one package (such as
 crates.io or a git repository with multiple crates) the _crate_ argument is
 required to indicate which crate should be installed.
 
@@ -117,7 +117,7 @@ treated as a caret requirement like Cargo dependencies are.</dd>
 
 
 <dt class="option-term" id="option-cargo-install---path"><a class="option-anchor" href="#option-cargo-install---path"></a><code>--path</code> <em>path</em></dt>
-<dd class="option-desc">Filesystem path to local crate to install.</dd>
+<dd class="option-desc">Filesystem path to local crate to install from.</dd>
 
 
 <dt class="option-term" id="option-cargo-install---list"><a class="option-anchor" href="#option-cargo-install---list"></a><code>--list</code></dt>
