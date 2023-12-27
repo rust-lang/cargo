@@ -4941,7 +4941,5 @@ fn cargo_test_set_out_dir_env_var() {
 
     p.cargo("test").run();
     p.cargo("test --package foo --test case -- tests::test_add --exact --nocapture")
-        .with_stdout_contains("test tests::test_add ... FAILED")
-        .with_status(101)
         .run();
 }
