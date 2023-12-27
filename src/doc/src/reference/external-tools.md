@@ -265,6 +265,10 @@ cargo `(?<command>[^ ]+)` into an invocation of an external tool
 `cargo-${command}`. The external tool must be present in one of the user's
 `$PATH` directories.
 
+> **Note**: Cargo defaults to prioritizing external tools in `$CARGO_HOME/bin`
+> over `$PATH`. Users can override this precedence by adding `$CARGO_HOME/bin`
+> to `$PATH`.
+
 When Cargo invokes a custom subcommand, the first argument to the subcommand
 will be the filename of the custom subcommand, as usual. The second argument
 will be the subcommand name itself. For example, the second argument would be
