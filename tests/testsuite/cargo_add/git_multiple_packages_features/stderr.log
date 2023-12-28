@@ -1,4 +1,5 @@
     Updating git repository `[ROOTURL]/git-package`
       Adding package-with-feature (git) to dependencies.
-error: unrecognized feature for crate package-with-feature: target_feature
-no features available for crate package-with-feature
+             Features:
+             + target_feature
+    Updating git repository `[ROOTURL]/git-package`

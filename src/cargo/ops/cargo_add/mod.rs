@@ -934,7 +934,7 @@ fn populate_available_features(
     }
 
     let possibilities = loop {
-        match registry.query_vec(&query, QueryKind::Fuzzy) {
+        match registry.query_vec(&query, QueryKind::Exact) {
             std::task::Poll::Ready(res) => {
                 break res?;
             }
