@@ -35,6 +35,7 @@ mod git_dev;
 mod git_inferred_name;
 mod git_inferred_name_multiple;
 mod git_multiple_names;
+mod git_multiple_packages_features;
 mod git_normalized_name;
 mod git_registry;
 mod git_rev;
