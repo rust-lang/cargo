@@ -127,7 +127,7 @@ separated with a comma, e.g., `>= 1.2, < 1.5`.
 > (e.g. only uses a simple type that hasn't changed between releases, like an `Id`)
 > may support users choosing which version of the "public dependency" to use.
 > In this case, a version requirement like `">=0.4, <2"` may be of interest.
-> *However* users of the package will likely run into errors and need to to
+> *However* users of the package will likely run into errors and need to
 > manually select a version of the "public dependency" via `cargo update` if
 > they also depend on it as Cargo might pick different versions of the "public
 > dependency" when [resolving dependency versions](resolver.md)  (see

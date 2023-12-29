@@ -15,7 +15,7 @@ impl Credential for MyCredential {
         _args: &[&str],
     ) -> Result<CredentialResponse, Error> {
         // Informational messages should be sent on stderr.
-        eprintln!("message on stderr should be sent the the parent process");
+        eprintln!("message on stderr should be sent to the parent process");
 
         // Reading from stdin and writing to stdout will go to the attached console (tty).
         println!("message from test credential provider");

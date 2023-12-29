@@ -328,7 +328,7 @@ pub enum LoadResponse {
     NotFound,
 }
 
-/// An abstract interface to handle both a local and and remote registry.
+/// An abstract interface to handle both a local and remote registry.
 ///
 /// This allows [`RegistrySource`] to abstractly handle each registry kind.
 ///
