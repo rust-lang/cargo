@@ -15,7 +15,7 @@ fn stdout_redirected() {
         .arg("--cargo-plugin")
         .assert()
         .stdout_eq(format!("{hello}\n{err_not_supported}\n"))
-        .stderr_eq("message on stderr should be sent the the parent process\n")
+        .stderr_eq("message on stderr should be sent to the parent process\n")
         .success();
 }
 
