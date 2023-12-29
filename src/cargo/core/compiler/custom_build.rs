@@ -707,6 +707,7 @@ impl BuildOutput {
             "rustc-link-lib=",
             "rustc-link-search=",
             "rustc-link-arg-cdylib=",
+            "rustc-cdylib-link-arg=",
             "rustc-link-arg-bins=",
             "rustc-link-arg-bin=",
             "rustc-link-arg-tests=",
