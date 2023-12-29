@@ -1859,6 +1859,8 @@ fn non_edition_lint_migration() {
 }
 
 // For rust-lang/cargo#9857
+#[ignore = "rustc no longer suggests the fix in dependency, try reproducing \
+            in a different way after landing rust#119204 and follow up PRs"]
 #[cargo_test]
 fn fix_in_dependency() {
     Package::new("bar", "1.0.0")
