@@ -379,6 +379,11 @@ pub fn fix_exec_rustc(config: &Config, lock_addr: &str) -> CargoResult<()> {
     rustc.retry_with_argfile(true);
     rustc.env_remove(FIX_ENV_INTERNAL);
     args.apply(&mut rustc);
+    // Removes `FD_CLOEXEC` set by `jobserver::Client` to ensure that the
+    // compiler can access the jobserver.
+    if let Some(client) = config.jobserver_from_env() {
+        rustc.inherit_jobserver(client);
+    }
 
     trace!("start rustfixing {:?}", args.file);
     let json_error_rustc = {
@@ -450,11 +455,6 @@ pub fn fix_exec_rustc(config: &Config, lock_addr: &str) -> CargoResult<()> {
         // Add any json/error format arguments that Cargo wants. This allows
         // things like colored output to work correctly.
         rustc.arg(arg);
-    }
-    // Removes `FD_CLOEXEC` set by `jobserver::Client` to pass jobserver
-    // as environment variables specify.
-    if let Some(client) = config.jobserver_from_env() {
-        rustc.inherit_jobserver(client);
     }
     debug!("calling rustc to display remaining diagnostics: {rustc}");
     exit_with(rustc.status()?);
