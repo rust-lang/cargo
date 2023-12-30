@@ -386,12 +386,7 @@ pub fn fix_exec_rustc(config: &Config, lock_addr: &str) -> CargoResult<()> {
     }
 
     trace!("start rustfixing {:?}", args.file);
-    let json_error_rustc = {
-        let mut cmd = rustc.clone();
-        cmd.arg("--error-format=json");
-        cmd
-    };
-    let fixes = rustfix_crate(&lock_addr, &json_error_rustc, &args.file, &args, config)?;
+    let fixes = rustfix_crate(&lock_addr, &rustc, &args.file, &args, config)?;
 
     // Ok now we have our final goal of testing out the changes that we applied.
     // If these changes went awry and actually started to cause the crate to
@@ -402,8 +397,8 @@ pub fn fix_exec_rustc(config: &Config, lock_addr: &str) -> CargoResult<()> {
     // new rustc, and otherwise we capture the output to hide it in the scenario
     // that we have to back it all out.
     if !fixes.files.is_empty() {
-        debug!("calling rustc for final verification: {json_error_rustc}");
-        let output = json_error_rustc.output()?;
+        debug!("calling rustc for final verification: {rustc}");
+        let output = rustc.output()?;
 
         if output.status.success() {
             for (path, file) in fixes.files.iter() {
@@ -434,7 +429,7 @@ pub fn fix_exec_rustc(config: &Config, lock_addr: &str) -> CargoResult<()> {
             }
 
             let krate = {
-                let mut iter = json_error_rustc.get_args();
+                let mut iter = rustc.get_args();
                 let mut krate = None;
                 while let Some(arg) = iter.next() {
                     if arg == "--crate-name" {
@@ -451,11 +446,6 @@ pub fn fix_exec_rustc(config: &Config, lock_addr: &str) -> CargoResult<()> {
     // - If the fix failed, show the original warnings and suggestions.
     // - If `--broken-code`, show the error messages.
     // - If the fix succeeded, show any remaining warnings.
-    for arg in args.format_args {
-        // Add any json/error format arguments that Cargo wants. This allows
-        // things like colored output to work correctly.
-        rustc.arg(arg);
-    }
     debug!("calling rustc to display remaining diagnostics: {rustc}");
     exit_with(rustc.status()?);
 }
@@ -799,12 +789,6 @@ struct FixArgs {
     other: Vec<OsString>,
     /// Path to the `rustc` executable.
     rustc: PathBuf,
-    /// Console output flags (`--error-format`, `--json`, etc.).
-    ///
-    /// The normal fix procedure always uses `--json`, so it overrides what
-    /// Cargo normally passes when applying fixes. When displaying warnings or
-    /// errors, it will use these flags.
-    format_args: Vec<String>,
 }
 
 impl FixArgs {
@@ -822,7 +806,6 @@ impl FixArgs {
         let mut file = None;
         let mut enabled_edition = None;
         let mut other = Vec::new();
-        let mut format_args = Vec::new();
 
         let mut handle_arg = |arg: OsString| -> CargoResult<()> {
             let path = PathBuf::from(arg);
@@ -833,12 +816,6 @@ impl FixArgs {
             if let Some(s) = path.to_str() {
                 if let Some(edition) = s.strip_prefix("--edition=") {
                     enabled_edition = Some(edition.parse()?);
-                    return Ok(());
-                }
-                if s.starts_with("--error-format=") || s.starts_with("--json=") {
-                    // Cargo may add error-format in some cases, but `cargo
-                    // fix` wants to add its own.
-                    format_args.push(s.to_string());
                     return Ok(());
                 }
             }
@@ -890,7 +867,6 @@ impl FixArgs {
             enabled_edition,
             other,
             rustc,
-            format_args,
         })
     }
 
