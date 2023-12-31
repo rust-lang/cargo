@@ -104,10 +104,6 @@ pub struct Snippet {
     pub file_name: String,
     pub line_range: LineRange,
     pub range: Range<usize>,
-    /// leading surrounding text, text to replace, trailing surrounding text
-    ///
-    /// This split is useful for highlighting the part that gets replaced
-    pub text: (String, String, String),
 }
 
 /// Represents a replacement of a `snippet`.
@@ -119,58 +115,9 @@ pub struct Replacement {
     pub replacement: String,
 }
 
-/// Parses a [`Snippet`] from a diagnostic span item.
-fn parse_snippet(span: &DiagnosticSpan) -> Option<Snippet> {
-    // unindent the snippet
-    let indent = span
-        .text
-        .iter()
-        .map(|line| {
-            let indent = line
-                .text
-                .chars()
-                .take_while(|&c| char::is_whitespace(c))
-                .count();
-            std::cmp::min(indent, line.highlight_start - 1)
-        })
-        .min()?;
-
-    let text_slice = span.text[0].text.chars().collect::<Vec<char>>();
-
-    // We subtract `1` because these highlights are 1-based
-    // Check the `min` so that it doesn't attempt to index out-of-bounds when
-    // the span points to the "end" of the line. For example, a line of
-    // "foo\n" with a highlight_start of 5 is intended to highlight *after*
-    // the line. This needs to compensate since the newline has been removed
-    // from the text slice.
-    let start = (span.text[0].highlight_start - 1).min(text_slice.len());
-    let end = (span.text[0].highlight_end - 1).min(text_slice.len());
-    let lead = text_slice[indent..start].iter().collect();
-    let mut body: String = text_slice[start..end].iter().collect();
-
-    for line in span.text.iter().take(span.text.len() - 1).skip(1) {
-        body.push('\n');
-        body.push_str(&line.text[indent..]);
-    }
-    let mut tail = String::new();
-    let last = &span.text[span.text.len() - 1];
-
-    // If we get a DiagnosticSpanLine where highlight_end > text.len(), we prevent an 'out of
-    // bounds' access by making sure the index is within the array bounds.
-    // `saturating_sub` is used in case of an empty file
-    let last_tail_index = last.highlight_end.min(last.text.len()).saturating_sub(1);
-    let last_slice = last.text.chars().collect::<Vec<char>>();
-
-    if span.text.len() > 1 {
-        body.push('\n');
-        body.push_str(
-            &last_slice[indent..last_tail_index]
-                .iter()
-                .collect::<String>(),
-        );
-    }
-    tail.push_str(&last_slice[last_tail_index..].iter().collect::<String>());
-    Some(Snippet {
+/// Converts a [`DiagnosticSpan`] to a [`Snippet`].
+fn span_to_snippet(span: &DiagnosticSpan) -> Snippet {
+    Snippet {
         file_name: span.file_name.clone(),
         line_range: LineRange {
             start: LinePosition {
@@ -183,13 +130,12 @@ fn parse_snippet(span: &DiagnosticSpan) -> Option<Snippet> {
             },
         },
         range: (span.byte_start as usize)..(span.byte_end as usize),
-        text: (lead, body, tail),
-    })
+    }
 }
 
 /// Converts a [`DiagnosticSpan`] into a [`Replacement`].
 fn collect_span(span: &DiagnosticSpan) -> Option<Replacement> {
-    let snippet = parse_snippet(span)?;
+    let snippet = span_to_snippet(span);
     let replacement = span.suggested_replacement.clone()?;
     Some(Replacement {
         snippet,
@@ -217,7 +163,7 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
         }
     }
 
-    let snippets = diagnostic.spans.iter().filter_map(parse_snippet).collect();
+    let snippets = diagnostic.spans.iter().map(span_to_snippet).collect();
 
     let solutions: Vec<_> = diagnostic
         .children
