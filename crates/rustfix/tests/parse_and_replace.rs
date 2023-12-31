@@ -10,6 +10,9 @@
 //! There are several debugging environment variables for this test that you can set:
 //!
 //! - `RUST_LOG=parse_and_replace=debug`: Print debug information.
+//! - `RUSTFIX_TEST_BLESS=test-name.rs`: When given the name of a test, this
+//!   will overwrite the `.json` and `.fixed.rs` files with the expected
+//!   values. This can be used when adding a new test.
 //! - `RUSTFIX_TEST_RECORD_JSON=1`:  Records the JSON output to
 //!   `*.recorded.json` files. You can then move that to `.json` or whatever
 //!   you need.
@@ -39,6 +42,7 @@ mod settings {
     pub const CHECK_JSON: &str = "RUSTFIX_TEST_CHECK_JSON";
     pub const RECORD_JSON: &str = "RUSTFIX_TEST_RECORD_JSON";
     pub const RECORD_FIXED_RUST: &str = "RUSTFIX_TEST_RECORD_FIXED_RUST";
+    pub const BLESS: &str = "RUSTFIX_TEST_BLESS";
 }
 
 fn compile(file: &Path) -> Result<Output, Error> {
@@ -174,6 +178,13 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
 
     if std::env::var(settings::RECORD_FIXED_RUST).is_ok() {
         fs::write(file.with_extension("recorded.rs"), &fixed)?;
+    }
+
+    if let Some(bless_name) = std::env::var_os(settings::BLESS) {
+        if bless_name == file.file_name().unwrap() {
+            std::fs::write(&json_file, &errors)?;
+            std::fs::write(&fixed_file, &fixed)?;
+        }
     }
 
     let expected_fixed = fs::read_to_string(&fixed_file)
