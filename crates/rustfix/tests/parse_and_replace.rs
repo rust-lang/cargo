@@ -174,7 +174,8 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
     }
 
     let fixed = apply_suggestions(&code, &suggestions)
-        .context(format!("could not apply suggestions to {}", file.display()))?;
+        .context(format!("could not apply suggestions to {}", file.display()))?
+        .replace('\r', "");
 
     if std::env::var(settings::RECORD_FIXED_RUST).is_ok() {
         fs::write(file.with_extension("recorded.rs"), &fixed)?;
@@ -188,7 +189,8 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
     }
 
     let expected_fixed = fs::read_to_string(&fixed_file)
-        .context(format!("could read fixed file for {}", file.display()))?;
+        .context(format!("could read fixed file for {}", file.display()))?
+        .replace('\r', "");
     ensure!(
         fixed.trim() == expected_fixed.trim(),
         "file {} doesn't look fixed:\n{}",
