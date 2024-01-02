@@ -18,10 +18,7 @@ pub(super) fn expand_manifest(
     let source = split_source(content)?;
     if let Some(frontmatter) = source.frontmatter {
         match source.info {
-            Some("cargo") => {}
-            None => {
-                anyhow::bail!("frontmatter is missing an infostring; specify `cargo` for embedding a manifest");
-            }
+            Some("cargo") | None => {}
             Some(other) => {
                 if let Some(remainder) = other.strip_prefix("cargo,") {
                     anyhow::bail!("cargo does not support frontmatter infostring attributes like `{remainder}` at this time")
@@ -324,6 +321,39 @@ strip = true
 [workspace]
 "#,
             si!(r#"```cargo
+[dependencies]
+time="0.1.25"
+```
+fn main() {}
+"#),
+        );
+    }
+
+    #[test]
+    fn test_no_infostring() {
+        snapbox::assert_matches(
+            r#"[[bin]]
+name = "test-"
+path = [..]
+
+[dependencies]
+time = "0.1.25"
+
+[package]
+autobenches = false
+autobins = false
+autoexamples = false
+autotests = false
+build = false
+edition = "2021"
+name = "test-"
+
+[profile.release]
+strip = true
+
+[workspace]
+"#,
+            si!(r#"```
 [dependencies]
 time="0.1.25"
 ```
