@@ -217,17 +217,29 @@ fn split_source(input: &str) -> CargoResult<Source<'_>> {
         source.content = content;
     }
 
+    // Experiment: let us try which char works better
+    let tick_char = source
+        .content
+        .chars()
+        .filter(|c| ['`', '#', '-'].contains(c))
+        .next()
+        .unwrap_or('`');
+
     let tick_end = source
         .content
         .char_indices()
-        .find_map(|(i, c)| (c != '`').then_some(i))
+        .find_map(|(i, c)| (c != tick_char).then_some(i))
         .unwrap_or(source.content.len());
     let (fence_pattern, rest) = match tick_end {
         0 => {
             return Ok(source);
         }
         1 | 2 => {
-            anyhow::bail!("found {tick_end} backticks in rust frontmatter, expected at least 3")
+            if tick_char == '#' {
+                // Attribute
+                return Ok(source);
+            }
+            anyhow::bail!("found {tick_end} `{tick_char}` in rust frontmatter, expected at least 3")
         }
         _ => source.content.split_at(tick_end),
     };
@@ -357,6 +369,72 @@ strip = true
 [dependencies]
 time="0.1.25"
 ```
+fn main() {}
+"#),
+        );
+    }
+
+    #[test]
+    fn test_dash() {
+        snapbox::assert_matches(
+            r#"[[bin]]
+name = "test-"
+path = [..]
+
+[dependencies]
+time = "0.1.25"
+
+[package]
+autobenches = false
+autobins = false
+autoexamples = false
+autotests = false
+build = false
+edition = "2021"
+name = "test-"
+
+[profile.release]
+strip = true
+
+[workspace]
+"#,
+            si!(r#"---
+[dependencies]
+time="0.1.25"
+---
+fn main() {}
+"#),
+        );
+    }
+
+    #[test]
+    fn test_hash() {
+        snapbox::assert_matches(
+            r#"[[bin]]
+name = "test-"
+path = [..]
+
+[dependencies]
+time = "0.1.25"
+
+[package]
+autobenches = false
+autobins = false
+autoexamples = false
+autotests = false
+build = false
+edition = "2021"
+name = "test-"
+
+[profile.release]
+strip = true
+
+[workspace]
+"#,
+            si!(r#"###
+[dependencies]
+time="0.1.25"
+###
 fn main() {}
 "#),
         );
