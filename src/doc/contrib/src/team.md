@@ -63,7 +63,7 @@ If you are interested in participating, feel free to contact us on [Zulip].
 
 Minutes for all meetings are recorded on [HackMD][meeting-minutes].
 
-[meeting-minutes]: https://hackmd.io/team/rust-cargo-team?nav=overview&tags=%5B%22meetings%22%5D
+[meeting-minutes]: https://hackmd.io/@rust-cargo-team?tags=%5B%22meetings%22%5D
 
 ### Becoming a member
 
@@ -92,7 +92,7 @@ The following are private streams for the Cargo team. The team should avoid usin
 
 ### HackMD
 
-The Cargo team has a shared, public workspace on HackMD at <https://hackmd.io/team/rust-cargo-team> for drafting documents and recording meeting minutes.
+The Cargo team has a shared, public workspace on HackMD at <https://hackmd.io/@rust-cargo-team> for drafting documents and recording meeting minutes.
 
 Since this HackMD workspace is using the free service, it does not support private documents. If you need to draft a private document, create it in your personal workspace and use private channels to share the link.
 
