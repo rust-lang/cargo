@@ -215,6 +215,8 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
 /// 3. Calls [`CodeFix::finish`] to get the "fixed" code.
 pub struct CodeFix {
     data: replace::Data,
+    /// Whether or not the data has been modified.
+    modified: bool,
 }
 
 impl CodeFix {
@@ -222,6 +224,7 @@ impl CodeFix {
     pub fn new(s: &str) -> CodeFix {
         CodeFix {
             data: replace::Data::new(s.as_bytes()),
+            modified: false,
         }
     }
 
@@ -231,6 +234,7 @@ impl CodeFix {
             for r in &sol.replacements {
                 self.data
                     .replace_range(r.snippet.range.clone(), r.replacement.as_bytes())?;
+                self.modified = true;
             }
         }
         Ok(())
@@ -239,6 +243,11 @@ impl CodeFix {
     /// Gets the result of the "fixed" code.
     pub fn finish(&self) -> Result<String, Error> {
         Ok(String::from_utf8(self.data.to_vec())?)
+    }
+
+    /// Returns whether or not the data has been modified.
+    pub fn modified(&self) -> bool {
+        self.modified
     }
 }
 

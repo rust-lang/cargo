@@ -266,7 +266,7 @@ fn output_message(level: &str, count: usize) {
 fn fix_no_suggestions() {
     // No suggested fixes.
     expect_fix_runs_rustc_n_times(
-        &[Step::SuccessNoOutput, Step::SuccessNoOutput],
+        &[Step::SuccessNoOutput],
         |_execs| {},
         "\
 [CHECKING] foo [..]
@@ -295,11 +295,7 @@ fn fix_one_suggestion() {
 fn fix_one_overlapping() {
     // Two suggested fixes, where one fails, then the next step returns no suggestions.
     expect_fix_runs_rustc_n_times(
-        &[
-            Step::TwoFixOverlapping,
-            Step::SuccessNoOutput,
-            Step::SuccessNoOutput,
-        ],
+        &[Step::TwoFixOverlapping, Step::SuccessNoOutput],
         |_execs| {},
         "\
 [CHECKING] foo [..]
@@ -316,7 +312,6 @@ fn fix_overlapping_max() {
     // the limit of 4 attempts. It should show the output from the 5th attempt.
     expect_fix_runs_rustc_n_times(
         &[
-            Step::TwoFixOverlapping,
             Step::TwoFixOverlapping,
             Step::TwoFixOverlapping,
             Step::TwoFixOverlapping,
@@ -342,8 +337,8 @@ Note that you may be able to make some more progress in the near-term
 fixing code with the `--broken-code` flag
 
 [FIXED] src/lib.rs (4 fixes)
+rustc fix shim comment 5
 rustc fix shim comment 6
-rustc fix shim comment 7
 warning: `foo` (lib) generated 2 warnings (run `cargo fix --lib -p foo` to apply 2 suggestions)
 [FINISHED] [..]
 ",
@@ -356,7 +351,7 @@ fn fix_verification_failed() {
     // One suggested fix, with an error in the verification step.
     // This should cause `cargo fix` to back out the changes.
     expect_fix_runs_rustc_n_times(
-        &[Step::OneFix, Step::Error, Step::OneFix],
+        &[Step::OneFix, Step::Error],
         |_execs| {},
         "\
 [CHECKING] foo [..]
@@ -379,7 +374,7 @@ The following errors were reported:
 rustc fix shim error count=2
 Original diagnostics will follow.
 
-rustc fix shim comment 3
+rustc fix shim comment 1
 warning: `foo` (lib) generated 1 warning (run `cargo fix --lib -p foo` to apply 1 suggestion)
 [FINISHED] [..]
 ",
@@ -393,7 +388,7 @@ fn fix_verification_failed_clippy() {
     // the error message has the customization for the clippy URL and
     // subcommand.
     expect_fix_runs_rustc_n_times(
-        &[Step::OneFix, Step::Error, Step::OneFix],
+        &[Step::OneFix, Step::Error],
         |execs| {
             execs.env("RUSTC_WORKSPACE_WRAPPER", tools::wrapped_clippy_driver());
         },
@@ -418,7 +413,7 @@ The following errors were reported:
 rustc fix shim error count=2
 Original diagnostics will follow.
 
-rustc fix shim comment 3
+rustc fix shim comment 1
 warning: `foo` (lib) generated 1 warning (run `cargo clippy --fix --lib -p foo` to apply 1 suggestion)
 [FINISHED] [..]
 ",
@@ -430,11 +425,11 @@ warning: `foo` (lib) generated 1 warning (run `cargo clippy --fix --lib -p foo` 
 fn warnings() {
     // Only emits warnings.
     expect_fix_runs_rustc_n_times(
-        &[Step::Warning, Step::Warning],
+        &[Step::Warning],
         |_execs| {},
         "\
 [CHECKING] foo [..]
-rustc fix shim warning count=2
+rustc fix shim warning count=1
 warning: `foo` (lib) generated 1 warning
 [FINISHED] [..]
 ",
@@ -446,13 +441,13 @@ warning: `foo` (lib) generated 1 warning
 fn starts_with_error() {
     // The source code doesn't compile to start with.
     expect_fix_runs_rustc_n_times(
-        &[Step::Error, Step::Error],
+        &[Step::Error],
         |execs| {
             execs.with_status(101);
         },
         "\
 [CHECKING] foo [..]
-rustc fix shim error count=2
+rustc fix shim error count=1
 error: could not compile `foo` (lib) due to 1 previous error
 ",
         "// fix-count 0",
@@ -463,13 +458,13 @@ error: could not compile `foo` (lib) due to 1 previous error
 fn broken_code_no_suggestions() {
     // --broken-code with no suggestions
     expect_fix_runs_rustc_n_times(
-        &[Step::Error, Step::Error],
+        &[Step::Error],
         |execs| {
             execs.arg("--broken-code").with_status(101);
         },
         "\
 [CHECKING] foo [..]
-rustc fix shim error count=2
+rustc fix shim error count=1
 error: could not compile `foo` (lib) due to 1 previous error
 ",
         "// fix-count 0",
@@ -480,7 +475,7 @@ error: could not compile `foo` (lib) due to 1 previous error
 fn broken_code_one_suggestion() {
     // --broken-code where there is an error and a suggestion.
     expect_fix_runs_rustc_n_times(
-        &[Step::OneFixError, Step::Error, Step::Error],
+        &[Step::OneFixError, Step::Error],
         |execs| {
             execs.arg("--broken-code").with_status(101);
         },
@@ -505,8 +500,10 @@ The following errors were reported:
 rustc fix shim error count=2
 Original diagnostics will follow.
 
-rustc fix shim error count=3
-error: could not compile `foo` (lib) due to 1 previous error
+rustc fix shim comment 1
+rustc fix shim error count=2
+warning: `foo` (lib) generated 1 warning
+error: could not compile `foo` (lib) due to 1 previous error; 1 warning emitted
 ",
         "// fix-count 1",
     );

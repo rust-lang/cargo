@@ -1522,11 +1522,10 @@ fn fix_shared_cross_workspace() {
 fn abnormal_exit() {
     // rustc fails unexpectedly after applying fixes, should show some error information.
     //
-    // This works with a proc-macro that runs three times:
+    // This works with a proc-macro that runs twice:
     // - First run (collect diagnostics pass): writes a file, exits normally.
     // - Second run (verify diagnostics work): it detects the presence of the
     //   file, removes the file, and aborts the process.
-    // - Third run (collecting messages to display): file not found, exits normally.
     let p = project()
         .file(
             "Cargo.toml",
