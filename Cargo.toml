@@ -77,7 +77,7 @@ pulldown-cmark = { version = "0.9.3", default-features = false }
 rand = "0.8.5"
 regex = "1.10.2"
 rusqlite = { version = "0.30.0", features = ["bundled"] }
-rustfix = { version = "0.7.0", path = "crates/rustfix" }
+rustfix = { version = "0.8.0", path = "crates/rustfix" }
 same-file = "1.0.6"
 security-framework = "2.9.2"
 semver = { version = "1.0.20", features = ["serde"] }
