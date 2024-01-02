@@ -1,7 +1,7 @@
 //! Tests for public/private dependencies.
 
 use cargo_test_support::project;
-use cargo_test_support::registry::Package;
+use cargo_test_support::registry::{Dependency, Package};
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
 fn exported_priv_warning() {
@@ -474,6 +474,61 @@ fn allow_priv_in_custom_build() {
 [DOWNLOADED] priv_dep v0.1.0 ([..])
 [COMPILING] priv_dep v0.1.0
 [COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run()
+}
+
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn publish_package_with_public_dependency() {
+    Package::new("pub_bar", "0.1.0")
+        .file("src/lib.rs", "pub struct FromPub;")
+        .publish();
+    Package::new("bar", "0.1.0")
+        .cargo_feature("public-dependency")
+        .add_dep(Dependency::new("pub_bar", "0.1.0").public(true))
+        .file(
+            "src/lib.rs",
+            "
+            extern crate pub_bar;
+            pub use pub_bar::FromPub as BarFromPub;
+        ",
+        )
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["public-dependency"]
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            [dependencies]
+            bar = {version = "0.1.0", public = true}
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            extern crate bar;
+            pub fn use_pub(_: bar::BarFromPub) {}
+        ",
+        )
+        .build();
+
+    p.cargo("check --message-format=short")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] pub_bar v0.1.0 ([..])
+[DOWNLOADED] bar v0.1.0 ([..])
+[CHECKING] pub_bar v0.1.0
+[CHECKING] bar v0.1.0
+[CHECKING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
