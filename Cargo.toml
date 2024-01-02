@@ -45,8 +45,8 @@ filetime = "0.2.22"
 flate2 = { version = "1.0.28", default-features = false, features = ["zlib"] }
 git2 = "0.18.1"
 git2-curl = "0.19.0"
-gix = { version = "0.56.0", default-features = false, features = ["blocking-http-transport-curl", "progress-tree", "revision"] }
-gix-features-for-configuration-only = { version = "0.35.0", package = "gix-features", features = [ "parallel" ] }
+gix = { version = "0.57.1", default-features = false, features = ["blocking-http-transport-curl", "progress-tree", "revision"] }
+gix-features-for-configuration-only = { version = "0.37.1", package = "gix-features", features = [ "parallel" ] }
 glob = "0.3.1"
 handlebars = { version = "4.5.0", features = ["dir_source"] }
 hex = "0.4.3"
