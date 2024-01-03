@@ -412,10 +412,18 @@ impl Dependency {
                         table.insert("version", src.version.as_str().into());
                     }
                     Some(Source::Path(src)) => {
-                        let relpath = path_field(crate_root, &src.path);
                         if let Some(r) = src.version.as_deref() {
                             table.insert("version", r.into());
                         }
+                        let relative_to = if let Some((base_name, base_value)) =
+                            src.base_name_and_value.as_ref()
+                        {
+                            table.insert("base", base_name.into());
+                            base_value
+                        } else {
+                            crate_root
+                        };
+                        let relpath = path_field(relative_to, &src.path);
                         table.insert("path", relpath.into());
                     }
                     Some(Source::Git(src)) => {
@@ -493,12 +501,20 @@ impl Dependency {
                 Some(Source::Registry(src)) => {
                     overwrite_value(table, "version", src.version.as_str());
 
-                    for key in ["path", "git", "branch", "tag", "rev", "workspace"] {
+                    for key in ["path", "git", "branch", "tag", "rev", "workspace", "base"] {
                         table.remove(key);
                     }
                 }
                 Some(Source::Path(src)) => {
-                    let relpath = path_field(crate_root, &src.path);
+                    let relative_to =
+                        if let Some((base_name, base_value)) = src.base_name_and_value.as_ref() {
+                            overwrite_value(table, "base", base_name);
+                            base_value
+                        } else {
+                            table.remove("base");
+                            crate_root
+                        };
+                    let relpath = path_field(relative_to, &src.path);
                     overwrite_value(table, "path", relpath);
                     if let Some(r) = src.version.as_deref() {
                         overwrite_value(table, "version", r);
@@ -533,7 +549,7 @@ impl Dependency {
                         table.remove("version");
                     }
 
-                    for key in ["path", "workspace"] {
+                    for key in ["path", "workspace", "base"] {
                         table.remove(key);
                     }
                 }
@@ -552,6 +568,7 @@ impl Dependency {
                         "rev",
                         "package",
                         "default-features",
+                        "base",
                     ] {
                         table.remove(key);
                     }
@@ -812,6 +829,8 @@ impl std::fmt::Display for RegistrySource {
 pub struct PathSource {
     /// Local, absolute path.
     pub path: PathBuf,
+    /// If using a named base, the base and relative path.
+    pub base_name_and_value: Option<(String, PathBuf)>,
     /// Version requirement for when published.
     pub version: Option<String>,
 }
@@ -821,6 +840,7 @@ impl PathSource {
     pub fn new(path: impl Into<PathBuf>) -> Self {
         Self {
             path: path.into(),
+            base_name_and_value: None,
             version: None,
         }
     }
@@ -843,7 +863,11 @@ impl PathSource {
 
 impl std::fmt::Display for PathSource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.path.display().fmt(f)
+        if let Some((base_name, _)) = &self.base_name_and_value {
+            write!(f, "{} (@{base_name})", self.path.display())
+        } else {
+            self.path.display().fmt(f)
+        }
     }
 }
 

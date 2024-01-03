@@ -590,6 +590,388 @@ Caused by:
 }
 
 #[cargo_test]
+fn path_bases_not_stable() {
+    let bar = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                "[path-bases]\ntest = '{}'",
+                bar.root().parent().unwrap().display()
+            ),
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+
+                [dependencies.bar]
+                path = 'bar'
+                base = 'test'
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_data(
+            "\
+[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  usage of path bases requires `-Z path-bases`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn path_with_base() {
+    let bar = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                "[path-bases]\ntest = '{}'",
+                bar.root().parent().unwrap().display()
+            ),
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+
+                [dependencies.bar]
+                path = 'bar'
+                base = 'test'
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v -Zpath-bases")
+        .masquerade_as_nightly_cargo(&["path-bases"])
+        .run();
+}
+
+#[cargo_test]
+fn workspace_with_base() {
+    let bar = project()
+        .at("dep_with_base")
+        .file("Cargo.toml", &basic_manifest("dep_with_base", "0.5.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                "[path-bases]\ntest = '{}'",
+                bar.root().parent().unwrap().display()
+            ),
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "parent"
+                version = "0.1.0"
+                authors = []
+
+                [workspace]
+                members = ["child"]
+
+                [workspace.dependencies.dep_with_base]
+                path = 'dep_with_base'
+                base = 'test'
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "child/Cargo.toml",
+            r#"
+                [package]
+                name = "child"
+                version = "0.1.0"
+                authors = []
+                workspace = ".."
+
+                [dependencies.dep_with_base]
+                workspace = true
+            "#,
+        )
+        .file("child/src/main.rs", "fn main() {}");
+    let p = p.build();
+
+    p.cargo("build -v -Zpath-bases")
+        .masquerade_as_nightly_cargo(&["path-bases"])
+        .run();
+}
+
+#[cargo_test]
+fn path_with_relative_base() {
+    project()
+        .at("shared_proj/bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    let p = project()
+        .file(
+            "../.cargo/config.toml",
+            "[path-bases]\ntest = 'shared_proj'",
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+
+                [dependencies.bar]
+                path = 'bar'
+                base = 'test'
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v -Zpath-bases")
+        .masquerade_as_nightly_cargo(&["path-bases"])
+        .run();
+}
+
+#[cargo_test]
+fn workspace_builtin_base() {
+    project()
+        .at("dep_with_base")
+        .file("Cargo.toml", &basic_manifest("dep_with_base", "0.5.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "parent"
+                version = "0.1.0"
+                authors = []
+
+                [workspace]
+                members = ["child"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "child/Cargo.toml",
+            r#"
+                [package]
+                name = "child"
+                version = "0.1.0"
+                authors = []
+                workspace = ".."
+
+                [dependencies.dep_with_base]
+                path = '../dep_with_base'
+                base = 'workspace'
+            "#,
+        )
+        .file("child/src/main.rs", "fn main() {}");
+    let p = p.build();
+
+    p.cargo("build -v -Zpath-bases")
+        .masquerade_as_nightly_cargo(&["path-bases"])
+        .run();
+}
+
+#[cargo_test]
+fn shadow_workspace_builtin_base() {
+    let bar = project()
+        .at("dep_with_base")
+        .file("Cargo.toml", &basic_manifest("dep_with_base", "0.5.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                "[path-bases]\nworkspace = '{}/subdir'",
+                bar.root().parent().unwrap().display()
+            ),
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "parent"
+                version = "0.1.0"
+                authors = []
+
+                [workspace]
+                members = ["child"]
+
+                [workspace.dependencies.dep_with_base]
+                path = '../dep_with_base'
+                base = 'workspace'
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "child/Cargo.toml",
+            r#"
+                [package]
+                name = "child"
+                version = "0.1.0"
+                authors = []
+                workspace = ".."
+
+                [dependencies.dep_with_base]
+                workspace = true
+            "#,
+        )
+        .file("child/src/main.rs", "fn main() {}");
+    let p = p.build();
+
+    p.cargo("build -v -Zpath-bases")
+        .masquerade_as_nightly_cargo(&["path-bases"])
+        .run();
+}
+
+#[cargo_test]
+fn unknown_base() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+
+                [dependencies.bar]
+                path = 'bar'
+                base = 'test'
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -Zpath-bases")
+        .masquerade_as_nightly_cargo(&["path-bases"])
+        .with_status(101)
+        .with_stderr_data(
+            "\
+[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  resolving path base for dependency (bar)
+
+Caused by:
+  path base `test` is undefined. You must add an entry for `test` in the Cargo configuration [path-bases] table.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn invalid_base() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+
+                [dependencies.bar]
+                path = 'bar'
+                base = '^^not-valid^^'
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -Zpath-bases")
+        .masquerade_as_nightly_cargo(&["path-bases"])
+        .with_status(101)
+        .with_stderr_data(
+            "\
+[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  resolving path base for dependency (bar)
+
+Caused by:
+  invalid path base name `^^not-valid^^`. Path base names must start with a letter and contain only letters, numbers, hyphens, and underscores.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn workspace_builtin_base_not_a_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+
+                [dependencies.bar]
+                path = 'bar'
+                base = 'workspace'
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -Zpath-bases")
+        .masquerade_as_nightly_cargo(&["path-bases"])
+        .with_status(101)
+        .with_stderr_data(
+            "\
+[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  resolving path base for dependency (bar)
+
+Caused by:
+  the `workspace` built-in path base cannot be used outside of a workspace.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn override_relative() {
     let bar = project()
         .at("bar")

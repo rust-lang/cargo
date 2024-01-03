@@ -901,13 +901,17 @@ impl InheritableFields {
         };
         let mut dep = dep.clone();
         if let manifest::TomlDependency::Detailed(detailed) = &mut dep {
-            if let Some(rel_path) = &detailed.path {
-                detailed.path = Some(resolve_relative_path(
-                    name,
-                    self.ws_root(),
-                    package_root,
-                    rel_path,
-                )?);
+            if detailed.base.is_none() {
+                // If this is a path dependency without a base, then update the path to be relative
+                // to the workspace root instead.
+                if let Some(rel_path) = &detailed.path {
+                    detailed.path = Some(resolve_relative_path(
+                        name,
+                        self.ws_root(),
+                        package_root,
+                        rel_path,
+                    )?);
+                }
             }
         }
         Ok(dep)
@@ -2135,7 +2139,20 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
             // always end up hashing to the same value no matter where it's
             // built from.
             if manifest_ctx.source_id.is_path() {
-                let path = manifest_ctx.root.join(path);
+                let path = if let Some(base) = orig.base.as_ref() {
+                    if !manifest_ctx.gctx.cli_unstable().path_bases {
+                        bail!("usage of path bases requires `-Z path-bases`");
+                    }
+
+                    lookup_path_base(&base, manifest_ctx.gctx, manifest_ctx.root)
+                        .with_context(|| {
+                            format!("resolving path base for dependency ({name_in_toml})")
+                        })?
+                        .join(path)
+                } else {
+                    // This is a standard path with no prefix.
+                    manifest_ctx.root.join(path)
+                };
                 let path = paths::normalize_path(&path);
                 SourceId::for_path(&path)
             } else {
@@ -2148,6 +2165,50 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
             SourceId::for_registry(&url)
         }
         (None, None, None, None) => SourceId::crates_io(manifest_ctx.gctx),
+    }
+}
+
+pub(crate) fn lookup_path_base(
+    base: &str,
+    gctx: &GlobalContext,
+    manifest_root: &Path,
+) -> CargoResult<PathBuf> {
+    // Validate the path base name.
+    if base.is_empty()
+        || !base.chars().next().unwrap().is_alphabetic()
+        || base
+            .chars()
+            .skip(1)
+            .any(|c| !c.is_alphanumeric() && c != '_' && c != '-')
+    {
+        bail!(
+            "invalid path base name `{base}`. \
+            Path base names must start with a letter and contain only letters, numbers, hyphens, and underscores."
+        );
+    }
+
+    // Look up the relevant base in the Config and use that as the root.
+    if let Some(path_bases) =
+        gctx.get::<Option<ConfigRelativePath>>(&format!("path-bases.{base}"))?
+    {
+        Ok(path_bases.resolve_path(gctx))
+    } else {
+        // Otherwise, check the built-in bases.
+        match base {
+            "workspace" => {
+                if let Some(workspace_root) = find_workspace_root(manifest_root, gctx)? {
+                    Ok(workspace_root.parent().unwrap().to_path_buf())
+                } else {
+                    bail!(
+                        "the `workspace` built-in path base cannot be used outside of a workspace."
+                    )
+                }
+            }
+            _ => bail!(
+                "path base `{base}` is undefined. \
+            You must add an entry for `{base}` in the Cargo configuration [path-bases] table."
+            ),
+        }
     }
 }
 
@@ -2865,6 +2926,7 @@ fn prepare_toml_for_publish(
                 let mut d = d.clone();
                 // Path dependencies become crates.io deps.
                 d.path.take();
+                d.base.take();
                 // Same with git dependencies.
                 d.git.take();
                 d.branch.take();

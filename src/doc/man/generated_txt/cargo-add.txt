@@ -5,7 +5,7 @@ NAME
 
 SYNOPSIS
        cargo add [options] crate…
-       cargo add [options] --path path
+       cargo add [options] --path path [--base base]
        cargo add [options] --git url [crate…]
 
 DESCRIPTION
@@ -55,6 +55,11 @@ OPTIONS
            Filesystem path
            <https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#specifying-path-dependencies>
            to local crate to add.
+
+       --base base
+           The path base
+           <https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#path-bases>
+           to use when adding a local crate.
 
        --registry registry
            Name of the registry to use. Registry names are defined in Cargo

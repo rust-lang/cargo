@@ -195,6 +195,11 @@ hyperlinks = true      # whether cargo inserts links into output
 unicode = true         # whether cargo can render output using non-ASCII unicode characters
 progress.when = 'auto' # whether cargo shows progress bar
 progress.width = 80    # width of progress bar
+
+[path-bases]
+# Named base directories that can be used in path dependencies.
+PATH_BASE_1 = "/path/to/somewhere"
+PATH_BASE_2 = "another/path"
 ```
 
 ## Environment variables
@@ -1358,3 +1363,14 @@ Sets the width for progress bar.
 [crates.io]: https://crates.io/
 [target triple]: ../appendix/glossary.md#target '"target" (glossary)'
 [`<triple>`]: ../appendix/glossary.md#target '"target" (glossary)'
+
+### `[path-bases]`
+
+* Type: string
+* Default: see below
+* Environment: `CARGO_PATH_BASES_<name>`
+
+The `[path-bases]` table defines a set of path prefixes that can be used to
+prepend the locations of `path` dependencies. See the
+[specifying dependencies](specifying-dependencies.md#path-bases)
+documentation for more information.

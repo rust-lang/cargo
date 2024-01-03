@@ -8,7 +8,7 @@ cargo\-add \[em] Add dependencies to a Cargo.toml manifest file
 .SH "SYNOPSIS"
 \fBcargo add\fR [\fIoptions\fR] \fIcrate\fR\[u2026]
 .br
-\fBcargo add\fR [\fIoptions\fR] \fB\-\-path\fR \fIpath\fR
+\fBcargo add\fR [\fIoptions\fR] \fB\-\-path\fR \fIpath\fR [\fB\-\-base\fR \fIbase\fR]
 .br
 \fBcargo add\fR [\fIoptions\fR] \fB\-\-git\fR \fIurl\fR [\fIcrate\fR\[u2026]]
 .SH "DESCRIPTION"
@@ -72,6 +72,11 @@ Specific commit to use when adding from git.
 \fB\-\-path\fR \fIpath\fR
 .RS 4
 \fIFilesystem path\fR <https://doc.rust\-lang.org/cargo/reference/specifying\-dependencies.html#specifying\-path\-dependencies> to local crate to add.
+.RE
+.sp
+\fB\-\-base\fR \fIbase\fR
+.RS 4
+The \fIpath base\fR <https://doc.rust\-lang.org/cargo/reference/specifying\-dependencies.html#path\-bases> to use when adding a local crate.
 .RE
 .sp
 \fB\-\-registry\fR \fIregistry\fR

@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Debug, Formatter};
 use std::fs;
@@ -14,7 +15,7 @@ use crate::sources::IndexSummary;
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_project_manifest_exact;
 use crate::util::internal;
-use crate::util::toml::read_manifest;
+use crate::util::toml::{lookup_path_base, read_manifest};
 use crate::util::GlobalContext;
 use anyhow::Context as _;
 use cargo_util::paths;
@@ -878,7 +879,7 @@ fn read_packages(
     }
 }
 
-fn nested_paths(manifest: &Manifest) -> Vec<PathBuf> {
+fn nested_paths(manifest: &Manifest) -> Vec<(PathBuf, Option<String>)> {
     let mut nested_paths = Vec::new();
     let normalized = manifest.normalized_toml();
     let dependencies = normalized
@@ -910,7 +911,7 @@ fn nested_paths(manifest: &Manifest) -> Vec<PathBuf> {
             let Some(path) = dep.path.as_ref() else {
                 continue;
             };
-            nested_paths.push(PathBuf::from(path.as_str()));
+            nested_paths.push((PathBuf::from(path.as_str()), dep.base.clone()));
         }
     }
     nested_paths
@@ -1000,8 +1001,36 @@ fn read_nested_packages(
     //
     // TODO: filesystem/symlink implications?
     if !source_id.is_registry() {
-        for p in nested.iter() {
-            let path = paths::normalize_path(&path.join(p));
+        let mut manifest_gctx = None;
+
+        for (p, base) in nested.iter() {
+            let p = if let Some(base) = base {
+                // If the dependency has a path base, then load the global context for the current
+                // manifest and use it to resolve the path base.
+                let manifest_gctx = match manifest_gctx {
+                    Some(ref gctx) => gctx,
+                    None => {
+                        let mut new_manifest_gctx = match GlobalContext::default() {
+                            Ok(gctx) => gctx,
+                            Err(err) => return Err(err),
+                        };
+                        if let Err(err) = new_manifest_gctx.reload_rooted_at(&manifest_path) {
+                            return Err(err);
+                        }
+                        manifest_gctx.insert(new_manifest_gctx)
+                    }
+                };
+                match lookup_path_base(base, manifest_gctx, manifest_path.parent().unwrap()) {
+                    Ok(base) => Cow::Owned(base.join(p)),
+                    Err(err) => {
+                        errors.push(err);
+                        continue;
+                    }
+                }
+            } else {
+                Cow::Borrowed(p)
+            };
+            let path = paths::normalize_path(&path.join(p.as_path()));
             let result =
                 read_nested_packages(&path, all_packages, source_id, gctx, visited, errors);
             // Ignore broken manifests found on git repositories.
@@ -1019,6 +1048,7 @@ fn read_nested_packages(
                     );
                     errors.push(err);
                 } else {
+                    trace!("Failed to manifest: {:?}", err);
                     return Err(err);
                 }
             }

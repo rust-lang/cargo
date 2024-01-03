@@ -10,7 +10,7 @@ cargo-add --- Add dependencies to a Cargo.toml manifest file
 ## SYNOPSIS
 
 `cargo add` [_options_] _crate_...\
-`cargo add` [_options_] `--path` _path_\
+`cargo add` [_options_] `--path` _path_ [`--base` _base_]\
 `cargo add` [_options_] `--git` _url_ [_crate_...]
 
 
@@ -61,6 +61,10 @@ Specific commit to use when adding from git.
 
 {{#option "`--path` _path_" }}
 [Filesystem path](../reference/specifying-dependencies.html#specifying-path-dependencies) to local crate to add.
+{{/option}}
+
+{{#option "`--base` _base_" }}
+The [path base](../reference/specifying-dependencies.html#path-bases) to use when adding a local crate.
 {{/option}}
 
 {{> options-registry }}

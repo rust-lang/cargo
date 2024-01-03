@@ -6,7 +6,7 @@ cargo-add --- Add dependencies to a Cargo.toml manifest file
 ## SYNOPSIS
 
 `cargo add` [_options_] _crate_...\
-`cargo add` [_options_] `--path` _path_\
+`cargo add` [_options_] `--path` _path_ [`--base` _base_]\
 `cargo add` [_options_] `--git` _url_ [_crate_...]
 
 
@@ -57,6 +57,10 @@ dependency will be listed in the command's output.
 
 <dt class="option-term" id="option-cargo-add---path"><a class="option-anchor" href="#option-cargo-add---path"></a><code>--path</code> <em>path</em></dt>
 <dd class="option-desc"><a href="../reference/specifying-dependencies.html#specifying-path-dependencies">Filesystem path</a> to local crate to add.</dd>
+
+
+<dt class="option-term" id="option-cargo-add---base"><a class="option-anchor" href="#option-cargo-add---base"></a><code>--base</code> <em>base</em></dt>
+<dd class="option-desc">The <a href="../reference/specifying-dependencies.html#path-bases">path base</a> to use when adding a local crate.</dd>
 
 
 <dt class="option-term" id="option-cargo-add---registry"><a class="option-anchor" href="#option-cargo-add---registry"></a><code>--registry</code> <em>registry</em></dt>
