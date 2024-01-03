@@ -558,6 +558,7 @@ pub struct Dependency {
     package: Option<String>,
     optional: bool,
     default_features: bool,
+    public: bool,
 }
 
 /// Entry with data that corresponds to [`tar::EntryType`].
@@ -1428,6 +1429,7 @@ impl Package {
                     "kind": dep.kind,
                     "registry": registry_url,
                     "package": dep.package,
+                    "public": dep.public,
                 })
             })
             .collect::<Vec<_>>();
@@ -1678,6 +1680,7 @@ impl Dependency {
             optional: false,
             registry: None,
             default_features: true,
+            public: false,
         }
     }
 
@@ -1728,6 +1731,12 @@ impl Dependency {
     /// Changes this to an optional dependency.
     pub fn optional(&mut self, optional: bool) -> &mut Self {
         self.optional = optional;
+        self
+    }
+
+    /// Changes this to an public dependency.
+    pub fn public(&mut self, public: bool) -> &mut Self {
+        self.public = public;
         self
     }
 
