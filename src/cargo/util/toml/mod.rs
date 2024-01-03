@@ -334,6 +334,7 @@ pub fn prepare_for_publish(
                 let mut d = d.clone();
                 // Path dependencies become crates.io deps.
                 d.path.take();
+                d.base.take();
                 // Same with git dependencies.
                 d.git.take();
                 d.branch.take();
@@ -1504,13 +1505,17 @@ impl InheritableFields {
         };
         let mut dep = dep.clone();
         if let manifest::TomlDependency::Detailed(detailed) = &mut dep {
-            if let Some(rel_path) = &detailed.path {
-                detailed.path = Some(resolve_relative_path(
-                    name,
-                    self.ws_root(),
-                    package_root,
-                    rel_path,
-                )?);
+            if detailed.base.is_none() {
+                // If this is a path dependency without a base, then update the path to be relative
+                // to the workspace root instead.
+                if let Some(rel_path) = &detailed.path {
+                    detailed.path = Some(resolve_relative_path(
+                        name,
+                        self.ws_root(),
+                        package_root,
+                        rel_path,
+                    )?);
+                }
             }
         }
         Ok(dep)
@@ -1877,7 +1882,28 @@ fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
             // always end up hashing to the same value no matter where it's
             // built from.
             if cx.source_id.is_path() {
-                let path = cx.root.join(path);
+                let path = if let Some(base) = orig.base.as_ref() {
+                    if !cx.config.cli_unstable().path_bases {
+                        bail!("usage of path bases requires `-Z path-bases`");
+                    }
+
+                    // Look up the relevant base in the Config and use that as the root.
+                    if let Some(base_path) = cx
+                        .config
+                        .get::<Option<ConfigRelativePath>>(&format!("base_path.{base}"))?
+                    {
+                        let base_path = base_path.resolve_path(cx.config);
+                        base_path.join(path)
+                    } else {
+                        bail!(
+                            "dependency ({name_in_toml}) uses an undefined base path `{base}`. \
+                            You must add an entry for `{base}` in the Cargo configuration [base_path] table."
+                        );
+                    }
+                } else {
+                    // This is a standard path with no prefix.
+                    cx.root.join(path)
+                };
                 let path = paths::normalize_path(&path);
                 SourceId::for_path(&path)?
             } else {
