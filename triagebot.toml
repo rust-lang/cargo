@@ -120,9 +120,6 @@ trigger_files = [
   "src/cargo/util/config/environment.rs",
 ]
 
-[autolabel."A-errors"]
-trigger_files = ["src/cargo/util/diagnostic_server.rs"]
-
 [autolabel."A-features2"]
 trigger_files = ["src/cargo/core/resolver/features.rs"]
 
