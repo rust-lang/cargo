@@ -1,7 +1,7 @@
 //! Tests for public/private dependencies.
 
 use cargo_test_support::project;
-use cargo_test_support::registry::Package;
+use cargo_test_support::registry::{Dependency, Package};
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
 fn exported_priv_warning() {
@@ -474,6 +474,223 @@ fn allow_priv_in_custom_build() {
 [DOWNLOADED] priv_dep v0.1.0 ([..])
 [COMPILING] priv_dep v0.1.0
 [COMPILING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run()
+}
+
+// A indirectly add D as private dependency.
+// A -> B -> C -> D
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn recursive_package_pub_no_warning() {
+    Package::new("grandparent_bar", "0.1.0")
+        .file("src/lib.rs", "pub struct FromPub;")
+        .publish();
+    Package::new("parent_bar", "0.1.0")
+        .cargo_feature("public-dependency")
+        .add_dep(Dependency::new("grandparent_bar", "0.1.0").public(true))
+        .file(
+            "src/lib.rs",
+            "
+            extern crate grandparent_bar;
+            pub use grandparent_bar::*;
+        ",
+        )
+        .publish();
+    Package::new("pub_dep", "0.1.0")
+        .cargo_feature("public-dependency")
+        .add_dep(Dependency::new("parent_bar", "0.1.0").public(true))
+        .file(
+            "src/lib.rs",
+            "
+            extern crate parent_bar;
+            pub use parent_bar::*;
+        ",
+        )
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["public-dependency"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            pub_dep = {version = "0.1.0", public = true}
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            extern crate pub_dep;
+            pub fn use_pub(_: pub_dep::FromPub) {}
+        ",
+        )
+        .build();
+
+    p.cargo("check --message-format=short")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] pub_dep v0.1.0 ([..])
+[DOWNLOADED] parent_bar v0.1.0 ([..])
+[DOWNLOADED] grandparent_bar v0.1.0 ([..])
+[CHECKING] grandparent_bar v0.1.0
+[CHECKING] parent_bar v0.1.0
+[CHECKING] pub_dep v0.1.0
+[CHECKING] foo v0.0.1 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run()
+}
+
+// A indirectly add D as private dependency.
+// A -> B -> C -> D
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn recursive_package_priv_warning() {
+    Package::new("grandparent_bar", "0.1.0")
+        .file("src/lib.rs", "pub struct FromPriv;")
+        .publish();
+    Package::new("parent_bar", "0.1.0")
+        .cargo_feature("public-dependency")
+        .add_dep(Dependency::new("grandparent_bar", "0.1.0").public(true))
+        .file(
+            "src/lib.rs",
+            "
+            extern crate grandparent_bar;
+            pub use grandparent_bar::*;
+        ",
+        )
+        .publish();
+    Package::new("priv_dep", "0.1.0")
+        .cargo_feature("public-dependency")
+        .add_dep(Dependency::new("parent_bar", "0.1.0").public(true))
+        .file(
+            "src/lib.rs",
+            "
+            extern crate parent_bar;
+            pub use parent_bar::*;
+        ",
+        )
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["public-dependency"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            priv_dep = "0.1.0"
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            extern crate priv_dep;
+            pub fn use_pub(_: priv_dep::FromPriv) {}
+        ",
+        )
+        .build();
+
+    p.cargo("check --message-format=short")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] priv_dep v0.1.0 ([..])
+[DOWNLOADED] parent_bar v0.1.0 ([..])
+[DOWNLOADED] grandparent_bar v0.1.0 ([..])
+[CHECKING] grandparent_bar v0.1.0
+[CHECKING] parent_bar v0.1.0
+[CHECKING] priv_dep v0.1.0
+[CHECKING] foo v0.0.1 ([..])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run()
+}
+
+// A indirectly add D as public dependency, then directly add D as private dependency.
+// A -> B -> C -> D
+//  \ _ _ _ _ _ /|\
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn recursive_package_pub_priv_together() {
+    Package::new("grandparent_bar", "0.1.0")
+        .file("src/lib.rs", "pub struct FromPriv;")
+        .publish();
+    Package::new("parent_bar", "0.1.0")
+        .cargo_feature("public-dependency")
+        .add_dep(Dependency::new("grandparent_bar", "0.1.0").public(true))
+        .file(
+            "src/lib.rs",
+            "
+            extern crate grandparent_bar;
+            pub use grandparent_bar::*;
+        ",
+        )
+        .publish();
+    Package::new("pub_dep", "0.1.0")
+        .cargo_feature("public-dependency")
+        .add_dep(Dependency::new("parent_bar", "0.1.0").public(true))
+        .file(
+            "src/lib.rs",
+            "
+            extern crate parent_bar;
+            pub use parent_bar::*;
+        ",
+        )
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["public-dependency"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+
+            [dependencies]
+            pub_dep = {version = "0.1.0", public = true}
+            grandparent_bar = "0.1.0"
+        "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+            extern crate pub_dep;
+            extern crate grandparent_bar;
+
+            pub fn use_pub(_: grandparent_bar::FromPriv) {}
+        ",
+        )
+        .build();
+
+    p.cargo("check --message-format=short")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] pub_dep v0.1.0 ([..])
+[DOWNLOADED] parent_bar v0.1.0 ([..])
+[DOWNLOADED] grandparent_bar v0.1.0 ([..])
+[CHECKING] grandparent_bar v0.1.0
+[CHECKING] parent_bar v0.1.0
+[CHECKING] pub_dep v0.1.0
+[CHECKING] foo v0.0.1 ([..])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
