@@ -120,9 +120,6 @@ trigger_files = [
   "src/cargo/util/config/environment.rs",
 ]
 
-[autolabel."A-errors"]
-trigger_files = ["src/cargo/util/diagnostic_server.rs"]
-
 [autolabel."A-features2"]
 trigger_files = ["src/cargo/core/resolver/features.rs"]
 
@@ -174,6 +171,7 @@ trigger_files = ["src/cargo/core/compiler/lto.rs"]
 
 [autolabel."A-manifest"]
 trigger_files = [
+    "crates/cargo-util-schemas/src/manifest.rs",
     "src/cargo/core/manifest.rs",
     "src/cargo/util/toml/mod.rs",
     "src/cargo/util/toml_mut/",
@@ -259,10 +257,11 @@ trigger_files = ["src/bin/cargo/commands/fetch.rs", "src/cargo/ops/cargo_fetch.r
 
 [autolabel."Command-fix"]
 trigger_files = [
+    "crates/rustfix/",
     "src/bin/cargo/commands/fix.rs",
     "src/cargo/ops/fix.rs",
+    "src/cargo/util/diagnostic_server.rs",
     "src/cargo/util/lockserver.rs",
-    "crates/rustfix/",
 ]
 
 [autolabel."Command-generate-lockfile"]
