@@ -90,6 +90,7 @@ mod features2;
 mod features_namespaced;
 mod fetch;
 mod fix;
+mod fix_n_times;
 mod freshness;
 mod future_incompat_report;
 mod generate_lockfile;
