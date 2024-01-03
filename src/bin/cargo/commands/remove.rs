@@ -167,20 +167,37 @@ fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
 
     let members = workspace
         .members()
-        .map(|p| LocalManifest::try_new(p.manifest_path()))
+        .map(|p| {
+            Ok((
+                LocalManifest::try_new(p.manifest_path())?,
+                p.manifest().unstable_features(),
+            ))
+        })
         .collect::<CargoResult<Vec<_>>>()?;
 
     let mut dependencies = members
-        .iter()
-        .flat_map(|manifest| {
-            manifest.get_sections().into_iter().flat_map(|(_, table)| {
-                table
-                    .as_table_like()
-                    .unwrap()
-                    .iter()
-                    .map(|(key, item)| Dependency::from_toml(&manifest.path, key, item))
-                    .collect::<Vec<_>>()
-            })
+        .into_iter()
+        .flat_map(|(manifest, unstable_features)| {
+            manifest
+                .get_sections()
+                .into_iter()
+                .flat_map(move |(_, table)| {
+                    table
+                        .as_table_like()
+                        .unwrap()
+                        .iter()
+                        .map(|(key, item)| {
+                            Dependency::from_toml(
+                                workspace.gctx(),
+                                workspace.root(),
+                                &manifest.path,
+                                &unstable_features,
+                                key,
+                                item,
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                })
         })
         .collect::<CargoResult<Vec<_>>>()?;
 
@@ -192,7 +209,14 @@ fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
     {
         deps_table.set_implicit(true);
         for (key, item) in deps_table.iter_mut() {
-            let ws_dep = Dependency::from_toml(&workspace.root(), key.get(), item)?;
+            let ws_dep = Dependency::from_toml(
+                workspace.gctx(),
+                workspace.root(),
+                &workspace.root(),
+                workspace.unstable_features(),
+                key.get(),
+                item,
+            )?;
 
             // search for uses of this workspace dependency
             let mut is_used = false;
@@ -329,7 +353,14 @@ fn gc_unused_patches(workspace: &Workspace<'_>, resolve: &Resolve) -> CargoResul
                 patch_table.set_implicit(true);
 
                 for (key, item) in patch_table.iter_mut() {
-                    let dep = Dependency::from_toml(&workspace.root_manifest(), key.get(), item)?;
+                    let dep = Dependency::from_toml(
+                        workspace.gctx(),
+                        workspace.root(),
+                        &workspace.root_manifest(),
+                        workspace.unstable_features(),
+                        key.get(),
+                        item,
+                    )?;
 
                     // Generate a PackageIdSpec url for querying
                     let url = if let MaybeWorkspace::Other(source_id) =

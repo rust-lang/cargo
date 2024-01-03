@@ -101,6 +101,12 @@ Example uses:
                 .help("Filesystem path to local crate to add")
                 .group("selected")
                 .conflicts_with("git"),
+            clap::Arg::new("base")
+                .long("base")
+                .action(ArgAction::Set)
+                .value_name("BASE")
+                .help("The path base to use when adding from a local crate (unstable).")
+                .requires("path"),
             clap::Arg::new("git")
                 .long("git")
                 .action(ArgAction::Set)
@@ -224,6 +230,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
 
 fn parse_dependencies(gctx: &GlobalContext, matches: &ArgMatches) -> CargoResult<Vec<DepOp>> {
     let path = matches.get_one::<String>("path");
+    let base = matches.get_one::<String>("base");
     let git = matches.get_one::<String>("git");
     let branch = matches.get_one::<String>("branch");
     let rev = matches.get_one::<String>("rev");
@@ -329,6 +336,7 @@ fn parse_dependencies(gctx: &GlobalContext, matches: &ArgMatches) -> CargoResult
             public,
             registry: registry.clone(),
             path: path.map(String::from),
+            base: base.map(String::from),
             git: git.map(String::from),
             branch: branch.map(String::from),
             rev: rev.map(String::from),

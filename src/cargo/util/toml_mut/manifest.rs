@@ -8,9 +8,9 @@ use anyhow::Context as _;
 
 use super::dependency::Dependency;
 use crate::core::dependency::DepKind;
-use crate::core::FeatureValue;
+use crate::core::{FeatureValue, Features, Workspace};
 use crate::util::interning::InternedString;
-use crate::CargoResult;
+use crate::{CargoResult, GlobalContext};
 
 /// Dependency table to add deps to.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -286,6 +286,8 @@ impl LocalManifest {
     pub fn get_dependency_versions<'s>(
         &'s self,
         dep_key: &'s str,
+        ws: &'s Workspace<'_>,
+        unstable_features: &'s Features,
     ) -> impl Iterator<Item = (DepTable, CargoResult<Dependency>)> + 's {
         let crate_root = self.path.parent().expect("manifest path is absolute");
         self.get_sections()
@@ -307,7 +309,14 @@ impl LocalManifest {
             })
             .flatten()
             .map(move |(table_path, dep_key, dep_item)| {
-                let dep = Dependency::from_toml(crate_root, &dep_key, &dep_item);
+                let dep = Dependency::from_toml(
+                    ws.gctx(),
+                    ws.root(),
+                    crate_root,
+                    unstable_features,
+                    &dep_key,
+                    &dep_item,
+                );
                 (table_path, dep)
             })
     }
@@ -317,6 +326,9 @@ impl LocalManifest {
         &mut self,
         table_path: &[String],
         dep: &Dependency,
+        gctx: &GlobalContext,
+        workspace_root: &Path,
+        unstable_features: &Features,
     ) -> CargoResult<()> {
         let crate_root = self
             .path
@@ -331,7 +343,14 @@ impl LocalManifest {
             .unwrap()
             .get_key_value_mut(dep_key)
         {
-            dep.update_toml(&crate_root, &mut dep_key, dep_item);
+            dep.update_toml(
+                gctx,
+                workspace_root,
+                &crate_root,
+                unstable_features,
+                &mut dep_key,
+                dep_item,
+            )?;
             if let Some(table) = dep_item.as_inline_table_mut() {
                 // So long as we don't have `Cargo.toml` auto-formatting and inline-tables can only
                 // be on one line, there isn't really much in the way of interesting formatting to
@@ -339,7 +358,8 @@ impl LocalManifest {
                 table.fmt();
             }
         } else {
-            let new_dependency = dep.to_toml(&crate_root);
+            let new_dependency =
+                dep.to_toml(gctx, workspace_root, &crate_root, unstable_features)?;
             table[dep_key] = new_dependency;
         }
 
