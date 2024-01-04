@@ -68,8 +68,6 @@ use url::Url;
 pub struct GitSource<'cfg> {
     /// The git remote which we're going to fetch from.
     remote: GitRemote,
-    /// The Git reference from the manifest file.
-    manifest_reference: GitReference,
     /// The revision which a git source is locked to.
     ///
     /// Expected to always be [`Revision::Locked`] after the Git repository is fetched.
@@ -103,7 +101,7 @@ impl<'cfg> GitSource<'cfg> {
         assert!(source_id.is_git(), "id is not git, id={}", source_id);
 
         let remote = GitRemote::new(source_id.url());
-        let manifest_reference = source_id.git_reference().unwrap().clone();
+        // Fallback to git ref from mainfest if there is no locked revision.
         let locked_rev = source_id
             .precise_full_git_fragment()
             .map(|s| Revision::new(s.into()))
@@ -119,7 +117,6 @@ impl<'cfg> GitSource<'cfg> {
 
         let source = GitSource {
             remote,
-            manifest_reference,
             locked_rev,
             source_id,
             path_source: None,
@@ -239,9 +236,12 @@ impl<'cfg> Debug for GitSource<'cfg> {
         // TODO(-Znext-lockfile-bump): set it to true when stabilizing
         // lockfile v4, because we want Source ID serialization to be
         // consistent with lockfile.
-        match self.manifest_reference.pretty_ref(false) {
-            Some(s) => write!(f, " ({})", s),
-            None => Ok(()),
+        match &self.locked_rev {
+            Revision::Deferred(git_ref) => match git_ref.pretty_ref(false) {
+                Some(s) => write!(f, " ({})", s),
+                None => Ok(()),
+            },
+            Revision::Locked(oid) => write!(f, " ({oid})"),
         }
     }
 }
