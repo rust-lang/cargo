@@ -379,6 +379,11 @@ fn proc_macro_crate_type_warning_plugin() {
 
     foo.cargo("check")
         .with_stderr_contains(
+            "[WARNING] support for rustc plugins has been removed from rustc. \
+            library `foo` should not specify `plugin = true`")
+        .with_stderr_contains(
+            "[WARNING] support for `plugin = true` will be removed from cargo in the future")
+        .with_stderr_contains(
             "[WARNING] proc-macro library `foo` should not specify `plugin = true`")
         .with_stderr_contains(
             "[WARNING] library `foo` should only specify `proc-macro = true` instead of setting `crate-type`")

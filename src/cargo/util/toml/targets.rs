@@ -203,6 +203,17 @@ fn clean_lib(
         }
     };
 
+    if lib.plugin == Some(true) {
+        warnings.push(format!(
+            "support for rustc plugins has been removed from rustc. \
+            library `{}` should not specify `plugin = true`",
+            name_or_panic(lib)
+        ));
+        warnings.push(format!(
+            "support for `plugin = true` will be removed from cargo in the future"
+        ));
+    }
+
     // Per the Macros 1.1 RFC:
     //
     // > Initially if a crate is compiled with the `proc-macro` crate type

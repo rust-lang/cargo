@@ -896,6 +896,8 @@ fn plugin_build_script_right_arch() {
         .arg(cross_compile::alternate())
         .with_stderr(
             "\
+[WARNING] support for rustc plugins has been removed from rustc. library `foo` should not specify `plugin = true`
+[WARNING] support for `plugin = true` will be removed from cargo in the future
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `[..]/build-script-build`
