@@ -1351,4 +1351,22 @@ fn update_precise_git_revisions() {
 
     assert!(p.read_lockfile().contains(&tag_commit_id));
     assert!(!p.read_lockfile().contains(&head_id));
+
+    // Now make a tag looks like an oid.
+    // It requires a git fetch, as the oid cannot be found in preexisting git db.
+    let arbitrary_tag: String = std::iter::repeat('a').take(head_id.len()).collect();
+    git::tag(&git_repo, &arbitrary_tag);
+
+    p.cargo("update git --precise")
+        .arg(&arbitrary_tag)
+        .with_stderr(format!(
+            "\
+[UPDATING] git repository `{url}`
+[UPDATING] git v0.5.0 ([..]) -> #{}",
+            &head_id[..8],
+        ))
+        .run();
+
+    assert!(p.read_lockfile().contains(&head_id));
+    assert!(!p.read_lockfile().contains(&tag_commit_id));
 }
