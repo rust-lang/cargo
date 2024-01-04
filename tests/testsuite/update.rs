@@ -1272,3 +1272,70 @@ rustdns.workspace = true
         )
         .run();
 }
+
+#[cargo_test]
+fn update_precise_git_revisions() {
+    let (git_project, git_repo) = git::new_repo("git", |p| {
+        p.file("Cargo.toml", &basic_lib_manifest("git"))
+            .file("src/lib.rs", "")
+    });
+    let tag_name = "Nazgûl";
+    git::tag(&git_repo, tag_name);
+
+    git_project.change_file("src/lib.rs", "fn f() {}");
+    git::add(&git_repo);
+    let head_id = git::commit(&git_repo).to_string();
+    let short_id = &head_id[..8];
+    let url = git_project.url();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    git = {{ git = '{url}' }}
+                "#
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fetch")
+        .with_stderr(format!("[UPDATING] git repository `{url}`"))
+        .run();
+
+    assert!(p.read_lockfile().contains(&head_id));
+
+    p.cargo("update git --precise")
+        .arg(tag_name)
+        .with_status(101)
+        .with_stderr(format!(
+            "\
+[ERROR] Unable to update {url}#{tag_name}
+
+Caused by:
+  precise value for git is not a git revision: {tag_name}
+
+Caused by:
+[..]"
+        ))
+        .run();
+
+    p.cargo("update git --precise")
+        .arg(short_id)
+        .with_status(101)
+        .with_stderr(format!(
+            "\
+[UPDATING] git repository `{url}`
+[ERROR] Unable to update {url}#{short_id}
+
+Caused by:
+  object not found - no match for id ({short_id}00000000000000[..]); [..]",
+        ))
+        .run();
+}
