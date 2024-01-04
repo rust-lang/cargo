@@ -460,10 +460,6 @@ impl SourceId {
     }
 
     pub fn precise_git_fragment(self) -> Option<&'static str> {
-        self.precise_full_git_fragment().map(|s| &s[..8])
-    }
-
-    pub fn precise_full_git_fragment(self) -> Option<&'static str> {
         match &self.inner.precise {
             Some(Precise::GitUrlFragment(s)) => Some(&s),
             _ => None,

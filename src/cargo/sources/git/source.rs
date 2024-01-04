@@ -103,7 +103,7 @@ impl<'cfg> GitSource<'cfg> {
         let remote = GitRemote::new(source_id.url());
         // Fallback to git ref from mainfest if there is no locked revision.
         let locked_rev = source_id
-            .precise_full_git_fragment()
+            .precise_git_fragment()
             .map(|s| Revision::new(s.into()))
             .unwrap_or_else(|| source_id.git_reference().unwrap().clone().into());
 
@@ -198,7 +198,6 @@ impl From<Revision> for GitReference {
         }
     }
 }
-
 
 /// Create an identifier from a URL,
 /// essentially turning `proto://host/path/repo` into `repo-<hash-of-url>`.
