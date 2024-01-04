@@ -757,13 +757,11 @@ fn update_with_shared_deps() {
         .with_status(101)
         .with_stderr(
             "\
+[UPDATING] git repository [..]
 [ERROR] Unable to update [..]
 
 Caused by:
-  precise value for git is not a git revision: 0.1.2
-
-Caused by:
-  unable to parse OID - contains invalid characters; class=Invalid (3)
+  revspec '0.1.2' not found; class=Reference (4); code=NotFound (-3)
 ",
         )
         .run();

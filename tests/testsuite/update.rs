@@ -1281,6 +1281,7 @@ fn update_precise_git_revisions() {
     });
     let tag_name = "Nazgûl";
     git::tag(&git_repo, tag_name);
+    let tag_commit_id = git_repo.head().unwrap().target().unwrap().to_string();
 
     git_project.change_file("src/lib.rs", "fn f() {}");
     git::add(&git_repo);
@@ -1313,29 +1314,41 @@ fn update_precise_git_revisions() {
 
     p.cargo("update git --precise")
         .arg(tag_name)
-        .with_status(101)
-        .with_stderr(format!(
-            "\
-[ERROR] Unable to update {url}#{tag_name}
-
-Caused by:
-  precise value for git is not a git revision: {tag_name}
-
-Caused by:
-[..]"
-        ))
-        .run();
-
-    p.cargo("update git --precise")
-        .arg(short_id)
-        .with_status(101)
         .with_stderr(format!(
             "\
 [UPDATING] git repository `{url}`
-[ERROR] Unable to update {url}#{short_id}
-
-Caused by:
-  object not found - no match for id ({short_id}00000000000000[..]); [..]",
+[UPDATING] git v0.5.0 ([..]) -> #{}",
+            &tag_commit_id[..8],
         ))
         .run();
+
+    assert!(p.read_lockfile().contains(&tag_commit_id));
+    assert!(!p.read_lockfile().contains(&head_id));
+
+    p.cargo("update git --precise")
+        .arg(short_id)
+        .with_stderr(format!(
+            "\
+[UPDATING] git repository `{url}`
+[UPDATING] git v0.5.0 ([..]) -> #{short_id}",
+        ))
+        .run();
+
+    assert!(p.read_lockfile().contains(&head_id));
+    assert!(!p.read_lockfile().contains(&tag_commit_id));
+
+    // updating back to tag still requires a git fetch,
+    // as the ref may change over time.
+    p.cargo("update git --precise")
+        .arg(tag_name)
+        .with_stderr(format!(
+            "\
+[UPDATING] git repository `{url}`
+[UPDATING] git v0.5.0 ([..]) -> #{}",
+            &tag_commit_id[..8],
+        ))
+        .run();
+
+    assert!(p.read_lockfile().contains(&tag_commit_id));
+    assert!(!p.read_lockfile().contains(&head_id));
 }
