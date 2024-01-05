@@ -1,8 +1,8 @@
 //! Tests for errors and invalid input.
 
-use mdman::{Format, ManMap};
-use pretty_assertions::assert_eq;
 use std::path::PathBuf;
+
+use mdman::{Format, ManMap};
 
 fn run(name: &str, expected_error: &str) {
     let input = PathBuf::from(format!("tests/invalid/{}", name));
@@ -11,7 +11,7 @@ fn run(name: &str, expected_error: &str) {
             panic!("expected {} to fail", name);
         }
         Err(e) => {
-            assert_eq!(expected_error, e.to_string());
+            snapbox::assert_eq(expected_error, e.to_string());
         }
     }
 }

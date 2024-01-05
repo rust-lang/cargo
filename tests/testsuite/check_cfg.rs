@@ -142,6 +142,77 @@ fn features_with_namespaced_features() {
 }
 
 #[cargo_test(nightly, reason = "--check-cfg is unstable")]
+fn features_fingerprint() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [features]
+                f_a = []
+                f_b = []
+            "#,
+        )
+        .file("src/lib.rs", "#[cfg(feature = \"f_b\")] fn entry() {}")
+        .build();
+
+    p.cargo("check -v -Zcheck-cfg")
+        .masquerade_as_nightly_cargo(&["check-cfg"])
+        .with_stderr_contains(x!("rustc" => "cfg" of "feature" with "f_a" "f_b"))
+        .with_stderr_does_not_contain("[..]unexpected_cfgs[..]")
+        .run();
+
+    p.cargo("check -v -Zcheck-cfg")
+        .masquerade_as_nightly_cargo(&["check-cfg"])
+        .with_stderr_does_not_contain("[..]rustc[..]")
+        .run();
+
+    // checking that re-ordering the features does not invalid the fingerprint
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [features]
+            f_b = []
+            f_a = []
+        "#,
+    );
+
+    p.cargo("check -v -Zcheck-cfg")
+        .masquerade_as_nightly_cargo(&["check-cfg"])
+        .with_stderr_does_not_contain("[..]rustc[..]")
+        .run();
+
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [features]
+            f_a = []
+        "#,
+    );
+
+    p.cargo("check -v -Zcheck-cfg")
+        .masquerade_as_nightly_cargo(&["check-cfg"])
+        // we check that the fingerprint is indeed dirty
+        .with_stderr_contains("[..]Dirty[..]the list of declared features changed")
+        // that is cause rustc to be called again with the new check-cfg args
+        .with_stderr_contains(x!("rustc" => "cfg" of "feature" with "f_a"))
+        // and that we indeed found a new warning from the unexpected_cfgs lint
+        .with_stderr_contains("[..]unexpected_cfgs[..]")
+        .run();
+}
+
+#[cargo_test(nightly, reason = "--check-cfg is unstable")]
 fn well_known_names_values() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
@@ -272,7 +343,7 @@ fn build_script_feedback() {
         .file("src/main.rs", "fn main() {}")
         .file(
             "build.rs",
-            r#"fn main() { println!("cargo:rustc-check-cfg=cfg(foo)"); }"#,
+            r#"fn main() { println!("cargo::rustc-check-cfg=cfg(foo)"); }"#,
         )
         .build();
 
@@ -298,7 +369,7 @@ fn build_script_doc() {
         .file("src/main.rs", "fn main() {}")
         .file(
             "build.rs",
-            r#"fn main() { println!("cargo:rustc-check-cfg=cfg(foo)"); }"#,
+            r#"fn main() { println!("cargo::rustc-check-cfg=cfg(foo)"); }"#,
         )
         .build();
 
@@ -406,9 +477,9 @@ fn build_script_test() {
         )
         .file(
             "build.rs",
-            r#"fn main() { 
-                println!("cargo:rustc-check-cfg=cfg(foo)");
-                println!("cargo:rustc-cfg=foo");
+            r#"fn main() {
+                println!("cargo::rustc-check-cfg=cfg(foo)");
+                println!("cargo::rustc-cfg=foo");
             }"#,
         )
         .file(
@@ -460,16 +531,16 @@ fn build_script_feature_gate() {
         )
         .file(
             "build.rs",
-            r#"fn main() { 
-                println!("cargo:rustc-check-cfg=cfg(foo)");
-                println!("cargo:rustc-cfg=foo");
+            r#"fn main() {
+                println!("cargo::rustc-check-cfg=cfg(foo)");
+                println!("cargo::rustc-cfg=foo");
             }"#,
         )
         .file("src/main.rs", "fn main() {}")
         .build();
 
     p.cargo("check")
-        .with_stderr_contains("warning[..]cargo:rustc-check-cfg requires -Zcheck-cfg flag")
+        .with_stderr_contains("warning[..]cargo::rustc-check-cfg requires -Zcheck-cfg flag")
         .with_status(0)
         .run();
 }

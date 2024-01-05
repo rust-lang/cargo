@@ -35,13 +35,12 @@
 //!   applied cleanly, rustc is run again to verify the suggestions didn't
 //!   break anything. The change will be backed out if it fails (unless
 //!   `--broken-code` is used).
-//! - If there are any warnings or errors, rustc will be run one last time to
-//!   show them to the user.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::ffi::OsString;
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{self, ExitStatus};
+use std::process::{self, ExitStatus, Output};
 use std::{env, fs, str};
 
 use anyhow::{bail, Context as _};
@@ -379,92 +378,103 @@ pub fn fix_exec_rustc(config: &Config, lock_addr: &str) -> CargoResult<()> {
     rustc.retry_with_argfile(true);
     rustc.env_remove(FIX_ENV_INTERNAL);
     args.apply(&mut rustc);
-
-    trace!("start rustfixing {:?}", args.file);
-    let json_error_rustc = {
-        let mut cmd = rustc.clone();
-        cmd.arg("--error-format=json");
-        cmd
-    };
-    let fixes = rustfix_crate(&lock_addr, &json_error_rustc, &args.file, &args, config)?;
-
-    // Ok now we have our final goal of testing out the changes that we applied.
-    // If these changes went awry and actually started to cause the crate to
-    // *stop* compiling then we want to back them out and continue to print
-    // warnings to the user.
-    //
-    // If we didn't actually make any changes then we can immediately execute the
-    // new rustc, and otherwise we capture the output to hide it in the scenario
-    // that we have to back it all out.
-    if !fixes.files.is_empty() {
-        debug!("calling rustc for final verification: {json_error_rustc}");
-        let output = json_error_rustc.output()?;
-
-        if output.status.success() {
-            for (path, file) in fixes.files.iter() {
-                Message::Fixed {
-                    file: path.clone(),
-                    fixes: file.fixes_applied,
-                }
-                .post(config)?;
-            }
-        }
-
-        // If we succeeded then we'll want to commit to the changes we made, if
-        // any. If stderr is empty then there's no need for the final exec at
-        // the end, we just bail out here.
-        if output.status.success() && output.stderr.is_empty() {
-            return Ok(());
-        }
-
-        // Otherwise, if our rustc just failed, then that means that we broke the
-        // user's code with our changes. Back out everything and fall through
-        // below to recompile again.
-        if !output.status.success() {
-            if config.get_env_os(BROKEN_CODE_ENV_INTERNAL).is_none() {
-                for (path, file) in fixes.files.iter() {
-                    debug!("reverting {:?} due to errors", path);
-                    paths::write(path, &file.original_code)?;
-                }
-            }
-
-            let krate = {
-                let mut iter = json_error_rustc.get_args();
-                let mut krate = None;
-                while let Some(arg) = iter.next() {
-                    if arg == "--crate-name" {
-                        krate = iter.next().and_then(|s| s.to_owned().into_string().ok());
-                    }
-                }
-                krate
-            };
-            log_failed_fix(config, krate, &output.stderr, output.status)?;
-        }
-    }
-
-    // This final fall-through handles multiple cases;
-    // - If the fix failed, show the original warnings and suggestions.
-    // - If `--broken-code`, show the error messages.
-    // - If the fix succeeded, show any remaining warnings.
-    for arg in args.format_args {
-        // Add any json/error format arguments that Cargo wants. This allows
-        // things like colored output to work correctly.
-        rustc.arg(arg);
-    }
-    // Removes `FD_CLOEXEC` set by `jobserver::Client` to pass jobserver
-    // as environment variables specify.
+    // Removes `FD_CLOEXEC` set by `jobserver::Client` to ensure that the
+    // compiler can access the jobserver.
     if let Some(client) = config.jobserver_from_env() {
         rustc.inherit_jobserver(client);
     }
-    debug!("calling rustc to display remaining diagnostics: {rustc}");
-    exit_with(rustc.status()?);
+
+    trace!("start rustfixing {:?}", args.file);
+    let fixes = rustfix_crate(&lock_addr, &rustc, &args.file, &args, config)?;
+
+    if fixes.last_output.status.success() {
+        for (path, file) in fixes.files.iter() {
+            Message::Fixed {
+                file: path.clone(),
+                fixes: file.fixes_applied,
+            }
+            .post(config)?;
+        }
+        // Display any remaining diagnostics.
+        emit_output(&fixes.last_output)?;
+        return Ok(());
+    }
+
+    let allow_broken_code = config.get_env_os(BROKEN_CODE_ENV_INTERNAL).is_some();
+
+    // There was an error running rustc during the last run.
+    //
+    // Back out all of the changes unless --broken-code was used.
+    if !allow_broken_code {
+        for (path, file) in fixes.files.iter() {
+            debug!("reverting {:?} due to errors", path);
+            paths::write(path, &file.original_code)?;
+        }
+    }
+
+    // If there were any fixes, let the user know that there was a failure
+    // attempting to apply them, and to ask for a bug report.
+    //
+    // FIXME: The error message here is not correct with --broken-code.
+    //        https://github.com/rust-lang/cargo/issues/10955
+    if fixes.files.is_empty() {
+        // No fixes were available. Display whatever errors happened.
+        emit_output(&fixes.last_output)?;
+        exit_with(fixes.last_output.status);
+    } else {
+        let krate = {
+            let mut iter = rustc.get_args();
+            let mut krate = None;
+            while let Some(arg) = iter.next() {
+                if arg == "--crate-name" {
+                    krate = iter.next().and_then(|s| s.to_owned().into_string().ok());
+                }
+            }
+            krate
+        };
+        log_failed_fix(
+            config,
+            krate,
+            &fixes.last_output.stderr,
+            fixes.last_output.status,
+        )?;
+        // Display the diagnostics that appeared at the start, before the
+        // fixes failed. This can help with diagnosing which suggestions
+        // caused the failure.
+        emit_output(&fixes.first_output)?;
+        // Exit with whatever exit code we initially started with. `cargo fix`
+        // treats this as a warning, and shouldn't return a failure code
+        // unless the code didn't compile in the first place.
+        exit_with(fixes.first_output.status);
+    }
 }
 
-#[derive(Default)]
+fn emit_output(output: &Output) -> CargoResult<()> {
+    // Unfortunately if there is output on stdout, this does not preserve the
+    // order of output relative to stderr. In practice, rustc should never
+    // print to stdout unless some proc-macro does it.
+    std::io::stderr().write_all(&output.stderr)?;
+    std::io::stdout().write_all(&output.stdout)?;
+    Ok(())
+}
+
 struct FixedCrate {
+    /// Map of file path to some information about modifications made to that file.
     files: HashMap<String, FixedFile>,
+    /// The output from rustc from the first time it was called.
+    ///
+    /// This is needed when fixes fail to apply, so that it can display the
+    /// original diagnostics to the user which can help with diagnosing which
+    /// suggestions caused the failure.
+    first_output: Output,
+    /// The output from rustc from the last time it was called.
+    ///
+    /// This will be displayed to the user to show any remaining diagnostics
+    /// or errors.
+    last_output: Output,
 }
 
+#[derive(Debug)]
 struct FixedFile {
     errors_applying_fixes: Vec<String>,
     fixes_applied: u32,
@@ -482,11 +492,6 @@ fn rustfix_crate(
     args: &FixArgs,
     config: &Config,
 ) -> CargoResult<FixedCrate> {
-    if !args.can_run_rustfix(config)? {
-        // This fix should not be run. Skipping...
-        return Ok(FixedCrate::default());
-    }
-
     // First up, we want to make sure that each crate is only checked by one
     // process at a time. If two invocations concurrently check a crate then
     // it's likely to corrupt it.
@@ -497,6 +502,23 @@ fn rustfix_crate(
     // makes it slower, but is the only safe way to prevent concurrent
     // modification.
     let _lock = LockServerClient::lock(&lock_addr.parse()?, "global")?;
+
+    // Map of files that have been modified.
+    let mut files = HashMap::new();
+
+    if !args.can_run_rustfix(config)? {
+        // This fix should not be run. Skipping...
+        // We still need to run rustc at least once to make sure any potential
+        // rmeta gets generated, and diagnostics get displayed.
+        debug!("can't fix {filename:?}, running rustc: {rustc}");
+        let last_output = rustc.output()?;
+        let fixes = FixedCrate {
+            files,
+            first_output: last_output.clone(),
+            last_output,
+        };
+        return Ok(fixes);
+    }
 
     // Next up, this is a bit suspicious, but we *iteratively* execute rustc and
     // collect suggestions to feed to rustfix. Once we hit our limit of times to
@@ -531,41 +553,53 @@ fn rustfix_crate(
     //   Detect this when a fix fails to get applied *and* no suggestions
     //   successfully applied to the same file. In that case looks like we
     //   definitely can't make progress, so bail out.
-    let mut fixes = FixedCrate::default();
-    let mut last_fix_counts = HashMap::new();
-    let iterations = config
+    let max_iterations = config
         .get_env("CARGO_FIX_MAX_RETRIES")
         .ok()
         .and_then(|n| n.parse().ok())
         .unwrap_or(4);
-    for _ in 0..iterations {
-        last_fix_counts.clear();
-        for (path, file) in fixes.files.iter_mut() {
-            last_fix_counts.insert(path.clone(), file.fixes_applied);
+    let mut last_output;
+    let mut last_made_changes;
+    let mut first_output = None;
+    let mut current_iteration = 0;
+    loop {
+        for file in files.values_mut() {
             // We'll generate new errors below.
             file.errors_applying_fixes.clear();
         }
-        rustfix_and_fix(&mut fixes, rustc, filename, config)?;
+        (last_output, last_made_changes) = rustfix_and_fix(&mut files, rustc, filename, config)?;
+        if current_iteration == 0 {
+            first_output = Some(last_output.clone());
+        }
         let mut progress_yet_to_be_made = false;
-        for (path, file) in fixes.files.iter_mut() {
+        for (path, file) in files.iter_mut() {
             if file.errors_applying_fixes.is_empty() {
                 continue;
             }
+            debug!("had rustfix apply errors in {path:?} {file:?}");
             // If anything was successfully fixed *and* there's at least one
             // error, then assume the error was spurious and we'll try again on
             // the next iteration.
-            if file.fixes_applied != *last_fix_counts.get(path).unwrap_or(&0) {
+            if last_made_changes {
                 progress_yet_to_be_made = true;
             }
         }
         if !progress_yet_to_be_made {
             break;
         }
+        current_iteration += 1;
+        if current_iteration >= max_iterations {
+            break;
+        }
+    }
+    if last_made_changes {
+        debug!("calling rustc one last time for final results: {rustc}");
+        last_output = rustc.output()?;
     }
 
     // Any errors still remaining at this point need to be reported as probably
     // bugs in Cargo and/or rustfix.
-    for (path, file) in fixes.files.iter_mut() {
+    for (path, file) in files.iter_mut() {
         for error in file.errors_applying_fixes.drain(..) {
             Message::ReplaceFailed {
                 file: path.clone(),
@@ -575,7 +609,11 @@ fn rustfix_crate(
         }
     }
 
-    Ok(fixes)
+    Ok(FixedCrate {
+        files,
+        first_output: first_output.expect("at least one iteration"),
+        last_output,
+    })
 }
 
 /// Executes `rustc` to apply one round of suggestions to the crate in question.
@@ -583,11 +621,11 @@ fn rustfix_crate(
 /// This will fill in the `fixes` map with original code, suggestions applied,
 /// and any errors encountered while fixing files.
 fn rustfix_and_fix(
-    fixes: &mut FixedCrate,
+    files: &mut HashMap<String, FixedFile>,
     rustc: &ProcessBuilder,
     filename: &Path,
     config: &Config,
-) -> CargoResult<()> {
+) -> CargoResult<(Output, bool)> {
     // If not empty, filter by these lints.
     // TODO: implement a way to specify this.
     let only = HashSet::new();
@@ -606,7 +644,7 @@ fn rustfix_and_fix(
             filename,
             output.status.code()
         );
-        return Ok(());
+        return Ok((output, false));
     }
 
     let fix_mode = config
@@ -674,6 +712,7 @@ fn rustfix_and_fix(
         filename.display(),
     );
 
+    let mut made_changes = false;
     for (file, suggestions) in file_map {
         // Attempt to read the source code for this file. If this fails then
         // that'd be pretty surprising, so log a message and otherwise keep
@@ -692,14 +731,11 @@ fn rustfix_and_fix(
         // code, so save it. If the file already exists then the original code
         // doesn't need to be updated as we've just read an interim state with
         // some fixes but perhaps not all.
-        let fixed_file = fixes
-            .files
-            .entry(file.clone())
-            .or_insert_with(|| FixedFile {
-                errors_applying_fixes: Vec::new(),
-                fixes_applied: 0,
-                original_code: code.clone(),
-            });
+        let fixed_file = files.entry(file.clone()).or_insert_with(|| FixedFile {
+            errors_applying_fixes: Vec::new(),
+            fixes_applied: 0,
+            original_code: code.clone(),
+        });
         let mut fixed = CodeFix::new(&code);
 
         // As mentioned above in `rustfix_crate`, we don't immediately warn
@@ -711,17 +747,19 @@ fn rustfix_and_fix(
                 Err(e) => fixed_file.errors_applying_fixes.push(e.to_string()),
             }
         }
-        let new_code = fixed.finish()?;
-        paths::write(&file, new_code)?;
+        if fixed.modified() {
+            made_changes = true;
+            let new_code = fixed.finish()?;
+            paths::write(&file, new_code)?;
+        }
     }
 
-    Ok(())
+    Ok((output, made_changes))
 }
 
 fn exit_with(status: ExitStatus) -> ! {
     #[cfg(unix)]
     {
-        use std::io::Write;
         use std::os::unix::prelude::*;
         if let Some(signal) = status.signal() {
             drop(writeln!(
@@ -799,12 +837,6 @@ struct FixArgs {
     other: Vec<OsString>,
     /// Path to the `rustc` executable.
     rustc: PathBuf,
-    /// Console output flags (`--error-format`, `--json`, etc.).
-    ///
-    /// The normal fix procedure always uses `--json`, so it overrides what
-    /// Cargo normally passes when applying fixes. When displaying warnings or
-    /// errors, it will use these flags.
-    format_args: Vec<String>,
 }
 
 impl FixArgs {
@@ -822,7 +854,6 @@ impl FixArgs {
         let mut file = None;
         let mut enabled_edition = None;
         let mut other = Vec::new();
-        let mut format_args = Vec::new();
 
         let mut handle_arg = |arg: OsString| -> CargoResult<()> {
             let path = PathBuf::from(arg);
@@ -833,12 +864,6 @@ impl FixArgs {
             if let Some(s) = path.to_str() {
                 if let Some(edition) = s.strip_prefix("--edition=") {
                     enabled_edition = Some(edition.parse()?);
-                    return Ok(());
-                }
-                if s.starts_with("--error-format=") || s.starts_with("--json=") {
-                    // Cargo may add error-format in some cases, but `cargo
-                    // fix` wants to add its own.
-                    format_args.push(s.to_string());
                     return Ok(());
                 }
             }
@@ -890,7 +915,6 @@ impl FixArgs {
             enabled_edition,
             other,
             rustc,
-            format_args,
         })
     }
 

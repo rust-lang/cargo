@@ -156,6 +156,30 @@ jobs:
 For projects with higher risks of per-platform or per-Rust version failures,
 more combinations may want to be tested.
 
+## Verifying `rust-version`
+
+When publishing packages that specify [`rust-version`](../reference/manifest.md#the-rust-version-field),
+it is important to verify the correctness of that field.
+
+Some third-party tools that can help with this include:
+- [`cargo-msrv`](https://crates.io/crates/cargo-msrv)
+- [`cargo-hack`](https://crates.io/crates/cargo-hack)
+
+An example of one way to do this, using GitHub Actions:
+```yaml
+jobs:
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: taiki-e/install-action@cargo-hack
+    - run: cargo hack check --rust-version --workspace --all-targets --ignore-private
+```
+This tries to balance thoroughness with turnaround time:
+- A single platform is used as most projects are platform-agnostic, trusting platform-specific dependencies to verify their behavior.
+- `cargo check` is used as most issues contributors will run into are API availability and not behavior.
+- Unpublished packages are skipped as this assumes only consumers of the verified project, through a registry, will care about `rust-version`.
+
 [`cargo add`]: ../commands/cargo-add.md
 [`cargo install`]: ../commands/cargo-install.md
 [Dependabot]: https://docs.github.com/en/code-security/dependabot/working-with-dependabot

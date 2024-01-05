@@ -65,6 +65,7 @@
 //! Target Name                                | ✓           | ✓
 //! TargetKind (bin/lib/etc.)                  | ✓           | ✓
 //! Enabled Features                           | ✓           | ✓
+//! Declared Features                          | ✓           |
 //! Immediate dependency’s hashes              | ✓[^1]       | ✓
 //! [`CompileKind`] (host/target)              | ✓           | ✓
 //! __CARGO_DEFAULT_LIB_METADATA[^4]           |             | ✓
@@ -572,6 +573,8 @@ pub struct Fingerprint {
     rustc: u64,
     /// Sorted list of cfg features enabled.
     features: String,
+    /// Sorted list of all the declared cfg features.
+    declared_features: String,
     /// Hash of the `Target` struct, including the target name,
     /// package-relative source path, edition, etc.
     target: u64,
@@ -876,6 +879,7 @@ impl Fingerprint {
             profile: 0,
             path: 0,
             features: String::new(),
+            declared_features: String::new(),
             deps: Vec::new(),
             local: Mutex::new(Vec::new()),
             memoized_hash: Mutex::new(None),
@@ -920,6 +924,12 @@ impl Fingerprint {
             return DirtyReason::FeaturesChanged {
                 old: old.features.clone(),
                 new: self.features.clone(),
+            };
+        }
+        if self.declared_features != old.declared_features {
+            return DirtyReason::DeclaredFeaturesChanged {
+                old: old.declared_features.clone(),
+                new: self.declared_features.clone(),
             };
         }
         if self.target != old.target {
@@ -1200,6 +1210,7 @@ impl hash::Hash for Fingerprint {
         let Fingerprint {
             rustc,
             ref features,
+            ref declared_features,
             target,
             path,
             profile,
@@ -1215,6 +1226,7 @@ impl hash::Hash for Fingerprint {
         (
             rustc,
             features,
+            declared_features,
             target,
             path,
             profile,
@@ -1431,6 +1443,9 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
         allow_features.hash(&mut config);
     }
     let compile_kind = unit.kind.fingerprint_hash();
+    let mut declared_features = unit.pkg.summary().features().keys().collect::<Vec<_>>();
+    declared_features.sort(); // to avoid useless rebuild if the user orders it's features
+                              // differently
     Ok(Fingerprint {
         rustc: util::hash_u64(&cx.bcx.rustc().verbose_version),
         target: util::hash_u64(&unit.target),
@@ -1439,6 +1454,14 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
         // actually affect the output artifact so there's no need to hash it.
         path: util::hash_u64(path_args(cx.bcx.ws, unit).0),
         features: format!("{:?}", unit.features),
+        // Note we curently only populate `declared_features` when `-Zcheck-cfg`
+        // is passed since it's the only user-facing toggle that will make this
+        // fingerprint relevant.
+        declared_features: if cx.bcx.config.cli_unstable().check_cfg {
+            format!("{declared_features:?}")
+        } else {
+            "".to_string()
+        },
         deps,
         local: Mutex::new(local),
         memoized_hash: Mutex::new(None),

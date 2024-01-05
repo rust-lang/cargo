@@ -1,4 +1,4 @@
-use crate::core::{PackageIdSpec, Workspace};
+use crate::core::{PackageIdSpec, PackageIdSpecQuery, Workspace};
 use crate::ops;
 use crate::util::CargoResult;
 
@@ -11,5 +11,5 @@ pub fn pkgid(ws: &Workspace<'_>, spec: Option<&str>) -> CargoResult<PackageIdSpe
         Some(spec) => PackageIdSpec::query_str(spec, resolve.iter())?,
         None => ws.current()?.package_id(),
     };
-    Ok(PackageIdSpec::from_package_id(pkgid))
+    Ok(pkgid.to_spec())
 }

@@ -47,7 +47,7 @@ impl Packages {
             Packages::All => ws
                 .members()
                 .map(Package::package_id)
-                .map(PackageIdSpec::from_package_id)
+                .map(|id| id.to_spec())
                 .collect(),
             Packages::OptOut(opt_out) => {
                 let (mut patterns, mut names) = opt_patterns_and_names(opt_out)?;
@@ -57,7 +57,7 @@ impl Packages {
                         !names.remove(pkg.name().as_str()) && !match_patterns(pkg, &mut patterns)
                     })
                     .map(Package::package_id)
-                    .map(PackageIdSpec::from_package_id)
+                    .map(|id| id.to_spec())
                     .collect();
                 let warn = |e| ws.config().shell().warn(e);
                 emit_package_not_found(ws, names, true).or_else(warn)?;
@@ -65,20 +65,20 @@ impl Packages {
                 specs
             }
             Packages::Packages(packages) if packages.is_empty() => {
-                vec![PackageIdSpec::from_package_id(ws.current()?.package_id())]
+                vec![ws.current()?.package_id().to_spec()]
             }
             Packages::Packages(opt_in) => {
                 let (mut patterns, packages) = opt_patterns_and_names(opt_in)?;
                 let mut specs = packages
                     .iter()
                     .map(|p| PackageIdSpec::parse(p))
-                    .collect::<CargoResult<Vec<_>>>()?;
+                    .collect::<Result<Vec<_>, _>>()?;
                 if !patterns.is_empty() {
                     let matched_pkgs = ws
                         .members()
                         .filter(|pkg| match_patterns(pkg, &mut patterns))
                         .map(Package::package_id)
-                        .map(PackageIdSpec::from_package_id);
+                        .map(|id| id.to_spec());
                     specs.extend(matched_pkgs);
                 }
                 emit_pattern_not_found(ws, patterns, false)?;
@@ -87,7 +87,7 @@ impl Packages {
             Packages::Default => ws
                 .default_members()
                 .map(Package::package_id)
-                .map(PackageIdSpec::from_package_id)
+                .map(|id| id.to_spec())
                 .collect(),
         };
         if specs.is_empty() {

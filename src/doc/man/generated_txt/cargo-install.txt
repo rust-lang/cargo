@@ -30,10 +30,11 @@ DESCRIPTION
        o  $HOME/.cargo
 
        There are multiple sources from which a crate can be installed. The
-       default location is crates.io but the --git, --path, and --registry
-       flags can change this source. If the source contains more than one
-       package (such as crates.io or a git repository with multiple crates) the
-       crate argument is required to indicate which crate should be installed.
+       default source location is crates.io but the --git, --path, and
+       --registry flags can change this source. If the source contains more
+       than one package (such as crates.io or a git repository with multiple
+       crates) the crate argument is required to indicate which crate should be
+       installed.
 
        Crates from crates.io can optionally specify the version they wish to
        install via the --version flags, and similarly packages from git
@@ -114,7 +115,7 @@ OPTIONS
            Specific commit to use when installing from git.
 
        --path path
-           Filesystem path to local crate to install.
+           Filesystem path to local crate to install from.
 
        --list
            List all installed packages and their versions.

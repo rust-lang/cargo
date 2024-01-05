@@ -1,13 +1,15 @@
 //! Handlebars template processing.
 
-use crate::format::Formatter;
-use anyhow::Error;
-use handlebars::{
-    handlebars_helper, Context, Decorator, Handlebars, Helper, HelperDef, HelperResult, Output,
-    RenderContext, RenderError, Renderable,
-};
 use std::collections::HashMap;
 use std::path::Path;
+
+use anyhow::Error;
+use handlebars::{
+    handlebars_helper, Context, Decorator, DirectorySourceOptions, Handlebars, Helper, HelperDef,
+    HelperResult, Output, RenderContext, RenderError, RenderErrorReason, Renderable,
+};
+
+use crate::format::Formatter;
 
 type FormatterRef<'a> = &'a (dyn Formatter + Send + Sync);
 
@@ -22,7 +24,12 @@ pub fn expand(file: &Path, formatter: FormatterRef<'_>) -> Result<String, Error>
     handlebars.register_decorator("set", Box::new(set_decorator));
     handlebars.register_template_file("template", file)?;
     let includes = file.parent().unwrap().join("includes");
-    handlebars.register_templates_directory(".md", includes)?;
+    let options = DirectorySourceOptions {
+        tpl_extension: ".md".to_string(),
+        hidden: false,
+        temporary: false,
+    };
+    handlebars.register_templates_directory(includes, options)?;
     let man_name = file
         .file_stem()
         .expect("expected filename")
@@ -42,14 +49,16 @@ struct OptionsHelper<'a> {
 impl HelperDef for OptionsHelper<'_> {
     fn call<'reg: 'rc, 'rc>(
         &self,
-        h: &Helper<'reg, 'rc>,
+        h: &Helper<'rc>,
         r: &'reg Handlebars<'reg>,
         ctx: &'rc Context,
         rc: &mut RenderContext<'reg, 'rc>,
         out: &mut dyn Output,
     ) -> HelperResult {
         if in_options(rc) {
-            return Err(RenderError::new("options blocks cannot be nested"));
+            return Err(
+                RenderErrorReason::Other("options blocks cannot be nested".to_string()).into(),
+            );
         }
         // Prevent nested {{#options}}.
         set_in_context(rc, "__MDMAN_IN_OPTIONS", serde_json::Value::Bool(true));
@@ -57,7 +66,12 @@ impl HelperDef for OptionsHelper<'_> {
         out.write(&s)?;
         let t = match h.template() {
             Some(t) => t,
-            None => return Err(RenderError::new("options block must not be empty")),
+            None => {
+                return Err(RenderErrorReason::Other(
+                    "options block must not be empty".to_string(),
+                )
+                .into());
+            }
         };
         let block = t.renders(r, ctx, rc)?;
         out.write(&block)?;
@@ -83,20 +97,23 @@ struct OptionHelper<'a> {
 impl HelperDef for OptionHelper<'_> {
     fn call<'reg: 'rc, 'rc>(
         &self,
-        h: &Helper<'reg, 'rc>,
+        h: &Helper<'rc>,
         r: &'reg Handlebars<'reg>,
         ctx: &'rc Context,
         rc: &mut RenderContext<'reg, 'rc>,
         out: &mut dyn Output,
     ) -> HelperResult {
         if !in_options(rc) {
-            return Err(RenderError::new("option must be in options block"));
+            return Err(
+                RenderErrorReason::Other("option must be in options block".to_string()).into(),
+            );
         }
         let params = h.params();
         if params.is_empty() {
-            return Err(RenderError::new(
-                "option block must have at least one param",
-            ));
+            return Err(RenderErrorReason::Other(
+                "option block must have at least one param".to_string(),
+            )
+            .into());
         }
         // Convert params to strings.
         let params = params
@@ -105,12 +122,19 @@ impl HelperDef for OptionHelper<'_> {
                 param
                     .value()
                     .as_str()
-                    .ok_or_else(|| RenderError::new("option params must be strings"))
+                    .ok_or_else(|| {
+                        RenderErrorReason::Other("option params must be strings".to_string())
+                    })
+                    .into()
             })
-            .collect::<Result<Vec<&str>, RenderError>>()?;
+            .collect::<Result<Vec<&str>, RenderErrorReason>>()?;
         let t = match h.template() {
             Some(t) => t,
-            None => return Err(RenderError::new("option block must not be empty")),
+            None => {
+                return Err(
+                    RenderErrorReason::Other("option block must not be empty".to_string()).into(),
+                );
+            }
         };
         // Render the block.
         let block = t.renders(r, ctx, rc)?;
@@ -127,7 +151,7 @@ impl HelperDef for OptionHelper<'_> {
         let option = self
             .formatter
             .render_option(&params, &block, man_name)
-            .map_err(|e| RenderError::new(format!("option render failed: {}", e)))?;
+            .map_err(|e| RenderErrorReason::Other(format!("option render failed: {}", e)))?;
         out.write(&option)?;
         Ok(())
     }
@@ -141,7 +165,7 @@ struct ManLinkHelper<'a> {
 impl HelperDef for ManLinkHelper<'_> {
     fn call<'reg: 'rc, 'rc>(
         &self,
-        h: &Helper<'reg, 'rc>,
+        h: &Helper<'rc>,
         _r: &'reg Handlebars<'reg>,
         _ctx: &'rc Context,
         _rc: &mut RenderContext<'reg, 'rc>,
@@ -149,22 +173,22 @@ impl HelperDef for ManLinkHelper<'_> {
     ) -> HelperResult {
         let params = h.params();
         if params.len() != 2 {
-            return Err(RenderError::new("{{man}} must have two arguments"));
+            return Err(
+                RenderErrorReason::Other("{{man}} must have two arguments".to_string()).into(),
+            );
         }
-        let name = params[0]
-            .value()
-            .as_str()
-            .ok_or_else(|| RenderError::new("man link name must be a string"))?;
-        let section = params[1]
-            .value()
-            .as_u64()
-            .ok_or_else(|| RenderError::new("man link section must be an integer"))?;
-        let section =
-            u8::try_from(section).map_err(|_e| RenderError::new("section number too large"))?;
+        let name = params[0].value().as_str().ok_or_else(|| {
+            RenderErrorReason::Other("man link name must be a string".to_string())
+        })?;
+        let section = params[1].value().as_u64().ok_or_else(|| {
+            RenderErrorReason::Other("man link section must be an integer".to_string())
+        })?;
+        let section = u8::try_from(section)
+            .map_err(|_e| RenderErrorReason::Other("section number too large".to_string()))?;
         let link = self
             .formatter
             .linkify_man_to_md(name, section)
-            .map_err(|e| RenderError::new(format!("failed to linkify man: {}", e)))?;
+            .map_err(|e| RenderErrorReason::Other(format!("failed to linkify man: {}", e)))?;
         out.write(&link)?;
         Ok(())
     }
@@ -174,7 +198,7 @@ impl HelperDef for ManLinkHelper<'_> {
 ///
 /// This sets a variable to a value within the template context.
 fn set_decorator(
-    d: &Decorator<'_, '_>,
+    d: &Decorator<'_>,
     _: &Handlebars<'_>,
     _ctx: &Context,
     rc: &mut RenderContext<'_, '_>,

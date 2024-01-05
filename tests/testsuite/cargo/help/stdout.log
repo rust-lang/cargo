@@ -33,7 +33,7 @@ Commands:
     update      Update dependencies listed in Cargo.lock
     search      Search registry for crates
     publish     Package and upload this package to the registry
-    install     Install a Rust binary. Default location is $HOME/.cargo/bin
+    install     Install a Rust binary
     uninstall   Uninstall a Rust binary
     ...         See all commands with --list
 

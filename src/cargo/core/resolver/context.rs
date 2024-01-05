@@ -22,9 +22,6 @@ pub struct Context {
     pub resolve_features: im_rc::HashMap<PackageId, FeaturesSet>,
     /// get the package that will be linking to a native library by its links attribute
     pub links: im_rc::HashMap<InternedString, PackageId>,
-    /// for each package the list of names it can see,
-    /// then for each name the exact version that name represents and whether the name is public.
-    pub public_dependency: Option<PublicDependency>,
 
     /// a way to look up for a package in activations what packages required it
     /// and all of the exact deps that it fulfilled.
@@ -74,16 +71,11 @@ impl PackageId {
 }
 
 impl Context {
-    pub fn new(check_public_visible_dependencies: bool) -> Context {
+    pub fn new() -> Context {
         Context {
             age: 0,
             resolve_features: im_rc::HashMap::new(),
             links: im_rc::HashMap::new(),
-            public_dependency: if check_public_visible_dependencies {
-                Some(PublicDependency::new())
-            } else {
-                None
-            },
             parents: Graph::new(),
             activations: im_rc::HashMap::new(),
         }
@@ -192,42 +184,6 @@ impl Context {
             .and_then(|(s, l)| if s.package_id() == id { Some(*l) } else { None })
     }
 
-    /// If the conflict reason on the package still applies returns the `ContextAge` when it was added
-    pub fn still_applies(&self, id: PackageId, reason: &ConflictReason) -> Option<ContextAge> {
-        self.is_active(id).and_then(|mut max| {
-            match reason {
-                ConflictReason::PublicDependency(name) => {
-                    if &id == name {
-                        return Some(max);
-                    }
-                    max = std::cmp::max(max, self.is_active(*name)?);
-                    max = std::cmp::max(
-                        max,
-                        self.public_dependency
-                            .as_ref()
-                            .unwrap()
-                            .can_see_item(*name, id)?,
-                    );
-                }
-                ConflictReason::PubliclyExports(name) => {
-                    if &id == name {
-                        return Some(max);
-                    }
-                    max = std::cmp::max(max, self.is_active(*name)?);
-                    max = std::cmp::max(
-                        max,
-                        self.public_dependency
-                            .as_ref()
-                            .unwrap()
-                            .publicly_exports_item(*name, id)?,
-                    );
-                }
-                _ => {}
-            }
-            Some(max)
-        })
-    }
-
     /// Checks whether all of `parent` and the keys of `conflicting activations`
     /// are still active.
     /// If so returns the `ContextAge` when the newest one was added.
@@ -241,8 +197,8 @@ impl Context {
             max = std::cmp::max(max, self.is_active(parent)?);
         }
 
-        for (id, reason) in conflicting_activations.iter() {
-            max = std::cmp::max(max, self.still_applies(*id, reason)?);
+        for id in conflicting_activations.keys() {
+            max = std::cmp::max(max, self.is_active(*id)?);
         }
         Some(max)
     }
@@ -278,160 +234,5 @@ impl Graph<PackageId, im_rc::HashSet<Dependency>> {
     pub fn parents_of(&self, p: PackageId) -> impl Iterator<Item = (PackageId, bool)> + '_ {
         self.edges(&p)
             .map(|(grand, d)| (*grand, d.iter().any(|x| x.is_public())))
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PublicDependency {
-    /// For each active package the set of all the names it can see,
-    /// for each name the exact package that name resolves to,
-    ///     the `ContextAge` when it was first visible,
-    ///     and the `ContextAge` when it was first exported.
-    inner: im_rc::HashMap<
-        PackageId,
-        im_rc::HashMap<InternedString, (PackageId, ContextAge, Option<ContextAge>)>,
-    >,
-}
-
-impl PublicDependency {
-    fn new() -> Self {
-        PublicDependency {
-            inner: im_rc::HashMap::new(),
-        }
-    }
-    fn publicly_exports(&self, candidate_pid: PackageId) -> Vec<PackageId> {
-        self.inner
-            .get(&candidate_pid) // if we have seen it before
-            .iter()
-            .flat_map(|x| x.values()) // all the things we have stored
-            .filter(|x| x.2.is_some()) // as publicly exported
-            .map(|x| x.0)
-            .chain(Some(candidate_pid)) // but even if not we know that everything exports itself
-            .collect()
-    }
-    fn publicly_exports_item(
-        &self,
-        candidate_pid: PackageId,
-        target: PackageId,
-    ) -> Option<ContextAge> {
-        debug_assert_ne!(candidate_pid, target);
-        let out = self
-            .inner
-            .get(&candidate_pid)
-            .and_then(|names| names.get(&target.name()))
-            .filter(|(p, _, _)| *p == target)
-            .and_then(|(_, _, age)| *age);
-        debug_assert_eq!(
-            out.is_some(),
-            self.publicly_exports(candidate_pid).contains(&target)
-        );
-        out
-    }
-    pub fn can_see_item(&self, candidate_pid: PackageId, target: PackageId) -> Option<ContextAge> {
-        self.inner
-            .get(&candidate_pid)
-            .and_then(|names| names.get(&target.name()))
-            .filter(|(p, _, _)| *p == target)
-            .map(|(_, age, _)| *age)
-    }
-    pub fn add_edge(
-        &mut self,
-        candidate_pid: PackageId,
-        parent_pid: PackageId,
-        is_public: bool,
-        age: ContextAge,
-        parents: &Graph<PackageId, im_rc::HashSet<Dependency>>,
-    ) {
-        // one tricky part is that `candidate_pid` may already be active and
-        // have public dependencies of its own. So we not only need to mark
-        // `candidate_pid` as visible to its parents but also all of its existing
-        // publicly exported dependencies.
-        for c in self.publicly_exports(candidate_pid) {
-            // for each (transitive) parent that can newly see `t`
-            let mut stack = vec![(parent_pid, is_public)];
-            while let Some((p, public)) = stack.pop() {
-                match self.inner.entry(p).or_default().entry(c.name()) {
-                    im_rc::hashmap::Entry::Occupied(mut o) => {
-                        // the (transitive) parent can already see something by `c`s name, it had better be `c`.
-                        assert_eq!(o.get().0, c);
-                        if o.get().2.is_some() {
-                            // The previous time the parent saw `c`, it was a public dependency.
-                            // So all of its parents already know about `c`
-                            // and we can save some time by stopping now.
-                            continue;
-                        }
-                        if public {
-                            // Mark that `c` has now bean seen publicly
-                            let old_age = o.get().1;
-                            o.insert((c, old_age, if public { Some(age) } else { None }));
-                        }
-                    }
-                    im_rc::hashmap::Entry::Vacant(v) => {
-                        // The (transitive) parent does not have anything by `c`s name,
-                        // so we add `c`.
-                        v.insert((c, age, if public { Some(age) } else { None }));
-                    }
-                }
-                // if `candidate_pid` was a private dependency of `p` then `p` parents can't see `c` thru `p`
-                if public {
-                    // if it was public, then we add all of `p`s parents to be checked
-                    stack.extend(parents.parents_of(p));
-                }
-            }
-        }
-    }
-    pub fn can_add_edge(
-        &self,
-        b_id: PackageId,
-        parent: PackageId,
-        is_public: bool,
-        parents: &Graph<PackageId, im_rc::HashSet<Dependency>>,
-    ) -> Result<
-        (),
-        (
-            ((PackageId, ConflictReason), (PackageId, ConflictReason)),
-            Option<(PackageId, ConflictReason)>,
-        ),
-    > {
-        // one tricky part is that `candidate_pid` may already be active and
-        // have public dependencies of its own. So we not only need to check
-        // `b_id` as visible to its parents but also all of its existing
-        // publicly exported dependencies.
-        for t in self.publicly_exports(b_id) {
-            // for each (transitive) parent that can newly see `t`
-            let mut stack = vec![(parent, is_public)];
-            while let Some((p, public)) = stack.pop() {
-                // TODO: don't look at the same thing more than once
-                if let Some(o) = self.inner.get(&p).and_then(|x| x.get(&t.name())) {
-                    if o.0 != t {
-                        // the (transitive) parent can already see a different version by `t`s name.
-                        // So, adding `b` will cause `p` to have a public dependency conflict on `t`.
-                        return Err((
-                            (o.0, ConflictReason::PublicDependency(p)), // p can see the other version and
-                            (parent, ConflictReason::PublicDependency(p)), // p can see us
-                        ))
-                        .map_err(|e| {
-                            if t == b_id {
-                                (e, None)
-                            } else {
-                                (e, Some((t, ConflictReason::PubliclyExports(b_id))))
-                            }
-                        });
-                    }
-                    if o.2.is_some() {
-                        // The previous time the parent saw `t`, it was a public dependency.
-                        // So all of its parents already know about `t`
-                        // and we can save some time by stopping now.
-                        continue;
-                    }
-                }
-                // if `b` was a private dependency of `p` then `p` parents can't see `t` thru `p`
-                if public {
-                    // if it was public, then we add all of `p`s parents to be checked
-                    stack.extend(parents.parents_of(p));
-                }
-            }
-        }
-        Ok(())
     }
 }

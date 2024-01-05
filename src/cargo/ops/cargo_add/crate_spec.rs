@@ -4,15 +4,14 @@ use anyhow::Context as _;
 
 use super::Dependency;
 use crate::util::toml_mut::dependency::RegistrySource;
-use crate::util::validate_package_name;
 use crate::CargoResult;
+use cargo_util_schemas::manifest::PackageName;
 
 /// User-specified crate
 ///
 /// This can be a
 /// - Name (e.g. `docopt`)
 /// - Name and a version req (e.g. `docopt@^0.8`)
-/// - Path
 #[derive(Debug)]
 pub struct CrateSpec {
     /// Crate name
@@ -29,7 +28,7 @@ impl CrateSpec {
             .map(|(n, v)| (n, Some(v)))
             .unwrap_or((pkg_id, None));
 
-        validate_package_name(name, "dependency name", "")?;
+        PackageName::new(name)?;
 
         if let Some(version) = version {
             semver::VersionReq::parse(version)

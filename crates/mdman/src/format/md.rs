@@ -30,11 +30,11 @@ impl super::Formatter for MdFormatter {
     }
 
     fn render_options_start(&self) -> &'static str {
-        "<dl>"
+        "<dl>\n"
     }
 
     fn render_options_end(&self) -> &'static str {
-        "</dl>"
+        "</dl>\n"
     }
 
     fn render_option(&self, params: &[&str], block: &str, man_name: &str) -> Result<String, Error> {
@@ -67,7 +67,7 @@ impl super::Formatter for MdFormatter {
         let rendered_block = self.render_html(block)?;
         write!(
             result,
-            "<dd class=\"option-desc\">{}</dd>\n",
+            "<dd class=\"option-desc\">{}</dd>\n\n",
             unwrap_p(&rendered_block)
         )?;
         Ok(result)

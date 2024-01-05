@@ -1,0 +1,8 @@
+[workspace]
+
+[package]
+name = "cargo-list-test-fixture"
+version = "0.0.0"
+
+[dependencies]
+package-with-feature = { git = "[ROOTURL]/git-package", version = "0.1.3", features = ["target_feature"] }

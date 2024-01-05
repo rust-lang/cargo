@@ -1,9 +1,9 @@
 //! Tests for profiles defined in config files.
 
-use cargo::util::toml::schema::TomlDebugInfo;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, paths, project};
+use cargo_util_schemas::manifest::TomlDebugInfo;
 
 // TODO: this should be remove once -Zprofile-rustflags is stabilized
 #[cargo_test]
@@ -428,8 +428,8 @@ fn named_config_profile() {
     let profiles = Profiles::new(&ws, profile_name).unwrap();
 
     let crates_io = cargo::core::SourceId::crates_io(&config).unwrap();
-    let a_pkg = PackageId::new("a", "0.1.0", crates_io).unwrap();
-    let dep_pkg = PackageId::new("dep", "0.1.0", crates_io).unwrap();
+    let a_pkg = PackageId::try_new("a", "0.1.0", crates_io).unwrap();
+    let dep_pkg = PackageId::try_new("dep", "0.1.0", crates_io).unwrap();
 
     // normal package
     let kind = CompileKind::Host;

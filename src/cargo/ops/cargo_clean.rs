@@ -1,6 +1,6 @@
 use crate::core::compiler::{CompileKind, CompileMode, Layout, RustcTargetData};
 use crate::core::profiles::Profiles;
-use crate::core::{PackageIdSpec, TargetKind, Workspace};
+use crate::core::{PackageIdSpec, PackageIdSpecQuery, TargetKind, Workspace};
 use crate::ops;
 use crate::util::edit_distance;
 use crate::util::errors::CargoResult;

@@ -1,5 +1,4 @@
 # cargo-publish(1)
-
 ## NAME
 
 cargo-publish --- Upload a package to the registry
@@ -52,7 +51,6 @@ variables of the form <code>CARGO_REGISTRIES_NAME_TOKEN</code> where <code>NAME<
 of the registry in all capital letters.</dd>
 
 
-
 <dt class="option-term" id="option-cargo-publish---no-verify"><a class="option-anchor" href="#option-cargo-publish---no-verify"></a><code>--no-verify</code></dt>
 <dd class="option-desc">Don’t verify the contents by building them.</dd>
 
@@ -63,7 +61,6 @@ of the registry in all capital letters.</dd>
 
 <dt class="option-term" id="option-cargo-publish---index"><a class="option-anchor" href="#option-cargo-publish---index"></a><code>--index</code> <em>index</em></dt>
 <dd class="option-desc">The URL of the registry index to use.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-publish---registry"><a class="option-anchor" href="#option-cargo-publish---registry"></a><code>--registry</code> <em>registry</em></dt>
@@ -93,7 +90,6 @@ format.</dd>
 
 </dl>
 
-
 ### Compilation Options
 
 <dl>
@@ -109,13 +105,11 @@ target artifacts are placed in a separate directory. See the
 <a href="../guide/build-cache.html">build cache</a> documentation for more details.</dd>
 
 
-
 <dt class="option-term" id="option-cargo-publish---target-dir"><a class="option-anchor" href="#option-cargo-publish---target-dir"></a><code>--target-dir</code> <em>directory</em></dt>
 <dd class="option-desc">Directory for all generated artifacts and intermediate files. May also be
 specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
 <code>build.target-dir</code> <a href="../reference/config.html">config value</a>.
 Defaults to <code>target</code> in the root of the workspace.</dd>
-
 
 
 </dl>
@@ -148,7 +142,6 @@ be specified multiple times, which enables all specified features.</dd>
 
 </dl>
 
-
 ### Manifest Options
 
 <dl>
@@ -156,7 +149,6 @@ be specified multiple times, which enables all specified features.</dd>
 <dt class="option-term" id="option-cargo-publish---manifest-path"><a class="option-anchor" href="#option-cargo-publish---manifest-path"></a><code>--manifest-path</code> <em>path</em></dt>
 <dd class="option-desc">Path to the <code>Cargo.toml</code> file. By default, Cargo searches for the
 <code>Cargo.toml</code> file in the current directory or any parent directory.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-publish---frozen"><a class="option-anchor" href="#option-cargo-publish---frozen"></a><code>--frozen</code></dt>
@@ -183,7 +175,6 @@ offline.</p>
 <p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</dd>
 
 
-
 </dl>
 
 ### Miscellaneous Options
@@ -198,7 +189,6 @@ parallel jobs to the number of logical CPUs plus provided value. If
 a string <code>default</code> is provided, it sets the value back to defaults.
 Should not be 0.</dd>
 
-
 <dt class="option-term" id="option-cargo-publish---keep-going"><a class="option-anchor" href="#option-cargo-publish---keep-going"></a><code>--keep-going</code></dt>
 <dd class="option-desc">Build as many crates in the dependency graph as possible, rather than aborting
 the build on the first one that fails to build.</p>
@@ -207,7 +197,6 @@ one of which fails to build, <code>cargo publish -j1</code> may or may not build
 one that succeeds (depending on which one of the two builds Cargo picked to run
 first), whereas <code>cargo publish -j1 --keep-going</code> would definitely run both
 builds, even if the one run first fails.</dd>
-
 
 </dl>
 
@@ -239,7 +228,6 @@ terminal.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
 <a href="../reference/config.html">config value</a>.</dd>
-
 
 </dl>
 
@@ -283,18 +271,15 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 
 </dl>
 
-
 ## ENVIRONMENT
 
 See [the reference](../reference/environment-variables.html) for
 details on environment variables that Cargo reads.
 
-
 ## EXIT STATUS
 
 * `0`: Cargo succeeded.
 * `101`: Cargo failed to complete.
-
 
 ## EXAMPLES
 

@@ -3304,3 +3304,52 @@ fn init_and_add_inner_target(p: ProjectBuilder) -> ProjectBuilder {
     .file("derp/target/foo.txt", "")
     .file("derp/not_target/foo.txt", "")
 }
+
+#[cargo_test]
+fn build_script_outside_pkg_root() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+    [package]
+    name = "foo"
+    version = "0.0.1"
+    license = "MIT"
+    description = "foo"
+    authors = []
+    build = "../t_custom_build/custom_build.rs"
+    "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    let mut expect_msg = String::from("\
+warning: manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+error: the source file of build script doesn't appear to exist.
+This may cause issue during packaging, as modules resolution and resources included via macros are often relative to the path of source files.
+Please update the `build` setting in the manifest at `[CWD]/Cargo.toml` and point to a path inside the root of the package.
+");
+    // custom_build.rs does not exist
+    p.cargo("package -l")
+        .with_status(101)
+        .with_stderr(&expect_msg)
+        .run();
+
+    // custom_build.rs outside the package root
+    let custom_build_root = paths::root().join("t_custom_build");
+    _ = fs::create_dir(&custom_build_root).unwrap();
+    _ = fs::write(&custom_build_root.join("custom_build.rs"), "fn main() {}");
+    expect_msg = format!(
+        "\
+warning: manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+error: the source file of build script doesn't appear to be a path inside of the package.
+It is at `{}/t_custom_build/custom_build.rs`, whereas the root the package is `[CWD]`.
+This may cause issue during packaging, as modules resolution and resources included via macros are often relative to the path of source files.
+Please update the `build` setting in the manifest at `[CWD]/Cargo.toml` and point to a path inside the root of the package.
+", paths::root().display());
+    p.cargo("package -l")
+        .with_status(101)
+        .with_stderr(&expect_msg)
+        .run();
+}

@@ -4,3 +4,6 @@ version = "0.0.0"
 
 [dependencies]
 foo = { workspace = true, optional = true }
+
+[features]
+foo = ["dep:foo"]

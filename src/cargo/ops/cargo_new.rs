@@ -6,6 +6,7 @@ use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
 use crate::util::{restricted_names, Config};
 use anyhow::{anyhow, Context};
 use cargo_util::paths::{self, write_atomic};
+use cargo_util_schemas::manifest::PackageName;
 use serde::de;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -180,7 +181,7 @@ fn check_name(
     };
     let bin_help = || {
         let mut help = String::from(name_help);
-        if has_bin {
+        if has_bin && !name.is_empty() {
             help.push_str(&format!(
                 "\n\
                 If you need a binary with the name \"{name}\", use a valid package \
@@ -197,7 +198,10 @@ fn check_name(
         }
         help
     };
-    restricted_names::validate_package_name(name, "package name", &bin_help())?;
+    PackageName::new(name).map_err(|err| {
+        let help = bin_help();
+        anyhow::anyhow!("{err}{help}")
+    })?;
 
     if restricted_names::is_keyword(name) {
         anyhow::bail!(

@@ -721,7 +721,7 @@ fn build_script_needed_for_host_and_target() {
                 use std::env;
                 fn main() {
                     let target = env::var("TARGET").unwrap();
-                    println!("cargo:rustc-flags=-L /path/to/{}", target);
+                    println!("cargo::rustc-flags=-L /path/to/{}", target);
                 }
             "#,
         )
@@ -896,6 +896,8 @@ fn plugin_build_script_right_arch() {
         .arg(cross_compile::alternate())
         .with_stderr(
             "\
+[WARNING] support for rustc plugins has been removed from rustc. library `foo` should not specify `plugin = true`
+[WARNING] support for `plugin = true` will be removed from cargo in the future
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `[..]/build-script-build`
@@ -1098,7 +1100,10 @@ fn platform_specific_variables_reflected_in_build_scripts() {
                 build = "build.rs"
             "#,
         )
-        .file("d1/build.rs", r#"fn main() { println!("cargo:val=1") }"#)
+        .file(
+            "d1/build.rs",
+            r#"fn main() { println!("cargo::metadata=val=1") }"#,
+        )
         .file("d1/src/lib.rs", "")
         .file(
             "d2/Cargo.toml",
@@ -1111,7 +1116,10 @@ fn platform_specific_variables_reflected_in_build_scripts() {
                 build = "build.rs"
             "#,
         )
-        .file("d2/build.rs", r#"fn main() { println!("cargo:val=1") }"#)
+        .file(
+            "d2/build.rs",
+            r#"fn main() { println!("cargo::metadata=val=1") }"#,
+        )
         .file("d2/src/lib.rs", "")
         .build();
 

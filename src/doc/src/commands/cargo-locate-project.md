@@ -68,7 +68,6 @@ terminal.</li>
 <p>May also be specified with the <code>term.color</code>
 <a href="../reference/config.html">config value</a>.</dd>
 
-
 </dl>
 
 ### Manifest Options
@@ -77,7 +76,6 @@ terminal.</li>
 <dt class="option-term" id="option-cargo-locate-project---manifest-path"><a class="option-anchor" href="#option-cargo-locate-project---manifest-path"></a><code>--manifest-path</code> <em>path</em></dt>
 <dd class="option-desc">Path to the <code>Cargo.toml</code> file. By default, Cargo searches for the
 <code>Cargo.toml</code> file in the current directory or any parent directory.</dd>
-
 
 </dl>
 
@@ -121,18 +119,15 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 
 </dl>
 
-
 ## ENVIRONMENT
 
 See [the reference](../reference/environment-variables.html) for
 details on environment variables that Cargo reads.
 
-
 ## EXIT STATUS
 
 * `0`: Cargo succeeded.
 * `101`: Cargo failed to complete.
-
 
 ## EXAMPLES
 

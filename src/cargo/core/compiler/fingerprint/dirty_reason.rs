@@ -15,6 +15,10 @@ pub enum DirtyReason {
         old: String,
         new: String,
     },
+    DeclaredFeaturesChanged {
+        old: String,
+        new: String,
+    },
     TargetConfigurationChanged,
     PathToSourceChanged,
     ProfileConfigurationChanged,
@@ -141,6 +145,9 @@ impl DirtyReason {
             DirtyReason::FeaturesChanged { .. } => {
                 s.dirty_because(unit, "the list of features changed")
             }
+            DirtyReason::DeclaredFeaturesChanged { .. } => {
+                s.dirty_because(unit, "the list of declared features changed")
+            }
             DirtyReason::TargetConfigurationChanged => {
                 s.dirty_because(unit, "the target configuration changed")
             }
@@ -161,7 +168,7 @@ impl DirtyReason {
             DirtyReason::LocalLengthsChanged => {
                 s.dirty_because(unit, "the local lengths changed")?;
                 s.note(
-                    "This could happen because of added/removed `cargo:rerun-if` instructions in the build script",
+                    "This could happen because of added/removed `cargo::rerun-if` instructions in the build script",
                 )?;
 
                 Ok(())

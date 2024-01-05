@@ -1,31 +1,7 @@
 use std::fmt::{self, Display};
 
-use semver::{Comparator, Op, Version, VersionReq};
+use semver::{Comparator, Version, VersionReq};
 use serde_untagged::UntaggedEnumVisitor;
-
-pub trait VersionExt {
-    fn is_prerelease(&self) -> bool;
-
-    fn to_exact_req(&self) -> VersionReq;
-}
-
-impl VersionExt for Version {
-    fn is_prerelease(&self) -> bool {
-        !self.pre.is_empty()
-    }
-
-    fn to_exact_req(&self) -> VersionReq {
-        VersionReq {
-            comparators: vec![Comparator {
-                op: Op::Exact,
-                major: self.major,
-                minor: Some(self.minor),
-                patch: Some(self.patch),
-                pre: self.pre.clone(),
-            }],
-        }
-    }
-}
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug)]
 pub struct PartialVersion {
@@ -104,11 +80,11 @@ impl From<semver::Version> for PartialVersion {
 }
 
 impl std::str::FromStr for PartialVersion {
-    type Err = anyhow::Error;
+    type Err = PartialVersionError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         if is_req(value) {
-            anyhow::bail!("unexpected version requirement, expected a version like \"1.32\"")
+            return Err(ErrorKind::VersionReq.into());
         }
         match semver::Version::parse(value) {
             Ok(ver) => Ok(ver.into()),
@@ -116,15 +92,9 @@ impl std::str::FromStr for PartialVersion {
                 // HACK: Leverage `VersionReq` for partial version parsing
                 let mut version_req = match semver::VersionReq::parse(value) {
                     Ok(req) => req,
-                    Err(_) if value.contains('-') => {
-                        anyhow::bail!(
-                            "unexpected prerelease field, expected a version like \"1.32\""
-                        )
-                    }
-                    Err(_) if value.contains('+') => {
-                        anyhow::bail!("unexpected build field, expected a version like \"1.32\"")
-                    }
-                    Err(_) => anyhow::bail!("expected a version like \"1.32\""),
+                    Err(_) if value.contains('-') => return Err(ErrorKind::Prerelease.into()),
+                    Err(_) if value.contains('+') => return Err(ErrorKind::BuildMetadata.into()),
+                    Err(_) => return Err(ErrorKind::Unexpected.into()),
                 };
                 assert_eq!(version_req.comparators.len(), 1, "guaranteed by is_req");
                 let comp = version_req.comparators.pop().unwrap();
@@ -185,6 +155,28 @@ impl<'de> serde::Deserialize<'de> for PartialVersion {
             .string(|value| value.parse().map_err(serde::de::Error::custom))
             .deserialize(deserializer)
     }
+}
+
+/// Error parsing a [`PartialVersion`].
+#[derive(Debug, thiserror::Error)]
+#[error(transparent)]
+pub struct PartialVersionError(#[from] ErrorKind);
+
+/// Non-public error kind for [`PartialVersionError`].
+#[non_exhaustive]
+#[derive(Debug, thiserror::Error)]
+enum ErrorKind {
+    #[error("unexpected version requirement, expected a version like \"1.32\"")]
+    VersionReq,
+
+    #[error("unexpected prerelease field, expected a version like \"1.32\"")]
+    Prerelease,
+
+    #[error("unexpected build field, expected a version like \"1.32\"")]
+    BuildMetadata,
+
+    #[error("expected a version like \"1.32\"")]
+    Unexpected,
 }
 
 fn is_req(value: &str) -> bool {

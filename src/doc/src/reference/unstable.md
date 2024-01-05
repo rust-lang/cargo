@@ -304,6 +304,9 @@ my_dep = { version = "1.2.3", public = true }
 private_dep = "2.0.0" # Will be 'private' by default
 ```
 
+Documentation updates:
+- For workspace's "The `dependencies` table" section, include `public` as an unsupported field for `workspace.dependencies`
+
 ## msrv-policy
 - [#9930](https://github.com/rust-lang/cargo/issues/9930) (MSRV-aware resolver)
 - [#10653](https://github.com/rust-lang/cargo/issues/10653) (MSRV-aware cargo-add)
@@ -1092,7 +1095,7 @@ You can use the flag like this:
 cargo check -Z unstable-options -Z check-cfg
 ```
 
-### `cargo:rustc-check-cfg=CHECK_CFG`
+### `cargo::rustc-check-cfg=CHECK_CFG`
 
 The `rustc-check-cfg` instruction tells Cargo to pass the given value to the
 `--check-cfg` flag to the compiler. This may be used for compile-time
@@ -1108,7 +1111,7 @@ You can use the instruction like this:
 
 ```rust,no_run
 // build.rs
-println!("cargo:rustc-check-cfg=cfg(foo, bar)");
+println!("cargo::rustc-check-cfg=cfg(foo, bar)");
 ```
 
 ```

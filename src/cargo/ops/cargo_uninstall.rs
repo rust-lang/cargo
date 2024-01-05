@@ -1,12 +1,11 @@
 use crate::core::PackageId;
-use crate::core::{PackageIdSpec, SourceId};
+use crate::core::{PackageIdSpec, PackageIdSpecQuery, SourceId};
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
 use crate::util::Config;
 use crate::util::Filesystem;
 use anyhow::bail;
-use cargo_util::paths;
 use std::collections::BTreeSet;
 use std::env;
 
@@ -103,7 +102,6 @@ fn uninstall_pkgid(
     bins: &[String],
     config: &Config,
 ) -> CargoResult<()> {
-    let mut to_remove = Vec::new();
     let installed = match tracker.installed_bins(pkgid) {
         Some(bins) => bins.clone(),
         None => bail!("package `{}` is not installed", pkgid),
@@ -137,19 +135,18 @@ fn uninstall_pkgid(
         }
     }
 
-    if bins.is_empty() {
-        to_remove.extend(installed.iter().map(|b| dst.join(b)));
-        tracker.remove(pkgid, &installed);
-    } else {
-        for bin in bins.iter() {
-            to_remove.push(dst.join(bin));
+    let to_remove = {
+        if bins.is_empty() {
+            installed
+        } else {
+            bins
         }
-        tracker.remove(pkgid, &bins);
-    }
-    tracker.save()?;
+    };
+
     for bin in to_remove {
-        config.shell().status("Removing", bin.display())?;
-        paths::remove_file(bin)?;
+        let bin_path = dst.join(&bin);
+        config.shell().status("Removing", bin_path.display())?;
+        tracker.remove_bin_then_save(pkgid, &bin, &bin_path)?;
     }
 
     Ok(())

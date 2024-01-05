@@ -6,3 +6,6 @@ version = "0.0.0"
 
 [dependencies]
 a1 = { package = "versioned-package", version = "0.1.1", optional = true }
+
+[features]
+a1 = ["dep:a1"]

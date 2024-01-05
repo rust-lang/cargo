@@ -1399,7 +1399,7 @@ fn override_respects_spec_metadata() {
 [..]
 [..]
 [..]
-error: could not compile `foo` (lib) due to previous error
+error: could not compile `foo` (lib) due to 1 previous error
 ",
         )
         .with_status(101)

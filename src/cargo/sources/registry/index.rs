@@ -92,9 +92,10 @@ use crate::sources::registry::{LoadResponse, RegistryData};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::interning::InternedString;
 use crate::util::IntoUrl;
-use crate::util::{internal, CargoResult, Config, Filesystem, OptVersionReq, RustVersion};
+use crate::util::{internal, CargoResult, Config, Filesystem, OptVersionReq};
 use anyhow::bail;
 use cargo_util::{paths, registry::make_dep_path};
+use cargo_util_schemas::manifest::RustVersion;
 use semver::Version;
 use serde::Deserialize;
 use std::borrow::Cow;
@@ -944,7 +945,7 @@ impl IndexSummary {
         } = serde_json::from_slice(line)?;
         let v = v.unwrap_or(1);
         tracing::trace!("json parsed registry {}/{}", name, vers);
-        let pkgid = PackageId::pure(name.into(), vers.clone(), source_id);
+        let pkgid = PackageId::new(name.into(), vers.clone(), source_id);
         let deps = deps
             .into_iter()
             .map(|dep| dep.into_dep(source_id))

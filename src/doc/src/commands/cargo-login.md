@@ -41,7 +41,6 @@ files</a>. If not specified, the default registry is used,
 which is defined by the <code>registry.default</code> config key which defaults to
 <code>crates-io</code>.</dd>
 
-
 </dl>
 
 ### Display Options
@@ -72,7 +71,6 @@ terminal.</li>
 </ul>
 <p>May also be specified with the <code>term.color</code>
 <a href="../reference/config.html">config value</a>.</dd>
-
 
 </dl>
 
@@ -116,18 +114,15 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 
 </dl>
 
-
 ## ENVIRONMENT
 
 See [the reference](../reference/environment-variables.html) for
 details on environment variables that Cargo reads.
 
-
 ## EXIT STATUS
 
 * `0`: Cargo succeeded.
 * `101`: Cargo failed to complete.
-
 
 ## EXAMPLES
 

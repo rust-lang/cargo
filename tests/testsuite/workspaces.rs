@@ -2198,6 +2198,7 @@ fn ws_err_unused() {
         "[features]",
         "[target]",
         "[badges]",
+        "[lints]",
     ] {
         let p = project()
             .file(

@@ -1,14 +1,15 @@
 //! Library for applying diagnostic suggestions to source code.
 //!
-//! This is a low-level library. You pass it the JSON output from `rustc`, and
-//! you can then use it to apply suggestions to in-memory strings. This
-//! library doesn't execute commands, or read or write from the filesystem.
+//! This is a low-level library. You pass it the [JSON output] from `rustc`,
+//! and you can then use it to apply suggestions to in-memory strings.
+//! This library doesn't execute commands, or read or write from the filesystem.
 //!
 //! If you are looking for the [`cargo fix`] implementation, the core of it is
 //! located in [`cargo::ops::fix`].
 //!
 //! [`cargo fix`]: https://doc.rust-lang.org/cargo/commands/cargo-fix.html
 //! [`cargo::ops::fix`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/ops/fix.rs
+//! [JSON output]: diagnostics
 //!
 //! The general outline of how to use this library is:
 //!
@@ -16,23 +17,33 @@
 //! 2. Pass the json data to [`get_suggestions_from_json`].
 //! 3. Create a [`CodeFix`] with the source of a file to modify.
 //! 4. Call [`CodeFix::apply`] to apply a change.
-//! 5. Write the source back to disk.
+//! 5. Call [`CodeFix::finish`] to get the result and write it back to disk.
 
 use std::collections::HashSet;
 use std::ops::Range;
 
-use anyhow::Error;
-
 pub mod diagnostics;
-use crate::diagnostics::{Diagnostic, DiagnosticSpan};
+mod error;
 mod replace;
 
+use diagnostics::Diagnostic;
+use diagnostics::DiagnosticSpan;
+pub use error::Error;
+
+/// A filter to control which suggestion should be applied.
 #[derive(Debug, Clone, Copy)]
 pub enum Filter {
+    /// For [`diagnostics::Applicability::MachineApplicable`] only.
     MachineApplicableOnly,
+    /// Everything is included. YOLO!
     Everything,
 }
 
+/// Collects code [`Suggestion`]s from one or more compiler diagnostic lines.
+///
+/// Fails if any of diagnostic line `input` is not a valid [`Diagnostic`] JSON.
+///
+/// * `only` --- only diagnostics with code in a set of error codes would be collected.
 pub fn get_suggestions_from_json<S: ::std::hash::BuildHasher>(
     input: &str,
     only: &HashSet<String, S>,
@@ -70,88 +81,43 @@ impl std::fmt::Display for LineRange {
     }
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 /// An error/warning and possible solutions for fixing it
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Suggestion {
     pub message: String,
     pub snippets: Vec<Snippet>,
     pub solutions: Vec<Solution>,
 }
 
+/// Solution to a diagnostic item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Solution {
+    /// The error message of the diagnostic item.
     pub message: String,
+    /// Possible solutions to fix the error.
     pub replacements: Vec<Replacement>,
 }
 
+/// Represents code that will get replaced.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Snippet {
     pub file_name: String,
     pub line_range: LineRange,
     pub range: Range<usize>,
-    /// leading surrounding text, text to replace, trailing surrounding text
-    ///
-    /// This split is useful for higlighting the part that gets replaced
-    pub text: (String, String, String),
 }
 
+/// Represents a replacement of a `snippet`.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Replacement {
+    /// Code snippet that gets replaced.
     pub snippet: Snippet,
+    /// The replacement of the snippet.
     pub replacement: String,
 }
 
-fn parse_snippet(span: &DiagnosticSpan) -> Option<Snippet> {
-    // unindent the snippet
-    let indent = span
-        .text
-        .iter()
-        .map(|line| {
-            let indent = line
-                .text
-                .chars()
-                .take_while(|&c| char::is_whitespace(c))
-                .count();
-            std::cmp::min(indent, line.highlight_start - 1)
-        })
-        .min()?;
-
-    let text_slice = span.text[0].text.chars().collect::<Vec<char>>();
-
-    // We subtract `1` because these highlights are 1-based
-    // Check the `min` so that it doesn't attempt to index out-of-bounds when
-    // the span points to the "end" of the line. For example, a line of
-    // "foo\n" with a highlight_start of 5 is intended to highlight *after*
-    // the line. This needs to compensate since the newline has been removed
-    // from the text slice.
-    let start = (span.text[0].highlight_start - 1).min(text_slice.len());
-    let end = (span.text[0].highlight_end - 1).min(text_slice.len());
-    let lead = text_slice[indent..start].iter().collect();
-    let mut body: String = text_slice[start..end].iter().collect();
-
-    for line in span.text.iter().take(span.text.len() - 1).skip(1) {
-        body.push('\n');
-        body.push_str(&line.text[indent..]);
-    }
-    let mut tail = String::new();
-    let last = &span.text[span.text.len() - 1];
-
-    // If we get a DiagnosticSpanLine where highlight_end > text.len(), we prevent an 'out of
-    // bounds' access by making sure the index is within the array bounds.
-    // `saturating_sub` is used in case of an empty file
-    let last_tail_index = last.highlight_end.min(last.text.len()).saturating_sub(1);
-    let last_slice = last.text.chars().collect::<Vec<char>>();
-
-    if span.text.len() > 1 {
-        body.push('\n');
-        body.push_str(
-            &last_slice[indent..last_tail_index]
-                .iter()
-                .collect::<String>(),
-        );
-    }
-    tail.push_str(&last_slice[last_tail_index..].iter().collect::<String>());
-    Some(Snippet {
+/// Converts a [`DiagnosticSpan`] to a [`Snippet`].
+fn span_to_snippet(span: &DiagnosticSpan) -> Snippet {
+    Snippet {
         file_name: span.file_name.clone(),
         line_range: LineRange {
             start: LinePosition {
@@ -164,12 +130,12 @@ fn parse_snippet(span: &DiagnosticSpan) -> Option<Snippet> {
             },
         },
         range: (span.byte_start as usize)..(span.byte_end as usize),
-        text: (lead, body, tail),
-    })
+    }
 }
 
+/// Converts a [`DiagnosticSpan`] into a [`Replacement`].
 fn collect_span(span: &DiagnosticSpan) -> Option<Replacement> {
-    let snippet = parse_snippet(span)?;
+    let snippet = span_to_snippet(span);
     let replacement = span.suggested_replacement.clone()?;
     Some(Replacement {
         snippet,
@@ -177,6 +143,9 @@ fn collect_span(span: &DiagnosticSpan) -> Option<Replacement> {
     })
 }
 
+/// Collects code [`Suggestion`]s from a single compiler diagnostic line.
+///
+/// * `only` --- only diagnostics with code in a set of error codes would be collected.
 pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
     diagnostic: &Diagnostic,
     only: &HashSet<String, S>,
@@ -194,7 +163,7 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
         }
     }
 
-    let snippets = diagnostic.spans.iter().filter_map(parse_snippet).collect();
+    let snippets = diagnostic.spans.iter().map(span_to_snippet).collect();
 
     let solutions: Vec<_> = diagnostic
         .children
@@ -237,32 +206,52 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
     }
 }
 
+/// Represents a code fix. This doesn't write to disks but is only in memory.
+///
+/// The general way to use this is:
+///
+/// 1. Feeds the source of a file to [`CodeFix::new`].
+/// 2. Calls [`CodeFix::apply`] to apply suggestions to the source code.
+/// 3. Calls [`CodeFix::finish`] to get the "fixed" code.
 pub struct CodeFix {
     data: replace::Data,
+    /// Whether or not the data has been modified.
+    modified: bool,
 }
 
 impl CodeFix {
+    /// Creates a `CodeFix` with the source of a file to modify.
     pub fn new(s: &str) -> CodeFix {
         CodeFix {
             data: replace::Data::new(s.as_bytes()),
+            modified: false,
         }
     }
 
+    /// Applies a suggestion to the code.
     pub fn apply(&mut self, suggestion: &Suggestion) -> Result<(), Error> {
         for sol in &suggestion.solutions {
             for r in &sol.replacements {
                 self.data
                     .replace_range(r.snippet.range.clone(), r.replacement.as_bytes())?;
+                self.modified = true;
             }
         }
         Ok(())
     }
 
+    /// Gets the result of the "fixed" code.
     pub fn finish(&self) -> Result<String, Error> {
         Ok(String::from_utf8(self.data.to_vec())?)
     }
+
+    /// Returns whether or not the data has been modified.
+    pub fn modified(&self) -> bool {
+        self.modified
+    }
 }
 
+/// Applies multiple `suggestions` to the given `code`.
 pub fn apply_suggestions(code: &str, suggestions: &[Suggestion]) -> Result<String, Error> {
     let mut fix = CodeFix::new(code);
     for suggestion in suggestions.iter().rev() {

@@ -6,7 +6,7 @@ use anyhow::format_err;
 use cargo::core::{GitReference, SourceId, Workspace};
 use cargo::ops;
 use cargo::util::IntoUrl;
-use cargo::util_semver::VersionExt;
+use cargo::util::VersionExt;
 use cargo::CargoResult;
 use itertools::Itertools;
 use semver::VersionReq;
@@ -15,7 +15,7 @@ use cargo_util::paths;
 
 pub fn cli() -> Command {
     subcommand("install")
-        .about("Install a Rust binary. Default location is $HOME/.cargo/bin")
+        .about("Install a Rust binary")
         .arg(
             Arg::new("crate")
                 .value_name("CRATE[@<VER>]")
@@ -63,7 +63,7 @@ pub fn cli() -> Command {
                 .requires("git"),
         )
         .arg(
-            opt("path", "Filesystem path to local crate to install")
+            opt("path", "Filesystem path to local crate to install from")
                 .value_name("PATH")
                 .conflicts_with_all(&["git", "index", "registry"]),
         )

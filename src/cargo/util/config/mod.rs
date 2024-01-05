@@ -77,12 +77,13 @@ use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::errors::CargoResult;
 use crate::util::network::http::configure_http_handle;
 use crate::util::network::http::http_handle;
+use crate::util::try_canonicalize;
 use crate::util::{internal, CanonicalUrl};
-use crate::util::{try_canonicalize, validate_package_name};
 use crate::util::{Filesystem, IntoUrl, IntoUrlWithBase, Rustc};
 use anyhow::{anyhow, bail, format_err, Context as _};
 use cargo_credential::Secret;
 use cargo_util::paths;
+use cargo_util_schemas::manifest::RegistryName;
 use curl::easy::Easy;
 use lazycell::LazyCell;
 use serde::de::IntoDeserializer as _;
@@ -245,7 +246,10 @@ pub struct Config {
     pub nightly_features_allowed: bool,
     /// WorkspaceRootConfigs that have been found
     pub ws_roots: RefCell<HashMap<PathBuf, WorkspaceRootConfig>>,
+    /// The global cache tracker is a database used to track disk cache usage.
     global_cache_tracker: LazyCell<RefCell<GlobalCacheTracker>>,
+    /// A cache of modifications to make to [`Config::global_cache_tracker`],
+    /// saved to disk in a batch to improve performance.
     deferred_global_last_use: LazyCell<RefCell<DeferredGlobalLastUse>>,
 }
 
@@ -362,6 +366,18 @@ impl Config {
     /// Gets the Cargo Git directory (`<cargo_home>/git`).
     pub fn git_path(&self) -> Filesystem {
         self.home_path.join("git")
+    }
+
+    /// Gets the directory of code sources Cargo checkouts from Git bare repos
+    /// (`<cargo_home>/git/checkouts`).
+    pub fn git_checkouts_path(&self) -> Filesystem {
+        self.git_path().join("checkouts")
+    }
+
+    /// Gets the directory for all Git bare repos Cargo clones
+    /// (`<cargo_home>/git/db`).
+    pub fn git_db_path(&self) -> Filesystem {
+        self.git_path().join("db")
     }
 
     /// Gets the Cargo base directory for all registry information (`<cargo_home>/registry`).
@@ -1548,7 +1564,7 @@ impl Config {
 
     /// Gets the index for a registry.
     pub fn get_registry_index(&self, registry: &str) -> CargoResult<Url> {
-        validate_package_name(registry, "registry name", "")?;
+        RegistryName::new(registry)?;
         if let Some(index) = self.get_string(&format!("registries.{}.index", registry))? {
             self.resolve_registry_index(&index).with_context(|| {
                 format!(

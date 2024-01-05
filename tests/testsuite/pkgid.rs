@@ -1,5 +1,7 @@
 //! Tests for the `cargo pkgid` command.
 
+use cargo_test_support::basic_lib_manifest;
+use cargo_test_support::git;
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
 
@@ -34,7 +36,10 @@ fn local() {
     p.cargo("generate-lockfile").run();
 
     p.cargo("pkgid foo")
-        .with_stdout(format!("file://[..]{}#0.1.0", p.root().to_str().unwrap()))
+        .with_stdout(format!(
+            "path+file://[..]{}#0.1.0",
+            p.root().to_str().unwrap()
+        ))
         .run();
 
     // Bad file URL.
@@ -89,7 +94,7 @@ fn registry() {
     p.cargo("generate-lockfile").run();
 
     p.cargo("pkgid crates-io")
-        .with_stdout("https://github.com/rust-lang/crates.io-index#crates-io@0.1.0")
+        .with_stdout("registry+https://github.com/rust-lang/crates.io-index#crates-io@0.1.0")
         .run();
 
     // Bad URL.
@@ -143,7 +148,7 @@ fn multiple_versions() {
     p.cargo("generate-lockfile").run();
 
     p.cargo("pkgid two-ver:0.2.0")
-        .with_stdout("https://github.com/rust-lang/crates.io-index#two-ver@0.2.0")
+        .with_stdout("registry+https://github.com/rust-lang/crates.io-index#two-ver@0.2.0")
         .run();
 
     // Incomplete version.
@@ -163,7 +168,7 @@ Please re-run this command with one of the following specifications:
     p.cargo("pkgid two-ver@0.2")
         .with_stdout(
             "\
-https://github.com/rust-lang/crates.io-index#two-ver@0.2.0
+registry+https://github.com/rust-lang/crates.io-index#two-ver@0.2.0
 ",
         )
         .run();
@@ -194,4 +199,89 @@ Did you mean one of these?
 ",
         )
         .run();
+}
+
+// Not for `cargo pkgid` but the `PackageIdSpec` format
+#[cargo_test]
+fn multiple_git_same_version() {
+    // Test what happens if different packages refer to the same git repo with
+    // different refs, and the package version is the same.
+    let (xyz_project, xyz_repo) = git::new_repo("xyz", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("xyz"))
+            .file("src/lib.rs", "fn example() {}")
+    });
+    let rev1 = xyz_repo.revparse_single("HEAD").unwrap().id();
+    xyz_project.change_file("src/lib.rs", "pub fn example() {}");
+    git::add(&xyz_repo);
+    let rev2 = git::commit(&xyz_repo);
+    // Both rev1 and rev2 point to version 0.1.0.
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    bar = {{ path = "bar" }}
+                    xyz = {{ git = "{}", rev = "{}" }}
+
+                "#,
+                xyz_project.url(),
+                rev1
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "bar"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    xyz = {{ git = "{}", rev = "{}" }}
+                "#,
+                xyz_project.url(),
+                rev2
+            ),
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("check").run();
+    p.cargo("tree")
+        .with_stdout(&format!(
+            "\
+foo v0.1.0 ([..]/foo)
+├── bar v0.1.0 ([..]/foo/bar)
+│   └── xyz v0.5.0 (file://[..]/xyz?rev={}#{})
+└── xyz v0.5.0 (file://[..]/xyz?rev={}#{})
+",
+            rev2,
+            &rev2.to_string()[..8],
+            rev1,
+            &rev1.to_string()[..8]
+        ))
+        .run();
+    // FIXME: This fails since xyz is ambiguous, but the
+    // possible pkgids are also ambiguous.
+    p.cargo("pkgid xyz")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: There are multiple `xyz` packages in your project, and the specification `xyz` is ambiguous.
+Please re-run this command with one of the following specifications:
+  git+file://[..]/xyz?rev=[..]#0.5.0
+  git+file://[..]/xyz?rev=[..]#0.5.0
+",
+        )
+        .run();
+    // TODO, what should the `-p` value be here?
+    //p.cargo("update -p")
 }

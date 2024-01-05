@@ -1,13 +1,8 @@
 //! Compares input to expected output.
-//!
-//! Use the MDMAN_BLESS environment variable to automatically update the
-//! expected output.
 
-#![allow(clippy::disallowed_methods)]
+use std::path::PathBuf;
 
 use mdman::{Format, ManMap};
-use pretty_assertions::assert_eq;
-use std::path::PathBuf;
 use url::Url;
 
 fn run(name: &str) {
@@ -27,14 +22,7 @@ fn run(name: &str) {
             name,
             format.extension(section)
         );
-        if std::env::var("MDMAN_BLESS").is_ok() {
-            std::fs::write(&expected_path, result).unwrap();
-        } else {
-            let expected = std::fs::read_to_string(&expected_path).unwrap();
-            // Fix if Windows checked out with autocrlf.
-            let expected = expected.replace("\r\n", "\n");
-            assert_eq!(expected, result);
-        }
+        snapbox::assert_eq_path(expected_path, result);
     }
 }
 

@@ -1,5 +1,26 @@
+//! Tests that verify rustfix applies the appropriate changes to a file.
+//!
+//! This test works by reading a series of `*.rs` files in the
+//! `tests/everything` directory. For each `.rs` file, it runs `rustc` to
+//! collect JSON diagnostics from the file. It feeds that JSON data into
+//! rustfix and applies the recommended suggestions to the `.rs` file. It then
+//! compares the result with the corresponding `.fixed.rs` file. If they don't
+//! match, then the test fails.
+//!
+//! There are several debugging environment variables for this test that you can set:
+//!
+//! - `RUST_LOG=parse_and_replace=debug`: Print debug information.
+//! - `RUSTFIX_TEST_BLESS=test-name.rs`: When given the name of a test, this
+//!   will overwrite the `.json` and `.fixed.rs` files with the expected
+//!   values. This can be used when adding a new test.
+//! - `RUSTFIX_TEST_RECORD_JSON=1`:  Records the JSON output to
+//!   `*.recorded.json` files. You can then move that to `.json` or whatever
+//!   you need.
+//! - `RUSTFIX_TEST_RECORD_FIXED_RUST=1`: Records the fixed result to
+//!   `*.recorded.rs` files. You can then move that to `.rs` or whatever you
+//!   need.
+
 #![allow(clippy::disallowed_methods, clippy::print_stdout, clippy::print_stderr)]
-#![cfg(not(windows))] // TODO: should fix these tests on Windows
 
 use anyhow::{anyhow, ensure, Context, Error};
 use rustfix::apply_suggestions;
@@ -14,7 +35,6 @@ use tracing::{debug, info, warn};
 
 mod fixmode {
     pub const EVERYTHING: &str = "yolo";
-    pub const EDITION: &str = "edition";
 }
 
 mod settings {
@@ -22,12 +42,13 @@ mod settings {
     pub const CHECK_JSON: &str = "RUSTFIX_TEST_CHECK_JSON";
     pub const RECORD_JSON: &str = "RUSTFIX_TEST_RECORD_JSON";
     pub const RECORD_FIXED_RUST: &str = "RUSTFIX_TEST_RECORD_FIXED_RUST";
+    pub const BLESS: &str = "RUSTFIX_TEST_BLESS";
 }
 
-fn compile(file: &Path, mode: &str) -> Result<Output, Error> {
+fn compile(file: &Path) -> Result<Output, Error> {
     let tmp = tempdir()?;
 
-    let mut args: Vec<OsString> = vec![
+    let args: Vec<OsString> = vec![
         file.into(),
         "--error-format=json".into(),
         "--emit=metadata".into(),
@@ -35,10 +56,6 @@ fn compile(file: &Path, mode: &str) -> Result<Output, Error> {
         "--out-dir".into(),
         tmp.path().into(),
     ];
-
-    if mode == fixmode::EDITION {
-        args.push("--edition=2018".into());
-    }
 
     let res = Command::new(env::var_os("RUSTC").unwrap_or("rustc".into()))
         .args(&args)
@@ -49,8 +66,8 @@ fn compile(file: &Path, mode: &str) -> Result<Output, Error> {
     Ok(res)
 }
 
-fn compile_and_get_json_errors(file: &Path, mode: &str) -> Result<String, Error> {
-    let res = compile(file, mode)?;
+fn compile_and_get_json_errors(file: &Path) -> Result<String, Error> {
+    let res = compile(file)?;
     let stderr = String::from_utf8(res.stderr)?;
     if stderr.contains("is only accepted on the nightly compiler") {
         panic!("rustfix tests require a nightly compiler");
@@ -66,8 +83,8 @@ fn compile_and_get_json_errors(file: &Path, mode: &str) -> Result<String, Error>
     }
 }
 
-fn compiles_without_errors(file: &Path, mode: &str) -> Result<(), Error> {
-    let res = compile(file, mode)?;
+fn compiles_without_errors(file: &Path) -> Result<(), Error> {
+    let res = compile(file)?;
 
     match res.status.code() {
         Some(0) => Ok(()),
@@ -83,15 +100,6 @@ fn compiles_without_errors(file: &Path, mode: &str) -> Result<(), Error> {
             ))
         }
     }
-}
-
-fn read_file(path: &Path) -> Result<String, Error> {
-    use std::io::Read;
-
-    let mut buffer = String::new();
-    let mut file = fs::File::open(path)?;
-    file.read_to_string(&mut buffer)?;
-    Ok(buffer)
 }
 
 fn diff(expected: &str, actual: &str) -> String {
@@ -110,11 +118,7 @@ fn diff(expected: &str, actual: &str) -> String {
                 ChangeTag::Delete => "-",
             };
             if !different {
-                write!(
-                    &mut res,
-                    "differences found (+ == actual, - == expected):\n"
-                )
-                .unwrap();
+                writeln!(&mut res, "differences found (+ == actual, - == expected):").unwrap();
                 different = true;
             }
             write!(&mut res, "{} {}", prefix, change.value()).unwrap();
@@ -139,23 +143,19 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
     };
 
     debug!("next up: {:?}", file);
-    let code = read_file(file).context(format!("could not read {}", file.display()))?;
-    let errors = compile_and_get_json_errors(file, mode)
-        .context(format!("could compile {}", file.display()))?;
+    let code = fs::read_to_string(file)?;
+    let errors =
+        compile_and_get_json_errors(file).context(format!("could compile {}", file.display()))?;
     let suggestions =
         rustfix::get_suggestions_from_json(&errors, &HashSet::new(), filter_suggestions)
             .context("could not load suggestions")?;
 
     if std::env::var(settings::RECORD_JSON).is_ok() {
-        use std::io::Write;
-        let mut recorded_json = fs::File::create(&file.with_extension("recorded.json")).context(
-            format!("could not create recorded.json for {}", file.display()),
-        )?;
-        recorded_json.write_all(errors.as_bytes())?;
+        fs::write(file.with_extension("recorded.json"), &errors)?;
     }
 
     if std::env::var(settings::CHECK_JSON).is_ok() {
-        let expected_json = read_file(&json_file).context(format!(
+        let expected_json = fs::read_to_string(&json_file).context(format!(
             "could not load json fixtures for {}",
             file.display()
         ))?;
@@ -174,16 +174,23 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
     }
 
     let fixed = apply_suggestions(&code, &suggestions)
-        .context(format!("could not apply suggestions to {}", file.display()))?;
+        .context(format!("could not apply suggestions to {}", file.display()))?
+        .replace('\r', "");
 
     if std::env::var(settings::RECORD_FIXED_RUST).is_ok() {
-        use std::io::Write;
-        let mut recorded_rust = fs::File::create(&file.with_extension("recorded.rs"))?;
-        recorded_rust.write_all(fixed.as_bytes())?;
+        fs::write(file.with_extension("recorded.rs"), &fixed)?;
     }
 
-    let expected_fixed =
-        read_file(&fixed_file).context(format!("could read fixed file for {}", file.display()))?;
+    if let Some(bless_name) = std::env::var_os(settings::BLESS) {
+        if bless_name == file.file_name().unwrap() {
+            std::fs::write(&json_file, &errors)?;
+            std::fs::write(&fixed_file, &fixed)?;
+        }
+    }
+
+    let expected_fixed = fs::read_to_string(&fixed_file)
+        .context(format!("could read fixed file for {}", file.display()))?
+        .replace('\r', "");
     ensure!(
         fixed.trim() == expected_fixed.trim(),
         "file {} doesn't look fixed:\n{}",
@@ -191,14 +198,13 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
         diff(fixed.trim(), expected_fixed.trim())
     );
 
-    compiles_without_errors(&fixed_file, mode)?;
+    compiles_without_errors(&fixed_file)?;
 
     Ok(())
 }
 
 fn get_fixture_files(p: &str) -> Result<Vec<PathBuf>, Error> {
-    Ok(fs::read_dir(&p)?
-        .into_iter()
+    Ok(fs::read_dir(p)?
         .map(|e| e.unwrap().path())
         .filter(|p| p.is_file())
         .filter(|p| {
@@ -209,7 +215,7 @@ fn get_fixture_files(p: &str) -> Result<Vec<PathBuf>, Error> {
 }
 
 fn assert_fixtures(dir: &str, mode: &str) {
-    let files = get_fixture_files(&dir)
+    let files = get_fixture_files(dir)
         .context(format!("couldn't load dir `{}`", dir))
         .unwrap();
     let mut failures = 0;
@@ -237,11 +243,4 @@ fn assert_fixtures(dir: &str, mode: &str) {
 fn everything() {
     tracing_subscriber::fmt::init();
     assert_fixtures("./tests/everything", fixmode::EVERYTHING);
-}
-
-#[test]
-#[ignore = "Requires custom rustc build"]
-fn edition() {
-    tracing_subscriber::fmt::init();
-    assert_fixtures("./tests/edition", fixmode::EDITION);
 }

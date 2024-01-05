@@ -14,18 +14,18 @@ use std::collections::HashSet;
 use std::fs::{self, DirEntry};
 use std::path::{Path, PathBuf};
 
-use super::schema::{
+use anyhow::Context as _;
+use cargo_util_schemas::manifest::{
     PathValue, StringOrBool, StringOrVec, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
     TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget,
 };
+
 use crate::core::compiler::rustdoc::RustdocScrapeExamples;
 use crate::core::compiler::CrateType;
 use crate::core::{Edition, Feature, Features, Target};
 use crate::util::errors::CargoResult;
 use crate::util::restricted_names;
 use crate::util::toml::warn_on_deprecated;
-
-use anyhow::Context as _;
 
 const DEFAULT_TEST_DIR_NAME: &'static str = "tests";
 const DEFAULT_BENCH_DIR_NAME: &'static str = "benches";
@@ -127,7 +127,7 @@ pub(super) fn targets(
         // Verify names match available build deps.
         let bdeps = manifest.build_dependencies.as_ref();
         for name in &metabuild.0 {
-            if !bdeps.map_or(false, |bd| bd.contains_key(name)) {
+            if !bdeps.map_or(false, |bd| bd.contains_key(name.as_str())) {
                 anyhow::bail!(
                     "metabuild package `{}` must be specified in `build-dependencies`",
                     name
@@ -202,6 +202,17 @@ fn clean_lib(
             }
         }
     };
+
+    if lib.plugin == Some(true) {
+        warnings.push(format!(
+            "support for rustc plugins has been removed from rustc. \
+            library `{}` should not specify `plugin = true`",
+            name_or_panic(lib)
+        ));
+        warnings.push(format!(
+            "support for `plugin = true` will be removed from cargo in the future"
+        ));
+    }
 
     // Per the Macros 1.1 RFC:
     //

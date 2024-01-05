@@ -7,9 +7,11 @@ use std::collections::BTreeSet;
 use std::collections::VecDeque;
 use std::fmt::Write;
 use std::path::Path;
+use std::str::FromStr;
 
 use anyhow::Context as _;
 use cargo_util::paths;
+use cargo_util_schemas::manifest::RustVersion;
 use indexmap::IndexSet;
 use itertools::Itertools;
 use toml_edit::Item as TomlItem;
@@ -34,7 +36,6 @@ use crate::util::toml_mut::dependency::WorkspaceSource;
 use crate::util::toml_mut::is_sorted;
 use crate::util::toml_mut::manifest::DepTable;
 use crate::util::toml_mut::manifest::LocalManifest;
-use crate::util::RustVersion;
 use crate::CargoResult;
 use crate::Config;
 use crate_spec::CrateSpec;
@@ -196,6 +197,20 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
         print_dep_table_msg(&mut options.config.shell(), &dep)?;
 
         manifest.insert_into_table(&dep_table, &dep)?;
+        if dep.optional == Some(true) {
+            let is_namespaced_features_supported =
+                check_rust_version_for_optional_dependency(options.spec.rust_version())?;
+            if is_namespaced_features_supported {
+                let dep_key = dep.toml_key();
+                if !manifest.is_explicit_dep_activation(dep_key) {
+                    let table = manifest.get_table_mut(&[String::from("features")])?;
+                    let dep_name = dep.rename.as_deref().unwrap_or(&dep.name);
+                    let new_feature: toml_edit::Value =
+                        [format!("dep:{dep_name}")].iter().collect();
+                    table[dep_key] = toml_edit::value(new_feature);
+                }
+            }
+        }
         manifest.gc_dep(dep.toml_key());
     }
 
@@ -243,6 +258,9 @@ pub struct DepOp {
 
     /// Whether dependency is optional
     pub optional: Option<bool>,
+
+    /// Whether dependency is public
+    pub public: Option<bool>,
 
     /// Registry for looking up dependency version
     pub registry: Option<String>,
@@ -467,6 +485,26 @@ fn check_invalid_ws_keys(toml_key: &str, arg: &DepOp) -> CargoResult<()> {
         anyhow::bail!("{}", err_msg(toml_key, "--rename", "package"))
     }
     Ok(())
+}
+
+/// When the `--optional` option is added using `cargo add`, we need to
+/// check the current rust-version. As the `dep:` syntax is only avaliable
+/// starting with Rust 1.60.0
+///
+/// `true` means that the rust-version is None or the rust-version is higher
+/// than the version needed.
+///
+/// Note: Previous versions can only use the implicit feature name.
+fn check_rust_version_for_optional_dependency(
+    rust_version: Option<&RustVersion>,
+) -> CargoResult<bool> {
+    match rust_version {
+        Some(version) => {
+            let syntax_support_version = RustVersion::from_str("1.60.0")?;
+            Ok(&syntax_support_version <= version)
+        }
+        None => Ok(true),
+    }
 }
 
 /// Provide the existing dependency for the target table
@@ -758,6 +796,13 @@ fn populate_dependency(mut dependency: Dependency, arg: &DepOp) -> Dependency {
             dependency.optional = None;
         }
     }
+    if let Some(value) = arg.public {
+        if value {
+            dependency.public = Some(true);
+        } else {
+            dependency.public = None;
+        }
+    }
     if let Some(value) = arg.default_features {
         if value {
             dependency.default_features = None;
@@ -889,7 +934,7 @@ fn populate_available_features(
     }
 
     let possibilities = loop {
-        match registry.query_vec(&query, QueryKind::Fuzzy) {
+        match registry.query_vec(&query, QueryKind::Exact) {
             std::task::Poll::Ready(res) => {
                 break res?;
             }
@@ -944,6 +989,9 @@ fn print_action_msg(shell: &mut Shell, dep: &DependencyUI, section: &[String]) -
     write!(message, " to")?;
     if dep.optional().unwrap_or(false) {
         write!(message, " optional")?;
+    }
+    if dep.public().unwrap_or(false) {
+        write!(message, " public")?;
     }
     let section = if section.len() == 1 {
         section[0].clone()

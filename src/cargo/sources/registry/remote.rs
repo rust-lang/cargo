@@ -4,6 +4,7 @@ use crate::core::global_cache_tracker;
 use crate::core::{GitReference, PackageId, SourceId};
 use crate::sources::git;
 use crate::sources::git::fetch::RemoteKind;
+use crate::sources::git::resolve_ref;
 use crate::sources::registry::download;
 use crate::sources::registry::MaybeLock;
 use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
@@ -48,6 +49,8 @@ use tracing::{debug, trace};
 ///
 /// [`HttpRegistry`]: super::http_remote::HttpRegistry
 pub struct RemoteRegistry<'cfg> {
+    /// The name of this source, a unique string (across all sources) used as
+    /// the directory name where its cached content is stored.
     name: InternedString,
     /// Path to the registry index (`$CARGO_HOME/registry/index/$REG-HASH`).
     index_path: Filesystem,
@@ -147,7 +150,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
     fn head(&self) -> CargoResult<git2::Oid> {
         if self.head.get().is_none() {
             let repo = self.repo()?;
-            let oid = self.index_git_ref.resolve(repo)?;
+            let oid = resolve_ref(&self.index_git_ref, repo)?;
             self.head.set(Some(oid));
         }
         Ok(self.head.get().unwrap())

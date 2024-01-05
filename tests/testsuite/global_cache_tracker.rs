@@ -444,7 +444,7 @@ fn auto_gc_index() {
 fn auto_gc_git() {
     // auto-gc should delete git checkouts and dbs.
 
-    // Returns the short git name of a a checkout.
+    // Returns the short git name of a checkout.
     let short_id = |repo: &git2::Repository| -> String {
         let head = repo.revparse_single("HEAD").unwrap();
         let short_id = head.short_id().unwrap();

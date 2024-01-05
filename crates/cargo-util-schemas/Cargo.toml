@@ -1,0 +1,22 @@
+[package]
+name = "cargo-util-schemas"
+version = "0.2.0"
+rust-version.workspace = true
+edition.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+description = "Deserialization schemas for Cargo"
+
+[dependencies]
+semver.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde-untagged.workspace = true
+serde-value.workspace = true
+thiserror.workspace = true
+toml.workspace = true
+unicode-xid.workspace = true
+url.workspace = true
+
+[lints]
+workspace = true

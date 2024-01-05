@@ -460,7 +460,11 @@ fn cargo_compile_with_empty_package_name() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
-  package name cannot be an empty string
+  TOML parse error at line 3, column 16
+    |
+  3 |         name = \"\"
+    |                ^^
+  package name cannot be empty
 ",
         )
         .run();
@@ -479,6 +483,10 @@ fn cargo_compile_with_invalid_package_name() {
 [ERROR] failed to parse manifest at `[..]`
 
 Caused by:
+  TOML parse error at line 3, column 16
+    |
+  3 |         name = \"foo::bar\"
+    |                ^^^^^^^^^^
   invalid character `:` in package name: `foo::bar`, [..]
 ",
         )
@@ -760,7 +768,7 @@ fn cargo_compile_with_invalid_code() {
     p.cargo("build")
         .with_status(101)
         .with_stderr_contains(
-            "[ERROR] could not compile `foo` (bin \"foo\") due to previous error\n",
+            "[ERROR] could not compile `foo` (bin \"foo\") due to 1 previous error\n",
         )
         .run();
     assert!(p.root().join("Cargo.lock").is_file());
@@ -1182,7 +1190,11 @@ fn cargo_compile_with_invalid_dep_rename() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  invalid character ` ` in dependency name: `haha this isn't a valid name 🐛`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
+  TOML parse error at line 7, column 17
+    |
+  7 |                 \"haha this isn't a valid name 🐛\" = { package = \"libc\", version = \"0.1\" }
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  invalid character ` ` in package name: `haha this isn't a valid name 🐛`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
 ",
         )
         .run();
@@ -1545,6 +1557,11 @@ fn crate_env_vars() {
 
                     // Verify CARGO_TARGET_TMPDIR isn't set for bins
                     assert!(option_env!("CARGO_TARGET_TMPDIR").is_none());
+
+                    // Verify CARGO_RUSTC_CURRENT_DIR is set for examples
+                    let workspace_dir = std::path::Path::new(option_env!("CARGO_RUSTC_CURRENT_DIR").expect("CARGO_RUSTC_CURRENT_DIR"));
+                    let file_path = workspace_dir.join(file!());
+                    assert!(file_path.exists(), "{}", file_path.display());
                 }
             "#,
         )
@@ -1581,13 +1598,25 @@ fn crate_env_vars() {
                     // Check that CARGO_TARGET_TMPDIR isn't set for lib code
                     assert!(option_env!("CARGO_TARGET_TMPDIR").is_none());
                     env::var("CARGO_TARGET_TMPDIR").unwrap_err();
+
+                    // Verify CARGO_RUSTC_CURRENT_DIR is set for examples
+                    let workspace_dir = std::path::Path::new(option_env!("CARGO_RUSTC_CURRENT_DIR").expect("CARGO_RUSTC_CURRENT_DIR"));
+                    let file_path = workspace_dir.join(file!());
+                    assert!(file_path.exists(), "{}", file_path.display());
                 }
 
                 #[test]
-                fn env() {
+                fn unit_env_cargo_target_tmpdir() {
                     // Check that CARGO_TARGET_TMPDIR isn't set for unit tests
                     assert!(option_env!("CARGO_TARGET_TMPDIR").is_none());
                     env::var("CARGO_TARGET_TMPDIR").unwrap_err();
+                }
+
+                #[test]
+                fn unit_env_cargo_rustc_current_dir() {
+                    let workspace_dir = std::path::Path::new(option_env!("CARGO_RUSTC_CURRENT_DIR").expect("CARGO_RUSTC_CURRENT_DIR"));
+                    let file_path = workspace_dir.join(file!());
+                    assert!(file_path.exists(), "{}", file_path.display());
                 }
             "#,
         )
@@ -1605,6 +1634,11 @@ fn crate_env_vars() {
 
                     // Verify CARGO_TARGET_TMPDIR isn't set for examples
                     assert!(option_env!("CARGO_TARGET_TMPDIR").is_none());
+
+                    // Verify CARGO_RUSTC_CURRENT_DIR is set for examples
+                    let workspace_dir = std::path::Path::new(option_env!("CARGO_RUSTC_CURRENT_DIR").expect("CARGO_RUSTC_CURRENT_DIR"));
+                    let file_path = workspace_dir.join(file!());
+                    assert!(file_path.exists(), "{}", file_path.display());
                 }
             "#,
         )
@@ -1612,8 +1646,15 @@ fn crate_env_vars() {
             "tests/env.rs",
             r#"
                 #[test]
-                fn env() {
+                fn integration_env_cargo_target_tmpdir() {
                     foo::check_tmpdir(option_env!("CARGO_TARGET_TMPDIR"));
+                }
+
+                #[test]
+                fn integration_env_cargo_rustc_current_dir() {
+                    let workspace_dir = std::path::Path::new(option_env!("CARGO_RUSTC_CURRENT_DIR").expect("CARGO_RUSTC_CURRENT_DIR"));
+                    let file_path = workspace_dir.join(file!());
+                    assert!(file_path.exists(), "{}", file_path.display());
                 }
             "#,
         );
@@ -1627,8 +1668,15 @@ fn crate_env_vars() {
                 use test::Bencher;
 
                 #[bench]
-                fn env(_: &mut Bencher) {
+                fn bench_env_cargo_target_tmpdir(_: &mut Bencher) {
                     foo::check_tmpdir(option_env!("CARGO_TARGET_TMPDIR"));
+                }
+
+                #[test]
+                fn bench_env_cargo_rustc_current_dir() {
+                    let workspace_dir = std::path::Path::new(option_env!("CARGO_RUSTC_CURRENT_DIR").expect("CARGO_RUSTC_CURRENT_DIR"));
+                    let file_path = workspace_dir.join(file!());
+                    assert!(file_path.exists(), "{}", file_path.display());
                 }
             "#,
         )
@@ -1638,7 +1686,9 @@ fn crate_env_vars() {
     };
 
     println!("build");
-    p.cargo("build -v").run();
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo(&["CARGO_RUSTC_CURRENT_DIR"])
+        .run();
 
     println!("bin");
     p.process(&p.bin("foo-bar"))
@@ -1646,15 +1696,175 @@ fn crate_env_vars() {
         .run();
 
     println!("example");
-    p.cargo("run --example ex-env-vars -v").run();
+    p.cargo("run --example ex-env-vars -v")
+        .masquerade_as_nightly_cargo(&["CARGO_RUSTC_CURRENT_DIR"])
+        .run();
 
     println!("test");
-    p.cargo("test -v").run();
+    p.cargo("test -v")
+        .masquerade_as_nightly_cargo(&["CARGO_RUSTC_CURRENT_DIR"])
+        .run();
 
     if is_nightly() {
         println!("bench");
-        p.cargo("bench -v").run();
+        p.cargo("bench -v")
+            .masquerade_as_nightly_cargo(&["CARGO_RUSTC_CURRENT_DIR"])
+            .run();
     }
+}
+
+#[cargo_test]
+fn cargo_rustc_current_dir_foreign_workspace_dep() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+
+            [dependencies]
+            baz.path = "../baz"
+            baz_member.path = "../baz/baz_member"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    let _baz = project()
+        .at("baz")
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["baz_member"]
+
+            [package]
+            name = "baz"
+            version = "0.1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "tests/env.rs",
+            r#"
+            use std::path::Path;
+
+            #[test]
+            fn baz_env() {
+                let workspace_dir = Path::new(option_env!("CARGO_RUSTC_CURRENT_DIR").expect("CARGO_RUSTC_CURRENT_DIR"));
+                let manifest_dir = Path::new(option_env!("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"));
+                let current_dir = std::env::current_dir().expect("current_dir");
+                let file_path = workspace_dir.join(file!());
+                assert!(file_path.exists(), "{}", file_path.display());
+                let workspace_dir = std::fs::canonicalize(current_dir.join(workspace_dir)).expect("CARGO_RUSTC_CURRENT_DIR");
+                let manifest_dir = std::fs::canonicalize(current_dir.join(manifest_dir)).expect("CARGO_MANIFEST_DIR");
+                assert_eq!(workspace_dir, manifest_dir);
+            }
+        "#,
+        )
+        .file(
+            "baz_member/Cargo.toml",
+            r#"
+            [package]
+            name = "baz_member"
+            version = "0.1.0"
+            authors = []
+            "#,
+        )
+        .file("baz_member/src/lib.rs", "")
+        .file(
+            "baz_member/tests/env.rs",
+            r#"
+            use std::path::Path;
+
+            #[test]
+            fn baz_member_env() {
+                let workspace_dir = Path::new(option_env!("CARGO_RUSTC_CURRENT_DIR").expect("CARGO_RUSTC_CURRENT_DIR"));
+                let file_path = workspace_dir.join(file!());
+                assert!(file_path.exists(), "{}", file_path.display());
+            }
+        "#,
+        )
+        .build();
+
+    // Verify it works from a different workspace
+    foo.cargo("test -p baz")
+        .masquerade_as_nightly_cargo(&["CARGO_RUSTC_CURRENT_DIR"])
+        .with_stdout_contains("running 1 test\ntest baz_env ... ok")
+        .run();
+    foo.cargo("test -p baz_member")
+        .masquerade_as_nightly_cargo(&["CARGO_RUSTC_CURRENT_DIR"])
+        .with_stdout_contains("running 1 test\ntest baz_member_env ... ok")
+        .run();
+}
+
+#[cargo_test]
+fn cargo_rustc_current_dir_non_local_dep() {
+    Package::new("bar", "0.1.0")
+        .file(
+            "tests/bar_env.rs",
+            r#"
+            use std::path::Path;
+
+            #[test]
+            fn bar_env() {
+                let workspace_dir = Path::new(option_env!("CARGO_RUSTC_CURRENT_DIR").expect("CARGO_RUSTC_CURRENT_DIR"));
+                let manifest_dir = Path::new(option_env!("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"));
+                let current_dir = std::env::current_dir().expect("current_dir");
+                let file_path = workspace_dir.join(file!());
+                assert!(file_path.exists(), "{}", file_path.display());
+                let workspace_dir = std::fs::canonicalize(current_dir.join(workspace_dir)).expect("CARGO_RUSTC_CURRENT_DIR");
+                let manifest_dir = std::fs::canonicalize(current_dir.join(manifest_dir)).expect("CARGO_MANIFEST_DIR");
+                assert_eq!(workspace_dir, manifest_dir);
+            }
+        "#,
+        )
+        .publish();
+
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies]
+                bar = "0.1.0"
+            "#,
+        )
+        .build();
+
+    p.cargo("test -p bar")
+        .masquerade_as_nightly_cargo(&["CARGO_RUSTC_CURRENT_DIR"])
+        .with_stdout_contains("running 1 test\ntest bar_env ... ok")
+        .run();
+}
+
+#[cargo_test]
+fn cargo_rustc_current_dir_is_not_stable() {
+    if is_nightly() {
+        return;
+    }
+    let p = project()
+        .file(
+            "tests/env.rs",
+            r#"
+                use std::path::Path;
+
+                #[test]
+                fn env() {
+                    assert_eq!(option_env!("CARGO_RUSTC_CURRENT_DIR"), None);
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("test").run();
 }
 
 #[cargo_test]
@@ -3951,7 +4161,7 @@ fn compiler_json_error_format() {
         )
         .file(
             "build.rs",
-            "fn main() { println!(\"cargo:rustc-cfg=xyz\") }",
+            "fn main() { println!(\"cargo::rustc-cfg=xyz\") }",
         )
         .file("src/main.rs", "fn main() { let unused = 92; }")
         .file("bar/Cargo.toml", &basic_manifest("bar", "0.5.0"))
@@ -5104,11 +5314,11 @@ fn deterministic_cfg_flags() {
             "build.rs",
             r#"
                 fn main() {
-                    println!("cargo:rustc-cfg=cfg_a");
-                    println!("cargo:rustc-cfg=cfg_b");
-                    println!("cargo:rustc-cfg=cfg_c");
-                    println!("cargo:rustc-cfg=cfg_d");
-                    println!("cargo:rustc-cfg=cfg_e");
+                    println!("cargo::rustc-cfg=cfg_a");
+                    println!("cargo::rustc-cfg=cfg_b");
+                    println!("cargo::rustc-cfg=cfg_c");
+                    println!("cargo::rustc-cfg=cfg_d");
+                    println!("cargo::rustc-cfg=cfg_e");
                 }
             "#,
         )

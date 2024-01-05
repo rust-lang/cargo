@@ -420,7 +420,7 @@ impl LocalManifest {
         }
     }
 
-    fn is_explicit_dep_activation(&self, dep_key: &str) -> bool {
+    pub fn is_explicit_dep_activation(&self, dep_key: &str) -> bool {
         if let Some(toml_edit::Item::Table(feature_table)) = self.data.as_table().get("features") {
             for values in feature_table
                 .iter()

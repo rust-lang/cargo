@@ -10,6 +10,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::Context;
 use bytesize::ByteSize;
+use cargo_util_schemas::manifest::RustVersion;
 use curl::easy::Easy;
 use curl::multi::{EasyHandle, Multi};
 use lazycell::LazyCell;
@@ -31,7 +32,7 @@ use crate::util::network::http::http_handle_and_timeout;
 use crate::util::network::http::HttpTimeout;
 use crate::util::network::retry::{Retry, RetryResult};
 use crate::util::network::sleep::SleepTracker;
-use crate::util::RustVersion;
+use crate::util::toml::prepare_for_publish;
 use crate::util::{self, internal, Config, Progress, ProgressStyle};
 
 pub const MANIFEST_PREAMBLE: &str = "\
@@ -197,10 +198,7 @@ impl Package {
     }
 
     pub fn to_registry_toml(&self, ws: &Workspace<'_>) -> CargoResult<String> {
-        let manifest = self
-            .manifest()
-            .original()
-            .prepare_for_publish(ws, self.root())?;
+        let manifest = prepare_for_publish(self.manifest().original(), ws, self.root())?;
         let toml = toml::to_string_pretty(&manifest)?;
         Ok(format!("{}\n{}", MANIFEST_PREAMBLE, toml))
     }

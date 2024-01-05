@@ -93,10 +93,10 @@ use crate::core::{Feature, PackageId, Target, Verbosity};
 use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
-use crate::util::toml::schema::TomlDebugInfo;
-use crate::util::toml::schema::TomlTrimPaths;
 use crate::util::{add_path_args, internal, iter_join_onto, profile};
 use cargo_util::{paths, ProcessBuilder, ProcessError};
+use cargo_util_schemas::manifest::TomlDebugInfo;
+use cargo_util_schemas::manifest::TomlTrimPaths;
 use rustfix::diagnostics::Applicability;
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
@@ -422,7 +422,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
                     };
                     let errors = match output_options.errors_seen {
                         0 => String::new(),
-                        1 => " due to previous error".to_string(),
+                        1 => " due to 1 previous error".to_string(),
                         count => format!(" due to {} previous errors", count),
                     };
                     let name = descriptive_pkg_name(&name, &target, &mode);
@@ -662,6 +662,15 @@ fn prepare_rustc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilde
     let mut base = cx
         .compilation
         .rustc_process(unit, is_primary, is_workspace)?;
+    build_base_args(cx, &mut base, unit)?;
+
+    base.inherit_jobserver(&cx.jobserver);
+    build_deps_args(&mut base, cx, unit)?;
+    add_cap_lints(cx.bcx, unit, &mut base);
+    base.args(cx.bcx.rustflags_args(unit));
+    if cx.bcx.config.cli_unstable().binary_dep_depinfo {
+        base.arg("-Z").arg("binary-dep-depinfo");
+    }
 
     if is_primary {
         base.env("CARGO_PRIMARY_PACKAGE", "1");
@@ -671,15 +680,17 @@ fn prepare_rustc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilde
         let tmp = cx.files().layout(unit.kind).prepare_tmp()?;
         base.env("CARGO_TARGET_TMPDIR", tmp.display().to_string());
     }
-
-    base.inherit_jobserver(&cx.jobserver);
-    build_base_args(cx, &mut base, unit)?;
-    build_deps_args(&mut base, cx, unit)?;
-    add_cap_lints(cx.bcx, unit, &mut base);
-    base.args(cx.bcx.rustflags_args(unit));
-    if cx.bcx.config.cli_unstable().binary_dep_depinfo {
-        base.arg("-Z").arg("binary-dep-depinfo");
+    if cx.bcx.config.nightly_features_allowed {
+        // This must come after `build_base_args` (which calls `add_path_args`) so that the `cwd`
+        // is set correctly.
+        base.env(
+            "CARGO_RUSTC_CURRENT_DIR",
+            base.get_cwd()
+                .map(|c| c.display().to_string())
+                .unwrap_or(String::new()),
+        );
     }
+
     Ok(base)
 }
 
@@ -732,7 +743,7 @@ fn prepare_rustdoc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuil
             .arg(scrape_output_path(cx, unit)?);
 
         // Only scrape example for items from crates in the workspace, to reduce generated file size
-        for pkg in cx.bcx.ws.members() {
+        for pkg in cx.bcx.packages.packages() {
             let names = pkg
                 .targets()
                 .iter()
@@ -1203,8 +1214,6 @@ fn trim_paths_args(
         }
         remap
     };
-    cmd.arg(sysroot_remap);
-
     let package_remap = {
         let pkg_root = unit.pkg.root();
         let ws_root = cx.bcx.ws.root();
@@ -1221,7 +1230,7 @@ fn trim_paths_args(
         // * path dependencies outside workspace root directory
         if is_local && pkg_root.strip_prefix(ws_root).is_ok() {
             remap.push(ws_root);
-            remap.push("="); // empty to remap to relative paths.
+            remap.push("=."); // remap to relative rustc work dir explicitly
         } else {
             remap.push(pkg_root);
             remap.push("=");
@@ -1231,7 +1240,11 @@ fn trim_paths_args(
         }
         remap
     };
+
+    // Order of `--remap-path-prefix` flags is important for `-Zbuild-std`.
+    // We want to show `/rustc/<hash>/library/std` instead of `std-0.0.0`.
     cmd.arg(package_remap);
+    cmd.arg(sysroot_remap);
 
     Ok(())
 }
@@ -1242,14 +1255,25 @@ fn trim_paths_args(
 /// [`check-cfg`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#check-cfg
 fn check_cfg_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
     if cx.bcx.config.cli_unstable().check_cfg {
-        // This generate something like this:
-        //  - cfg()
-        //  - cfg(feature, values("foo", "bar"))
+        // The routine below generates the --check-cfg arguments. Our goals here are to
+        // enable the checking of conditionals and pass the list of declared features.
         //
-        // NOTE: Despite only explicitly specifying `feature`, well known names and values
-        // are implicitly enabled when one or more `--check-cfg` argument is passed.
-        // NOTE: Never generate a empty `values()` since it would mean that it's possible
-        // to have `cfg(feature)` without a feature name which is impossible.
+        // In the simplified case, it would resemble something like this:
+        //
+        //   --check-cfg=cfg() --check-cfg=cfg(feature, values(...))
+        //
+        // but having `cfg()` is redundant with the second argument (as well-known names
+        // and values are implicitly enabled when one or more `--check-cfg` argument is
+        // passed) so we don't emit it:
+        //
+        //   --check-cfg=cfg(feature, values(...))
+        //
+        // expect when there are no features declared, where we can't generate the
+        // `cfg(feature, values())` argument since it would mean that it is somehow
+        // possible to have a `#[cfg(feature)]` without a feature name, which is
+        // impossible and not what we want, so we just generate:
+        //
+        //   --check-cfg=cfg()
 
         let gross_cap_estimation = unit.pkg.summary().features().len() * 7 + 25;
         let mut arg_feature = OsString::with_capacity(gross_cap_estimation);
@@ -1421,6 +1445,7 @@ pub fn extern_args(
                 .require(Feature::public_dependency())
                 .is_ok()
                 && !dep.public
+                && unit.target.is_lib()
             {
                 opts.push("priv");
                 *unstable_opts = true;

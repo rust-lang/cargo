@@ -502,9 +502,9 @@ fn build_override_shared() {
             r#"
             fn main() {
                 if std::env::var("DEBUG").unwrap() != "false" {
-                    println!("cargo:rustc-cfg=foo_debug");
+                    println!("cargo::rustc-cfg=foo_debug");
                 } else {
-                    println!("cargo:rustc-cfg=foo_release");
+                    println!("cargo::rustc-cfg=foo_release");
                 }
             }
             "#,

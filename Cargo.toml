@@ -14,11 +14,13 @@ exclude = [
 rust-version = "1.73"  # MSRV:1
 edition = "2021"
 license = "MIT OR Apache-2.0"
+homepage = "https://github.com/rust-lang/cargo"
+repository = "https://github.com/rust-lang/cargo"
 
 [workspace.dependencies]
-anstream = "0.6.4"
+anstream = "0.6.5"
 anstyle = "1.0.4"
-anyhow = "1.0.75"
+anyhow = "1.0.79"
 base64 = "0.21.5"
 bytesize = "1.3"
 cargo = { path = "" }
@@ -30,81 +32,80 @@ cargo-platform = { path = "crates/cargo-platform", version = "0.1.4" }
 cargo-test-macro = { path = "crates/cargo-test-macro" }
 cargo-test-support = { path = "crates/cargo-test-support" }
 cargo-util = { version = "0.2.6", path = "crates/cargo-util" }
+cargo-util-schemas = { version = "0.2.0", path = "crates/cargo-util-schemas" }
 cargo_metadata = "0.18.1"
-clap = "4.4.10"
+clap = "4.4.12"
 color-print = "0.3.5"
-core-foundation = { version = "0.9.3", features = ["mac_os_10_7_support"] }
+core-foundation = { version = "0.9.4", features = ["mac_os_10_7_support"] }
 crates-io = { version = "0.39.0", path = "crates/crates-io" }
 criterion = { version = "0.5.1", features = ["html_reports"] }
 curl = "0.4.44"
-curl-sys = "0.4.68"
-filetime = "0.2.22"
+curl-sys = "0.4.70"
+filetime = "0.2.23"
 flate2 = { version = "1.0.28", default-features = false, features = ["zlib"] }
 git2 = "0.18.1"
 git2-curl = "0.19.0"
-gix = { version = "0.55.2", default-features = false, features = ["blocking-http-transport-curl", "progress-tree", "revision"] }
-gix-features-for-configuration-only = { version = "0.35.0", package = "gix-features", features = [ "parallel" ] }
+gix = { version = "0.57.1", default-features = false, features = ["blocking-http-transport-curl", "progress-tree", "revision"] }
+gix-features-for-configuration-only = { version = "0.37.1", package = "gix-features", features = [ "parallel" ] }
 glob = "0.3.1"
-handlebars = { version = "3.5.5", features = ["dir_source"] }
+handlebars = { version = "5.0.0", features = ["dir_source"] }
 hex = "0.4.3"
 hmac = "0.12.1"
-home = "0.5.5"
-http-auth = { version = "0.1.8", default-features = false }
+home = "0.5.9"
+http-auth = { version = "0.1.9", default-features = false }
 humantime = "2.1.0"
-ignore = "0.4.20"
+ignore = "0.4.21"
 im-rc = "15.1.0"
 indexmap = "2"
-itertools = "0.11.0"
+itertools = "0.12.0"
 jobserver = "0.1.27"
 lazycell = "1.3.0"
-libc = "0.2.149"
+libc = "0.2.151"
 libgit2-sys = "0.16.1"
 libloading = "0.8.1"
-memchr = "2.6.4"
+memchr = "2.7.1"
 miow = "0.6.0"
 opener = "0.6.1"
-openssl ="0.10.57"
+openssl = "0.10.57"
 os_info = "3.7.0"
-pasetors = { version = "0.6.7", features = ["v3", "paserk", "std", "serde"] }
+pasetors = { version = "0.6.8", features = ["v3", "paserk", "std", "serde"] }
 pathdiff = "0.2"
 percent-encoding = "2.3"
-pkg-config = "0.3.27"
-pretty_assertions = "1.4.0"
-proptest = "1.3.1"
+pkg-config = "0.3.28"
+proptest = "1.4.0"
 pulldown-cmark = { version = "0.9.3", default-features = false }
 rand = "0.8.5"
-regex = "1.9.3"
-rusqlite = { version = "0.29.0", features = ["bundled"] }
-rustfix = { version = "0.6.2", path = "crates/rustfix" }
+regex = "1.10.2"
+rusqlite = { version = "0.30.0", features = ["bundled"] }
+rustfix = { version = "0.8.0", path = "crates/rustfix" }
 same-file = "1.0.6"
 security-framework = "2.9.2"
 semver = { version = "1.0.20", features = ["serde"] }
-serde = "1.0.190"
-serde-untagged = "0.1.1"
+serde = "1.0.194"
+serde-untagged = "0.1.4"
 serde-value = "0.7.0"
 serde_ignored = "0.1.9"
-serde_json = "1.0.108"
+serde_json = "1.0.110"
 sha1 = "0.10.6"
 sha2 = "0.10.8"
 shell-escape = "0.1.5"
 supports-hyperlinks = "2.1.0"
-snapbox = { version = "0.4.14", features = ["diff", "path"] }
-syn = { version = "2.0.38", features = ["extra-traits", "full"] }
+snapbox = { version = "0.4.15", features = ["diff", "path"] }
 tar = { version = "0.4.40", default-features = false }
-tempfile = "3.8.1"
-thiserror = "1.0.50"
+tempfile = "3.9.0"
+thiserror = "1.0.56"
 time = { version = "0.3", features = ["parsing", "formatting", "serde"] }
-toml = "0.8.6"
-toml_edit = { version = "0.20.7", features = ["serde"] }
-tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+toml = "0.8.8"
+toml_edit = { version = "0.21.0", features = ["serde"] }
+tracing = "0.1.37" # be compatible with rustc_log: https://github.com/rust-lang/rust/blob/e51e98dde6a/compiler/rustc_log/Cargo.toml#L9
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 unicase = "2.7.0"
 unicode-width = "0.1.11"
 unicode-xid = "0.2.4"
-url = "2.4.1"
+url = "2.5.0"
 varisat = "0.2.2"
 walkdir = "2.4.0"
-windows-sys = "0.48"
+windows-sys = "0.52"
 
 [workspace.lints.rust]
 rust_2018_idioms = "warn" # TODO: could this be removed?
@@ -122,12 +123,12 @@ self_named_module_files = "warn"
 
 [package]
 name = "cargo"
-version = "0.77.0"
+version = "0.78.0"
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-homepage = "https://crates.io"
-repository = "https://github.com/rust-lang/cargo"
+homepage = "https://doc.rust-lang.org/cargo/index.html"
+repository.workspace = true
 documentation = "https://docs.rs/cargo"
 description = """
 Cargo, a package manager for Rust.
@@ -145,6 +146,7 @@ base64.workspace = true
 bytesize.workspace = true
 cargo-credential.workspace = true
 cargo-platform.workspace = true
+cargo-util-schemas.workspace = true
 cargo-util.workspace = true
 clap = { workspace = true, features = ["wrap_help"] }
 color-print.workspace = true
@@ -176,7 +178,6 @@ opener.workspace = true
 os_info.workspace = true
 pasetors.workspace = true
 pathdiff.workspace = true
-pulldown-cmark.workspace = true
 rand.workspace = true
 regex.workspace = true
 rusqlite.workspace = true
@@ -184,13 +185,11 @@ rustfix.workspace = true
 semver.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde-untagged.workspace = true
-serde-value.workspace = true
 serde_ignored.workspace = true
 serde_json = { workspace = true, features = ["raw_value"] }
 sha1.workspace = true
 shell-escape.workspace = true
 supports-hyperlinks.workspace = true
-syn.workspace = true
 tar.workspace = true
 tempfile.workspace = true
 time.workspace = true
@@ -200,7 +199,6 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 unicase.workspace = true
 unicode-width.workspace = true
-unicode-xid.workspace = true
 url.workspace = true
 walkdir.workspace = true
 
@@ -247,7 +245,7 @@ doc = false
 vendored-openssl = ["openssl/vendored"]
 vendored-libgit2 = ["libgit2-sys/vendored"]
 # This is primarily used by rust-lang/rust distributing cargo the executable.
-all-static = ['vendored-openssl', 'curl/static-curl', 'curl/force-system-lib-on-osx']
+all-static = ['vendored-openssl', 'curl/static-curl', 'curl/force-system-lib-on-osx', 'vendored-libgit2']
 
 [lints]
 workspace = true

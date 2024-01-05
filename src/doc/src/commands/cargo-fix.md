@@ -1,5 +1,4 @@
 # cargo-fix(1)
-
 ## NAME
 
 cargo-fix --- Automatically fix lint warnings reported by rustc
@@ -127,10 +126,8 @@ double quotes around each pattern.</dd>
 <dd class="option-desc">Fix all members in the workspace.</dd>
 
 
-
 <dt class="option-term" id="option-cargo-fix---all"><a class="option-anchor" href="#option-cargo-fix---all"></a><code>--all</code></dt>
 <dd class="option-desc">Deprecated alias for <code>--workspace</code>.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-fix---exclude"><a class="option-anchor" href="#option-cargo-fix---exclude"></a><code>--exclude</code> <em>SPEC</em>…</dt>
@@ -142,7 +139,6 @@ single quotes or double quotes around each pattern.</dd>
 
 
 </dl>
-
 
 ### Target Selection
 
@@ -171,7 +167,6 @@ and supports common Unix glob patterns.</dd>
 
 <dt class="option-term" id="option-cargo-fix---bins"><a class="option-anchor" href="#option-cargo-fix---bins"></a><code>--bins</code></dt>
 <dd class="option-desc">Fix all binary targets.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-fix---example"><a class="option-anchor" href="#option-cargo-fix---example"></a><code>--example</code> <em>name</em>…</dt>
@@ -219,7 +214,6 @@ manifest settings for the target.</dd>
 
 </dl>
 
-
 ### Feature Selection
 
 The feature flags allow you to control which features are enabled. When no
@@ -248,7 +242,6 @@ be specified multiple times, which enables all specified features.</dd>
 
 </dl>
 
-
 ### Compilation Options
 
 <dl>
@@ -264,12 +257,10 @@ target artifacts are placed in a separate directory. See the
 <a href="../guide/build-cache.html">build cache</a> documentation for more details.</dd>
 
 
-
 <dt class="option-term" id="option-cargo-fix--r"><a class="option-anchor" href="#option-cargo-fix--r"></a><code>-r</code></dt>
 <dt class="option-term" id="option-cargo-fix---release"><a class="option-anchor" href="#option-cargo-fix---release"></a><code>--release</code></dt>
 <dd class="option-desc">Fix optimized artifacts with the <code>release</code> profile.
 See also the <code>--profile</code> option for choosing a specific profile by name.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-fix---profile"><a class="option-anchor" href="#option-cargo-fix---profile"></a><code>--profile</code> <em>name</em></dt>
@@ -281,11 +272,9 @@ detail.</p>
 <p>See <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
 
 
-
 <dt class="option-term" id="option-cargo-fix---ignore-rust-version"><a class="option-anchor" href="#option-cargo-fix---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
 <dd class="option-desc">Fix the target even if the selected Rust compiler is older than the
 required Rust version as configured in the project’s <code>rust-version</code> field.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-fix---timings=fmts"><a class="option-anchor" href="#option-cargo-fix---timings=fmts"></a><code>--timings=</code><em>fmts</em></dt>
@@ -306,7 +295,6 @@ information about timing information.</li>
 
 
 
-
 </dl>
 
 ### Output Options
@@ -317,7 +305,6 @@ information about timing information.</li>
 specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
 <code>build.target-dir</code> <a href="../reference/config.html">config value</a>.
 Defaults to <code>target</code> in the root of the workspace.</dd>
-
 
 </dl>
 
@@ -351,7 +338,6 @@ terminal.</li>
 <a href="../reference/config.html">config value</a>.</dd>
 
 
-
 <dt class="option-term" id="option-cargo-fix---message-format"><a class="option-anchor" href="#option-cargo-fix---message-format"></a><code>--message-format</code> <em>fmt</em></dt>
 <dd class="option-desc">The output format for diagnostic messages. Can be specified multiple times
 and consists of comma-separated values. Valid values:</p>
@@ -374,7 +360,6 @@ JSON diagnostics coming from rustc. Cargo’s own JSON diagnostics and others
 coming from rustc are still emitted. Cannot be used with <code>human</code> or <code>short</code>.</li>
 </ul></dd>
 
-
 </dl>
 
 ### Manifest Options
@@ -383,7 +368,6 @@ coming from rustc are still emitted. Cannot be used with <code>human</code> or <
 <dt class="option-term" id="option-cargo-fix---manifest-path"><a class="option-anchor" href="#option-cargo-fix---manifest-path"></a><code>--manifest-path</code> <em>path</em></dt>
 <dd class="option-desc">Path to the <code>Cargo.toml</code> file. By default, Cargo searches for the
 <code>Cargo.toml</code> file in the current directory or any parent directory.</dd>
-
 
 
 <dt class="option-term" id="option-cargo-fix---frozen"><a class="option-anchor" href="#option-cargo-fix---frozen"></a><code>--frozen</code></dt>
@@ -408,7 +392,6 @@ if there might be a newer version as indicated in the local copy of the index.
 See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
 offline.</p>
 <p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</dd>
-
 
 </dl>
 
@@ -452,7 +435,6 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 
 </dl>
 
-
 ### Miscellaneous Options
 
 <dl>
@@ -465,7 +447,6 @@ parallel jobs to the number of logical CPUs plus provided value. If
 a string <code>default</code> is provided, it sets the value back to defaults.
 Should not be 0.</dd>
 
-
 <dt class="option-term" id="option-cargo-fix---keep-going"><a class="option-anchor" href="#option-cargo-fix---keep-going"></a><code>--keep-going</code></dt>
 <dd class="option-desc">Build as many crates in the dependency graph as possible, rather than aborting
 the build on the first one that fails to build.</p>
@@ -475,7 +456,6 @@ one that succeeds (depending on which one of the two builds Cargo picked to run
 first), whereas <code>cargo fix -j1 --keep-going</code> would definitely run both
 builds, even if the one run first fails.</dd>
 
-
 </dl>
 
 ## ENVIRONMENT
@@ -483,12 +463,10 @@ builds, even if the one run first fails.</dd>
 See [the reference](../reference/environment-variables.html) for
 details on environment variables that Cargo reads.
 
-
 ## EXIT STATUS
 
 * `0`: Cargo succeeded.
 * `101`: Cargo failed to complete.
-
 
 ## EXAMPLES
 

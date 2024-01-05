@@ -168,7 +168,7 @@ pub const SEE_CHANNELS: &str =
 /// - Update [`CLI_VALUES`] to include the new edition.
 /// - Set [`LATEST_UNSTABLE`] to Some with the new edition.
 /// - Add an unstable feature to the [`features!`] macro invocation below for the new edition.
-/// - Gate on that new feature in [`TomlManifest::to_real_manifest`].
+/// - Gate on that new feature in [`toml::to_real_manifest`].
 /// - Update the shell completion files.
 /// - Update any failing tests (hopefully there are very few).
 /// - Update unstable.md to add a new section for this new edition (see [this example]).
@@ -195,7 +195,7 @@ pub const SEE_CHANNELS: &str =
 /// [`LATEST_STABLE`]: Edition::LATEST_STABLE
 /// [this example]: https://github.com/rust-lang/cargo/blob/3ebb5f15a940810f250b68821149387af583a79e/src/doc/src/reference/unstable.md?plain=1#L1238-L1264
 /// [`is_stable`]: Edition::is_stable
-/// [`TomlManifest::to_real_manifest`]: crate::util::toml::schema::TomlManifest::to_real_manifest
+/// [`toml::to_real_manifest`]: crate::util::toml::to_real_manifest
 /// [`features!`]: macro.features.html
 #[derive(Clone, Copy, Debug, Hash, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Edition {

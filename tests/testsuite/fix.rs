@@ -6,7 +6,7 @@ use cargo_test_support::git::{self, init};
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::tools;
-use cargo_test_support::{basic_manifest, is_nightly, project, Project};
+use cargo_test_support::{basic_manifest, is_nightly, project};
 
 #[cargo_test]
 fn do_not_fix_broken_builds() {
@@ -29,7 +29,7 @@ fn do_not_fix_broken_builds() {
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
         .with_status(101)
-        .with_stderr_contains("[ERROR] could not compile `foo` (lib) due to previous error")
+        .with_stderr_contains("[ERROR] could not compile `foo` (lib) due to 1 previous error")
         .run();
     assert!(p.read_file("src/lib.rs").contains("let mut x = 3;"));
 }
@@ -51,178 +51,6 @@ fn fix_broken_if_requested() {
     p.cargo("fix --allow-no-vcs --broken-code")
         .env("__CARGO_FIX_YOLO", "1")
         .run();
-}
-
-fn rustc_shim_for_cargo_fix() -> Project {
-    // This works as follows:
-    // - Create a `rustc` shim (the "foo" project) which will pretend that the
-    //   verification step fails.
-    // - There is an empty build script so `foo` has `OUT_DIR` to track the steps.
-    // - The first "check", `foo` creates a file in OUT_DIR, and it completes
-    //   successfully with a warning diagnostic to remove unused `mut`.
-    // - rustfix removes the `mut`.
-    // - The second "check" to verify the changes, `foo` swaps out the content
-    //   with something that fails to compile. It creates a second file so it
-    //   won't do anything in the third check.
-    // - cargo fix discovers that the fix failed, and it backs out the changes.
-    // - The third "check" is done to display the original diagnostics of the
-    //   original code.
-    let p = project()
-        .file(
-            "foo/Cargo.toml",
-            r#"
-                [package]
-                name = 'foo'
-                version = '0.1.0'
-                [workspace]
-            "#,
-        )
-        .file(
-            "foo/src/main.rs",
-            r#"
-                use std::env;
-                use std::fs;
-                use std::io::Write;
-                use std::path::{Path, PathBuf};
-                use std::process::{self, Command};
-
-                fn main() {
-                    // Ignore calls to things like --print=file-names and compiling build.rs.
-                    // Also compatible for rustc invocations with `@path` argfile.
-                    let is_lib_rs = env::args_os()
-                        .map(PathBuf::from)
-                        .flat_map(|p| if let Some(p) = p.to_str().unwrap_or_default().strip_prefix("@") {
-                            fs::read_to_string(p).unwrap().lines().map(PathBuf::from).collect()
-                        } else {
-                            vec![p]
-                        })
-                        .any(|l| l == Path::new("src/lib.rs"));
-                    if is_lib_rs {
-                        let path = PathBuf::from(env::var_os("OUT_DIR").unwrap());
-                        let first = path.join("first");
-                        let second = path.join("second");
-                        if first.exists() && !second.exists() {
-                            fs::write("src/lib.rs", b"not rust code").unwrap();
-                            fs::File::create(&second).unwrap();
-                        } else {
-                            fs::File::create(&first).unwrap();
-                        }
-                    }
-                    let status = Command::new("rustc")
-                        .args(env::args().skip(1))
-                        .status()
-                        .expect("failed to run rustc");
-                    process::exit(status.code().unwrap_or(2));
-                }
-            "#,
-        )
-        .file(
-            "bar/Cargo.toml",
-            r#"
-                [package]
-                name = 'bar'
-                version = '0.1.0'
-                [workspace]
-            "#,
-        )
-        .file("bar/build.rs", "fn main() {}")
-        .file(
-            "bar/src/lib.rs",
-            r#"
-                pub fn foo() {
-                    let mut x = 3;
-                    drop(x);
-                }
-            "#,
-        )
-        .build();
-
-    // Build our rustc shim
-    p.cargo("build").cwd("foo").run();
-
-    p
-}
-
-#[cargo_test]
-fn broken_fixes_backed_out() {
-    let p = rustc_shim_for_cargo_fix();
-    // Attempt to fix code, but our shim will always fail the second compile.
-    p.cargo("fix --allow-no-vcs --lib")
-        .cwd("bar")
-        .env("__CARGO_FIX_YOLO", "1")
-        .env("RUSTC", p.root().join("foo/target/debug/foo"))
-        .with_stderr_contains(
-            "warning: failed to automatically apply fixes suggested by rustc \
-             to crate `bar`\n\
-             \n\
-             after fixes were automatically applied the compiler reported \
-             errors within these files:\n\
-             \n  \
-             * src/lib.rs\n\
-             \n\
-             This likely indicates a bug in either rustc or cargo itself,\n\
-             and we would appreciate a bug report! You're likely to see \n\
-             a number of compiler warnings after this message which cargo\n\
-             attempted to fix but failed. If you could open an issue at\n\
-             https://github.com/rust-lang/rust/issues\n\
-             quoting the full output of this command we'd be very appreciative!\n\
-             Note that you may be able to make some more progress in the near-term\n\
-             fixing code with the `--broken-code` flag\n\
-             \n\
-             The following errors were reported:\n\
-             error: expected one of `!` or `::`, found `rust`\n\
-             ",
-        )
-        .with_stderr_contains("Original diagnostics will follow.")
-        .with_stderr_contains("[WARNING] variable does not need to be mutable")
-        .with_stderr_does_not_contain("[..][FIXED][..]")
-        .run();
-
-    // Make sure the fix which should have been applied was backed out
-    assert!(p.read_file("bar/src/lib.rs").contains("let mut x = 3;"));
-}
-
-#[cargo_test]
-fn broken_clippy_fixes_backed_out() {
-    let p = rustc_shim_for_cargo_fix();
-    // Attempt to fix code, but our shim will always fail the second compile.
-    // Also, we use `clippy` as a workspace wrapper to make sure that we properly
-    // generate the report bug text.
-    p.cargo("fix --allow-no-vcs --lib")
-        .cwd("bar")
-        .env("__CARGO_FIX_YOLO", "1")
-        .env("RUSTC", p.root().join("foo/target/debug/foo"))
-        //  We can't use `clippy` so we use a `rustc` workspace wrapper instead
-        .env("RUSTC_WORKSPACE_WRAPPER", tools::wrapped_clippy_driver())
-        .with_stderr_contains(
-            "warning: failed to automatically apply fixes suggested by rustc \
-             to crate `bar`\n\
-             \n\
-             after fixes were automatically applied the compiler reported \
-             errors within these files:\n\
-             \n  \
-             * src/lib.rs\n\
-             \n\
-             This likely indicates a bug in either rustc or cargo itself,\n\
-             and we would appreciate a bug report! You're likely to see \n\
-             a number of compiler warnings after this message which cargo\n\
-             attempted to fix but failed. If you could open an issue at\n\
-             https://github.com/rust-lang/rust-clippy/issues\n\
-             quoting the full output of this command we'd be very appreciative!\n\
-             Note that you may be able to make some more progress in the near-term\n\
-             fixing code with the `--broken-code` flag\n\
-             \n\
-             The following errors were reported:\n\
-             error: expected one of `!` or `::`, found `rust`\n\
-             ",
-        )
-        .with_stderr_contains("Original diagnostics will follow.")
-        .with_stderr_contains("[WARNING] variable does not need to be mutable")
-        .with_stderr_does_not_contain("[..][FIXED][..]")
-        .run();
-
-    // Make sure the fix which should have been applied was backed out
-    assert!(p.read_file("bar/src/lib.rs").contains("let mut x = 3;"));
 }
 
 #[cargo_test]
@@ -1694,11 +1522,10 @@ fn fix_shared_cross_workspace() {
 fn abnormal_exit() {
     // rustc fails unexpectedly after applying fixes, should show some error information.
     //
-    // This works with a proc-macro that runs three times:
+    // This works with a proc-macro that runs twice:
     // - First run (collect diagnostics pass): writes a file, exits normally.
     // - Second run (verify diagnostics work): it detects the presence of the
     //   file, removes the file, and aborts the process.
-    // - Third run (collecting messages to display): file not found, exits normally.
     let p = project()
         .file(
             "Cargo.toml",
@@ -1857,9 +1684,22 @@ fn non_edition_lint_migration() {
     assert!(contents.contains("from_utf8(crate::foo::FOO)"));
 }
 
-// For rust-lang/cargo#9857
 #[cargo_test]
 fn fix_in_dependency() {
+    // Tests what happens if rustc emits a suggestion to modify a file from a
+    // dependency in cargo's home directory. This should never happen, and
+    // indicates a bug in rustc. However, there are several known bugs in
+    // rustc where it does this (often involving macros), so `cargo fix` has a
+    // guard that says if the suggestion points to some location in CARGO_HOME
+    // to not apply it.
+    //
+    // See https://github.com/rust-lang/cargo/issues/9857 for some other
+    // examples.
+    //
+    // This test uses a simulated rustc which replays a suggestion via a JSON
+    // message that points into CARGO_HOME. This does not use the real rustc
+    // because as the bugs are fixed in the real rustc, that would cause this
+    // test to stop working.
     Package::new("bar", "1.0.0")
         .file(
             "src/lib.rs",
@@ -1895,8 +1735,146 @@ fn fix_in_dependency() {
             "#,
         )
         .build();
+    p.cargo("fetch").run();
 
-    p.cargo("fix --allow-no-vcs")
-        .with_stderr_does_not_contain("[FIXED] [..]")
+    // The path in CARGO_HOME.
+    let bar_path = std::fs::read_dir(paths::home().join(".cargo/registry/src"))
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    // Since this is a substitution into a Rust string (representing a JSON
+    // string), deal with backslashes like on Windows.
+    let bar_path_str = bar_path.to_str().unwrap().replace("\\", "/");
+
+    // This is a fake rustc that will emit a JSON message when the `foo` crate
+    // builds that tells cargo to modify a file it shouldn't.
+    let rustc = project()
+        .at("rustc-replay")
+        .file("Cargo.toml", &basic_manifest("rustc-replay", "1.0.0"))
+        .file("src/main.rs",
+            &r##"
+                fn main() {
+                    let pkg_name = match std::env::var("CARGO_PKG_NAME") {
+                        Ok(pkg_name) => pkg_name,
+                        Err(_) => {
+                            let r = std::process::Command::new("rustc")
+                                .args(std::env::args_os().skip(1))
+                                .status();
+                            std::process::exit(r.unwrap().code().unwrap_or(2));
+                        }
+                    };
+                    if pkg_name == "foo" {
+                        eprintln!("{}", r#"{
+                          "$message_type": "diagnostic",
+                          "message": "unused variable: `abc`",
+                          "code":
+                          {
+                            "code": "unused_variables",
+                            "explanation": null
+                          },
+                          "level": "warning",
+                          "spans":
+                          [
+                            {
+                              "file_name": "__BAR_PATH__/bar-1.0.0/src/lib.rs",
+                              "byte_start": 127,
+                              "byte_end": 129,
+                              "line_start": 5,
+                              "line_end": 5,
+                              "column_start": 29,
+                              "column_end": 31,
+                              "is_primary": true,
+                              "text":
+                              [
+                                {
+                                  "text": "                        let $i = 1;",
+                                  "highlight_start": 29,
+                                  "highlight_end": 31
+                                }
+                              ],
+                              "label": null,
+                              "suggested_replacement": null,
+                              "suggestion_applicability": null,
+                              "expansion": null
+                            }
+                          ],
+                          "children":
+                          [
+                            {
+                              "message": "`#[warn(unused_variables)]` on by default",
+                              "code": null,
+                              "level": "note",
+                              "spans":
+                              [],
+                              "children":
+                              [],
+                              "rendered": null
+                            },
+                            {
+                              "message": "if this is intentional, prefix it with an underscore",
+                              "code": null,
+                              "level": "help",
+                              "spans":
+                              [
+                                {
+                                  "file_name": "__BAR_PATH__/bar-1.0.0/src/lib.rs",
+                                  "byte_start": 127,
+                                  "byte_end": 129,
+                                  "line_start": 5,
+                                  "line_end": 5,
+                                  "column_start": 29,
+                                  "column_end": 31,
+                                  "is_primary": true,
+                                  "text":
+                                  [
+                                    {
+                                      "text": "                        let $i = 1;",
+                                      "highlight_start": 29,
+                                      "highlight_end": 31
+                                    }
+                                  ],
+                                  "label": null,
+                                  "suggested_replacement": "_abc",
+                                  "suggestion_applicability": "MachineApplicable",
+                                  "expansion": null
+                                }
+                              ],
+                              "children":
+                              [],
+                              "rendered": null
+                            }
+                          ],
+                          "rendered": "warning: unused variable: `abc`\n --> __BAR_PATH__/bar-1.0.0/src/lib.rs:5:29\n  |\n5 |                         let $i = 1;\n  |                             ^^ help: if this is intentional, prefix it with an underscore: `_abc`\n  |\n  = note: `#[warn(unused_variables)]` on by default\n\n"
+                        }"#.replace("\n", ""));
+                    }
+                }
+            "##.replace("__BAR_PATH__", &bar_path_str))
+        .build();
+    rustc.cargo("build").run();
+    let rustc_bin = rustc.bin("rustc-replay");
+
+    // The output here should not say `Fixed`.
+    //
+    // It is OK to compare the full diagnostic output here because the text is
+    // hard-coded in rustc-replay. Normally tests should not be checking the
+    // compiler output.
+    p.cargo("fix --lib --allow-no-vcs")
+        .env("RUSTC", &rustc_bin)
+        .with_stderr("\
+[CHECKING] bar v1.0.0
+[CHECKING] foo v0.1.0 [..]
+warning: unused variable: `abc`
+ --> [ROOT]/home/.cargo/registry/src/[..]/bar-1.0.0/src/lib.rs:5:29
+  |
+5 |                         let $i = 1;
+  |                             ^^ help: if this is intentional, prefix it with an underscore: `_abc`
+  |
+  = note: `#[warn(unused_variables)]` on by default
+
+warning: `foo` (lib) generated 1 warning (run `cargo fix --lib -p foo` to apply 1 suggestion)
+[FINISHED] [..]
+")
         .run();
 }

@@ -1,5 +1,6 @@
 use cargo::core::dependency::DepKind;
 use cargo::core::PackageIdSpec;
+use cargo::core::PackageIdSpecQuery;
 use cargo::core::Resolve;
 use cargo::core::Workspace;
 use cargo::ops::cargo_remove::remove;

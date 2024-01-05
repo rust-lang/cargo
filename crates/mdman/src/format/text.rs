@@ -26,11 +26,11 @@ impl super::Formatter for TextFormatter {
     fn render_options_start(&self) -> &'static str {
         // Tell pulldown_cmark to ignore this.
         // This will be stripped out later.
-        "<![CDATA["
+        "<![CDATA[\n"
     }
 
     fn render_options_end(&self) -> &'static str {
-        "]]>"
+        "]]>\n"
     }
 
     fn render_option(
@@ -46,7 +46,7 @@ impl super::Formatter for TextFormatter {
         let trimmed: Vec<_> = rendered_options.iter().map(|o| o.trim()).collect();
         // Wrap in HTML tags, they will be stripped out during rendering.
         Ok(format!(
-            "<dt>{}</dt>\n<dd>{}</dd>\n<br>\n",
+            "<dt>{}</dt>\n<dd>\n{}</dd>\n<br>\n",
             trimmed.join(", "),
             block
         ))

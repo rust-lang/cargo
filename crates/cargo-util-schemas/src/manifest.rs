@@ -16,7 +16,11 @@ use serde::{Deserialize, Serialize};
 use serde_untagged::UntaggedEnumVisitor;
 
 use crate::core::PackageIdSpec;
-use crate::util::RustVersion;
+use crate::core::PartialVersion;
+use crate::core::PartialVersionError;
+use crate::restricted_names;
+
+pub use crate::restricted_names::NameValidationError;
 
 /// This type is used to deserialize `Cargo.toml` files.
 #[derive(Debug, Deserialize, Serialize)]
@@ -31,20 +35,21 @@ pub struct TomlManifest {
     pub example: Option<Vec<TomlExampleTarget>>,
     pub test: Option<Vec<TomlTestTarget>>,
     pub bench: Option<Vec<TomlTestTarget>>,
-    pub dependencies: Option<BTreeMap<String, InheritableDependency>>,
-    pub dev_dependencies: Option<BTreeMap<String, InheritableDependency>>,
+    pub dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
+    pub dev_dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
     #[serde(rename = "dev_dependencies")]
-    pub dev_dependencies2: Option<BTreeMap<String, InheritableDependency>>,
-    pub build_dependencies: Option<BTreeMap<String, InheritableDependency>>,
+    pub dev_dependencies2: Option<BTreeMap<PackageName, InheritableDependency>>,
+    pub build_dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
     #[serde(rename = "build_dependencies")]
-    pub build_dependencies2: Option<BTreeMap<String, InheritableDependency>>,
-    pub features: Option<BTreeMap<String, Vec<String>>>,
+    pub build_dependencies2: Option<BTreeMap<PackageName, InheritableDependency>>,
+    pub features: Option<BTreeMap<FeatureName, Vec<String>>>,
     pub target: Option<BTreeMap<String, TomlPlatform>>,
     pub replace: Option<BTreeMap<String, TomlDependency>>,
-    pub patch: Option<BTreeMap<String, BTreeMap<String, TomlDependency>>>,
+    pub patch: Option<BTreeMap<String, BTreeMap<PackageName, TomlDependency>>>,
     pub workspace: Option<TomlWorkspace>,
     pub badges: Option<InheritableBtreeMap>,
     pub lints: Option<InheritableLints>,
+    // when adding new fields, be sure to check whether `to_virtual_manifest` should disallow them
 }
 
 impl TomlManifest {
@@ -56,19 +61,19 @@ impl TomlManifest {
         self.package.as_ref().or(self.project.as_ref())
     }
 
-    pub fn dev_dependencies(&self) -> Option<&BTreeMap<String, InheritableDependency>> {
+    pub fn dev_dependencies(&self) -> Option<&BTreeMap<PackageName, InheritableDependency>> {
         self.dev_dependencies
             .as_ref()
             .or(self.dev_dependencies2.as_ref())
     }
 
-    pub fn build_dependencies(&self) -> Option<&BTreeMap<String, InheritableDependency>> {
+    pub fn build_dependencies(&self) -> Option<&BTreeMap<PackageName, InheritableDependency>> {
         self.build_dependencies
             .as_ref()
             .or(self.build_dependencies2.as_ref())
     }
 
-    pub fn features(&self) -> Option<&BTreeMap<String, Vec<String>>> {
+    pub fn features(&self) -> Option<&BTreeMap<FeatureName, Vec<String>>> {
         self.features.as_ref()
     }
 }
@@ -84,7 +89,7 @@ pub struct TomlWorkspace {
 
     // Properties that can be inherited by members.
     pub package: Option<InheritablePackage>,
-    pub dependencies: Option<BTreeMap<String, TomlDependency>>,
+    pub dependencies: Option<BTreeMap<PackageName, TomlDependency>>,
     pub lints: Option<TomlLints>,
 }
 
@@ -122,7 +127,7 @@ pub struct InheritablePackage {
 pub struct TomlPackage {
     pub edition: Option<InheritableString>,
     pub rust_version: Option<InheritableRustVersion>,
-    pub name: String,
+    pub name: PackageName,
     pub version: Option<InheritableSemverVersion>,
     pub authors: Option<InheritableVecString>,
     pub build: Option<StringOrBool>,
@@ -534,6 +539,13 @@ impl TomlDependency {
         }
     }
 
+    pub fn is_public(&self) -> bool {
+        match self {
+            TomlDependency::Detailed(d) => d.public.unwrap_or(false),
+            TomlDependency::Simple(..) => false,
+        }
+    }
+
     pub fn unused_keys(&self) -> Vec<String> {
         match self {
             TomlDependency::Simple(_) => vec![],
@@ -562,7 +574,7 @@ impl<'de, P: Deserialize<'de> + Clone> de::Deserialize<'de> for TomlDependency<P
 #[serde(rename_all = "kebab-case")]
 pub struct TomlDetailedDependency<P: Clone = String> {
     pub version: Option<String>,
-    pub registry: Option<String>,
+    pub registry: Option<RegistryName>,
     /// The URL of the `registry` field.
     /// This is an internal implementation detail. When Cargo creates a
     /// package, it replaces `registry` with `registry-index` so that the
@@ -582,7 +594,7 @@ pub struct TomlDetailedDependency<P: Clone = String> {
     pub default_features: Option<bool>,
     #[serde(rename = "default_features")]
     pub default_features2: Option<bool>,
-    pub package: Option<String>,
+    pub package: Option<PackageName>,
     pub public: Option<bool>,
 
     /// One or more of `bin`, `cdylib`, `staticlib`, `bin:<name>`.
@@ -631,10 +643,10 @@ impl<P: Clone> Default for TomlDetailedDependency<P> {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
-pub struct TomlProfiles(pub BTreeMap<String, TomlProfile>);
+pub struct TomlProfiles(pub BTreeMap<ProfileName, TomlProfile>);
 
 impl TomlProfiles {
-    pub fn get_all(&self) -> &BTreeMap<String, TomlProfile> {
+    pub fn get_all(&self) -> &BTreeMap<ProfileName, TomlProfile> {
         &self.0
     }
 
@@ -668,6 +680,98 @@ pub struct TomlProfile {
     pub build_override: Option<Box<TomlProfile>>,
     /// Unstable feature `-Ztrim-paths`.
     pub trim_paths: Option<TomlTrimPaths>,
+}
+
+impl TomlProfile {
+    /// Overwrite self's values with the given profile.
+    pub fn merge(&mut self, profile: &Self) {
+        if let Some(v) = &profile.opt_level {
+            self.opt_level = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.lto {
+            self.lto = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.codegen_backend {
+            self.codegen_backend = Some(v.clone());
+        }
+
+        if let Some(v) = profile.codegen_units {
+            self.codegen_units = Some(v);
+        }
+
+        if let Some(v) = profile.debug {
+            self.debug = Some(v);
+        }
+
+        if let Some(v) = profile.debug_assertions {
+            self.debug_assertions = Some(v);
+        }
+
+        if let Some(v) = &profile.split_debuginfo {
+            self.split_debuginfo = Some(v.clone());
+        }
+
+        if let Some(v) = profile.rpath {
+            self.rpath = Some(v);
+        }
+
+        if let Some(v) = &profile.panic {
+            self.panic = Some(v.clone());
+        }
+
+        if let Some(v) = profile.overflow_checks {
+            self.overflow_checks = Some(v);
+        }
+
+        if let Some(v) = profile.incremental {
+            self.incremental = Some(v);
+        }
+
+        if let Some(v) = &profile.rustflags {
+            self.rustflags = Some(v.clone());
+        }
+
+        if let Some(other_package) = &profile.package {
+            match &mut self.package {
+                Some(self_package) => {
+                    for (spec, other_pkg_profile) in other_package {
+                        match self_package.get_mut(spec) {
+                            Some(p) => p.merge(other_pkg_profile),
+                            None => {
+                                self_package.insert(spec.clone(), other_pkg_profile.clone());
+                            }
+                        }
+                    }
+                }
+                None => self.package = Some(other_package.clone()),
+            }
+        }
+
+        if let Some(other_bo) = &profile.build_override {
+            match &mut self.build_override {
+                Some(self_bo) => self_bo.merge(other_bo),
+                None => self.build_override = Some(other_bo.clone()),
+            }
+        }
+
+        if let Some(v) = &profile.inherits {
+            self.inherits = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.dir_name {
+            self.dir_name = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.strip {
+            self.strip = Some(v.clone());
+        }
+
+        if let Some(v) = &profile.trim_paths {
+            self.trim_paths = Some(v.clone())
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash)]
@@ -1008,27 +1112,138 @@ impl TomlTarget {
     }
 }
 
+macro_rules! str_newtype {
+    ($name:ident) => {
+        /// Verified string newtype
+        #[derive(Serialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        #[serde(transparent)]
+        pub struct $name<T: AsRef<str> = String>(T);
+
+        impl<T: AsRef<str>> $name<T> {
+            pub fn into_inner(self) -> T {
+                self.0
+            }
+        }
+
+        impl<T: AsRef<str>> AsRef<str> for $name<T> {
+            fn as_ref(&self) -> &str {
+                self.0.as_ref()
+            }
+        }
+
+        impl<T: AsRef<str>> std::ops::Deref for $name<T> {
+            type Target = T;
+
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
+        }
+
+        impl<T: AsRef<str>> std::borrow::Borrow<str> for $name<T> {
+            fn borrow(&self) -> &str {
+                self.0.as_ref()
+            }
+        }
+
+        impl<'a> std::str::FromStr for $name<String> {
+            type Err = restricted_names::NameValidationError;
+
+            fn from_str(value: &str) -> Result<Self, Self::Err> {
+                Self::new(value.to_owned())
+            }
+        }
+
+        impl<'de, T: AsRef<str> + serde::Deserialize<'de>> serde::Deserialize<'de> for $name<T> {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                let inner = T::deserialize(deserializer)?;
+                Self::new(inner).map_err(serde::de::Error::custom)
+            }
+        }
+
+        impl<T: AsRef<str>> Display for $name<T> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                self.0.as_ref().fmt(f)
+            }
+        }
+    };
+}
+
+str_newtype!(PackageName);
+
+impl<T: AsRef<str>> PackageName<T> {
+    /// Validated package name
+    pub fn new(name: T) -> Result<Self, NameValidationError> {
+        restricted_names::validate_package_name(name.as_ref(), "package name")?;
+        Ok(Self(name))
+    }
+}
+
+impl PackageName {
+    /// Coerce a value to be a validate package name
+    ///
+    /// Replaces invalid values with `placeholder`
+    pub fn sanitize(name: impl AsRef<str>, placeholder: char) -> Self {
+        PackageName(restricted_names::sanitize_package_name(
+            name.as_ref(),
+            placeholder,
+        ))
+    }
+}
+
+str_newtype!(RegistryName);
+
+impl<T: AsRef<str>> RegistryName<T> {
+    /// Validated registry name
+    pub fn new(name: T) -> Result<Self, NameValidationError> {
+        restricted_names::validate_package_name(name.as_ref(), "registry name")?;
+        Ok(Self(name))
+    }
+}
+
+str_newtype!(ProfileName);
+
+impl<T: AsRef<str>> ProfileName<T> {
+    /// Validated profile name
+    pub fn new(name: T) -> Result<Self, NameValidationError> {
+        restricted_names::validate_profile_name(name.as_ref())?;
+        Ok(Self(name))
+    }
+}
+
+str_newtype!(FeatureName);
+
+impl<T: AsRef<str>> FeatureName<T> {
+    /// Validated feature name
+    pub fn new(name: T) -> Result<Self, NameValidationError> {
+        restricted_names::validate_feature_name(name.as_ref())?;
+        Ok(Self(name))
+    }
+}
+
 /// Corresponds to a `target` entry, but `TomlTarget` is already used.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlPlatform {
-    pub dependencies: Option<BTreeMap<String, InheritableDependency>>,
-    pub build_dependencies: Option<BTreeMap<String, InheritableDependency>>,
+    pub dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
+    pub build_dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
     #[serde(rename = "build_dependencies")]
-    pub build_dependencies2: Option<BTreeMap<String, InheritableDependency>>,
-    pub dev_dependencies: Option<BTreeMap<String, InheritableDependency>>,
+    pub build_dependencies2: Option<BTreeMap<PackageName, InheritableDependency>>,
+    pub dev_dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
     #[serde(rename = "dev_dependencies")]
-    pub dev_dependencies2: Option<BTreeMap<String, InheritableDependency>>,
+    pub dev_dependencies2: Option<BTreeMap<PackageName, InheritableDependency>>,
 }
 
 impl TomlPlatform {
-    pub fn dev_dependencies(&self) -> Option<&BTreeMap<String, InheritableDependency>> {
+    pub fn dev_dependencies(&self) -> Option<&BTreeMap<PackageName, InheritableDependency>> {
         self.dev_dependencies
             .as_ref()
             .or(self.dev_dependencies2.as_ref())
     }
 
-    pub fn build_dependencies(&self) -> Option<&BTreeMap<String, InheritableDependency>> {
+    pub fn build_dependencies(&self) -> Option<&BTreeMap<PackageName, InheritableDependency>> {
         self.build_dependencies
             .as_ref()
             .or(self.build_dependencies2.as_ref())
@@ -1106,6 +1321,71 @@ pub enum TomlLintLevel {
     Deny,
     Warn,
     Allow,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Debug, serde::Serialize)]
+#[serde(transparent)]
+pub struct RustVersion(PartialVersion);
+
+impl std::ops::Deref for RustVersion {
+    type Target = PartialVersion;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::str::FromStr for RustVersion {
+    type Err = RustVersionError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let partial = value.parse::<PartialVersion>();
+        let partial = partial.map_err(RustVersionErrorKind::PartialVersion)?;
+        if partial.pre.is_some() {
+            return Err(RustVersionErrorKind::Prerelease.into());
+        }
+        if partial.build.is_some() {
+            return Err(RustVersionErrorKind::BuildMetadata.into());
+        }
+        Ok(Self(partial))
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for RustVersion {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        UntaggedEnumVisitor::new()
+            .expecting("SemVer version")
+            .string(|value| value.parse().map_err(serde::de::Error::custom))
+            .deserialize(deserializer)
+    }
+}
+
+impl Display for RustVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+/// Error parsing a [`RustVersion`].
+#[derive(Debug, thiserror::Error)]
+#[error(transparent)]
+pub struct RustVersionError(#[from] RustVersionErrorKind);
+
+/// Non-public error kind for [`RustVersionError`].
+#[non_exhaustive]
+#[derive(Debug, thiserror::Error)]
+enum RustVersionErrorKind {
+    #[error("unexpected prerelease field, expected a version like \"1.32\"")]
+    Prerelease,
+
+    #[error("unexpected build field, expected a version like \"1.32\"")]
+    BuildMetadata,
+
+    #[error(transparent)]
+    PartialVersion(#[from] PartialVersionError),
 }
 
 #[derive(Copy, Clone, Debug)]

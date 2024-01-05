@@ -25,6 +25,9 @@ pub struct Dependency {
     /// Whether the dependency is opted-in with a feature flag.
     pub optional: Option<bool>,
 
+    /// Whether the dependency is marked as public.
+    pub public: Option<bool>,
+
     /// List of features to add (or None to keep features unchanged).
     pub features: Option<IndexSet<String>>,
     /// Whether default features are enabled.
@@ -48,6 +51,7 @@ impl Dependency {
         Self {
             name: name.into(),
             optional: None,
+            public: None,
             features: None,
             default_features: None,
             inherited_features: None,
@@ -161,6 +165,11 @@ impl Dependency {
     /// Get whether the dep is optional.
     pub fn optional(&self) -> Option<bool> {
         self.optional
+    }
+
+    /// Get whether the dep is public.
+    pub fn public(&self) -> Option<bool> {
+        self.public
     }
 
     /// Get the SourceID for this dependency.
@@ -325,16 +334,18 @@ impl Dependency {
             };
 
             let optional = table.get("optional").and_then(|v| v.as_bool());
+            let public = table.get("public").and_then(|v| v.as_bool());
 
             let dep = Self {
                 name,
-                rename,
+                optional,
+                public,
+                features,
+                default_features,
+                inherited_features: None,
                 source: Some(source),
                 registry,
-                default_features,
-                features,
-                optional,
-                inherited_features: None,
+                rename,
             };
             Ok(dep)
         } else {
@@ -366,6 +377,7 @@ impl Dependency {
             crate_root.display()
         );
         let table: toml_edit::Item = match (
+            self.public.unwrap_or(false),
             self.optional.unwrap_or(false),
             self.features.as_ref(),
             self.default_features.unwrap_or(true),
@@ -376,20 +388,21 @@ impl Dependency {
             // Extra short when version flag only
             (
                 false,
+                false,
                 None,
                 true,
                 Some(Source::Registry(RegistrySource { version: v })),
                 None,
                 None,
             ) => toml_edit::value(v),
-            (false, None, true, Some(Source::Workspace(WorkspaceSource {})), None, None) => {
+            (false, false, None, true, Some(Source::Workspace(WorkspaceSource {})), None, None) => {
                 let mut table = toml_edit::InlineTable::default();
                 table.set_dotted(true);
                 table.insert("workspace", true.into());
                 toml_edit::value(toml_edit::Value::InlineTable(table))
             }
             // Other cases are represented as an inline table
-            (_, _, _, _, _, _) => {
+            (_, _, _, _, _, _, _) => {
                 let mut table = toml_edit::InlineTable::default();
 
                 match &self.source {
@@ -441,6 +454,9 @@ impl Dependency {
                 }
                 if let Some(v) = self.optional {
                     table.insert("optional", v.into());
+                }
+                if let Some(v) = self.public {
+                    table.insert("public", v.into());
                 }
 
                 toml_edit::value(toml_edit::Value::InlineTable(table))
@@ -577,6 +593,15 @@ impl Dependency {
                 }
                 None => {
                     table.remove("optional");
+                }
+            }
+            match self.public {
+                Some(v) => {
+                    table.set_dotted(false);
+                    overwrite_value(table, "public", v);
+                }
+                None => {
+                    table.remove("public");
                 }
             }
         } else {
