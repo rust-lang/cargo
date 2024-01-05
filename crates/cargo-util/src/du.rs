@@ -4,6 +4,7 @@ use anyhow::{Context, Result};
 use ignore::overrides::OverrideBuilder;
 use ignore::{WalkBuilder, WalkState};
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 /// Determines the disk usage of all files in the given directory.
@@ -39,7 +40,7 @@ fn du_inner(path: &Path, patterns: &[&str]) -> Result<u64> {
         .git_ignore(false)
         .git_exclude(false);
     let walker = builder.build_parallel();
-    let total = Arc::new(Mutex::new(0u64));
+    let total = AtomicU64::new(0);
     // A slot used to indicate there was an error while walking.
     //
     // It is possible that more than one error happens (such as in different
@@ -51,8 +52,8 @@ fn du_inner(path: &Path, patterns: &[&str]) -> Result<u64> {
                 Ok(entry) => match entry.metadata() {
                     Ok(meta) => {
                         if meta.is_file() {
-                            let mut lock = total.lock().unwrap();
-                            *lock += meta.len();
+                            // Note that fetch_add may wrap the u64.
+                            total.fetch_add(meta.len(), Ordering::Relaxed);
                         }
                     }
                     Err(e) => {
@@ -73,6 +74,5 @@ fn du_inner(path: &Path, patterns: &[&str]) -> Result<u64> {
         return Err(e);
     }
 
-    let total = *total.lock().unwrap();
-    Ok(total)
+    Ok(total.load(Ordering::Relaxed))
 }
