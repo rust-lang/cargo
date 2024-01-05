@@ -29,10 +29,9 @@ pub fn with_retry_and_progress(
 ) -> CargoResult<()> {
     std::thread::scope(|s| {
         let mut progress_bar = Progress::new("Fetch", config);
-        let is_shallow = config
-            .cli_unstable()
-            .gitoxide
-            .map_or(false, |gix| gix.shallow_deps || gix.shallow_index);
+        let is_shallow = config.cli_unstable().git.map_or(false, |features| {
+            features.shallow_deps || features.shallow_index
+        });
         network::retry::with_retry(config, || {
             let progress_root: Arc<gix::progress::tree::Root> =
                 gix::progress::tree::root::Options {

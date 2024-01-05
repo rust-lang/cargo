@@ -770,6 +770,7 @@ unstable_cli_options!(
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
     features: Option<Vec<String>>,
     gc: bool = ("Track cache usage and \"garbage collect\" unused files"),
+    git: Option<GitFeatures> = ("Enable support for shallow git fetch operations"),
     gitoxide: Option<GitoxideFeatures> = ("Use gitoxide for the given git interactions, or all of them if no argument is given"),
     host_config: bool = ("Enable the `[host]` section in the .cargo/config.toml file"),
     lints: bool = ("Pass `[lints]` to the linting tools"),
@@ -875,13 +876,47 @@ where
 }
 
 #[derive(Debug, Copy, Clone, Default, Deserialize)]
-pub struct GitoxideFeatures {
-    /// All fetches are done with `gitoxide`, which includes git dependencies as well as the crates index.
-    pub fetch: bool,
+pub struct GitFeatures {
     /// When cloning the index, perform a shallow clone. Maintain shallowness upon subsequent fetches.
     pub shallow_index: bool,
     /// When cloning git dependencies, perform a shallow clone and maintain shallowness on subsequent fetches.
     pub shallow_deps: bool,
+}
+
+impl GitFeatures {
+    fn all() -> Self {
+        GitFeatures {
+            shallow_index: true,
+            shallow_deps: true,
+        }
+    }
+}
+
+fn parse_git(it: impl Iterator<Item = impl AsRef<str>>) -> CargoResult<Option<GitFeatures>> {
+    let mut out = GitFeatures::default();
+    let GitFeatures {
+        shallow_index,
+        shallow_deps,
+    } = &mut out;
+
+    for e in it {
+        match e.as_ref() {
+            "shallow-index" => *shallow_index = true,
+            "shallow-deps" => *shallow_deps = true,
+            _ => {
+                bail!(
+                    "unstable 'git' only takes 'shallow-index' and 'shallow-deps' as valid inputs"
+                )
+            }
+        }
+    }
+    Ok(Some(out))
+}
+
+#[derive(Debug, Copy, Clone, Default, Deserialize)]
+pub struct GitoxideFeatures {
+    /// All fetches are done with `gitoxide`, which includes git dependencies as well as the crates index.
+    pub fetch: bool,
     /// Checkout git dependencies using `gitoxide` (submodules are still handled by git2 ATM, and filters
     /// like linefeed conversions are unsupported).
     pub checkout: bool,
@@ -895,9 +930,7 @@ impl GitoxideFeatures {
     fn all() -> Self {
         GitoxideFeatures {
             fetch: true,
-            shallow_index: true,
             checkout: true,
-            shallow_deps: true,
             internal_use_git2: false,
         }
     }
@@ -907,9 +940,7 @@ impl GitoxideFeatures {
     fn safe() -> Self {
         GitoxideFeatures {
             fetch: true,
-            shallow_index: false,
             checkout: true,
-            shallow_deps: false,
             internal_use_git2: false,
         }
     }
@@ -921,21 +952,17 @@ fn parse_gitoxide(
     let mut out = GitoxideFeatures::default();
     let GitoxideFeatures {
         fetch,
-        shallow_index,
         checkout,
-        shallow_deps,
         internal_use_git2,
     } = &mut out;
 
     for e in it {
         match e.as_ref() {
             "fetch" => *fetch = true,
-            "shallow-index" => *shallow_index = true,
-            "shallow-deps" => *shallow_deps = true,
             "checkout" => *checkout = true,
             "internal-use-git2" => *internal_use_git2 = true,
             _ => {
-                bail!("unstable 'gitoxide' only takes `fetch`, 'shallow-index', 'shallow-deps' and 'checkout' as valid inputs")
+                bail!("unstable 'gitoxide' only takes `fetch` and 'checkout' as valid inputs")
             }
         }
     }
@@ -1109,6 +1136,12 @@ impl CliUnstable {
             "doctest-xcompile" => self.doctest_xcompile = parse_empty(k, v)?,
             "dual-proc-macros" => self.dual_proc_macros = parse_empty(k, v)?,
             "gc" => self.gc = parse_empty(k, v)?,
+            "git" => {
+                self.git = v.map_or_else(
+                    || Ok(Some(GitFeatures::all())),
+                    |v| parse_git(v.split(',')),
+                )?
+            }
             "gitoxide" => {
                 self.gitoxide = v.map_or_else(
                     || Ok(Some(GitoxideFeatures::all())),

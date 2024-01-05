@@ -16,7 +16,7 @@ mod utils;
 
 /// For `-Zgitoxide` integration.
 pub mod fetch {
-    use crate::core::features::GitoxideFeatures;
+    use crate::core::features::GitFeatures;
     use crate::Config;
 
     /// The kind remote repository to fetch.
@@ -37,18 +37,19 @@ pub mod fetch {
             repo_is_shallow: bool,
             config: &Config,
         ) -> gix::remote::fetch::Shallow {
-            let has_feature = |cb: &dyn Fn(GitoxideFeatures) -> bool| {
+            let has_feature = |cb: &dyn Fn(GitFeatures) -> bool| {
                 config
                     .cli_unstable()
-                    .gitoxide
+                    .git
                     .map_or(false, |features| cb(features))
             };
 
             // maintain shallow-ness and keep downloading single commits, or see if we can do shallow clones
             if !repo_is_shallow {
                 match self {
-                    RemoteKind::GitDependency if has_feature(&|git| git.shallow_deps) => {}
-                    RemoteKind::Registry if has_feature(&|git| git.shallow_index) => {}
+                    RemoteKind::GitDependency if has_feature(&|features| features.shallow_deps) => {
+                    }
+                    RemoteKind::Registry if has_feature(&|features| features.shallow_index) => {}
                     _ => return gix::remote::fetch::Shallow::NoChange,
                 }
             };

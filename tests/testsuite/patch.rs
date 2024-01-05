@@ -2531,8 +2531,11 @@ dependencies = [
     let mut cargo = p.cargo("tree");
     if shallow {
         cargo
-            .arg("-Zgitoxide=fetch,shallow-deps")
-            .masquerade_as_nightly_cargo(&["unstable features must be available for -Z gitoxide"]);
+            .arg("-Zgitoxide=fetch")
+            .arg("-Zgit=shallow-deps")
+            .masquerade_as_nightly_cargo(&[
+                "unstable features must be available for -Z gitoxide and -Z git",
+            ]);
     }
     cargo
         // .env("CARGO_LOG", "trace")
