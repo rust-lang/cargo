@@ -1164,7 +1164,7 @@ Valid operations are the following:
 
 ## git
 
-* Tracking Issue: [TODO]()
+* Tracking Issue: [TODO](https://github.com/rust-lang/cargo/issues/TODO)
 
 With the 'git' unstable feature, both `gitoxide` and `git2` will perform shallow fetches of the crate
 index and git dependencies.
