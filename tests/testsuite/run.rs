@@ -790,6 +790,7 @@ fn example_with_release_flag() {
         -C opt-level=3[..]\
         -C metadata=[..] \
         --out-dir [CWD]/target/release/deps \
+        -C strip=debuginfo \
         -L dependency=[CWD]/target/release/deps`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name a examples/a.rs [..]--crate-type bin \
@@ -797,6 +798,7 @@ fn example_with_release_flag() {
         -C opt-level=3[..]\
         -C metadata=[..] \
         --out-dir [CWD]/target/release/examples \
+        -C strip=debuginfo \
         -L dependency=[CWD]/target/release/deps \
          --extern bar=[CWD]/target/release/deps/libbar-[..].rlib`
 [FINISHED] release [optimized] target(s) in [..]
