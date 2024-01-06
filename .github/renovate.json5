@@ -4,7 +4,7 @@
   ],
   semanticCommits: 'enabled',
   configMigration: true,
-  dependencyDashboard: false,
+  dependencyDashboard: true,
   ignorePaths: [
     '**/tests/**',
   ],
