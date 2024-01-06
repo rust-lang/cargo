@@ -643,7 +643,7 @@ impl Default for Profile {
             rpath: false,
             incremental: false,
             panic: PanicStrategy::Unwind,
-            strip: Strip::Resolved(StripInner::None),
+            strip: Strip::Deferred(StripInner::None),
             rustflags: vec![],
             trim_paths: None,
         }
@@ -925,6 +925,15 @@ impl Strip {
         match self {
             Strip::Resolved(v) | Strip::Deferred(v) => v,
         }
+    }
+
+    pub(crate) fn is_deferred(&self) -> bool {
+        matches!(self, Strip::Deferred(_))
+    }
+
+    /// Reset to stripping debuginfo.
+    pub(crate) fn strip_debuginfo(self) -> Self {
+        Strip::Resolved(StripInner::Named("debuginfo".into()))
     }
 }
 
