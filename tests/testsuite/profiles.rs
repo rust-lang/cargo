@@ -607,7 +607,7 @@ fn strip_accepts_false_to_disable_strip() {
         .build();
 
     p.cargo("build --release -v")
-        .with_stderr_does_not_contain("-C strip")
+        .with_stderr_does_not_contain("[RUNNING] `rustc [..] -C strip[..]`")
         .run();
 }
 
