@@ -437,15 +437,6 @@ impl Default for TomlInheritedField {
     }
 }
 
-fn bool_no_false<'de, D: de::Deserializer<'de>>(deserializer: D) -> Result<bool, D::Error> {
-    let b: bool = Deserialize::deserialize(deserializer)?;
-    if b {
-        Ok(b)
-    } else {
-        Err(de::Error::custom("`workspace` cannot be false"))
-    }
-}
-
 #[derive(Deserialize, Serialize, Copy, Clone, Debug)]
 #[serde(try_from = "bool")]
 #[serde(into = "bool")]
@@ -1269,12 +1260,9 @@ impl TomlPlatform {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
-#[serde(expecting = "a lints table")]
-#[serde(rename_all = "kebab-case")]
+#[derive(Serialize, Debug, Clone)]
 pub struct InheritableLints {
     #[serde(skip_serializing_if = "is_false")]
-    #[serde(deserialize_with = "bool_no_false", default)]
     pub workspace: bool,
     #[serde(flatten)]
     pub lints: TomlLints,
@@ -1282,6 +1270,54 @@ pub struct InheritableLints {
 
 fn is_false(b: &bool) -> bool {
     !b
+}
+
+impl<'de> Deserialize<'de> for InheritableLints {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct InheritableLintsVisitor;
+
+        impl<'de> de::Visitor<'de> for InheritableLintsVisitor {
+            // The type that our Visitor is going to produce.
+            type Value = InheritableLints;
+
+            // Format a message stating what data this Visitor expects to receive.
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("a lints table")
+            }
+
+            // Deserialize MyMap from an abstract "map" provided by the
+            // Deserializer. The MapAccess input is a callback provided by
+            // the Deserializer to let us see each entry in the map.
+            fn visit_map<M>(self, mut access: M) -> Result<Self::Value, M::Error>
+            where
+                M: de::MapAccess<'de>,
+            {
+                let mut lints = TomlLints::new();
+                let mut workspace = false;
+
+                // While there are entries remaining in the input, add them
+                // into our map.
+                while let Some(key) = access.next_key()? {
+                    if key == "workspace" {
+                        workspace = match access.next_value()? {
+                            Some(WorkspaceValue) => true,
+                            None => false,
+                        };
+                    } else {
+                        let value = access.next_value()?;
+                        lints.insert(key, value);
+                    }
+                }
+
+                Ok(InheritableLints { workspace, lints })
+            }
+        }
+
+        deserializer.deserialize_map(InheritableLintsVisitor)
+    }
 }
 
 pub type TomlLints = BTreeMap<String, TomlToolLints>;

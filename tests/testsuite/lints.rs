@@ -170,6 +170,7 @@ fn warn_on_unused_key() {
     foo.cargo("check")
         .with_stderr(
             "\
+[WARNING] [CWD]/Cargo.toml: unused manifest key: lints.rust.rust-2018-idioms.unused
 [WARNING] [CWD]/Cargo.toml: unused manifest key: workspace.lints.rust.rust-2018-idioms.unused
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
