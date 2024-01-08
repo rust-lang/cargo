@@ -1651,6 +1651,37 @@ fn warn_inherit_unused_manifest_key_dep() {
 }
 
 #[cargo_test]
+fn warn_unused_workspace_package_field() {
+    Package::new("dep", "0.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = []
+            [workspace.package]
+            name = "unused"
+
+            [package]
+            name = "foo"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[WARNING] [CWD]/Cargo.toml: unused manifest key: workspace.package.name
+[CHECKING] foo v0.0.0 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn warn_inherit_unused_manifest_key_package() {
     Package::new("dep", "0.1.0").publish();
 
