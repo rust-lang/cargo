@@ -474,6 +474,8 @@
   [#12515](https://github.com/rust-lang/cargo/pull/12515)
 - ❗️ cargo-clean: error out if `--doc` is mixed with `-p`.
   [#12637](https://github.com/rust-lang/cargo/pull/12637)
+- ❗ cargo-new / cargo-init no longer exclude `Cargo.lock` in VCS ignore files for libraries.
+  [#12382](https://github.com/rust-lang/cargo/pull/12382)
 - cargo-update: silently deprecate `--aggressive` in favor of the new `--recursive`.
   [#12544](https://github.com/rust-lang/cargo/pull/12544)
 - cargo-update: `-p/--package` can be used as a positional argument.
