@@ -1,1 +1,10 @@
-     Created binary (application) `foo` package
+warning: compiling this new package may not work due to invalid workspace configuration
+
+failed to parse manifest at `[ROOT]/case/bar/Cargo.toml`
+
+Caused by:
+  error inheriting `edition` from workspace root manifest's `workspace.package.edition`
+
+Caused by:
+  failed to find a workspace root
+     Created binary (application) `bar` package
