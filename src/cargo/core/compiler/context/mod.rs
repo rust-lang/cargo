@@ -12,6 +12,7 @@ use crate::util::errors::CargoResult;
 use crate::util::profile;
 use anyhow::{bail, Context as _};
 use filetime::FileTime;
+use itertools::Itertools;
 use jobserver::Client;
 
 use super::build_plan::BuildPlan;
@@ -185,6 +186,32 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
             plan.output_plan(self.bcx.config);
         }
 
+        // Add `OUT_DIR` to env vars if unit has a build script.
+        let units_with_build_script = &self
+            .bcx
+            .roots
+            .iter()
+            .filter(|unit| self.build_scripts.contains_key(unit))
+            .dedup_by(|x, y| x.pkg.package_id() == y.pkg.package_id())
+            .collect::<Vec<_>>();
+        for unit in units_with_build_script {
+            for dep in &self.bcx.unit_graph[unit] {
+                if dep.unit.mode.is_run_custom_build() {
+                    let out_dir = self
+                        .files()
+                        .build_script_out_dir(&dep.unit)
+                        .display()
+                        .to_string();
+                    let script_meta = self.get_run_build_script_metadata(&dep.unit);
+                    self.compilation
+                        .extra_env
+                        .entry(script_meta)
+                        .or_insert_with(Vec::new)
+                        .push(("OUT_DIR".to_string(), out_dir));
+                }
+            }
+        }
+
         // Collect the result of the build into `self.compilation`.
         for unit in &self.bcx.roots {
             // Collect tests and executables.
@@ -210,26 +237,6 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
                     self.compilation
                         .cdylibs
                         .push(self.unit_output(unit, bindst));
-                }
-            }
-
-            // If the unit has a build script, add `OUT_DIR` to the
-            // environment variables.
-            if unit.target.is_lib() {
-                for dep in &self.bcx.unit_graph[unit] {
-                    if dep.unit.mode.is_run_custom_build() {
-                        let out_dir = self
-                            .files()
-                            .build_script_out_dir(&dep.unit)
-                            .display()
-                            .to_string();
-                        let script_meta = self.get_run_build_script_metadata(&dep.unit);
-                        self.compilation
-                            .extra_env
-                            .entry(script_meta)
-                            .or_insert_with(Vec::new)
-                            .push(("OUT_DIR".to_string(), out_dir));
-                    }
                 }
             }
 
