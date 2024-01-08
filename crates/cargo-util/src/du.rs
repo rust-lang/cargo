@@ -4,8 +4,10 @@ use anyhow::{Context, Result};
 use ignore::overrides::OverrideBuilder;
 use ignore::{WalkBuilder, WalkState};
 use std::path::Path;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+
+#[cfg(target_has_atomic = "64")]
+use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Determines the disk usage of all files in the given directory.
 ///
@@ -40,7 +42,16 @@ fn du_inner(path: &Path, patterns: &[&str]) -> Result<u64> {
         .git_ignore(false)
         .git_exclude(false);
     let walker = builder.build_parallel();
+
+    // Not all targets support atomics, so a mutex is used as a fallback
+    // https://github.com/rust-lang/cargo/pull/12981
+    // https://doc.rust-lang.org/std/sync/atomic/index.html#portability
+    #[cfg(target_has_atomic = "64")]
     let total = AtomicU64::new(0);
+
+    #[cfg(not(target_has_atomic = "64"))]
+    let total = Arc::new(Mutex::new(0_u64));
+
     // A slot used to indicate there was an error while walking.
     //
     // It is possible that more than one error happens (such as in different
@@ -52,8 +63,17 @@ fn du_inner(path: &Path, patterns: &[&str]) -> Result<u64> {
                 Ok(entry) => match entry.metadata() {
                     Ok(meta) => {
                         if meta.is_file() {
-                            // Note that fetch_add may wrap the u64.
-                            total.fetch_add(meta.len(), Ordering::Relaxed);
+                            #[cfg(target_has_atomic = "64")]
+                            {
+                                // Note that fetch_add may wrap the u64.
+                                total.fetch_add(meta.len(), Ordering::Relaxed);
+                            }
+
+                            #[cfg(not(target_has_atomic = "64"))]
+                            {
+                                let mut lock = total.lock().unwrap();
+                                *lock += meta.len();
+                            }
                         }
                     }
                     Err(e) => {
@@ -74,5 +94,9 @@ fn du_inner(path: &Path, patterns: &[&str]) -> Result<u64> {
         return Err(e);
     }
 
-    Ok(total.load(Ordering::Relaxed))
+    #[cfg(target_has_atomic = "64")]
+    return Ok(total.load(Ordering::Relaxed));
+
+    #[cfg(not(target_has_atomic = "64"))]
+    Ok(*total.lock().unwrap())
 }
