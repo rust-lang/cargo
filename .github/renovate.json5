@@ -28,8 +28,8 @@
         'Cargo.toml$',
       ],
       matchStrings: [
-        '\bMSRV:3\b.*?(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)',
-        '(?<currentValue>\\d+\\.\\d+(\\.\\d+)?).*?\bMSRV:3\b',
+        '\\bMSRV:3\\b.*?(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)',
+        '(?<currentValue>\\d+\\.\\d+(\\.\\d+)?).*?\\bMSRV:3\\b',
       ],
       depNameTemplate: 'MSRV:3',  // Support 3 versions of rustc
       packageNameTemplate: 'rust-lang/rust',
