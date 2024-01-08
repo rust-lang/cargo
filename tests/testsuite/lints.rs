@@ -149,6 +149,36 @@ Caused by:
 }
 
 #[cargo_test]
+fn warn_on_unused_key() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [workspace.lints.rust]
+                rust-2018-idioms = { level = "allow", unused = true }
+                [lints.rust]
+                rust-2018-idioms = { level = "allow", unused = true }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("check")
+        .with_stderr(
+            "\
+[WARNING] [CWD]/Cargo.toml: unused manifest key: workspace.lints.rust.rust-2018-idioms.unused
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn fail_on_tool_injection() {
     let foo = project()
         .file(
