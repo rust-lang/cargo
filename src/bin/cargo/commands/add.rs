@@ -62,17 +62,17 @@ The package name will be exposed as feature of your crate.")
 The package will be removed from your features.")
                 .conflicts_with("dev")
                 .overrides_with("optional"),
-            flag("public", "Mark the dependency as public")
+            flag("public", "Mark the dependency as public (unstable)")
                 .conflicts_with("dev")
                 .conflicts_with("build")
-                .long_help("Mark the dependency as public
+                .long_help("Mark the dependency as public (unstable)
 
 The dependency can be referenced in your library's public API."),
-            flag("no-public", "Mark the dependency as private")
+            flag("no-public", "Mark the dependency as private (unstable)")
                 .conflicts_with("dev")
                 .conflicts_with("build")
                 .overrides_with("public")
-                .long_help("Mark the dependency as private
+                .long_help("Mark the dependency as private (unstable)
 
 While you can use the crate in your implementation, it cannot be referenced in your public API."),
             clap::Arg::new("rename")

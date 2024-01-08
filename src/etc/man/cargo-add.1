@@ -121,6 +121,24 @@ Mark the dependency as \fIoptional\fR <https://doc.rust\-lang.org/cargo/referenc
 Mark the dependency as \fIrequired\fR <https://doc.rust\-lang.org/cargo/reference/features.html#optional\-dependencies>\&.
 .RE
 .sp
+\fB\-\-public\fR
+.RS 4
+Mark the dependency as public. 
+.sp
+The dependency can be referenced in your library\[cq]s public API.
+.sp
+\fIUnstable (nightly\-only)\fR <https://doc.rust\-lang.org/cargo/reference/unstable.html#public\-dependency>
+.RE
+.sp
+\fB\-\-no\-public\fR
+.RS 4
+Mark the dependency as private. 
+.sp
+While you can use the crate in your implementation, it cannot be referenced in your public API.
+.sp
+\fIUnstable (nightly\-only)\fR <https://doc.rust\-lang.org/cargo/reference/unstable.html#public\-dependency>
+.RE
+.sp
 \fB\-\-no\-default\-features\fR
 .RS 4
 Disable the \fIdefault features\fR <https://doc.rust\-lang.org/cargo/reference/features.html#dependency\-features>\&.
