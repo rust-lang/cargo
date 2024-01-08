@@ -1073,49 +1073,8 @@ fn to_virtual_manifest(
     root: &Path,
     config: &Config,
 ) -> CargoResult<(VirtualManifest, Vec<PathBuf>)> {
-    if me.project.is_some() {
-        bail!("this virtual manifest specifies a [project] section, which is not allowed");
-    }
-    if me.package.is_some() {
-        bail!("this virtual manifest specifies a [package] section, which is not allowed");
-    }
-    if me.lib.is_some() {
-        bail!("this virtual manifest specifies a [lib] section, which is not allowed");
-    }
-    if me.bin.is_some() {
-        bail!("this virtual manifest specifies a [[bin]] section, which is not allowed");
-    }
-    if me.example.is_some() {
-        bail!("this virtual manifest specifies a [[example]] section, which is not allowed");
-    }
-    if me.test.is_some() {
-        bail!("this virtual manifest specifies a [[test]] section, which is not allowed");
-    }
-    if me.bench.is_some() {
-        bail!("this virtual manifest specifies a [[bench]] section, which is not allowed");
-    }
-    if me.dependencies.is_some() {
-        bail!("this virtual manifest specifies a [dependencies] section, which is not allowed");
-    }
-    if me.dev_dependencies().is_some() {
-        bail!("this virtual manifest specifies a [dev-dependencies] section, which is not allowed");
-    }
-    if me.build_dependencies().is_some() {
-        bail!(
-            "this virtual manifest specifies a [build-dependencies] section, which is not allowed"
-        );
-    }
-    if me.features.is_some() {
-        bail!("this virtual manifest specifies a [features] section, which is not allowed");
-    }
-    if me.target.is_some() {
-        bail!("this virtual manifest specifies a [target] section, which is not allowed");
-    }
-    if me.badges.is_some() {
-        bail!("this virtual manifest specifies a [badges] section, which is not allowed");
-    }
-    if me.lints.is_some() {
-        bail!("this virtual manifest specifies a [lints] section, which is not allowed");
+    for field in me.requires_package() {
+        bail!("this virtual manifest specifies a `{field}` section, which is not allowed");
     }
 
     let mut nested_paths = Vec::new();
