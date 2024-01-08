@@ -389,7 +389,9 @@ impl Registry {
         self.handle.url(&format!("{}/api/v1{}", self.host, path))?;
         let mut headers = List::new();
         headers.append("Accept: application/json")?;
-        headers.append("Content-Type: application/json")?;
+        if body.is_some() {
+            headers.append("Content-Type: application/json")?;
+        }
 
         if self.auth_required || authorized == Auth::Authorized {
             headers.append(&format!("Authorization: {}", self.token()?))?;
