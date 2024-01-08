@@ -410,11 +410,7 @@ impl<'de> de::Deserialize<'de> for InheritableBtreeMap {
         if let Ok(w) = TomlInheritedField::deserialize(
             serde_value::ValueDeserializer::<D::Error>::new(value.clone()),
         ) {
-            return if w.workspace {
-                Ok(InheritableField::Inherit(w))
-            } else {
-                Err(de::Error::custom("`workspace` cannot be false"))
-            };
+            return Ok(InheritableField::Inherit(w));
         }
         BTreeMap::deserialize(serde_value::ValueDeserializer::<D::Error>::new(value))
             .map(InheritableField::Value)
@@ -424,13 +420,14 @@ impl<'de> de::Deserialize<'de> for InheritableBtreeMap {
 #[derive(Deserialize, Serialize, Copy, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlInheritedField {
-    #[serde(deserialize_with = "bool_no_false")]
-    workspace: bool,
+    workspace: WorkspaceValue,
 }
 
 impl TomlInheritedField {
     pub fn new() -> Self {
-        TomlInheritedField { workspace: true }
+        TomlInheritedField {
+            workspace: WorkspaceValue,
+        }
     }
 }
 
@@ -446,6 +443,28 @@ fn bool_no_false<'de, D: de::Deserializer<'de>>(deserializer: D) -> Result<bool,
         Ok(b)
     } else {
         Err(de::Error::custom("`workspace` cannot be false"))
+    }
+}
+
+#[derive(Deserialize, Serialize, Copy, Clone, Debug)]
+#[serde(try_from = "bool")]
+#[serde(into = "bool")]
+struct WorkspaceValue;
+
+impl TryFrom<bool> for WorkspaceValue {
+    type Error = String;
+    fn try_from(other: bool) -> Result<WorkspaceValue, Self::Error> {
+        if other {
+            Ok(WorkspaceValue)
+        } else {
+            Err("`workspace` cannot be false".to_owned())
+        }
+    }
+}
+
+impl From<WorkspaceValue> for bool {
+    fn from(_: WorkspaceValue) -> bool {
+        true
     }
 }
 
