@@ -49,10 +49,31 @@ pub struct TomlManifest {
     pub workspace: Option<TomlWorkspace>,
     pub badges: Option<InheritableBtreeMap>,
     pub lints: Option<InheritableLints>,
-    // when adding new fields, be sure to check whether `to_virtual_manifest` should disallow them
+    // when adding new fields, be sure to check whether `requires_package` should disallow them
 }
 
 impl TomlManifest {
+    pub fn requires_package(&self) -> impl Iterator<Item = &'static str> {
+        [
+            self.lib.as_ref().map(|_| "lib"),
+            self.bin.as_ref().map(|_| "bin"),
+            self.example.as_ref().map(|_| "example"),
+            self.test.as_ref().map(|_| "test"),
+            self.bench.as_ref().map(|_| "bench"),
+            self.dependencies.as_ref().map(|_| "dependencies"),
+            self.dev_dependencies().as_ref().map(|_| "dev-dependencies"),
+            self.build_dependencies()
+                .as_ref()
+                .map(|_| "build-dependencies"),
+            self.features.as_ref().map(|_| "features"),
+            self.target.as_ref().map(|_| "target"),
+            self.badges.as_ref().map(|_| "badges"),
+            self.lints.as_ref().map(|_| "lints"),
+        ]
+        .into_iter()
+        .flatten()
+    }
+
     pub fn has_profiles(&self) -> bool {
         self.profile.is_some()
     }
