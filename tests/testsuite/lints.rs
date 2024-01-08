@@ -307,6 +307,51 @@ error: usage of an `unsafe` block
 }
 
 #[cargo_test]
+fn workspace_cant_be_false() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [lints]
+                workspace = false
+
+                [workspace.lints.rust]
+                "unsafe_code" = "deny"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            "
+pub fn foo(num: i32) -> u32 {
+    unsafe { std::mem::transmute(num) }
+}
+",
+        )
+        .build();
+
+    foo.cargo("check")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+error: failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  TOML parse error at line 8, column 29
+    |
+  8 |                 workspace = false
+    |                             ^^^^^
+  `workspace` cannot be false
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn workspace_lint_deny() {
     let foo = project()
         .file(
