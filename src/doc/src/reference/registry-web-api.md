@@ -40,7 +40,7 @@ be required in the future.
 
 Cargo sets the following headers for all requests:
 
-- `Content-Type`: `application/json`
+- `Content-Type`: `application/json` (for requests with a body payload)
 - `Accept`: `application/json`
 - `User-Agent`: The Cargo version such as `cargo 1.32.0 (8610973aa
   2019-01-02)`. This may be modified by the user in a configuration value.
