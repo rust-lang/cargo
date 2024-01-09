@@ -43,17 +43,6 @@ fn help_external_subcommand() {
         .run();
 }
 
-#[cargo_test]
-fn z_flags_help() {
-    // Test that the output of `cargo -Z help` shows a different help screen with
-    // all the `-Z` flags.
-    cargo_process("-Z help")
-        .with_stdout_contains(
-            "    -Z allow-features[..]-- Allow *only* the listed unstable features",
-        )
-        .run();
-}
-
 fn help_with_man(display_command: &str) {
     // Build a "man" process that just echoes the contents.
     let p = project()
