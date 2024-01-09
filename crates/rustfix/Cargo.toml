@@ -1,11 +1,11 @@
 [package]
 name = "rustfix"
-version = "0.8.0"
+version = "0.8.1"
 authors = [
     "Pascal Hertleif <killercup@gmail.com>",
     "Oliver Schneider <oli-obk@users.noreply.github.com>",
 ]
-rust-version = "1.70.0"  # MSRV:3
+rust-version = "1.73"  # MSRV:3
 edition.workspace = true
 license.workspace = true
 homepage.workspace = true
