@@ -55,38 +55,34 @@ pub fn main(config: &mut LazyConfig) -> CliResult {
         .map(String::as_str)
         == Some("help")
     {
+        let header = style::HEADER.render();
+        let literal = style::LITERAL.render();
+        let placeholder = style::PLACEHOLDER.render();
+        let reset = anstyle::Reset.render();
+
         let options = CliUnstable::help();
-        let non_hidden_options: Vec<(String, String)> = options
+        let max_length = options
             .iter()
-            .filter(|(_, help_message)| *help_message != HIDDEN)
-            .map(|(name, help)| (name.to_string(), help.to_string()))
-            .collect();
-        let longest_option = non_hidden_options
-            .iter()
+            .filter(|(_, help)| *help != HIDDEN)
             .map(|(option_name, _)| option_name.len())
             .max()
             .unwrap_or(0);
-        let help_lines: Vec<String> = non_hidden_options
+        let z_flags = options
             .iter()
-            .map(|(option_name, option_help_message)| {
-                let option_name_kebab_case = option_name.replace("_", "-");
-                let padding = " ".repeat(longest_option - option_name.len()); // safe to subtract
-                format!(
-                    "    -Z {}{} -- {}",
-                    option_name_kebab_case, padding, option_help_message
-                )
+            .filter(|(_, help)| *help != HIDDEN)
+            .map(|(opt, help)| {
+                let opt = opt.replace("_", "-");
+                format!("    {literal}-Z {opt:<max_length$}{reset}  {help}")
             })
-            .collect();
-        let joined = help_lines.join("\n");
+            .join("\n");
         drop_println!(
             config,
-            "
-Available unstable (nightly-only) flags:
+            "\
+{header}Available unstable (nightly-only) flags:{reset}
 
-{}
+{z_flags}
 
-Run with 'cargo -Z [FLAG] [COMMAND]'",
-            joined
+Run with `{literal}cargo -Z{reset} {placeholder}[FLAG] [COMMAND]{reset}`",
         );
         if !config.nightly_features_allowed {
             drop_println!(
