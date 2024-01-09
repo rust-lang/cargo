@@ -15,7 +15,7 @@ Available unstable (nightly-only) flags:
     -Z dual-proc-macros         Build proc-macros for both the host and the target
     -Z gc                       Track cache usage and "garbage collect" unused files
     -Z gitoxide                 Use gitoxide for the given git interactions, or all of them if no argument is given
-    -Z host-config              Enable the [host] section in the .cargo/config.toml file
+    -Z host-config              Enable the `[host]` section in the .cargo/config.toml file
     -Z lints                    Pass `[lints]` to the linting tools
     -Z minimal-versions         Resolve minimal dependency versions instead of maximum
     -Z msrv-policy              Enable rust-version aware policy within cargo

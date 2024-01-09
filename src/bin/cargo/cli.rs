@@ -13,7 +13,6 @@ use super::commands;
 use super::list_commands;
 use crate::command_prelude::*;
 use crate::util::is_rustup;
-use cargo::core::features::HIDDEN;
 use cargo::util::style;
 
 pub fn main(config: &mut LazyConfig) -> CliResult {
@@ -63,15 +62,16 @@ pub fn main(config: &mut LazyConfig) -> CliResult {
         let options = CliUnstable::help();
         let max_length = options
             .iter()
-            .filter(|(_, help)| *help != HIDDEN)
+            .filter(|(_, help)| help.is_some())
             .map(|(option_name, _)| option_name.len())
             .max()
             .unwrap_or(0);
         let z_flags = options
             .iter()
-            .filter(|(_, help)| *help != HIDDEN)
+            .filter(|(_, help)| help.is_some())
             .map(|(opt, help)| {
                 let opt = opt.replace("_", "-");
+                let help = help.unwrap();
                 format!("    {literal}-Z {opt:<max_length$}{reset}  {help}")
             })
             .join("\n");
