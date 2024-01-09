@@ -76,7 +76,7 @@ pub fn main(config: &mut LazyConfig) -> CliResult {
             .map(|(option_name, option_help_message)| {
                 let option_name_kebab_case = option_name.replace("_", "-");
                 format!(
-                    "    {literal}-Z {:<longest_option$}{reset} -- {}",
+                    "    {literal}-Z {:<longest_option$}{reset}  {}",
                     option_name_kebab_case, option_help_message
                 )
             })
@@ -84,12 +84,12 @@ pub fn main(config: &mut LazyConfig) -> CliResult {
         let joined = help_lines.join("\n");
         drop_println!(
             config,
-            "
+            "\
 {header}Available unstable (nightly-only) flags:{reset}
 
 {}
 
-Run with '{literal}cargo -Z{reset} {placeholder}[FLAG] [COMMAND]{reset}'",
+Run with `{literal}cargo -Z{reset} {placeholder}[FLAG] [COMMAND]{reset}`",
             joined
         );
         if !config.nightly_features_allowed {
