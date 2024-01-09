@@ -40,7 +40,7 @@ fn du_inner(path: &Path, patterns: &[&str]) -> Result<u64> {
         .git_exclude(false);
     let walker = builder.build_parallel();
 
-    // Platforms like PowerPC don't support AtomicU64, so we a Mutex instead.
+    // Platforms like PowerPC don't support AtomicU64, so we use a Mutex instead.
     //
     // See:
     // - https://github.com/rust-lang/cargo/pull/12981
