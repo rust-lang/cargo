@@ -816,11 +816,8 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
         // This should not block the creation of the new project. It is only a best effort to
         // inherit the workspace package keys.
         if let Ok(mut workspace_document) = root_manifest.parse::<toml_edit::Document>() {
-            let (display_path, can_be_a_member) = get_display_path_and_check_membership(
-                &root_manifest_path,
-                &path,
-                &workspace_document,
-            )?;
+            let display_path = get_display_path(&root_manifest_path, &path)?;
+            let can_be_a_member = can_be_workspace_member(&display_path, &workspace_document)?;
             // Only try to inherit the workspace stuff if the new package can be a member of the workspace.
             if can_be_a_member {
                 if let Some(workspace_package_keys) = workspace_document
@@ -1003,11 +1000,7 @@ fn update_manifest_with_new_member(
     )
 }
 
-fn get_display_path_and_check_membership(
-    root_manifest_path: &Path,
-    package_path: &Path,
-    workspace_document: &toml_edit::Document,
-) -> CargoResult<(String, bool)> {
+fn get_display_path(root_manifest_path: &Path, package_path: &Path) -> CargoResult<String> {
     // Find the relative path for the package from the workspace root directory.
     let workspace_root = root_manifest_path.parent().with_context(|| {
         format!(
@@ -1031,7 +1024,14 @@ fn get_display_path_and_check_membership(
         components.push(comp);
     }
     let display_path = components.join("/");
+    Ok(display_path)
+}
 
+// Check if the package can be a member of the workspace.
+fn can_be_workspace_member(
+    display_path: &str,
+    workspace_document: &toml_edit::Document,
+) -> CargoResult<bool> {
     if let Some(exclude) = workspace_document
         .get("workspace")
         .and_then(|workspace| workspace.get("exclude"))
@@ -1042,10 +1042,9 @@ fn get_display_path_and_check_membership(
                 .as_str()
                 .with_context(|| format!("invalid non-string exclude path `{}`", member))?;
             if pat == display_path {
-                return Ok((display_path, false));
+                return Ok(false);
             }
         }
     }
-
-    Ok((display_path, true))
+    Ok(true)
 }
