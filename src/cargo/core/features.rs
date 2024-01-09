@@ -358,20 +358,43 @@ enum Status {
     Removed,
 }
 
+/// A listing of stable and unstable new syntax in Cargo.toml.
+///
+/// This generates definitions and impls for [`Features`] and [`Feature`]
+/// for each new syntax.
+///
+/// Note that all feature names in the macro invocation are valid Rust
+/// identifiers, but the `_` character is translated to `-` when specified in
+/// the `cargo-features` manifest entry in `Cargo.toml`.
+///
+/// See the [module-level documentation](self#new-cargotoml-syntax)
+/// for the process of adding a new syntax.
 macro_rules! features {
     (
-        $(($stab:ident, $feature:ident, $version:expr, $docs:expr),)*
+        $(
+            $(#[$attr:meta])*
+            ($stab:ident, $feature:ident, $version:expr, $docs:expr),
+        )*
     ) => (
+        /// Unstable feature context for querying if a new Cargo.toml syntax
+        /// is allowed to use.
+        ///
+        /// See the [module-level documentation](self#new-cargotoml-syntax) for the usage.
         #[derive(Default, Clone, Debug)]
         pub struct Features {
             $($feature: bool,)*
+            /// The current activated features.
             activated: Vec<String>,
+            /// Whether is allowed to use any unstable features.
             nightly_features_allowed: bool,
+            /// Whether the source mainfest is from a local package.
             is_local: bool,
         }
 
         impl Feature {
             $(
+                $(#[$attr])*
+                #[doc = concat!("\n\n\nSee <https://doc.rust-lang.org/nightly/cargo/", $docs, ">.")]
                 pub fn $feature() -> &'static Feature {
                     fn get(features: &Features) -> bool {
                         stab!($stab) == Status::Stable || features.$feature
@@ -387,6 +410,7 @@ macro_rules! features {
                 }
             )*
 
+            /// Whether this feature is allowed to use in the given [`Features`] context.
             fn is_enabled(&self, features: &Features) -> bool {
                 (self.get)(features)
             }
@@ -421,96 +445,91 @@ macro_rules! stab {
     };
 }
 
-// A listing of all features in Cargo.
-//
 // "look here"
-//
-// This is the macro that lists all stable and unstable features in Cargo.
-// You'll want to add to this macro whenever you add a feature to Cargo, also
-// following the directions above.
-//
-// Note that all feature names here are valid Rust identifiers, but the `_`
-// character is translated to `-` when specified in the `cargo-features`
-// manifest entry in `Cargo.toml`.
 features! {
-    // A dummy feature that doesn't actually gate anything, but it's used in
-    // testing to ensure that we can enable stable features.
+    /// A dummy feature that doesn't actually gate anything, but it's used in
+    /// testing to ensure that we can enable stable features.
     (stable, test_dummy_stable, "1.0", ""),
 
-    // A dummy feature that gates the usage of the `im-a-teapot` manifest
-    // entry. This is basically just intended for tests.
+    /// A dummy feature that gates the usage of the `im-a-teapot` manifest
+    /// entry. This is basically just intended for tests.
     (unstable, test_dummy_unstable, "", "reference/unstable.html"),
 
-    // Downloading packages from alternative registry indexes.
+    /// Downloading packages from alternative registry indexes.
     (stable, alternative_registries, "1.34", "reference/registries.html"),
 
-    // Using editions
+    /// Using editions
     (stable, edition, "1.31", "reference/manifest.html#the-edition-field"),
 
-    // Renaming a package in the manifest via the `package` key
+    /// Renaming a package in the manifest via the `package` key.
     (stable, rename_dependency, "1.31", "reference/specifying-dependencies.html#renaming-dependencies-in-cargotoml"),
 
-    // Whether a lock file is published with this crate
+    /// Whether a lock file is published with this crate.
     (removed, publish_lockfile, "1.37", "reference/unstable.html#publish-lockfile"),
 
-    // Overriding profiles for dependencies.
+    /// Overriding profiles for dependencies.
     (stable, profile_overrides, "1.41", "reference/profiles.html#overrides"),
 
-    // "default-run" manifest option,
+    /// "default-run" manifest option.
     (stable, default_run, "1.37", "reference/manifest.html#the-default-run-field"),
 
-    // Declarative build scripts.
+    /// Declarative build scripts.
     (unstable, metabuild, "", "reference/unstable.html#metabuild"),
 
-    // Specifying the 'public' attribute on dependencies
+    /// Specifying the 'public' attribute on dependencies.
     (unstable, public_dependency, "", "reference/unstable.html#public-dependency"),
 
-    // Allow to specify profiles other than 'dev', 'release', 'test', etc.
+    /// Allow to specify profiles other than 'dev', 'release', 'test', etc.
     (stable, named_profiles, "1.57", "reference/profiles.html#custom-profiles"),
 
-    // Opt-in new-resolver behavior.
+    /// Opt-in new-resolver behavior.
     (stable, resolver, "1.51", "reference/resolver.html#resolver-versions"),
 
-    // Allow to specify whether binaries should be stripped.
+    /// Allow to specify whether binaries should be stripped.
     (stable, strip, "1.58", "reference/profiles.html#strip-option"),
 
-    // Specifying a minimal 'rust-version' attribute for crates
+    /// Specifying a minimal 'rust-version' attribute for crates.
     (stable, rust_version, "1.56", "reference/manifest.html#the-rust-version-field"),
 
-    // Support for 2021 edition.
+    /// Support for 2021 edition.
     (stable, edition2021, "1.56", "reference/manifest.html#the-edition-field"),
 
-    // Allow to specify per-package targets (compile kinds)
+    /// Allow to specify per-package targets (compile kinds).
     (unstable, per_package_target, "", "reference/unstable.html#per-package-target"),
 
-    // Allow to specify which codegen backend should be used.
+    /// Allow to specify which codegen backend should be used.
     (unstable, codegen_backend, "", "reference/unstable.html#codegen-backend"),
 
-    // Allow specifying different binary name apart from the crate name
+    /// Allow specifying different binary name apart from the crate name.
     (unstable, different_binary_name, "", "reference/unstable.html#different-binary-name"),
 
-    // Allow specifying rustflags directly in a profile
+    /// Allow specifying rustflags directly in a profile.
     (unstable, profile_rustflags, "", "reference/unstable.html#profile-rustflags-option"),
 
-    // Allow specifying rustflags directly in a profile
+    /// Allow workspace members to inherit fields and dependencies from a workspace.
     (stable, workspace_inheritance, "1.64", "reference/unstable.html#workspace-inheritance"),
 
-     // Support for 2024 edition.
+    /// Support for 2024 edition.
     (unstable, edition2024, "", "reference/unstable.html#edition-2024"),
 
-    // Allow setting trim-paths in a profile to control the sanitisation of file paths in build outputs.
+    /// Allow setting trim-paths in a profile to control the sanitisation of file paths in build outputs.
     (unstable, trim_paths, "", "reference/unstable.html#profile-trim-paths-option"),
 }
 
+/// Status and metadata for a single unstable feature.
 pub struct Feature {
+    /// Feature name. This is valid Rust identifer so no dash only underscore.
     name: &'static str,
     stability: Status,
+    /// Version that this feature was stabilized or removed.
     version: &'static str,
+    /// Link to the unstable documentation.
     docs: &'static str,
     get: fn(&Features) -> bool,
 }
 
 impl Features {
+    /// Creates a new unstable features context.
     pub fn new(
         features: &[String],
         config: &Config,
@@ -617,10 +636,12 @@ impl Features {
         Ok(())
     }
 
+    /// Gets the current activated features.
     pub fn activated(&self) -> &[String] {
         &self.activated
     }
 
+    /// Checks if the given feature is enabled.
     pub fn require(&self, feature: &Feature) -> CargoResult<()> {
         if feature.is_enabled(self) {
             return Ok(());
@@ -666,6 +687,7 @@ impl Features {
         bail!("{}", msg);
     }
 
+    /// Whether the given feature is allowed to use in this context.
     pub fn is_enabled(&self, feature: &Feature) -> bool {
         feature.is_enabled(self)
     }
