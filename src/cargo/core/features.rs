@@ -148,7 +148,6 @@ use serde::{Deserialize, Serialize};
 use crate::core::resolver::ResolveBehavior;
 use crate::util::errors::CargoResult;
 use crate::util::indented_lines;
-use crate::Config;
 
 pub const SEE_CHANNELS: &str =
     "See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information \
@@ -532,15 +531,16 @@ impl Features {
     /// Creates a new unstable features context.
     pub fn new(
         features: &[String],
-        config: &Config,
+        ctx: &dyn UnstableFeatureContext,
         warnings: &mut Vec<String>,
         is_local: bool,
     ) -> CargoResult<Features> {
         let mut ret = Features::default();
-        ret.nightly_features_allowed = config.nightly_features_allowed;
+        let allow_features = ctx.allow_features();
+        ret.nightly_features_allowed = ctx.nightly_features_allowed();
         ret.is_local = is_local;
         for feature in features {
-            ret.add(feature, config, warnings)?;
+            ret.add(feature, allow_features, warnings)?;
             ret.activated.push(feature.to_string());
         }
         Ok(ret)
@@ -549,7 +549,7 @@ impl Features {
     fn add(
         &mut self,
         feature_name: &str,
-        config: &Config,
+        allow_features: Option<&AllowFeatures>,
         warnings: &mut Vec<String>,
     ) -> CargoResult<()> {
         let nightly_features_allowed = self.nightly_features_allowed;
@@ -598,7 +598,7 @@ impl Features {
                 see_docs()
             ),
             Status::Unstable => {
-                if let Some(allow) = &config.cli_unstable().allow_features {
+                if let Some(allow) = allow_features {
                     if !allow.contains(feature_name) {
                         bail!(
                             "the feature `{}` is not in the list of allowed features: [{}]",
@@ -691,6 +691,25 @@ impl Features {
     pub fn is_enabled(&self, feature: &Feature) -> bool {
         feature.is_enabled(self)
     }
+}
+
+/// A trait offering methods for [`Features`] to determine which feature is
+/// allowed to activate.
+pub trait UnstableFeatureContext {
+    /// This is the top-level gate that when false,
+    /// no nightly feature would be allowed in this context.
+    ///
+    /// Generally true when on the nightly channel, and false otherwise.
+    fn nightly_features_allowed(&self) -> bool;
+
+    /// Gets a list of features allowed to use in this context.
+    ///
+    /// The value normally comes from `-Zallow-features` from the CLI,
+    /// or `cargo-features` list from the Cargo.toml manifest file.
+    ///
+    /// Althought being an allow-list, the actual features activated are gated
+    /// by [`UnstableFeatureContext::nightly_features_allowed`].
+    fn allow_features(&self) -> Option<&AllowFeatures>;
 }
 
 /// Generates `-Z` flags as fields of [`CliUnstable`].
@@ -943,8 +962,9 @@ fn parse_gitoxide(
 }
 
 impl CliUnstable {
-    /// Parses `-Z` flags from the command line, and returns messages that warn
-    /// if any flag has alreardy been stabilized.
+    /// Parses `-Z` flags from the command line, and adds flags onto itself.
+    ///
+    /// Returns warnings of unstable flag issues, e.g. already stabilized.
     pub fn parse(
         &mut self,
         flags: &[String],
@@ -1184,7 +1204,7 @@ impl CliUnstable {
     /// unstable subcommand.
     pub fn fail_if_stable_command(
         &self,
-        config: &Config,
+        ctx: &dyn UnstableFeatureContext,
         command: &str,
         issue: u32,
         z_name: &str,
@@ -1198,7 +1218,7 @@ impl CliUnstable {
             information about the `cargo {}` command.",
             issue, command
         );
-        if config.nightly_features_allowed {
+        if ctx.nightly_features_allowed() {
             bail!(
                 "the `cargo {command}` command is unstable, pass `-Z {z_name}` \
                  to enable it\n\

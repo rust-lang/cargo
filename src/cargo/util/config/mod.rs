@@ -111,6 +111,8 @@ pub use target::{TargetCfgConfig, TargetConfig};
 mod environment;
 use environment::Env;
 
+mod contexts;
+
 use super::auth::RegistryConfig;
 
 // Helper macro for creating typed access methods.
