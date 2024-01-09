@@ -15,8 +15,6 @@
 //!   not yet been designed, or for more complex features that affect multiple
 //!   parts of Cargo should use a new `-Z` flag.
 //!
-//! See below for more details.
-//!
 //! When adding new tests for your feature, usually the tests should go into a
 //! new module of the testsuite. See
 //! <https://doc.crates.io/contrib/tests/writing.html> for more information on
@@ -63,8 +61,8 @@
 //!
 //! The steps to add a new `-Z` option are:
 //!
-//! 1. Add the option to the [`CliUnstable`] struct below. Flags can take an
-//!    optional value if you want.
+//! 1. Add the option to the [`CliUnstable`] struct in the macro invocation of
+//!    [`unstable_cli_options!`]. Flags can take an optional value if you want.
 //! 2. Update the [`CliUnstable::add`] function to parse the flag.
 //! 3. Wherever the new functionality is implemented, call
 //!    [`Config::cli_unstable`] to get an instance of [`CliUnstable`]
@@ -136,6 +134,7 @@
 //! [`Config::cli_unstable`]: crate::util::config::Config::cli_unstable
 //! [`fail_if_stable_opt`]: CliUnstable::fail_if_stable_opt
 //! [`features!`]: macro.features.html
+//! [`unstable_cli_options!`]: macro.unstable_cli_options.html
 
 use std::collections::BTreeSet;
 use std::env;
@@ -151,10 +150,12 @@ use crate::util::errors::CargoResult;
 use crate::util::{indented_lines, iter_join};
 use crate::Config;
 
-pub const HIDDEN: &str = "";
 pub const SEE_CHANNELS: &str =
     "See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information \
      about Rust release channels.";
+
+/// Value of [`allow-features`](CliUnstable::allow_features]
+pub type AllowFeatures = BTreeSet<String>;
 
 /// The edition of the compiler ([RFC 2052])
 ///
@@ -670,11 +671,14 @@ impl Features {
     }
 }
 
+/// Generates `-Z` flags as fields of [`CliUnstable`].
+///
+/// See the [module-level documentation](self#-z-options) for details.
 macro_rules! unstable_cli_options {
     (
         $(
             $(#[$meta:meta])?
-            $element: ident: $ty: ty = ($help: expr ),
+            $element: ident: $ty: ty$( = ($help:literal))?,
         )*
     ) => {
         /// A parsed representation of all unstable flags that Cargo accepts.
@@ -686,13 +690,15 @@ macro_rules! unstable_cli_options {
         #[serde(default, rename_all = "kebab-case")]
         pub struct CliUnstable {
             $(
+                $(#[doc = $help])?
                 $(#[$meta])?
                 pub $element: $ty
             ),*
         }
         impl CliUnstable {
-            pub fn help() -> Vec<(&'static str, &'static str)> {
-                let fields = vec![$((stringify!($element), $help)),*];
+            /// Returns a list of `(<option-name>, <help-text>)`.
+            pub fn help() -> Vec<(&'static str, Option<&'static str>)> {
+                let fields = vec![$((stringify!($element), None$(.or(Some($help)))?)),*];
                 fields
             }
         }
@@ -721,12 +727,12 @@ macro_rules! unstable_cli_options {
 
 unstable_cli_options!(
     // Permanently unstable features:
-    allow_features: Option<BTreeSet<String>> = ("Allow *only* the listed unstable features"),
-    print_im_a_teapot: bool = (HIDDEN),
+    allow_features: Option<AllowFeatures> = ("Allow *only* the listed unstable features"),
+    print_im_a_teapot: bool,
 
     // All other unstable features.
     // Please keep this list lexicographically ordered.
-    advanced_env: bool = (HIDDEN),
+    advanced_env: bool,
     asymmetric_token: bool = ("Allows authenticating with asymmetric tokens"),
     avoid_dev_deps: bool = ("Avoid installing dev-dependencies if possible"),
     binary_dep_depinfo: bool = ("Track changes to dependency artifacts"),
@@ -740,15 +746,15 @@ unstable_cli_options!(
     direct_minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum (direct dependencies only)"),
     doctest_xcompile: bool = ("Compile and run doctests for non-host target using runner config"),
     dual_proc_macros: bool = ("Build proc-macros for both the host and the target"),
-    features: Option<Vec<String>>  = (HIDDEN),
+    features: Option<Vec<String>>,
     gc: bool = ("Track cache usage and \"garbage collect\" unused files"),
     gitoxide: Option<GitoxideFeatures> = ("Use gitoxide for the given git interactions, or all of them if no argument is given"),
-    host_config: bool = ("Enable the [host] section in the .cargo/config.toml file"),
+    host_config: bool = ("Enable the `[host]` section in the .cargo/config.toml file"),
     lints: bool = ("Pass `[lints]` to the linting tools"),
     minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
     msrv_policy: bool = ("Enable rust-version aware policy within cargo"),
     mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
-    next_lockfile_bump: bool = (HIDDEN),
+    next_lockfile_bump: bool,
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
     profile_rustflags: bool = ("Enable the `rustflags` option in profiles in .cargo/config.toml file"),
@@ -756,8 +762,8 @@ unstable_cli_options!(
     rustdoc_map: bool = ("Allow passing external documentation mappings to rustdoc"),
     rustdoc_scrape_examples: bool = ("Allows Rustdoc to scrape code examples from reverse-dependencies"),
     script: bool = ("Enable support for single-file, `.rs` packages"),
-    separate_nightlies: bool = (HIDDEN),
-    skip_rustdoc_fingerprint: bool = (HIDDEN),
+    separate_nightlies: bool,
+    skip_rustdoc_fingerprint: bool,
     target_applies_to_host: bool = ("Enable the `target-applies-to-host` key in the .cargo/config.toml file"),
     trim_paths: bool = ("Enable the `trim-paths` option in profiles"),
     unstable_options: bool = ("Allow the usage of unstable options"),
@@ -915,6 +921,8 @@ fn parse_gitoxide(
 }
 
 impl CliUnstable {
+    /// Parses `-Z` flags from the command line, and returns messages that warn
+    /// if any flag has alreardy been stabilized.
     pub fn parse(
         &mut self,
         flags: &[String],
