@@ -830,7 +830,7 @@ fn clean_dry_run() {
     // Verify it didn't delete anything.
     let after = p.build_dir().ls_r();
     assert_eq!(before, after);
-    let expected = cargo::util::iter_join(before.iter().map(|p| p.to_str().unwrap()), "\n");
+    let expected = itertools::join(before.iter().map(|p| p.to_str().unwrap()), "\n");
     eprintln!("{expected}");
     // Verify the verbose output.
     p.cargo("clean --dry-run -v")
