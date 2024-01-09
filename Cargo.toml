@@ -37,7 +37,7 @@ cargo_metadata = "0.18.1"
 clap = "4.4.12"
 color-print = "0.3.5"
 core-foundation = { version = "0.9.4", features = ["mac_os_10_7_support"] }
-crates-io = { version = "0.39.0", path = "crates/crates-io" }
+crates-io = { version = "0.40.0", path = "crates/crates-io" }
 criterion = { version = "0.5.1", features = ["html_reports"] }
 curl = "0.4.44"
 curl-sys = "0.4.70"
