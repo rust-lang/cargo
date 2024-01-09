@@ -55,6 +55,11 @@ pub fn main(config: &mut LazyConfig) -> CliResult {
         .map(String::as_str)
         == Some("help")
     {
+        let header = style::HEADER.render();
+        let literal = style::LITERAL.render();
+        let placeholder = style::PLACEHOLDER.render();
+        let reset = anstyle::Reset.render();
+
         let options = CliUnstable::help();
         let non_hidden_options: Vec<(String, String)> = options
             .iter()
@@ -71,7 +76,7 @@ pub fn main(config: &mut LazyConfig) -> CliResult {
             .map(|(option_name, option_help_message)| {
                 let option_name_kebab_case = option_name.replace("_", "-");
                 format!(
-                    "    -Z {:<longest_option$} -- {}",
+                    "    {literal}-Z {:<longest_option$}{reset} -- {}",
                     option_name_kebab_case, option_help_message
                 )
             })
@@ -80,11 +85,11 @@ pub fn main(config: &mut LazyConfig) -> CliResult {
         drop_println!(
             config,
             "
-Available unstable (nightly-only) flags:
+{header}Available unstable (nightly-only) flags:{reset}
 
 {}
 
-Run with 'cargo -Z [FLAG] [COMMAND]'",
+Run with '{literal}cargo -Z{reset} {placeholder}[FLAG] [COMMAND]{reset}'",
             joined
         );
         if !config.nightly_features_allowed {
