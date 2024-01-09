@@ -38,7 +38,7 @@ use crate::core::{Dependency, PackageId, Workspace};
 use crate::sources::source::QueryKind;
 use crate::sources::SourceConfigMap;
 use crate::util::cache_lock::CacheLockMode;
-use crate::util::{iter_join, CargoResult};
+use crate::util::CargoResult;
 use anyhow::{bail, format_err, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
@@ -228,7 +228,7 @@ impl OnDiskReports {
     /// Returns an ANSI-styled report
     pub fn get_report(&self, id: u32, package: Option<&str>) -> CargoResult<String> {
         let report = self.reports.iter().find(|r| r.id == id).ok_or_else(|| {
-            let available = iter_join(self.reports.iter().map(|r| r.id.to_string()), ", ");
+            let available = itertools::join(self.reports.iter().map(|r| r.id), ", ");
             format_err!(
                 "could not find report with ID {}\n\
                  Available IDs are: {}",
@@ -250,7 +250,7 @@ impl OnDiskReports {
                 Available packages are: {}\n
                 Omit the `--package` flag to display a report for all packages",
                         package,
-                        iter_join(report.per_package.keys(), ", ")
+                        itertools::join(report.per_package.keys(), ", ")
                     )
                 })?
                 .to_string()
@@ -353,14 +353,8 @@ fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<
             .collect();
         updated_versions.sort();
 
-        let updated_versions = iter_join(
-            updated_versions
-                .into_iter()
-                .map(|version| version.to_string()),
-            ", ",
-        );
-
         if !updated_versions.is_empty() {
+            let updated_versions = itertools::join(updated_versions, ", ");
             writeln!(
                 updates,
                 "{} has the following newer versions available: {}",

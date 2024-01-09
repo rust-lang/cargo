@@ -1,4 +1,3 @@
-use std::fmt;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -92,32 +91,6 @@ pub fn human_readable_bytes(bytes: u64) -> (f32, &'static str) {
     let bytes = bytes as f32;
     let i = ((bytes.log2() / 10.0) as usize).min(UNITS.len() - 1);
     (bytes / 1024_f32.powi(i as i32), UNITS[i])
-}
-
-pub fn iter_join_onto<W, I, T>(mut w: W, iter: I, delim: &str) -> fmt::Result
-where
-    W: fmt::Write,
-    I: IntoIterator<Item = T>,
-    T: std::fmt::Display,
-{
-    let mut it = iter.into_iter().peekable();
-    while let Some(n) = it.next() {
-        write!(w, "{}", n)?;
-        if it.peek().is_some() {
-            write!(w, "{}", delim)?;
-        }
-    }
-    Ok(())
-}
-
-pub fn iter_join<I, T>(iter: I, delim: &str) -> String
-where
-    I: IntoIterator<Item = T>,
-    T: std::fmt::Display,
-{
-    let mut s = String::new();
-    let _ = iter_join_onto(&mut s, iter, delim);
-    s
 }
 
 pub fn indented_lines(text: &str) -> String {

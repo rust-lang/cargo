@@ -147,7 +147,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::core::resolver::ResolveBehavior;
 use crate::util::errors::CargoResult;
-use crate::util::{indented_lines, iter_join};
+use crate::util::indented_lines;
 use crate::Config;
 
 pub const SEE_CHANNELS: &str =
@@ -603,7 +603,7 @@ impl Features {
                         bail!(
                             "the feature `{}` is not in the list of allowed features: [{}]",
                             feature_name,
-                            iter_join(allow, ", "),
+                            itertools::join(allow, ", "),
                         );
                     }
                 }
@@ -1031,7 +1031,7 @@ impl CliUnstable {
                 bail!(
                     "the feature `{}` is not in the list of allowed features: [{}]",
                     k,
-                    iter_join(allowed, ", ")
+                    itertools::join(allowed, ", ")
                 );
             }
         }
