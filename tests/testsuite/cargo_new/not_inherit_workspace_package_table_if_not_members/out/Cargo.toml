@@ -1,5 +1,5 @@
 [workspace]
-members = ["foo"]
+exclude = ["bar"]
 [workspace.package]
 authors = ["Rustaceans"]
 description = "foo"
@@ -15,3 +15,10 @@ include = ["foo"]
 license = "MIT OR Apache-2.0"
 publish = false
 repository = "foo"
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[package]
+name = "foo"
+version = "0.1.0"
+edition = "2018"

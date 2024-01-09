@@ -11,7 +11,7 @@ fn case() {
 
     snapbox::cmd::Command::cargo_ui()
         .arg("new")
-        .args(["foo"])
+        .args(["bar"])
         .current_dir(cwd)
         .assert()
         .success()
