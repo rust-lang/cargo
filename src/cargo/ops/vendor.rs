@@ -1,6 +1,6 @@
 use crate::core::package::MANIFEST_PREAMBLE;
 use crate::core::shell::Verbosity;
-use crate::core::{GitReference, Package, Workspace};
+use crate::core::{GitReference, Package, SourceId, Workspace};
 use crate::ops;
 use crate::sources::path::PathSource;
 use crate::sources::CRATES_IO_REGISTRY;
@@ -9,18 +9,23 @@ use crate::util::{try_canonicalize, CargoResult, GlobalContext};
 use anyhow::{bail, Context as _};
 use cargo_util::{paths, Sha256};
 use serde::Serialize;
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashSet;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ffi::OsStr;
 use std::fs::{self, File, OpenOptions};
+use std::hash::Hasher;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+
+const SOURCES_FILE_NAME: &str = ".sources";
 
 pub struct VendorOptions<'a> {
     pub no_delete: bool,
     pub versioned_dirs: bool,
     pub destination: &'a Path,
     pub extra: Vec<PathBuf>,
+    pub no_merge_sources: bool,
 }
 
 pub fn vendor(ws: &Workspace<'_>, opts: &VendorOptions<'_>) -> CargoResult<()> {
@@ -84,8 +89,16 @@ fn sync(
     let canonical_destination = try_canonicalize(opts.destination);
     let canonical_destination = canonical_destination.as_deref().unwrap_or(opts.destination);
     let dest_dir_already_exists = canonical_destination.exists();
+    let merge_sources = !opts.no_merge_sources;
+    let sources_file = canonical_destination.join(SOURCES_FILE_NAME);
 
     paths::create_dir_all(&canonical_destination)?;
+
+    if !merge_sources {
+        let mut file = File::create(sources_file)?;
+        file.write_all(serde_json::json!([]).to_string().as_bytes())?;
+    }
+
     let mut to_remove = HashSet::new();
     if !opts.no_delete {
         for entry in canonical_destination.read_dir()? {
@@ -172,8 +185,9 @@ fn sync(
     let mut versions = HashMap::new();
     for id in ids.keys() {
         let map = versions.entry(id.name()).or_insert_with(BTreeMap::default);
-        if let Some(prev) = map.get(&id.version()) {
-            bail!(
+
+        match map.get(&id.version()) {
+            Some(prev) if merge_sources => bail!(
                 "found duplicate version of package `{} v{}` \
                  vendored from two sources:\n\
                  \n\
@@ -183,7 +197,8 @@ fn sync(
                 id.version(),
                 prev,
                 id.source_id()
-            );
+            ),
+            _ => {}
         }
         map.insert(id.version(), id.source_id());
     }
@@ -207,7 +222,17 @@ fn sync(
         };
 
         sources.insert(id.source_id());
-        let dst = canonical_destination.join(&dst_name);
+        let source_dir = if merge_sources {
+            PathBuf::from(canonical_destination).clone()
+        } else {
+            PathBuf::from(canonical_destination).join(source_id_to_dir_name(id.source_id()))
+        };
+        if sources.insert(id.source_id()) && !merge_sources {
+            if fs::create_dir_all(&source_dir).is_err() {
+                panic!("failed to create: `{}`", source_dir.display())
+            }
+        }
+        let dst = source_dir.join(&dst_name);
         to_remove.remove(&dst);
         let cksum = dst.join(".cargo-checksum.json");
         if dir_has_version_suffix && cksum.exists() {
@@ -244,6 +269,31 @@ fn sync(
         }
     }
 
+    if !merge_sources {
+        let sources_file = PathBuf::from(canonical_destination).join(SOURCES_FILE_NAME);
+        let file = File::open(&sources_file)?;
+        let mut new_sources: BTreeSet<String> = sources
+            .iter()
+            .map(|src_id| source_id_to_dir_name(*src_id))
+            .collect();
+        let old_sources: BTreeSet<String> = serde_json::from_reader::<_, BTreeSet<String>>(file)?
+            .difference(&new_sources)
+            .map(|e| e.clone())
+            .collect();
+        for dir_name in old_sources {
+            let path = PathBuf::from(canonical_destination).join(dir_name.clone());
+            if path.is_dir() {
+                if path.read_dir()?.next().is_none() {
+                    fs::remove_dir(path)?;
+                } else {
+                    new_sources.insert(dir_name.clone());
+                }
+            }
+        }
+        let file = File::create(sources_file)?;
+        serde_json::to_writer(file, &new_sources)?;
+    }
+
     // add our vendored source
     let mut config = BTreeMap::new();
 
@@ -259,16 +309,32 @@ fn sync(
             source_id.without_precise().as_url().to_string()
         };
 
+        let replace_name = if !merge_sources {
+            format!("vendor+{}", name)
+        } else {
+            merged_source_name.to_string()
+        };
+
+        if !merge_sources {
+            let src_id_string = source_id_to_dir_name(source_id);
+            let src_dir = PathBuf::from(canonical_destination).join(src_id_string.clone());
+            let string = src_dir.to_str().unwrap().to_string();
+            config.insert(
+                replace_name.clone(),
+                VendorSource::Directory { directory: string },
+            );
+        }
+
         let source = if source_id.is_crates_io() {
             VendorSource::Registry {
                 registry: None,
-                replace_with: merged_source_name.to_string(),
+                replace_with: replace_name,
             }
         } else if source_id.is_remote_registry() {
             let registry = source_id.url().to_string();
             VendorSource::Registry {
                 registry: Some(registry),
-                replace_with: merged_source_name.to_string(),
+                replace_with: replace_name,
             }
         } else if source_id.is_git() {
             let mut branch = None;
@@ -287,7 +353,7 @@ fn sync(
                 branch,
                 tag,
                 rev,
-                replace_with: merged_source_name.to_string(),
+                replace_with: replace_name,
             }
         } else {
             panic!("Invalid source ID: {}", source_id)
@@ -394,6 +460,42 @@ fn cp_sources(
         cksums.insert(relative.to_str().unwrap().replace("\\", "/"), cksum);
     }
     Ok(())
+}
+
+fn source_id_to_dir_name(src_id: SourceId) -> String {
+    let src_type = if src_id.is_registry() {
+        "registry"
+    } else if src_id.is_git() {
+        "git"
+    } else {
+        panic!()
+    };
+    let mut hasher = DefaultHasher::new();
+    src_id.stable_hash(Path::new(""), &mut hasher);
+    let src_hash = hasher.finish();
+    let mut bytes = [0; 8];
+    for i in 0..7 {
+        bytes[i] = (src_hash >> i * 8) as u8
+    }
+    format!("{}-{}", src_type, hex(&bytes))
+}
+
+fn hex(bytes: &[u8]) -> String {
+    let mut s = String::with_capacity(bytes.len() * 2);
+    for &byte in bytes {
+        s.push(hex((byte >> 4) & 0xf));
+        s.push(hex((byte >> 0) & 0xf));
+    }
+
+    return s;
+
+    fn hex(b: u8) -> char {
+        if b < 10 {
+            (b'0' + b) as char
+        } else {
+            (b'a' + b - 10) as char
+        }
+    }
 }
 
 fn copy_and_checksum<T: Read>(

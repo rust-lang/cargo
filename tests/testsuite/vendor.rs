@@ -1151,3 +1151,76 @@ fn vendor_crate_with_ws_inherit() {
         .with_stderr_contains("[..]foo/vendor/bar/src/lib.rs[..]")
         .run();
 }
+
+#[cargo_test]
+fn replace_section() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                libc = "0.2.43"
+                [replace."libc:0.2.43"]
+                git = "https://github.com/rust-lang/libc"
+                rev = "add1a320b4e1b454794a034e3f4218f877c393fc"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    Package::new("libc", "0.2.43").publish();
+
+    let output = p
+        .cargo("vendor --no-merge-sources")
+        .exec_with_output()
+        .unwrap();
+    p.change_file(".cargo/config", &String::from_utf8(output.stdout).unwrap());
+    assert!(p.root().join("vendor/.sources").exists());
+    p.cargo("check").run();
+}
+
+#[cargo_test]
+fn switch_merged_source() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                [dependencies]
+                log = "0.3.5"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    Package::new("log", "0.3.5").publish();
+
+    // Start with multi sources
+    let output = p
+        .cargo("vendor --no-merge-sources")
+        .exec_with_output()
+        .unwrap();
+    assert!(p.root().join("vendor/.sources").exists());
+    p.change_file(".cargo/config", &String::from_utf8(output.stdout).unwrap());
+    p.cargo("check").run();
+
+    // Switch to merged source
+    let output = p.cargo("vendor").exec_with_output().unwrap();
+    p.change_file(".cargo/config", &String::from_utf8(output.stdout).unwrap());
+    p.cargo("check").run();
+
+    // Switch back to multi sources
+    let output = p
+        .cargo("vendor --no-merge-sources")
+        .exec_with_output()
+        .unwrap();
+    p.change_file(".cargo/config", &String::from_utf8(output.stdout).unwrap());
+    assert!(p.root().join("vendor/.sources").exists());
+    p.cargo("check").run();
+}
