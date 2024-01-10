@@ -39,7 +39,14 @@ fn du_inner(path: &Path, patterns: &[&str]) -> Result<u64> {
         .git_ignore(false)
         .git_exclude(false);
     let walker = builder.build_parallel();
+
+    // Platforms like PowerPC don't support AtomicU64, so we use a Mutex instead.
+    //
+    // See:
+    // - https://github.com/rust-lang/cargo/pull/12981
+    // - https://github.com/rust-lang/rust/pull/117916#issuecomment-1812635848
     let total = Arc::new(Mutex::new(0u64));
+
     // A slot used to indicate there was an error while walking.
     //
     // It is possible that more than one error happens (such as in different
