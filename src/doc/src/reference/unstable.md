@@ -89,6 +89,7 @@ For the latest nightly, see the [nightly version] of this page.
 * rustdoc
     * [rustdoc-map](#rustdoc-map) --- Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
     * [scrape-examples](#scrape-examples) --- Shows examples within documentation.
+    * [output-format](#output-format-for-rustdoc) --- Allows documentation to also be emitted in the experimental [JSON format](https://doc.rust-lang.org/nightly/nightly-rustc/rustdoc_json_types/).
 * `Cargo.toml` extensions
     * [Profile `rustflags` option](#profile-rustflags-option) --- Passed directly to rustc.
     * [codegen-backend](#codegen-backend) --- Select the codegen backend used by rustc.
@@ -1079,6 +1080,17 @@ If you want examples to be scraped from example targets, then you must not satis
 For example, you can set `doc-scrape-examples` to true for one example target, and that signals to Cargo that
 you are ok with dev-deps being build for `cargo doc`.
 
+## output-format for rustdoc
+
+* Tracking Issue: [#13283](https://github.com/rust-lang/cargo/issues/13283)
+
+This flag determines the output format of `cargo rustdoc`, accepting `html` or `json`, providing tools with a way to lean on [rustdoc's experimental JSON format](https://doc.rust-lang.org/nightly/nightly-rustc/rustdoc_json_types/).
+
+You can use the flag like this:
+
+```
+cargo rustdoc -Z unstable-options --output-format json
+```
 
 ## check-cfg
 
