@@ -962,7 +962,7 @@ fn parse_gitoxide(
             "checkout" => *checkout = true,
             "internal-use-git2" => *internal_use_git2 = true,
             _ => {
-                bail!("unstable 'gitoxide' only takes `fetch` and 'checkout' as valid inputs")
+                bail!("unstable 'gitoxide' only takes `fetch` and 'checkout' as valid input, for shallow fetches see `-Zgit=shallow-index,shallow-deps`")
             }
         }
     }
