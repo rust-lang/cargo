@@ -9,6 +9,7 @@ Options:
       --open                  Opens the docs in a browser after the operation
       --ignore-rust-version   Ignore `rust-version` specification in packages
       --message-format <FMT>  Error format
+      --output-format <FMT>   The output type to write (unstable) [possible values: html, json]
   -v, --verbose...            Use verbose output (-vv very verbose/build.rs output)
   -q, --quiet                 Do not print cargo log messages
       --color <WHEN>          Coloring: auto, always, never

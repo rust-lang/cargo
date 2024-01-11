@@ -22,6 +22,88 @@ fn rustdoc_simple() {
 }
 
 #[cargo_test]
+fn rustdoc_simple_html() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("rustdoc --output-format html --open -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: the `--output-format` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+[..]
+See https://github.com/rust-lang/cargo/issues/12103 for more information about the `--output-format` flag.
+",
+        )
+        .run();
+}
+
+#[cargo_test(nightly, reason = "--output-format is unstable")]
+fn rustdoc_simple_json() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("rustdoc -Z unstable-options --output-format json -v")
+        .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
+        .with_stderr(
+            "\
+[DOCUMENTING] foo v0.0.1 ([CWD])
+[RUNNING] `rustdoc [..]--crate-name foo [..]-o [CWD]/target/doc [..]--output-format=json[..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+    assert!(p.root().join("target/doc/foo.json").is_file());
+}
+
+#[cargo_test]
+fn rustdoc_invalid_output_format() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("rustdoc -Z unstable-options --output-format pdf -v")
+        .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
+        .with_status(1)
+        .with_stderr(
+            "\
+error: invalid value 'pdf' for '--output-format <FMT>'
+  [possible values: html, json]
+
+For more information, try '--help'.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn rustdoc_json_stable() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("rustdoc -Z unstable-options --output-format json -v")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: the `-Z` flag is only accepted on the nightly channel of Cargo, but this is the `stable` channel
+[..]
+",
+	    )
+        .run();
+}
+
+#[cargo_test]
+fn rustdoc_json_without_unstable_options() {
+    let p = project().file("src/lib.rs", "").build();
+
+    p.cargo("rustdoc --output-format json -v")
+        .masquerade_as_nightly_cargo(&["rustdoc-output-format"])
+        .with_status(101)
+        .with_stderr(
+            "\
+error: the `--output-format` flag is unstable, pass `-Z unstable-options` to enable it
+[..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn rustdoc_args() {
     let p = project().file("src/lib.rs", "").build();
 

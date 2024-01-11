@@ -49,6 +49,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(config)?;
     let mode = CompileMode::Doc {
         deps: !args.flag("no-deps"),
+        json: false,
     };
     let mut compile_opts =
         args.compile_options(config, mode, Some(&ws), ProfileChecking::Custom)?;
@@ -56,6 +57,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
     let doc_opts = DocOptions {
         open_result: args.flag("open"),
+        output_format: ops::OutputFormat::Html,
         compile_opts,
     };
     ops::doc(&ws, &doc_opts)?;

@@ -5,7 +5,7 @@ pub use self::cargo_compile::{
     compile, compile_with_exec, compile_ws, create_bcx, print, resolve_all_features, CompileOptions,
 };
 pub use self::cargo_compile::{CompileFilter, FilterRule, LibRule, Packages};
-pub use self::cargo_doc::{doc, DocOptions};
+pub use self::cargo_doc::{doc, DocOptions, OutputFormat};
 pub use self::cargo_fetch::{fetch, FetchOptions};
 pub use self::cargo_generate_lockfile::generate_lockfile;
 pub use self::cargo_generate_lockfile::update_lockfile;

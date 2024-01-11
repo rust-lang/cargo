@@ -420,7 +420,7 @@ pub fn create_bcx<'a, 'cfg>(
 
     // TODO: In theory, Cargo should also dedupe the roots, but I'm uncertain
     // what heuristics to use in that case.
-    if build_config.mode == (CompileMode::Doc { deps: true }) {
+    if matches!(build_config.mode, CompileMode::Doc { deps: true, .. }) {
         remove_duplicate_doc(build_config, &units, &mut unit_graph);
     }
 

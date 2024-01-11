@@ -762,6 +762,8 @@ fn prepare_rustdoc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuil
     build_deps_args(&mut rustdoc, cx, unit)?;
     rustdoc::add_root_urls(cx, unit, &mut rustdoc)?;
 
+    rustdoc::add_output_format(cx, unit, &mut rustdoc)?;
+
     rustdoc.args(bcx.rustdocflags_args(unit));
 
     if !crate_version_flag_already_present(&rustdoc) {

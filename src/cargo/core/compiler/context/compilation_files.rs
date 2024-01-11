@@ -435,11 +435,16 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
         bcx: &BuildContext<'a, 'cfg>,
     ) -> CargoResult<Arc<Vec<OutputFile>>> {
         let ret = match unit.mode {
-            CompileMode::Doc { .. } => {
-                let path = self
-                    .out_dir(unit)
-                    .join(unit.target.crate_name())
-                    .join("index.html");
+            CompileMode::Doc { json, .. } => {
+                let path = if json {
+                    self.out_dir(unit)
+                        .join(format!("{}.json", unit.target.crate_name()))
+                } else {
+                    self.out_dir(unit)
+                        .join(unit.target.crate_name())
+                        .join("index.html")
+                };
+
                 vec![OutputFile {
                     path,
                     hardlink: None,
