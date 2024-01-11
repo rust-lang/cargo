@@ -162,12 +162,20 @@ explicitly asked to install one.
 
 Cargo allows "newer" pre-releases to be used automatically. For example, if
 `1.0.0-beta` is published, then a requirement `foo = "1.0.0-alpha"` will allow
-updating to the `beta` version. Beware that pre-release versions can be
-unstable, and as such care should be taken when using them. Some projects may
-choose to publish breaking changes between pre-release versions. It is
-recommended to not use pre-release dependencies in a library if your library
-is not also a pre-release. Care should also be taken when updating your
-`Cargo.lock`, and be prepared if a pre-release update causes issues.
+updating to the `beta` version. Note that this only works on the same release
+version, `foo = "1.0.0-alpha"` will not allow updating to `foo = "1.0.1-alpha"`
+or `foo = "1.0.1-beta"`.
+
+Cargo will also upgrade automatically to semver-compatible released versions
+from prereleases. The requirement `foo = "1.0.0-alpha"` will allow updating to
+`foo = "1.0.0"` as well as `foo = "1.2.0"`.
+
+Beware that pre-release versions can be unstable, and as such care should be
+taken when using them. Some projects may choose to publish breaking changes
+between pre-release versions. It is recommended to not use pre-release
+dependencies in a library if your library is not also a pre-release. Care
+should also be taken when updating your `Cargo.lock`, and be prepared if a
+pre-release update causes issues.
 
 The pre-release tag may be separated with periods to distinguish separate
 components. Numeric components will use numeric comparison. For example,
