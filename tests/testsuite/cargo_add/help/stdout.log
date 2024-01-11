@@ -33,12 +33,12 @@ Options:
           The package will be removed from your features.
 
       --public
-          Mark the dependency as public
+          Mark the dependency as public (unstable)
           
           The dependency can be referenced in your library's public API.
 
       --no-public
-          Mark the dependency as private
+          Mark the dependency as private (unstable)
           
           While you can use the crate in your implementation, it cannot be referenced in your public
           API.

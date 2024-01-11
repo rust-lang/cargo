@@ -107,6 +107,18 @@ which is defined by the <code>registry.default</code> config key which defaults 
 <dd class="option-desc">Mark the dependency as <a href="../reference/features.html#optional-dependencies">required</a>.</dd>
 
 
+<dt class="option-term" id="option-cargo-add---public"><a class="option-anchor" href="#option-cargo-add---public"></a><code>--public</code></dt>
+<dd class="option-desc">Mark the dependency as public. </p>
+<p>The dependency can be referenced in your library’s public API.</p>
+<p><a href="../reference/unstable.html#public-dependency">Unstable (nightly-only)</a></dd>
+
+
+<dt class="option-term" id="option-cargo-add---no-public"><a class="option-anchor" href="#option-cargo-add---no-public"></a><code>--no-public</code></dt>
+<dd class="option-desc">Mark the dependency as private. </p>
+<p>While you can use the crate in your implementation, it cannot be referenced in your public API.</p>
+<p><a href="../reference/unstable.html#public-dependency">Unstable (nightly-only)</a></dd>
+
+
 <dt class="option-term" id="option-cargo-add---no-default-features"><a class="option-anchor" href="#option-cargo-add---no-default-features"></a><code>--no-default-features</code></dt>
 <dd class="option-desc">Disable the <a href="../reference/features.html#dependency-features">default features</a>.</dd>
 
