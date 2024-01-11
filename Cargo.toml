@@ -18,6 +18,7 @@ homepage = "https://github.com/rust-lang/cargo"
 repository = "https://github.com/rust-lang/cargo"
 
 [workspace.dependencies]
+annotate-snippets = "0.10.1"
 anstream = "0.6.5"
 anstyle = "1.0.4"
 anyhow = "1.0.79"
@@ -139,6 +140,7 @@ name = "cargo"
 path = "src/cargo/lib.rs"
 
 [dependencies]
+annotate-snippets.workspace = true
 anstream.workspace = true
 anstyle.workspace = true
 anyhow.workspace = true

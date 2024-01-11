@@ -449,15 +449,13 @@ fn malformed_override() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  TOML parse error at line 8, column 27
-    |
-  8 |                 native = {
-    |                           ^
-  invalid inline table
-  expected `}`
+[ERROR] invalid inline table
+expected `}`
+ --> Cargo.toml:8:27
+  |
+8 |                 native = {
+  |                           ^
+  |
 ",
         )
         .run();
@@ -1282,14 +1280,12 @@ fn bad_dependency() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to parse manifest at `[..]`
-
-Caused by:
-  TOML parse error at line 8, column 23
-    |
-  8 |                 bar = 3
-    |                       ^
-  invalid type: integer `3`, expected a version string like [..]
+[ERROR] invalid type: integer `3`, expected a version string like [..]
+ --> Cargo.toml:8:23
+  |
+8 |                 bar = 3
+  |                       ^
+  |
 ",
         )
         .run();
@@ -1317,14 +1313,12 @@ fn bad_debuginfo() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to parse manifest [..]
-
-Caused by:
-  TOML parse error at line 8, column 25
-    |
-  8 |                 debug = 'a'
-    |                         ^^^
-  invalid value: string \"a\", expected a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"
+[ERROR] invalid value: string \"a\", expected a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"
+ --> Cargo.toml:8:25
+  |
+8 |                 debug = 'a'
+  |                         ^^^
+  |
 ",
         )
         .run();
@@ -1352,14 +1346,12 @@ fn bad_debuginfo2() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to parse manifest at `[..]`
-
-Caused by:
-  TOML parse error at line 8, column 25
-    |
-  8 |                 debug = 3.6
-    |                         ^^^
-  invalid type: floating point `3.6`, expected a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"
+[ERROR] invalid type: floating point `3.6`, expected a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"
+ --> Cargo.toml:8:25
+  |
+8 |                 debug = 3.6
+  |                         ^^^
+  |
 ",
         )
         .run();
@@ -1385,14 +1377,12 @@ fn bad_opt_level() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to parse manifest at `[..]`
-
-Caused by:
-  TOML parse error at line 6, column 25
-    |
-  6 |                 build = 3
-    |                         ^
-  invalid type: integer `3`, expected a boolean or string
+[ERROR] invalid type: integer `3`, expected a boolean or string
+ --> Cargo.toml:6:25
+  |
+6 |                 build = 3
+  |                         ^
+  |
 ",
         )
         .run();
@@ -1685,16 +1675,14 @@ fn bad_trim_paths() {
     p.cargo("check -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["trim-paths"])
         .with_status(101)
-        .with_stderr(
-            r#"error: failed to parse manifest at `[..]`
-
-Caused by:
-  TOML parse error at line 7, column 30
-    |
-  7 |                 trim-paths = "split-debuginfo"
-    |                              ^^^^^^^^^^^^^^^^^
-  expected a boolean, "none", "diagnostics", "macro", "object", "all", or an array with these options
-"#,
+        .with_stderr("\
+[ERROR] expected a boolean, \"none\", \"diagnostics\", \"macro\", \"object\", \"all\", or an array with these options
+ --> Cargo.toml:7:30
+  |
+7 |                 trim-paths = \"split-debuginfo\"
+  |                              ^^^^^^^^^^^^^^^^^
+  |
+",
         )
         .run();
 }

@@ -44,18 +44,21 @@ fn toml_deserialize_manifest_error() {
         .file("bar/src/main.rs", "fn main() {}")
         .build();
 
-    let root_manifest_path = p.root().join("Cargo.toml");
-    let member_manifest_path = p.root().join("bar").join("Cargo.toml");
-
-    let error = Workspace::new(&root_manifest_path, &Config::default().unwrap()).unwrap_err();
-    eprintln!("{:?}", error);
-
-    let manifest_err: &ManifestError = error.downcast_ref().expect("Not a ManifestError");
-    assert_eq!(manifest_err.manifest_path(), &root_manifest_path);
-
-    let causes: Vec<_> = manifest_err.manifest_causes().collect();
-    assert_eq!(causes.len(), 1, "{:?}", causes);
-    assert_eq!(causes[0].manifest_path(), &member_manifest_path);
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] invalid string
+expected `\"`, `'`
+ --> bar/Cargo.toml:8:25
+  |
+8 |                 foobar == \"0.55\"
+  |                         ^
+  |
+[ERROR] failed to load manifest for dependency `bar`
+",
+        )
+        .run();
 }
 
 /// Tests inclusion of a `ManifestError` pointing to a member manifest

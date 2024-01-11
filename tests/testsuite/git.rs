@@ -2573,6 +2573,12 @@ fn invalid_git_dependency_manifest() {
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{}`
+[ERROR] duplicate key `categories` in table `package`
+ --> [..]/Cargo.toml:8:21
+  |
+8 |                     categories = [\"algorithms\"]
+  |                     ^
+  |
 [ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([..])`
 
 Caused by:
@@ -2580,16 +2586,6 @@ Caused by:
 
 Caused by:
   Unable to update {}
-
-Caused by:
-  failed to parse manifest at `[..]`
-
-Caused by:
-  TOML parse error at line 8, column 21
-    |
-  8 |                     categories = [\"algorithms\"]
-    |                     ^
-  duplicate key `categories` in table `package`
 ",
             path2url(&git_root),
             path2url(&git_root),

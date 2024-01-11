@@ -70,14 +70,12 @@ fn malformed_on_stable() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to parse manifest[..]
-
-Caused by:
-  TOML parse error at line 2, column 25
-    |
-  2 |                 lints = 20
-    |                         ^^
-  invalid type: integer `20`, expected a lints table
+[ERROR] invalid type: integer `20`, expected a lints table
+ --> Cargo.toml:2:25
+  |
+2 |                 lints = 20
+  |                         ^^
+  |
 ",
         )
         .run();
@@ -135,14 +133,12 @@ fn invalid_type_in_lint_value() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to parse manifest at `[..]/Cargo.toml`
-
-Caused by:
-  TOML parse error at line 7, column 36
-    |
-  7 |                 rust-2018-idioms = -1
-    |                                    ^^
-  invalid type: integer `-1`, expected a string or map
+[ERROR] invalid type: integer `-1`, expected a string or map
+ --> Cargo.toml:7:36
+  |
+7 |                 rust-2018-idioms = -1
+  |                                    ^^
+  |
 ",
         )
         .run();
@@ -339,14 +335,12 @@ pub fn foo(num: i32) -> u32 {
         .with_status(101)
         .with_stderr_contains(
             "\
-error: failed to parse manifest at `[CWD]/Cargo.toml`
-
-Caused by:
-  TOML parse error at line 8, column 29
-    |
-  8 |                 workspace = false
-    |                             ^^^^^
-  `workspace` cannot be false
+error: `workspace` cannot be false
+ --> Cargo.toml:8:29
+  |
+8 |                 workspace = false
+  |                             ^^^^^
+  |
 ",
         )
         .run();

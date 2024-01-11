@@ -679,14 +679,12 @@ fn wrong_position() {
         .with_status(101)
         .with_stderr(
             "\
-error: failed to parse manifest at [..]
-
-Caused by:
-  TOML parse error at line 5, column 34
-    |
-  5 |                 cargo-features = [\"test-dummy-unstable\"]
-    |                                  ^^^^^^^^^^^^^^^^^^^^^^^
-  the field `cargo-features` should be set at the top of Cargo.toml before any tables
+[ERROR] the field `cargo-features` should be set at the top of Cargo.toml before any tables
+ --> Cargo.toml:5:34
+  |
+5 |                 cargo-features = [\"test-dummy-unstable\"]
+  |                                  ^^^^^^^^^^^^^^^^^^^^^^^
+  |
 ",
         )
         .run();

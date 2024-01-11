@@ -1,9 +1,11 @@
+use annotate_snippets::{Annotation, AnnotationType, Renderer, Slice, Snippet, SourceAnnotation};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::{self, FromStr};
 
+use crate::AlreadyPrintedError;
 use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
 use cargo_util::paths;
@@ -11,6 +13,7 @@ use cargo_util_schemas::manifest;
 use cargo_util_schemas::manifest::RustVersion;
 use itertools::Itertools;
 use lazycell::LazyCell;
+use pathdiff::diff_paths;
 use tracing::{debug, trace};
 use url::Url;
 
@@ -43,7 +46,7 @@ pub fn read_manifest(
     path: &Path,
     source_id: SourceId,
     config: &Config,
-) -> Result<(EitherManifest, Vec<PathBuf>), ManifestError> {
+) -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
     trace!(
         "read_manifest; path={}; source-id={}",
         path.display(),
@@ -56,15 +59,23 @@ pub fn read_manifest(
             return Err(ManifestError::new(
                 anyhow::anyhow!("parsing `{}` requires `-Zscript`", path.display()),
                 path.into(),
-            ));
+            ))?;
         }
         contents = embedded::expand_manifest(&contents, path, config)
             .map_err(|err| ManifestError::new(err, path.into()))?;
     }
 
-    read_manifest_from_str(&contents, path, embedded, source_id, config)
-        .with_context(|| format!("failed to parse manifest at `{}`", path.display()))
-        .map_err(|err| ManifestError::new(err, path.into()))
+    read_manifest_from_str(&contents, path, embedded, source_id, config).map_err(|err| {
+        if err.is::<AlreadyPrintedError>() {
+            err
+        } else {
+            ManifestError::new(
+                err.context(format!("failed to parse manifest at `{}`", path.display())),
+                path.into(),
+            )
+            .into()
+        }
+    })
 }
 
 /// See also `bin/cargo/commands/run.rs`s `is_manifest_command`
@@ -94,11 +105,61 @@ fn read_manifest_from_str(
 
     let mut unused = BTreeSet::new();
     let deserializer = toml::de::Deserializer::new(contents);
-    let manifest: manifest::TomlManifest = serde_ignored::deserialize(deserializer, |path| {
+    let manifest: manifest::TomlManifest = match serde_ignored::deserialize(deserializer, |path| {
         let mut key = String::new();
         stringify(&mut key, &path);
         unused.insert(key);
-    })?;
+    }) {
+        Ok(manifest) => manifest,
+        Err(e) => {
+            let Some(span) = e.span() else {
+                return Err(e.into());
+            };
+
+            let (line_num, column) = translate_position(&contents, span.start);
+            let source_start = contents[0..span.start]
+                .rfind('\n')
+                .map(|s| s + 1)
+                .unwrap_or(0);
+            let source_end = contents[span.end - 1..]
+                .find('\n')
+                .map(|s| s + span.end)
+                .unwrap_or(contents.len());
+            let source = &contents[source_start..source_end];
+            // Make sure we don't try to highlight past the end of the line,
+            // but also make sure we are highlighting at least one character
+            let highlight_end = (column + contents[span].chars().count())
+                .min(source.len())
+                .max(column + 1);
+            // Get the path to the manifest, relative to the cwd
+            let manifest_path = diff_paths(manifest_file, config.cwd())
+                .unwrap_or_else(|| manifest_file.to_path_buf())
+                .display()
+                .to_string();
+            let snippet = Snippet {
+                title: Some(Annotation {
+                    id: None,
+                    label: Some(e.message()),
+                    annotation_type: AnnotationType::Error,
+                }),
+                footer: vec![],
+                slices: vec![Slice {
+                    source: &source,
+                    line_start: line_num + 1,
+                    origin: Some(manifest_path.as_str()),
+                    annotations: vec![SourceAnnotation {
+                        range: (column, highlight_end),
+                        label: "",
+                        annotation_type: AnnotationType::Error,
+                    }],
+                    fold: false,
+                }],
+            };
+            let renderer = Renderer::styled();
+            writeln!(config.shell().err(), "{}", renderer.render(snippet))?;
+            return Err(AlreadyPrintedError::new(e.into()).into());
+        }
+    };
     let add_unused = |warnings: &mut Warnings| {
         for key in unused {
             warnings.add_warning(format!("unused manifest key: {}", key));
@@ -2112,4 +2173,34 @@ impl ResolveToPath for ConfigRelativePath {
     fn resolve(&self, c: &Config) -> PathBuf {
         self.resolve_path(c)
     }
+}
+
+fn translate_position(input: &str, index: usize) -> (usize, usize) {
+    if input.is_empty() {
+        return (0, index);
+    }
+
+    let safe_index = index.min(input.len() - 1);
+    let column_offset = index - safe_index;
+
+    let nl = input[0..safe_index]
+        .as_bytes()
+        .iter()
+        .rev()
+        .enumerate()
+        .find(|(_, b)| **b == b'\n')
+        .map(|(nl, _)| safe_index - nl - 1);
+    let line_start = match nl {
+        Some(nl) => nl + 1,
+        None => 0,
+    };
+    let line = input[0..line_start]
+        .as_bytes()
+        .iter()
+        .filter(|c| **c == b'\n')
+        .count();
+    let column = input[line_start..=safe_index].chars().count() - 1;
+    let column = column + column_offset;
+
+    (line, column)
 }

@@ -1818,14 +1818,13 @@ fn cargo_metadata_with_invalid_authors_field() {
     p.cargo("metadata")
         .with_status(101)
         .with_stderr(
-            r#"[ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  TOML parse error at line 3, column 27
-    |
-  3 |                 authors = ""
-    |                           ^^
-  invalid type: string "", expected a vector of strings or workspace"#,
+            r#"[ERROR] invalid type: string "", expected a vector of strings or workspace
+ --> Cargo.toml:3:27
+  |
+3 |                 authors = ""
+  |                           ^^
+  |
+"#,
         )
         .run();
 }
@@ -1846,14 +1845,14 @@ fn cargo_metadata_with_invalid_version_field() {
     p.cargo("metadata")
         .with_status(101)
         .with_stderr(
-            r#"[ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  TOML parse error at line 3, column 27
-    |
-  3 |                 version = 1
-    |                           ^
-  invalid type: integer `1`, expected SemVer version"#,
+            "\
+[ERROR] invalid type: integer `1`, expected SemVer version
+ --> Cargo.toml:3:27
+  |
+3 |                 version = 1
+  |                           ^
+  |
+",
         )
         .run();
 }
@@ -1874,14 +1873,13 @@ fn cargo_metadata_with_invalid_publish_field() {
     p.cargo("metadata")
         .with_status(101)
         .with_stderr(
-            r#"[ERROR] failed to parse manifest at `[..]`
-
-Caused by:
-  TOML parse error at line 3, column 27
-    |
-  3 |                 publish = "foo"
-    |                           ^^^^^
-  invalid type: string "foo", expected a boolean, a vector of strings, or workspace"#,
+            r#"[ERROR] invalid type: string "foo", expected a boolean, a vector of strings, or workspace
+ --> Cargo.toml:3:27
+  |
+3 |                 publish = "foo"
+  |                           ^^^^^
+  |
+"#,
         )
         .run();
 }

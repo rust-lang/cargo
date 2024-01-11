@@ -83,14 +83,12 @@ fn invalid_profile_name() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] failed to parse manifest at [..]
-
-Caused by:
-  TOML parse error at line 7, column 26
-    |
-  7 |                 [profile.'.release-lto']
-    |                          ^^^^^^^^^^^^^^
-  invalid character `.` in profile name: `.release-lto`, allowed characters are letters, numbers, underscore, and hyphen
+[ERROR] invalid character `.` in profile name: `.release-lto`, allowed characters are letters, numbers, underscore, and hyphen
+ --> Cargo.toml:7:26
+  |
+7 |                 [profile.'.release-lto']
+  |                          ^^^^^^^^^^^^^^
+  |
 ",
         )
         .run();
@@ -634,17 +632,15 @@ See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configur
             .with_status(101)
             .with_stderr(&format!(
                 "\
-error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  TOML parse error at line 6, column 30
-    |
-  6 |                     [profile.{name}]
-    |                              {highlight}
-  profile name `{name}` is reserved
-  Please choose a different name.
-  See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
-",
+[ERROR] profile name `{name}` is reserved
+Please choose a different name.
+See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
+ --> Cargo.toml:6:30
+  |
+6 |                     [profile.{name}]
+  |                              {highlight}
+  |
+"
             ))
             .run();
     }
@@ -667,16 +663,14 @@ Caused by:
         .with_status(101)
         .with_stderr(
             "\
-error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  TOML parse error at line 7, column 25
-    |
-  7 |                [profile.debug]
-    |                         ^^^^^
-  profile name `debug` is reserved
-  To configure the default development profile, use the name `dev` as in [profile.dev]
-  See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
+[ERROR] profile name `debug` is reserved
+To configure the default development profile, use the name `dev` as in [profile.dev]
+See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
+ --> Cargo.toml:7:25
+  |
+7 |                [profile.debug]
+  |                         ^^^^^
+  |
 ",
         )
         .run();
