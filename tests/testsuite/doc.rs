@@ -3,7 +3,7 @@
 use cargo::core::compiler::RustDocFingerprint;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
+use cargo_test_support::{basic_lib_manifest, basic_manifest, cross_compile, git, project};
 use cargo_test_support::{rustc_host, symlink_supported, tools};
 use std::fs;
 use std::str;
@@ -809,6 +809,29 @@ fn doc_target() {
 }
 
 #[cargo_test]
+fn doc_and_open() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            "
+            /// test
+            pub fn foo() {}
+            ",
+        )
+        .build();
+
+    p.cargo("doc --verbose --open --target")
+        .arg(rustc_host())
+        .env("BROWSER", tools::echo())
+        .with_stderr_contains("[..] Documenting foo v0.0.1 ([..])")
+        .with_stderr_contains(&format!(
+            "[..] Opening [..]/target/{}/doc/foo/index.html",
+            rustc_host()
+        ))
+        .run();
+}
+
+#[cargo_test]
 fn target_specific_not_documented() {
     let p = project()
         .file(
@@ -1243,6 +1266,90 @@ fn doc_virtual_manifest_one_project() {
 }
 
 #[cargo_test]
+fn doc_and_open_virtual_manifest_one_project() {
+    if cross_compile::disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "bar"]
+            "#,
+        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("foo/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            &format!(
+                r#"
+                cargo-features = ["per-package-target"]
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                forced-target = "{}"
+            "#,
+                target
+            ),
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc -p bar --open")
+        .masquerade_as_nightly_cargo(&["per-package-target"])
+        .env("BROWSER", tools::echo())
+        .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
+        .with_stderr_contains(&format!(
+            "[..] Opening [..]/target/{}/doc/bar/index.html",
+            target
+        ))
+        .run();
+}
+
+#[cargo_test]
+fn doc_and_open_virtual_manifest_two_projects() {
+    if cross_compile::disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "bar"]
+            "#,
+        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("foo/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            &format!(
+                r#"
+                cargo-features = ["per-package-target"]
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                forced-target = "{}"
+            "#,
+                target
+            ),
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc -p foo -p bar --open")
+        .masquerade_as_nightly_cargo(&["per-package-target"])
+        .env("BROWSER", tools::echo())
+        .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
+        .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
+        .with_stderr_contains("[..] Opening [..]/foo/index.html")
+        .run();
+}
+
+#[cargo_test]
 fn doc_virtual_manifest_glob() {
     let p = project()
         .file(
@@ -1341,6 +1448,210 @@ fn doc_workspace_open_help_message() {
         .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
         .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
         .with_stderr_contains("[..] Opening [..]/bar/index.html")
+        .run();
+}
+
+#[cargo_test]
+fn doc_workspace_open_first_one_built_for_host() {
+    if cross_compile::disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "bar"]
+            "#,
+        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("foo/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            &format!(
+                r#"
+                cargo-features = ["per-package-target"]
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                forced-target = "{}"
+            "#,
+                target
+            ),
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc --workspace --open")
+        .masquerade_as_nightly_cargo(&["per-package-target"])
+        .env("BROWSER", tools::echo())
+        .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
+        .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
+        .with_stderr_contains("[..] Opening [..]/foo/index.html")
+        .run();
+}
+
+#[cargo_test]
+fn doc_workspace_open_first_one_when_no_one_built_for_host() {
+    if cross_compile::disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "bar"]
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            &format!(
+                r#"
+                cargo-features = ["per-package-target"]
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                forced-target = "{}"
+            "#,
+                target
+            ),
+        )
+        .file("foo/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            &format!(
+                r#"
+                cargo-features = ["per-package-target"]
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                forced-target = "{}"
+            "#,
+                target
+            ),
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc --workspace --open")
+        .masquerade_as_nightly_cargo(&["per-package-target"])
+        .env("BROWSER", tools::echo())
+        .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
+        .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
+        .with_stderr_contains(&format!(
+            "[..] Opening [..]/target/{}/doc/bar/index.html",
+            target
+        ))
+        .run();
+}
+
+#[cargo_test]
+fn doc_workspace_open_first_one_built_for_target() {
+    if cross_compile::disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "bar"]
+            "#,
+        )
+        .file("foo/Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("foo/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            &format!(
+                r#"
+                cargo-features = ["per-package-target"]
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                forced-target = "{}"
+            "#,
+                target
+            ),
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("doc --workspace --open --target")
+        .arg(target)
+        .masquerade_as_nightly_cargo(&["per-package-target"])
+        .env("BROWSER", tools::echo())
+        .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
+        .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
+        .with_stderr_contains(&format!(
+            "[..] Opening [..]/target/{}/doc/bar/index.html",
+            target
+        ))
+        .run();
+}
+
+#[cargo_test]
+fn doc_workspace_open_first_one_when_no_one_built_for_target() {
+    if cross_compile::disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "bar"]
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            &format!(
+                r#"
+                cargo-features = ["per-package-target"]
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                forced-target = "{}"
+            "#,
+                target
+            ),
+        )
+        .file("foo/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            &format!(
+                r#"
+                cargo-features = ["per-package-target"]
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                forced-target = "{}"
+            "#,
+                target
+            ),
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    // We don't build for host, so we should open the first one built for TARGET.
+    let host_target = rustc_host();
+    p.cargo("doc --workspace --open --target")
+        .arg(host_target)
+        .masquerade_as_nightly_cargo(&["per-package-target"])
+        .env("BROWSER", tools::echo())
+        .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
+        .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
+        .with_stderr_contains(&format!(
+            "[..] Opening [..]/target/{}/doc/bar/index.html",
+            target
+        ))
         .run();
 }
 

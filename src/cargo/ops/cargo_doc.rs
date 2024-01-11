@@ -20,11 +20,21 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
     let compilation = ops::compile(ws, &options.compile_opts)?;
 
     if options.open_result {
-        let name = &compilation
+        // The open behavior is as follows:
+        // cargo doc --open:
+        //  - Pick the first root unit that was built for host.
+        //  - If none found, pick the first one(whatever it's target is).
+        // cargo doc --target TARGET --open:
+        //  - Pick the first root unit for the given target.
+        //  - If none found, pick the first one(whatever it's target is).
+        let request_kind = options.compile_opts.build_config.single_requested_kind()?;
+        let (name, kind) = &compilation
             .root_crate_names
-            .get(0)
+            .iter()
+            .find(|(_, kind)| *kind == request_kind)
+            .or_else(|| compilation.root_crate_names.get(0))
             .ok_or_else(|| anyhow::anyhow!("no crates with documentation"))?;
-        let kind = options.compile_opts.build_config.single_requested_kind()?;
+
         let path = compilation.root_output[&kind]
             .with_file_name("doc")
             .join(&name)

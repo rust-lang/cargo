@@ -336,9 +336,12 @@ impl<'a, 'cfg> Context<'a, 'cfg> {
         }
         self.primary_packages
             .extend(self.bcx.roots.iter().map(|u| u.pkg.package_id()));
-        self.compilation
-            .root_crate_names
-            .extend(self.bcx.roots.iter().map(|u| u.target.crate_name()));
+        self.compilation.root_crate_names.extend(
+            self.bcx
+                .roots
+                .iter()
+                .map(|u| (u.target.crate_name(), u.kind.clone())),
+        );
 
         self.record_units_requiring_metadata();
 

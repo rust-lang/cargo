@@ -56,8 +56,8 @@ pub struct Compilation<'cfg> {
     /// An array of all cdylibs created.
     pub cdylibs: Vec<UnitOutput>,
 
-    /// The crate names of the root units specified on the command-line.
-    pub root_crate_names: Vec<String>,
+    /// The crate names and kinds of the root units specified on the command-line.
+    pub root_crate_names: Vec<(String, CompileKind)>,
 
     /// All directories for the output of native build commands.
     ///
