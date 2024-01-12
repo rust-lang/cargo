@@ -108,8 +108,8 @@ impl<'cfg> GitSource<'cfg> {
             &source_id,
             config
                 .cli_unstable()
-                .gitoxide
-                .map_or(false, |gix| gix.fetch && gix.shallow_deps),
+                .git
+                .map_or(false, |features| features.shallow_deps),
         );
 
         let source = GitSource {

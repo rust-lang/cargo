@@ -1117,6 +1117,9 @@ pub fn fetch(
             if tags {
                 opts.download_tags(git2::AutotagOption::All);
             }
+            if let gix::remote::fetch::Shallow::DepthAtRemote(depth) = shallow {
+                opts.depth(0i32.saturating_add_unsigned(depth.get()));
+            }
             // The `fetch` operation here may fail spuriously due to a corrupt
             // repository. It could also fail, however, for a whole slew of other
             // reasons (aka network related reasons). We want Cargo to automatically

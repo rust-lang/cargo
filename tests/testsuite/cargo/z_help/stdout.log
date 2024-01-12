@@ -14,6 +14,7 @@ Available unstable (nightly-only) flags:
     -Z doctest-xcompile         Compile and run doctests for non-host target using runner config
     -Z dual-proc-macros         Build proc-macros for both the host and the target
     -Z gc                       Track cache usage and "garbage collect" unused files
+    -Z git                      Enable support for shallow git fetch operations
     -Z gitoxide                 Use gitoxide for the given git interactions, or all of them if no argument is given
     -Z host-config              Enable the `[host]` section in the .cargo/config.toml file
     -Z lints                    Pass `[lints]` to the linting tools

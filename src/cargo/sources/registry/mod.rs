@@ -476,8 +476,8 @@ impl<'cfg> RegistrySource<'cfg> {
             source_id,
             config
                 .cli_unstable()
-                .gitoxide
-                .map_or(false, |gix| gix.fetch && gix.shallow_index)
+                .git
+                .map_or(false, |features| features.shallow_index)
                 && !source_id.is_sparse(),
         );
         let ops = if source_id.is_sparse() {

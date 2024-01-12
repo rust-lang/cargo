@@ -433,9 +433,10 @@ fn compile_offline_with_cached_git_dep(shallow: bool) {
     let maybe_use_shallow = |mut cargo: Execs| -> Execs {
         if shallow {
             cargo
-                .arg("-Zgitoxide=fetch,shallow-deps")
+                .arg("-Zgitoxide=fetch")
+                .arg("-Zgit=shallow-deps")
                 .masquerade_as_nightly_cargo(&[
-                    "unstable features must be available for -Z gitoxide",
+                    "unstable features must be available for -Z gitoxide and -Z git",
                 ]);
         }
         cargo
