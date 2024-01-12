@@ -283,4 +283,13 @@ mod test {
                 .to_string()
         );
     }
+
+    #[should_panic = "`at` split index (is 1) should be <= len (is 0)"]
+    #[test]
+    fn test_empty_summaries() {
+        let vp = VersionPreferences::default();
+        let mut summaries = vec![];
+
+        vp.sort_summaries(&mut summaries, Some(VersionOrdering::MaximumVersionsFirst));
+    }
 }
