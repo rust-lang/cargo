@@ -28,7 +28,7 @@ Package Selection:
       --all               Alias for --workspace (deprecated)
 
 Target Selection:
-      --lib               Test only this package's library unit tests
+      --lib               Test only this package's library
       --bins              Test all binaries
       --bin [<NAME>]      Test only the specified binary
       --examples          Test all examples

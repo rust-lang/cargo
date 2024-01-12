@@ -37,7 +37,7 @@ pub fn cli() -> Command {
             "Exclude packages from the test",
         )
         .arg_targets_all(
-            "Test only this package's library unit tests",
+            "Test only this package's library",
             "Test only the specified binary",
             "Test all binaries",
             "Test only the specified example",
