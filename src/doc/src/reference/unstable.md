@@ -1164,7 +1164,7 @@ Valid operations are the following:
 
 ## git
 
-* Tracking Issue: [TODO](https://github.com/rust-lang/cargo/issues/TODO)
+* Tracking Issue: [#13285](https://github.com/rust-lang/cargo/issues/13285)
 
 With the 'git' unstable feature, both `gitoxide` and `git2` will perform shallow fetches of the crate
 index and git dependencies.
@@ -1185,7 +1185,7 @@ Valid operations are the following:
   - `~/.cargo/git/db/*-shallow`
   - `~/.cargo/git/checkouts/*-shallow`
 * When the unstable feature is on, fetching/cloning a git repository is always a shallow fetch. This roughly equals to `git fetch --depth 1` everywhere.
-* Even with the presence of `Cargo.lock` or specifying a commit `{ rev = "…" }`, gitoxide is still smart enough to shallow fetch without unshallowing the existing repository. TODO: does this hold for libgit2?
+* Even with the presence of `Cargo.lock` or specifying a commit `{ rev = "…" }`, gitoxide and libgit2 are still smart enough to shallow fetch without unshallowing the existing repository.
 
 ## script
 
