@@ -266,8 +266,8 @@ containing the text of the license (relative to this `Cargo.toml`).
 
 [crates.io] interprets the `license` field as an [SPDX 2.3 license
 expression][spdx-2.3-license-expressions]. The name must be a known license
-from the [SPDX license list 3.20][spdx-license-list-3.20]. Parentheses are not
-currently supported. See the [SPDX site] for more information.
+from the [SPDX license list 3.20][spdx-license-list-3.20]. See the [SPDX site]
+for more information.
 
 SPDX license expressions support AND and OR operators to combine multiple
 licenses.[^slash]
