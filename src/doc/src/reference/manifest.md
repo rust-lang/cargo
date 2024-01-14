@@ -244,8 +244,12 @@ package.
 ```toml
 [package]
 # ...
-homepage = "https://serde.rs/"
+homepage = "https://serde.rs"
 ```
+
+A value should only be set for `homepage` if there is a dedicated website for
+the crate other than the source repository or API documentation. Do not make
+`homepage` redundant with either the `documentation` or `repository` values.
 
 ### The `repository` field
 
@@ -255,7 +259,7 @@ package.
 ```toml
 [package]
 # ...
-repository = "https://github.com/rust-lang/cargo/"
+repository = "https://github.com/rust-lang/cargo"
 ```
 
 ### The `license` and `license-file` fields
