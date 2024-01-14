@@ -535,6 +535,232 @@ Caused by:
 }
 
 #[cargo_test]
+fn path_bases_not_stable() {
+    let bar = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    fs::create_dir(&paths::root().join(".cargo")).unwrap();
+    fs::write(
+        &paths::root().join(".cargo/config"),
+        &format!(
+            "[base_path]\ntest = '{}'",
+            bar.root().parent().unwrap().display()
+        ),
+    )
+    .unwrap();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+
+                [dependencies.bar]
+                path = 'bar'
+                base = 'test'
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  usage of path bases requires `-Z path-bases`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn patch_with_base() {
+    let bar = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
+        .file("src/lib.rs", "pub fn hello() {}")
+        .build();
+    Package::new("bar", "0.5.0").publish();
+
+    fs::create_dir(&paths::root().join(".cargo")).unwrap();
+    fs::write(
+        &paths::root().join(".cargo/config"),
+        &format!(
+            "[base_path]\ntest = '{}'",
+            bar.root().parent().unwrap().display()
+        ),
+    )
+    .unwrap();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+                edition = "2018"
+
+                [dependencies.bar]
+                bar = "0.5.0"
+
+                [patch.crates-io.bar]
+                path = 'bar'
+                base = 'test'
+            "#,
+        )
+        .file("src/lib.rs", "use bar::hello as _;")
+        .build();
+
+    p.cargo("build -v -Zpath-bases")
+        .masquerade_as_nightly_cargo(&["path-bases"])
+        .run();
+}
+
+#[cargo_test]
+fn path_with_base() {
+    let bar = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    fs::create_dir(&paths::root().join(".cargo")).unwrap();
+    fs::write(
+        &paths::root().join(".cargo/config"),
+        &format!(
+            "[base_path]\ntest = '{}'",
+            bar.root().parent().unwrap().display()
+        ),
+    )
+    .unwrap();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+
+                [dependencies.bar]
+                path = 'bar'
+                base = 'test'
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -v -Zpath-bases")
+        .masquerade_as_nightly_cargo(&["path-bases"])
+        .run();
+}
+
+#[cargo_test]
+fn workspace_with_base() {
+    let bar = project()
+        .at("dep_with_base")
+        .file("Cargo.toml", &basic_manifest("dep_with_base", "0.5.0"))
+        .file("src/lib.rs", "")
+        .build();
+
+    fs::create_dir(&paths::root().join(".cargo")).unwrap();
+    fs::write(
+        &paths::root().join(".cargo/config"),
+        &format!(
+            "[base_path]\ntest = '{}'",
+            bar.root().parent().unwrap().display()
+        ),
+    )
+    .unwrap();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "parent"
+                version = "0.1.0"
+                authors = []
+
+                [workspace]
+                members = ["child"]
+
+                [workspace.dependencies.dep_with_base]
+                path = 'dep_with_base'
+                base = 'test'
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "child/Cargo.toml",
+            r#"
+                [package]
+                name = "child"
+                version = "0.1.0"
+                authors = []
+                workspace = ".."
+
+                [dependencies.dep_with_base]
+                workspace = true
+            "#,
+        )
+        .file("child/src/main.rs", "fn main() {}");
+    let p = p.build();
+
+    p.cargo("build -v -Zpath-bases")
+        .masquerade_as_nightly_cargo(&["path-bases"])
+        .run();
+}
+
+#[cargo_test]
+fn unknown_base() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+
+                [dependencies.bar]
+                path = 'bar'
+                base = 'test'
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("build -Zpath-bases")
+        .masquerade_as_nightly_cargo(&["path-bases"])
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]/foo/Cargo.toml`
+
+Caused by:
+  dependency (bar) uses an undefined base path `test`. You must add an entry for `test` in the Cargo configuration [base_path] table.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn override_relative() {
     let bar = project()
         .at("bar")
