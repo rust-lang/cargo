@@ -39,6 +39,10 @@ DESCRIPTION
        | url#name@version | https://github.com/rust-lang/cargo#crates-io@0.21.0 |
        +-----------------+--------------------------------------------------+
 
+       The specification grammar can be found in chapter Package ID
+       Specifications
+       <https://doc.rust-lang.org/cargo/reference/pkgid-spec.html>.
+
 OPTIONS
    Package Selection
        -p spec, --package spec
@@ -166,5 +170,7 @@ EXAMPLES
               cargo pkgid file:///path/to/local/package#foo
 
 SEE ALSO
-       cargo(1), cargo-generate-lockfile(1), cargo-metadata(1)
+       cargo(1), cargo-generate-lockfile(1), cargo-metadata(1), Package ID
+       Specifications
+       <https://doc.rust-lang.org/cargo/reference/pkgid-spec.html>
 

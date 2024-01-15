@@ -33,6 +33,8 @@ _url_`#`_version_          | `https://github.com/rust-lang/cargo#0.33.0`
 _url_`#`_name_             | `https://github.com/rust-lang/crates.io-index#bitflags`
 _url_`#`_name_`@`_version_ | `https://github.com/rust-lang/cargo#crates-io@0.21.0`
 
+The specification grammar can be found in chapter [Package ID Specifications].
+
 ## OPTIONS
 
 ### Package Selection
@@ -86,4 +88,6 @@ Get the package ID for the given package instead of the current package.
        cargo pkgid file:///path/to/local/package#foo
 
 ## SEE ALSO
-{{man "cargo" 1}}, {{man "cargo-generate-lockfile" 1}}, {{man "cargo-metadata" 1}}
+{{man "cargo" 1}}, {{man "cargo-generate-lockfile" 1}}, {{man "cargo-metadata" 1}}, [Package ID Specifications]
+
+[Package ID Specifications]: ../reference/pkgid-spec.html
