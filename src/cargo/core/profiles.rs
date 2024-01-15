@@ -573,10 +573,17 @@ fn merge_profile(profile: &mut Profile, toml: &TomlProfile) {
         profile.trim_paths = Some(trim_paths.clone());
     }
     profile.strip = match toml.strip {
-        Some(StringOrBool::Bool(true)) => Strip::Named(InternedString::new("symbols")),
-        None | Some(StringOrBool::Bool(false)) => Strip::None,
-        Some(StringOrBool::String(ref n)) if n.as_str() == "none" => Strip::None,
-        Some(StringOrBool::String(ref n)) => Strip::Named(InternedString::new(n)),
+        Some(StringOrBool::Bool(true)) => {
+            Strip::Resolved(StripInner::Named(InternedString::new("symbols")))
+        }
+        Some(StringOrBool::Bool(false)) => Strip::Resolved(StripInner::None),
+        Some(StringOrBool::String(ref n)) if n.as_str() == "none" => {
+            Strip::Resolved(StripInner::None)
+        }
+        Some(StringOrBool::String(ref n)) => {
+            Strip::Resolved(StripInner::Named(InternedString::new(n)))
+        }
+        None => Strip::Deferred(StripInner::None),
     };
 }
 
@@ -636,7 +643,7 @@ impl Default for Profile {
             rpath: false,
             incremental: false,
             panic: PanicStrategy::Unwind,
-            strip: Strip::None,
+            strip: Strip::Deferred(StripInner::None),
             rustflags: vec![],
             trim_paths: None,
         }
@@ -873,25 +880,84 @@ impl fmt::Display for PanicStrategy {
     }
 }
 
-/// The setting for choosing which symbols to strip
 #[derive(
     Clone, Copy, PartialEq, Eq, Debug, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
 )]
-#[serde(rename_all = "lowercase")]
-pub enum Strip {
+pub enum StripInner {
     /// Don't remove any symbols
     None,
     /// Named Strip settings
     Named(InternedString),
 }
 
-impl fmt::Display for Strip {
+impl fmt::Display for StripInner {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            Strip::None => "none",
-            Strip::Named(s) => s.as_str(),
+            StripInner::None => "none",
+            StripInner::Named(s) => s.as_str(),
         }
         .fmt(f)
+    }
+}
+
+/// The setting for choosing which symbols to strip.
+///
+/// This is semantically a [`StripInner`], and should be used as so via the
+/// [`Strip::into_inner`] method for all intents and purposes.
+///
+/// Internally, it's used to model a strip option whose value can be deferred
+/// for optimization purposes: when no package being compiled requires debuginfo,
+/// then we can strip debuginfo to remove pre-existing debug symbols from the
+/// standard library.
+#[derive(Clone, Copy, Debug, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Strip {
+    /// A strip option that is fixed and will not change.
+    Resolved(StripInner),
+    /// A strip option that might be overridden by Cargo for optimization
+    /// purposes.
+    Deferred(StripInner),
+}
+
+impl Strip {
+    /// The main way to interact with this strip option, turning it into a [`StripInner`].
+    pub fn into_inner(self) -> StripInner {
+        match self {
+            Strip::Resolved(v) | Strip::Deferred(v) => v,
+        }
+    }
+
+    pub(crate) fn is_deferred(&self) -> bool {
+        matches!(self, Strip::Deferred(_))
+    }
+
+    /// Reset to stripping debuginfo.
+    pub(crate) fn strip_debuginfo(self) -> Self {
+        Strip::Resolved(StripInner::Named("debuginfo".into()))
+    }
+}
+
+impl PartialEq for Strip {
+    fn eq(&self, other: &Self) -> bool {
+        self.into_inner().eq(&other.into_inner())
+    }
+}
+
+impl Hash for Strip {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.into_inner().hash(state);
+    }
+}
+
+impl PartialOrd for Strip {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.into_inner().partial_cmp(&other.into_inner())
+    }
+}
+
+impl Ord for Strip {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.into_inner().cmp(&other.into_inner())
     }
 }
 

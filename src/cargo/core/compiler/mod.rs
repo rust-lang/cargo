@@ -88,7 +88,7 @@ use self::unit_graph::UnitDep;
 use crate::core::compiler::future_incompat::FutureIncompatReport;
 pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
-use crate::core::profiles::{PanicStrategy, Profile, Strip};
+use crate::core::profiles::{PanicStrategy, Profile, StripInner};
 use crate::core::{Feature, PackageId, Target, Verbosity};
 use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;
@@ -1135,7 +1135,8 @@ fn build_base_args(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) 
         opt(cmd, "-C", "incremental=", Some(dir));
     }
 
-    if strip != Strip::None {
+    let strip = strip.into_inner();
+    if strip != StripInner::None {
         cmd.arg("-C").arg(format!("strip={}", strip));
     }
 

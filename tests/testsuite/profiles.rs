@@ -607,7 +607,82 @@ fn strip_accepts_false_to_disable_strip() {
         .build();
 
     p.cargo("build --release -v")
-        .with_stderr_does_not_contain("-C strip")
+        .with_stderr_does_not_contain("[RUNNING] `rustc [..] -C strip[..]`")
+        .run();
+}
+
+#[cargo_test]
+fn strip_debuginfo_in_release() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --release -v")
+        .with_stderr_contains("[RUNNING] `rustc [..] -C strip=debuginfo[..]`")
+        .run();
+}
+
+#[cargo_test]
+fn strip_debuginfo_without_debug() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                
+                [profile.dev]
+                debug = 0
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build -v")
+        .with_stderr_contains("[RUNNING] `rustc [..] -C strip=debuginfo[..]`")
+        .run();
+}
+
+#[cargo_test]
+fn do_not_strip_debuginfo_with_requested_debug() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                bar = { path = "bar" }
+
+                [profile.release.package.bar]
+                debug = 1
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                verison = "0.1.0"
+        "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("build --release -v")
+        .with_stderr_does_not_contain("[RUNNING] `rustc [..] -C strip=debuginfo[..]`")
         .run();
 }
 
