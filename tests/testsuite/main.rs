@@ -134,6 +134,7 @@ mod patch;
 mod path;
 mod paths;
 mod pkgid;
+mod precise_pre_release;
 mod proc_macro;
 mod profile_config;
 mod profile_custom;

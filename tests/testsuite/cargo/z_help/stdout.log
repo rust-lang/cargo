@@ -23,6 +23,7 @@ Available unstable (nightly-only) flags:
     -Z mtime-on-use             Configure Cargo to update the mtime of used files
     -Z no-index-update          Do not update the registry index even if the cache is outdated
     -Z panic-abort-tests        Enable support to run tests with -Cpanic=abort
+    -Z precise-pre-release      Enable pre-release versions to be selected with `update --precise`
     -Z profile-rustflags        Enable the `rustflags` option in profiles in .cargo/config.toml file
     -Z publish-timeout          Enable the `publish.timeout` key in .cargo/config.toml file
     -Z rustdoc-map              Allow passing external documentation mappings to rustdoc
