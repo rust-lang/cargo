@@ -95,8 +95,6 @@ impl GitRemote {
     /// This ensures that it gets the up-to-date commit when a named reference
     /// is given (tag, branch, refs/*). Thus, network connection is involved.
     ///
-    /// When `locked_rev` is provided, it takes precedence over `reference`.
-    ///
     /// If we have a previous instance of [`GitDatabase`] then fetch into that
     /// if we can. If that can successfully load our revision then we've
     /// populated the database with the latest version of `reference`, so
@@ -106,11 +104,8 @@ impl GitRemote {
         into: &Path,
         db: Option<GitDatabase>,
         reference: &GitReference,
-        locked_rev: Option<git2::Oid>,
         cargo_config: &Config,
     ) -> CargoResult<(GitDatabase, git2::Oid)> {
-        let locked_ref = locked_rev.map(|oid| GitReference::Rev(oid.to_string()));
-        let reference = locked_ref.as_ref().unwrap_or(reference);
         if let Some(mut db) = db {
             fetch(
                 &mut db.repo,
@@ -121,11 +116,7 @@ impl GitRemote {
             )
             .with_context(|| format!("failed to fetch into: {}", into.display()))?;
 
-            let resolved_commit_hash = match locked_rev {
-                Some(rev) => db.contains(rev).then_some(rev),
-                None => resolve_ref(reference, &db.repo).ok(),
-            };
-            if let Some(rev) = resolved_commit_hash {
+            if let Some(rev) = resolve_ref(reference, &db.repo).ok() {
                 return Ok((db, rev));
             }
         }
@@ -146,10 +137,7 @@ impl GitRemote {
             RemoteKind::GitDependency,
         )
         .with_context(|| format!("failed to clone into: {}", into.display()))?;
-        let rev = match locked_rev {
-            Some(rev) => rev,
-            None => resolve_ref(reference, &repo)?,
-        };
+        let rev = resolve_ref(reference, &repo)?;
 
         Ok((
             GitDatabase {

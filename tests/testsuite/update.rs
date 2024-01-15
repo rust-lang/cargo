@@ -1272,3 +1272,101 @@ rustdns.workspace = true
         )
         .run();
 }
+
+#[cargo_test]
+fn update_precise_git_revisions() {
+    let (git_project, git_repo) = git::new_repo("git", |p| {
+        p.file("Cargo.toml", &basic_lib_manifest("git"))
+            .file("src/lib.rs", "")
+    });
+    let tag_name = "Nazgûl";
+    git::tag(&git_repo, tag_name);
+    let tag_commit_id = git_repo.head().unwrap().target().unwrap().to_string();
+
+    git_project.change_file("src/lib.rs", "fn f() {}");
+    git::add(&git_repo);
+    let head_id = git::commit(&git_repo).to_string();
+    let short_id = &head_id[..8];
+    let url = git_project.url();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    git = {{ git = '{url}' }}
+                "#
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fetch")
+        .with_stderr(format!("[UPDATING] git repository `{url}`"))
+        .run();
+
+    assert!(p.read_lockfile().contains(&head_id));
+
+    p.cargo("update git --precise")
+        .arg(tag_name)
+        .with_stderr(format!(
+            "\
+[UPDATING] git repository `{url}`
+[UPDATING] git v0.5.0 ([..]) -> #{}",
+            &tag_commit_id[..8],
+        ))
+        .run();
+
+    assert!(p.read_lockfile().contains(&tag_commit_id));
+    assert!(!p.read_lockfile().contains(&head_id));
+
+    p.cargo("update git --precise")
+        .arg(short_id)
+        .with_stderr(format!(
+            "\
+[UPDATING] git repository `{url}`
+[UPDATING] git v0.5.0 ([..]) -> #{short_id}",
+        ))
+        .run();
+
+    assert!(p.read_lockfile().contains(&head_id));
+    assert!(!p.read_lockfile().contains(&tag_commit_id));
+
+    // updating back to tag still requires a git fetch,
+    // as the ref may change over time.
+    p.cargo("update git --precise")
+        .arg(tag_name)
+        .with_stderr(format!(
+            "\
+[UPDATING] git repository `{url}`
+[UPDATING] git v0.5.0 ([..]) -> #{}",
+            &tag_commit_id[..8],
+        ))
+        .run();
+
+    assert!(p.read_lockfile().contains(&tag_commit_id));
+    assert!(!p.read_lockfile().contains(&head_id));
+
+    // Now make a tag looks like an oid.
+    // It requires a git fetch, as the oid cannot be found in preexisting git db.
+    let arbitrary_tag: String = std::iter::repeat('a').take(head_id.len()).collect();
+    git::tag(&git_repo, &arbitrary_tag);
+
+    p.cargo("update git --precise")
+        .arg(&arbitrary_tag)
+        .with_stderr(format!(
+            "\
+[UPDATING] git repository `{url}`
+[UPDATING] git v0.5.0 ([..]) -> #{}",
+            &head_id[..8],
+        ))
+        .run();
+
+    assert!(p.read_lockfile().contains(&head_id));
+    assert!(!p.read_lockfile().contains(&tag_commit_id));
+}

@@ -167,7 +167,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 format!(
                     "{} -> #{}",
                     removed[0],
-                    &added[0].source_id().precise_git_fragment().unwrap()
+                    &added[0].source_id().precise_git_fragment().unwrap()[..8],
                 )
             } else {
                 format!("{} -> v{}", removed[0], added[0].version())

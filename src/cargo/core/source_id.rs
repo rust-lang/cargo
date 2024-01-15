@@ -461,20 +461,9 @@ impl SourceId {
 
     pub fn precise_git_fragment(self) -> Option<&'static str> {
         match &self.inner.precise {
-            Some(Precise::GitUrlFragment(s)) => Some(&s[..8]),
+            Some(Precise::GitUrlFragment(s)) => Some(&s),
             _ => None,
         }
-    }
-
-    pub fn precise_git_oid(self) -> CargoResult<Option<git2::Oid>> {
-        Ok(match self.inner.precise.as_ref() {
-            Some(Precise::GitUrlFragment(s)) => {
-                Some(git2::Oid::from_str(s).with_context(|| {
-                    format!("precise value for git is not a git revision: {}", s)
-                })?)
-            }
-            _ => None,
-        })
     }
 
     /// Creates a new `SourceId` from this source with the given `precise`.
