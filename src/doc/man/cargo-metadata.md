@@ -393,4 +393,6 @@ reproduction of the information within `Cargo.toml`.
        cargo metadata --format-version=1
 
 ## SEE ALSO
-{{man "cargo" 1}}
+{{man "cargo" 1}}, {{man "cargo-pkgid" 1}}, [Package ID Specifications]
+
+[Package ID Specifications]: ../reference/pkgid-spec.html

@@ -512,4 +512,6 @@ details on environment variables that Cargo reads.
        cargo metadata --format-version=1
 
 ## SEE ALSO
-[cargo(1)](cargo.html)
+[cargo(1)](cargo.html), [cargo-pkgid(1)](cargo-pkgid.html), [Package ID Specifications]
+
+[Package ID Specifications]: ../reference/pkgid-spec.html
