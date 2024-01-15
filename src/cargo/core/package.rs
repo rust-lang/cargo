@@ -22,7 +22,7 @@ use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::resolver::features::ForceAllTargets;
 use crate::core::resolver::{HasDevUnits, Resolve};
-use crate::core::{Dependency, Manifest, PackageId, SourceId, Target};
+use crate::core::{Dependency, Manifest, PackageId, PackageIdSpec, SourceId, Target};
 use crate::core::{Summary, Workspace};
 use crate::sources::source::{MaybePackage, SourceMap};
 use crate::util::cache_lock::{CacheLock, CacheLockMode};
@@ -82,7 +82,7 @@ impl PartialOrd for Package {
 pub struct SerializedPackage {
     name: InternedString,
     version: Version,
-    id: PackageId,
+    id: PackageIdSpec,
     license: Option<String>,
     license_file: Option<String>,
     description: Option<String>,
@@ -239,7 +239,7 @@ impl Package {
         SerializedPackage {
             name: package_id.name(),
             version: package_id.version().clone(),
-            id: package_id,
+            id: package_id.to_spec(),
             license: manmeta.license.clone(),
             license_file: manmeta.license_file.clone(),
             description: manmeta.description.clone(),

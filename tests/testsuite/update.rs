@@ -700,7 +700,7 @@ fn update_precise_first_run() {
       "edition": "2015",
       "features": {},
       "homepage": null,
-      "id": "bar 0.0.1 (path+file://[..]/foo)",
+      "id": "path+file://[..]/foo#bar@0.0.1",
       "keywords": [],
       "license": null,
       "license_file": null,
@@ -741,7 +741,7 @@ fn update_precise_first_run() {
       "edition": "2015",
       "features": {},
       "homepage": null,
-      "id": "serde 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+      "id": "registry+https://github.com/rust-lang/crates.io-index#serde@0.2.0",
       "keywords": [],
       "license": null,
       "license_file": null,
@@ -777,7 +777,7 @@ fn update_precise_first_run() {
     "nodes": [
       {
         "dependencies": [
-          "serde 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)"
+          "registry+https://github.com/rust-lang/crates.io-index#serde@0.2.0"
         ],
         "deps": [
           {
@@ -788,28 +788,28 @@ fn update_precise_first_run() {
               }
             ],
             "name": "serde",
-            "pkg": "serde 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)"
+            "pkg": "registry+https://github.com/rust-lang/crates.io-index#serde@0.2.0"
           }
         ],
         "features": [],
-        "id": "bar 0.0.1 (path+file://[..]/foo)"
+        "id": "path+file://[..]/foo#bar@0.0.1"
       },
       {
         "dependencies": [],
         "deps": [],
         "features": [],
-        "id": "serde 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)"
+        "id": "registry+https://github.com/rust-lang/crates.io-index#serde@0.2.0"
       }
     ],
-    "root": "bar 0.0.1 (path+file://[..]/foo)"
+    "root": "path+file://[..]/foo#bar@0.0.1"
   },
   "target_directory": "[..]/foo/target",
   "version": 1,
   "workspace_members": [
-    "bar 0.0.1 (path+file://[..]/foo)"
+    "path+file://[..]/foo#bar@0.0.1"
   ],
   "workspace_default_members": [
-    "bar 0.0.1 (path+file://[..]/foo)"
+    "path+file://[..]/foo#bar@0.0.1"
   ],
   "workspace_root": "[..]/foo",
   "metadata": null

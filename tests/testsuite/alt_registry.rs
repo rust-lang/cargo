@@ -858,7 +858,7 @@ fn alt_reg_metadata() {
                     {
                         "name": "foo",
                         "version": "0.0.1",
-                        "id": "foo 0.0.1 (path+file:[..]/foo)",
+                        "id": "path+file:[..]/foo#0.0.1",
                         "license": null,
                         "license_file": null,
                         "description": null,
@@ -908,10 +908,10 @@ fn alt_reg_metadata() {
                     }
                 ],
                 "workspace_members": [
-                    "foo 0.0.1 (path+file:[..]/foo)"
+                    "path+file:[..]/foo#0.0.1"
                 ],
                 "workspace_default_members": [
-                    "foo 0.0.1 (path+file:[..]/foo)"
+                    "path+file:[..]/foo#0.0.1"
                 ],
                 "resolve": null,
                 "target_directory": "[..]/foo/target",
@@ -931,7 +931,7 @@ fn alt_reg_metadata() {
                     {
                         "name": "altdep",
                         "version": "0.0.1",
-                        "id": "altdep 0.0.1 (registry+file:[..]/alternative-registry)",
+                        "id": "registry+file:[..]/alternative-registry#altdep@0.0.1",
                         "license": null,
                         "license_file": null,
                         "description": null,
@@ -970,7 +970,7 @@ fn alt_reg_metadata() {
                     {
                         "name": "altdep2",
                         "version": "0.0.1",
-                        "id": "altdep2 0.0.1 (registry+file:[..]/alternative-registry)",
+                        "id": "registry+file:[..]/alternative-registry#altdep2@0.0.1",
                         "license": null,
                         "license_file": null,
                         "description": null,
@@ -996,7 +996,7 @@ fn alt_reg_metadata() {
                     {
                         "name": "bar",
                         "version": "0.0.1",
-                        "id": "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+                        "id": "registry+https://github.com/rust-lang/crates.io-index#bar@0.0.1",
                         "license": null,
                         "license_file": null,
                         "description": null,
@@ -1022,7 +1022,7 @@ fn alt_reg_metadata() {
                     {
                         "name": "foo",
                         "version": "0.0.1",
-                        "id": "foo 0.0.1 (path+file:[..]/foo)",
+                        "id": "path+file:[..]/foo#0.0.1",
                         "license": null,
                         "license_file": null,
                         "description": null,
@@ -1073,7 +1073,7 @@ fn alt_reg_metadata() {
                     {
                         "name": "iodep",
                         "version": "0.0.1",
-                        "id": "iodep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+                        "id": "registry+https://github.com/rust-lang/crates.io-index#iodep@0.0.1",
                         "license": null,
                         "license_file": null,
                         "description": null,
@@ -1111,10 +1111,10 @@ fn alt_reg_metadata() {
                     }
                 ],
                 "workspace_members": [
-                    "foo 0.0.1 (path+file:[..]/foo)"
+                    "path+file:[..]/foo#0.0.1"
                 ],
                 "workspace_default_members": [
-                    "foo 0.0.1 (path+file:[..]/foo)"
+                    "path+file:[..]/foo#0.0.1"
                 ],
                 "resolve": "{...}",
                 "target_directory": "[..]/foo/target",
@@ -1174,7 +1174,7 @@ fn unknown_registry() {
                 {
                   "name": "bar",
                   "version": "0.0.1",
-                  "id": "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+                  "id": "registry+https://github.com/rust-lang/crates.io-index#bar@0.0.1",
                   "license": null,
                   "license_file": null,
                   "description": null,
@@ -1213,7 +1213,7 @@ fn unknown_registry() {
                 {
                   "name": "baz",
                   "version": "0.0.1",
-                  "id": "baz 0.0.1 (registry+file://[..]/alternative-registry)",
+                  "id": "registry+file://[..]/alternative-registry#baz@0.0.1",
                   "license": null,
                   "license_file": null,
                   "description": null,
@@ -1239,7 +1239,7 @@ fn unknown_registry() {
                 {
                   "name": "foo",
                   "version": "0.0.1",
-                  "id": "foo 0.0.1 (path+file://[..]/foo)",
+                  "id": "path+file://[..]/foo#0.0.1",
                   "license": null,
                   "license_file": null,
                   "description": null,
@@ -1277,10 +1277,10 @@ fn unknown_registry() {
                 }
               ],
               "workspace_members": [
-                "foo 0.0.1 (path+file://[..]/foo)"
+                "path+file://[..]/foo#0.0.1"
               ],
               "workspace_default_members": [
-                "foo 0.0.1 (path+file://[..]/foo)"
+                "path+file://[..]/foo#0.0.1"
               ],
               "resolve": "{...}",
               "target_directory": "[..]/foo/target",

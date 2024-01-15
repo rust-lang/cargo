@@ -26,7 +26,7 @@ fn cargo_metadata_simple() {
                 "default_run": null,
                 "name": "foo",
                 "version": "0.5.0",
-                "id": "foo[..]",
+                "id": "[..]foo#0.5.0",
                 "keywords": [],
                 "source": null,
                 "dependencies": [],
@@ -64,18 +64,18 @@ fn cargo_metadata_simple() {
                 "publish": null
             }
         ],
-        "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
-        "workspace_default_members": ["foo 0.5.0 (path+file:[..]foo)"],
+        "workspace_members": ["path+file:[..]foo#0.5.0"],
+        "workspace_default_members": ["path+file:[..]foo#0.5.0"],
         "resolve": {
             "nodes": [
                 {
                     "dependencies": [],
                     "deps": [],
                     "features": [],
-                    "id": "foo 0.5.0 (path+file:[..]foo)"
+                    "id": "path+file:[..]foo#0.5.0"
                 }
             ],
-            "root": "foo 0.5.0 (path+file:[..]foo)"
+            "root": "path+file:[..]foo#0.5.0"
         },
         "target_directory": "[..]foo/target",
         "version": 1,
@@ -131,7 +131,7 @@ crate-type = ["lib", "staticlib"]
                 "documentation": null,
                 "version": "0.5.0",
                 "rust_version": null,
-                "id": "foo[..]",
+                "id": "[..]foo#0.5.0",
                 "keywords": [],
                 "source": null,
                 "dependencies": [],
@@ -164,18 +164,18 @@ crate-type = ["lib", "staticlib"]
                 "publish": null
             }
         ],
-        "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
-        "workspace_default_members": ["foo 0.5.0 (path+file:[..]foo)"],
+        "workspace_members": ["path+file:[..]foo#0.5.0"],
+        "workspace_default_members": ["path+file:[..]foo#0.5.0"],
         "resolve": {
             "nodes": [
                 {
                     "dependencies": [],
                     "deps": [],
                     "features": [],
-                    "id": "foo 0.5.0 (path+file:[..]foo)"
+                    "id": "path+file:[..]foo#0.5.0"
                 }
             ],
-            "root": "foo 0.5.0 (path+file:[..]foo)"
+            "root": "path+file:[..]foo#0.5.0"
         },
         "target_directory": "[..]foo/target",
         "version": 1,
@@ -221,7 +221,7 @@ optional_feat = []
                 "homepage": null,
                 "documentation": null,
                 "version": "0.5.0",
-                "id": "foo[..]",
+                "id": "[..]foo#0.5.0",
                 "keywords": [],
                 "source": null,
                 "dependencies": [],
@@ -258,8 +258,8 @@ optional_feat = []
                 "publish": null
             }
         ],
-        "workspace_members": ["foo 0.5.0 (path+file:[..]foo)"],
-        "workspace_default_members": ["foo 0.5.0 (path+file:[..]foo)"],
+        "workspace_members": ["path+file:[..]foo#0.5.0"],
+        "workspace_default_members": ["path+file:[..]foo#0.5.0"],
         "resolve": {
             "nodes": [
                 {
@@ -269,10 +269,10 @@ optional_feat = []
                       "default",
                       "default_feat"
                     ],
-                    "id": "foo 0.5.0 (path+file:[..]foo)"
+                    "id": "path+file:[..]foo#0.5.0"
                 }
             ],
-            "root": "foo 0.5.0 (path+file:[..]foo)"
+            "root": "path+file:[..]foo#0.5.0"
         },
         "target_directory": "[..]foo/target",
         "version": 1,
@@ -337,7 +337,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "description": null,
                 "edition": "2015",
                 "features": {},
-                "id": "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+                "id": "registry+https://github.com/rust-lang/crates.io-index#bar@0.0.1",
                 "keywords": [],
                 "license": null,
                 "license_file": null,
@@ -378,7 +378,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "description": null,
                 "edition": "2015",
                 "features": {},
-                "id": "baz 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+                "id": "registry+https://github.com/rust-lang/crates.io-index#baz@0.0.1",
                 "keywords": [],
                 "license": null,
                 "license_file": null,
@@ -444,7 +444,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "description": "foo",
                 "edition": "2015",
                 "features": {},
-                "id": "foo 0.5.0 (path+file:[..]foo)",
+                "id": "path+file:[..]foo#0.5.0",
                 "keywords": [],
                 "license": "MIT",
                 "license_file": null,
@@ -485,7 +485,7 @@ fn cargo_metadata_with_deps_and_version() {
                 "description": null,
                 "edition": "2015",
                 "features": {},
-                "id": "foobar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+                "id": "registry+https://github.com/rust-lang/crates.io-index#foobar@0.0.1",
                 "keywords": [],
                 "license": null,
                 "license_file": null,
@@ -523,7 +523,7 @@ fn cargo_metadata_with_deps_and_version() {
             "nodes": [
                 {
                     "dependencies": [
-                        "baz 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+                        "registry+https://github.com/rust-lang/crates.io-index#baz@0.0.1"
                     ],
                     "deps": [
                         {
@@ -534,22 +534,22 @@ fn cargo_metadata_with_deps_and_version() {
                               }
                             ],
                             "name": "baz",
-                            "pkg": "baz 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+                            "pkg": "registry+https://github.com/rust-lang/crates.io-index#baz@0.0.1"
                         }
                     ],
                     "features": [],
-                    "id": "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+                    "id": "registry+https://github.com/rust-lang/crates.io-index#bar@0.0.1"
                 },
                 {
                     "dependencies": [],
                     "deps": [],
                     "features": [],
-                    "id": "baz 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+                    "id": "registry+https://github.com/rust-lang/crates.io-index#baz@0.0.1"
                 },
                 {
                     "dependencies": [
-                        "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
-                        "foobar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+                        "registry+https://github.com/rust-lang/crates.io-index#bar@0.0.1",
+                        "registry+https://github.com/rust-lang/crates.io-index#foobar@0.0.1"
                     ],
                     "deps": [
                         {
@@ -560,7 +560,7 @@ fn cargo_metadata_with_deps_and_version() {
                               }
                             ],
                             "name": "bar",
-                            "pkg": "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+                            "pkg": "registry+https://github.com/rust-lang/crates.io-index#bar@0.0.1"
                         },
                         {
                             "dep_kinds": [
@@ -570,28 +570,28 @@ fn cargo_metadata_with_deps_and_version() {
                               }
                             ],
                             "name": "foobar",
-                            "pkg": "foobar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+                            "pkg": "registry+https://github.com/rust-lang/crates.io-index#foobar@0.0.1"
                         }
                     ],
                     "features": [],
-                    "id": "foo 0.5.0 (path+file:[..]foo)"
+                    "id": "path+file:[..]foo#0.5.0"
                 },
                 {
                     "dependencies": [],
                     "deps": [],
                     "features": [],
-                    "id": "foobar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+                    "id": "registry+https://github.com/rust-lang/crates.io-index#foobar@0.0.1"
                 }
             ],
-            "root": "foo 0.5.0 (path+file:[..]foo)"
+            "root": "path+file:[..]foo#0.5.0"
         },
         "target_directory": "[..]foo/target",
         "version": 1,
         "workspace_members": [
-            "foo 0.5.0 (path+file:[..]foo)"
+            "path+file:[..]foo#0.5.0"
         ],
         "workspace_default_members": [
-            "foo 0.5.0 (path+file:[..]foo)"
+            "path+file:[..]foo#0.5.0"
         ],
         "workspace_root": "[..]/foo",
         "metadata": null
@@ -634,7 +634,7 @@ name = "ex"
                 "homepage": null,
                 "documentation": null,
                 "version": "0.1.0",
-                "id": "foo[..]",
+                "id": "[..]foo#0.1.0",
                 "keywords": [],
                 "license": null,
                 "license_file": null,
@@ -672,16 +672,16 @@ name = "ex"
             }
         ],
         "workspace_members": [
-            "foo 0.1.0 (path+file:[..]foo)"
+            "path+file:[..]foo#0.1.0"
         ],
         "workspace_default_members": [
-            "foo 0.1.0 (path+file:[..]foo)"
+            "path+file:[..]foo#0.1.0"
         ],
         "resolve": {
-            "root": "foo 0.1.0 (path+file://[..]foo)",
+            "root": "path+file://[..]foo#0.1.0",
             "nodes": [
                 {
-                    "id": "foo 0.1.0 (path+file:[..]foo)",
+                    "id": "path+file:[..]foo#0.1.0",
                     "features": [],
                     "dependencies": [],
                     "deps": []
@@ -732,7 +732,7 @@ crate-type = ["rlib", "dylib"]
                 "homepage": null,
                 "documentation": null,
                 "version": "0.1.0",
-                "id": "foo[..]",
+                "id": "[..]foo#0.1.0",
                 "keywords": [],
                 "license": null,
                 "license_file": null,
@@ -770,16 +770,16 @@ crate-type = ["rlib", "dylib"]
             }
         ],
         "workspace_members": [
-            "foo 0.1.0 (path+file:[..]foo)"
+            "path+file:[..]foo#0.1.0"
         ],
          "workspace_default_members": [
-            "foo 0.1.0 (path+file:[..]foo)"
+            "path+file:[..]foo#0.1.0"
         ],
         "resolve": {
-            "root": "foo 0.1.0 (path+file://[..]foo)",
+            "root": "path+file://[..]foo#0.1.0",
             "nodes": [
                 {
-                    "id": "foo 0.1.0 (path+file:[..]foo)",
+                    "id": "path+file:[..]foo#0.1.0",
                     "features": [],
                     "dependencies": [],
                     "deps": []
@@ -832,7 +832,7 @@ fn workspace_metadata() {
                 "default_run": null,
                 "name": "bar",
                 "version": "0.5.0",
-                "id": "bar[..]",
+                "id": "[..]bar#0.5.0",
                 "readme": null,
                 "repository": null,
                 "rust_version": null,
@@ -876,7 +876,7 @@ fn workspace_metadata() {
                 "homepage": null,
                 "documentation": null,
                 "version": "0.5.0",
-                "id": "baz[..]",
+                "id": "[..]baz#0.5.0",
                 "keywords": [],
                 "source": null,
                 "dependencies": [],
@@ -903,21 +903,27 @@ fn workspace_metadata() {
                 "publish": null
             }
         ],
-        "workspace_members": ["bar 0.5.0 (path+file:[..]bar)", "baz 0.5.0 (path+file:[..]baz)"],
-        "workspace_default_members": ["bar 0.5.0 (path+file:[..]bar)", "baz 0.5.0 (path+file:[..]baz)"],
+        "workspace_members": [
+            "path+file:[..]bar#0.5.0",
+            "path+file:[..]baz#0.5.0"
+        ],
+        "workspace_default_members": [
+            "path+file:[..]bar#0.5.0",
+            "path+file:[..]baz#0.5.0"
+        ],
         "resolve": {
             "nodes": [
                 {
                     "dependencies": [],
                     "deps": [],
                     "features": [],
-                    "id": "bar 0.5.0 (path+file:[..]bar)"
+                    "id": "path+file:[..]bar#0.5.0"
                 },
                 {
                     "dependencies": [],
                     "deps": [],
                     "features": [],
-                    "id": "baz 0.5.0 (path+file:[..]baz)"
+                    "id": "path+file:[..]baz#0.5.0"
                 }
             ],
             "root": null
@@ -988,7 +994,7 @@ fn workspace_metadata_with_dependencies_no_deps() {
                 "homepage": null,
                 "documentation": null,
                 "version": "0.5.0",
-                "id": "bar[..]",
+                "id": "[..]bar#0.5.0",
                 "keywords": [],
                 "source": null,
                 "license": null,
@@ -1060,7 +1066,7 @@ fn workspace_metadata_with_dependencies_no_deps() {
               "edition": "2015",
               "features": {},
               "homepage": null,
-              "id": "artifact 0.5.0 (path+file:[..]/foo/artifact)",
+              "id": "path+file:[..]/foo/artifact#0.5.0",
               "keywords": [],
               "license": null,
               "license_file": null,
@@ -1104,7 +1110,7 @@ fn workspace_metadata_with_dependencies_no_deps() {
                 "homepage": null,
                 "documentation": null,
                 "version": "0.5.0",
-                "id": "baz[..]",
+                "id": "[..]baz#0.5.0",
                 "keywords": [],
                 "source": null,
                 "dependencies": [],
@@ -1132,14 +1138,14 @@ fn workspace_metadata_with_dependencies_no_deps() {
             }
         ],
         "workspace_members": [
-            "bar 0.5.0 (path+file:[..]bar)",
-            "artifact 0.5.0 (path+file:[..]/foo/artifact)",
-            "baz 0.5.0 (path+file:[..]baz)"
+            "path+file:[..]bar#0.5.0",
+            "path+file:[..]/foo/artifact#0.5.0",
+            "path+file:[..]baz#0.5.0"
         ],
         "workspace_default_members": [
-            "bar 0.5.0 (path+file:[..]bar)",
-            "artifact 0.5.0 (path+file:[..]/foo/artifact)",
-            "baz 0.5.0 (path+file:[..]baz)"
+            "path+file:[..]bar#0.5.0",
+            "path+file:[..]/foo/artifact#0.5.0",
+            "path+file:[..]baz#0.5.0"
         ],
         "resolve": null,
         "target_directory": "[..]foo/target",
@@ -1254,7 +1260,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                   "edition": "2015",
                   "features": {},
                   "homepage": null,
-                  "id": "artifact 0.5.0 (path+file://[..]/foo/artifact)",
+                  "id": "path+file://[..]/foo/artifact#0.5.0",
                   "keywords": [],
                   "license": null,
                   "license_file": null,
@@ -1482,7 +1488,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                   "edition": "2015",
                   "features": {},
                   "homepage": null,
-                  "id": "bar 0.5.0 (path+file://[..]/foo/bar)",
+                  "id": "path+file://[..]/foo/bar#0.5.0",
                   "keywords": [],
                   "license": null,
                   "license_file": null,
@@ -1537,7 +1543,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                   "edition": "2015",
                   "features": {},
                   "homepage": null,
-                  "id": "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)",
+                  "id": "path+file://[..]/foo/bin-only-artifact#0.5.0",
                   "keywords": [],
                   "license": null,
                   "license_file": null,
@@ -1592,7 +1598,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                   "edition": "2015",
                   "features": {},
                   "homepage": null,
-                  "id": "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)",
+                  "id": "path+file://[..]/foo/non-artifact#0.5.0",
                   "keywords": [],
                   "license": null,
                   "license_file": null,
@@ -1630,13 +1636,13 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                     "dependencies": [],
                     "deps": [],
                     "features": [],
-                    "id": "artifact 0.5.0 (path+file://[..]/foo/artifact)"
+                    "id": "path+file://[..]/foo/artifact#0.5.0"
                   },
                   {
                     "dependencies": [
-                      "artifact 0.5.0 (path+file://[..]/foo/artifact)",
-                      "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)",
-                      "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)"
+                      "path+file://[..]/foo/artifact#0.5.0",
+                      "path+file://[..]/foo/bin-only-artifact#0.5.0",
+                      "path+file://[..]/foo/non-artifact#0.5.0"
                     ],
                     "deps": [
                       {
@@ -1690,7 +1696,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                           }
                         ],
                         "name": "artifact",
-                        "pkg": "artifact 0.5.0 (path+file://[..]/foo/artifact)"
+                        "pkg": "path+file://[..]/foo/artifact#0.5.0"
                       },
                       {
                         "dep_kinds": [
@@ -1726,7 +1732,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                           }
                         ],
                         "name": "",
-                        "pkg": "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)"
+                        "pkg": "path+file://[..]/foo/bin-only-artifact#0.5.0"
                       },
                       {
                         "dep_kinds": [
@@ -1744,23 +1750,23 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                           }
                         ],
                         "name": "non_artifact",
-                        "pkg": "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)"
+                        "pkg": "path+file://[..]/foo/non-artifact#0.5.0"
                       }
                     ],
                     "features": [],
-                    "id": "bar 0.5.0 (path+file://[..]/foo/bar)"
+                    "id": "path+file://[..]/foo/bar#0.5.0"
                   },
                   {
                     "dependencies": [],
                     "deps": [],
                     "features": [],
-                    "id": "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)"
+                    "id": "path+file://[..]/foo/bin-only-artifact#0.5.0"
                   },
                   {
                     "dependencies": [],
                     "deps": [],
                     "features": [],
-                    "id": "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)"
+                    "id": "path+file://[..]/foo/non-artifact#0.5.0"
                   }
                 ],
                 "root": null
@@ -1768,16 +1774,16 @@ fn workspace_metadata_with_dependencies_and_resolve() {
               "target_directory": "[..]/foo/target",
               "version": 1,
               "workspace_members": [
-                "bar 0.5.0 (path+file://[..]/foo/bar)",
-                "artifact 0.5.0 (path+file://[..]/foo/artifact)",
-                "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)",
-                "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)"
+                "path+file://[..]/foo/bar#0.5.0",
+                "path+file://[..]/foo/artifact#0.5.0",
+                "path+file://[..]/foo/bin-only-artifact#0.5.0",
+                "path+file://[..]/foo/non-artifact#0.5.0"
               ],
               "workspace_default_members": [
-                "bar 0.5.0 (path+file://[..]/foo/bar)",
-                "artifact 0.5.0 (path+file://[..]/foo/artifact)",
-                "bin-only-artifact 0.5.0 (path+file://[..]/foo/bin-only-artifact)",
-                "non-artifact 0.5.0 (path+file://[..]/foo/non-artifact)"
+                "path+file://[..]/foo/bar#0.5.0",
+                "path+file://[..]/foo/artifact#0.5.0",
+                "path+file://[..]/foo/bin-only-artifact#0.5.0",
+                "path+file://[..]/foo/non-artifact#0.5.0"
               ],
               "workspace_root": "[..]/foo"
             }
@@ -1954,7 +1960,7 @@ const MANIFEST_OUTPUT: &str = r#"
         "default_run": null,
         "name":"foo",
         "version":"0.5.0",
-        "id":"foo[..]0.5.0[..](path+file://[..]/foo)",
+        "id":"path+file://[..]/foo#0.5.0",
         "source":null,
         "dependencies":[],
         "keywords": [],
@@ -1983,8 +1989,8 @@ const MANIFEST_OUTPUT: &str = r#"
         "homepage": null,
         "documentation": null
     }],
-    "workspace_members": [ "foo 0.5.0 (path+file:[..]foo)" ],
-    "workspace_default_members": [ "foo 0.5.0 (path+file:[..]foo)" ],
+    "workspace_members": [ "path+file:[..]foo#0.5.0" ],
+    "workspace_default_members": [ "path+file:[..]foo#0.5.0" ],
     "resolve": null,
     "target_directory": "[..]foo/target",
     "version": 1,
@@ -2147,7 +2153,7 @@ fn package_metadata() {
                 "homepage": "https://rust-lang.org",
                 "documentation": "https://doc.rust-lang.org/stable/std/",
                 "version": "0.1.0",
-                "id": "foo[..]",
+                "id": "[..]foo#0.1.0",
                 "keywords": ["database"],
                 "source": null,
                 "dependencies": [],
@@ -2178,8 +2184,8 @@ fn package_metadata() {
                 "publish": null
             }
         ],
-        "workspace_members": ["foo[..]"],
-        "workspace_default_members": ["foo[..]"],
+        "workspace_members": ["[..]foo#0.1.0"],
+        "workspace_default_members": ["[..]foo#0.1.0"],
         "resolve": null,
         "target_directory": "[..]foo/target",
         "version": 1,
@@ -2227,7 +2233,7 @@ fn package_publish() {
                 "homepage": null,
                 "documentation": null,
                 "version": "0.1.0",
-                "id": "foo[..]",
+                "id": "[..]foo#0.1.0",
                 "keywords": ["database"],
                 "source": null,
                 "dependencies": [],
@@ -2254,8 +2260,8 @@ fn package_publish() {
                 "publish": ["my-registry"]
             }
         ],
-        "workspace_members": ["foo[..]"],
-        "workspace_default_members": ["foo[..]"],
+        "workspace_members": ["[..]foo#0.1.0"],
+        "workspace_default_members": ["[..]foo#0.1.0"],
         "resolve": null,
         "target_directory": "[..]foo/target",
         "version": 1,
@@ -2301,7 +2307,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                     "description": null,
                     "edition": "2015",
                     "features": {},
-                    "id": "bar 0.5.0 ([..])",
+                    "id": "[..]#bar@0.5.0",
                     "keywords": [],
                     "license": null,
                     "license_file": null,
@@ -2341,18 +2347,18 @@ fn cargo_metadata_path_to_cargo_toml_project() {
                         "dependencies": [],
                         "deps": [],
                         "features": [],
-                        "id": "bar 0.5.0 ([..])"
+                        "id": "[..]#bar@0.5.0"
                     }
                     ],
-                    "root": "bar 0.5.0 (path+file:[..])"
+                    "root": "path+file:[..]#bar@0.5.0"
                 },
                 "target_directory": "[..]",
                 "version": 1,
                 "workspace_members": [
-                    "bar 0.5.0 (path+file:[..])"
+                    "path+file:[..]#bar@0.5.0"
                 ],
                 "workspace_default_members": [
-                    "bar 0.5.0 (path+file:[..])"
+                    "path+file:[..]#bar@0.5.0"
                 ],
                 "workspace_root": "[..]",
                 "metadata": null
@@ -2392,7 +2398,7 @@ fn package_edition_2018() {
                         "description": null,
                         "edition": "2018",
                         "features": {},
-                        "id": "foo 0.1.0 (path+file:[..])",
+                        "id": "path+file:[..]#0.1.0",
                         "keywords": [],
                         "license": null,
                         "license_file": null,
@@ -2432,18 +2438,18 @@ fn package_edition_2018() {
                             "dependencies": [],
                             "deps": [],
                             "features": [],
-                            "id": "foo 0.1.0 (path+file:[..])"
+                            "id": "path+file:[..]#0.1.0"
                         }
                     ],
-                    "root": "foo 0.1.0 (path+file:[..])"
+                    "root": "path+file:[..]#0.1.0"
                 },
                 "target_directory": "[..]",
                 "version": 1,
                 "workspace_members": [
-                    "foo 0.1.0 (path+file:[..])"
+                    "path+file:[..]#0.1.0"
                 ],
                 "workspace_default_members": [
-                    "foo 0.1.0 (path+file:[..])"
+                    "path+file:[..]#0.1.0"
                 ],
                 "workspace_root": "[..]",
                 "metadata": null
@@ -2529,7 +2535,7 @@ fn target_edition_2018() {
                         "description": null,
                         "edition": "2015",
                         "features": {},
-                        "id": "foo 0.1.0 (path+file:[..])",
+                        "id": "path+file:[..]#0.1.0",
                         "keywords": [],
                         "license": null,
                         "license_file": null,
@@ -2583,18 +2589,18 @@ fn target_edition_2018() {
                             "dependencies": [],
                             "deps": [],
                             "features": [],
-                            "id": "foo 0.1.0 (path+file:[..])"
+                            "id": "path+file:[..]#0.1.0"
                         }
                     ],
-                    "root": "foo 0.1.0 (path+file:[..])"
+                    "root": "path+file:[..]#0.1.0"
                 },
                 "target_directory": "[..]",
                 "version": 1,
                 "workspace_members": [
-                    "foo 0.1.0 (path+file:[..])"
+                    "path+file:[..]#0.1.0"
                 ],
                 "workspace_default_members": [
-                    "foo 0.1.0 (path+file:[..])"
+                    "path+file:[..]#0.1.0"
                 ],
                 "workspace_root": "[..]",
                 "metadata": null
@@ -2639,7 +2645,7 @@ fn rename_dependency() {
             "description": null,
             "edition": "2015",
             "features": {},
-            "id": "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+            "id": "registry+https://github.com/rust-lang/crates.io-index#bar@0.1.0",
             "keywords": [],
             "license": null,
             "license_file": null,
@@ -2680,7 +2686,7 @@ fn rename_dependency() {
             "description": null,
             "edition": "2015",
             "features": {},
-            "id": "bar 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+            "id": "registry+https://github.com/rust-lang/crates.io-index#bar@0.2.0",
             "keywords": [],
             "license": null,
             "license_file": null,
@@ -2746,7 +2752,7 @@ fn rename_dependency() {
             "description": null,
             "edition": "2015",
             "features": {},
-            "id": "foo 0.0.1[..]",
+            "id": "[..]foo#0.0.1",
             "keywords": [],
             "license": null,
             "license_file": null,
@@ -2786,18 +2792,18 @@ fn rename_dependency() {
                 "dependencies": [],
                 "deps": [],
                 "features": [],
-                "id": "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)"
+                "id": "registry+https://github.com/rust-lang/crates.io-index#bar@0.1.0"
             },
             {
                 "dependencies": [],
                 "deps": [],
                 "features": [],
-                "id": "bar 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)"
+                "id": "registry+https://github.com/rust-lang/crates.io-index#bar@0.2.0"
             },
             {
                 "dependencies": [
-                    "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
-                    "bar 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)"
+                    "registry+https://github.com/rust-lang/crates.io-index#bar@0.1.0",
+                    "registry+https://github.com/rust-lang/crates.io-index#bar@0.2.0"
                 ],
                 "deps": [
                     {
@@ -2808,7 +2814,7 @@ fn rename_dependency() {
                           }
                         ],
                         "name": "bar",
-                        "pkg": "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)"
+                        "pkg": "registry+https://github.com/rust-lang/crates.io-index#bar@0.1.0"
                     },
                     {
                         "dep_kinds": [
@@ -2818,22 +2824,22 @@ fn rename_dependency() {
                           }
                         ],
                         "name": "baz",
-                        "pkg": "bar 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)"
+                        "pkg": "registry+https://github.com/rust-lang/crates.io-index#bar@0.2.0"
                     }
                 ],
                 "features": [],
-                "id": "foo 0.0.1[..]"
+                "id": "[..]foo#0.0.1"
             }
         ],
-        "root": "foo 0.0.1[..]"
+        "root": "[..]foo#0.0.1"
     },
     "target_directory": "[..]",
     "version": 1,
     "workspace_members": [
-        "foo 0.0.1[..]"
+        "[..]foo#0.0.1"
     ],
     "workspace_default_members": [
-        "foo 0.0.1[..]"
+        "[..]foo#0.0.1"
     ],
     "workspace_root": "[..]",
     "metadata": null
@@ -2871,7 +2877,7 @@ fn metadata_links() {
                   "description": null,
                   "edition": "2015",
                   "features": {},
-                  "id": "foo 0.5.0 [..]",
+                  "id": "[..]foo#0.5.0",
                   "keywords": [],
                   "license": null,
                   "license_file": null,
@@ -2925,18 +2931,18 @@ fn metadata_links() {
                     "dependencies": [],
                     "deps": [],
                     "features": [],
-                    "id": "foo 0.5.0 [..]"
+                    "id": "[..]foo#0.5.0"
                   }
                 ],
-                "root": "foo 0.5.0 [..]"
+                "root": "[..]foo#0.5.0"
               },
               "target_directory": "[..]/foo/target",
               "version": 1,
               "workspace_members": [
-                "foo 0.5.0 [..]"
+                "[..]foo#0.5.0"
               ],
               "workspace_default_members": [
-                "foo 0.5.0 [..]"
+                "[..]foo#0.5.0"
               ],
               "workspace_root": "[..]/foo",
               "metadata": null
@@ -2972,7 +2978,7 @@ fn deps_with_bin_only() {
                 {
                   "name": "foo",
                   "version": "0.1.0",
-                  "id": "foo 0.1.0 ([..])",
+                  "id": "[..]foo#0.1.0",
                   "license": null,
                   "license_file": null,
                   "description": null,
@@ -3026,21 +3032,21 @@ fn deps_with_bin_only() {
                 }
               ],
               "workspace_members": [
-                "foo 0.1.0 ([..])"
+                "[..]foo#0.1.0"
               ],
               "workspace_default_members": [
-                "foo 0.1.0 ([..])"
+                "[..]foo#0.1.0"
               ],
               "resolve": {
                 "nodes": [
                   {
-                    "id": "foo 0.1.0 ([..])",
+                    "id": "[..]foo#0.1.0",
                     "dependencies": [],
                     "deps": [],
                     "features": []
                   }
                 ],
-                "root": "foo 0.1.0 ([..])"
+                "root": "[..]foo#0.1.0"
               },
               "target_directory": "[..]/foo/target",
               "version": 1,
@@ -3094,7 +3100,7 @@ fn filter_platform() {
     {
       "name": "alt-dep",
       "version": "0.0.1",
-      "id": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+      "id": "registry+https://github.com/rust-lang/crates.io-index#alt-dep@0.0.1",
       "license": null,
       "license_file": null,
       "description": null,
@@ -3138,7 +3144,7 @@ fn filter_platform() {
     {
       "name": "cfg-dep",
       "version": "0.0.1",
-      "id": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+      "id": "registry+https://github.com/rust-lang/crates.io-index#cfg-dep@0.0.1",
       "license": null,
       "license_file": null,
       "description": null,
@@ -3182,7 +3188,7 @@ fn filter_platform() {
     {
       "name": "host-dep",
       "version": "0.0.1",
-      "id": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+      "id": "registry+https://github.com/rust-lang/crates.io-index#host-dep@0.0.1",
       "license": null,
       "license_file": null,
       "description": null,
@@ -3226,7 +3232,7 @@ fn filter_platform() {
     {
       "name": "normal-dep",
       "version": "0.0.1",
-      "id": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+      "id": "registry+https://github.com/rust-lang/crates.io-index#normal-dep@0.0.1",
       "license": null,
       "license_file": null,
       "description": null,
@@ -3332,7 +3338,7 @@ fn filter_platform() {
     {
       "name": "foo",
       "version": "0.1.0",
-      "id": "foo 0.1.0 (path+file:[..]foo)",
+      "id": "path+file:[..]foo#0.1.0",
       "license": null,
       "license_file": null,
       "description": null,
@@ -3408,37 +3414,37 @@ fn filter_platform() {
     $NORMAL_DEP
   ],
   "workspace_members": [
-    "foo 0.1.0 (path+file:[..]foo)"
+    "path+file:[..]foo#0.1.0"
   ],
   "workspace_default_members": [
-    "foo 0.1.0 (path+file:[..]foo)"
+    "path+file:[..]foo#0.1.0"
   ],
   "resolve": {
     "nodes": [
       {
-        "id": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "id": "registry+https://github.com/rust-lang/crates.io-index#alt-dep@0.0.1",
         "dependencies": [],
         "deps": [],
         "features": []
       },
       {
-        "id": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "id": "registry+https://github.com/rust-lang/crates.io-index#cfg-dep@0.0.1",
         "dependencies": [],
         "deps": [],
         "features": []
       },
       {
-        "id": "foo 0.1.0 (path+file:[..]foo)",
+        "id": "path+file:[..]foo#0.1.0",
         "dependencies": [
-          "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
-          "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
-          "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
-          "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+          "registry+https://github.com/rust-lang/crates.io-index#alt-dep@0.0.1",
+          "registry+https://github.com/rust-lang/crates.io-index#cfg-dep@0.0.1",
+          "registry+https://github.com/rust-lang/crates.io-index#host-dep@0.0.1",
+          "registry+https://github.com/rust-lang/crates.io-index#normal-dep@0.0.1"
         ],
         "deps": [
           {
             "name": "alt_dep",
-            "pkg": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "pkg": "registry+https://github.com/rust-lang/crates.io-index#alt-dep@0.0.1",
             "dep_kinds": [
               {
                 "kind": null,
@@ -3448,7 +3454,7 @@ fn filter_platform() {
           },
           {
             "name": "cfg_dep",
-            "pkg": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "pkg": "registry+https://github.com/rust-lang/crates.io-index#cfg-dep@0.0.1",
             "dep_kinds": [
               {
                 "kind": null,
@@ -3458,7 +3464,7 @@ fn filter_platform() {
           },
           {
             "name": "host_dep",
-            "pkg": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "pkg": "registry+https://github.com/rust-lang/crates.io-index#host-dep@0.0.1",
             "dep_kinds": [
               {
                 "kind": null,
@@ -3468,7 +3474,7 @@ fn filter_platform() {
           },
           {
             "name": "normal_dep",
-            "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "pkg": "registry+https://github.com/rust-lang/crates.io-index#normal-dep@0.0.1",
             "dep_kinds": [
               {
                 "kind": null,
@@ -3480,19 +3486,19 @@ fn filter_platform() {
         "features": []
       },
       {
-        "id": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "id": "registry+https://github.com/rust-lang/crates.io-index#host-dep@0.0.1",
         "dependencies": [],
         "deps": [],
         "features": []
       },
       {
-        "id": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "id": "registry+https://github.com/rust-lang/crates.io-index#normal-dep@0.0.1",
         "dependencies": [],
         "deps": [],
         "features": []
       }
     ],
-    "root": "foo 0.1.0 (path+file:[..]foo)"
+    "root": "path+file:[..]foo#0.1.0"
   },
   "target_directory": "[..]/foo/target",
   "version": 1,
@@ -3536,21 +3542,21 @@ fn filter_platform() {
   "resolve": {
     "nodes": [
       {
-        "id": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "id": "registry+https://github.com/rust-lang/crates.io-index#alt-dep@0.0.1",
         "dependencies": [],
         "deps": [],
         "features": []
       },
       {
-        "id": "foo 0.1.0 (path+file:[..]foo)",
+        "id": "path+file:[..]foo#0.1.0",
         "dependencies": [
-          "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
-          "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+          "registry+https://github.com/rust-lang/crates.io-index#alt-dep@0.0.1",
+          "registry+https://github.com/rust-lang/crates.io-index#normal-dep@0.0.1"
         ],
         "deps": [
           {
             "name": "alt_dep",
-            "pkg": "alt-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "pkg": "registry+https://github.com/rust-lang/crates.io-index#alt-dep@0.0.1",
             "dep_kinds": [
               {
                 "kind": null,
@@ -3560,7 +3566,7 @@ fn filter_platform() {
           },
           {
             "name": "normal_dep",
-            "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "pkg": "registry+https://github.com/rust-lang/crates.io-index#normal-dep@0.0.1",
             "dep_kinds": [
               {
                 "kind": null,
@@ -3572,13 +3578,13 @@ fn filter_platform() {
         "features": []
       },
       {
-        "id": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "id": "registry+https://github.com/rust-lang/crates.io-index#normal-dep@0.0.1",
         "dependencies": [],
         "deps": [],
         "features": []
       }
     ],
-    "root": "foo 0.1.0 (path+file:[..]foo)"
+    "root": "path+file:[..]foo#0.1.0"
   },
   "target_directory": "[..]foo/target",
   "version": 1,
@@ -3618,15 +3624,15 @@ fn filter_platform() {
   "resolve": {
     "nodes": [
       {
-        "id": "foo 0.1.0 (path+file:[..]foo)",
+        "id": "path+file:[..]foo#0.1.0",
         "dependencies": [
-          "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
-          "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+          "registry+https://github.com/rust-lang/crates.io-index#host-dep@0.0.1",
+          "registry+https://github.com/rust-lang/crates.io-index#normal-dep@0.0.1"
         ],
         "deps": [
           {
             "name": "host_dep",
-            "pkg": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "pkg": "registry+https://github.com/rust-lang/crates.io-index#host-dep@0.0.1",
             "dep_kinds": [
               {
                 "kind": null,
@@ -3636,7 +3642,7 @@ fn filter_platform() {
           },
           {
             "name": "normal_dep",
-            "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "pkg": "registry+https://github.com/rust-lang/crates.io-index#normal-dep@0.0.1",
             "dep_kinds": [
               {
                 "kind": null,
@@ -3648,19 +3654,19 @@ fn filter_platform() {
         "features": []
       },
       {
-        "id": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "id": "registry+https://github.com/rust-lang/crates.io-index#host-dep@0.0.1",
         "dependencies": [],
         "deps": [],
         "features": []
       },
       {
-        "id": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "id": "registry+https://github.com/rust-lang/crates.io-index#normal-dep@0.0.1",
         "dependencies": [],
         "deps": [],
         "features": []
       }
     ],
-    "root": "foo 0.1.0 (path+file:[..]foo)"
+    "root": "path+file:[..]foo#0.1.0"
   },
   "target_directory": "[..]foo/target",
   "version": 1,
@@ -3703,22 +3709,22 @@ fn filter_platform() {
   "resolve": {
     "nodes": [
       {
-        "id": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "id": "registry+https://github.com/rust-lang/crates.io-index#cfg-dep@0.0.1",
         "dependencies": [],
         "deps": [],
         "features": []
       },
       {
-        "id": "foo 0.1.0 (path+file:[..]/foo)",
+        "id": "path+file:[..]/foo#0.1.0",
         "dependencies": [
-          "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
-          "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
-          "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)"
+          "registry+https://github.com/rust-lang/crates.io-index#cfg-dep@0.0.1",
+          "registry+https://github.com/rust-lang/crates.io-index#host-dep@0.0.1",
+          "registry+https://github.com/rust-lang/crates.io-index#normal-dep@0.0.1"
         ],
         "deps": [
           {
             "name": "cfg_dep",
-            "pkg": "cfg-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "pkg": "registry+https://github.com/rust-lang/crates.io-index#cfg-dep@0.0.1",
             "dep_kinds": [
               {
                 "kind": null,
@@ -3728,7 +3734,7 @@ fn filter_platform() {
           },
           {
             "name": "host_dep",
-            "pkg": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "pkg": "registry+https://github.com/rust-lang/crates.io-index#host-dep@0.0.1",
             "dep_kinds": [
               {
                 "kind": null,
@@ -3738,7 +3744,7 @@ fn filter_platform() {
           },
           {
             "name": "normal_dep",
-            "pkg": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+            "pkg": "registry+https://github.com/rust-lang/crates.io-index#normal-dep@0.0.1",
             "dep_kinds": [
               {
                 "kind": null,
@@ -3750,19 +3756,19 @@ fn filter_platform() {
         "features": []
       },
       {
-        "id": "host-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "id": "registry+https://github.com/rust-lang/crates.io-index#host-dep@0.0.1",
         "dependencies": [],
         "deps": [],
         "features": []
       },
       {
-        "id": "normal-dep 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+        "id": "registry+https://github.com/rust-lang/crates.io-index#normal-dep@0.0.1",
         "dependencies": [],
         "deps": [],
         "features": []
       }
     ],
-    "root": "foo 0.1.0 (path+file:[..]/foo)"
+    "root": "path+file:[..]/foo#0.1.0"
   },
   "target_directory": "[..]/foo/target",
   "version": 1,
@@ -3822,21 +3828,21 @@ fn dep_kinds() {
               "resolve": {
                 "nodes": [
                   {
-                    "id": "bar 0.1.0 [..]",
+                    "id": "[..]#bar@0.1.0",
                     "dependencies": [],
                     "deps": [],
                     "features": []
                   },
                   {
-                    "id": "foo 0.1.0 [..]",
+                    "id": "[..]foo#0.1.0",
                     "dependencies": [
-                      "bar 0.1.0 [..]",
-                      "winapi 0.1.0 [..]"
+                      "[..]#bar@0.1.0",
+                      "[..]#winapi@0.1.0"
                     ],
                     "deps": [
                       {
                         "name": "bar",
-                        "pkg": "bar 0.1.0 [..]",
+                        "pkg": "[..]#bar@0.1.0",
                         "dep_kinds": [
                           {
                             "kind": null,
@@ -3854,7 +3860,7 @@ fn dep_kinds() {
                       },
                       {
                         "name": "winapi",
-                        "pkg": "winapi 0.1.0 [..]",
+                        "pkg": "[..]#winapi@0.1.0",
                         "dep_kinds": [
                           {
                             "kind": null,
@@ -3866,13 +3872,13 @@ fn dep_kinds() {
                     "features": []
                   },
                   {
-                    "id": "winapi 0.1.0 [..]",
+                    "id": "[..]#winapi@0.1.0",
                     "dependencies": [],
                     "deps": [],
                     "features": []
                   }
                 ],
-                "root": "foo 0.1.0 [..]"
+                "root": "[..]foo#0.1.0"
               }
             }
             "#,
@@ -3938,14 +3944,14 @@ fn dep_kinds_workspace() {
               "resolve": {
                 "nodes": [
                   {
-                    "id": "bar 0.1.0 (path+file://[..]/foo/bar)",
+                    "id": "path+file://[..]/foo/bar#0.1.0",
                     "dependencies": [
-                      "foo 0.1.0 (path+file://[..]/foo)"
+                      "path+file://[..]/foo#0.1.0"
                     ],
                     "deps": [
                       {
                         "name": "foo",
-                        "pkg": "foo 0.1.0 (path+file://[..]/foo)",
+                        "pkg": "path+file://[..]/foo#0.1.0",
                         "dep_kinds": [
                           {
                             "kind": null,
@@ -3957,20 +3963,20 @@ fn dep_kinds_workspace() {
                     "features": []
                   },
                   {
-                    "id": "dep 0.5.0 (path+file://[..]/foo/dep)",
+                    "id": "path+file://[..]/foo/dep#0.5.0",
                     "dependencies": [],
                     "deps": [],
                     "features": []
                   },
                   {
-                    "id": "foo 0.1.0 (path+file://[..]/foo)",
+                    "id": "path+file://[..]/foo#0.1.0",
                     "dependencies": [
-                      "dep 0.5.0 (path+file://[..]/foo/dep)"
+                      "path+file://[..]/foo/dep#0.5.0"
                     ],
                     "deps": [
                       {
                         "name": "dep",
-                        "pkg": "dep 0.5.0 (path+file://[..]/foo/dep)",
+                        "pkg": "path+file://[..]/foo/dep#0.5.0",
                         "dep_kinds": [
                           {
                             "kind": null,
@@ -3984,7 +3990,7 @@ fn dep_kinds_workspace() {
                     ]
                   }
                 ],
-                "root": "foo 0.1.0 (path+file://[..]/foo)"
+                "root": "path+file://[..]/foo#0.1.0"
               }
             }
             "#,
@@ -4118,7 +4124,7 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
                   "edition": "2015",
                   "features": {},
                   "homepage": null,
-                  "id": "bar 0.5.0 (path+file://[..]/foo/bar)",
+                  "id": "path+file://[..]/foo/bar#0.5.0",
                   "keywords": [],
                   "license": null,
                   "license_file": null,
@@ -4161,7 +4167,7 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
                   "edition": "2015",
                   "features": {},
                   "homepage": null,
-                  "id": "artifact 0.5.0 (path+file://[..]/foo/artifact)",
+                  "id": "path+file://[..]/foo/artifact#0.5.0",
                   "keywords": [],
                   "license": null,
                   "license_file": null,
@@ -4204,7 +4210,7 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
                   "edition": "2015",
                   "features": {},
                   "homepage": null,
-                  "id": "baz 0.5.0 (path+file://[..]/foo/baz)",
+                  "id": "path+file://[..]/foo/baz#0.5.0",
                   "keywords": [],
                   "license": null,
                   "license_file": null,
@@ -4240,14 +4246,14 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
               "target_directory": "[..]/foo/target",
               "version": 1,
               "workspace_members": [
-                "bar 0.5.0 (path+file://[..]/foo/bar)",
-                "artifact 0.5.0 (path+file://[..]/foo/artifact)",
-                "baz 0.5.0 (path+file://[..]/foo/baz)"
+                "path+file://[..]/foo/bar#0.5.0",
+                "path+file://[..]/foo/artifact#0.5.0",
+                "path+file://[..]/foo/baz#0.5.0"
               ],
               "workspace_default_members": [
-                "bar 0.5.0 (path+file://[..]/foo/bar)",
-                "artifact 0.5.0 (path+file://[..]/foo/artifact)",
-                "baz 0.5.0 (path+file://[..]/foo/baz)"
+                "path+file://[..]/foo/bar#0.5.0",
+                "path+file://[..]/foo/artifact#0.5.0",
+                "path+file://[..]/foo/baz#0.5.0"
               ],
               "workspace_root": "[..]/foo"
             }
@@ -4300,7 +4306,7 @@ fn versionless_packages() {
     {
       "name": "bar",
       "version": "0.0.0",
-      "id": "bar 0.0.0 [..]",
+      "id": "[..]bar#0.0.0",
       "license": null,
       "license_file": null,
       "description": null,
@@ -4367,7 +4373,7 @@ fn versionless_packages() {
     {
       "name": "baz",
       "version": "0.0.0",
-      "id": "baz 0.0.0 [..]",
+      "id": "[..]baz#0.0.0",
       "license": null,
       "license_file": null,
       "description": null,
@@ -4421,7 +4427,7 @@ fn versionless_packages() {
     {
       "name": "foobar",
       "version": "0.0.1",
-      "id": "foobar 0.0.1 [..]",
+      "id": "[..]#foobar@0.0.1",
       "license": null,
       "license_file": null,
       "description": null,
@@ -4461,25 +4467,25 @@ fn versionless_packages() {
     }
   ],
   "workspace_members": [
-    "bar 0.0.0 [..]",
-    "baz 0.0.0 [..]"
+    "[..]bar#0.0.0",
+    "[..]baz#0.0.0"
   ],
   "workspace_default_members": [
-    "bar 0.0.0 [..]",
-    "baz 0.0.0 [..]"
+    "[..]bar#0.0.0",
+    "[..]baz#0.0.0"
   ],
   "resolve": {
     "nodes": [
       {
-        "id": "bar 0.0.0 [..]",
+        "id": "[..]bar#0.0.0",
         "dependencies": [
-          "baz 0.0.0 [..]",
-          "foobar 0.0.1 [..]"
+          "[..]baz#0.0.0",
+          "[..]#foobar@0.0.1"
         ],
         "deps": [
           {
             "name": "baz",
-            "pkg": "baz 0.0.0 [..]",
+            "pkg": "[..]baz#0.0.0",
             "dep_kinds": [
               {
                 "kind": null,
@@ -4489,7 +4495,7 @@ fn versionless_packages() {
           },
           {
             "name": "foobar",
-            "pkg": "foobar 0.0.1 [..]",
+            "pkg": "[..]#foobar@0.0.1",
             "dep_kinds": [
               {
                 "kind": null,
@@ -4501,14 +4507,14 @@ fn versionless_packages() {
         "features": []
       },
       {
-        "id": "baz 0.0.0 [..]",
+        "id": "[..]baz#0.0.0",
         "dependencies": [
-          "foobar 0.0.1 [..]"
+          "[..]#foobar@0.0.1"
         ],
         "deps": [
           {
             "name": "foobar",
-            "pkg": "foobar 0.0.1 [..]",
+            "pkg": "[..]#foobar@0.0.1",
             "dep_kinds": [
               {
                 "kind": null,
@@ -4520,7 +4526,7 @@ fn versionless_packages() {
         "features": []
       },
       {
-        "id": "foobar 0.0.1 [..]",
+        "id": "[..]#foobar@0.0.1",
         "dependencies": [],
         "deps": [],
         "features": []
