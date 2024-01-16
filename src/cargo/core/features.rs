@@ -9,17 +9,31 @@
 //! Cargo, and the good news is that it shouldn't be too hard! First determine
 //! how the feature should be gated:
 //!
-//! * New syntax in Cargo.toml should use `cargo-features`.
-//! * New CLI options should use `-Z unstable-options`.
-//! * New functionality that may not have an interface, or the interface has
-//!   not yet been designed, or for more complex features that affect multiple
-//!   parts of Cargo should use a new `-Z` flag.
+//! * Error when the feature is used without the gate
+//!   * Required if ignoring the feature violates the users intent in non-superficial ways
+//!   * A low-effort / safe way to protect the user from being broken if the format of the feature changes in
+//!     incompatible was (can be worked around)
+//!   * Good for: CLI (gate: `-Zunstable-options` or `-Z` if combined with other changes), `Cargo.toml` (gate: `cargo-features`)
+//! * Warn that the feature is ignored due to lack of the gate
+//!   * For if you could opt-in to the unimplemented feature on Cargo today and Cargo would
+//!     operate just fine
+//!   * If gate is not enabled, prefer to warn if the format of the feature is incompatible
+//!     (instead of error or ignore)
+//!   * Good for: `Cargo.toml`, `.cargo/config.toml`, `config.json` index file (gate: `-Z`)
+//! * Ignore the feature that is used without a gate
+//!   * For when ignoring the feature has so little impact that annoying the user is not worth it
+//!     (e.g. a config field that changes Cargo's terminal output)
+//!   * For behavior changes without an interface (e.g. the resolver)
+//!   * Good for: `.cargo/config.toml`, `config.json` index file (gate: `-Z`)
+//!
+//! For features that touch multiple parts of Cargo, multiple feature gating strategies (error,
+//! warn, ignore) and mechnisms (`-Z`, `cargo-features`) may be used.
 //!
 //! When adding new tests for your feature, usually the tests should go into a
-//! new module of the testsuite. See
+//! new module of the testsuite named after the feature. See
 //! <https://doc.crates.io/contrib/tests/writing.html> for more information on
 //! writing tests. Particularly, check out the "Testing Nightly Features"
-//! section for testing unstable features.
+//! section for testing unstable features. Be sure to test the feature gate itself.
 //!
 //! After you have added your feature, be sure to update the unstable
 //! documentation at `src/doc/src/reference/unstable.md` to include a short
@@ -27,11 +41,11 @@
 //!
 //! And hopefully that's it!
 //!
-//! ## New Cargo.toml syntax
+//! ## `cargo-features`
 //!
 //! The steps for adding new Cargo.toml syntax are:
 //!
-//! 1. Add the cargo-features unstable gate. Search below for "look here" to
+//! 1. Add the cargo-features unstable gate. Search the code below for "look here" to
 //!    find the [`features!`] macro invocation and add your feature to the list.
 //!
 //! 2. Update the Cargo.toml parsing code to handle your new feature.
@@ -68,43 +82,10 @@
 //!    [`Config::cli_unstable`] to get an instance of [`CliUnstable`]
 //!    and check if the option has been enabled on the [`CliUnstable`] instance.
 //!    Nightly gating is already handled, so no need to worry about that.
-//!
-//! ### `-Z` vs `cargo-features`
-//!
-//! In some cases there might be some changes that `cargo-features` is unable
-//! to sufficiently encompass. An example would be a syntax change in
-//! `Cargo.toml` that also impacts the index or resolver. The resolver doesn't
-//! know about `cargo-features`, so it needs a `-Z` flag to enable the
-//! experimental functionality.
-//!
-//! In those cases, you usually should introduce both a `-Z` flag (to enable
-//! the changes outside of the manifest) and a `cargo-features` entry (to
-//! enable the new syntax in `Cargo.toml`). The `cargo-features` entry ensures
-//! that any experimental syntax that gets uploaded to crates.io is clearly
-//! intended for nightly-only builds. Otherwise, users accessing those crates
-//! may get confusing errors, particularly if the syntax changes during the
-//! development cycle, and the user tries to access it with a stable release.
-//!
-//! ### `-Z` with external files
-//!
-//! Some files, such as `config.toml` config files, or the `config.json` index
-//! file, are used in a global location which can make interaction with stable
-//! releases problematic. In general, before the feature is stabilized, stable
-//! Cargo should behave roughly similar to how it behaved *before* the
-//! unstable feature was introduced. If Cargo would normally have ignored or
-//! warned about the introduction of something, then it probably should
-//! continue to do so.
-//!
-//! For example, Cargo generally ignores (or warns) about `config.toml`
-//! entries it doesn't know about. This allows a limited degree of
-//! forwards-compatibility with future versions of Cargo that add new entries.
-//!
-//! Whether or not to warn on stable may need to be decided on a case-by-case
-//! basis. For example, you may want to avoid generating a warning for options
-//! that are not critical to Cargo's operation in order to reduce the
-//! annoyance of constant warnings. However, ignoring some options may prevent
-//! proper operation, so a warning may be valuable for a user trying to
-//! diagnose why it isn't working correctly.
+//!    If warning when feature is used without the gate, be sure to gracefully degrade (with a
+//!    warning) when the `Cargo.toml` / `.cargo/config.toml` field usage doesn't match the
+//!    schema.
+//! 4. For any `Cargo.toml` fields, strip them in [`prepare_for_publish`] if the gate isn't set
 //!
 //! ## Stabilization
 //!
@@ -135,6 +116,7 @@
 //! [`fail_if_stable_opt`]: CliUnstable::fail_if_stable_opt
 //! [`features!`]: macro.features.html
 //! [`unstable_cli_options!`]: macro.unstable_cli_options.html
+//! [`prepare_for_publish`]: crate::util::toml::prepare_for_publish
 
 use std::collections::BTreeSet;
 use std::env;
