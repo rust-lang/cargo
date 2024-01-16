@@ -511,7 +511,9 @@ rand v0.8.5
 └── ...
 ```
 
-You might identify that it was an activated feature that caused `rand` to show up.  To figure out which package activated the feature, you can add the `--edges features`
+### Why was that feature on this dependency enabled?
+
+You might identify that it was an activated feature that caused `rand` to show up.  **To figure out which package activated the feature, you can add the `--edges features`**
 ```console
 $ cargo tree --workspace --target all --all-features --edges features --invert rand
 rand v0.8.5
