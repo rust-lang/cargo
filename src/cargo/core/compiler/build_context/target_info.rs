@@ -438,7 +438,8 @@ impl TargetInfo {
                 });
             } else if suffix == ".dll"
                 && (target_triple.ends_with("windows-gnu")
-                    || target_triple.ends_with("windows-gnullvm"))
+                    || target_triple.ends_with("windows-gnullvm")
+                    || target_triple.ends_with("cygwin"))
             {
                 // See https://cygwin.com/cygwin-ug-net/dll.html for more
                 // information about GNU import libraries.
