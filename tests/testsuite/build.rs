@@ -4160,7 +4160,7 @@ fn compiler_json_error_format() {
         r#"
             {
                 "reason":"compiler-artifact",
-                "package_id":"foo 0.5.0 ([..])",
+                "package_id":"path+file:///[..]/foo#0.5.0",
                 "manifest_path": "[..]",
                 "target":{
                     "kind":["custom-build"],
@@ -4187,7 +4187,7 @@ fn compiler_json_error_format() {
 
             {
                 "reason":"compiler-message",
-                "package_id":"bar 0.5.0 ([..])",
+                "package_id":"path+file:///[..]/bar#0.5.0",
                 "manifest_path": "[..]",
                 "target":{
                     "kind":["lib"],
@@ -4213,7 +4213,7 @@ fn compiler_json_error_format() {
                 },
                 "executable": null,
                 "features": [],
-                "package_id":"bar 0.5.0 ([..])",
+                "package_id":"path+file:///[..]/bar#0.5.0",
                 "manifest_path": "[..]",
                 "target":{
                     "kind":["lib"],
@@ -4234,7 +4234,7 @@ fn compiler_json_error_format() {
 
             {
                 "reason":"build-script-executed",
-                "package_id":"foo 0.5.0 ([..])",
+                "package_id":"path+file:///[..]/foo#0.5.0",
                 "linked_libs":[],
                 "linked_paths":[],
                 "env":[],
@@ -4244,7 +4244,7 @@ fn compiler_json_error_format() {
 
             {
                 "reason":"compiler-message",
-                "package_id":"foo 0.5.0 ([..])",
+                "package_id":"path+file:///[..]/foo#0.5.0",
                 "manifest_path": "[..]",
                 "target":{
                     "kind":["bin"],
@@ -4261,7 +4261,7 @@ fn compiler_json_error_format() {
 
             {
                 "reason":"compiler-artifact",
-                "package_id":"foo 0.5.0 ([..])",
+                "package_id":"path+file:///[..]/foo#0.5.0",
                 "manifest_path": "[..]",
                 "target":{
                     "kind":["bin"],
@@ -4332,7 +4332,7 @@ fn message_format_json_forward_stderr() {
             r#"
                 {
                     "reason":"compiler-message",
-                    "package_id":"foo 0.5.0 ([..])",
+                    "package_id":"path+file:///[..]/foo#0.5.0",
                     "manifest_path": "[..]",
                     "target":{
                         "kind":["bin"],
@@ -4349,7 +4349,7 @@ fn message_format_json_forward_stderr() {
 
                 {
                     "reason":"compiler-artifact",
-                    "package_id":"foo 0.5.0 ([..])",
+                    "package_id":"path+file:///[..]/foo#0.5.0",
                     "manifest_path": "[..]",
                     "target":{
                         "kind":["bin"],

@@ -21,8 +21,10 @@ fetched.
 
 A package specifier consists of a name, version, and source URL. You are
 allowed to use partial specifiers to succinctly match a specific package as
-long as it matches only one package. The format of a _spec_ can be one of the
-following:
+long as it matches only one package. This specifier is also used by other parts
+in Cargo, such as {{man "cargo-metadata" 1}} and [JSON messages] emitted by Cargo.
+
+The format of a _spec_ can be one of the following:
 
 SPEC Structure             | Example SPEC
 ---------------------------|--------------
@@ -88,6 +90,9 @@ Get the package ID for the given package instead of the current package.
        cargo pkgid file:///path/to/local/package#foo
 
 ## SEE ALSO
-{{man "cargo" 1}}, {{man "cargo-generate-lockfile" 1}}, {{man "cargo-metadata" 1}}, [Package ID Specifications]
+
+{{man "cargo" 1}}, {{man "cargo-generate-lockfile" 1}}, {{man "cargo-metadata" 1}},
+[Package ID Specifications], [JSON messages]
 
 [Package ID Specifications]: ../reference/pkgid-spec.html
+[JSON messages]: ../reference/external-tools.html#json-messages

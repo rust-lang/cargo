@@ -1,10 +1,12 @@
 use std::path::{Path, PathBuf};
 
+use cargo_util_schemas::core::PackageIdSpec;
 use serde::ser;
 use serde::Serialize;
 use serde_json::{self, json, value::RawValue};
 
-use crate::core::{compiler::CompileMode, PackageId, Target};
+use crate::core::compiler::CompileMode;
+use crate::core::Target;
 
 pub trait Message: ser::Serialize {
     fn reason(&self) -> &str;
@@ -19,7 +21,7 @@ pub trait Message: ser::Serialize {
 
 #[derive(Serialize)]
 pub struct FromCompiler<'a> {
-    pub package_id: PackageId,
+    pub package_id: PackageIdSpec,
     pub manifest_path: &'a Path,
     pub target: &'a Target,
     pub message: Box<RawValue>,
@@ -33,7 +35,7 @@ impl<'a> Message for FromCompiler<'a> {
 
 #[derive(Serialize)]
 pub struct Artifact<'a> {
-    pub package_id: PackageId,
+    pub package_id: PackageIdSpec,
     pub manifest_path: PathBuf,
     pub target: &'a Target,
     pub profile: ArtifactProfile,
@@ -71,7 +73,7 @@ pub enum ArtifactDebuginfo {
 
 #[derive(Serialize)]
 pub struct BuildScript<'a> {
-    pub package_id: PackageId,
+    pub package_id: PackageIdSpec,
     pub linked_libs: &'a [String],
     pub linked_paths: &'a [String],
     pub cfgs: &'a [String],
@@ -87,7 +89,7 @@ impl<'a> Message for BuildScript<'a> {
 
 #[derive(Serialize)]
 pub struct TimingInfo<'a> {
-    pub package_id: PackageId,
+    pub package_id: PackageIdSpec,
     pub target: &'a Target,
     pub mode: CompileMode,
     pub duration: f64,

@@ -55,8 +55,8 @@ The JSON output has the following format:
             "name": "my\-package",
             /* The version of the package. */
             "version": "0.1.0",
-            /* The Package ID, an opaque and unique identifier for referring to the
-               package. See "Compatibility" above for the stability guarantee.
+            /* The Package ID for referring to the
+               package within the document and as the `\-\-package` argument to many commands
             */
             "id": "file:///path/to/my\-package#0.1.0",
             /* The license value from the manifest, or null. */
@@ -529,4 +529,4 @@ cargo metadata \-\-format\-version=1
 .RE
 .RE
 .SH "SEE ALSO"
-\fBcargo\fR(1), \fBcargo\-pkgid\fR(1), \fIPackage ID Specifications\fR <https://doc.rust\-lang.org/cargo/reference/pkgid\-spec.html>
+\fBcargo\fR(1), \fBcargo\-pkgid\fR(1), \fIPackage ID Specifications\fR <https://doc.rust\-lang.org/cargo/reference/pkgid\-spec.html>, \fIJSON messages\fR <https://doc.rust\-lang.org/cargo/reference/external\-tools.html#json\-messages>
