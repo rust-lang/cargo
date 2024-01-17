@@ -694,7 +694,7 @@ fn metabuild_json_artifact() {
               "features": [],
               "filenames": "{...}",
               "fresh": false,
-              "package_id": "foo [..]",
+              "package_id": "path+file:///[..]/foo#0.0.1",
               "manifest_path": "[..]",
               "profile": "{...}",
               "reason": "compiler-artifact",
@@ -719,7 +719,7 @@ fn metabuild_json_artifact() {
               "env": [],
               "linked_libs": [],
               "linked_paths": [],
-              "package_id": "foo [..]",
+              "package_id": "path+file:///[..]/foo#0.0.1",
               "out_dir": "[..]",
               "reason": "build-script-executed"
             }
@@ -748,7 +748,7 @@ fn metabuild_failed_build_json() {
                 "rendered": "{...}",
                 "spans": "{...}"
               },
-              "package_id": "foo [..]",
+              "package_id": "path+file:///[..]/foo#0.0.1",
               "manifest_path": "[..]",
               "reason": "compiler-message",
               "target": {

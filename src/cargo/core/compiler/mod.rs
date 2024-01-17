@@ -578,7 +578,7 @@ fn link_targets(cx: &mut Context<'_, '_>, unit: &Unit, fresh: bool) -> CargoResu
             };
 
             let msg = machine_message::Artifact {
-                package_id,
+                package_id: package_id.to_spec(),
                 manifest_path,
                 target: &target,
                 profile: art_profile,
@@ -1766,7 +1766,7 @@ fn on_stderr_line_inner(
     }
 
     let msg = machine_message::FromCompiler {
-        package_id,
+        package_id: package_id.to_spec(),
         manifest_path,
         target,
         message: compiler_message,

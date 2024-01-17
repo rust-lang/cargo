@@ -128,7 +128,7 @@ fn simple_with_message_format() {
             r#"
             {
                 "reason": "compiler-artifact",
-                "package_id": "foo 0.0.1 ([..])",
+                "package_id": "registry+https://[..]#foo@0.0.1",
                 "manifest_path": "[..]",
                 "target": {
                     "kind": [
@@ -153,7 +153,7 @@ fn simple_with_message_format() {
 
             {
                 "reason": "compiler-artifact",
-                "package_id": "foo 0.0.1 ([..])",
+                "package_id": "registry+https://[..]#foo@0.0.1",
                 "manifest_path": "[..]",
                 "target": {
                     "kind": [

@@ -222,7 +222,7 @@ impl<'cfg> Timings<'cfg> {
             .extend(unlocked.iter().cloned().cloned());
         if self.report_json {
             let msg = machine_message::TimingInfo {
-                package_id: unit_time.unit.pkg.package_id(),
+                package_id: unit_time.unit.pkg.package_id().to_spec(),
                 target: &unit_time.unit.target,
                 mode: unit_time.unit.mode,
                 duration: unit_time.duration,

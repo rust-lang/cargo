@@ -229,7 +229,7 @@ fn emit_build_output(
         .collect::<Vec<_>>();
 
     let msg = machine_message::BuildScript {
-        package_id,
+        package_id: package_id.to_spec(),
         linked_libs: &output.library_links,
         linked_paths: &library_paths,
         cfgs: &output.cfgs,

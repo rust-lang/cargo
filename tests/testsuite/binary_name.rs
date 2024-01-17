@@ -280,7 +280,7 @@ fn check_msg_format_json() {
     let output = r#"
 {
     "reason": "compiler-artifact",
-    "package_id": "foo 0.0.1 [..]",
+    "package_id": "path+file:///[..]/foo#0.0.1",
     "manifest_path": "[CWD]/Cargo.toml",
     "target": "{...}",
     "profile": "{...}",
