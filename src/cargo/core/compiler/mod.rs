@@ -1270,34 +1270,27 @@ fn check_cfg_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
         //
         // but having `cfg()` is redundant with the second argument (as well-known names
         // and values are implicitly enabled when one or more `--check-cfg` argument is
-        // passed) so we don't emit it:
+        // passed) so we don't emit it and just pass:
         //
         //   --check-cfg=cfg(feature, values(...))
         //
-        // expect when there are no features declared, where we can't generate the
-        // `cfg(feature, values())` argument since it would mean that it is somehow
-        // possible to have a `#[cfg(feature)]` without a feature name, which is
-        // impossible and not what we want, so we just generate:
-        //
-        //   --check-cfg=cfg()
+        // This way, even if there are no declared features, the config `feature` will
+        // still be expected, meaning users would get "unexpected value" instead of name.
+        // This wasn't always the case, see rust-lang#119930 for some details.
 
         let gross_cap_estimation = unit.pkg.summary().features().len() * 7 + 25;
         let mut arg_feature = OsString::with_capacity(gross_cap_estimation);
 
-        arg_feature.push("cfg(");
-        if !unit.pkg.summary().features().is_empty() {
-            arg_feature.push("feature, values(");
-            for (i, feature) in unit.pkg.summary().features().keys().enumerate() {
-                if i != 0 {
-                    arg_feature.push(", ");
-                }
-                arg_feature.push("\"");
-                arg_feature.push(feature);
-                arg_feature.push("\"");
+        arg_feature.push("cfg(feature, values(");
+        for (i, feature) in unit.pkg.summary().features().keys().enumerate() {
+            if i != 0 {
+                arg_feature.push(", ");
             }
-            arg_feature.push(")");
+            arg_feature.push("\"");
+            arg_feature.push(feature);
+            arg_feature.push("\"");
         }
-        arg_feature.push(")");
+        arg_feature.push("))");
 
         vec![
             OsString::from("-Zunstable-options"),
