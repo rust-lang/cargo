@@ -483,5 +483,7 @@ EXAMPLES
 
 SEE ALSO
        cargo(1), cargo-pkgid(1), Package ID Specifications
-       <https://doc.rust-lang.org/cargo/reference/pkgid-spec.html>
+       <https://doc.rust-lang.org/cargo/reference/pkgid-spec.html>, JSON
+       messages
+       <https://doc.rust-lang.org/cargo/reference/external-tools.html#json-messages>
 

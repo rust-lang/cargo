@@ -19,8 +19,10 @@ fetched.
 .sp
 A package specifier consists of a name, version, and source URL. You are
 allowed to use partial specifiers to succinctly match a specific package as
-long as it matches only one package. The format of a \fIspec\fR can be one of the
-following:
+long as it matches only one package. This specifier is also used by other parts
+in Cargo, such as \fBcargo\-metadata\fR(1) and \fIJSON messages\fR <https://doc.rust\-lang.org/cargo/reference/external\-tools.html#json\-messages> emitted by Cargo.
+.sp
+The format of a \fIspec\fR can be one of the following:
 
 .TS
 allbox tab(:);
@@ -242,4 +244,5 @@ cargo pkgid file:///path/to/local/package#foo
 .RE
 .RE
 .SH "SEE ALSO"
-\fBcargo\fR(1), \fBcargo\-generate\-lockfile\fR(1), \fBcargo\-metadata\fR(1), \fIPackage ID Specifications\fR <https://doc.rust\-lang.org/cargo/reference/pkgid\-spec.html>
+\fBcargo\fR(1), \fBcargo\-generate\-lockfile\fR(1), \fBcargo\-metadata\fR(1),
+\fIPackage ID Specifications\fR <https://doc.rust\-lang.org/cargo/reference/pkgid\-spec.html>, \fIJSON messages\fR <https://doc.rust\-lang.org/cargo/reference/external\-tools.html#json\-messages>

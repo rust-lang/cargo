@@ -18,8 +18,12 @@ DESCRIPTION
 
        A package specifier consists of a name, version, and source URL. You are
        allowed to use partial specifiers to succinctly match a specific package
-       as long as it matches only one package. The format of a spec can be one
-       of the following:
+       as long as it matches only one package. This specifier is also used by
+       other parts in Cargo, such as cargo-metadata(1) and JSON messages
+       <https://doc.rust-lang.org/cargo/reference/external-tools.html#json-messages>
+       emitted by Cargo.
+
+       The format of a spec can be one of the following:
 
        +-----------------+--------------------------------------------------+
        | SPEC Structure  | Example SPEC                                     |
@@ -172,5 +176,7 @@ EXAMPLES
 SEE ALSO
        cargo(1), cargo-generate-lockfile(1), cargo-metadata(1), Package ID
        Specifications
-       <https://doc.rust-lang.org/cargo/reference/pkgid-spec.html>
+       <https://doc.rust-lang.org/cargo/reference/pkgid-spec.html>, JSON
+       messages
+       <https://doc.rust-lang.org/cargo/reference/external-tools.html#json-messages>
 

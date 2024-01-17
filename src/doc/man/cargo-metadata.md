@@ -334,8 +334,6 @@ The JSON output has the following format:
 Notes:
 - For `"id"` field syntax, see [Package ID Specifications] in the reference.
 
-[Package ID Specifications]: ../reference/pkgid-spec.html
-
 ## OPTIONS
 
 ### Output Options
@@ -393,6 +391,8 @@ reproduction of the information within `Cargo.toml`.
        cargo metadata --format-version=1
 
 ## SEE ALSO
-{{man "cargo" 1}}, {{man "cargo-pkgid" 1}}, [Package ID Specifications]
+
+{{man "cargo" 1}}, {{man "cargo-pkgid" 1}}, [Package ID Specifications], [JSON messages]
 
 [Package ID Specifications]: ../reference/pkgid-spec.html
+[JSON messages]: ../reference/external-tools.html#json-messages
