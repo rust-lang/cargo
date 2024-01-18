@@ -3,6 +3,7 @@
 use std::fmt::{self, Write};
 
 use crate::messages::raw_rustc_output;
+use cargo_test_support::compare;
 use cargo_test_support::install::exe;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
@@ -1516,6 +1517,46 @@ fn versionless_package() {
 [CHECKING] foo v0.0.0 ([CWD])
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn pkgid_querystring_works() {
+    let git_project = git::new("gitdep", |p| {
+        p.file("Cargo.toml", &basic_manifest("gitdep", "1.0.0"))
+            .file("src/lib.rs", "")
+    });
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+
+                [dependencies]
+                gitdep = {{ git = "{}", branch = "master" }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    let output = p.cargo("pkgid").arg("gitdep").exec_with_output().unwrap();
+    let gitdep_pkgid = String::from_utf8(output.stdout).unwrap();
+    let gitdep_pkgid = gitdep_pkgid.trim();
+    compare::assert_match_exact("git+file://[..]/gitdep?branch=master#1.0.0", &gitdep_pkgid);
+
+    p.cargo("build -p")
+        .arg(gitdep_pkgid)
+        .with_stderr(
+            "\
+[COMPILING] gitdep v1.0.0 (file:///[..]/gitdep?branch=master#[..])
+[FINISHED] dev [..]",
         )
         .run();
 }
