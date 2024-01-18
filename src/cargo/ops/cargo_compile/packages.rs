@@ -195,7 +195,7 @@ fn opt_patterns_and_names(
     let mut opt_patterns = Vec::new();
     let mut opt_names = BTreeSet::new();
     for x in opt.iter() {
-        if is_glob_pattern(x) {
+        if PackageIdSpec::parse(x).is_err() && is_glob_pattern(x) {
             opt_patterns.push((build_glob(x)?, false));
         } else {
             opt_names.insert(String::as_str(x));
