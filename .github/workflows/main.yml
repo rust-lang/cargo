@@ -1,9 +1,13 @@
 name: CI
 on:
   push:
-    branches-ignore: [master]
+    branches:
+      - auto-cargo
+      - try
+      - automation/bors/try
   pull_request:
-    branches: ['*']
+    branches:
+      - "**"
 
 defaults:
   run:
@@ -11,6 +15,10 @@ defaults:
 
 permissions:
   contents: read
+
+concurrency:
+  group: "${{ github.workflow }}-${{ (github.ref == 'refs/heads/try' && github.sha) || github.ref }}"
+  cancel-in-progress: true
 
 jobs:
   success:
@@ -28,7 +36,7 @@ jobs:
     - test
     - test_gitoxide
     runs-on: ubuntu-latest
-    if: "success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
+    if: "success() && github.event_name == 'push' && (github.ref == 'refs/heads/auto-cargo' || github.ref == 'refs/heads/try') && github.repository == 'rust-lang/cargo'"
     steps:
     - run: echo ok
   failure:
@@ -46,7 +54,7 @@ jobs:
     - test
     - test_gitoxide
     runs-on: ubuntu-latest
-    if: "!success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
+    if: "!success() && github.event_name == 'push' && (github.ref == 'refs/heads/auto-cargo' || github.ref == 'refs/heads/try') && github.repository == 'rust-lang/cargo'"
     steps:
     - run: exit 1
 
