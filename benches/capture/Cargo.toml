@@ -1,7 +1,6 @@
 [package]
 name = "capture"
 version = "0.1.0"
-rust-version.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "Tool for capturing a real-world workspace for benchmarking."

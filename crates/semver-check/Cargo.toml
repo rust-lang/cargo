@@ -2,7 +2,6 @@
 name = "semver-check"
 version = "0.0.0"
 authors = ["Eric Huss"]
-rust-version.workspace = true
 edition.workspace = true
 publish = false
 
