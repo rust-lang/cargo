@@ -1553,7 +1553,10 @@ fn pkgid_querystring_works() {
 
     p.cargo("build -p")
         .arg(gitdep_pkgid)
-        .with_status(101)
-        .with_stderr("[ERROR] package pattern(s) `git+file:///[..]/gitdep?branch=master#1.0.0` not found in workspace `[CWD]`")
+        .with_stderr(
+            "\
+[COMPILING] gitdep v1.0.0 (file:///[..]/gitdep?branch=master#[..])
+[FINISHED] dev [..]",
+        )
         .run();
 }
