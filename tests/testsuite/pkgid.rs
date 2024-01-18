@@ -1,6 +1,7 @@
 //! Tests for the `cargo pkgid` command.
 
 use cargo_test_support::basic_lib_manifest;
+use cargo_test_support::compare;
 use cargo_test_support::git;
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
@@ -284,4 +285,146 @@ Please re-run this command with one of the following specifications:
         .run();
     // TODO, what should the `-p` value be here?
     //p.cargo("update -p")
+}
+
+// Keep Package ID format in sync among
+//
+// * Package ID specifications
+// * machine-readable message via `--message-format=json`
+// * `cargo metadata` output
+#[cargo_test]
+fn pkgid_json_message_metadata_consistency() {
+    let p = project()
+        .file("Cargo.toml", &basic_lib_manifest("foo"))
+        .file("src/lib.rs", "fn unused() {}")
+        .file("build.rs", "fn main() {}")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    let output = p.cargo("pkgid").arg("foo").exec_with_output().unwrap();
+    let pkgid = String::from_utf8(output.stdout).unwrap();
+    let pkgid = pkgid.trim();
+    compare::assert_match_exact("path+file://[..]/foo#0.5.0", &pkgid);
+
+    p.cargo("check --message-format=json")
+        .with_json(
+            &r#"
+{
+  "reason": "compiler-artifact",
+  "package_id": "$PKGID",
+  "manifest_path": "[..]",
+  "target": "{...}",
+  "profile": "{...}",
+  "features": [],
+  "filenames": "{...}",
+  "executable": null,
+  "fresh": false
+}
+
+{
+  "reason": "build-script-executed",
+  "package_id": "$PKGID",
+  "linked_libs": [],
+  "linked_paths": [],
+  "cfgs": [],
+  "env": [],
+  "out_dir": "[..]"
+}
+
+{
+  "manifest_path": "[..]",
+  "message": "{...}",
+  "package_id": "$PKGID",
+  "reason": "compiler-message",
+  "target": "{...}"
+}
+
+{
+  "reason": "compiler-message",
+  "package_id": "$PKGID",
+  "manifest_path": "[..]",
+  "target": "{...}",
+  "message": "{...}"
+}
+
+{
+  "reason": "compiler-artifact",
+  "package_id": "$PKGID",
+  "manifest_path": "[..]",
+  "target": "{...}",
+  "profile": "{...}",
+  "features": [],
+  "filenames": "{...}",
+  "executable": null,
+  "fresh": false
+}
+
+{
+  "reason": "build-finished",
+  "success": true
+}
+            "#
+            .replace("$PKGID", pkgid),
+        )
+        .run();
+
+    p.cargo("metadata")
+        .with_json(
+            &r#"
+{
+  "metadata": null,
+  "packages": [
+    {
+      "authors": "{...}",
+      "categories": [],
+      "default_run": null,
+      "dependencies": [],
+      "description": null,
+      "documentation": null,
+      "edition": "2015",
+      "features": {},
+      "homepage": null,
+      "id": "$PKGID",
+      "keywords": [],
+      "license": null,
+      "license_file": null,
+      "links": null,
+      "manifest_path": "[..]",
+      "metadata": null,
+      "name": "foo",
+      "publish": null,
+      "readme": null,
+      "repository": null,
+      "rust_version": null,
+      "source": null,
+      "targets": "{...}",
+      "version": "0.5.0"
+    }
+  ],
+  "resolve": {
+    "nodes": [
+      {
+        "dependencies": [],
+        "deps": [],
+        "features": [],
+        "id": "$PKGID"
+      }
+    ],
+    "root": "$PKGID"
+  },
+  "target_directory": "[..]",
+  "version": 1,
+  "workspace_default_members": [
+    "$PKGID"
+  ],
+  "workspace_members": [
+    "$PKGID"
+  ],
+  "workspace_root": "[..]"
+}
+            "#
+            .replace("$PKGID", pkgid),
+        )
+        .run()
 }
