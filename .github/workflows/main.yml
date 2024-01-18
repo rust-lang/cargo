@@ -36,7 +36,7 @@ jobs:
     - test
     - test_gitoxide
     runs-on: ubuntu-latest
-    if: "success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
+    if: "success() && github.event_name == 'push' && (github.ref == 'refs/heads/auto-cargo' || github.ref == 'refs/heads/try') && github.repository == 'rust-lang/cargo'"
     steps:
     - run: echo ok
   failure:
@@ -54,7 +54,7 @@ jobs:
     - test
     - test_gitoxide
     runs-on: ubuntu-latest
-    if: "!success() && github.event_name == 'push' && github.ref == 'refs/heads/auto-cargo'"
+    if: "!success() && github.event_name == 'push' && (github.ref == 'refs/heads/auto-cargo' || github.ref == 'refs/heads/try') && github.repository == 'rust-lang/cargo'"
     steps:
     - run: exit 1
 
