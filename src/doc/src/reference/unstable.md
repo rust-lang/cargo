@@ -319,7 +319,7 @@ preparation for an upcoming RFC.
 
 ## precise-pre-release
 
-* Tracking Issue: [#13290](https://github.com/rust-lang/rust/issues/13290)
+* Tracking Issue: [#13290](https://github.com/rust-lang/cargo/issues/13290)
 * RFC: [#3493](https://github.com/rust-lang/rfcs/pull/3493)
 
 The `precise-pre-release` feature allows pre-release versions to be selected with `update --precise`
