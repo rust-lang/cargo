@@ -2,7 +2,7 @@
 name = "home"
 version = "0.5.11"
 authors = ["Brian Anderson <andersrb@gmail.com>"]
-rust-version = "1.73"  # MSRV:3
+rust-version.workspace = true
 documentation = "https://docs.rs/home"
 edition.workspace = true
 include = [
