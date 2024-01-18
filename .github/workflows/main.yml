@@ -1,9 +1,13 @@
 name: CI
 on:
   push:
-    branches-ignore: [master]
+    branches:
+      - auto-cargo
+      - try
+      - automation/bors/try
   pull_request:
-    branches: ['*']
+    branches:
+      - "**"
 
 defaults:
   run:
@@ -11,6 +15,10 @@ defaults:
 
 permissions:
   contents: read
+
+concurrency:
+  group: "${{ github.workflow }}-${{ (github.ref == 'refs/heads/try' && github.sha) || github.ref }}"
+  cancel-in-progress: true
 
 jobs:
   success:
