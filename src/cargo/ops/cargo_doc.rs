@@ -1,3 +1,4 @@
+use crate::core::compiler::{Compilation, CompileKind};
 use crate::core::{Shell, Workspace};
 use crate::ops;
 use crate::util::config::{Config, PathAndArgs};
@@ -61,16 +62,7 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
             .ok_or_else(|| anyhow::anyhow!("no crates with documentation"))?;
         let kind = options.compile_opts.build_config.single_requested_kind()?;
 
-        let path = if matches!(options.output_format, OutputFormat::Json) {
-            compilation.root_output[&kind]
-                .with_file_name("doc")
-                .join(format!("{}.json", &name))
-        } else {
-            compilation.root_output[&kind]
-                .with_file_name("doc")
-                .join(&name)
-                .join("index.html")
-        };
+        let path = path_by_output_format(&compilation, &kind, &name, &options.output_format);
 
         if path.exists() {
             let config_browser = {
@@ -88,10 +80,8 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
     } else {
         for name in &compilation.root_crate_names {
             for kind in &options.compile_opts.build_config.requested_kinds {
-                let path = compilation.root_output[&kind]
-                    .with_file_name("doc")
-                    .join(&name)
-                    .join("index.html");
+                let path =
+                    path_by_output_format(&compilation, &kind, &name, &options.output_format);
                 if path.exists() {
                     let mut shell = ws.config().shell();
                     let link = shell.err_file_hyperlink(&path);
@@ -105,6 +95,24 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
     }
 
     Ok(())
+}
+
+fn path_by_output_format(
+    compilation: &Compilation<'_>,
+    kind: &CompileKind,
+    name: &str,
+    output_format: &OutputFormat,
+) -> PathBuf {
+    if matches!(output_format, OutputFormat::Json) {
+        compilation.root_output[kind]
+            .with_file_name("doc")
+            .join(format!("{}.json", name))
+    } else {
+        compilation.root_output[kind]
+            .with_file_name("doc")
+            .join(name)
+            .join("index.html")
+    }
 }
 
 fn open_docs(

@@ -48,6 +48,7 @@ fn rustdoc_simple_json() {
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [RUNNING] `rustdoc [..]--crate-name foo [..]-o [CWD]/target/doc [..]--output-format=json[..]
 [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[GENERATED] [CWD]/target/doc/foo.json
 ",
         )
         .run();
