@@ -1,7 +1,6 @@
 [package]
 name = "mdman"
 version = "0.0.0"
-rust-version.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "Creates a man page page from markdown."

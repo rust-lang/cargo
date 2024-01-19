@@ -5,7 +5,7 @@ authors = [
     "Pascal Hertleif <killercup@gmail.com>",
     "Oliver Schneider <oli-obk@users.noreply.github.com>",
 ]
-rust-version = "1.73"  # MSRV:3
+rust-version.workspace = true
 edition.workspace = true
 license.workspace = true
 homepage.workspace = true
