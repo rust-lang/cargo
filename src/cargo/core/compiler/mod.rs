@@ -1223,18 +1223,22 @@ fn trim_paths_args(
     let package_remap = {
         let pkg_root = unit.pkg.root();
         let ws_root = cx.bcx.ws.root();
-        let is_local = unit.pkg.package_id().source_id().is_path();
         let mut remap = OsString::from("--remap-path-prefix=");
-        // Remapped to path relative to workspace root:
+        // Remap rules for dependencies
         //
-        // * path dependencies under workspace root directory
-        //
-        // Remapped to `<pkg>-<version>`
-        //
-        // * registry dependencies
-        // * git dependencies
-        // * path dependencies outside workspace root directory
-        if is_local && pkg_root.strip_prefix(ws_root).is_ok() {
+        // * Git dependencies: remove ~/.cargo/git/checkouts prefix.
+        // * Registry dependencies: remove ~/.cargo/registry/src prefix.
+        // * Others (e.g. path dependencies):
+        //     * relative paths to workspace root if inside the workspace directory.
+        //     * otherwise remapped to `<pkg>-<version>`.
+        let source_id = unit.pkg.package_id().source_id();
+        if source_id.is_git() {
+            remap.push(cx.bcx.config.git_checkouts_path().as_path_unlocked());
+            remap.push("=");
+        } else if source_id.is_registry() {
+            remap.push(cx.bcx.config.registry_source_path().as_path_unlocked());
+            remap.push("=");
+        } else if pkg_root.strip_prefix(ws_root).is_ok() {
             remap.push(ws_root);
             remap.push("=."); // remap to relative rustc work dir explicitly
         } else {

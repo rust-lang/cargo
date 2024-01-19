@@ -225,11 +225,11 @@ fn registry_dependency() {
         .build();
 
     let registry_src = paths::home().join(".cargo/registry/src");
-    let pkg_remap = format!("{}/[..]/bar-0.0.1=bar-0.0.1", registry_src.display());
+    let registry_src = registry_src.display();
 
     p.cargo("run --verbose -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-        .with_stdout("bar-0.0.1/src/lib.rs")
+        .with_stdout("-[..]/bar-0.0.1/src/lib.rs") // Omit the hash of Source URL
         .with_stderr(&format!(
             "\
 [UPDATING] [..]
@@ -238,7 +238,7 @@ fn registry_dependency() {
 [COMPILING] bar v0.0.1
 [RUNNING] `rustc [..]\
     -Zremap-path-scope=object \
-    --remap-path-prefix={pkg_remap} \
+    --remap-path-prefix={registry_src}= \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]\
@@ -281,18 +281,18 @@ fn git_dependency() {
         .build();
 
     let git_checkouts_src = paths::home().join(".cargo/git/checkouts");
-    let pkg_remap = format!("{}/bar-[..]/[..]=bar-0.0.1", git_checkouts_src.display());
+    let git_checkouts_src = git_checkouts_src.display();
 
     p.cargo("run --verbose -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-        .with_stdout("bar-0.0.1/src/lib.rs")
+        .with_stdout("bar-[..]/[..]/src/lib.rs") // Omit the hash of Source URL and commit
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{url}`
 [COMPILING] bar v0.0.1 ({url}[..])
 [RUNNING] `rustc [..]\
     -Zremap-path-scope=object \
-    --remap-path-prefix={pkg_remap} \
+    --remap-path-prefix={git_checkouts_src}= \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]\
@@ -426,7 +426,6 @@ fn diagnostics_works() {
 
     let registry_src = paths::home().join(".cargo/registry/src");
     let registry_src = registry_src.display();
-    let pkg_remap = format!("{registry_src}/[..]/bar-0.0.1=bar-0.0.1");
 
     p.cargo("build -vv -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
@@ -439,7 +438,7 @@ fn diagnostics_works() {
             "\
 [RUNNING] [..]rustc [..]\
     -Zremap-path-scope=diagnostics \
-    --remap-path-prefix={pkg_remap} \
+    --remap-path-prefix={registry_src}= \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]",
         ))
         .with_stderr_contains(
@@ -516,9 +515,9 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
     use std::os::unix::ffi::OsStrExt;
 
     let registry_src = paths::home().join(".cargo/registry/src");
-    let pkg_remap = format!("{}/[..]/bar-0.0.1=bar-0.0.1", registry_src.display());
-    let rust_src = "/lib/rustc/src/rust".as_bytes();
     let registry_src_bytes = registry_src.as_os_str().as_bytes();
+    let registry_src = registry_src.display();
+    let rust_src = "/lib/rustc/src/rust".as_bytes();
 
     Package::new("bar", "0.0.1")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
@@ -570,7 +569,7 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
 [COMPILING] bar v0.0.1
 [RUNNING] `rustc [..]-C split-debuginfo={split_debuginfo} [..]\
     -Zremap-path-scope=object \
-    --remap-path-prefix={pkg_remap} \
+    --remap-path-prefix={registry_src}= \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]-C split-debuginfo={split_debuginfo} [..]\
