@@ -146,7 +146,7 @@ The default is the host platform. Use the value <code>all</code> to include <em>
 
 <dt class="option-term" id="option-cargo-tree---charset"><a class="option-anchor" href="#option-cargo-tree---charset"></a><code>--charset</code> <em>charset</em></dt>
 <dd class="option-desc">Chooses the character set to use for the tree. Valid values are “utf8” or
-“ascii”. Default is “utf8”.</dd>
+“ascii”. When unspecified, cargo will auto-select a value.</dd>
 
 
 <dt class="option-term" id="option-cargo-tree--f"><a class="option-anchor" href="#option-cargo-tree--f"></a><code>-f</code> <em>format</em></dt>

@@ -7,6 +7,7 @@ use cargo::ops::Packages;
 use cargo::util::print_available_packages;
 use cargo::util::CargoResult;
 use std::collections::HashSet;
+use std::io::IsTerminal as _;
 use std::str::FromStr;
 
 pub fn cli() -> Command {
@@ -69,8 +70,7 @@ pub fn cli() -> Command {
         .arg(
             opt("charset", "Character set to use in output")
                 .value_name("CHARSET")
-                .value_parser(["utf8", "ascii"])
-                .default_value("utf8"),
+                .value_parser(["utf8", "ascii"]),
         )
         .arg(
             opt("format", "Format string used for printing dependencies")
@@ -181,8 +181,18 @@ subtree of the package given to -p.\n\
         print_available_packages(&ws)?;
     }
 
-    let charset = tree::Charset::from_str(args.get_one::<String>("charset").unwrap())
+    let charset = args.get_one::<String>("charset");
+    let charset = charset
+        .map(|c| tree::Charset::from_str(c))
+        .transpose()
         .map_err(|e| anyhow::anyhow!("{}", e))?;
+    let charset = charset.unwrap_or_else(|| {
+        if supports_unicode::supports_unicode() || !std::io::stdout().is_terminal() {
+            tree::Charset::Utf8
+        } else {
+            tree::Charset::Ascii
+        }
+    });
     let opts = tree::TreeOptions {
         cli_features: args.cli_features()?,
         packages,

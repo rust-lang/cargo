@@ -141,7 +141,8 @@ OPTIONS
    Tree Formatting Options
        --charset charset
            Chooses the character set to use for the tree. Valid values are
-           “utf8” or “ascii”. Default is “utf8”.
+           “utf8” or “ascii”. When unspecified, cargo will auto-select
+           a value.
 
        -f format, --format format
            Set the format string for each package. The default is “{p}”.
