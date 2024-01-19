@@ -187,7 +187,7 @@ fn to_token_stream(code: &str) -> TokenStream {
 
 static mut VERSION: (u32, bool) = (0, false);
 
-fn version() -> &'static (u32, bool) {
+fn version() -> (u32, bool) {
     static INIT: Once = Once::new();
     INIT.call_once(|| {
         let output = Command::new("rustc")
@@ -201,7 +201,7 @@ fn version() -> &'static (u32, bool) {
         let minor = vers.split('.').skip(1).next().unwrap().parse().unwrap();
         unsafe { VERSION = (minor, is_nightly) }
     });
-    unsafe { &VERSION }
+    unsafe { VERSION }
 }
 
 fn has_command(command: &str) -> bool {
