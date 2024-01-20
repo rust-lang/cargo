@@ -106,6 +106,8 @@ pub struct SerializedPackage {
     metabuild: Option<Vec<String>>,
     default_run: Option<String>,
     rust_version: Option<RustVersion>,
+    include: Vec<String>,
+    exclude: Vec<String>,
 }
 
 impl Package {
@@ -262,6 +264,8 @@ impl Package {
             publish: self.publish().as_ref().cloned(),
             default_run: self.manifest().default_run().map(|s| s.to_owned()),
             rust_version: self.rust_version().cloned(),
+            include: self.manifest().include().to_vec(),
+            exclude: self.manifest().exclude().to_vec(),
         }
     }
 }
