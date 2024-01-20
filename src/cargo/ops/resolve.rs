@@ -73,7 +73,6 @@ use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::{profile, CanonicalUrl};
 use anyhow::Context as _;
-use cargo_util_schemas::manifest::RustVersion;
 use std::collections::{HashMap, HashSet};
 use tracing::{debug, trace};
 
@@ -109,10 +108,8 @@ version. This may also occur with an optional dependency that is not enabled.";
 /// This is a simple interface used by commands like `clean`, `fetch`, and
 /// `package`, which don't specify any options or features.
 pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolve)> {
-    let max_rust_version = ws.rust_version();
-
     let mut registry = PackageRegistry::new(ws.config())?;
-    let resolve = resolve_with_registry(ws, &mut registry, max_rust_version)?;
+    let resolve = resolve_with_registry(ws, &mut registry)?;
     let packages = get_resolved_packages(&resolve, registry)?;
     Ok((packages, resolve))
 }
@@ -135,7 +132,6 @@ pub fn resolve_ws_with_opts<'cfg>(
     specs: &[PackageIdSpec],
     has_dev_units: HasDevUnits,
     force_all_targets: ForceAllTargets,
-    max_rust_version: Option<&RustVersion>,
 ) -> CargoResult<WorkspaceResolve<'cfg>> {
     let mut registry = PackageRegistry::new(ws.config())?;
     let mut add_patches = true;
@@ -144,7 +140,7 @@ pub fn resolve_ws_with_opts<'cfg>(
     } else if ws.require_optional_deps() {
         // First, resolve the root_package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
-        let resolve = resolve_with_registry(ws, &mut registry, max_rust_version)?;
+        let resolve = resolve_with_registry(ws, &mut registry)?;
         // No need to add patches again, `resolve_with_registry` has done it.
         add_patches = false;
 
@@ -190,7 +186,6 @@ pub fn resolve_ws_with_opts<'cfg>(
         None,
         specs,
         add_patches,
-        max_rust_version,
     )?;
 
     let pkg_set = get_resolved_packages(&resolved_with_overrides, registry)?;
@@ -242,7 +237,6 @@ pub fn resolve_ws_with_opts<'cfg>(
 fn resolve_with_registry<'cfg>(
     ws: &Workspace<'cfg>,
     registry: &mut PackageRegistry<'cfg>,
-    max_rust_version: Option<&RustVersion>,
 ) -> CargoResult<Resolve> {
     let prev = ops::load_pkg_lockfile(ws)?;
     let mut resolve = resolve_with_previous(
@@ -254,7 +248,6 @@ fn resolve_with_registry<'cfg>(
         None,
         &[],
         true,
-        max_rust_version,
     )?;
 
     if !ws.is_ephemeral() && ws.require_optional_deps() {
@@ -287,7 +280,6 @@ pub fn resolve_with_previous<'cfg>(
     to_avoid: Option<&HashSet<PackageId>>,
     specs: &[PackageIdSpec],
     register_patches: bool,
-    max_rust_version: Option<&RustVersion>,
 ) -> CargoResult<Resolve> {
     // We only want one Cargo at a time resolving a crate graph since this can
     // involve a lot of frobbing of the global caches.
@@ -326,7 +318,7 @@ pub fn resolve_with_previous<'cfg>(
         version_prefs.version_ordering(VersionOrdering::MinimumVersionsFirst)
     }
     if ws.config().cli_unstable().msrv_policy {
-        version_prefs.max_rust_version(max_rust_version.cloned());
+        version_prefs.max_rust_version(ws.rust_version().cloned());
     }
 
     // This is a set of PackageIds of `[patch]` entries, and some related locked PackageIds, for
