@@ -1417,6 +1417,14 @@ impl std::str::FromStr for RustVersion {
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let partial = value.parse::<PartialVersion>();
         let partial = partial.map_err(RustVersionErrorKind::PartialVersion)?;
+        partial.try_into()
+    }
+}
+
+impl TryFrom<PartialVersion> for RustVersion {
+    type Error = RustVersionError;
+
+    fn try_from(partial: PartialVersion) -> Result<Self, Self::Error> {
         if partial.pre.is_some() {
             return Err(RustVersionErrorKind::Prerelease.into());
         }
