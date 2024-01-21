@@ -1400,10 +1400,34 @@ fn precise_yanked() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[ERROR] no matching package named `bar` found
-location searched: registry `crates-io`
-required by package `foo v0.0.0 ([CWD])`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 ([CWD])`
+
+Caused by:
+  failed to query replaced source registry `crates-io`
+
+Caused by:
+  the `--precise <yanked-version>` flag is unstable[..]
+  See [..]
+  See [..]
 ",
         )
-        .run()
+        .run();
+
+    p.cargo("update --precise 0.1.1 bar")
+        .masquerade_as_nightly_cargo(&["--precise <yanked-version>"])
+        .arg("-Zunstable-options")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[WARNING] yanked package `bar@0.1.1` is selected by the `--precise` flag from registry `dummy-registry`
+[NOTE] it is not recommended to depend on a yanked version
+[NOTE] if possible, try other SemVer-compatbile versions
+[UPDATING] bar v0.1.0 -> v0.1.1
+",
+        )
+        .run();
+
+    // Use yanked version.
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.contains("\nname = \"bar\"\nversion = \"0.1.1\""));
 }

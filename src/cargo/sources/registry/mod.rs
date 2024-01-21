@@ -779,6 +779,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
                 Poll::Pending
             }
         } else {
+            let mut precise_yanked_in_use = false;
             ready!(self
                 .index
                 .query_inner(dep.package_name(), &req, &mut *self.ops, &mut |s| {
@@ -786,15 +787,39 @@ impl<'cfg> Source for RegistrySource<'cfg> {
                         QueryKind::Exact => dep.matches(s.as_summary()),
                         QueryKind::Fuzzy => true,
                     };
+                    if !matched {
+                        return;
+                    }
                     // Next filter out all yanked packages. Some yanked packages may
                     // leak through if they're in a whitelist (aka if they were
                     // previously in `Cargo.lock`
-                    if matched
-                        && (!s.is_yanked() || self.yanked_whitelist.contains(&s.package_id()))
-                    {
+                    if !s.is_yanked() {
                         callback(s);
+                    } else if self.yanked_whitelist.contains(&s.package_id()) {
+                        callback(s);
+                    } else if req.is_precise() {
+                        precise_yanked_in_use = true;
+                        if self.config.cli_unstable().unstable_options {
+                            callback(s);
+                        }
                     }
                 }))?;
+            if precise_yanked_in_use {
+                self.config
+                    .cli_unstable()
+                    .fail_if_stable_opt("--precise <yanked-version>", 4225)?;
+                let name = dep.package_name();
+                let version = req
+                    .precise_version()
+                    .expect("--precise <yanked-version> in use");
+                let source = self.source_id();
+                let mut shell = self.config.shell();
+                shell.warn(format_args!(
+                    "yanked package `{name}@{version}` is selected by the `--precise` flag from {source}",
+                ))?;
+                shell.note("it is not recommended to depend on a yanked version")?;
+                shell.note("if possible, try other SemVer-compatbile versions")?;
+            }
             if called {
                 return Poll::Ready(Ok(()));
             }

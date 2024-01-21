@@ -87,6 +87,18 @@ impl OptVersionReq {
         };
     }
 
+    pub fn is_precise(&self) -> bool {
+        matches!(self, OptVersionReq::Precise(..))
+    }
+
+    /// Gets the version to which this req is precise to, if any.
+    pub fn precise_version(&self) -> Option<&Version> {
+        match self {
+            OptVersionReq::Precise(version, _) => Some(version),
+            _ => None,
+        }
+    }
+
     pub fn is_locked(&self) -> bool {
         matches!(self, OptVersionReq::Locked(..))
     }
