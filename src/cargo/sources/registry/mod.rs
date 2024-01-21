@@ -748,7 +748,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
             .precise_registry_version(dep.package_name().as_str())
             .filter(|(c, _)| req.matches(c))
         {
-            req.update_precise(&requested);
+            req.precise_to(&requested);
         }
 
         let mut called = false;
