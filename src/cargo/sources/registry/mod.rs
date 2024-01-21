@@ -751,20 +751,24 @@ impl<'cfg> Source for RegistrySource<'cfg> {
             req.update_precise(&requested);
         }
 
+        let mut called = false;
+        let callback = &mut |s| {
+            called = true;
+            f(s);
+        };
+
         // If this is a locked dependency, then it came from a lock file and in
         // theory the registry is known to contain this version. If, however, we
         // come back with no summaries, then our registry may need to be
         // updated, so we fall back to performing a lazy update.
         if kind == QueryKind::Exact && req.is_locked() && !self.ops.is_updated() {
             debug!("attempting query without update");
-            let mut called = false;
             ready!(self
                 .index
                 .query_inner(dep.package_name(), &req, &mut *self.ops, &mut |s| {
                     if dep.matches(s.as_summary()) {
                         // We are looking for a package from a lock file so we do not care about yank
-                        called = true;
-                        f(s);
+                        callback(s)
                     }
                 },))?;
             if called {
@@ -775,7 +779,6 @@ impl<'cfg> Source for RegistrySource<'cfg> {
                 Poll::Pending
             }
         } else {
-            let mut called = false;
             ready!(self
                 .index
                 .query_inner(dep.package_name(), &req, &mut *self.ops, &mut |s| {
@@ -789,8 +792,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
                     if matched
                         && (!s.is_yanked() || self.yanked_whitelist.contains(&s.package_id()))
                     {
-                        f(s);
-                        called = true;
+                        callback(s);
                     }
                 }))?;
             if called {
