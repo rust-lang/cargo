@@ -42,6 +42,10 @@ Cannot be used with `--precise`.
 When used with _spec_, allows you to specify a specific version number to set
 the package to. If the package comes from a git repository, this can be a git
 revision (such as a SHA hash or tag).
+
+While not recommended, you can specify a yanked version of a package (nightly only).
+When possible, try other non-yanked SemVer-compatible versions or seek help
+from the maintainers of the package.
 {{/option}}
 
 {{#option "`-w`" "`--workspace`" }}

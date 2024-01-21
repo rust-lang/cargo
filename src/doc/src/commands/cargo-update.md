@@ -39,7 +39,10 @@ Cannot be used with <code>--precise</code>.</dd>
 <dt class="option-term" id="option-cargo-update---precise"><a class="option-anchor" href="#option-cargo-update---precise"></a><code>--precise</code> <em>precise</em></dt>
 <dd class="option-desc">When used with <em>spec</em>, allows you to specify a specific version number to set
 the package to. If the package comes from a git repository, this can be a git
-revision (such as a SHA hash or tag).</dd>
+revision (such as a SHA hash or tag).</p>
+<p>While not recommended, you can specify a yanked version of a package (nightly only).
+When possible, try other non-yanked SemVer-compatible versions or seek help
+from the maintainers of the package.</dd>
 
 
 <dt class="option-term" id="option-cargo-update--w"><a class="option-anchor" href="#option-cargo-update--w"></a><code>-w</code></dt>

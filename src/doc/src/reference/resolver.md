@@ -325,9 +325,11 @@ the `links` field if your library is in common use.
 
 [Yanked releases][yank] are those that are marked that they should not be
 used. When the resolver is building the graph, it will ignore all yanked
-releases unless they already exist in the `Cargo.lock` file.
+releases unless they already exist in the `Cargo.lock` file or are explicitly
+requested by the [`--precise`] flag of `cargo update` (nightly only).
 
 [yank]: publishing.md#cargo-yank
+[`--precise`]: ../commands/cargo-update.md#option-cargo-update---precise
 
 ## Dependency updates
 
