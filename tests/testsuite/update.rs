@@ -1370,3 +1370,40 @@ fn update_precise_git_revisions() {
     assert!(p.read_lockfile().contains(&head_id));
     assert!(!p.read_lockfile().contains(&tag_commit_id));
 }
+
+#[cargo_test]
+fn precise_yanked() {
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.1.1").yanked(true).publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+
+                [dependencies]
+                bar = "0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    // Use non-yanked version.
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.contains("\nname = \"bar\"\nversion = \"0.1.0\""));
+
+    p.cargo("update --precise 0.1.1 bar")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[ERROR] no matching package named `bar` found
+location searched: registry `crates-io`
+required by package `foo v0.0.0 ([CWD])`
+",
+        )
+        .run()
+}
