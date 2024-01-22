@@ -1431,3 +1431,50 @@ Caused by:
     let lockfile = p.read_lockfile();
     assert!(lockfile.contains("\nname = \"bar\"\nversion = \"0.1.1\""));
 }
+
+#[cargo_test]
+fn precise_yanked_multiple_presence() {
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.1.1").yanked(true).publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+
+                [dependencies]
+                bar = "0.1"
+                baz = { package = "bar", version = "0.1" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    // Use non-yanked version.
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.contains("\nname = \"bar\"\nversion = \"0.1.0\""));
+
+    p.cargo("update --precise 0.1.1 bar")
+        .masquerade_as_nightly_cargo(&["--precise <yanked-version>"])
+        .arg("-Zunstable-options")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[WARNING] yanked package `bar@0.1.1` is selected by the `--precise` flag from registry `dummy-registry`
+[NOTE] it is not recommended to depend on a yanked version
+[NOTE] if possible, try other SemVer-compatbile versions
+[WARNING] yanked package `bar@0.1.1` is selected by the `--precise` flag from registry `dummy-registry`
+[NOTE] it is not recommended to depend on a yanked version
+[NOTE] if possible, try other SemVer-compatbile versions
+[UPDATING] bar v0.1.0 -> v0.1.1
+",
+        )
+        .run();
+
+    // Use yanked version.
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.contains("\nname = \"bar\"\nversion = \"0.1.1\""));
+}
