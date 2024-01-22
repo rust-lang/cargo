@@ -261,6 +261,12 @@ pub struct RegistrySource<'cfg> {
     /// Otherwise, the resolver would think that those entries no longer
     /// exist, and it would trigger updates to unrelated packages.
     yanked_whitelist: HashSet<PackageId>,
+    /// Yanked versions that have already been selected during queries.
+    ///
+    /// As of this writing, this is for not emitting the `--precise <yanked>`
+    /// warning twice, with the assumption of (`dep.package_name()` + `--precise`
+    /// version) being sufficient to uniquely identify the same query result.
+    selected_precise_yanked: HashSet<(InternedString, semver::Version)>,
 }
 
 /// The [`config.json`] file stored in the index.
@@ -531,6 +537,7 @@ impl<'cfg> RegistrySource<'cfg> {
             index: index::RegistryIndex::new(source_id, ops.index_path(), config),
             yanked_whitelist: yanked_whitelist.clone(),
             ops,
+            selected_precise_yanked: HashSet::new(),
         }
     }
 
@@ -812,13 +819,13 @@ impl<'cfg> Source for RegistrySource<'cfg> {
                 let version = req
                     .precise_version()
                     .expect("--precise <yanked-version> in use");
-                let source = self.source_id();
-                let mut shell = self.config.shell();
-                shell.warn(format_args!(
-                    "yanked package `{name}@{version}` is selected by the `--precise` flag from {source}",
-                ))?;
-                shell.note("it is not recommended to depend on a yanked version")?;
-                shell.note("if possible, try other SemVer-compatbile versions")?;
+                if self.selected_precise_yanked.insert((name, version.clone())) {
+                    let mut shell = self.config.shell();
+                    shell.warn(format_args!(
+                        "selected package `{name}@{version}` was yanked by the author"
+                    ))?;
+                    shell.note("if possible, try a compatible non-yanked version")?;
+                }
             }
             if called {
                 return Poll::Ready(Ok(()));
