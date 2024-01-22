@@ -1566,3 +1566,47 @@ fn run_link_system_path_macos() {
     p2.cargo("run").env(VAR, &libdir).run();
     p2.cargo("test").env(VAR, &libdir).run();
 }
+
+#[cargo_test]
+fn run_binary_with_same_name_as_dependency() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                authors = []
+
+                [dependencies]
+                foo = { path = "foo" }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                fn main() {}
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+
+                [lib]
+                name = "foo"
+                path = "foo.rs"
+            "#,
+        )
+        .file("foo/foo.rs", "")
+        .build();
+
+    p.cargo("run").run();
+    p.cargo("run -p foo@0.5.0")
+        .with_status(101)
+        .with_stderr("[ERROR] package(s) `foo@0.5.0` not found in workspace [..]")
+        .run();
+}
