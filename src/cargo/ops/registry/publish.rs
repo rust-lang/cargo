@@ -407,6 +407,9 @@ fn transmit(
             bail!("the license file `{}` does not exist", file)
         }
     }
+    if keywords.len() > 5 {
+        bail!("Number of keywords in Cargo.toml must be upto 5.")
+    }
 
     // Do not upload if performing a dry run
     if dry_run {
