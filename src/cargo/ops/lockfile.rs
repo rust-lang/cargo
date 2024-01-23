@@ -112,7 +112,12 @@ fn resolve_to_string_orig(
 fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
     let toml = toml::Table::try_from(resolve).unwrap();
 
-    let mut out = String::new();
+    let use_crlf = if let Some(orig) = orig {
+        has_crlf_line_endings(orig)
+    } else {
+        false
+    };
+    let mut out = Emitter::new(use_crlf);
 
     // At the start of the file we notify the reader that the file is generated.
     // Specifically Phabricator ignores files containing "@generated", so we use that.
@@ -184,11 +189,9 @@ fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
     // file doesn't contain any trailing newlines so trim out the extra if
     // necessary.
     if resolve.version() >= ResolveVersion::V2 {
-        while out.ends_with("\n\n") {
-            out.pop();
-        }
+        out.remove_trailing_whitespace();
     }
-    out
+    out.underlying
 }
 
 fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
@@ -209,7 +212,7 @@ fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
     orig.lines().eq(current.lines())
 }
 
-fn emit_package(dep: &toml::Table, out: &mut String) {
+fn emit_package(dep: &toml::Table, out: &mut Emitter) {
     out.push_str(&format!("name = {}\n", &dep["name"]));
     out.push_str(&format!("version = {}\n", &dep["version"]));
 
@@ -243,5 +246,63 @@ fn lock_root(ws: &Workspace<'_>) -> Filesystem {
         ws.target_dir()
     } else {
         Filesystem::new(ws.root().to_owned())
+    }
+}
+
+struct Emitter {
+    underlying: String,
+    use_crlf: bool,
+}
+
+impl Emitter {
+    pub fn new(use_crlf: bool) -> Emitter {
+        Emitter {
+            underlying: String::new(),
+            use_crlf,
+        }
+    }
+
+    pub fn push_str(&mut self, string: &str) {
+        if self.use_crlf {
+            let mut iterator = string.lines().peekable();
+
+            while let Some(line) = iterator.next() {
+                self.underlying.push_str(line);
+                if iterator.peek().is_some() || string.ends_with('\n') {
+                    self.underlying.push_str("\r\n");
+                }
+            }
+        } else {
+            self.underlying.push_str(string);
+        }
+    }
+
+    pub fn push(&mut self, ch: char) {
+        if ch == '\n' && self.use_crlf {
+            self.underlying.push('\r');
+        }
+        self.underlying.push(ch);
+    }
+
+    pub fn remove_trailing_whitespace(&mut self) {
+        if self.use_crlf {
+            while self.underlying.ends_with("\n\r\n") {
+                self.underlying.pop();
+                self.underlying.pop();
+            }
+        } else {
+            while self.underlying.ends_with("\n\n") {
+                self.underlying.pop();
+            }
+        }
+    }
+}
+
+fn has_crlf_line_endings(s: &str) -> bool {
+    // Only check the first line.
+    if let Some(lf) = s.find('\n') {
+        s[..lf].ends_with('\r')
+    } else {
+        false
     }
 }
