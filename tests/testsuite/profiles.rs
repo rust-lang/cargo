@@ -675,7 +675,7 @@ fn do_not_strip_debuginfo_with_requested_debug() {
             r#"
                 [package]
                 name = "bar"
-                verison = "0.1.0"
+                version = "0.1.0"
         "#,
         )
         .file("bar/src/lib.rs", "")
