@@ -242,7 +242,7 @@ dependencies = [
 
 [[package]]
 name = "capture"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "cargo_metadata",
  "flate2",
@@ -394,11 +394,11 @@ dependencies = [
 
 [[package]]
 name = "cargo-test-macro"
-version = "0.1.0"
+version = "0.0.0"
 
 [[package]]
 name = "cargo-test-support"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "anstream",
  "anstyle",

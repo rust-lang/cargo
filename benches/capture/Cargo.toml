@@ -1,10 +1,8 @@
 [package]
 name = "capture"
-version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 description = "Tool for capturing a real-world workspace for benchmarking."
-publish = false
 
 [dependencies]
 cargo_metadata.workspace = true

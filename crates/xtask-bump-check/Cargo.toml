@@ -1,8 +1,6 @@
 [package]
 name = "xtask-bump-check"
-version = "0.0.0"
 edition.workspace = true
-publish = false
 
 [dependencies]
 anyhow.workspace = true
