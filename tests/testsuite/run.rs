@@ -1603,10 +1603,7 @@ fn run_binary_with_same_name_as_dependency() {
         )
         .file("foo/foo.rs", "")
         .build();
-
     p.cargo("run").run();
-    p.cargo("run -p foo@0.5.0")
-        .with_status(101)
-        .with_stderr("[ERROR] package(s) `foo@0.5.0` not found in workspace [..]")
-        .run();
+    p.cargo("check -p foo@0.5.0").run();
+    p.cargo("run -p foo@0.5.0").run();
 }
