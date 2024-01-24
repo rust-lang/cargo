@@ -173,7 +173,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: taiki-e/install-action@cargo-hack
-    - run: cargo hack check --rust-version --workspace --all-targets --ignore-private
+    - run: cargo hack check --rust-version --workspace --all-targets --no-private
 ```
 This tries to balance thoroughness with turnaround time:
 - A single platform is used as most projects are platform-agnostic, trusting platform-specific dependencies to verify their behavior.
