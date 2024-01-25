@@ -178,12 +178,19 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&OsStr]) -> C
     let command = match path {
         Some(command) => command,
         None => {
+            let script_suggestion = if config.cli_unstable().script
+                && std::path::Path::new(cmd).is_file()
+            {
+                let sep = std::path::MAIN_SEPARATOR;
+                format!("\n\tTo run the file `{cmd}`, provide a relative path like `.{sep}{cmd}`")
+            } else {
+                "".to_owned()
+            };
             let err = if cmd.starts_with('+') {
                 anyhow::format_err!(
-                    "no such command: `{}`\n\n\t\
+                    "no such command: `{cmd}`\n\n\t\
                     Cargo does not handle `+toolchain` directives.\n\t\
-                    Did you mean to invoke `cargo` through `rustup` instead?",
-                    cmd
+                    Did you mean to invoke `cargo` through `rustup` instead?{script_suggestion}",
                 )
             } else {
                 let suggestions = list_commands(config);
@@ -192,7 +199,7 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&OsStr]) -> C
                 anyhow::format_err!(
                     "no such command: `{cmd}`{did_you_mean}\n\n\t\
                     View all installed commands with `cargo --list`\n\t\
-                    Find a package to install `{cmd}` with `cargo search cargo-{cmd}`",
+                    Find a package to install `{cmd}` with `cargo search cargo-{cmd}`{script_suggestion}",
                 )
             };
 

@@ -109,6 +109,7 @@ error: no such command: `echo`
 
 <tab>View all installed commands with `cargo --list`
 <tab>Find a package to install `echo` with `cargo search cargo-echo`
+<tab>To run the file `echo`, provide a relative path like `./echo`
 ",
         )
         .run();
@@ -182,7 +183,7 @@ fn requires_nightly() {
         .with_stdout("")
         .with_stderr(
             "\
-error: running `echo.rs` requires `-Zscript`
+[ERROR] running the file `echo.rs` requires `-Zscript`
 ",
         )
         .run();
@@ -200,7 +201,7 @@ fn requires_z_flag() {
         .with_stdout("")
         .with_stderr(
             "\
-error: running `echo.rs` requires `-Zscript`
+[ERROR] running the file `echo.rs` requires `-Zscript`
 ",
         )
         .run();
@@ -591,30 +592,119 @@ args: []
 #[cargo_test]
 fn script_like_dir() {
     let p = cargo_test_support::project()
-        .file("script.rs/foo", "something")
+        .file("foo.rs/foo", "something")
         .build();
 
-    p.cargo("-Zscript -v script.rs")
+    p.cargo("-Zscript -v foo.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stderr(
             "\
-error: manifest path `script.rs` is a directory but expected a file
+[ERROR] no such file or subcommand `foo.rs`
+<tab>`foo.rs` is a directory
 ",
         )
         .run();
 }
 
 #[cargo_test]
-fn missing_script_rs() {
+fn non_existent_rs() {
     let p = cargo_test_support::project().build();
 
-    p.cargo("-Zscript -v script.rs")
+    p.cargo("-Zscript -v foo.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] manifest path `script.rs` does not exist
+[ERROR] no such file or subcommand `foo.rs`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn non_existent_rs_stable() {
+    let p = cargo_test_support::project().build();
+
+    p.cargo("-v foo.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout("")
+        .with_stderr(
+            "\
+[ERROR] no such subcommand `foo.rs`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn did_you_mean_file() {
+    let p = cargo_test_support::project()
+        .file("food.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-Zscript -v foo.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout("")
+        .with_stderr(
+            "\
+[ERROR] no such file or subcommand `foo.rs`
+<tab>Did you mean the file `./food.rs`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn did_you_mean_file_stable() {
+    let p = cargo_test_support::project()
+        .file("food.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-v foo.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout("")
+        .with_stderr(
+            "\
+[ERROR] no such subcommand `foo.rs`
+<tab>Did you mean the file `./food.rs` with `-Zscript`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn did_you_mean_command() {
+    let p = cargo_test_support::project().build();
+
+    p.cargo("-Zscript -v build--manifest-path=./Cargo.toml")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout("")
+        .with_stderr(
+            "\
+[ERROR] no such file or subcommand `build--manifest-path=./Cargo.toml`
+<tab>Did you mean the command `build --manifest-path=./Cargo.toml`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn did_you_mean_command_stable() {
+    let p = cargo_test_support::project().build();
+
+    p.cargo("-v build--manifest-path=./Cargo.toml")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout("")
+        .with_stderr(
+            "\
+[ERROR] no such subcommand `build--manifest-path=./Cargo.toml`
+<tab>Did you mean the command `build --manifest-path=./Cargo.toml`
 ",
         )
         .run();
