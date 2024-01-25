@@ -600,14 +600,14 @@ fn script_like_dir() {
         .with_status(101)
         .with_stderr(
             "\
-error: manifest path `foo.rs` is a directory but expected a file
+[ERROR] manifest path `foo.rs` is a directory but expected a file
 ",
         )
         .run();
 }
 
 #[cargo_test]
-fn missing_script_rs() {
+fn non_existent_rs() {
     let p = cargo_test_support::project().build();
 
     p.cargo("-Zscript -v foo.rs")
@@ -616,6 +616,90 @@ fn missing_script_rs() {
         .with_stderr(
             "\
 [ERROR] manifest path `foo.rs` does not exist
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn non_existent_rs_stable() {
+    let p = cargo_test_support::project().build();
+
+    p.cargo("-v foo.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout("")
+        .with_stderr(
+            "\
+[ERROR] running `foo.rs` requires `-Zscript`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn did_you_mean_file() {
+    let p = cargo_test_support::project()
+        .file("food.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-Zscript -v foo.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout("")
+        .with_stderr(
+            "\
+[ERROR] manifest path `foo.rs` does not exist
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn did_you_mean_file_stable() {
+    let p = cargo_test_support::project()
+        .file("food.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-v foo.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout("")
+        .with_stderr(
+            "\
+[ERROR] running `foo.rs` requires `-Zscript`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn did_you_mean_command() {
+    let p = cargo_test_support::project().build();
+
+    p.cargo("-Zscript -v build--manifest-path=./Cargo.toml")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout("")
+        .with_stderr(
+            "\
+[ERROR] manifest path `build--manifest-path=./Cargo.toml` does not exist
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn did_you_mean_command_stable() {
+    let p = cargo_test_support::project().build();
+
+    p.cargo("-v build--manifest-path=./Cargo.toml")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout("")
+        .with_stderr(
+            "\
+[ERROR] running `build--manifest-path=./Cargo.toml` requires `-Zscript`
 ",
         )
         .run();
