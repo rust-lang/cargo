@@ -180,10 +180,9 @@ fn execute_external_subcommand(config: &Config, cmd: &str, args: &[&OsStr]) -> C
         None => {
             let err = if cmd.starts_with('+') {
                 anyhow::format_err!(
-                    "no such command: `{}`\n\n\t\
+                    "no such command: `{cmd}`\n\n\t\
                     Cargo does not handle `+toolchain` directives.\n\t\
                     Did you mean to invoke `cargo` through `rustup` instead?",
-                    cmd
                 )
             } else {
                 let suggestions = list_commands(config);
