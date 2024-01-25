@@ -109,6 +109,7 @@ error: no such command: `echo`
 
 <tab>View all installed commands with `cargo --list`
 <tab>Find a package to install `echo` with `cargo search cargo-echo`
+<tab>To run the file `echo`, provide a relative path like `./echo`
 ",
         )
         .run();
