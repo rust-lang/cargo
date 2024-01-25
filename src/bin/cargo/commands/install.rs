@@ -72,7 +72,7 @@ pub fn cli() -> Command {
         .arg(flag("no-track", "Do not save tracking information"))
         .arg(flag(
             "list",
-            "list all installed packages and their versions",
+            "List all installed packages and their versions",
         ))
         .arg_ignore_rust_version()
         .arg_message_format()

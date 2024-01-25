@@ -17,7 +17,7 @@ Options:
       --root <DIR>            Directory to install packages into
   -f, --force                 Force overwriting existing crates or binaries
       --no-track              Do not save tracking information
-      --list                  list all installed packages and their versions
+      --list                  List all installed packages and their versions
       --ignore-rust-version   Ignore `rust-version` specification in packages
       --message-format <FMT>  Error format
       --debug                 Build in debug mode (with the 'dev' profile) instead of release mode
