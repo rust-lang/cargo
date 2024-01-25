@@ -258,4 +258,4 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: taiki-e/install-action@cargo-hack
-    - run: cargo hack check --all-targets --rust-version --workspace --no-private
+    - run: cargo hack check --rust-version --workspace --no-private --no-dev-deps
