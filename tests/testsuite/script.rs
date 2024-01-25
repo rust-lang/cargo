@@ -592,15 +592,15 @@ args: []
 #[cargo_test]
 fn script_like_dir() {
     let p = cargo_test_support::project()
-        .file("script.rs/foo", "something")
+        .file("foo.rs/foo", "something")
         .build();
 
-    p.cargo("-Zscript -v script.rs")
+    p.cargo("-Zscript -v foo.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stderr(
             "\
-error: manifest path `script.rs` is a directory but expected a file
+error: manifest path `foo.rs` is a directory but expected a file
 ",
         )
         .run();
@@ -610,12 +610,12 @@ error: manifest path `script.rs` is a directory but expected a file
 fn missing_script_rs() {
     let p = cargo_test_support::project().build();
 
-    p.cargo("-Zscript -v script.rs")
+    p.cargo("-Zscript -v foo.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] manifest path `script.rs` does not exist
+[ERROR] manifest path `foo.rs` does not exist
 ",
         )
         .run();
