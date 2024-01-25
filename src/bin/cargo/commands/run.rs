@@ -7,7 +7,9 @@ use crate::util::restricted_names::is_glob_pattern;
 use cargo::core::Verbosity;
 use cargo::core::Workspace;
 use cargo::ops::{self, CompileFilter, Packages};
+use cargo::util::closest;
 use cargo_util::ProcessError;
+use itertools::Itertools as _;
 
 pub fn cli() -> Command {
     subcommand("run")
@@ -97,11 +99,81 @@ pub fn is_manifest_command(arg: &str) -> bool {
 }
 
 pub fn exec_manifest_command(config: &mut Config, cmd: &str, args: &[OsString]) -> CliResult {
-    if !config.cli_unstable().script {
-        return Err(anyhow::anyhow!("running `{cmd}` requires `-Zscript`").into());
+    let manifest_path = Path::new(cmd);
+    match (manifest_path.is_file(), config.cli_unstable().script) {
+        (true, true) => {}
+        (true, false) => {
+            return Err(anyhow::anyhow!("running the file `{cmd}` requires `-Zscript`").into());
+        }
+        (false, true) => {
+            let possible_commands = crate::list_commands(config);
+            let is_dir = if manifest_path.is_dir() {
+                format!("\n\t`{cmd}` is a directory")
+            } else {
+                "".to_owned()
+            };
+            let suggested_command = if let Some(suggested_command) = possible_commands
+                .keys()
+                .filter(|c| cmd.starts_with(c.as_str()))
+                .max_by_key(|c| c.len())
+            {
+                let actual_args = cmd.strip_prefix(suggested_command).unwrap();
+                let args = if args.is_empty() {
+                    "".to_owned()
+                } else {
+                    format!(
+                        " {}",
+                        args.into_iter().map(|os| os.to_string_lossy()).join(" ")
+                    )
+                };
+                format!("\n\tDid you mean the command `{suggested_command} {actual_args}{args}`")
+            } else {
+                "".to_owned()
+            };
+            let suggested_script = if let Some(suggested_script) = suggested_script(cmd) {
+                format!("\n\tDid you mean the file `{suggested_script}`")
+            } else {
+                "".to_owned()
+            };
+            return Err(anyhow::anyhow!(
+                "no such file or subcommand `{cmd}`{is_dir}{suggested_command}{suggested_script}"
+            )
+            .into());
+        }
+        (false, false) => {
+            // HACK: duplicating the above for minor tweaks but this will all go away on
+            // stabilization
+            let possible_commands = crate::list_commands(config);
+            let suggested_command = if let Some(suggested_command) = possible_commands
+                .keys()
+                .filter(|c| cmd.starts_with(c.as_str()))
+                .max_by_key(|c| c.len())
+            {
+                let actual_args = cmd.strip_prefix(suggested_command).unwrap();
+                let args = if args.is_empty() {
+                    "".to_owned()
+                } else {
+                    format!(
+                        " {}",
+                        args.into_iter().map(|os| os.to_string_lossy()).join(" ")
+                    )
+                };
+                format!("\n\tDid you mean the command `{suggested_command} {actual_args}{args}`")
+            } else {
+                "".to_owned()
+            };
+            let suggested_script = if let Some(suggested_script) = suggested_script(cmd) {
+                format!("\n\tDid you mean the file `{suggested_script}` with `-Zscript`")
+            } else {
+                "".to_owned()
+            };
+            return Err(anyhow::anyhow!(
+                "no such subcommand `{cmd}`{suggested_command}{suggested_script}"
+            )
+            .into());
+        }
     }
 
-    let manifest_path = Path::new(cmd);
     let manifest_path = root_manifest(Some(manifest_path), config)?;
 
     // Treat `cargo foo.rs` like `cargo install --path foo` and re-evaluate the config based on the
@@ -121,6 +193,39 @@ pub fn exec_manifest_command(config: &mut Config, cmd: &str, args: &[OsString]) 
     compile_opts.spec = cargo::ops::Packages::Default;
 
     cargo::ops::run(&ws, &compile_opts, args).map_err(|err| to_run_error(config, err))
+}
+
+fn suggested_script(cmd: &str) -> Option<String> {
+    let cmd_path = Path::new(cmd);
+    let mut suggestion = Path::new(".").to_owned();
+    for cmd_part in cmd_path.components() {
+        let exact_match = suggestion.join(cmd_part);
+        suggestion = if exact_match.exists() {
+            exact_match
+        } else {
+            let possible: Vec<_> = std::fs::read_dir(suggestion)
+                .into_iter()
+                .flatten()
+                .filter_map(|e| e.ok())
+                .map(|e| e.path())
+                .filter(|p| p.to_str().is_some())
+                .collect();
+            if let Some(possible) = closest(
+                cmd_part.as_os_str().to_str().unwrap(),
+                possible.iter(),
+                |p| p.file_name().unwrap().to_str().unwrap(),
+            ) {
+                possible.to_owned()
+            } else {
+                return None;
+            }
+        };
+    }
+    if suggestion.is_dir() {
+        None
+    } else {
+        suggestion.into_os_string().into_string().ok()
+    }
 }
 
 fn to_run_error(config: &cargo::util::Config, err: anyhow::Error) -> CliError {

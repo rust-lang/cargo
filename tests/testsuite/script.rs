@@ -183,7 +183,7 @@ fn requires_nightly() {
         .with_stdout("")
         .with_stderr(
             "\
-error: running `echo.rs` requires `-Zscript`
+[ERROR] running the file `echo.rs` requires `-Zscript`
 ",
         )
         .run();
@@ -201,7 +201,7 @@ fn requires_z_flag() {
         .with_stdout("")
         .with_stderr(
             "\
-error: running `echo.rs` requires `-Zscript`
+[ERROR] running the file `echo.rs` requires `-Zscript`
 ",
         )
         .run();
@@ -600,7 +600,8 @@ fn script_like_dir() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] manifest path `foo.rs` is a directory but expected a file
+[ERROR] no such file or subcommand `foo.rs`
+<tab>`foo.rs` is a directory
 ",
         )
         .run();
@@ -615,7 +616,7 @@ fn non_existent_rs() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] manifest path `foo.rs` does not exist
+[ERROR] no such file or subcommand `foo.rs`
 ",
         )
         .run();
@@ -631,7 +632,7 @@ fn non_existent_rs_stable() {
         .with_stdout("")
         .with_stderr(
             "\
-[ERROR] running `foo.rs` requires `-Zscript`
+[ERROR] no such subcommand `foo.rs`
 ",
         )
         .run();
@@ -649,7 +650,8 @@ fn did_you_mean_file() {
         .with_stdout("")
         .with_stderr(
             "\
-[ERROR] manifest path `foo.rs` does not exist
+[ERROR] no such file or subcommand `foo.rs`
+<tab>Did you mean the file `./food.rs`
 ",
         )
         .run();
@@ -667,7 +669,8 @@ fn did_you_mean_file_stable() {
         .with_stdout("")
         .with_stderr(
             "\
-[ERROR] running `foo.rs` requires `-Zscript`
+[ERROR] no such subcommand `foo.rs`
+<tab>Did you mean the file `./food.rs` with `-Zscript`
 ",
         )
         .run();
@@ -683,7 +686,8 @@ fn did_you_mean_command() {
         .with_stdout("")
         .with_stderr(
             "\
-[ERROR] manifest path `build--manifest-path=./Cargo.toml` does not exist
+[ERROR] no such file or subcommand `build--manifest-path=./Cargo.toml`
+<tab>Did you mean the command `build --manifest-path=./Cargo.toml`
 ",
         )
         .run();
@@ -699,7 +703,8 @@ fn did_you_mean_command_stable() {
         .with_stdout("")
         .with_stderr(
             "\
-[ERROR] running `build--manifest-path=./Cargo.toml` requires `-Zscript`
+[ERROR] no such subcommand `build--manifest-path=./Cargo.toml`
+<tab>Did you mean the command `build --manifest-path=./Cargo.toml`
 ",
         )
         .run();
