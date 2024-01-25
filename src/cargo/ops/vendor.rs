@@ -56,14 +56,13 @@ struct VendorConfig {
 }
 
 #[derive(Serialize)]
-#[serde(rename_all = "lowercase", untagged)]
+#[serde(rename_all = "kebab-case", rename_all_fields = "kebab-case", untagged)]
 enum VendorSource {
     Directory {
         directory: String,
     },
     Registry {
         registry: Option<String>,
-        #[serde(rename = "replace-with")]
         replace_with: String,
     },
     Git {
@@ -71,7 +70,10 @@ enum VendorSource {
         branch: Option<String>,
         tag: Option<String>,
         rev: Option<String>,
-        #[serde(rename = "replace-with")]
+        replace_with: String,
+    },
+    Path {
+        path: String,
         replace_with: String,
     },
 }
@@ -143,6 +145,10 @@ fn sync(
 
     // Next up let's actually download all crates and start storing internal
     // tables about them.
+    let members: BTreeSet<_> = workspaces
+        .iter()
+        .flat_map(|ws| ws.members().map(|p| p.package_id()))
+        .collect();
     for ws in workspaces {
         let (packages, resolve) =
             ops::resolve_ws(ws).with_context(|| "failed to load pkg lockfile")?;
@@ -152,9 +158,8 @@ fn sync(
             .with_context(|| "failed to download packages")?;
 
         for pkg in resolve.iter() {
-            // No need to vendor path crates since they're already in the
-            // repository
-            if pkg.source_id().is_path() {
+            // Don't vendor path deps unless it is outside any of the given workspaces.
+            if pkg.source_id().is_path() && !members.contains(&pkg) {
                 continue;
             }
             ids.insert(
@@ -287,6 +292,16 @@ fn sync(
                 branch,
                 tag,
                 rev,
+                replace_with: merged_source_name.to_string(),
+            }
+        } else if source_id.is_path() {
+            VendorSource::Path {
+                path: source_id
+                    .url()
+                    .to_file_path()
+                    .unwrap()
+                    .to_string_lossy()
+                    .replace("\\", "/"),
                 replace_with: merged_source_name.to_string(),
             }
         } else {
