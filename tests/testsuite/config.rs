@@ -275,7 +275,7 @@ f1 = 1
 
     // It should NOT have warned for the symlink.
     let output = read_output(config);
-    assert_eq!(output, "");
+    assert_match("", &output);
 }
 
 #[cargo_test]
@@ -301,7 +301,7 @@ f1 = 1
 
     // It should NOT have warned for the symlink.
     let output = read_output(config);
-    assert_eq!(output, "");
+    assert_match("", &output);
 }
 
 #[cargo_test]
