@@ -272,6 +272,10 @@ f1 = 1
     let config = new_config();
 
     assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
+
+    // It should NOT have warned for the symlink.
+    let output = read_output(config);
+    assert_eq!(output, "");
 }
 
 #[cargo_test]
