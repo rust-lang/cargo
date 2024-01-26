@@ -299,7 +299,7 @@ Cargo will search `PATH` for its executable.
 
 Configuration values with sensitive information are stored in the
 `$CARGO_HOME/credentials.toml` file. This file is automatically created and updated
-by [`cargo login`] and [`cargo logout`] when using the `cargo:token` credential provider.
+by [`cargo login`] and [`cargo logout`] when using the [`cargo:token`] credential provider.
 
 It follows the same format as Cargo config files.
 
@@ -1320,6 +1320,7 @@ Sets the width for progress bar.
 [source replacement]: source-replacement.md
 [revision]: https://git-scm.com/docs/gitrevisions
 [registries]: registries.md
+[`cargo:token`]: registry-authentication.md#cargotoken
 [crates.io]: https://crates.io/
 [target triple]: ../appendix/glossary.md#target '"target" (glossary)'
 [`<triple>`]: ../appendix/glossary.md#target '"target" (glossary)'
