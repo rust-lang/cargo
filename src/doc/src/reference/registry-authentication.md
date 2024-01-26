@@ -19,20 +19,18 @@ which defaults to:
 * Unix: `~/.cargo/config.toml`
 
 This recommended configuration uses the operating system provider, with a fallback to `cargo:token`
-to look in Cargo's [credentials](config.md#credentials) file or environment variables.
-
-Some private registries may also recommend a registry-specific credential-provider. Check your
-registry's documentation to see if this is the case.
-
+to look in Cargo's [credentials](config.md#credentials) file or environment variables:
 ```toml
 # ~/.cargo/config.toml
 [registry]
 global-credential-providers = ["cargo:token", "cargo:libsecret", "cargo:macos-keychain", "cargo:wincred"]
 ```
-
-Note that later entries have higher precedence.
+*Note that later entries have higher precedence.
 See [`registry.global-credential-providers`](config.md#registryglobal-credential-providers)
-for more details.
+for more details.*
+
+Some private registries may also recommend a registry-specific credential-provider. Check your
+registry's documentation to see if this is the case.
 
 ## Built-in providers
 Cargo includes several built-in credential providers. The available built-in providers
