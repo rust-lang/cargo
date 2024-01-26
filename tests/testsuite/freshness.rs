@@ -290,7 +290,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
     let p = project()
         .no_manifest()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [build]
                 target-dir = "./target"
@@ -724,7 +724,7 @@ fn same_build_dir_cached_packages() {
         .file("d/Cargo.toml", &basic_manifest("d", "0.0.1"))
         .file("d/src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [build]
                 target-dir = "./target"
@@ -2522,7 +2522,7 @@ fn lld_is_fresh() {
     // Check for bug when using lld linker that it remains fresh with dylib.
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [target.x86_64-pc-windows-msvc]
                 linker = "rust-lld"

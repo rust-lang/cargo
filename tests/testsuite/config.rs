@@ -158,7 +158,7 @@ fn read_env_vars_for_config() {
     p.cargo("check").env("CARGO_BUILD_JOBS", "100").run();
 }
 
-pub fn write_config(config: &str) {
+pub fn write_config_extless(config: &str) {
     write_config_at(paths::root().join(".cargo/config"), config);
 }
 
@@ -215,7 +215,7 @@ pub fn assert_match(expected: &str, actual: &str) {
 
 #[cargo_test]
 fn get_config() {
-    write_config(
+    write_config_toml(
         "\
 [S]
 f1 = 123
@@ -261,8 +261,8 @@ fn environment_variable_casing() {
 }
 
 #[cargo_test]
-fn config_works_with_extension() {
-    write_config_toml(
+fn config_works_without_extension() {
+    write_config_extless(
         "\
 [foo]
 f1 = 1
@@ -272,6 +272,13 @@ f1 = 1
     let config = new_config();
 
     assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
+
+    // It should NOT have warned for the symlink.
+    let output = read_output(config);
+    let expected = "\
+warning: `[ROOT]/.cargo/config` is deprecated in favor of `config.toml`
+note: If you need to support cargo 1.38 or earlier, you can symlink `config` to `config.toml`";
+    assert_match(expected, &output);
 }
 
 #[cargo_test]
@@ -297,12 +304,12 @@ f1 = 1
 
     // It should NOT have warned for the symlink.
     let output = read_output(config);
-    assert_eq!(output, "");
+    assert_match("", &output);
 }
 
 #[cargo_test]
 fn config_ambiguous_filename() {
-    write_config(
+    write_config_extless(
         "\
 [foo]
 f1 = 1
@@ -332,7 +339,7 @@ warning: Both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[
 
 #[cargo_test]
 fn config_unused_fields() {
-    write_config(
+    write_config_toml(
         "\
 [S]
 unused = 456
@@ -359,14 +366,14 @@ unused = 456
     // Verify the warnings.
     let output = read_output(config);
     let expected = "\
-warning: unused config key `S.unused` in `[..]/.cargo/config`
+warning: unused config key `S.unused` in `[..]/.cargo/config.toml`
 ";
     assert_match(expected, &output);
 }
 
 #[cargo_test]
 fn config_load_toml_profile() {
-    write_config(
+    write_config_toml(
         "\
 [profile.dev]
 opt-level = 's'
@@ -483,7 +490,7 @@ fn profile_env_var_prefix() {
 fn config_deserialize_any() {
     // Some tests to exercise deserialize_any for deserializers that need to
     // be told the format.
-    write_config(
+    write_config_toml(
         "\
 a = true
 b = ['b']
@@ -546,10 +553,10 @@ Caused by:
     assert_error(
         config.unwrap_err(),
         "\
-failed to merge --config key `a` into `[..]/.cargo/config`
+failed to merge --config key `a` into `[..]/.cargo/config.toml`
 
 Caused by:
-  failed to merge config value from `--config cli option` into `[..]/.cargo/config`: \
+  failed to merge config value from `--config cli option` into `[..]/.cargo/config.toml`: \
 expected boolean, but found array",
     );
 
@@ -583,7 +590,7 @@ expected boolean, but found array",
 
 #[cargo_test]
 fn config_toml_errors() {
-    write_config(
+    write_config_toml(
         "\
 [profile.dev]
 opt-level = 'foo'
@@ -597,7 +604,7 @@ opt-level = 'foo'
             .get::<cargo_toml::TomlProfile>("profile.dev")
             .unwrap_err(),
         "\
-error in [..]/.cargo/config: could not load config key `profile.dev.opt-level`
+error in [..]/.cargo/config.toml: could not load config key `profile.dev.opt-level`
 
 Caused by:
   must be `0`, `1`, `2`, `3`, `s` or `z`, but found the string: \"foo\"",
@@ -619,7 +626,7 @@ Caused by:
 
 #[cargo_test]
 fn load_nested() {
-    write_config(
+    write_config_toml(
         "\
 [nest.foo]
 f1 = 1
@@ -656,7 +663,7 @@ asdf = 3
 
 #[cargo_test]
 fn get_errors() {
-    write_config(
+    write_config_toml(
         "\
 [S]
 f1 = 123
@@ -679,12 +686,12 @@ big = 123456789
     );
     assert_error(
         config.get::<i64>("S.f2").unwrap_err(),
-        "error in [..]/.cargo/config: `S.f2` expected an integer, but found a string",
+        "error in [..]/.cargo/config.toml: `S.f2` expected an integer, but found a string",
     );
     assert_error(
         config.get::<u8>("S.big").unwrap_err(),
         "\
-error in [..].cargo/config: could not load config key `S.big`
+error in [..].cargo/config.toml: could not load config key `S.big`
 
 Caused by:
   invalid value: integer `123456789`, expected u8",
@@ -717,7 +724,7 @@ Caused by:
 
 #[cargo_test]
 fn config_get_option() {
-    write_config(
+    write_config_toml(
         "\
 [foo]
 f1 = 1
@@ -735,7 +742,7 @@ f1 = 1
 
 #[cargo_test]
 fn config_bad_toml() {
-    write_config("asdf");
+    write_config_toml("asdf");
     let config = new_config();
     assert_error(
         config.get::<i32>("foo").unwrap_err(),
@@ -743,7 +750,7 @@ fn config_bad_toml() {
 could not load Cargo configuration
 
 Caused by:
-  could not parse TOML configuration in `[..]/.cargo/config`
+  could not parse TOML configuration in `[..]/.cargo/config.toml`
 
 Caused by:
   TOML parse error at line 1, column 5
@@ -756,7 +763,7 @@ expected `.`, `=`",
 
 #[cargo_test]
 fn config_get_list() {
-    write_config(
+    write_config_toml(
         "\
 l1 = []
 l2 = ['one', 'two']
@@ -797,7 +804,7 @@ l = ['y']
         config.get::<L>("l3").unwrap_err(),
         "\
 invalid configuration for key `l3`
-expected a list, but found a integer for `l3` in [..]/.cargo/config",
+expected a list, but found a integer for `l3` in [..]/.cargo/config.toml",
     );
     assert_eq!(
         config.get::<L>("l4").unwrap(),
@@ -879,7 +886,7 @@ expected `]`
 
 #[cargo_test]
 fn config_get_other_types() {
-    write_config(
+    write_config_toml(
         "\
 ns = 123
 ns2 = 456
@@ -905,7 +912,7 @@ ns2 = 456
 
 #[cargo_test]
 fn config_relative_path() {
-    write_config(&format!(
+    write_config_toml(&format!(
         "\
 p1 = 'foo/bar'
 p2 = '../abc'
@@ -959,7 +966,7 @@ abs = '{}'
 
 #[cargo_test]
 fn config_get_integers() {
-    write_config(
+    write_config_toml(
         "\
 npos = 123456789
 nneg = -123456789
@@ -993,7 +1000,7 @@ i64max = 9223372036854775807
     assert_error(
         config.get::<u32>("nneg").unwrap_err(),
         "\
-error in [..].cargo/config: could not load config key `nneg`
+error in [..].cargo/config.toml: could not load config key `nneg`
 
 Caused by:
   invalid value: integer `-123456789`, expected u32",
@@ -1009,7 +1016,7 @@ Caused by:
     assert_error(
         config.get::<i8>("npos").unwrap_err(),
         "\
-error in [..].cargo/config: could not load config key `npos`
+error in [..].cargo/config.toml: could not load config key `npos`
 
 Caused by:
   invalid value: integer `123456789`, expected i8",
@@ -1026,7 +1033,7 @@ Caused by:
 
 #[cargo_test]
 fn config_get_ssl_version_missing() {
-    write_config(
+    write_config_toml(
         "\
 [http]
 hello = 'world'
@@ -1043,7 +1050,7 @@ hello = 'world'
 
 #[cargo_test]
 fn config_get_ssl_version_single() {
-    write_config(
+    write_config_toml(
         "\
 [http]
 ssl-version = 'tlsv1.2'
@@ -1064,7 +1071,7 @@ ssl-version = 'tlsv1.2'
 
 #[cargo_test]
 fn config_get_ssl_version_min_max() {
-    write_config(
+    write_config_toml(
         "\
 [http]
 ssl-version.min = 'tlsv1.2'
@@ -1090,7 +1097,7 @@ ssl-version.max = 'tlsv1.3'
 #[cargo_test]
 fn config_get_ssl_version_both_forms_configured() {
     // this is not allowed
-    write_config(
+    write_config_toml(
         "\
 [http]
 ssl-version = 'tlsv1.1'
@@ -1109,7 +1116,7 @@ ssl-version.max = 'tlsv1.3'
 could not load Cargo configuration
 
 Caused by:
-  could not parse TOML configuration in `[..]/.cargo/config`
+  could not parse TOML configuration in `[..]/.cargo/config.toml`
 
 Caused by:
   TOML parse error at line 3, column 1
@@ -1125,7 +1132,7 @@ dotted key `ssl-version` attempted to extend non-table type (string)
 /// Assert that unstable options can be configured with the `unstable` table in
 /// cargo config files
 fn unstable_table_notation() {
-    write_config(
+    write_config_toml(
         "\
 [unstable]
 print-im-a-teapot = true
@@ -1138,7 +1145,7 @@ print-im-a-teapot = true
 #[cargo_test]
 /// Assert that dotted notation works for configuring unstable options
 fn unstable_dotted_notation() {
-    write_config(
+    write_config_toml(
         "\
 unstable.print-im-a-teapot = true
 ",
@@ -1150,7 +1157,7 @@ unstable.print-im-a-teapot = true
 #[cargo_test]
 /// Assert that Zflags on the CLI take precedence over those from config
 fn unstable_cli_precedence() {
-    write_config(
+    write_config_toml(
         "\
 unstable.print-im-a-teapot = true
 ",
@@ -1168,7 +1175,7 @@ unstable.print-im-a-teapot = true
 /// Assert that attempting to set an unstable flag that doesn't exist via config
 /// is ignored on stable
 fn unstable_invalid_flag_ignored_on_stable() {
-    write_config(
+    write_config_toml(
         "\
 unstable.an-invalid-flag = 'yes'
 ",
@@ -1180,7 +1187,7 @@ unstable.an-invalid-flag = 'yes'
 /// Assert that unstable options can be configured with the `unstable` table in
 /// cargo config files
 fn unstable_flags_ignored_on_stable() {
-    write_config(
+    write_config_toml(
         "\
 [unstable]
 print-im-a-teapot = true
@@ -1195,14 +1202,14 @@ print-im-a-teapot = true
 fn table_merge_failure() {
     // Config::merge fails to merge entries in two tables.
     write_config_at(
-        "foo/.cargo/config",
+        "foo/.cargo/config.toml",
         "
         [table]
         key = ['foo']
         ",
     );
     write_config_at(
-        ".cargo/config",
+        ".cargo/config.toml",
         "
         [table]
         key = 'bar'
@@ -1221,16 +1228,16 @@ fn table_merge_failure() {
 could not load Cargo configuration
 
 Caused by:
-  failed to merge configuration at `[..]/.cargo/config`
+  failed to merge configuration at `[..]/.cargo/config.toml`
 
 Caused by:
-  failed to merge key `table` between [..]/foo/.cargo/config and [..]/.cargo/config
+  failed to merge key `table` between [..]/foo/.cargo/config.toml and [..]/.cargo/config.toml
 
 Caused by:
-  failed to merge key `key` between [..]/foo/.cargo/config and [..]/.cargo/config
+  failed to merge key `key` between [..]/foo/.cargo/config.toml and [..]/.cargo/config.toml
 
 Caused by:
-  failed to merge config value from `[..]/.cargo/config` into `[..]/foo/.cargo/config`: \
+  failed to merge config value from `[..]/.cargo/config.toml` into `[..]/foo/.cargo/config.toml`: \
   expected array, but found string",
     );
 }
@@ -1238,7 +1245,7 @@ Caused by:
 #[cargo_test]
 fn non_string_in_array() {
     // Currently only strings are supported.
-    write_config("foo = [1, 2, 3]");
+    write_config_toml("foo = [1, 2, 3]");
     let config = new_config();
     assert_error(
         config.get::<Vec<i32>>("foo").unwrap_err(),
@@ -1246,7 +1253,7 @@ fn non_string_in_array() {
 could not load Cargo configuration
 
 Caused by:
-  failed to load TOML configuration from `[..]/.cargo/config`
+  failed to load TOML configuration from `[..]/.cargo/config.toml`
 
 Caused by:
   failed to parse key `foo`
@@ -1440,16 +1447,16 @@ fn string_list_tricky_env() {
 #[cargo_test]
 fn string_list_wrong_type() {
     // What happens if StringList is given then wrong type.
-    write_config("some_list = 123");
+    write_config_toml("some_list = 123");
     let config = ConfigBuilder::new().build();
     assert_error(
         config.get::<StringList>("some_list").unwrap_err(),
         "\
 invalid configuration for key `some_list`
-expected a string or array of strings, but found a integer for `some_list` in [..]/.cargo/config",
+expected a string or array of strings, but found a integer for `some_list` in [..]/.cargo/config.toml",
     );
 
-    write_config("some_list = \"1 2\"");
+    write_config_toml("some_list = \"1 2\"");
     let config = ConfigBuilder::new().build();
     let x = config.get::<StringList>("some_list").unwrap();
     assert_eq!(x.as_slice(), &["1".to_string(), "2".to_string()]);
@@ -1476,7 +1483,7 @@ fn string_list_advanced_env() {
 
 #[cargo_test]
 fn parse_strip_with_string() {
-    write_config(
+    write_config_toml(
         "\
 [profile.release]
 strip = 'debuginfo'
@@ -1495,7 +1502,7 @@ strip = 'debuginfo'
 
 #[cargo_test]
 fn cargo_target_empty_cfg() {
-    write_config(
+    write_config_toml(
         "\
 [build]
 target-dir = ''
@@ -1506,7 +1513,7 @@ target-dir = ''
 
     assert_error(
         config.target_dir().unwrap_err(),
-        "the target directory is set to an empty string in [..]/.cargo/config",
+        "the target directory is set to an empty string in [..]/.cargo/config.toml",
     );
 }
 
@@ -1673,7 +1680,7 @@ fn debuginfo_parsing() {
 
 #[cargo_test]
 fn build_jobs_missing() {
-    write_config(
+    write_config_toml(
         "\
 [build]
 ",
@@ -1689,7 +1696,7 @@ fn build_jobs_missing() {
 
 #[cargo_test]
 fn build_jobs_default() {
-    write_config(
+    write_config_toml(
         "\
 [build]
 jobs = \"default\"
@@ -1711,7 +1718,7 @@ jobs = \"default\"
 
 #[cargo_test]
 fn build_jobs_integer() {
-    write_config(
+    write_config_toml(
         "\
 [build]
 jobs = 2

@@ -279,7 +279,7 @@ impl RegistryBuilder {
     /// Initializes the registry.
     #[must_use]
     pub fn build(self) -> TestRegistry {
-        let config_path = paths::home().join(".cargo/config");
+        let config_path = paths::home().join(".cargo/config.toml");
         t!(fs::create_dir_all(config_path.parent().unwrap()));
         let prefix = if let Some(alternative) = &self.alternative {
             format!("{alternative}-")
@@ -1195,7 +1195,7 @@ impl Package {
     /// Creates a new package builder.
     /// Call `publish()` to finalize and build the package.
     pub fn new(name: &str, vers: &str) -> Package {
-        let config = paths::home().join(".cargo/config");
+        let config = paths::home().join(".cargo/config.toml");
         if !config.exists() {
             init();
         }

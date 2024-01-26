@@ -37,7 +37,7 @@ fn get_token_test() -> (Project, TestRegistry) {
 
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [registries.alternative]
@@ -293,7 +293,7 @@ fn all_not_found() {
         .build();
     let not_found = build_provider("not_found", r#"{"Err": {"kind": "not-found"}}"#);
     cargo_util::paths::append(
-        &paths::home().join(".cargo/config"),
+        &paths::home().join(".cargo/config.toml"),
         format!(
             r#"
                 [registry]
@@ -333,7 +333,7 @@ fn all_not_supported() {
     let not_supported =
         build_provider("not_supported", r#"{"Err": {"kind": "url-not-supported"}}"#);
     cargo_util::paths::append(
-        &paths::home().join(".cargo/config"),
+        &paths::home().join(".cargo/config.toml"),
         format!(
             r#"
                 [registry]
@@ -378,7 +378,7 @@ fn multiple_providers() {
     let success_provider = build_provider("success_provider", r#"{"Ok": {"kind": "login"}}"#);
 
     cargo_util::paths::append(
-        &paths::home().join(".cargo/config"),
+        &paths::home().join(".cargo/config.toml"),
         format!(
             r#"
                 [registry]
@@ -428,7 +428,7 @@ k3.public[..]
 fn registry_provider_overrides_global() {
     let server = registry::RegistryBuilder::new().build();
     cargo_util::paths::append(
-        &paths::home().join(".cargo/config"),
+        &paths::home().join(".cargo/config.toml"),
         format!(
             r#"
                 [registry]
@@ -458,7 +458,7 @@ fn registry_provider_overrides_global() {
 fn both_asymmetric_and_token() {
     let server = registry::RegistryBuilder::new().build();
     cargo_util::paths::append(
-        &paths::home().join(".cargo/config"),
+        &paths::home().join(".cargo/config.toml"),
         format!(
             r#"
                 [registry]
@@ -475,7 +475,7 @@ fn both_asymmetric_and_token() {
         .replace_crates_io(server.index_url())
         .with_stderr(
             r#"[UPDATING] [..]
-[WARNING] registry `crates-io` has a `secret_key` configured in [..]config that will be ignored because a `token` is also configured, and the `cargo:token` provider is configured with higher precedence
+[WARNING] registry `crates-io` has a `secret_key` configured in [..]config.toml that will be ignored because a `token` is also configured, and the `cargo:token` provider is configured with higher precedence
 [CREDENTIAL] cargo:token login crates-io
 [LOGIN] token for `crates-io` saved
 "#,
@@ -510,7 +510,7 @@ fn token_caching() {
 
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [registries.alternative]
@@ -554,7 +554,7 @@ You may press ctrl-c [..]
         .run();
 
     p.change_file(
-        ".cargo/config",
+        ".cargo/config.toml",
         &format!(
             r#"
                 [registries.alternative]
@@ -679,7 +679,7 @@ fn alias_builtin_warning() {
         .build();
 
     cargo_util::paths::append(
-        &paths::home().join(".cargo/config"),
+        &paths::home().join(".cargo/config.toml"),
         format!(
             r#"
                 [credential-alias]

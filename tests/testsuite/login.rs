@@ -323,7 +323,7 @@ fn default_registry_configured() {
     let _alternative = RegistryBuilder::new().alternative().build();
     let cargo_home = paths::home().join(".cargo");
     cargo_util::paths::append(
-        &cargo_home.join("config"),
+        &cargo_home.join("config.toml"),
         br#"
             [registry]
             default = "alternative"

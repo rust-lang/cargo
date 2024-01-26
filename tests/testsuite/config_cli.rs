@@ -1,7 +1,7 @@
 //! Tests for the --config CLI option.
 
 use super::config::{
-    assert_error, assert_match, read_output, write_config, write_config_at, ConfigBuilder,
+    assert_error, assert_match, read_output, write_config_at, write_config_toml, ConfigBuilder,
 };
 use cargo::util::config::Definition;
 use cargo_test_support::paths;
@@ -17,7 +17,7 @@ fn basic() {
 #[cargo_test]
 fn cli_priority() {
     // Command line takes priority over files and env vars.
-    write_config(
+    write_config_toml(
         "
         demo_list = ['a']
         [build]
@@ -124,7 +124,7 @@ fn merge_primitives_for_multiple_cli_occurrences() {
 #[cargo_test]
 fn merges_array() {
     // Array entries are appended.
-    write_config(
+    write_config_toml(
         "
         [build]
         rustflags = ['--file']
@@ -173,7 +173,7 @@ fn merges_array() {
 #[cargo_test]
 fn string_list_array() {
     // Using the StringList type.
-    write_config(
+    write_config_toml(
         "
         [build]
         rustflags = ['--file']
@@ -221,7 +221,7 @@ fn string_list_array() {
 #[cargo_test]
 fn merges_table() {
     // Tables are merged.
-    write_config(
+    write_config_toml(
         "
         [foo]
         key1 = 1
@@ -258,7 +258,7 @@ fn merges_table() {
 #[cargo_test]
 fn merge_array_mixed_def_paths() {
     // Merging of arrays with different def sites.
-    write_config(
+    write_config_toml(
         "
         paths = ['file']
         ",

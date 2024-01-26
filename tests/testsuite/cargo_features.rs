@@ -377,7 +377,7 @@ error: the feature `unstable-options` is not in the list of allowed features: [p
         )
         .run();
 
-    // -Zallow-features overrides .cargo/config
+    // -Zallow-features overrides .cargo/config.toml
     p.cargo("-Zallow-features=test-dummy-unstable -Zprint-im-a-teapot check")
         .masquerade_as_nightly_cargo(&[
             "allow-features",

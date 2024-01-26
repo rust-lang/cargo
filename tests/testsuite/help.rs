@@ -129,7 +129,7 @@ fn help_alias() {
     // Check that `help some_alias` will resolve.
     help_with_man_and_path("", "b", "build", Path::new(""));
 
-    let config = paths::root().join(".cargo/config");
+    let config = paths::root().join(".cargo/config.toml");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
     fs::write(
         config,

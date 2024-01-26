@@ -11,7 +11,7 @@ fn alias_incorrect_config_type() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [alias]
                 b-cargo-test = 5
@@ -35,7 +35,7 @@ fn alias_malformed_config_string() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [alias]
                 b-cargo-test = `
@@ -50,7 +50,7 @@ fn alias_malformed_config_string() {
 [ERROR] could not load Cargo configuration
 
 Caused by:
-  could not parse TOML configuration in `[..]/config`
+  could not parse TOML configuration in `[..]/config.toml`
 
 Caused by:
   TOML parse error at line [..]
@@ -70,7 +70,7 @@ fn alias_malformed_config_list() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [alias]
                 b-cargo-test = [1, 2]
@@ -85,7 +85,7 @@ fn alias_malformed_config_list() {
 [ERROR] could not load Cargo configuration
 
 Caused by:
-  failed to load TOML configuration from `[..]/config`
+  failed to load TOML configuration from `[..]/config.toml`
 
 Caused by:
   [..] `alias`
@@ -106,7 +106,7 @@ fn alias_config() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [alias]
                 b-cargo-test = "build"
@@ -129,7 +129,7 @@ fn dependent_alias() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [alias]
                 b-cargo-test = "build"
@@ -178,7 +178,7 @@ fn alias_shadowing_external_subcommand() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [alias]
                 echo = "build"
@@ -210,7 +210,7 @@ fn default_args_alias() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [alias]
                 echo = "echo --flag1 --flag2"
@@ -266,7 +266,7 @@ fn corecursive_alias() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [alias]
                 test-1 = "test-2 --flag1"
@@ -297,7 +297,7 @@ fn alias_list_test() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                [alias]
                b-cargo-test = ["build", "--release"]
@@ -317,7 +317,7 @@ fn alias_with_flags_config() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                [alias]
                b-cargo-test = "build --release"
@@ -337,7 +337,7 @@ fn alias_cannot_shadow_builtin_command() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                [alias]
                build = "fetch"
@@ -362,7 +362,7 @@ fn alias_override_builtin_alias() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                [alias]
                b = "run"

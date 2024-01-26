@@ -621,7 +621,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
 fn passwords_in_registries_index_url_forbidden() {
     registry::alt_init();
 
-    let config = paths::home().join(".cargo/config");
+    let config = paths::home().join(".cargo/config.toml");
 
     fs::write(
         config,
@@ -638,7 +638,7 @@ fn passwords_in_registries_index_url_forbidden() {
         .with_status(101)
         .with_stderr(
             "\
-error: invalid index URL for registry `alternative` defined in [..]/home/.cargo/config
+error: invalid index URL for registry `alternative` defined in [..]/home/.cargo/config.toml
 
 Caused by:
   registry URLs may not contain passwords
@@ -1153,7 +1153,7 @@ fn unknown_registry() {
         .publish();
 
     // Remove "alternative" from config.
-    let cfg_path = paths::home().join(".cargo/config");
+    let cfg_path = paths::home().join(".cargo/config.toml");
     let mut config = fs::read_to_string(&cfg_path).unwrap();
     let start = config.find("[registries.alternative]").unwrap();
     config.insert(start, '#');
@@ -1296,7 +1296,7 @@ fn unknown_registry() {
 #[cargo_test]
 fn registries_index_relative_url() {
     registry::alt_init();
-    let config = paths::root().join(".cargo/config");
+    let config = paths::root().join(".cargo/config.toml");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
     fs::write(
         &config,
@@ -1343,7 +1343,7 @@ fn registries_index_relative_url() {
 #[cargo_test]
 fn registries_index_relative_path_not_allowed() {
     registry::alt_init();
-    let config = paths::root().join(".cargo/config");
+    let config = paths::root().join(".cargo/config.toml");
     fs::create_dir_all(config.parent().unwrap()).unwrap();
     fs::write(
         &config,
@@ -1379,7 +1379,7 @@ fn registries_index_relative_path_not_allowed() {
 error: failed to parse manifest at `{root}/foo/Cargo.toml`
 
 Caused by:
-  invalid index URL for registry `relative` defined in [..]/.cargo/config
+  invalid index URL for registry `relative` defined in [..]/.cargo/config.toml
 
 Caused by:
   invalid url `alternative-registry`: relative URL without a base

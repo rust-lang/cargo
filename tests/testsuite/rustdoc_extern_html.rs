@@ -76,7 +76,7 @@ fn std_docs() {
     }
     let p = basic_project();
     p.change_file(
-        ".cargo/config",
+        ".cargo/config.toml",
         r#"
             [doc.extern-map]
             std = "local"
@@ -90,7 +90,7 @@ fn std_docs() {
     assert!(myfun.contains(r#"share/doc/rust/html/core/option/enum.Option.html""#));
 
     p.change_file(
-        ".cargo/config",
+        ".cargo/config.toml",
         r#"
             [doc.extern-map]
             std = "https://example.com/rust/"
@@ -241,7 +241,7 @@ fn alt_registry() {
             "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [doc.extern-map.registries]
                 alternative = "https://example.com/{pkg_name}/{version}/"
@@ -329,7 +329,7 @@ fn rebuilds_when_changing() {
 
     // This also tests that the map for docs.rs can be overridden.
     p.change_file(
-        ".cargo/config",
+        ".cargo/config.toml",
         r#"
             [doc.extern-map.registries]
             crates-io = "https://example.com/"
@@ -396,7 +396,7 @@ fn alt_sparse_registry() {
             "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [doc.extern-map.registries]
                 alternative = "https://example.com/{pkg_name}/{version}/"

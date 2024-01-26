@@ -260,7 +260,7 @@ fn cargo_build_out_dir() {
     let p = project()
         .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [build]
             out-dir = "out"

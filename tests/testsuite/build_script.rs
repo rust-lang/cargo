@@ -255,7 +255,7 @@ fn custom_build_env_var_rustflags() {
     let rustflags_alt = "--cfg=notspecial";
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                 [build]
@@ -300,7 +300,7 @@ fn custom_build_env_var_encoded_rustflags() {
     // thing either way.
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [build]
             rustflags = ["-Clink-arg=-B nope", "--cfg=foo"]
@@ -426,7 +426,7 @@ fn custom_build_env_var_rustc_linker() {
     let target = cross_compile::alternate();
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                 [target.{}]
@@ -466,7 +466,7 @@ fn custom_build_env_var_rustc_linker_with_target_cfg() {
     let target = cross_compile::alternate();
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [target.'cfg(target_pointer_width = "32")']
             linker = "/path/to/linker"
@@ -495,7 +495,7 @@ fn custom_build_env_var_rustc_linker_bad_host_target() {
     let target = rustc_host();
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                 [target.{}]
@@ -526,7 +526,7 @@ fn custom_build_env_var_rustc_linker_host_target() {
     let target = rustc_host();
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                 target-applies-to-host = false
@@ -562,7 +562,7 @@ fn custom_build_env_var_rustc_linker_host_target_env() {
     let target = rustc_host();
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                 [target.{}]
@@ -598,7 +598,7 @@ fn custom_build_invalid_host_config_feature_flag() {
     let target = rustc_host();
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                 [target.{}]
@@ -629,7 +629,7 @@ fn custom_build_linker_host_target_with_bad_host_config() {
     let target = rustc_host();
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                 [host]
@@ -664,7 +664,7 @@ fn custom_build_linker_bad_host() {
     let target = rustc_host();
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                 [host]
@@ -699,7 +699,7 @@ fn custom_build_linker_bad_host_with_arch() {
     let target = rustc_host();
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                 [host]
@@ -737,7 +737,7 @@ fn custom_build_env_var_rustc_linker_cross_arch_host() {
     let cross_target = cross_compile::alternate();
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                 [host.{}]
@@ -775,7 +775,7 @@ fn custom_build_linker_bad_cross_arch_host() {
     let cross_target = cross_compile::alternate();
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                 [host]
@@ -1186,7 +1186,7 @@ fn overrides_and_links() {
             "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.{}.foo]
@@ -1245,7 +1245,7 @@ fn unused_overrides() {
         .file("src/lib.rs", "")
         .file("build.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.{}.foo]
@@ -1538,7 +1538,7 @@ fn propagation_of_l_flags() {
         .file("b/src/lib.rs", "")
         .file("b/build.rs", "bad file")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.{}.foo]
@@ -1613,7 +1613,7 @@ fn propagation_of_l_flags_new() {
         .file("b/src/lib.rs", "")
         .file("b/build.rs", "bad file")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.{}.foo]
@@ -2511,7 +2511,7 @@ fn cfg_override() {
         .file("src/main.rs", "#[cfg(foo)] fn main() {}")
         .file("build.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.{}.a]
@@ -2646,7 +2646,7 @@ fn cfg_override_test() {
         )
         .file("build.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.{}.a]
@@ -2716,7 +2716,7 @@ fn cfg_override_doc() {
             "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.{target}.a]
@@ -3041,7 +3041,7 @@ fn adding_an_override_invalidates() {
             "#,
         )
         .file("src/lib.rs", "")
-        .file(".cargo/config", "")
+        .file(".cargo/config.toml", "")
         .file(
             "build.rs",
             r#"
@@ -3065,7 +3065,7 @@ fn adding_an_override_invalidates() {
         .run();
 
     p.change_file(
-        ".cargo/config",
+        ".cargo/config.toml",
         &format!(
             "
                 [target.{}.foo]
@@ -3103,7 +3103,7 @@ fn changing_an_override_invalidates() {
         )
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 "
             [target.{}.foo]
@@ -3126,7 +3126,7 @@ fn changing_an_override_invalidates() {
         .run();
 
     p.change_file(
-        ".cargo/config",
+        ".cargo/config.toml",
         &format!(
             "
                 [target.{}.foo]
@@ -3166,7 +3166,7 @@ fn fresh_builds_possible_with_link_libs() {
         )
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 "
             [target.{}.nativefoo]
@@ -3218,7 +3218,7 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
         )
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 "
             [target.{}.foo]
@@ -3662,7 +3662,7 @@ fn custom_target_dir() {
         )
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [build]
                 target-dir = 'test'
@@ -4008,7 +4008,7 @@ fn links_with_dots() {
             "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.{}.'a.b']

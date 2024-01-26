@@ -18,7 +18,7 @@ fn env_basic() {
         "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [env]
                 ENV_TEST_1233 = "Hello"
@@ -44,7 +44,7 @@ fn env_invalid() {
         "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [env]
                 ENV_TEST_BOOL = false
@@ -68,7 +68,7 @@ fn env_no_disallowed() {
 
     for disallowed in &["CARGO_HOME", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN"] {
         p.change_file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [env]
@@ -102,7 +102,7 @@ fn env_force() {
         "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [env]
                 ENV_TEST_UNFORCED_DEFAULT = "from-config"
@@ -143,7 +143,7 @@ fn env_relative() {
         "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [env]
                 ENV_TEST_REGULAR = { value = "Cargo.toml", relative = false }
@@ -170,7 +170,7 @@ fn env_no_override() {
         "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [env]
                 CARGO_PKG_NAME = { value = "from-config", force = true }
@@ -216,7 +216,7 @@ fn env_applied_to_target_info_discovery_rustc() {
             "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [env]
                 ENV_TEST = "from-config"

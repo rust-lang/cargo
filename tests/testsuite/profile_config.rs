@@ -72,7 +72,7 @@ fn profile_config_validate_warnings() {
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [profile.test]
                 opt-level = 3
@@ -95,9 +95,9 @@ fn profile_config_validate_warnings() {
     p.cargo("build")
         .with_stderr_unordered(
             "\
-[WARNING] unused config key `profile.dev.bad-key` in `[..].cargo/config`
-[WARNING] unused config key `profile.dev.package.bar.bad-key-bar` in `[..].cargo/config`
-[WARNING] unused config key `profile.dev.build-override.bad-key-bo` in `[..].cargo/config`
+[WARNING] unused config key `profile.dev.bad-key` in `[..].cargo/config.toml`
+[WARNING] unused config key `profile.dev.package.bar.bad-key-bar` in `[..].cargo/config.toml`
+[WARNING] unused config key `profile.dev.build-override.bad-key-bo` in `[..].cargo/config.toml`
 [COMPILING] foo [..]
 [FINISHED] [..]
 ",
@@ -112,14 +112,14 @@ fn profile_config_error_paths() {
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [profile.dev]
                 opt-level = 3
             "#,
         )
         .file(
-            paths::home().join(".cargo/config"),
+            paths::home().join(".cargo/config.toml"),
             r#"
             [profile.dev]
             rpath = "foo"
@@ -131,10 +131,10 @@ fn profile_config_error_paths() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] error in [..]/foo/.cargo/config: could not load config key `profile.dev`
+[ERROR] error in [..]/foo/.cargo/config.toml: could not load config key `profile.dev`
 
 Caused by:
-  error in [..]/home/.cargo/config: `profile.dev.rpath` expected true/false, but found a string
+  error in [..]/home/.cargo/config.toml: `profile.dev.rpath` expected true/false, but found a string
 ",
         )
         .run();
@@ -146,7 +146,7 @@ fn profile_config_validate_errors() {
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [profile.dev.package.foo]
                 panic = "abort"
@@ -158,7 +158,7 @@ fn profile_config_validate_errors() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] config profile `dev` is not valid (defined in `[..]/foo/.cargo/config`)
+[ERROR] config profile `dev` is not valid (defined in `[..]/foo/.cargo/config.toml`)
 
 Caused by:
   `panic` may not be specified in a `package` profile
@@ -173,7 +173,7 @@ fn profile_config_syntax_errors() {
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [profile.dev]
                 codegen-units = "foo"
@@ -185,10 +185,10 @@ fn profile_config_syntax_errors() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] error in [..]/.cargo/config: could not load config key `profile.dev`
+[ERROR] error in [..]/.cargo/config.toml: could not load config key `profile.dev`
 
 Caused by:
-  error in [..]/foo/.cargo/config: `profile.dev.codegen-units` expected an integer, but found a string
+  error in [..]/foo/.cargo/config.toml: `profile.dev.codegen-units` expected an integer, but found a string
 ",
         )
         .run();
@@ -209,7 +209,7 @@ fn profile_config_override_spec_multiple() {
             "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [profile.dev.package.bar]
                 opt-level = 3
@@ -241,7 +241,7 @@ fn profile_config_all_options() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [profile.release]
             opt-level = 1
@@ -303,7 +303,7 @@ fn profile_config_override_precedence() {
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("bar/src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [profile.dev.package.bar]
                 opt-level = 2
@@ -329,7 +329,7 @@ fn profile_config_no_warn_unknown_override() {
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [profile.dev.package.bar]
                 codegen-units = 4
@@ -348,14 +348,14 @@ fn profile_config_mixed_types() {
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [profile.dev]
                 opt-level = 3
             "#,
         )
         .file(
-            paths::home().join(".cargo/config"),
+            paths::home().join(".cargo/config.toml"),
             r#"
             [profile.dev]
             opt-level = 's'
@@ -372,7 +372,7 @@ fn profile_config_mixed_types() {
 fn named_config_profile() {
     // Exercises config named profiles.
     // foo -> middle -> bar -> dev
-    // middle exists in Cargo.toml, the others in .cargo/config
+    // middle exists in Cargo.toml, the others in .cargo/config.toml
     use super::config::ConfigBuilder;
     use cargo::core::compiler::CompileKind;
     use cargo::core::profiles::{Profiles, UnitFor};
@@ -381,7 +381,7 @@ fn named_config_profile() {
     use std::fs;
     paths::root().join(".cargo").mkdir_p();
     fs::write(
-        paths::root().join(".cargo/config"),
+        paths::root().join(".cargo/config.toml"),
         r#"
             [profile.foo]
             inherits = "middle"

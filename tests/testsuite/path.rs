@@ -543,7 +543,11 @@ fn override_relative() {
         .build();
 
     fs::create_dir(&paths::root().join(".cargo")).unwrap();
-    fs::write(&paths::root().join(".cargo/config"), r#"paths = ["bar"]"#).unwrap();
+    fs::write(
+        &paths::root().join(".cargo/config.toml"),
+        r#"paths = ["bar"]"#,
+    )
+    .unwrap();
 
     let p = project()
         .file(
@@ -578,7 +582,10 @@ fn override_self() {
     let p = project();
     let root = p.root();
     let p = p
-        .file(".cargo/config", &format!("paths = ['{}']", root.display()))
+        .file(
+            ".cargo/config.toml",
+            &format!("paths = ['{}']", root.display()),
+        )
         .file(
             "Cargo.toml",
             &format!(
@@ -626,7 +633,7 @@ fn override_path_dep() {
 
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 "paths = ['{}', '{}']",
                 bar.root().join("p1").display(),
@@ -869,7 +876,7 @@ fn override_and_depend() {
             "#,
         )
         .file("b/src/lib.rs", "")
-        .file("b/.cargo/config", r#"paths = ["../a"]"#)
+        .file("b/.cargo/config.toml", r#"paths = ["../a"]"#)
         .build();
     p.cargo("check")
         .cwd("b")
@@ -891,7 +898,7 @@ fn missing_path_dependency() {
         .file("Cargo.toml", &basic_manifest("a", "0.5.0"))
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"paths = ["../whoa-this-does-not-exist"]"#,
         )
         .build();

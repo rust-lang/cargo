@@ -342,7 +342,7 @@ fn use_script_config() {
 
     let p = cargo_test_support::project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
 [build]
 rustc = "non-existent-rustc"

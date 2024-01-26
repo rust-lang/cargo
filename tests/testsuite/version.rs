@@ -27,7 +27,9 @@ fn version_works_without_rustc() {
 
 #[cargo_test]
 fn version_works_with_bad_config() {
-    let p = project().file(".cargo/config", "this is not toml").build();
+    let p = project()
+        .file(".cargo/config.toml", "this is not toml")
+        .build();
     p.cargo("version").run();
 }
 
@@ -35,7 +37,7 @@ fn version_works_with_bad_config() {
 fn version_works_with_bad_target_dir() {
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [build]
                 target-dir = 4

@@ -476,7 +476,7 @@ fn build_rustflags_normal_source() {
             "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [build]
             rustflags = ["-Z", "bogus"]
@@ -528,7 +528,7 @@ fn build_rustflags_build_script() {
             "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [build]
             rustflags = ["--cfg", "foo"]
@@ -560,7 +560,7 @@ fn build_rustflags_build_script_dep() {
         .file("src/lib.rs", "")
         .file("build.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [build]
             rustflags = ["--cfg", "foo"]
@@ -610,7 +610,7 @@ fn build_rustflags_plugin() {
             "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [build]
             rustflags = ["--cfg", "foo"]
@@ -644,7 +644,7 @@ fn build_rustflags_plugin_dep() {
         )
         .file("src/lib.rs", "fn foo() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [build]
             rustflags = ["--cfg", "foo"]
@@ -683,7 +683,7 @@ fn build_rustflags_normal_source_with_target() {
             "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [build]
             rustflags = ["-Z", "bogus"]
@@ -743,7 +743,7 @@ fn build_rustflags_build_script_with_target() {
             "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [build]
             rustflags = ["--cfg", "foo"]
@@ -776,7 +776,7 @@ fn build_rustflags_build_script_dep_with_target() {
         .file("src/lib.rs", "")
         .file("build.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [build]
             rustflags = ["--cfg", "foo"]
@@ -827,7 +827,7 @@ fn build_rustflags_plugin_with_target() {
             "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [build]
             rustflags = ["--cfg", "foo"]
@@ -862,7 +862,7 @@ fn build_rustflags_plugin_dep_with_target() {
         )
         .file("src/lib.rs", "fn foo() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [build]
             rustflags = ["--cfg", "foo"]
@@ -897,7 +897,7 @@ fn build_rustflags_recompile() {
         [build]
         rustflags = ["-Z", "bogus"]
         "#;
-    let config_file = paths::root().join("foo/.cargo/config");
+    let config_file = paths::root().join("foo/.cargo/config.toml");
     fs::create_dir_all(config_file.parent().unwrap()).unwrap();
     fs::write(config_file, config).unwrap();
 
@@ -918,7 +918,7 @@ fn build_rustflags_recompile2() {
         [build]
         rustflags = ["-Z", "bogus"]
         "#;
-    let config_file = paths::root().join("foo/.cargo/config");
+    let config_file = paths::root().join("foo/.cargo/config.toml");
     fs::create_dir_all(config_file.parent().unwrap()).unwrap();
     fs::write(config_file, config).unwrap();
 
@@ -933,7 +933,7 @@ fn build_rustflags_no_recompile() {
     let p = project()
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [build]
             rustflags = ["--cfg", "foo"]
@@ -986,7 +986,7 @@ fn target_rustflags_normal_source() {
             "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 "
             [target.{}]
@@ -1030,7 +1030,7 @@ fn target_rustflags_also_for_build_scripts() {
             "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 "
             [target.{}]
@@ -1056,7 +1056,7 @@ fn target_rustflags_not_for_build_scripts_with_target() {
             "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 "
             [target.{}]
@@ -1079,7 +1079,7 @@ fn target_rustflags_not_for_build_scripts_with_target() {
     // Even with the setting, the rustflags from `target.` should not apply, to match the legacy
     // Cargo behavior.
     p.change_file(
-        ".cargo/config",
+        ".cargo/config.toml",
         &format!(
             "
         target-applies-to-host = true
@@ -1109,7 +1109,7 @@ fn build_rustflags_for_build_scripts() {
             "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             "
             [build]
             rustflags = [\"--cfg=foo\"]
@@ -1143,7 +1143,7 @@ fn build_rustflags_for_build_scripts() {
     // When set to false though, the "proper" behavior where host artifacts _only_ pick up on
     // [host] should be applied.
     p.change_file(
-        ".cargo/config",
+        ".cargo/config.toml",
         "
         target-applies-to-host = false
 
@@ -1179,7 +1179,7 @@ fn host_rustflags_for_build_scripts() {
             "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 "
                 target-applies-to-host = false
@@ -1209,7 +1209,7 @@ fn target_rustflags_precedence() {
         .file("examples/b.rs", "fn main() {}")
         .file("tests/c.rs", "#[test] fn f() { }")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 "
             [build]
@@ -1253,7 +1253,7 @@ fn cfg_rustflags_normal_source() {
         .file("examples/b.rs", "fn main() {}")
         .file("tests/c.rs", "#[test] fn f() { }")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                 [target.'cfg({})']
@@ -1337,7 +1337,7 @@ fn cfg_rustflags_precedence() {
         .file("examples/b.rs", "fn main() {}")
         .file("tests/c.rs", "#[test] fn f() { }")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                 [build]
@@ -1420,7 +1420,7 @@ fn target_rustflags_string_and_array_form1() {
     let p1 = project()
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [build]
             rustflags = ["--cfg", "foo"]
@@ -1441,7 +1441,7 @@ fn target_rustflags_string_and_array_form1() {
     let p2 = project()
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [build]
             rustflags = "--cfg foo"
@@ -1464,7 +1464,7 @@ fn target_rustflags_string_and_array_form1() {
 fn target_rustflags_string_and_array_form2() {
     let p1 = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.{}]
@@ -1488,7 +1488,7 @@ fn target_rustflags_string_and_array_form2() {
 
     let p2 = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.{}]
@@ -1515,7 +1515,7 @@ fn target_rustflags_string_and_array_form2() {
 fn two_matching_in_config() {
     let p1 = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [target.'cfg(unix)']
                 rustflags = ["--cfg", 'foo="a"']

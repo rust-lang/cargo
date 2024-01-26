@@ -2478,7 +2478,7 @@ fn registry_index_rejected() {
 
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [registry]
             index = "https://example.com/"
@@ -3292,7 +3292,7 @@ or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
 
     // Test the output with the default.
     cargo_util::paths::append(
-        &cargo_home().join("config"),
+        &cargo_home().join("config.toml"),
         br#"
             [registry]
             default = "alternative"

@@ -16,7 +16,7 @@ fn setup() {
     let root = paths::root();
     t!(fs::create_dir(&root.join(".cargo")));
     t!(fs::write(
-        root.join(".cargo/config"),
+        root.join(".cargo/config.toml"),
         r#"
             [source.crates-io]
             replace-with = 'my-awesome-local-registry'
@@ -586,7 +586,7 @@ fn git_lock_file_doesnt_change() {
     let root = paths::root();
     t!(fs::create_dir(&root.join(".cargo")));
     t!(fs::write(
-        root.join(".cargo/config"),
+        root.join(".cargo/config.toml"),
         format!(
             r#"
                 [source.my-git-repo]
@@ -641,7 +641,7 @@ fn git_override_requires_lockfile() {
     let root = paths::root();
     t!(fs::create_dir(&root.join(".cargo")));
     t!(fs::write(
-        root.join(".cargo/config"),
+        root.join(".cargo/config.toml"),
         r#"
             [source.my-git-repo]
             git = 'https://example.com/'
@@ -707,7 +707,7 @@ fn workspace_different_locations() {
         )
         .file("bar/src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [build]
                 target-dir = './target'
