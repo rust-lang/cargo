@@ -24,25 +24,10 @@ to look in Cargo's [credentials](config.md#credentials) file or environment vari
 Some private registries may also recommend a registry-specific credential-provider. Check your
 registry's documentation to see if this is the case.
 
-### macOS configuration
 ```toml
 # ~/.cargo/config.toml
 [registry]
-global-credential-providers = ["cargo:token", "cargo:macos-keychain"]
-```
-
-### Linux (libsecret) configuration
-```toml
-# ~/.cargo/config.toml
-[registry]
-global-credential-providers = ["cargo:token", "cargo:libsecret"]
-```
-
-### Windows configuration
-```toml
-# %USERPROFILE%\.cargo\config.toml
-[registry]
-global-credential-providers = ["cargo:token", "cargo:wincred"]
+global-credential-providers = ["cargo:token", "cargo:libsecret", "cargo:macos-keychain", "cargo:wincred"]
 ```
 
 Note that later entries have higher precedence.
