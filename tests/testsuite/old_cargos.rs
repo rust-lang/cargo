@@ -291,7 +291,7 @@ fn new_features() {
 
     let toolchains = collect_all_toolchains();
 
-    let config_path = paths::home().join(".cargo/config");
+    let config_path = paths::home().join(".cargo/config.toml");
     let lock_path = p.root().join("Cargo.lock");
 
     struct ToolchainBehavior {

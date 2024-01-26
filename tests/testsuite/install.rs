@@ -437,7 +437,7 @@ fn install_location_precedence() {
 
     fs::create_dir(root.join(".cargo")).unwrap();
     fs::write(
-        root.join(".cargo/config"),
+        root.join(".cargo/config.toml"),
         &format!(
             "[install]
              root = '{}'
@@ -470,7 +470,7 @@ fn install_location_precedence() {
     assert_has_installed_exe(&t3, "foo");
     assert_has_not_installed_exe(&t4, "foo");
 
-    fs::remove_file(root.join(".cargo/config")).unwrap();
+    fs::remove_file(root.join(".cargo/config.toml")).unwrap();
 
     println!("install cargo home");
 
@@ -1943,7 +1943,7 @@ fn install_ignores_local_cargo_config() {
 
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [build]
                 target = "non-existing-target"
@@ -1962,7 +1962,7 @@ fn install_ignores_unstable_table_in_local_cargo_config() {
 
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [unstable]
                 build-std = ["core"]
@@ -2002,7 +2002,7 @@ fn install_global_cargo_config() {
 fn install_path_config() {
     project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [build]
             target = 'nonexistent'

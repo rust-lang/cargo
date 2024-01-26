@@ -410,7 +410,7 @@ fn build_script_override() {
         .file("src/main.rs", "fn main() {}")
         .file("build.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.{}.a]
@@ -444,7 +444,7 @@ fn build_script_override_feature_gate() {
         .file("src/main.rs", "fn main() {}")
         .file("build.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.{}.a]

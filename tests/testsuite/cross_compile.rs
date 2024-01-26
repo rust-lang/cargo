@@ -64,7 +64,7 @@ fn simple_cross_config() {
 
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [build]
@@ -367,7 +367,7 @@ fn linker() {
     let target = cross_compile::alternate();
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.{}]
@@ -1227,7 +1227,7 @@ fn doctest_xcompile_linker() {
     let target = cross_compile::alternate();
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.{}]

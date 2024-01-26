@@ -17,7 +17,7 @@ fn parses_config() {
     let p = project()
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [build]
                 rustdocflags = ["--cfg", "foo"]
@@ -135,7 +135,7 @@ fn not_affected_by_target_rustflags() {
     let p = project()
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.'cfg({cfg})']

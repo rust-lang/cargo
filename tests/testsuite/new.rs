@@ -260,7 +260,7 @@ fn git_prefers_command_line() {
     let root = paths::root();
     fs::create_dir(&root.join(".cargo")).unwrap();
     fs::write(
-        &root.join(".cargo/config"),
+        &root.join(".cargo/config.toml"),
         r#"
             [cargo-new]
             vcs = "none"

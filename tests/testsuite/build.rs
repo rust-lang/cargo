@@ -116,7 +116,7 @@ fn incremental_config() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [build]
                 incremental = false
@@ -3316,7 +3316,7 @@ fn bad_cargo_config() {
     let foo = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
         .file("src/lib.rs", "")
-        .file(".cargo/config", "this is not valid toml")
+        .file(".cargo/config.toml", "this is not valid toml")
         .build();
     foo.cargo("build -v")
         .with_status(101)
@@ -3945,7 +3945,7 @@ fn custom_target_dir_env() {
     assert!(p.root().join("foo2/target/debug").join(&exe_name).is_file());
 
     p.change_file(
-        ".cargo/config",
+        ".cargo/config.toml",
         r#"
             [build]
             target-dir = "foo/target"
@@ -3972,7 +3972,7 @@ fn custom_target_dir_line_parameter() {
     assert!(p.root().join("target/debug").join(&exe_name).is_file());
 
     p.change_file(
-        ".cargo/config",
+        ".cargo/config.toml",
         r#"
             [build]
             target-dir = "foo/target"
@@ -5881,7 +5881,7 @@ fn default_cargo_config_jobs() {
     let p = project()
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [build]
                 jobs = 1
@@ -5896,7 +5896,7 @@ fn good_cargo_config_jobs() {
     let p = project()
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [build]
                 jobs = 4
@@ -5925,7 +5925,7 @@ fn invalid_cargo_config_jobs() {
     let p = project()
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [build]
                 jobs = 0

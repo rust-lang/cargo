@@ -150,7 +150,7 @@ directory = "deps/.vendor"
 
 fn add_vendor_config(p: &Project) {
     p.change_file(
-        ".cargo/config",
+        ".cargo/config.toml",
         r#"
             [source.crates-io]
             replace-with = 'vendor'
@@ -851,7 +851,7 @@ fn git_complex() {
         .exec_with_output()
         .unwrap();
     let output = String::from_utf8(output.stdout).unwrap();
-    p.change_file(".cargo/config", &output);
+    p.change_file(".cargo/config.toml", &output);
 
     p.cargo("check -v")
         .with_stderr_contains("[..]foo/vendor/a/src/lib.rs[..]")
@@ -973,7 +973,7 @@ fn config_instructions_works() {
         .exec_with_output()
         .unwrap();
     let output = String::from_utf8(output.stdout).unwrap();
-    p.change_file(".cargo/config", &output);
+    p.change_file(".cargo/config.toml", &output);
 
     p.cargo("check -v")
         .with_stderr_contains("[..]foo/vendor/dep/src/lib.rs[..]")
@@ -1132,7 +1132,7 @@ fn vendor_crate_with_ws_inherit() {
 
     p.cargo("vendor --respect-source-config").run();
     p.change_file(
-        ".cargo/config",
+        ".cargo/config.toml",
         &format!(
             r#"
                 [source."{}"]

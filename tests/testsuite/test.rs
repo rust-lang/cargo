@@ -4358,7 +4358,7 @@ fn cargo_test_doctest_xcompile_runner() {
     let runner_path = paths::root().join("runner");
     fs::copy(&runner.bin("runner"), &runner_path).unwrap();
 
-    let config = paths::root().join(".cargo/config");
+    let config = paths::root().join(".cargo/config.toml");
 
     fs::create_dir_all(config.parent().unwrap()).unwrap();
     // Escape Windows backslashes for TOML config.

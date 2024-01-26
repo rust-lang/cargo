@@ -124,7 +124,7 @@ fn http_auth_offered() {
         )
         .file("src/main.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             "[net]
              retry = 0
             ",
@@ -196,7 +196,7 @@ fn https_something_happens() {
         )
         .file("src/main.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             "[net]
              retry = 0
             ",
@@ -351,7 +351,7 @@ Caused by:
         .run();
 
     p.change_file(
-        ".cargo/config",
+        ".cargo/config.toml",
         "
             [net]
             git-fetch-with-cli = true

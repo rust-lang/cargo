@@ -7,7 +7,7 @@ use cargo_test_support::registry::Package;
 fn bad_progress_config_unknown_when() {
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [term]
             progress = { when = 'unknown' }
@@ -20,7 +20,7 @@ fn bad_progress_config_unknown_when() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] error in [..].cargo/config: \
+[ERROR] error in [..].cargo/config.toml: \
 could not load config key `term.progress.when`
 
 Caused by:
@@ -34,7 +34,7 @@ Caused by:
 fn bad_progress_config_missing_width() {
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [term]
             progress = { when = 'always' }
@@ -57,7 +57,7 @@ fn bad_progress_config_missing_width() {
 fn bad_progress_config_missing_when() {
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [term]
             progress = { width = 1000 }
@@ -87,7 +87,7 @@ fn always_shows_progress() {
 
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [term]
             progress = { when = 'always', width = 100 }
@@ -128,7 +128,7 @@ fn never_progress() {
 
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [term]
             progress = { when = 'never' }

@@ -13,7 +13,7 @@ fn setup_replacement(config: &str) -> TestRegistry {
 
     let root = paths::root();
     t!(fs::create_dir(&root.join(".cargo")));
-    t!(fs::write(root.join(".cargo/config"), config,));
+    t!(fs::write(root.join(".cargo/config.toml"), config,));
     crates_io
 }
 

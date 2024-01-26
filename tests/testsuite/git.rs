@@ -2697,7 +2697,7 @@ fn use_the_cli() {
         )
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             "
                 [net]
                 git-fetch-with-cli = true
@@ -2799,7 +2799,7 @@ fn git_with_cli_force() {
         )
         .file("src/main.rs", "fn main() { dep1::f(); }")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             "
             [net]
             git-fetch-with-cli = true
@@ -2857,7 +2857,7 @@ fn git_fetch_cli_env_clean() {
             )
             .file("src/lib.rs", "pub extern crate dep1;")
             .file(
-                ".cargo/config",
+                ".cargo/config.toml",
                 "
                 [net]
                 git-fetch-with-cli = true
@@ -3126,7 +3126,10 @@ fn historical_lockfile_works_with_vendor() {
         .build();
 
     let output = project.cargo("vendor").exec_with_output().unwrap();
-    project.change_file(".cargo/config", str::from_utf8(&output.stdout).unwrap());
+    project.change_file(
+        ".cargo/config.toml",
+        str::from_utf8(&output.stdout).unwrap(),
+    );
     project.change_file(
         "Cargo.lock",
         &format!(

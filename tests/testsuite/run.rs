@@ -90,7 +90,7 @@ fn quiet_arg_and_verbose_arg() {
 fn quiet_arg_and_verbose_config() {
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [term]
                 verbose = true
@@ -106,7 +106,7 @@ fn quiet_arg_and_verbose_config() {
 fn verbose_arg_and_quiet_config() {
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [term]
                 quiet = true
@@ -131,7 +131,7 @@ fn verbose_arg_and_quiet_config() {
 fn quiet_config_alone() {
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [term]
                 quiet = true
@@ -147,7 +147,7 @@ fn quiet_config_alone() {
 fn verbose_config_alone() {
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [term]
                 verbose = true
@@ -172,7 +172,7 @@ fn verbose_config_alone() {
 fn quiet_config_and_verbose_config() {
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
                 [term]
                 verbose = true

@@ -10,7 +10,7 @@ fn pathless_tools() {
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.{}]
@@ -39,7 +39,7 @@ fn custom_linker_cfg() {
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [target.'cfg(not(target_os = "none"))']
             linker = "nonexistent-linker"
@@ -67,7 +67,7 @@ fn custom_linker_cfg_precedence() {
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.'cfg(not(target_os = "none"))']
@@ -97,7 +97,7 @@ fn custom_linker_cfg_collision() {
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [target.'cfg(not(target_arch = "avr"))']
             linker = "nonexistent-linker1"
@@ -112,8 +112,8 @@ fn custom_linker_cfg_collision() {
         .with_stderr(&format!(
             "\
 [ERROR] several matching instances of `target.'cfg(..)'.linker` in configurations
-first match `cfg(not(target_arch = \"avr\"))` located in [..]/foo/.cargo/config
-second match `cfg(not(target_os = \"none\"))` located in [..]/foo/.cargo/config
+first match `cfg(not(target_arch = \"avr\"))` located in [..]/foo/.cargo/config.toml
+second match `cfg(not(target_os = \"none\"))` located in [..]/foo/.cargo/config.toml
 ",
         ))
         .run();
@@ -134,7 +134,7 @@ fn absolute_tools() {
         .file("Cargo.toml", &basic_lib_manifest("foo"))
         .file("src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.{target}]
@@ -175,7 +175,7 @@ fn relative_tools() {
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file("bar/src/lib.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.{target}]
@@ -211,7 +211,7 @@ fn custom_runner() {
         .file("tests/test.rs", "")
         .file("benches/bench.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.{}]
@@ -265,7 +265,7 @@ fn custom_runner_cfg() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [target.'cfg(not(target_os = "none"))']
             runner = "nonexistent-runner -r"
@@ -293,7 +293,7 @@ fn custom_runner_cfg_precedence() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.'cfg(not(target_os = "none"))']
@@ -324,7 +324,7 @@ fn custom_runner_cfg_collision() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [target.'cfg(not(target_arch = "avr"))']
             runner = "true"
@@ -340,8 +340,8 @@ fn custom_runner_cfg_collision() {
         .with_stderr(
             "\
 [ERROR] several matching instances of `target.'cfg(..)'.runner` in configurations
-first match `cfg(not(target_arch = \"avr\"))` located in [..]/foo/.cargo/config
-second match `cfg(not(target_os = \"none\"))` located in [..]/foo/.cargo/config
+first match `cfg(not(target_arch = \"avr\"))` located in [..]/foo/.cargo/config.toml
+second match `cfg(not(target_os = \"none\"))` located in [..]/foo/.cargo/config.toml
 ",
         )
         .run();
@@ -454,7 +454,7 @@ fn cfg_ignored_fields() {
     // Test for some ignored fields in [target.'cfg()'] tables.
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             # Try some empty tables.
             [target.'cfg(not(foo))']

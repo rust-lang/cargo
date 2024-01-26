@@ -19,7 +19,7 @@ fn net_retry_loads_from_config() {
         )
         .file("src/main.rs", "")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
            [net]
            retry=1
@@ -54,7 +54,7 @@ fn net_retry_git_outputs_warning() {
             "#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
            [http]
            timeout=1

@@ -1,12 +1,12 @@
 //! Tests for `include` config field.
 
-use super::config::{assert_error, write_config, write_config_at, ConfigBuilder};
+use super::config::{assert_error, write_config_at, write_config_toml, ConfigBuilder};
 use cargo_test_support::{no_such_file_err_msg, project};
 
 #[cargo_test]
 fn gated() {
     // Requires -Z flag.
-    write_config("include='other.toml'");
+    write_config_toml("include='other.toml'");
     write_config_at(
         ".cargo/other.toml",
         "
@@ -23,7 +23,7 @@ fn gated() {
 fn simple() {
     // Simple test.
     write_config_at(
-        ".cargo/config",
+        ".cargo/config.toml",
         "
         include = 'other.toml'
         key1 = 1
@@ -87,7 +87,7 @@ fn works_with_cli() {
 fn left_to_right_bottom_to_top() {
     // How it merges multiple nested includes.
     write_config_at(
-        ".cargo/config",
+        ".cargo/config.toml",
         "
         include = ['left-middle.toml', 'right-middle.toml']
         top = 1
@@ -140,7 +140,7 @@ fn left_to_right_bottom_to_top() {
 #[cargo_test]
 fn missing_file() {
     // Error when there's a missing file.
-    write_config("include='missing.toml'");
+    write_config_toml("include='missing.toml'");
     let config = ConfigBuilder::new()
         .unstable_flag("config-include")
         .build_err();
@@ -151,7 +151,7 @@ fn missing_file() {
 could not load Cargo configuration
 
 Caused by:
-  failed to load config include `missing.toml` from `[..]/.cargo/config`
+  failed to load config include `missing.toml` from `[..]/.cargo/config.toml`
 
 Caused by:
   failed to read configuration file `[..]/.cargo/missing.toml`
@@ -166,7 +166,7 @@ Caused by:
 #[cargo_test]
 fn wrong_file_extension() {
     // Error when it doesn't end with `.toml`.
-    write_config("include='config.png'");
+    write_config_toml("include='config.png'");
     let config = ConfigBuilder::new()
         .unstable_flag("config-include")
         .build_err();
@@ -176,7 +176,7 @@ fn wrong_file_extension() {
 could not load Cargo configuration
 
 Caused by:
-  expected a config include path ending with `.toml`, but found `config.png` from `[..]/.cargo/config`
+  expected a config include path ending with `.toml`, but found `config.png` from `[..]/.cargo/config.toml`
 ",
     );
 }
@@ -214,7 +214,7 @@ fn cli_include() {
     // Using --config with include.
     // CLI takes priority over files.
     write_config_at(
-        ".cargo/config",
+        ".cargo/config.toml",
         "
         foo = 1
         bar = 2
@@ -232,7 +232,7 @@ fn cli_include() {
 #[cargo_test]
 fn bad_format() {
     // Not a valid format.
-    write_config("include = 1");
+    write_config_toml("include = 1");
     let config = ConfigBuilder::new()
         .unstable_flag("config-include")
         .build_err();
@@ -242,7 +242,7 @@ fn bad_format() {
 could not load Cargo configuration
 
 Caused by:
-  `include` expected a string or list, but found integer in `[..]/.cargo/config`",
+  `include` expected a string or list, but found integer in `[..]/.cargo/config.toml`",
     );
 }
 
@@ -275,7 +275,7 @@ Caused by:
 #[cargo_test]
 fn cli_merge_failed() {
     // Error message when CLI include merge fails.
-    write_config("foo = ['a']");
+    write_config_toml("foo = ['a']");
     write_config_at(
         ".cargo/other.toml",
         "
@@ -290,10 +290,10 @@ fn cli_merge_failed() {
     assert_error(
         config.unwrap_err(),
         "\
-failed to merge --config key `foo` into `[..]/.cargo/config`
+failed to merge --config key `foo` into `[..]/.cargo/config.toml`
 
 Caused by:
-  failed to merge config value from `[..]/.cargo/other.toml` into `[..]/.cargo/config`: \
+  failed to merge config value from `[..]/.cargo/other.toml` into `[..]/.cargo/config.toml`: \
   expected array, but found string",
     );
 }

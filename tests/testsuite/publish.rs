@@ -1377,7 +1377,7 @@ fn publish_checks_for_token_before_verify() {
 fn publish_with_bad_source() {
     let p = project()
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             r#"
             [source.crates-io]
             replace-with = 'local-registry'
@@ -1400,7 +1400,7 @@ include `--registry crates-io` to use crates.io
         .run();
 
     p.change_file(
-        ".cargo/config",
+        ".cargo/config.toml",
         r#"
         [source.crates-io]
         replace-with = "vendored-sources"
@@ -2823,7 +2823,7 @@ fn skip_wait_for_publish() {
         )
         .file("src/main.rs", "fn main() {}")
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             "
                 [publish]
                 timeout = 0

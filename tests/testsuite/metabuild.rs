@@ -345,7 +345,7 @@ fn metabuild_override() {
             r#"pub fn metabuild() { panic!("should not run"); }"#,
         )
         .file(
-            ".cargo/config",
+            ".cargo/config.toml",
             &format!(
                 r#"
                     [target.{}.cat]
