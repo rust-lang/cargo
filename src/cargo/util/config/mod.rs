@@ -1507,7 +1507,7 @@ impl Config {
         let possible_with_extension = dir.join(format!("{}.toml", filename_without_extension));
 
         if possible.exists() {
-            if warn && possible_with_extension.exists() {
+            if warn {
                 // We don't want to print a warning if the version
                 // without the extension is just a symlink to the version
                 // WITH an extension, which people may want to do to
@@ -1520,12 +1520,22 @@ impl Config {
                 };
 
                 if !skip_warning {
-                    self.shell().warn(format!(
-                        "Both `{}` and `{}` exist. Using `{}`",
-                        possible.display(),
-                        possible_with_extension.display(),
-                        possible.display()
-                    ))?;
+                    if possible_with_extension.exists() {
+                        self.shell().warn(format!(
+                            "Both `{}` and `{}` exist. Using `{}`",
+                            possible.display(),
+                            possible_with_extension.display(),
+                            possible.display()
+                        ))?;
+                    } else {
+                        self.shell().warn(format!(
+                            "`{}` is deprecated in favor of `{filename_without_extension}.toml`",
+                            possible.display(),
+                        ))?;
+                        self.shell().note(
+                            format!("If you need to support cargo 1.38 or earlier, you can symlink `{filename_without_extension}` to `{filename_without_extension}.toml`"),
+                        )?;
+                    }
                 }
             }
 
