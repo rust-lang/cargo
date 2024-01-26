@@ -45,6 +45,7 @@ global-credential-providers = ["cargo:token", "cargo:libsecret"]
 global-credential-providers = ["cargo:token", "cargo:wincred"]
 ```
 
+Note that later entries have higher precedence.
 See [`registry.global-credential-providers`](config.md#registryglobal-credential-providers)
 for more details.
 
