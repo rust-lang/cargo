@@ -301,6 +301,10 @@ Configuration values with sensitive information are stored in the
 `$CARGO_HOME/credentials.toml` file. This file is automatically created and updated
 by [`cargo login`] and [`cargo logout`] when using the [`cargo:token`] credential provider.
 
+Tokens are used by some Cargo commands such as [`cargo publish`] for
+authenticating with remote registries. Care should be taken to protect the
+tokens and to keep them secret.
+
 It follows the same format as Cargo config files.
 
 ```toml
@@ -310,10 +314,6 @@ token = "…"   # Access token for crates.io
 [registries.<name>]
 token = "…"   # Access token for the named registry
 ```
-
-Tokens are used by some Cargo commands such as [`cargo publish`] for
-authenticating with remote registries. Care should be taken to protect the
-tokens and to keep them secret.
 
 As with most other config values, tokens may be specified with environment
 variables. The token for [crates.io] may be specified with the
