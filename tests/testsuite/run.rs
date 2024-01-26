@@ -1606,4 +1606,9 @@ fn run_binary_with_same_name_as_dependency() {
     p.cargo("run").run();
     p.cargo("check -p foo@0.5.0").run();
     p.cargo("run -p foo@0.5.0").run();
+    p.cargo("run -p foo@0.5").run();
+    p.cargo("run -p foo@0.4")
+        .with_status(101)
+        .with_stderr("[ERROR] package(s) `foo@0.4` not found in workspace `[..]`")
+        .run();
 }
