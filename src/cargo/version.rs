@@ -15,7 +15,7 @@ pub struct VersionInfo {
     pub version: String,
     /// The release channel we were built for (stable/beta/nightly/dev).
     ///
-    /// `None` if not built via rustuild.
+    /// `None` if not built via rustbuild.
     pub release_channel: Option<String>,
     /// Information about the Git repository we may have been built from.
     ///
