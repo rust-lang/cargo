@@ -1111,9 +1111,11 @@ impl<'cfg> DrainState<'cfg> {
             // being a compiled package.
             Dirty(dirty_reason) => {
                 if let Some(reason) = dirty_reason {
-                    config
-                        .shell()
-                        .verbose(|shell| reason.present_to(shell, unit, ws_root))?;
+                    if !reason.is_fresh_build() {
+                        config
+                            .shell()
+                            .verbose(|shell| reason.present_to(shell, unit, ws_root))?;
+                    }
                 }
 
                 if unit.mode.is_doc() {
