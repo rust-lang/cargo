@@ -506,7 +506,7 @@ pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> Car
         Work::new(move |_| write_fingerprint(&loc, &fingerprint))
     };
 
-    Ok(Job::new_dirty(write_fingerprint, Some(dirty_reason)))
+    Ok(Job::new_dirty(write_fingerprint, dirty_reason))
 }
 
 /// Dependency edge information for fingerprints. This is generated for each

@@ -183,7 +183,7 @@ fn compile<'cfg>(
         // We run these targets later, so this is just a no-op for now.
         Job::new_fresh()
     } else if build_plan {
-        Job::new_dirty(rustc(cx, unit, &exec.clone())?, None)
+        Job::new_dirty(rustc(cx, unit, &exec.clone())?, DirtyReason::FreshBuild)
     } else {
         let force = exec.force_rebuild(unit) || force_rebuild;
         let mut job = fingerprint::prepare_target(cx, unit, force)?;
