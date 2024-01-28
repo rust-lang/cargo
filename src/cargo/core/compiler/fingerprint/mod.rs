@@ -415,8 +415,7 @@ pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> Car
     // information about failed comparisons to aid in debugging.
     let fingerprint = calculate(cx, unit)?;
     let mtime_on_use = cx.bcx.config.cli_unstable().mtime_on_use;
-    let compare = compare_old_fingerprint(&loc, &*fingerprint, mtime_on_use);
-    log_compare(unit, &compare);
+    let compare = compare_old_fingerprint(unit, &loc, &*fingerprint, mtime_on_use);
 
     // If our comparison failed or reported dirty (e.g., we're going to trigger
     // a rebuild of this crate), then we also ensure the source of the crate
@@ -1752,6 +1751,17 @@ fn target_root(cx: &Context<'_, '_>) -> PathBuf {
 /// If dirty, it then restores the detailed information
 /// from the fingerprint JSON file, and provides an rich dirty reason.
 fn compare_old_fingerprint(
+    unit: &Unit,
+    old_hash_path: &Path,
+    new_fingerprint: &Fingerprint,
+    mtime_on_use: bool,
+) -> CargoResult<Option<DirtyReason>> {
+    let compare = _compare_old_fingerprint(old_hash_path, new_fingerprint, mtime_on_use);
+    log_compare(unit, &compare);
+    compare
+}
+
+fn _compare_old_fingerprint(
     old_hash_path: &Path,
     new_fingerprint: &Fingerprint,
     mtime_on_use: bool,
