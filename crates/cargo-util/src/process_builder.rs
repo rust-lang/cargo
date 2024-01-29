@@ -176,7 +176,7 @@ impl ProcessBuilder {
     /// Sets the `make` jobserver. See the [jobserver crate][jobserver_docs] for
     /// more information.
     ///
-    /// [jobserver_docs]: https://docs.rs/jobserver/0.1.6/jobserver/
+    /// [jobserver_docs]: https://docs.rs/jobserver/latest/jobserver/
     pub fn inherit_jobserver(&mut self, jobserver: &Client) -> &mut Self {
         self.jobserver = Some(jobserver.clone());
         self
