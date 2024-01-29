@@ -91,8 +91,7 @@ OPTIONS
            Beware that this may result in different dependency resolution than
            online mode. Cargo will restrict itself to crates that are
            downloaded locally, even if there might be a newer version as
-           indicated in the local copy of the index. See the cargo-fetch(1)
-           command to download dependencies before going offline.
+           indicated in the local copy of the index.
 
            May also be specified with the net.offline config value
            <https://doc.rust-lang.org/cargo/reference/config.html>.
