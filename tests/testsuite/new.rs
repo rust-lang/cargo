@@ -27,7 +27,10 @@ fn create_default_gitconfig() {
 #[cargo_test]
 fn simple_lib() {
     cargo_process("new --lib foo --vcs none --edition 2015")
-        .with_stderr("[CREATING] library `foo` package")
+        .with_stderr("\
+[CREATING] library `foo` package
+[NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+")
         .run();
 
     assert!(paths::root().join("foo").is_dir());
@@ -62,7 +65,10 @@ mod tests {
 #[cargo_test]
 fn simple_bin() {
     cargo_process("new --bin foo --edition 2015")
-        .with_stderr("[CREATING] binary (application) `foo` package")
+        .with_stderr("\
+[CREATING] binary (application) `foo` package
+[NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+")
         .run();
 
     assert!(paths::root().join("foo").is_dir());
@@ -213,6 +219,7 @@ If you need a package name to not match the directory name, consider using --nam
 [CREATING] library `incremental` package
 [WARNING] the name `incremental` will not support binary executables with that name, \
 it conflicts with cargo's build directory names
+[NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 ",
         )
         .run();
@@ -259,6 +266,7 @@ or change the name in Cargo.toml with:
     name = \"core\"
     path = \"src/main.rs\"
 
+[NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 ",
         )
         .run();
@@ -376,7 +384,10 @@ or change the name in Cargo.toml with:
 #[cargo_test]
 fn explicit_project_name() {
     cargo_process("new --lib foo --name bar")
-        .with_stderr("[CREATING] library `bar` package")
+        .with_stderr("\
+[CREATING] library `bar` package
+[NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+")
         .run();
 }
 
@@ -410,14 +421,6 @@ fn new_with_bad_edition() {
 }
 
 #[cargo_test]
-fn new_with_reference_link() {
-    cargo_process("new foo").run();
-
-    let contents = fs::read_to_string(paths::root().join("foo/Cargo.toml")).unwrap();
-    assert!(contents.contains("# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html"))
-}
-
-#[cargo_test]
 fn lockfile_constant_during_new() {
     cargo_process("new foo").run();
 
@@ -448,6 +451,7 @@ If you need a package name to not match the directory name, consider using --nam
 [CREATING] binary (application) `nul` package
 [WARNING] the name `nul` is a reserved Windows filename
 This package will not work on Windows platforms.
+[NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 ",
             )
             .run();
@@ -463,6 +467,7 @@ fn non_ascii_name() {
 [WARNING] the name `Привет` contains non-ASCII characters
 Non-ASCII crate names are not supported by Rust.
 [WARNING] the name `Привет` is not snake_case or kebab-case which is recommended for package names, consider `привет`
+[NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 ",
         )
         .run();
@@ -521,6 +526,7 @@ fn non_snake_case_name() {
             "\
 [CREATING] binary (application) `UPPERcase_name` package
 [WARNING] the name `UPPERcase_name` is not snake_case or kebab-case which is recommended for package names, consider `uppercase_name`
+[NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 ",
         )
         .run();
@@ -532,6 +538,7 @@ fn kebab_case_name_is_accepted() {
         .with_stderr(
             "\
 [CREATING] binary (application) `kebab-case-is-valid` package
+[NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 ",
         )
         .run();
@@ -591,6 +598,7 @@ fn path_with_invalid_character() {
 [CREATING] binary (application) `testing` package
 [WARNING] the path `[CWD]/test:ing` contains invalid PATH characters (usually `:`, `;`, or `\"`)
 It is recommended to use a different name to avoid problems.
+[NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 ",
         )
         .run();
