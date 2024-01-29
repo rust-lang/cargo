@@ -1750,7 +1750,25 @@ fn compare_old_fingerprint(
     }
 
     let compare = _compare_old_fingerprint(old_hash_path, new_fingerprint);
-    log_compare(unit, &compare);
+
+    match compare.as_ref() {
+        Ok(None) => {}
+        Ok(Some(reason)) => {
+            info!(
+                "fingerprint dirty for {}/{:?}/{:?}",
+                unit.pkg, unit.mode, unit.target,
+            );
+            info!("    dirty: {reason:?}");
+        }
+        Err(e) => {
+            info!(
+                "fingerprint error for {}/{:?}/{:?}",
+                unit.pkg, unit.mode, unit.target,
+            );
+            info!("    err: {e:?}");
+        }
+    }
+
     match compare {
         Ok(None) if forced => Some(DirtyReason::Forced),
         Ok(reason) => reason,
@@ -1782,29 +1800,6 @@ fn _compare_old_fingerprint(
     }
 
     Ok(Some(new_fingerprint.compare(&old_fingerprint)))
-}
-
-/// Logs the result of fingerprint comparison.
-///
-/// TODO: Obsolete and mostly superseded by [`DirtyReason`]. Could be removed.
-fn log_compare(unit: &Unit, compare: &CargoResult<Option<DirtyReason>>) {
-    match compare {
-        Ok(None) => {}
-        Ok(Some(reason)) => {
-            info!(
-                "fingerprint dirty for {}/{:?}/{:?}",
-                unit.pkg, unit.mode, unit.target,
-            );
-            info!("    dirty: {reason:?}");
-        }
-        Err(e) => {
-            info!(
-                "fingerprint error for {}/{:?}/{:?}",
-                unit.pkg, unit.mode, unit.target,
-            );
-            info!("    err: {e:?}");
-        }
-    }
 }
 
 /// Parses Cargo's internal [`EncodedDepInfo`] structure that was previously
