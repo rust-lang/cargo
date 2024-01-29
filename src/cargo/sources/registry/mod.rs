@@ -261,6 +261,12 @@ pub struct RegistrySource<'cfg> {
     /// Otherwise, the resolver would think that those entries no longer
     /// exist, and it would trigger updates to unrelated packages.
     yanked_whitelist: HashSet<PackageId>,
+    /// Yanked versions that have already been selected during queries.
+    ///
+    /// As of this writing, this is for not emitting the `--precise <yanked>`
+    /// warning twice, with the assumption of (`dep.package_name()` + `--precise`
+    /// version) being sufficient to uniquely identify the same query result.
+    selected_precise_yanked: HashSet<(InternedString, semver::Version)>,
 }
 
 /// The [`config.json`] file stored in the index.
@@ -531,6 +537,7 @@ impl<'cfg> RegistrySource<'cfg> {
             index: index::RegistryIndex::new(source_id, ops.index_path(), config),
             yanked_whitelist: yanked_whitelist.clone(),
             ops,
+            selected_precise_yanked: HashSet::new(),
         }
     }
 
@@ -748,8 +755,14 @@ impl<'cfg> Source for RegistrySource<'cfg> {
             .precise_registry_version(dep.package_name().as_str())
             .filter(|(c, _)| req.matches(c))
         {
-            req.update_precise(&requested);
+            req.precise_to(&requested);
         }
+
+        let mut called = false;
+        let callback = &mut |s| {
+            called = true;
+            f(s);
+        };
 
         // If this is a locked dependency, then it came from a lock file and in
         // theory the registry is known to contain this version. If, however, we
@@ -757,14 +770,12 @@ impl<'cfg> Source for RegistrySource<'cfg> {
         // updated, so we fall back to performing a lazy update.
         if kind == QueryKind::Exact && req.is_locked() && !self.ops.is_updated() {
             debug!("attempting query without update");
-            let mut called = false;
             ready!(self
                 .index
                 .query_inner(dep.package_name(), &req, &mut *self.ops, &mut |s| {
                     if dep.matches(s.as_summary()) {
                         // We are looking for a package from a lock file so we do not care about yank
-                        called = true;
-                        f(s);
+                        callback(s)
                     }
                 },))?;
             if called {
@@ -775,7 +786,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
                 Poll::Pending
             }
         } else {
-            let mut called = false;
+            let mut precise_yanked_in_use = false;
             ready!(self
                 .index
                 .query_inner(dep.package_name(), &req, &mut *self.ops, &mut |s| {
@@ -783,16 +794,39 @@ impl<'cfg> Source for RegistrySource<'cfg> {
                         QueryKind::Exact => dep.matches(s.as_summary()),
                         QueryKind::Fuzzy => true,
                     };
+                    if !matched {
+                        return;
+                    }
                     // Next filter out all yanked packages. Some yanked packages may
                     // leak through if they're in a whitelist (aka if they were
                     // previously in `Cargo.lock`
-                    if matched
-                        && (!s.is_yanked() || self.yanked_whitelist.contains(&s.package_id()))
-                    {
-                        f(s);
-                        called = true;
+                    if !s.is_yanked() {
+                        callback(s);
+                    } else if self.yanked_whitelist.contains(&s.package_id()) {
+                        callback(s);
+                    } else if req.is_precise() {
+                        precise_yanked_in_use = true;
+                        if self.config.cli_unstable().unstable_options {
+                            callback(s);
+                        }
                     }
                 }))?;
+            if precise_yanked_in_use {
+                self.config
+                    .cli_unstable()
+                    .fail_if_stable_opt("--precise <yanked-version>", 4225)?;
+                let name = dep.package_name();
+                let version = req
+                    .precise_version()
+                    .expect("--precise <yanked-version> in use");
+                if self.selected_precise_yanked.insert((name, version.clone())) {
+                    let mut shell = self.config.shell();
+                    shell.warn(format_args!(
+                        "selected package `{name}@{version}` was yanked by the author"
+                    ))?;
+                    shell.note("if possible, try a compatible non-yanked version")?;
+                }
+            }
             if called {
                 return Poll::Ready(Ok(()));
             }

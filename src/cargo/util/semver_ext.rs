@@ -33,7 +33,11 @@ pub enum OptVersionReq {
     /// The exact locked version and the original version requirement.
     Locked(Version, VersionReq),
     /// The exact requested version and the original version requirement.
-    UpdatePrecise(Version, VersionReq),
+    ///
+    /// This looks identical to [`OptVersionReq::Locked`] but has a different
+    /// meaning, and is used for the `--precise` field of `cargo update`.
+    /// See comments in [`OptVersionReq::matches`] for more.
+    Precise(Version, VersionReq),
 }
 
 impl OptVersionReq {
@@ -51,7 +55,7 @@ impl OptVersionReq {
     pub fn is_exact(&self) -> bool {
         match self {
             OptVersionReq::Any => false,
-            OptVersionReq::Req(req) | OptVersionReq::UpdatePrecise(_, req) => {
+            OptVersionReq::Req(req) | OptVersionReq::Precise(_, req) => {
                 req.comparators.len() == 1 && {
                     let cmp = &req.comparators[0];
                     cmp.op == Op::Exact && cmp.minor.is_some() && cmp.patch.is_some()
@@ -67,19 +71,32 @@ impl OptVersionReq {
         let version = version.clone();
         *self = match self {
             Any => Locked(version, VersionReq::STAR),
-            Req(req) | Locked(_, req) | UpdatePrecise(_, req) => Locked(version, req.clone()),
+            Req(req) | Locked(_, req) | Precise(_, req) => Locked(version, req.clone()),
         };
     }
 
-    pub fn update_precise(&mut self, version: &Version) {
+    /// Makes the requirement precise to the requested version.
+    ///
+    /// This is used for the `--precise` field of `cargo update`.
+    pub fn precise_to(&mut self, version: &Version) {
         use OptVersionReq::*;
         let version = version.clone();
         *self = match self {
-            Any => UpdatePrecise(version, VersionReq::STAR),
-            Req(req) | Locked(_, req) | UpdatePrecise(_, req) => {
-                UpdatePrecise(version, req.clone())
-            }
+            Any => Precise(version, VersionReq::STAR),
+            Req(req) | Locked(_, req) | Precise(_, req) => Precise(version, req.clone()),
         };
+    }
+
+    pub fn is_precise(&self) -> bool {
+        matches!(self, OptVersionReq::Precise(..))
+    }
+
+    /// Gets the version to which this req is precise to, if any.
+    pub fn precise_version(&self) -> Option<&Version> {
+        match self {
+            OptVersionReq::Precise(version, _) => Some(version),
+            _ => None,
+        }
     }
 
     pub fn is_locked(&self) -> bool {
@@ -108,7 +125,7 @@ impl OptVersionReq {
                 // we should not silently use `1.0.0+foo` even though they have the same version.
                 v == version
             }
-            OptVersionReq::UpdatePrecise(v, _) => {
+            OptVersionReq::Precise(v, _) => {
                 // This is used for the `--precise` field of cargo update.
                 //
                 // Unfortunately crates.io allowed versions to differ only
@@ -135,7 +152,7 @@ impl Display for OptVersionReq {
             OptVersionReq::Any => f.write_str("*"),
             OptVersionReq::Req(req)
             | OptVersionReq::Locked(_, req)
-            | OptVersionReq::UpdatePrecise(_, req) => Display::fmt(req, f),
+            | OptVersionReq::Precise(_, req) => Display::fmt(req, f),
         }
     }
 }

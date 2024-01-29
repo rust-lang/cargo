@@ -1370,3 +1370,106 @@ fn update_precise_git_revisions() {
     assert!(p.read_lockfile().contains(&head_id));
     assert!(!p.read_lockfile().contains(&tag_commit_id));
 }
+
+#[cargo_test]
+fn precise_yanked() {
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.1.1").yanked(true).publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+
+                [dependencies]
+                bar = "0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    // Use non-yanked version.
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.contains("\nname = \"bar\"\nversion = \"0.1.0\""));
+
+    p.cargo("update --precise 0.1.1 bar")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 ([CWD])`
+
+Caused by:
+  failed to query replaced source registry `crates-io`
+
+Caused by:
+  the `--precise <yanked-version>` flag is unstable[..]
+  See [..]
+  See [..]
+",
+        )
+        .run();
+
+    p.cargo("update --precise 0.1.1 bar")
+        .masquerade_as_nightly_cargo(&["--precise <yanked-version>"])
+        .arg("-Zunstable-options")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[WARNING] selected package `bar@0.1.1` was yanked by the author
+[NOTE] if possible, try a compatible non-yanked version
+[UPDATING] bar v0.1.0 -> v0.1.1
+",
+        )
+        .run();
+
+    // Use yanked version.
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.contains("\nname = \"bar\"\nversion = \"0.1.1\""));
+}
+
+#[cargo_test]
+fn precise_yanked_multiple_presence() {
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.1.1").yanked(true).publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+
+                [dependencies]
+                bar = "0.1"
+                baz = { package = "bar", version = "0.1" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    // Use non-yanked version.
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.contains("\nname = \"bar\"\nversion = \"0.1.0\""));
+
+    p.cargo("update --precise 0.1.1 bar")
+        .masquerade_as_nightly_cargo(&["--precise <yanked-version>"])
+        .arg("-Zunstable-options")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[WARNING] selected package `bar@0.1.1` was yanked by the author
+[NOTE] if possible, try a compatible non-yanked version
+[UPDATING] bar v0.1.0 -> v0.1.1
+",
+        )
+        .run();
+
+    // Use yanked version.
+    let lockfile = p.read_lockfile();
+    assert!(lockfile.contains("\nname = \"bar\"\nversion = \"0.1.1\""));
+}
