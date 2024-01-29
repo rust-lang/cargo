@@ -1063,7 +1063,7 @@ fn new_creates_members_list() {
     let p = p.build();
 
     p.cargo("new --lib bar")
-        .with_stderr("     Created library `bar` package")
+        .with_stderr("    Creating library `bar` package")
         .run();
 }
 
@@ -1073,6 +1073,7 @@ fn new_warning_with_corrupt_ws() {
     p.cargo("new bar")
         .with_stderr(
             "\
+[CREATING] binary (application) `bar` package
 [ERROR] expected `.`, `=`
  --> Cargo.toml:1:5
   |
@@ -1081,7 +1082,6 @@ fn new_warning_with_corrupt_ws() {
   |
 [WARNING] compiling this new package may not work due to invalid workspace configuration
 
-[CREATED] binary (application) `bar` package
 ",
         )
         .run();

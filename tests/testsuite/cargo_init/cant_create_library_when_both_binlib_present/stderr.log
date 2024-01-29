@@ -1,1 +1,2 @@
+    Creating library package
 error: cannot have a package with multiple libraries, found both `case.rs` and `lib.rs`

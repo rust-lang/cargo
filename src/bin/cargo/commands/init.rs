@@ -21,9 +21,6 @@ pub fn cli() -> Command {
 
 pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let opts = args.new_options(config)?;
-    let project_kind = ops::init(&opts, config)?;
-    config
-        .shell()
-        .status("Created", format!("{} package", project_kind))?;
+    ops::init(&opts, config)?;
     Ok(())
 }

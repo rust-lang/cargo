@@ -440,6 +440,9 @@ fn calculate_new_project_kind(
 pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     let path = &opts.path;
     let name = get_name(path, opts)?;
+    config
+        .shell()
+        .status("Creating", format!("{} `{}` package", opts.kind, name))?;
 
     if path.exists() {
         anyhow::bail!(
@@ -484,6 +487,9 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
     let mut src_paths_types = vec![];
     detect_source_paths_and_types(path, name, &mut src_paths_types)?;
     let kind = calculate_new_project_kind(opts.kind, opts.auto_detect_kind, &src_paths_types);
+    config
+        .shell()
+        .status("Creating", format!("{} package", opts.kind))?;
 
     if path.join("Cargo.toml").exists() {
         anyhow::bail!("`cargo init` cannot be run on existing Cargo packages")
