@@ -54,10 +54,9 @@ pub fn main(config: &mut LazyConfig) -> CliResult {
         .map(String::as_str)
         == Some("help")
     {
-        let header = style::HEADER.render();
-        let literal = style::LITERAL.render();
-        let placeholder = style::PLACEHOLDER.render();
-        let reset = anstyle::Reset.render();
+        let header = style::HEADER;
+        let literal = style::LITERAL;
+        let placeholder = style::PLACEHOLDER;
 
         let options = CliUnstable::help();
         let max_length = options
@@ -72,17 +71,17 @@ pub fn main(config: &mut LazyConfig) -> CliResult {
             .map(|(opt, help)| {
                 let opt = opt.replace("_", "-");
                 let help = help.unwrap();
-                format!("    {literal}-Z {opt:<max_length$}{reset}  {help}")
+                format!("    {literal}-Z {opt:<max_length$}{literal:#}  {help}")
             })
             .join("\n");
         drop_println!(
             config,
             "\
-{header}Available unstable (nightly-only) flags:{reset}
+{header}Available unstable (nightly-only) flags:{header:#}
 
 {z_flags}
 
-Run with `{literal}cargo -Z{reset} {placeholder}[FLAG] [COMMAND]{reset}`",
+Run with `{literal}cargo -Z{literal:#} {placeholder}[FLAG] [COMMAND]{placeholder:#}`",
         );
         if !config.nightly_features_allowed {
             drop_println!(
@@ -136,8 +135,7 @@ Run with `{literal}cargo -Z{reset} {placeholder}[FLAG] [COMMAND]{reset}`",
         );
         for (name, command) in list_commands(config) {
             let known_external_desc = known_external_command_descriptions.get(name.as_str());
-            let literal = style::LITERAL.render();
-            let reset = anstyle::Reset.render();
+            let literal = style::LITERAL;
             match command {
                 CommandInfo::BuiltIn { about } => {
                     assert!(
@@ -146,21 +144,25 @@ Run with `{literal}cargo -Z{reset} {placeholder}[FLAG] [COMMAND]{reset}`",
                     );
                     let summary = about.unwrap_or_default();
                     let summary = summary.lines().next().unwrap_or(&summary); // display only the first line
-                    drop_println!(config, "    {literal}{name:<20}{reset} {summary}");
+                    drop_println!(config, "    {literal}{name:<20}{literal:#} {summary}");
                 }
                 CommandInfo::External { path } => {
                     if let Some(desc) = known_external_desc {
-                        drop_println!(config, "    {literal}{name:<20}{reset} {desc}");
+                        drop_println!(config, "    {literal}{name:<20}{literal:#} {desc}");
                     } else if is_verbose {
-                        drop_println!(config, "    {literal}{name:<20}{reset} {}", path.display());
+                        drop_println!(
+                            config,
+                            "    {literal}{name:<20}{literal:#} {}",
+                            path.display()
+                        );
                     } else {
-                        drop_println!(config, "    {literal}{name}{reset}");
+                        drop_println!(config, "    {literal}{name}{literal:#}");
                     }
                 }
                 CommandInfo::Alias { target } => {
                     drop_println!(
                         config,
-                        "    {literal}{name:<20}{reset} alias: {}",
+                        "    {literal}{name:<20}{literal:#} alias: {}",
                         target.iter().join(" ")
                     );
                 }

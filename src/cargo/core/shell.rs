@@ -455,15 +455,13 @@ impl ShellOut {
         style: &Style,
         justified: bool,
     ) -> CargoResult<()> {
-        let style = style.render();
-        let bold = (anstyle::Style::new() | anstyle::Effects::BOLD).render();
-        let reset = anstyle::Reset.render();
+        let bold = anstyle::Style::new() | anstyle::Effects::BOLD;
 
         let mut buffer = Vec::new();
         if justified {
-            write!(&mut buffer, "{style}{status:>12}{reset}")?;
+            write!(&mut buffer, "{style}{status:>12}{style:#}")?;
         } else {
-            write!(&mut buffer, "{style}{status}{reset}{bold}:{reset}")?;
+            write!(&mut buffer, "{style}{status}{style:#}{bold}:{bold:#}")?;
         }
         match message {
             Some(message) => writeln!(buffer, " {message}")?,
