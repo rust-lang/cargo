@@ -439,6 +439,7 @@ fn calculate_new_project_kind(
 
 pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     let path = &opts.path;
+    let name = get_name(path, opts)?;
 
     if path.exists() {
         anyhow::bail!(
@@ -451,7 +452,6 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
 
     let is_bin = opts.kind.is_bin();
 
-    let name = get_name(path, opts)?;
     check_name(name, opts.name.is_none(), is_bin, &mut config.shell())?;
 
     let mkopts = MkOptions {
@@ -480,18 +480,16 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
     }
 
     let path = &opts.path;
+    let name = get_name(path, opts)?;
+    let mut src_paths_types = vec![];
+    detect_source_paths_and_types(path, name, &mut src_paths_types)?;
+    let kind = calculate_new_project_kind(opts.kind, opts.auto_detect_kind, &src_paths_types);
 
     if path.join("Cargo.toml").exists() {
         anyhow::bail!("`cargo init` cannot be run on existing Cargo packages")
     }
     check_path(path, &mut config.shell())?;
 
-    let name = get_name(path, opts)?;
-
-    let mut src_paths_types = vec![];
-    detect_source_paths_and_types(path, name, &mut src_paths_types)?;
-
-    let kind = calculate_new_project_kind(opts.kind, opts.auto_detect_kind, &src_paths_types);
     let has_bin = kind.is_bin();
 
     if src_paths_types.is_empty() {
