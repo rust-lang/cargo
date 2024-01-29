@@ -439,6 +439,7 @@ fn calculate_new_project_kind(
 
 pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     let path = &opts.path;
+
     if path.exists() {
         anyhow::bail!(
             "destination `{}` already exists\n\n\
@@ -446,7 +447,6 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
             path.display()
         )
     }
-
     check_path(path, &mut config.shell())?;
 
     let is_bin = opts.kind.is_bin();
@@ -484,13 +484,11 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
     if path.join("Cargo.toml").exists() {
         anyhow::bail!("`cargo init` cannot be run on existing Cargo packages")
     }
-
     check_path(path, &mut config.shell())?;
 
     let name = get_name(path, opts)?;
 
     let mut src_paths_types = vec![];
-
     detect_source_paths_and_types(path, name, &mut src_paths_types)?;
 
     let kind = calculate_new_project_kind(opts.kind, opts.auto_detect_kind, &src_paths_types);
