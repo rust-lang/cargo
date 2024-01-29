@@ -415,12 +415,14 @@ pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> Car
     // information about failed comparisons to aid in debugging.
     let fingerprint = calculate(cx, unit)?;
     let mtime_on_use = cx.bcx.config.cli_unstable().mtime_on_use;
-    let compare = compare_old_fingerprint(&loc, &*fingerprint, mtime_on_use);
-    log_compare(unit, &compare);
+    let dirty_reason = compare_old_fingerprint(unit, &loc, &*fingerprint, mtime_on_use, force);
 
-    // If our comparison failed or reported dirty (e.g., we're going to trigger
-    // a rebuild of this crate), then we also ensure the source of the crate
-    // passes all verification checks before we build it.
+    let Some(dirty_reason) = dirty_reason else {
+        return Ok(Job::new_fresh());
+    };
+
+    // We're going to rebuild, so ensure the source of the crate passes all
+    // verification checks before we build it.
     //
     // The `Source::verify` method is intended to allow sources to execute
     // pre-build checks to ensure that the relevant source code is all
@@ -428,30 +430,12 @@ pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> Car
     // directory sources which will use this hook to perform an integrity check
     // on all files in the source to ensure they haven't changed. If they have
     // changed then an error is issued.
-    if compare
-        .as_ref()
-        .map(|dirty| dirty.is_some())
-        .unwrap_or(true)
-    {
-        let source_id = unit.pkg.package_id().source_id();
-        let sources = bcx.packages.sources();
-        let source = sources
-            .get(source_id)
-            .ok_or_else(|| internal("missing package source"))?;
-        source.verify(unit.pkg.package_id())?;
-    }
-
-    let dirty_reason = match compare {
-        Ok(None) => {
-            if force {
-                Some(DirtyReason::Forced)
-            } else {
-                return Ok(Job::new_fresh());
-            }
-        }
-        Ok(reason) => reason,
-        Err(_) => None,
-    };
+    let source_id = unit.pkg.package_id().source_id();
+    let sources = bcx.packages.sources();
+    let source = sources
+        .get(source_id)
+        .ok_or_else(|| internal("missing package source"))?;
+    source.verify(unit.pkg.package_id())?;
 
     // Clear out the old fingerprint file if it exists. This protects when
     // compilation is interrupted leaving a corrupt file. For example, a
@@ -1752,18 +1736,51 @@ fn target_root(cx: &Context<'_, '_>) -> PathBuf {
 /// If dirty, it then restores the detailed information
 /// from the fingerprint JSON file, and provides an rich dirty reason.
 fn compare_old_fingerprint(
+    unit: &Unit,
     old_hash_path: &Path,
     new_fingerprint: &Fingerprint,
     mtime_on_use: bool,
-) -> CargoResult<Option<DirtyReason>> {
-    let old_fingerprint_short = paths::read(old_hash_path)?;
-
+    forced: bool,
+) -> Option<DirtyReason> {
     if mtime_on_use {
         // update the mtime so other cleaners know we used it
         let t = FileTime::from_system_time(SystemTime::now());
         debug!("mtime-on-use forcing {:?} to {}", old_hash_path, t);
         paths::set_file_time_no_err(old_hash_path, t);
     }
+
+    let compare = _compare_old_fingerprint(old_hash_path, new_fingerprint);
+
+    match compare.as_ref() {
+        Ok(None) => {}
+        Ok(Some(reason)) => {
+            info!(
+                "fingerprint dirty for {}/{:?}/{:?}",
+                unit.pkg, unit.mode, unit.target,
+            );
+            info!("    dirty: {reason:?}");
+        }
+        Err(e) => {
+            info!(
+                "fingerprint error for {}/{:?}/{:?}",
+                unit.pkg, unit.mode, unit.target,
+            );
+            info!("    err: {e:?}");
+        }
+    }
+
+    match compare {
+        Ok(None) if forced => Some(DirtyReason::Forced),
+        Ok(reason) => reason,
+        Err(_) => Some(DirtyReason::FreshBuild),
+    }
+}
+
+fn _compare_old_fingerprint(
+    old_hash_path: &Path,
+    new_fingerprint: &Fingerprint,
+) -> CargoResult<Option<DirtyReason>> {
+    let old_fingerprint_short = paths::read(old_hash_path)?;
 
     let new_hash = new_fingerprint.hash_u64();
 
@@ -1783,29 +1800,6 @@ fn compare_old_fingerprint(
     }
 
     Ok(Some(new_fingerprint.compare(&old_fingerprint)))
-}
-
-/// Logs the result of fingerprint comparison.
-///
-/// TODO: Obsolete and mostly superseded by [`DirtyReason`]. Could be removed.
-fn log_compare(unit: &Unit, compare: &CargoResult<Option<DirtyReason>>) {
-    match compare {
-        Ok(None) => {}
-        Ok(Some(reason)) => {
-            info!(
-                "fingerprint dirty for {}/{:?}/{:?}",
-                unit.pkg, unit.mode, unit.target,
-            );
-            info!("    dirty: {reason:?}");
-        }
-        Err(e) => {
-            info!(
-                "fingerprint error for {}/{:?}/{:?}",
-                unit.pkg, unit.mode, unit.target,
-            );
-            info!("    err: {e:?}");
-        }
-    }
 }
 
 /// Parses Cargo's internal [`EncodedDepInfo`] structure that was previously

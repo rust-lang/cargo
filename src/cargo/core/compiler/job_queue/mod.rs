@@ -1110,10 +1110,10 @@ impl<'cfg> DrainState<'cfg> {
             // Any dirty stage which runs at least one command gets printed as
             // being a compiled package.
             Dirty(dirty_reason) => {
-                if let Some(reason) = dirty_reason {
+                if !dirty_reason.is_fresh_build() {
                     config
                         .shell()
-                        .verbose(|shell| reason.present_to(shell, unit, ws_root))?;
+                        .verbose(|shell| dirty_reason.present_to(shell, unit, ws_root))?;
                 }
 
                 if unit.mode.is_doc() {

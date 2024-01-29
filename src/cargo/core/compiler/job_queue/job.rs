@@ -60,7 +60,7 @@ impl Job {
     }
 
     /// Creates a new job representing a unit of work.
-    pub fn new_dirty(work: Work, dirty_reason: Option<DirtyReason>) -> Job {
+    pub fn new_dirty(work: Work, dirty_reason: DirtyReason) -> Job {
         Job {
             work,
             fresh: Freshness::Dirty(dirty_reason),
@@ -100,7 +100,7 @@ impl fmt::Debug for Job {
 #[derive(Debug, Clone)]
 pub enum Freshness {
     Fresh,
-    Dirty(Option<DirtyReason>),
+    Dirty(DirtyReason),
 }
 
 impl Freshness {

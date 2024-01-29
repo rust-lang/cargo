@@ -34,6 +34,7 @@
 use super::{fingerprint, Context, Job, Unit, Work};
 use crate::core::compiler::artifact;
 use crate::core::compiler::context::Metadata;
+use crate::core::compiler::fingerprint::DirtyReason;
 use crate::core::compiler::job_queue::JobState;
 use crate::core::{profiles::ProfileRoot, PackageId, Target};
 use crate::util::errors::CargoResult;
@@ -608,7 +609,7 @@ fn build_work(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     });
 
     let mut job = if cx.bcx.build_config.build_plan {
-        Job::new_dirty(Work::noop(), None)
+        Job::new_dirty(Work::noop(), DirtyReason::FreshBuild)
     } else {
         fingerprint::prepare_target(cx, unit, false)?
     };
