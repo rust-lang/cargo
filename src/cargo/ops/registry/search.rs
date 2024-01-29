@@ -47,8 +47,7 @@ pub fn search(
 
     let mut shell = config.shell();
     let stdout = shell.out();
-    let good = style::GOOD.render();
-    let reset = anstyle::Reset.render();
+    let good = style::GOOD;
 
     for (name, description) in names.into_iter().zip(descriptions) {
         let line = match description {
@@ -59,7 +58,7 @@ pub fn search(
         while let Some(fragment) = fragments.next() {
             let _ = write!(stdout, "{fragment}");
             if fragments.peek().is_some() {
-                let _ = write!(stdout, "{good}{query}{reset}");
+                let _ = write!(stdout, "{good}{query}{good:#}");
             }
         }
         let _ = writeln!(stdout);

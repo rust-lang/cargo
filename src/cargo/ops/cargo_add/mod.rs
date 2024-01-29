@@ -1009,9 +1009,8 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
     }
 
     let stderr = shell.err();
-    let good = style::GOOD.render();
-    let error = style::ERROR.render();
-    let reset = anstyle::Reset.render();
+    let good = style::GOOD;
+    let error = style::ERROR;
 
     let (activated, deactivated) = dep.features();
     if !activated.is_empty() || !deactivated.is_empty() {
@@ -1026,7 +1025,7 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
 
         if total_activated <= MAX_FEATURE_PRINTS {
             for feat in activated {
-                writeln!(stderr, "{prefix}{good}+{reset} {feat}")?;
+                writeln!(stderr, "{prefix}{good}+{good:#} {feat}")?;
             }
         } else {
             writeln!(stderr, "{prefix}{total_activated} activated features")?;
@@ -1034,7 +1033,7 @@ fn print_dep_table_msg(shell: &mut Shell, dep: &DependencyUI) -> CargoResult<()>
 
         if total_activated + total_deactivated <= MAX_FEATURE_PRINTS {
             for feat in deactivated {
-                writeln!(stderr, "{prefix}{error}-{reset} {feat}")?;
+                writeln!(stderr, "{prefix}{error}-{error:#} {feat}")?;
             }
         } else {
             writeln!(stderr, "{prefix}{total_deactivated} deactivated features")?;
