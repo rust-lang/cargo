@@ -186,10 +186,18 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 }
             };
             let warn = style::WARN;
+            let present_version = present.version();
             possibilities
                 .iter()
                 .map(|s| s.as_summary())
-                .filter(|s| s.version().pre.is_empty())
+                .filter(|s| {
+                    let s_version = s.version();
+                    s_version.pre.is_empty()
+                        // Only match pre-release if major.minor.patch are the same
+                        || (s_version.major == present_version.major
+                            && s_version.minor == present_version.minor
+                            && s_version.patch == present_version.patch)
+                })
                 .map(|s| s.version().clone())
                 .max()
                 .filter(|v| present.version() < v)

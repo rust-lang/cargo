@@ -1480,6 +1480,8 @@ fn precise_yanked_multiple_presence() {
 
 #[cargo_test]
 fn report_behind() {
+    Package::new("pre", "1.0.0-alpha.0").publish();
+    Package::new("pre", "1.0.0-alpha.1").publish();
     Package::new("breaking", "0.1.0").publish();
     Package::new("breaking", "0.2.0").publish();
     Package::new("breaking", "0.2.1-alpha.0").publish();
@@ -1492,6 +1494,7 @@ fn report_behind() {
 
                 [dependencies]
                 breaking = "0.1"
+                pre = "=1.0.0-alpha.0"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1505,6 +1508,7 @@ fn report_behind() {
             "\
 [UPDATING] `dummy-registry` index
 [UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.0)
+[NOTE] Pass `--verbose` to see 1 unchanged dependencies behind latest
 [WARNING] not updating lockfile due to dry run
 ",
         )
@@ -1515,6 +1519,7 @@ fn report_behind() {
             "\
 [UPDATING] `dummy-registry` index
 [UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.0)
+[UNCHANGED] pre v1.0.0-alpha.0 (latest: v1.0.0-alpha.1)
 [WARNING] not updating lockfile due to dry run
 ",
         )
@@ -1526,7 +1531,7 @@ fn report_behind() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[NOTE] Pass `--verbose` to see 1 unchanged dependencies behind latest
+[NOTE] Pass `--verbose` to see 2 unchanged dependencies behind latest
 [WARNING] not updating lockfile due to dry run
 ",
         )
@@ -1537,6 +1542,7 @@ fn report_behind() {
             "\
 [UPDATING] `dummy-registry` index
 [UNCHANGED] breaking v0.1.1 (latest: v0.2.0)
+[UNCHANGED] pre v1.0.0-alpha.0 (latest: v1.0.0-alpha.1)
 [WARNING] not updating lockfile due to dry run
 ",
         )
