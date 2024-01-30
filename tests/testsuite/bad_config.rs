@@ -105,6 +105,7 @@ fn bad4() {
         .with_status(101)
         .with_stderr(
             "\
+[CREATING] binary (application) `foo` package
 [ERROR] Failed to create package `foo` at `[..]`
 
 Caused by:
