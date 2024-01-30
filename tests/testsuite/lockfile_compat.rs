@@ -1220,6 +1220,7 @@ dependencies = [
         ("1.37", Some(1), 1),
         ("1.37", Some(2), 2),
         ("1.37", Some(3), 3),
+        ("1.37", Some(4), 4),
         // v2 introduced
         ("1.38", None, 1),
         // last version of v1 as the default
@@ -1229,6 +1230,7 @@ dependencies = [
         ("1.41", Some(1), 1),
         ("1.41", Some(2), 2),
         ("1.41", Some(3), 3),
+        ("1.41", Some(4), 4),
         // v3 introduced
         ("1.47", None, 2),
         // last version of v2 as the default
@@ -1238,6 +1240,9 @@ dependencies = [
         ("1.53", Some(1), 1),
         ("1.53", Some(2), 2),
         ("1.53", Some(3), 3),
+        ("1.53", Some(4), 4),
+        // v4 introduced
+        ("1.78", None, 3),
     ];
 
     for (msrv, existing_lockfile, expected_version) in cases {

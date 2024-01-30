@@ -85,7 +85,7 @@ pub enum ResolveVersion {
     V3,
     /// SourceId URL serialization is aware of URL encoding. For example,
     /// `?branch=foo bar` is now encoded as `?branch=foo+bar` and can be decoded
-    /// back and forth correctly. Introduced in 2024 in version 1.77.
+    /// back and forth correctly. Introduced in 2024 in version 1.78.
     V4,
     /// Unstable. Will collect a certain amount of changes and then go.
     ///
