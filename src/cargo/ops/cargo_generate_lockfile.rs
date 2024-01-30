@@ -255,7 +255,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             (dep.name().as_str(), dep.source_id())
         }
 
-        fn vec_subtract(a: &[PackageId], b: &[PackageId]) -> Vec<PackageId> {
+        fn vec_subset(a: &[PackageId], b: &[PackageId]) -> Vec<PackageId> {
             a.iter().filter(|a| !contains_id(b, a)).cloned().collect()
         }
 
@@ -308,8 +308,8 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             let (ref mut old, ref mut new) = *v;
             old.sort();
             new.sort();
-            let removed = vec_subtract(old, new);
-            let added = vec_subtract(new, old);
+            let removed = vec_subset(old, new);
+            let added = vec_subset(new, old);
             *old = removed;
             *new = added;
         }
