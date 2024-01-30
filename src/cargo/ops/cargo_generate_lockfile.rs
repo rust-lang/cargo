@@ -184,6 +184,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             possibilities
                 .iter()
                 .map(|s| s.as_summary())
+                .filter(|s| s.version().pre.is_empty())
                 .map(|s| s.version().clone())
                 .max()
                 .filter(|v| added.version() < v)
