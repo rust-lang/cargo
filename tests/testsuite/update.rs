@@ -109,6 +109,7 @@ fn transitive_minor_update() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[NOTE] Pass `--verbose` to see 2 unchanged dependencies behind latest
 ",
         )
         .run();
@@ -160,6 +161,7 @@ fn conservative() {
             "\
 [UPDATING] `[..]` index
 [UPDATING] serde v0.1.0 -> v0.1.1
+[NOTE] Pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
         )
         .run();
@@ -520,6 +522,7 @@ fn update_precise_do_not_force_update_deps() {
             "\
 [UPDATING] `[..]` index
 [UPDATING] serde v0.2.1 -> v0.2.2
+[NOTE] Pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
         )
         .run();
@@ -898,6 +901,7 @@ fn dry_run_update() {
             "\
 [UPDATING] `[..]` index
 [UPDATING] serde v0.1.0 -> v0.1.1
+[NOTE] Pass `--verbose` to see 1 unchanged dependencies behind latest
 [WARNING] not updating lockfile due to dry run
 ",
         )
@@ -1522,6 +1526,7 @@ fn report_behind() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[NOTE] Pass `--verbose` to see 1 unchanged dependencies behind latest
 [WARNING] not updating lockfile due to dry run
 ",
         )
@@ -1531,6 +1536,7 @@ fn report_behind() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[UNCHANGED] breaking v0.1.1 (latest: v0.2.0)
 [WARNING] not updating lockfile due to dry run
 ",
         )
@@ -1566,6 +1572,7 @@ fn update_with_missing_feature() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[NOTE] Pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
         )
         .run();

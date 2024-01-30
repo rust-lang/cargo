@@ -1,5 +1,6 @@
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::{CliFeatures, HasDevUnits};
+use crate::core::shell::Verbosity;
 use crate::core::Registry as _;
 use crate::core::{PackageId, PackageIdSpec, PackageIdSpecQuery};
 use crate::core::{Resolve, SourceId, Workspace};
@@ -163,15 +164,19 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     let print_change = |status: &str, msg: String, color: &Style| {
         opts.config.shell().status_with_color(status, msg, color)
     };
-    for (removed, added) in compare_dependency_graphs(&previous_resolve, &resolve) {
-        let latest = if let Some(added) = added
-            .iter()
-            .rev()
-            .next()
-            .filter(|p| p.source_id().is_registry())
+    let mut unchanged_behind = 0;
+    for (removed, added, unchanged) in compare_dependency_graphs(&previous_resolve, &resolve) {
+        let highest_present = [added.iter().rev().next(), unchanged.iter().rev().next()]
+            .into_iter()
+            .flatten()
+            .max_by_key(|s| s.version());
+        let latest = if let Some(present) = highest_present.filter(|p| p.source_id().is_registry())
         {
-            let query =
-                crate::core::dependency::Dependency::parse(added.name(), None, added.source_id())?;
+            let query = crate::core::dependency::Dependency::parse(
+                present.name(),
+                None,
+                present.source_id(),
+            )?;
             let possibilities = loop {
                 match registry.query_vec(&query, QueryKind::Exact) {
                     std::task::Poll::Ready(res) => {
@@ -187,7 +192,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 .filter(|s| s.version().pre.is_empty())
                 .map(|s| s.version().clone())
                 .max()
-                .filter(|v| added.version() < v)
+                .filter(|v| present.version() < v)
                 .map(|v| format!(" {warn}(latest: v{v}){warn:#}"))
         } else {
             None
@@ -222,6 +227,26 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 print_change("Adding", format!("{package}{latest}"), &style::NOTE)?;
             }
         }
+        if !latest.is_empty() {
+            if opts.config.shell().verbosity() == Verbosity::Verbose {
+                for package in &unchanged {
+                    opts.config.shell().status_with_color(
+                        "Unchanged",
+                        format!("{package}{latest}"),
+                        &anstyle::Style::new().bold(),
+                    )?;
+                }
+            } else {
+                if !unchanged.is_empty() {
+                    unchanged_behind += 1;
+                }
+            }
+        }
+    }
+    if 0 < unchanged_behind {
+        opts.config.shell().note(format!(
+            "Pass `--verbose` to see {unchanged_behind} unchanged dependencies behind latest"
+        ))?;
     }
     if opts.dry_run {
         opts.config
@@ -250,13 +275,17 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     fn compare_dependency_graphs(
         previous_resolve: &Resolve,
         resolve: &Resolve,
-    ) -> Vec<(Vec<PackageId>, Vec<PackageId>)> {
+    ) -> Vec<(Vec<PackageId>, Vec<PackageId>, Vec<PackageId>)> {
         fn key(dep: PackageId) -> (&'static str, SourceId) {
             (dep.name().as_str(), dep.source_id())
         }
 
         fn vec_subset(a: &[PackageId], b: &[PackageId]) -> Vec<PackageId> {
             a.iter().filter(|a| !contains_id(b, a)).cloned().collect()
+        }
+
+        fn vec_intersection(a: &[PackageId], b: &[PackageId]) -> Vec<PackageId> {
+            a.iter().filter(|a| contains_id(b, a)).cloned().collect()
         }
 
         // Check if a PackageId is present `b` from `a`.
@@ -288,7 +317,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
 
         // Map `(package name, package source)` to `(removed versions, added versions)`.
         let mut changes = BTreeMap::new();
-        let empty = (Vec::new(), Vec::new());
+        let empty = (Vec::new(), Vec::new(), Vec::new());
         for dep in previous_resolve.iter() {
             changes
                 .entry(key(dep))
@@ -305,13 +334,15 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         }
 
         for v in changes.values_mut() {
-            let (ref mut old, ref mut new) = *v;
+            let (ref mut old, ref mut new, ref mut other) = *v;
             old.sort();
             new.sort();
             let removed = vec_subset(old, new);
             let added = vec_subset(new, old);
+            let unchanged = vec_intersection(new, old);
             *old = removed;
             *new = added;
+            *other = unchanged;
         }
         debug!("{:#?}", changes);
 
