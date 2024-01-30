@@ -73,18 +73,24 @@ pub enum ResolveVersion {
     V1,
     /// A more compact format, more amenable to avoiding source-control merge
     /// conflicts. The `dependencies` arrays are compressed and checksums are
-    /// listed inline. Introduced in 2019 in version 1.38. New lockfiles use
-    /// V2 by default from 1.41 to 1.52.
+    /// listed inline.
+    ///
+    /// * Introduced in 2019 in version 1.38.
+    /// * New lockfiles use V2 by default from 1.41 to 1.52.
     V2,
     /// A format that explicitly lists a `version` at the top of the file as
     /// well as changing how git dependencies are encoded. Dependencies with
     /// `branch = "master"` are no longer encoded the same way as those without
-    /// branch specifiers. Introduced in 2020 in version 1.47. New lockfiles use
-    /// V3 by default staring in 1.53.
+    /// branch specifiers.
+    ///
+    /// * Introduced in 2020 in version 1.47.
+    /// * New lockfiles use V3 by default starting in 1.53.
     V3,
     /// SourceId URL serialization is aware of URL encoding. For example,
     /// `?branch=foo bar` is now encoded as `?branch=foo+bar` and can be decoded
-    /// back and forth correctly. Introduced in 2024 in version 1.78.
+    /// back and forth correctly.
+    ///
+    /// * Introduced in 2024 in version 1.78.
     V4,
     /// Unstable. Will collect a certain amount of changes and then go.
     ///
