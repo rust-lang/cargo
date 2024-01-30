@@ -80,12 +80,14 @@ pub enum ResolveVersion {
     /// V3 by default staring in 1.53.
     #[default]
     V3,
+    /// SourceId URL serialization is aware of URL encoding. For example,
+    /// `?branch=foo bar` is now encoded as `?branch=foo+bar` and can be decoded
+    /// back and forth correctly. Introduced in 2024 in version 1.77.
+    V4,
     /// Unstable. Will collect a certain amount of changes and then go.
     ///
     /// Changes made:
-    ///
-    /// * SourceId URL serialization is aware of URL encoding.
-    V4,
+    V5,
 }
 
 impl ResolveVersion {
@@ -95,7 +97,7 @@ impl ResolveVersion {
     ///
     /// Update this when you're going to stabilize a new lockfile format.
     pub fn max_stable() -> ResolveVersion {
-        ResolveVersion::V3
+        ResolveVersion::V4
     }
 }
 

@@ -918,7 +918,7 @@ impl std::fmt::Display for GitSource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let git_ref = self.git_ref();
 
-        // TODO(-Znext-lockfile-bump): set it to true when stabilizing
+        // TODO(-Znext-lockfile-bump): set it to true when the default is
         // lockfile v4, because we want Source ID serialization to be
         // consistent with lockfile.
         if let Some(pretty_ref) = git_ref.pretty_ref(false) {
