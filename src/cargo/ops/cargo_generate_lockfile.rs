@@ -255,37 +255,35 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             (dep.name().as_str(), dep.source_id())
         }
 
-        // Removes all package IDs in `b` from `a`. Note that this is somewhat
-        // more complicated because the equality for source IDs does not take
-        // precise versions into account (e.g., git shas), but we want to take
-        // that into account here.
         fn vec_subtract(a: &[PackageId], b: &[PackageId]) -> Vec<PackageId> {
-            a.iter()
-                .filter(|a| {
-                    // If this package ID is not found in `b`, then it's definitely
-                    // in the subtracted set.
-                    let Ok(i) = b.binary_search(a) else {
-                        return true;
-                    };
+            a.iter().filter(|a| !contains_id(b, a)).cloned().collect()
+        }
 
-                    // If we've found `a` in `b`, then we iterate over all instances
-                    // (we know `b` is sorted) and see if they all have different
-                    // precise versions. If so, then `a` isn't actually in `b` so
-                    // we'll let it through.
-                    //
-                    // Note that we only check this for non-registry sources,
-                    // however, as registries contain enough version information in
-                    // the package ID to disambiguate.
-                    if a.source_id().is_registry() {
-                        return false;
-                    }
-                    b[i..]
-                        .iter()
-                        .take_while(|b| a == b)
-                        .all(|b| !a.source_id().has_same_precise_as(b.source_id()))
-                })
-                .cloned()
-                .collect()
+        // Check if a PackageId is present `b` from `a`.
+        //
+        // Note that this is somewhat more complicated because the equality for source IDs does not
+        // take precise versions into account (e.g., git shas), but we want to take that into
+        // account here.
+        fn contains_id(haystack: &[PackageId], needle: &PackageId) -> bool {
+            let Ok(i) = haystack.binary_search(needle) else {
+                return false;
+            };
+
+            // If we've found `a` in `b`, then we iterate over all instances
+            // (we know `b` is sorted) and see if they all have different
+            // precise versions. If so, then `a` isn't actually in `b` so
+            // we'll let it through.
+            //
+            // Note that we only check this for non-registry sources,
+            // however, as registries contain enough version information in
+            // the package ID to disambiguate.
+            if needle.source_id().is_registry() {
+                return true;
+            }
+            haystack[i..]
+                .iter()
+                .take_while(|b| &needle == b)
+                .any(|b| needle.source_id().has_same_precise_as(b.source_id()))
         }
 
         // Map `(package name, package source)` to `(removed versions, added versions)`.
