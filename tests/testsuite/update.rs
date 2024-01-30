@@ -1478,6 +1478,7 @@ fn precise_yanked_multiple_presence() {
 fn report_behind() {
     Package::new("breaking", "0.1.0").publish();
     Package::new("breaking", "0.2.0").publish();
+    Package::new("breaking", "0.2.1-alpha.0").publish();
     let p = project()
         .file(
             "Cargo.toml",
@@ -1499,7 +1500,7 @@ fn report_behind() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.0)
+[UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.1-alpha.0)
 ",
         )
         .run();
