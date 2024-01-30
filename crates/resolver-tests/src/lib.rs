@@ -175,7 +175,7 @@ pub fn resolve_with_config_raw(
         &[],
         &mut registry,
         &version_prefs,
-        ResolveVersion::default(),
+        ResolveVersion::with_rust_version(None),
         Some(config),
     );
 

@@ -51,7 +51,7 @@ pub struct Resolve {
 
 /// A version to indicate how a `Cargo.lock` should be serialized.
 ///
-/// When creating a new lockfile, the version with `#[default]` is used.
+/// When creating a new lockfile, the version in [`ResolveVersion::default`] is used.
 /// If an old version of lockfile already exists, it will stay as-is.
 ///
 /// It's important that if a new version is added that this is not updated
@@ -67,7 +67,7 @@ pub struct Resolve {
 ///
 /// It's theorized that we can add more here over time to track larger changes
 /// to the `Cargo.lock` format, but we've yet to see how that strategy pans out.
-#[derive(Default, PartialEq, Eq, Clone, Copy, Debug, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, PartialOrd, Ord)]
 pub enum ResolveVersion {
     /// Historical baseline for when this abstraction was added.
     V1,
@@ -81,7 +81,6 @@ pub enum ResolveVersion {
     /// `branch = "master"` are no longer encoded the same way as those without
     /// branch specifiers. Introduced in 2020 in version 1.47. New lockfiles use
     /// V3 by default staring in 1.53.
-    #[default]
     V3,
     /// SourceId URL serialization is aware of URL encoding. For example,
     /// `?branch=foo bar` is now encoded as `?branch=foo+bar` and can be decoded
@@ -94,6 +93,17 @@ pub enum ResolveVersion {
 }
 
 impl ResolveVersion {
+    /// Gets the default lockfile version.
+    ///
+    /// This is intended to be private.
+    /// You shall use [`ResolveVersion::with_rust_version`] always.
+    ///
+    /// Update this and the description of enum variants of [`ResolveVersion`]
+    /// when we're changing the default lockfile version.
+    fn default() -> ResolveVersion {
+        ResolveVersion::V3
+    }
+
     /// The maximum version of lockfile made into the stable channel.
     ///
     /// Any version larger than this needs `-Znext-lockfile-bump` to enable.
