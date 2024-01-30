@@ -1,8 +1,10 @@
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::{CliFeatures, HasDevUnits};
+use crate::core::Registry as _;
 use crate::core::{PackageId, PackageIdSpec, PackageIdSpecQuery};
 use crate::core::{Resolve, SourceId, Workspace};
 use crate::ops;
+use crate::sources::source::QueryKind;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::config::Config;
 use crate::util::style;
@@ -162,6 +164,35 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         opts.config.shell().status_with_color(status, msg, color)
     };
     for (removed, added) in compare_dependency_graphs(&previous_resolve, &resolve) {
+        let latest = if let Some(added) = added
+            .iter()
+            .rev()
+            .next()
+            .filter(|p| p.source_id().is_registry())
+        {
+            let query =
+                crate::core::dependency::Dependency::parse(added.name(), None, added.source_id())?;
+            let possibilities = loop {
+                match registry.query_vec(&query, QueryKind::Exact) {
+                    std::task::Poll::Ready(res) => {
+                        break res?;
+                    }
+                    std::task::Poll::Pending => registry.block_until_ready()?,
+                }
+            };
+            let warn = style::WARN;
+            possibilities
+                .iter()
+                .map(|s| s.as_summary())
+                .map(|s| s.version().clone())
+                .max()
+                .filter(|v| added.version() < v)
+                .map(|v| format!(" {warn}(latest: v{v}){warn:#}"))
+        } else {
+            None
+        }
+        .unwrap_or_default();
+
         if removed.len() == 1 && added.len() == 1 {
             let msg = if removed[0].source_id().is_git() {
                 format!(
@@ -170,7 +201,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                     &added[0].source_id().precise_git_fragment().unwrap()[..8],
                 )
             } else {
-                format!("{} -> v{}", removed[0], added[0].version())
+                format!("{} -> v{}{latest}", removed[0], added[0].version())
             };
 
             // If versions differ only in build metadata, we call it an "update"
@@ -184,10 +215,10 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             }
         } else {
             for package in removed.iter() {
-                print_change("Removing", format!("{}", package), &style::ERROR)?;
+                print_change("Removing", format!("{package}"), &style::ERROR)?;
             }
             for package in added.iter() {
-                print_change("Adding", format!("{}", package), &style::NOTE)?;
+                print_change("Adding", format!("{package}{latest}"), &style::NOTE)?;
             }
         }
     }

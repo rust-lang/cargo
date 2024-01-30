@@ -1499,7 +1499,7 @@ fn report_behind() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[UPDATING] breaking v0.1.0 -> v0.1.1
+[UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.0)
 ",
         )
         .run();
