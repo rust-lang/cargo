@@ -1473,3 +1473,34 @@ fn precise_yanked_multiple_presence() {
     let lockfile = p.read_lockfile();
     assert!(lockfile.contains("\nname = \"bar\"\nversion = \"0.1.1\""));
 }
+
+#[cargo_test]
+fn report_behind() {
+    Package::new("breaking", "0.1.0").publish();
+    Package::new("breaking", "0.2.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+
+                [dependencies]
+                breaking = "0.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+    Package::new("breaking", "0.1.1").publish();
+
+    p.cargo("update")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[UPDATING] breaking v0.1.0 -> v0.1.1
+",
+        )
+        .run();
+}
