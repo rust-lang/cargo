@@ -1496,11 +1496,42 @@ fn report_behind() {
     p.cargo("generate-lockfile").run();
     Package::new("breaking", "0.1.1").publish();
 
-    p.cargo("update")
+    p.cargo("update --dry-run")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
 [UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.0)
+[WARNING] not updating lockfile due to dry run
+",
+        )
+        .run();
+
+    p.cargo("update --dry-run --verbose")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.0)
+[WARNING] not updating lockfile due to dry run
+",
+        )
+        .run();
+
+    p.cargo("update").run();
+
+    p.cargo("update --dry-run")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[WARNING] not updating lockfile due to dry run
+",
+        )
+        .run();
+
+    p.cargo("update --dry-run --verbose")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[WARNING] not updating lockfile due to dry run
 ",
         )
         .run();
