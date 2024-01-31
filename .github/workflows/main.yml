@@ -139,6 +139,10 @@ jobs:
           os: macos-latest
           rust: nightly
           other: x86_64-apple-ios
+        - name: macOS aarch64 stable
+          os: macos-14
+          rust: stable
+          other: x86_64-apple-darwin
         - name: Windows x86_64 MSVC stable
           os: windows-latest
           rust: stable-msvc
