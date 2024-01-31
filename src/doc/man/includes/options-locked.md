@@ -18,8 +18,10 @@ proceed without the network if possible.
 Beware that this may result in different dependency resolution than online
 mode. Cargo will restrict itself to crates that are downloaded locally, even
 if there might be a newer version as indicated in the local copy of the index.
+{{#if (ne command "fetch")}}
 See the {{man "cargo-fetch" 1}} command to download dependencies before going
 offline.
+{{/if}}
 
 May also be specified with the `net.offline` [config value](../reference/config.html).
 {{/option}}
