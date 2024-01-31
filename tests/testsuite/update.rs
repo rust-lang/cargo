@@ -1536,3 +1536,48 @@ fn report_behind() {
         )
         .run();
 }
+
+#[cargo_test]
+fn update_with_missing_feature() {
+    // Attempting to update a package to a version with a missing feature
+    // should produce a warning.
+    Package::new("bar", "0.1.0").feature("feat1", &[]).publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = {version="0.1", features=["feat1"]}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("generate-lockfile").run();
+
+    // Publish an update that is missing the feature.
+    Package::new("bar", "0.1.1").publish();
+
+    p.cargo("update")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+",
+        )
+        .run();
+
+    // Publish a fixed version, should not warn.
+    Package::new("bar", "0.1.2").feature("feat1", &[]).publish();
+    p.cargo("update")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[UPDATING] bar v0.1.0 -> v0.1.2
+",
+        )
+        .run();
+}
