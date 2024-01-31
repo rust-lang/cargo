@@ -121,7 +121,7 @@ fn read_manifest_from_str(
                 .rfind('\n')
                 .map(|s| s + 1)
                 .unwrap_or(0);
-            let source_end = contents[span.end - 1..]
+            let source_end = contents[span.end.saturating_sub(1)..]
                 .find('\n')
                 .map(|s| s + span.end)
                 .unwrap_or(contents.len());
