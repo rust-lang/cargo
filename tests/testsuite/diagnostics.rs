@@ -21,9 +21,11 @@ edition = "2021"
         .with_stderr(
             "\
 error: invalid type: map, expected a sequence
---> Cargo.toml:1:1
- |
- |
+ --> Cargo.toml:6:3
+  |
+6 | [[bench.foo]]
+  |   ^^^^^
+  |
 ",
         )
         .run();
