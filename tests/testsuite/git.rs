@@ -1372,7 +1372,7 @@ fn dep_with_changed_submodule() {
     sleep_ms(1000);
     // Update the dependency and carry on!
     println!("update");
-    p.cargo("update -v")
+    p.cargo("update")
         .with_stderr("")
         .with_stderr(&format!(
             "[UPDATING] git repository `{}`\n\
