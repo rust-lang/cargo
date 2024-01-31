@@ -18,6 +18,13 @@ edition = "2021"
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr_contains("attempt to subtract with overflow")
+        .with_stderr(
+            "\
+error: invalid type: map, expected a sequence
+--> Cargo.toml:1:1
+ |
+ |
+",
+        )
         .run();
 }
