@@ -244,17 +244,20 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                         &anstyle::Style::new().bold(),
                     )?;
                 }
-            } else {
-                if !unchanged.is_empty() {
-                    unchanged_behind += 1;
-                }
             }
+            unchanged_behind += unchanged.len();
         }
     }
-    if 0 < unchanged_behind {
-        opts.config.shell().note(format!(
-            "Pass `--verbose` to see {unchanged_behind} unchanged dependencies behind latest"
-        ))?;
+    if opts.config.shell().verbosity() == Verbosity::Verbose {
+        opts.config.shell().note(
+            "To see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`",
+        )?;
+    } else {
+        if 0 < unchanged_behind {
+            opts.config.shell().note(format!(
+                "Pass `--verbose` to see {unchanged_behind} unchanged dependencies behind latest"
+            ))?;
+        }
     }
     if opts.dry_run {
         opts.config

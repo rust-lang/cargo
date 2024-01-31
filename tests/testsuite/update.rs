@@ -1520,6 +1520,7 @@ fn report_behind() {
 [UPDATING] `dummy-registry` index
 [UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.0)
 [UNCHANGED] pre v1.0.0-alpha.0 (latest: v1.0.0-alpha.1)
+[NOTE] To see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`
 [WARNING] not updating lockfile due to dry run
 ",
         )
@@ -1543,6 +1544,7 @@ fn report_behind() {
 [UPDATING] `dummy-registry` index
 [UNCHANGED] breaking v0.1.1 (latest: v0.2.0)
 [UNCHANGED] pre v1.0.0-alpha.0 (latest: v1.0.0-alpha.1)
+[NOTE] To see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`
 [WARNING] not updating lockfile due to dry run
 ",
         )
