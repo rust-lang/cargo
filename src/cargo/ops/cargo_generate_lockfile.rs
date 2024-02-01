@@ -170,6 +170,14 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             let warn = style::WARN;
             format!(" {warn}(latest: v{version}){warn:#}")
         }
+        fn is_latest(candidate: &semver::Version, current: &semver::Version) -> bool {
+            current < candidate
+                // Only match pre-release if major.minor.patch are the same
+                && (candidate.pre.is_empty()
+                    || (candidate.major == current.major
+                        && candidate.minor == current.minor
+                        && candidate.patch == current.patch))
+        }
 
         let highest_present = [added.iter().rev().next(), unchanged.iter().rev().next()]
             .into_iter()
@@ -194,17 +202,9 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             possibilities
                 .iter()
                 .map(|s| s.as_summary())
-                .filter(|s| {
-                    let s_version = s.version();
-                    s_version.pre.is_empty()
-                        // Only match pre-release if major.minor.patch are the same
-                        || (s_version.major == present_version.major
-                            && s_version.minor == present_version.minor
-                            && s_version.patch == present_version.patch)
-                })
+                .filter(|s| is_latest(s.version(), present_version))
                 .map(|s| s.version().clone())
                 .max()
-                .filter(|v| present.version() < v)
                 .map(format_latest)
         } else {
             None
