@@ -1480,6 +1480,8 @@ fn precise_yanked_multiple_presence() {
 
 #[cargo_test]
 fn report_behind() {
+    Package::new("two-ver", "0.1.0").publish();
+    Package::new("two-ver", "0.2.0").publish();
     Package::new("pre", "1.0.0-alpha.0").publish();
     Package::new("pre", "1.0.0-alpha.1").publish();
     Package::new("breaking", "0.1.0").publish();
@@ -1495,6 +1497,8 @@ fn report_behind() {
                 [dependencies]
                 breaking = "0.1"
                 pre = "=1.0.0-alpha.0"
+                two-ver = "0.2.0"
+                two-ver-one = { version = "0.1.0", package = "two-ver" }
             "#,
         )
         .file("src/lib.rs", "")
