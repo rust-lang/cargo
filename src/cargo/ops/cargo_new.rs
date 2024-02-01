@@ -784,8 +784,7 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
         array.push(registry);
         manifest["package"]["publish"] = toml_edit::value(array);
     }
-    let mut dep_table = toml_edit::Table::default();
-    dep_table.decor_mut().set_prefix("\n# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html\n\n");
+    let dep_table = toml_edit::Table::default();
     manifest["dependencies"] = toml_edit::Item::Table(dep_table);
 
     // Calculate what `[lib]` and `[[bin]]`s we need to append to `Cargo.toml`.
@@ -910,6 +909,10 @@ mod tests {
             &mut config.shell(),
         );
     }
+
+    config.shell().note(
+        "see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html",
+    )?;
 
     Ok(())
 }
