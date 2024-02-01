@@ -1502,6 +1502,7 @@ fn fix_shared_cross_workspace() {
     //     [FIXED] bar/src/../../foo/src/shared.rs (2 fixes)
     //     [FIXED] foo/src/shared.rs (2 fixes)
     p.cargo("fix --allow-no-vcs")
+        .env("__CARGO_FIX_YOLO", "1")
         .with_stderr_unordered(
             "\
 [CHECKING] foo v0.1.0 [..]
