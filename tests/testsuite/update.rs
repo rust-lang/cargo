@@ -388,6 +388,7 @@ fn update_precise() {
             "\
 [UPDATING] `[..]` index
 [DOWNGRADING] serde v0.2.1 -> v0.2.0
+[NOTE] Pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
         )
         .run();
@@ -1512,7 +1513,7 @@ fn report_behind() {
             "\
 [UPDATING] `dummy-registry` index
 [UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.0)
-[NOTE] Pass `--verbose` to see 1 unchanged dependencies behind latest
+[NOTE] Pass `--verbose` to see 2 unchanged dependencies behind latest
 [WARNING] not updating lockfile due to dry run
 ",
         )
@@ -1524,6 +1525,7 @@ fn report_behind() {
 [UPDATING] `dummy-registry` index
 [UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.0)
 [UNCHANGED] pre v1.0.0-alpha.0 (latest: v1.0.0-alpha.1)
+[UNCHANGED] two-ver v0.1.0 (latest: v0.2.0)
 [NOTE] To see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`
 [WARNING] not updating lockfile due to dry run
 ",
@@ -1536,7 +1538,7 @@ fn report_behind() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[NOTE] Pass `--verbose` to see 2 unchanged dependencies behind latest
+[NOTE] Pass `--verbose` to see 3 unchanged dependencies behind latest
 [WARNING] not updating lockfile due to dry run
 ",
         )
@@ -1548,6 +1550,7 @@ fn report_behind() {
 [UPDATING] `dummy-registry` index
 [UNCHANGED] breaking v0.1.1 (latest: v0.2.0)
 [UNCHANGED] pre v1.0.0-alpha.0 (latest: v1.0.0-alpha.1)
+[UNCHANGED] two-ver v0.1.0 (latest: v0.2.0)
 [NOTE] To see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`
 [WARNING] not updating lockfile due to dry run
 ",

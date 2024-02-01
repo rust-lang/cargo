@@ -178,42 +178,43 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                         && candidate.minor == current.minor
                         && candidate.patch == current.patch))
         }
-
-        let highest_present = [added.iter().rev().next(), unchanged.iter().rev().next()]
+        let possibilities = if let Some(query) = [added.iter(), unchanged.iter()]
             .into_iter()
             .flatten()
-            .max_by_key(|s| s.version());
-        let latest = if let Some(present) = highest_present.filter(|p| p.source_id().is_registry())
+            .next()
+            .filter(|s| s.source_id().is_registry())
         {
-            let query = crate::core::dependency::Dependency::parse(
-                present.name(),
-                None,
-                present.source_id(),
-            )?;
-            let possibilities = loop {
+            let query =
+                crate::core::dependency::Dependency::parse(query.name(), None, query.source_id())?;
+            loop {
                 match registry.query_vec(&query, QueryKind::Exact) {
                     std::task::Poll::Ready(res) => {
                         break res?;
                     }
                     std::task::Poll::Pending => registry.block_until_ready()?,
                 }
-            };
-            let present_version = present.version();
-            possibilities
-                .iter()
-                .map(|s| s.as_summary())
-                .filter(|s| is_latest(s.version(), present_version))
-                .map(|s| s.version().clone())
-                .max()
-                .map(format_latest)
+            }
         } else {
-            None
-        }
-        .unwrap_or_default();
+            vec![]
+        };
 
         if removed.len() == 1 && added.len() == 1 {
             let added = added.into_iter().next().unwrap();
             let removed = removed.into_iter().next().unwrap();
+
+            let latest = if !possibilities.is_empty() {
+                possibilities
+                    .iter()
+                    .map(|s| s.as_summary())
+                    .filter(|s| is_latest(s.version(), added.version()))
+                    .map(|s| s.version().clone())
+                    .max()
+                    .map(format_latest)
+            } else {
+                None
+            }
+            .unwrap_or_default();
+
             let msg = if removed.source_id().is_git() {
                 format!(
                     "{removed} -> #{}",
@@ -237,12 +238,38 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 print_change("Removing", format!("{package}"), &style::ERROR)?;
             }
             for package in added.iter() {
+                let latest = if !possibilities.is_empty() {
+                    possibilities
+                        .iter()
+                        .map(|s| s.as_summary())
+                        .filter(|s| is_latest(s.version(), package.version()))
+                        .map(|s| s.version().clone())
+                        .max()
+                        .map(format_latest)
+                } else {
+                    None
+                }
+                .unwrap_or_default();
+
                 print_change("Adding", format!("{package}{latest}"), &style::NOTE)?;
             }
         }
-        if !latest.is_empty() {
-            if opts.config.shell().verbosity() == Verbosity::Verbose {
-                for package in &unchanged {
+        for package in &unchanged {
+            let latest = if !possibilities.is_empty() {
+                possibilities
+                    .iter()
+                    .map(|s| s.as_summary())
+                    .filter(|s| is_latest(s.version(), package.version()))
+                    .map(|s| s.version().clone())
+                    .max()
+                    .map(format_latest)
+            } else {
+                None
+            };
+
+            if let Some(latest) = latest {
+                unchanged_behind += 1;
+                if opts.config.shell().verbosity() == Verbosity::Verbose {
                     opts.config.shell().status_with_color(
                         "Unchanged",
                         format!("{package}{latest}"),
@@ -250,7 +277,6 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                     )?;
                 }
             }
-            unchanged_behind += unchanged.len();
         }
     }
     if opts.config.shell().verbosity() == Verbosity::Verbose {
