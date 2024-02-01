@@ -1296,8 +1296,15 @@ fn check_cfg_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
         }
         arg_feature.push("))");
 
+        // We also include the `docsrs` cfg from the docs.rs service. We include it here
+        // (in Cargo) instead of rustc, since there is a much closer relationship between
+        // Cargo and docs.rs than rustc and docs.rs. In particular, all users of docs.rs use
+        // Cargo, but not all users of rustc (like Rust-for-Linux) use docs.rs.
+
         vec![
             OsString::from("-Zunstable-options"),
+            OsString::from("--check-cfg"),
+            OsString::from("cfg(docsrs)"),
             OsString::from("--check-cfg"),
             arg_feature,
         ]
