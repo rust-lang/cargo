@@ -212,21 +212,22 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         .unwrap_or_default();
 
         if removed.len() == 1 && added.len() == 1 {
-            let msg = if removed[0].source_id().is_git() {
+            let added = added.into_iter().next().unwrap();
+            let removed = removed.into_iter().next().unwrap();
+            let msg = if removed.source_id().is_git() {
                 format!(
-                    "{} -> #{}",
-                    removed[0],
-                    &added[0].source_id().precise_git_fragment().unwrap()[..8],
+                    "{removed} -> #{}",
+                    &added.source_id().precise_git_fragment().unwrap()[..8],
                 )
             } else {
-                format!("{} -> v{}{latest}", removed[0], added[0].version())
+                format!("{removed} -> v{}{latest}", added.version())
             };
 
             // If versions differ only in build metadata, we call it an "update"
             // regardless of whether the build metadata has gone up or down.
             // This metadata is often stuff like git commit hashes, which are
             // not meaningfully ordered.
-            if removed[0].version().cmp_precedence(added[0].version()) == Ordering::Greater {
+            if removed.version().cmp_precedence(added.version()) == Ordering::Greater {
                 print_change("Downgrading", msg, &style::WARN)?;
             } else {
                 print_change("Updating", msg, &style::GOOD)?;
