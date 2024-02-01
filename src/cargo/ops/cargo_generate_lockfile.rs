@@ -166,6 +166,11 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     };
     let mut unchanged_behind = 0;
     for (removed, added, unchanged) in compare_dependency_graphs(&previous_resolve, &resolve) {
+        fn format_latest(version: semver::Version) -> String {
+            let warn = style::WARN;
+            format!(" {warn}(latest: v{version}){warn:#}")
+        }
+
         let highest_present = [added.iter().rev().next(), unchanged.iter().rev().next()]
             .into_iter()
             .flatten()
@@ -185,7 +190,6 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                     std::task::Poll::Pending => registry.block_until_ready()?,
                 }
             };
-            let warn = style::WARN;
             let present_version = present.version();
             possibilities
                 .iter()
@@ -201,7 +205,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 .map(|s| s.version().clone())
                 .max()
                 .filter(|v| present.version() < v)
-                .map(|v| format!(" {warn}(latest: v{v}){warn:#}"))
+                .map(format_latest)
         } else {
             None
         }
