@@ -376,19 +376,6 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             }
         }
 
-        fn verbose_if_simple_exit_code(err: Error) -> Error {
-            // If a signal on unix (`code == None`) or an abnormal termination
-            // on Windows (codes like `0xC0000409`), don't hide the error details.
-            match err
-                .downcast_ref::<ProcessError>()
-                .as_ref()
-                .and_then(|perr| perr.code)
-            {
-                Some(n) if cargo_util::is_simple_exit_code(n) => VerboseError::new(err).into(),
-                _ => err,
-            }
-        }
-
         state.running(&rustc);
         let timestamp = paths::set_invocation_time(&fingerprint_dir)?;
         if build_plan {
@@ -507,6 +494,19 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             }
         }
         Ok(())
+    }
+}
+
+fn verbose_if_simple_exit_code(err: Error) -> Error {
+    // If a signal on unix (`code == None`) or an abnormal termination
+    // on Windows (codes like `0xC0000409`), don't hide the error details.
+    match err
+        .downcast_ref::<ProcessError>()
+        .as_ref()
+        .and_then(|perr| perr.code)
+    {
+        Some(n) if cargo_util::is_simple_exit_code(n) => VerboseError::new(err).into(),
+        _ => err,
     }
 }
 
@@ -862,6 +862,7 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
                 },
                 false,
             )
+            .map_err(verbose_if_simple_exit_code)
             .with_context(|| format!("could not document `{}`", name));
 
         if let Err(e) = result {
