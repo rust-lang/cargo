@@ -2640,3 +2640,24 @@ fn link_to_private_item() {
         )
         .run();
 }
+
+#[cargo_test]
+fn rustdoc_failure_hides_command_line_by_default() {
+    let p = project().file("src/lib.rs", "invalid rust code").build();
+
+    let string_to_test = "\
+Caused by:
+  process didn't exit successfully[..]rustdoc[..]";
+
+    // `cargo doc` doesn't print the full command line on failures by default
+    p.cargo("doc")
+        .with_stderr_does_not_contain(string_to_test)
+        .with_status(101)
+        .run();
+
+    // ... but it still does so if requested with `--verbose`.
+    p.cargo("doc --verbose")
+        .with_stderr_contains(string_to_test)
+        .with_status(101)
+        .run();
+}
