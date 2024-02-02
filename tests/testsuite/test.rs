@@ -4869,6 +4869,7 @@ error: 2 targets failed:
         .run();
 
     p.cargo("test --no-fail-fast -- --nocapture")
+    .env_remove("RUST_BACKTRACE")
     .with_stderr_does_not_contain("test exited abnormally; to see the full output pass --nocapture to the harness.")
     .with_stderr_contains("[..]thread 't' panicked [..] tests/t1[..]")
     .with_stderr_contains("note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace")
