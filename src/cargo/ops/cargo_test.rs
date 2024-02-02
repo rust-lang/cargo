@@ -1,4 +1,5 @@
 use crate::core::compiler::{Compilation, CompileKind, Doctest, Metadata, Unit, UnitOutput};
+use crate::core::profiles::PanicStrategy;
 use crate::core::shell::Verbosity;
 use crate::core::{TargetKind, Workspace};
 use crate::ops;
@@ -242,6 +243,10 @@ fn run_doc_tests(
                 joined.push(linker);
                 p.arg("-C").arg(joined);
             }
+        }
+
+        if unit.profile.panic != PanicStrategy::Unwind {
+            p.arg("-C").arg(format!("panic={}", unit.profile.panic));
         }
 
         for &rust_dep in &[
