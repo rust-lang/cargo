@@ -1,5 +1,63 @@
 # Changelog
 
+## Cargo 1.78 (2024-05-02)
+[7bb7b539...HEAD](https://github.com/rust-lang/cargo/compare/7bb7b539...HEAD)
+
+### Added
+
+- Stabilize lockfile format v4. Lockfile v3 is still the default version.
+  [#12852](https://github.com/rust-lang/cargo/pull/12852)
+
+### Changed
+
+- cargo-new: Print a 'Creating', rather than 'Created' status
+  [#13367](https://github.com/rust-lang/cargo/pull/13367)
+- cargo-new: Print a note, rather than a comment, for more information
+  [#13371](https://github.com/rust-lang/cargo/pull/13371)
+- Deprecate non-extension `.cargo/config` files.
+  [#13349](https://github.com/rust-lang/cargo/pull/13349)
+- Don't print rustdoc command lines on failure by default
+  [#13387](https://github.com/rust-lang/cargo/pull/13387)
+
+### Fixed
+
+- Don't panic on empty spans when parsing Cargo.toml.
+  [#13375](https://github.com/rust-lang/cargo/pull/13375)
+  [#13376](https://github.com/rust-lang/cargo/pull/13376)
+- cargo-run: use Package ID Spec match packages
+  [#13335](https://github.com/rust-lang/cargo/pull/13335)
+
+### Nightly only
+
+- 🔥 cargo-update: allows `--precise` to specify a yanked version of a package
+  [#13333](https://github.com/rust-lang/cargo/pull/13333)
+- `-Zcheck-cfg`: Add `docsrs` cfg as a well known `--check-cfg`
+  [#13383](https://github.com/rust-lang/cargo/pull/13383)
+- `-Zscript`: Improve errors related to cargo script
+  [#13346](https://github.com/rust-lang/cargo/pull/13346)
+- `-Zpanic-abort-tests`: applies to doctests too
+  [#13388](https://github.com/rust-lang/cargo/pull/13388)
+
+### Documentation
+
+- cargo-fetch: hide `cargo-fetch` recursive link in `--offline` man page.
+  [#13364](https://github.com/rust-lang/cargo/pull/13364)
+- cargo-install: `--list` option description starting with uppercase
+  [#13344](https://github.com/rust-lang/cargo/pull/13344)
+- Clarify the `version` field in `[package]` is optional in Cargo.toml
+  [#13390](https://github.com/rust-lang/cargo/pull/13390)
+- Improve "Registry Authentication" docs
+  [#13351](https://github.com/rust-lang/cargo/pull/13351)
+
+### Internal
+
+- ci: enable m1 runner
+  [#13377](https://github.com/rust-lang/cargo/pull/13377)
+- console: Use new fancy `anstyle` API
+  [#13368](https://github.com/rust-lang/cargo/pull/13368)
+- fingerprint: remove unnecessary Option in `Freshness::Dirty`
+  [#13361](https://github.com/rust-lang/cargo/pull/13361)
+
 ## Cargo 1.77 (2024-03-21)
 [1a2666dd...rust-1.77.0](https://github.com/rust-lang/cargo/compare/1a2666dd...rust-1.77.0)
 
