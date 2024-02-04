@@ -97,8 +97,6 @@
 
 ### Fixed
 
-- Accept `?` in the `--package` flag if it's a valid pkgid spec.
-  [#13315](https://github.com/rust-lang/cargo/pull/13315)
 - jobserver: inherit jobserver from env for all kinds of runner
   [#12776](https://github.com/rust-lang/cargo/pull/12776)
 - build script: Set `OUT_DIR` for all units with build scripts
@@ -187,8 +185,6 @@
   [#13267](https://github.com/rust-lang/cargo/pull/13267)
 - Updated to `gix` 0.57.1.
   [#13230](https://github.com/rust-lang/cargo/pull/13230)
-- Updated to `tracing` 0.1.37 for being be compatible with rustc_log.
-  [#13239](https://github.com/rust-lang/cargo/pull/13239)
 - cargo-fix: Remove error-format special-case in `cargo fix`
   [#13224](https://github.com/rust-lang/cargo/pull/13224)
 - cargo-credential: bump to 0.4.3
@@ -274,6 +270,9 @@
   [#12975](https://github.com/rust-lang/cargo/pull/12975)
 - Avoid writing CACHEDIR.TAG if it already exists.
   [#13132](https://github.com/rust-lang/cargo/pull/13132)
+- Accept `?` in the `--package` flag if it's a valid pkgid spec.
+  [#13315](https://github.com/rust-lang/cargo/pull/13315)
+  [#13318](https://github.com/rust-lang/cargo/pull/13318)
 - cargo-package: Only filter out `target` directory if it's in the package root.
   [#12944](https://github.com/rust-lang/cargo/pull/12944)
 - cargo-package: errors out when a build script doesn't exist or is outside the package root.
@@ -366,6 +365,9 @@
   [#13088](https://github.com/rust-lang/cargo/pull/13088)
 - Updated to `windows-sys` 0.52.0.
   [#13089](https://github.com/rust-lang/cargo/pull/13089)
+- Updated to `tracing` 0.1.37 for being be compatible with rustc_log.
+  [#13239](https://github.com/rust-lang/cargo/pull/13239)
+  [#13242](https://github.com/rust-lang/cargo/pull/13242)
 - Re-enable flaky gitoxide auth tests thanks to update to `gix-config`.
   [#13117](https://github.com/rust-lang/cargo/pull/13117)
   [#13129](https://github.com/rust-lang/cargo/pull/13129)
