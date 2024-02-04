@@ -96,8 +96,8 @@ tar = { version = "0.4.40", default-features = false }
 tempfile = "3.9.0"
 thiserror = "1.0.56"
 time = { version = "0.3", features = ["parsing", "formatting", "serde"] }
-toml = "0.8.8"
-toml_edit = { version = "0.21.0", features = ["serde"] }
+toml = "0.8.9"
+toml_edit = { version = "0.21.1", features = ["serde"] }
 tracing = "0.1.37" # be compatible with rustc_log: https://github.com/rust-lang/rust/blob/e51e98dde6a/compiler/rustc_log/Cargo.toml#L9
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 unicase = "2.7.0"
