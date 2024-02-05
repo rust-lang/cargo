@@ -165,7 +165,12 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         opts.config.shell().status_with_color(status, msg, color)
     };
     let mut unchanged_behind = 0;
-    for (removed, added, unchanged) in compare_dependency_graphs(&previous_resolve, &resolve) {
+    for ResolvedPackageVersions {
+        removed,
+        added,
+        unchanged,
+    } in compare_dependency_graphs(&previous_resolve, &resolve)
+    {
         fn format_latest(version: semver::Version) -> String {
             let warn = style::WARN;
             format!(" {warn}(latest: v{version}){warn:#}")
@@ -314,10 +319,16 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         }
     }
 
+    #[derive(Default, Clone, Debug)]
+    struct ResolvedPackageVersions {
+        removed: Vec<PackageId>,
+        added: Vec<PackageId>,
+        unchanged: Vec<PackageId>,
+    }
     fn compare_dependency_graphs(
         previous_resolve: &Resolve,
         resolve: &Resolve,
-    ) -> Vec<(Vec<PackageId>, Vec<PackageId>, Vec<PackageId>)> {
+    ) -> Vec<ResolvedPackageVersions> {
         fn key(dep: PackageId) -> (&'static str, SourceId) {
             (dep.name().as_str(), dep.source_id())
         }
@@ -359,24 +370,28 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
 
         // Map `(package name, package source)` to `(removed versions, added versions)`.
         let mut changes = BTreeMap::new();
-        let empty = (Vec::new(), Vec::new(), Vec::new());
+        let empty = ResolvedPackageVersions::default();
         for dep in previous_resolve.iter() {
             changes
                 .entry(key(dep))
                 .or_insert_with(|| empty.clone())
-                .0
+                .removed
                 .push(dep);
         }
         for dep in resolve.iter() {
             changes
                 .entry(key(dep))
                 .or_insert_with(|| empty.clone())
-                .1
+                .added
                 .push(dep);
         }
 
         for v in changes.values_mut() {
-            let (ref mut old, ref mut new, ref mut other) = *v;
+            let ResolvedPackageVersions {
+                removed: ref mut old,
+                added: ref mut new,
+                unchanged: ref mut other,
+            } = *v;
             old.sort();
             new.sort();
             let removed = vec_subset(old, new);
