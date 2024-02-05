@@ -399,6 +399,7 @@ pub use dirty_reason::DirtyReason;
 /// transitively propagate throughout the dependency graph, it only forces this
 /// one unit which is very unlikely to be what you want unless you're
 /// exclusively talking about top-level units.
+#[tracing::instrument(skip(build_runner, unit))]
 pub fn prepare_target(
     build_runner: &mut BuildRunner<'_, '_>,
     unit: &Unit,

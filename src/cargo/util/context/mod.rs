@@ -1945,6 +1945,7 @@ impl GlobalContext {
     /// Locks are usually acquired via [`GlobalContext::acquire_package_cache_lock`]
     /// or [`GlobalContext::try_acquire_package_cache_lock`].
     #[track_caller]
+    #[tracing::instrument(skip_all)]
     pub fn assert_package_cache_locked<'a>(
         &self,
         mode: CacheLockMode,
@@ -1965,6 +1966,7 @@ impl GlobalContext {
     ///
     /// See [`crate::util::cache_lock`] for an in-depth discussion of locking
     /// and lock modes.
+    #[tracing::instrument(skip_all)]
     pub fn acquire_package_cache_lock(&self, mode: CacheLockMode) -> CargoResult<CacheLock<'_>> {
         self.package_cache_lock.lock(self, mode)
     }
@@ -1974,6 +1976,7 @@ impl GlobalContext {
     ///
     /// See [`crate::util::cache_lock`] for an in-depth discussion of locking
     /// and lock modes.
+    #[tracing::instrument(skip_all)]
     pub fn try_acquire_package_cache_lock(
         &self,
         mode: CacheLockMode,

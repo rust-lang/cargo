@@ -194,6 +194,7 @@ impl LinkArgTarget {
 }
 
 /// Prepares a `Work` that executes the target as a custom build script.
+#[tracing::instrument(skip_all)]
 pub fn prepare(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     let _p = profile::start(format!(
         "build script prepare: {}/{}",

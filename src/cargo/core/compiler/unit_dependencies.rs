@@ -81,6 +81,7 @@ impl IsArtifact {
 /// Then entry point for building a dependency graph of compilation units.
 ///
 /// You can find some information for arguments from doc of [`State`].
+#[tracing::instrument(skip_all)]
 pub fn build_unit_dependencies<'a, 'gctx>(
     ws: &'a Workspace<'gctx>,
     package_set: &'a PackageSet<'gctx>,

@@ -467,6 +467,7 @@ impl<'gctx> JobQueue<'gctx> {
     /// This function will spawn off `config.jobs()` workers to build all of the
     /// necessary dependencies, in order. Freshness is propagated as far as
     /// possible along each dependency chain.
+    #[tracing::instrument(skip_all)]
     pub fn execute(
         mut self,
         build_runner: &mut BuildRunner<'_, '_>,

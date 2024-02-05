@@ -6,6 +6,7 @@ use crate::util::Filesystem;
 
 use anyhow::Context as _;
 
+#[tracing::instrument(skip_all)]
 pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
     let lock_root = lock_root(ws);
     if !lock_root.as_path_unlocked().join("Cargo.lock").exists() {
@@ -32,6 +33,7 @@ pub fn resolve_to_string(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoResu
     Ok(out)
 }
 
+#[tracing::instrument(skip_all)]
 pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoResult<()> {
     let (orig, mut out, lock_root) = resolve_to_string_orig(ws, resolve);
 

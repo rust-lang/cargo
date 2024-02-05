@@ -287,6 +287,7 @@ fn search_directories(gctx: &GlobalContext) -> Vec<PathBuf> {
 }
 
 /// Initialize libgit2.
+#[tracing::instrument(skip_all)]
 fn init_git(gctx: &GlobalContext) {
     // Disabling the owner validation in git can, in theory, lead to code execution
     // vulnerabilities. However, libgit2 does not launch executables, which is the foundation of
@@ -318,6 +319,7 @@ fn init_git(gctx: &GlobalContext) {
 /// If the user has a non-default network configuration, then libgit2 will be
 /// configured to use libcurl instead of the built-in networking support so
 /// that those configuration settings can be used.
+#[tracing::instrument(skip_all)]
 fn init_git_transports(gctx: &GlobalContext) {
     match needs_custom_http_transport(gctx) {
         Ok(true) => {}

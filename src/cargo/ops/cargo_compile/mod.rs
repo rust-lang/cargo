@@ -142,6 +142,7 @@ pub fn compile_with_exec<'a>(
 }
 
 /// Like [`compile_with_exec`] but without warnings from manifest parsing.
+#[tracing::instrument(skip_all)]
 pub fn compile_ws<'a>(
     ws: &Workspace<'a>,
     options: &CompileOptions,
@@ -197,6 +198,7 @@ pub fn print<'a>(
 ///
 /// For how it works and what data it collects,
 /// please see the [module-level documentation](self).
+#[tracing::instrument(skip_all)]
 pub fn create_bcx<'a, 'gctx>(
     ws: &'a Workspace<'gctx>,
     options: &'a CompileOptions,

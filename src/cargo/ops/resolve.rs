@@ -234,6 +234,7 @@ pub fn resolve_ws_with_opts<'gctx>(
     })
 }
 
+#[tracing::instrument(skip_all)]
 fn resolve_with_registry<'gctx>(
     ws: &Workspace<'gctx>,
     registry: &mut PackageRegistry<'gctx>,
@@ -271,6 +272,7 @@ fn resolve_with_registry<'gctx>(
 ///
 /// If `register_patches` is true, then entries from the `[patch]` table in
 /// the manifest will be added to the given `PackageRegistry`.
+#[tracing::instrument(skip_all)]
 pub fn resolve_with_previous<'gctx>(
     registry: &mut PackageRegistry<'gctx>,
     ws: &Workspace<'gctx>,
@@ -529,6 +531,7 @@ pub fn resolve_with_previous<'gctx>(
 
 /// Read the `paths` configuration variable to discover all path overrides that
 /// have been configured.
+#[tracing::instrument(skip_all)]
 pub fn add_overrides<'a>(
     registry: &mut PackageRegistry<'a>,
     ws: &Workspace<'a>,
