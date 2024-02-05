@@ -21,9 +21,6 @@
 
 ### Fixed
 
-- Don't panic on empty spans when parsing Cargo.toml.
-  [#13375](https://github.com/rust-lang/cargo/pull/13375)
-  [#13376](https://github.com/rust-lang/cargo/pull/13376)
 - cargo-run: use Package ID Spec match packages
   [#13335](https://github.com/rust-lang/cargo/pull/13335)
 
@@ -80,9 +77,8 @@
 
 ### Changed
 
-- 🎉 Cargo now implicitly sets `strip = "debuginfo"` when `strip` is not set
-  explicitly, and debuginfo is not enabled for any package being compiled.
-  This would strip pre-existing debuginfo coming from the standard library,
+- 🎉 Disabling debuginfo now implies `strip = "debuginfo"` (when `strip` is not set)
+  to strip pre-existing debuginfo coming from the standard library,
   reducing the default size of release binaries considerably
   (from ~4.5 MiB down to ~450 KiB for helloworld on Linux x64).
   [#13257](https://github.com/rust-lang/cargo/pull/13257)
