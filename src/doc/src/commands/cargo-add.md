@@ -7,7 +7,7 @@ cargo-add --- Add dependencies to a Cargo.toml manifest file
 
 `cargo add` [_options_] _crate_...\
 `cargo add` [_options_] `--path` _path_\
-`cargo add` [_options_] `--git` _url_ [_crate_...]\
+`cargo add` [_options_] `--git` _url_ [_crate_...]
 
 
 ## DESCRIPTION
