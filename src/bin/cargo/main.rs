@@ -18,7 +18,7 @@ mod commands;
 use crate::command_prelude::*;
 
 fn main() {
-    setup_logger();
+    let _guard = setup_logger();
 
     let mut gctx = match GlobalContext::default() {
         Ok(gctx) => gctx,
@@ -41,16 +41,43 @@ fn main() {
     }
 }
 
-fn setup_logger() {
-    let env = tracing_subscriber::EnvFilter::from_env("CARGO_LOG");
+fn setup_logger() -> Option<tracing_chrome::FlushGuard> {
+    #![allow(clippy::disallowed_methods)]
 
-    tracing_subscriber::fmt()
+    use tracing_subscriber::prelude::*;
+
+    let env = tracing_subscriber::EnvFilter::from_env("CARGO_LOG");
+    let fmt_layer = tracing_subscriber::fmt::layer()
         .with_timer(tracing_subscriber::fmt::time::Uptime::default())
         .with_ansi(std::io::IsTerminal::is_terminal(&std::io::stderr()))
         .with_writer(std::io::stderr)
-        .with_env_filter(env)
-        .init();
+        .with_filter(env);
+
+    let (profile_layer, profile_guard) =
+        if env_to_bool(std::env::var_os("__CARGO_LOG_PROFILE").as_deref()) {
+            let capture_args =
+                env_to_bool(std::env::var_os("__CARGO_LOG_PROFILE_CAPTURE_ARGS").as_deref());
+            let (layer, guard) = tracing_chrome::ChromeLayerBuilder::new()
+                .include_args(capture_args)
+                .build();
+            (Some(layer), Some(guard))
+        } else {
+            (None, None)
+        };
+
+    let registry = tracing_subscriber::registry()
+        .with(fmt_layer)
+        .with(profile_layer);
+    registry.init();
     tracing::trace!(start = humantime::format_rfc3339(std::time::SystemTime::now()).to_string());
+    profile_guard
+}
+
+fn env_to_bool(os: Option<&OsStr>) -> bool {
+    match os.and_then(|os| os.to_str()) {
+        Some("1") | Some("true") => true,
+        _ => false,
+    }
 }
 
 /// Table for defining the aliases which come builtin in `Cargo`.
