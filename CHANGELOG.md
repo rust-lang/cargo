@@ -21,9 +21,6 @@
 
 ### Fixed
 
-- Don't panic on empty spans when parsing Cargo.toml.
-  [#13375](https://github.com/rust-lang/cargo/pull/13375)
-  [#13376](https://github.com/rust-lang/cargo/pull/13376)
 - cargo-run: use Package ID Spec match packages
   [#13335](https://github.com/rust-lang/cargo/pull/13335)
 
