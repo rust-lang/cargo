@@ -2430,6 +2430,7 @@ fn can_update_with_alt_reg() {
             "\
 [UPDATING] `alternative` index
 [UPDATING] `dummy-registry` index
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
         )
         .run();

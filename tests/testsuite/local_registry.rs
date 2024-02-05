@@ -183,7 +183,7 @@ fn multiple_versions() {
         .file("src/lib.rs", "pub fn bar() {}")
         .publish();
 
-    p.cargo("update -v")
+    p.cargo("update")
         .with_stderr("[UPDATING] bar v0.1.0 -> v0.2.0")
         .run();
 }

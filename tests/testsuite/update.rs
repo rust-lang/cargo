@@ -109,6 +109,7 @@ fn transitive_minor_update() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[NOTE] pass `--verbose` to see 2 unchanged dependencies behind latest
 ",
         )
         .run();
@@ -160,6 +161,7 @@ fn conservative() {
             "\
 [UPDATING] `[..]` index
 [UPDATING] serde v0.1.0 -> v0.1.1
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
         )
         .run();
@@ -386,6 +388,7 @@ fn update_precise() {
             "\
 [UPDATING] `[..]` index
 [DOWNGRADING] serde v0.2.1 -> v0.2.0
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
         )
         .run();
@@ -520,6 +523,7 @@ fn update_precise_do_not_force_update_deps() {
             "\
 [UPDATING] `[..]` index
 [UPDATING] serde v0.2.1 -> v0.2.2
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
         )
         .run();
@@ -898,6 +902,7 @@ fn dry_run_update() {
             "\
 [UPDATING] `[..]` index
 [UPDATING] serde v0.1.0 -> v0.1.1
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 [WARNING] not updating lockfile due to dry run
 ",
         )
@@ -1472,4 +1477,129 @@ fn precise_yanked_multiple_presence() {
     // Use yanked version.
     let lockfile = p.read_lockfile();
     assert!(lockfile.contains("\nname = \"bar\"\nversion = \"0.1.1\""));
+}
+
+#[cargo_test]
+fn report_behind() {
+    Package::new("two-ver", "0.1.0").publish();
+    Package::new("two-ver", "0.2.0").publish();
+    Package::new("pre", "1.0.0-alpha.0").publish();
+    Package::new("pre", "1.0.0-alpha.1").publish();
+    Package::new("breaking", "0.1.0").publish();
+    Package::new("breaking", "0.2.0").publish();
+    Package::new("breaking", "0.2.1-alpha.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+
+                [dependencies]
+                breaking = "0.1"
+                pre = "=1.0.0-alpha.0"
+                two-ver = "0.2.0"
+                two-ver-one = { version = "0.1.0", package = "two-ver" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+    Package::new("breaking", "0.1.1").publish();
+
+    p.cargo("update --dry-run")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.0)
+[NOTE] pass `--verbose` to see 2 unchanged dependencies behind latest
+[WARNING] not updating lockfile due to dry run
+",
+        )
+        .run();
+
+    p.cargo("update --dry-run --verbose")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.0)
+[UNCHANGED] pre v1.0.0-alpha.0 (latest: v1.0.0-alpha.1)
+[UNCHANGED] two-ver v0.1.0 (latest: v0.2.0)
+[NOTE] to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`
+[WARNING] not updating lockfile due to dry run
+",
+        )
+        .run();
+
+    p.cargo("update").run();
+
+    p.cargo("update --dry-run")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[NOTE] pass `--verbose` to see 3 unchanged dependencies behind latest
+[WARNING] not updating lockfile due to dry run
+",
+        )
+        .run();
+
+    p.cargo("update --dry-run --verbose")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[UNCHANGED] breaking v0.1.1 (latest: v0.2.0)
+[UNCHANGED] pre v1.0.0-alpha.0 (latest: v1.0.0-alpha.1)
+[UNCHANGED] two-ver v0.1.0 (latest: v0.2.0)
+[NOTE] to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`
+[WARNING] not updating lockfile due to dry run
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn update_with_missing_feature() {
+    // Attempting to update a package to a version with a missing feature
+    // should produce a warning.
+    Package::new("bar", "0.1.0").feature("feat1", &[]).publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = {version="0.1", features=["feat1"]}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("generate-lockfile").run();
+
+    // Publish an update that is missing the feature.
+    Package::new("bar", "0.1.1").publish();
+
+    p.cargo("update")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
+",
+        )
+        .run();
+
+    // Publish a fixed version, should not warn.
+    Package::new("bar", "0.1.2").feature("feat1", &[]).publish();
+    p.cargo("update")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[UPDATING] bar v0.1.0 -> v0.1.2
+",
+        )
+        .run();
 }

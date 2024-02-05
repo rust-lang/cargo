@@ -1572,6 +1572,7 @@ fn update_multiple_packages() {
 [UPDATING] `[..]` index
 [UPDATING] a v0.1.0 -> v0.1.1
 [UPDATING] b v0.1.0 -> v0.1.1
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
         )
         .run();
