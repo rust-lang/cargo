@@ -539,7 +539,7 @@ fn override_adds_some_deps() {
             "\
 [UPDATING] git repository `file://[..]`
 [UPDATING] `dummy-registry` index
-[NOTE] Pass `--verbose` to see 1 unchanged dependencies behind latest
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
         )
         .run();
@@ -547,7 +547,7 @@ fn override_adds_some_deps() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[NOTE] Pass `--verbose` to see 1 unchanged dependencies behind latest
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
         )
         .run();

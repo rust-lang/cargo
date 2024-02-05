@@ -281,12 +281,12 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     }
     if opts.config.shell().verbosity() == Verbosity::Verbose {
         opts.config.shell().note(
-            "To see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`",
+            "to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`",
         )?;
     } else {
         if 0 < unchanged_behind {
             opts.config.shell().note(format!(
-                "Pass `--verbose` to see {unchanged_behind} unchanged dependencies behind latest"
+                "pass `--verbose` to see {unchanged_behind} unchanged dependencies behind latest"
             ))?;
         }
     }
