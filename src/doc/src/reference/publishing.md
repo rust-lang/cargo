@@ -50,7 +50,6 @@ you have filled out the following fields:
 - [`license` or `license-file`]
 - [`description`]
 - [`homepage`]
-- [`documentation`]
 - [`repository`]
 - [`readme`]
 
