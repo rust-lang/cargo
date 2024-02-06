@@ -1,0 +1,7 @@
+[workspace]
+members = ["bar"]
+
+[package]
+name = "foo"
+version = "0.1.0"
+edition = "2021"
