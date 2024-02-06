@@ -20,7 +20,7 @@ use crate::core::{Dependency, PackageId, PackageIdSpec, SourceId, Summary};
 use crate::core::{Edition, Feature, Features, WorkspaceConfig};
 use crate::util::errors::*;
 use crate::util::interning::InternedString;
-use crate::util::{short_hash, Config, Filesystem};
+use crate::util::{short_hash, Filesystem, GlobalContext};
 
 pub enum EitherManifest {
     Real(Manifest),
@@ -559,10 +559,10 @@ impl Manifest {
     }
 
     // Just a helper function to test out `-Z` flags on Cargo
-    pub fn print_teapot(&self, config: &Config) {
+    pub fn print_teapot(&self, gctx: &GlobalContext) {
         if let Some(teapot) = self.im_a_teapot {
-            if config.cli_unstable().print_im_a_teapot {
-                crate::drop_println!(config, "im-a-teapot = {}", teapot);
+            if gctx.cli_unstable().print_im_a_teapot {
+                crate::drop_println!(gctx, "im-a-teapot = {}", teapot);
             }
         }
     }

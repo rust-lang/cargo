@@ -47,8 +47,8 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let ws = args.workspace(config)?;
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(gctx)?;
 
     if args.is_present_with_zero_values("package") {
         print_available_packages(&ws)?;
@@ -76,7 +76,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         to_update,
         dry_run: args.dry_run(),
         workspace: args.flag("workspace"),
-        config,
+        gctx,
     };
     ops::update_lockfile(&ws, &update_opts)?;
     Ok(())

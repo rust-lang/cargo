@@ -3,7 +3,7 @@
 use cargo::core::resolver::ResolveError;
 use cargo::core::{compiler::CompileMode, Shell, Workspace};
 use cargo::ops::{self, CompileOptions};
-use cargo::util::{config::Config, errors::ManifestError};
+use cargo::util::{config::GlobalContext, errors::ManifestError};
 
 use cargo_test_support::install::cargo_home;
 use cargo_test_support::project;
@@ -100,7 +100,8 @@ fn member_manifest_path_io_error() {
     let member_manifest_path = p.root().join("bar").join("Cargo.toml");
     let missing_manifest_path = p.root().join("bar").join("nosuch").join("Cargo.toml");
 
-    let error = Workspace::new(&root_manifest_path, &Config::default().unwrap()).unwrap_err();
+    let error =
+        Workspace::new(&root_manifest_path, &GlobalContext::default().unwrap()).unwrap_err();
     eprintln!("{:?}", error);
 
     let manifest_err: &ManifestError = error.downcast_ref().expect("Not a ManifestError");
@@ -148,13 +149,13 @@ fn member_manifest_version_error() {
 
     // Prevent this test from accessing the network by setting up .cargo/config.
     registry::init();
-    let config = Config::new(
+    let gctx = GlobalContext::new(
         Shell::from_write(Box::new(Vec::new())),
         cargo_home(),
         cargo_home(),
     );
-    let ws = Workspace::new(&p.root().join("Cargo.toml"), &config).unwrap();
-    let compile_options = CompileOptions::new(&config, CompileMode::Build).unwrap();
+    let ws = Workspace::new(&p.root().join("Cargo.toml"), &gctx).unwrap();
+    let compile_options = CompileOptions::new(&gctx, CompileMode::Build).unwrap();
     let member_bar = ws.members().find(|m| &*m.name() == "bar").unwrap();
 
     let error = ops::compile(&ws, &compile_options).map(|_| ()).unwrap_err();

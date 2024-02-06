@@ -36,13 +36,13 @@ use crate::util::config::JobsConfig;
 use crate::util::Progress;
 use crate::util::ProgressStyle;
 use crate::CargoResult;
-use crate::Config;
+use crate::GlobalContext;
 
 use super::super::check_dep_has_version;
 use super::RegistryOrIndex;
 
-pub struct PublishOpts<'cfg> {
-    pub config: &'cfg Config,
+pub struct PublishOpts<'gctx> {
+    pub gctx: &'gctx GlobalContext,
     pub token: Option<Secret<String>>,
     pub reg_or_index: Option<RegistryOrIndex>,
     pub verify: bool,
@@ -90,7 +90,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             if default_registry != CRATES_IO_REGISTRY {
                 // Don't change the registry for crates.io and don't warn the user.
                 // crates.io will be defaulted even without this.
-                opts.config.shell().note(&format!(
+                opts.gctx.shell().note(&format!(
                     "found `{}` as only allowed registry. Publishing to it automatically.",
                     default_registry
                 ))?;
@@ -128,7 +128,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         val => val,
     };
     let (mut registry, reg_ids) = super::registry(
-        opts.config,
+        opts.gctx,
         opts.token.as_ref().map(Secret::as_deref),
         reg_or_index.as_ref(),
         true,
@@ -142,7 +142,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         ws,
         pkg,
         &PackageOpts {
-            config: opts.config,
+            gctx: opts.gctx,
             verify: opts.verify,
             list: false,
             check_metadata: true,
@@ -166,7 +166,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             cksum: &hash,
         };
         registry.set_token(Some(auth::auth_token(
-            &opts.config,
+            &opts.gctx,
             &reg_ids.original,
             None,
             operation,
@@ -175,11 +175,11 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         )?));
     }
 
-    opts.config
+    opts.gctx
         .shell()
         .status("Uploading", pkg.package_id().to_string())?;
     transmit(
-        opts.config,
+        opts.gctx,
         pkg,
         tarball.file(),
         &mut registry,
@@ -188,15 +188,15 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     )?;
     if !opts.dry_run {
         const DEFAULT_TIMEOUT: u64 = 60;
-        let timeout = if opts.config.cli_unstable().publish_timeout {
-            let timeout: Option<u64> = opts.config.get("publish.timeout")?;
+        let timeout = if opts.gctx.cli_unstable().publish_timeout {
+            let timeout: Option<u64> = opts.gctx.get("publish.timeout")?;
             timeout.unwrap_or(DEFAULT_TIMEOUT)
         } else {
             DEFAULT_TIMEOUT
         };
         if 0 < timeout {
             let timeout = Duration::from_secs(timeout);
-            wait_for_publish(opts.config, reg_ids.original, pkg, timeout)?;
+            wait_for_publish(opts.gctx, reg_ids.original, pkg, timeout)?;
         }
     }
 
@@ -204,13 +204,13 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
 }
 
 fn wait_for_publish(
-    config: &Config,
+    gctx: &GlobalContext,
     registry_src: SourceId,
     pkg: &Package,
     timeout: Duration,
 ) -> CargoResult<()> {
     let version_req = format!("={}", pkg.version());
-    let mut source = SourceConfigMap::empty(config)?.load(registry_src, &HashSet::new())?;
+    let mut source = SourceConfigMap::empty(gctx)?.load(registry_src, &HashSet::new())?;
     // Disable the source's built-in progress bars. Repeatedly showing a bunch
     // of independent progress bars can be a little confusing. There is an
     // overall progress bar managed here.
@@ -223,27 +223,25 @@ fn wait_for_publish(
     let max = timeout.as_secs() as usize;
     // Short does not include the registry name.
     let short_pkg_description = format!("{} v{}", pkg.name(), pkg.version());
-    config.shell().status(
+    gctx.shell().status(
         "Uploaded",
         format!("{short_pkg_description} to {source_description}"),
     )?;
-    config.shell().note(format!(
+    gctx.shell().note(format!(
         "waiting for `{short_pkg_description}` to be available at {source_description}.\n\
         You may press ctrl-c to skip waiting; the crate should be available shortly."
     ))?;
-    let mut progress = Progress::with_style("Waiting", ProgressStyle::Ratio, config);
+    let mut progress = Progress::with_style("Waiting", ProgressStyle::Ratio, gctx);
     progress.tick_now(0, max, "")?;
     let is_available = loop {
         {
-            let _lock = config.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
+            let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
             // Force re-fetching the source
             //
             // As pulling from a git source is expensive, we track when we've done it within the
             // process to only do it once, but we are one of the rare cases that needs to do it
             // multiple times
-            config
-                .updated_sources()
-                .remove(&source.replaced_source_id());
+            gctx.updated_sources().remove(&source.replaced_source_id());
             source.invalidate_cache();
             let summaries = loop {
                 // Exact to avoid returning all for path/git
@@ -261,10 +259,10 @@ fn wait_for_publish(
 
         let elapsed = now.elapsed();
         if timeout < elapsed {
-            config.shell().warn(format!(
+            gctx.shell().warn(format!(
                 "timed out waiting for `{short_pkg_description}` to be available in {source_description}",
             ))?;
-            config.shell().note(
+            gctx.shell().note(
                 "the registry may have a backlog that is delaying making the \
                 crate available. The crate should be available soon.",
             )?;
@@ -275,7 +273,7 @@ fn wait_for_publish(
         std::thread::sleep(sleep_time);
     };
     if is_available {
-        config.shell().status(
+        gctx.shell().status(
             "Published",
             format!("{short_pkg_description} at {source_description}"),
         )?;
@@ -320,7 +318,7 @@ fn verify_dependencies(
 }
 
 fn transmit(
-    config: &Config,
+    gctx: &GlobalContext,
     pkg: &Package,
     tarball: &File,
     registry: &mut Registry,
@@ -339,7 +337,7 @@ fn transmit(
             // registry in the dependency.
             let dep_registry_id = match dep.registry_id() {
                 Some(id) => id,
-                None => SourceId::crates_io(config)?,
+                None => SourceId::crates_io(gctx)?,
             };
             // In the index and Web API, None means "from the same registry"
             // whereas in Cargo.toml, it means "from crates.io".
@@ -410,7 +408,7 @@ fn transmit(
 
     // Do not upload if performing a dry run
     if dry_run {
-        config.shell().warn("aborting upload due to dry run")?;
+        gctx.shell().warn("aborting upload due to dry run")?;
         return Ok(());
     }
 
@@ -461,7 +459,7 @@ fn transmit(
              ",
             warnings.invalid_categories.join(", ")
         );
-        config.shell().warn(&msg)?;
+        gctx.shell().warn(&msg)?;
     }
 
     if !warnings.invalid_badges.is_empty() {
@@ -473,12 +471,12 @@ fn transmit(
              for valid badge types and their required attributes.",
             warnings.invalid_badges.join(", ")
         );
-        config.shell().warn(&msg)?;
+        gctx.shell().warn(&msg)?;
     }
 
     if !warnings.other.is_empty() {
         for msg in warnings.other {
-            config.shell().warn(&msg)?;
+            gctx.shell().warn(&msg)?;
         }
     }
 

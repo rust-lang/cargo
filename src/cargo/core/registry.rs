@@ -10,7 +10,7 @@ use crate::sources::source::SourceMap;
 use crate::sources::IndexSummary;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{CanonicalUrl, Config};
+use crate::util::{CanonicalUrl, GlobalContext};
 use anyhow::{bail, Context as _};
 use tracing::{debug, trace};
 use url::Url;
@@ -56,9 +56,9 @@ pub trait Registry {
 /// `SourceMap` structure, contained within which is a mapping of a `SourceId` to
 /// a `Source`. Each `Source` in the map has been updated (using network
 /// operations if necessary) and is ready to be queried for packages.
-pub struct PackageRegistry<'cfg> {
-    config: &'cfg Config,
-    sources: SourceMap<'cfg>,
+pub struct PackageRegistry<'gctx> {
+    gctx: &'gctx GlobalContext,
+    sources: SourceMap<'gctx>,
 
     // A list of sources which are considered "overrides" which take precedent
     // when querying for packages.
@@ -83,7 +83,7 @@ pub struct PackageRegistry<'cfg> {
 
     locked: LockedMap,
     yanked_whitelist: HashSet<PackageId>,
-    source_config: SourceConfigMap<'cfg>,
+    source_config: SourceConfigMap<'gctx>,
 
     patches: HashMap<CanonicalUrl, Vec<Summary>>,
     patches_locked: bool,
@@ -132,11 +132,11 @@ pub struct LockedPatchDependency {
     pub alt_package_id: Option<PackageId>,
 }
 
-impl<'cfg> PackageRegistry<'cfg> {
-    pub fn new(config: &'cfg Config) -> CargoResult<PackageRegistry<'cfg>> {
-        let source_config = SourceConfigMap::new(config)?;
+impl<'gctx> PackageRegistry<'gctx> {
+    pub fn new(gctx: &'gctx GlobalContext) -> CargoResult<PackageRegistry<'gctx>> {
+        let source_config = SourceConfigMap::new(gctx)?;
         Ok(PackageRegistry {
-            config,
+            gctx,
             sources: SourceMap::new(),
             source_ids: HashMap::new(),
             overrides: Vec::new(),
@@ -149,9 +149,9 @@ impl<'cfg> PackageRegistry<'cfg> {
         })
     }
 
-    pub fn get(self, package_ids: &[PackageId]) -> CargoResult<PackageSet<'cfg>> {
+    pub fn get(self, package_ids: &[PackageId]) -> CargoResult<PackageSet<'gctx>> {
         trace!("getting packages; sources={}", self.sources.len());
-        PackageSet::new(package_ids, self.sources, self.config)
+        PackageSet::new(package_ids, self.sources, self.gctx)
     }
 
     fn ensure_loaded(&mut self, namespace: SourceId, kind: Kind) -> CargoResult<()> {
@@ -203,17 +203,17 @@ impl<'cfg> PackageRegistry<'cfg> {
         Ok(())
     }
 
-    pub fn add_preloaded(&mut self, source: Box<dyn Source + 'cfg>) {
+    pub fn add_preloaded(&mut self, source: Box<dyn Source + 'gctx>) {
         self.add_source(source, Kind::Locked);
     }
 
-    fn add_source(&mut self, source: Box<dyn Source + 'cfg>, kind: Kind) {
+    fn add_source(&mut self, source: Box<dyn Source + 'gctx>, kind: Kind) {
         let id = source.source_id();
         self.sources.insert(source);
         self.source_ids.insert(id, (id, kind));
     }
 
-    pub fn add_override(&mut self, source: Box<dyn Source + 'cfg>) {
+    pub fn add_override(&mut self, source: Box<dyn Source + 'gctx>) {
         self.overrides.push(source.source_id());
         self.add_source(source, Kind::Override);
     }
@@ -311,7 +311,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                 );
 
                 if dep.features().len() != 0 || !dep.uses_default_features() {
-                    self.source_config.config().shell().warn(format!(
+                    self.source_config.gctx().shell().warn(format!(
                         "patch for `{}` uses the features mechanism. \
                         default-features and features will not take effect because the patch dependency does not support this mechanism",
                         dep.package_name()
@@ -558,7 +558,7 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
                 dep.package_name(),
                 boilerplate
             );
-            self.source_config.config().shell().warn(&msg)?;
+            self.source_config.gctx().shell().warn(&msg)?;
             return Ok(());
         }
 
@@ -571,7 +571,7 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
                 dep.package_name(),
                 boilerplate
             );
-            self.source_config.config().shell().warn(&msg)?;
+            self.source_config.gctx().shell().warn(&msg)?;
             return Ok(());
         }
 
@@ -579,7 +579,7 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
     }
 }
 
-impl<'cfg> Registry for PackageRegistry<'cfg> {
+impl<'gctx> Registry for PackageRegistry<'gctx> {
     fn query(
         &mut self,
         dep: &Dependency,

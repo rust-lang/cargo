@@ -15,7 +15,7 @@
 use cargo::core::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCacheTracker};
 use cargo::util::cache_lock::CacheLockMode;
 use cargo::util::interning::InternedString;
-use cargo::Config;
+use cargo::GlobalContext;
 use rand::prelude::SliceRandom;
 use std::collections::HashMap;
 use std::fs;
@@ -28,30 +28,29 @@ fn main() {
     let shell = cargo::core::Shell::new();
     let homedir = Path::new(env!("CARGO_MANIFEST_DIR")).join("global-cache-tracker");
     let cwd = homedir.clone();
-    let mut config = Config::new(shell, cwd, homedir.clone());
-    config
-        .configure(
-            0,
-            false,
-            None,
-            false,
-            false,
-            false,
-            &None,
-            &["gc".to_string()],
-            &[],
-        )
-        .unwrap();
-    let db_path = GlobalCacheTracker::db_path(&config).into_path_unlocked();
+    let mut gctx = GlobalContext::new(shell, cwd, homedir.clone());
+    gctx.configure(
+        0,
+        false,
+        None,
+        false,
+        false,
+        false,
+        &None,
+        &["gc".to_string()],
+        &[],
+    )
+    .unwrap();
+    let db_path = GlobalCacheTracker::db_path(&gctx).into_path_unlocked();
     if db_path.exists() {
         fs::remove_file(&db_path).unwrap();
     }
 
-    let _lock = config
+    let _lock = gctx
         .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)
         .unwrap();
     let mut deferred = DeferredGlobalLastUse::new();
-    let mut tracker = GlobalCacheTracker::new(&config).unwrap();
+    let mut tracker = GlobalCacheTracker::new(&gctx).unwrap();
 
     let real_home = cargo::util::homedir(&std::env::current_dir().unwrap()).unwrap();
 

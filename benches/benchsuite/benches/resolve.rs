@@ -4,27 +4,27 @@ use cargo::core::resolver::features::{FeatureOpts, FeatureResolver};
 use cargo::core::resolver::{CliFeatures, ForceAllTargets, HasDevUnits, ResolveBehavior};
 use cargo::core::{PackageIdSpec, Workspace};
 use cargo::ops::WorkspaceResolve;
-use cargo::Config;
+use cargo::GlobalContext;
 use criterion::{criterion_group, criterion_main, Criterion};
 use std::path::Path;
 
-struct ResolveInfo<'cfg> {
-    ws: Workspace<'cfg>,
+struct ResolveInfo<'gctx> {
+    ws: Workspace<'gctx>,
     requested_kinds: [CompileKind; 1],
-    target_data: RustcTargetData<'cfg>,
+    target_data: RustcTargetData<'gctx>,
     cli_features: CliFeatures,
     specs: Vec<PackageIdSpec>,
     has_dev_units: HasDevUnits,
     force_all_targets: ForceAllTargets,
-    ws_resolve: WorkspaceResolve<'cfg>,
+    ws_resolve: WorkspaceResolve<'gctx>,
 }
 
 /// Helper for resolving a workspace. This will run the resolver once to
 /// download everything, and returns all the data structures that are used
 /// during resolution.
-fn do_resolve<'cfg>(config: &'cfg Config, ws_root: &Path) -> ResolveInfo<'cfg> {
+fn do_resolve<'gctx>(gctx: &'gctx GlobalContext, ws_root: &Path) -> ResolveInfo<'gctx> {
     let requested_kinds = [CompileKind::Host];
-    let ws = Workspace::new(&ws_root.join("Cargo.toml"), config).unwrap();
+    let ws = Workspace::new(&ws_root.join("Cargo.toml"), gctx).unwrap();
     let mut target_data = RustcTargetData::new(&ws, &requested_kinds).unwrap();
     let cli_features = CliFeatures::from_command_line(&[], false, true).unwrap();
     let pkgs = cargo::ops::Packages::Default;
@@ -62,7 +62,7 @@ fn resolve_ws(c: &mut Criterion) {
     let fixtures = fixtures!();
     let mut group = c.benchmark_group("resolve_ws");
     for (ws_name, ws_root) in fixtures.workspaces() {
-        let config = fixtures.make_config(&ws_root);
+        let gctx = fixtures.make_context(&ws_root);
         // The resolver info is initialized only once in a lazy fashion. This
         // allows criterion to skip this workspace if the user passes a filter
         // on the command-line (like `cargo bench -- resolve_ws/tikv`).
@@ -81,7 +81,7 @@ fn resolve_ws(c: &mut Criterion) {
                 has_dev_units,
                 force_all_targets,
                 ..
-            } = lazy_info.get_or_insert_with(|| do_resolve(&config, &ws_root));
+            } = lazy_info.get_or_insert_with(|| do_resolve(&gctx, &ws_root));
             b.iter(|| {
                 cargo::ops::resolve_ws_with_opts(
                     ws,
@@ -104,7 +104,7 @@ fn feature_resolver(c: &mut Criterion) {
     let fixtures = fixtures!();
     let mut group = c.benchmark_group("feature_resolver");
     for (ws_name, ws_root) in fixtures.workspaces() {
-        let config = fixtures.make_config(&ws_root);
+        let gctx = fixtures.make_context(&ws_root);
         let mut lazy_info = None;
         group.bench_function(&ws_name, |b| {
             let ResolveInfo {
@@ -116,7 +116,7 @@ fn feature_resolver(c: &mut Criterion) {
                 has_dev_units,
                 ws_resolve,
                 ..
-            } = lazy_info.get_or_insert_with(|| do_resolve(&config, &ws_root));
+            } = lazy_info.get_or_insert_with(|| do_resolve(&gctx, &ws_root));
             b.iter(|| {
                 let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, *has_dev_units);
                 FeatureResolver::resolve(

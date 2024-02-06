@@ -45,14 +45,13 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let ws = args.workspace(config)?;
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(gctx)?;
     let mode = CompileMode::Doc {
         deps: !args.flag("no-deps"),
         json: false,
     };
-    let mut compile_opts =
-        args.compile_options(config, mode, Some(&ws), ProfileChecking::Custom)?;
+    let mut compile_opts = args.compile_options(gctx, mode, Some(&ws), ProfileChecking::Custom)?;
     compile_opts.rustdoc_document_private_items = args.flag("document-private-items");
 
     let doc_opts = DocOptions {

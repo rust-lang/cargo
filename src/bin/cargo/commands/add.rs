@@ -167,11 +167,11 @@ Build-dependencies are the only dependencies available for use by build scripts 
         ])
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let dry_run = args.dry_run();
     let section = parse_section(args);
 
-    let ws = args.workspace(config)?;
+    let ws = args.workspace(gctx)?;
 
     if args.is_present_with_zero_values("package") {
         print_available_packages(&ws)?;
@@ -203,10 +203,10 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         }
     };
 
-    let dependencies = parse_dependencies(config, args)?;
+    let dependencies = parse_dependencies(gctx, args)?;
 
     let ignore_rust_version = args.flag("ignore-rust-version");
-    if ignore_rust_version && !config.cli_unstable().msrv_policy {
+    if ignore_rust_version && !gctx.cli_unstable().msrv_policy {
         return Err(CliError::new(
             anyhow::format_err!(
                 "`--ignore-rust-version` is unstable; pass `-Zmsrv-policy` to enable support for it"
@@ -217,7 +217,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let honor_rust_version = !ignore_rust_version;
 
     let options = AddOptions {
-        config,
+        gctx,
         spec,
         dependencies,
         section,
@@ -228,21 +228,21 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
 
     if !dry_run {
         // Reload the workspace since we've changed dependencies
-        let ws = args.workspace(config)?;
+        let ws = args.workspace(gctx)?;
         resolve_ws(&ws)?;
     }
 
     Ok(())
 }
 
-fn parse_dependencies(config: &Config, matches: &ArgMatches) -> CargoResult<Vec<DepOp>> {
+fn parse_dependencies(gctx: &GlobalContext, matches: &ArgMatches) -> CargoResult<Vec<DepOp>> {
     let path = matches.get_one::<String>("path");
     let git = matches.get_one::<String>("git");
     let branch = matches.get_one::<String>("branch");
     let rev = matches.get_one::<String>("rev");
     let tag = matches.get_one::<String>("tag");
     let rename = matches.get_one::<String>("rename");
-    let registry = match matches.registry(config)? {
+    let registry = match matches.registry(gctx)? {
         Some(reg) if reg == CRATES_IO_REGISTRY => None,
         reg => reg,
     };

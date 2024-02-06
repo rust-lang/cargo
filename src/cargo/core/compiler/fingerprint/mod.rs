@@ -135,7 +135,7 @@
 //! Fingerprint based on the updated information. If the Unit fails to compile,
 //! the fingerprint is not updated.
 //!
-//! Fingerprints are cached in the [`Context`]. This makes computing
+//! Fingerprints are cached in the [`CompileContext`]. This makes computing
 //! Fingerprints faster, but also is necessary for properly updating
 //! dependency information. Since a Fingerprint includes the Fingerprints of
 //! all dependencies, when it is updated, by using `Arc` clones, it
@@ -378,10 +378,10 @@ use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{self, try_canonicalize};
 use crate::util::{internal, path_args, profile, StableHasher};
-use crate::{Config, CARGO_ENV};
+use crate::{GlobalContext, CARGO_ENV};
 
 use super::custom_build::BuildDeps;
-use super::{BuildContext, Context, FileFlavor, Job, Unit, Work};
+use super::{BuildContext, CompileContext, FileFlavor, Job, Unit, Work};
 
 pub use dirty_reason::DirtyReason;
 
@@ -399,7 +399,11 @@ pub use dirty_reason::DirtyReason;
 /// transitively propagate throughout the dependency graph, it only forces this
 /// one unit which is very unlikely to be what you want unless you're
 /// exclusively talking about top-level units.
-pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> CargoResult<Job> {
+pub fn prepare_target(
+    cx: &mut CompileContext<'_, '_>,
+    unit: &Unit,
+    force: bool,
+) -> CargoResult<Job> {
     let _p = profile::start(format!(
         "fingerprint: {} / {}",
         unit.pkg.package_id(),
@@ -414,7 +418,7 @@ pub fn prepare_target(cx: &mut Context<'_, '_>, unit: &Unit, force: bool) -> Car
     // compare it to an old version, if any, and attempt to print diagnostic
     // information about failed comparisons to aid in debugging.
     let fingerprint = calculate(cx, unit)?;
-    let mtime_on_use = cx.bcx.config.cli_unstable().mtime_on_use;
+    let mtime_on_use = cx.bcx.gctx.cli_unstable().mtime_on_use;
     let dirty_reason = compare_old_fingerprint(unit, &loc, &*fingerprint, mtime_on_use, force);
 
     let Some(dirty_reason) = dirty_reason else {
@@ -787,7 +791,7 @@ impl LocalFingerprint {
         pkg_root: &Path,
         target_root: &Path,
         cargo_exe: &Path,
-        config: &Config,
+        gctx: &GlobalContext,
     ) -> CargoResult<Option<StaleItem>> {
         match self {
             // We need to parse `dep_info`, learn about the crate's dependencies.
@@ -815,7 +819,7 @@ impl LocalFingerprint {
                                 .to_string(),
                         )
                     } else {
-                        config.get_env(key).ok()
+                        gctx.get_env(key).ok()
                     };
                     if current == *previous {
                         continue;
@@ -1071,7 +1075,7 @@ impl Fingerprint {
         pkg_root: &Path,
         target_root: &Path,
         cargo_exe: &Path,
-        config: &Config,
+        gctx: &GlobalContext,
     ) -> CargoResult<()> {
         assert!(!self.fs_status.up_to_date());
 
@@ -1173,7 +1177,7 @@ impl Fingerprint {
         // message and bail out so we stay stale.
         for local in self.local.get_mut().unwrap().iter() {
             if let Some(item) =
-                local.find_stale_item(mtime_cache, pkg_root, target_root, cargo_exe, config)?
+                local.find_stale_item(mtime_cache, pkg_root, target_root, cargo_exe, gctx)?
             {
                 item.log();
                 self.fs_status = FsStatus::StaleItem(item);
@@ -1241,7 +1245,11 @@ impl hash::Hash for Fingerprint {
 }
 
 impl DepFingerprint {
-    fn new(cx: &mut Context<'_, '_>, parent: &Unit, dep: &UnitDep) -> CargoResult<DepFingerprint> {
+    fn new(
+        cx: &mut CompileContext<'_, '_>,
+        parent: &Unit,
+        dep: &UnitDep,
+    ) -> CargoResult<DepFingerprint> {
         let fingerprint = calculate(cx, &dep.unit)?;
         // We need to be careful about what we hash here. We have a goal of
         // supporting renaming a project directory and not rebuilding
@@ -1315,7 +1323,7 @@ impl StaleItem {
 ///
 /// Information like file modification time is only calculated for path
 /// dependencies.
-fn calculate(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Arc<Fingerprint>> {
+fn calculate(cx: &mut CompileContext<'_, '_>, unit: &Unit) -> CargoResult<Arc<Fingerprint>> {
     // This function is slammed quite a lot, so the result is memoized.
     if let Some(s) = cx.fingerprints.get(unit) {
         return Ok(Arc::clone(s));
@@ -1331,13 +1339,13 @@ fn calculate(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Arc<Fingerpri
     // After we built the initial `Fingerprint` be sure to update the
     // `fs_status` field of it.
     let target_root = target_root(cx);
-    let cargo_exe = cx.bcx.config.cargo_exe()?;
+    let cargo_exe = cx.bcx.gctx.cargo_exe()?;
     fingerprint.check_filesystem(
         &mut cx.mtime_cache,
         unit.pkg.root(),
         &target_root,
         cargo_exe,
-        cx.bcx.config,
+        cx.bcx.gctx,
     )?;
 
     let fingerprint = Arc::new(fingerprint);
@@ -1348,7 +1356,7 @@ fn calculate(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Arc<Fingerpri
 
 /// Calculate a fingerprint for a "normal" unit, or anything that's not a build
 /// script. This is an internal helper of [`calculate`], don't call directly.
-fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Fingerprint> {
+fn calculate_normal(cx: &mut CompileContext<'_, '_>, unit: &Unit) -> CargoResult<Fingerprint> {
     let deps = {
         // Recursively calculate the fingerprint for all of our dependencies.
         //
@@ -1418,12 +1426,12 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
     if let Some(linker) = cx.compilation.target_linker(unit.kind) {
         linker.hash(&mut config);
     }
-    if unit.mode.is_doc() && cx.bcx.config.cli_unstable().rustdoc_map {
-        if let Ok(map) = cx.bcx.config.doc_extern_map() {
+    if unit.mode.is_doc() && cx.bcx.gctx.cli_unstable().rustdoc_map {
+        if let Ok(map) = cx.bcx.gctx.doc_extern_map() {
             map.hash(&mut config);
         }
     }
-    if let Some(allow_features) = &cx.bcx.config.cli_unstable().allow_features {
+    if let Some(allow_features) = &cx.bcx.gctx.cli_unstable().allow_features {
         allow_features.hash(&mut config);
     }
     let compile_kind = unit.kind.fingerprint_hash();
@@ -1441,7 +1449,7 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
         // Note we curently only populate `declared_features` when `-Zcheck-cfg`
         // is passed since it's the only user-facing toggle that will make this
         // fingerprint relevant.
-        declared_features: if cx.bcx.config.cli_unstable().check_cfg {
+        declared_features: if cx.bcx.gctx.cli_unstable().check_cfg {
             format!("{declared_features:?}")
         } else {
             "".to_string()
@@ -1460,7 +1468,10 @@ fn calculate_normal(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Finger
 
 /// Calculate a fingerprint for an "execute a build script" unit.  This is an
 /// internal helper of [`calculate`], don't call directly.
-fn calculate_run_custom_build(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Fingerprint> {
+fn calculate_run_custom_build(
+    cx: &mut CompileContext<'_, '_>,
+    unit: &Unit,
+) -> CargoResult<Fingerprint> {
     assert!(unit.mode.is_run_custom_build());
     // Using the `BuildDeps` information we'll have previously parsed and
     // inserted into `build_explicit_deps` built an initial snapshot of the
@@ -1557,7 +1568,7 @@ See https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-change
 ///
 /// [`RunCustomBuild`]: crate::core::compiler::CompileMode::RunCustomBuild
 fn build_script_local_fingerprints(
-    cx: &mut Context<'_, '_>,
+    cx: &mut CompileContext<'_, '_>,
     unit: &Unit,
 ) -> (
     Box<
@@ -1632,7 +1643,7 @@ fn build_script_local_fingerprints(
 /// Create a [`LocalFingerprint`] for an overridden build script.
 /// Returns None if it is not overridden.
 fn build_script_override_fingerprint(
-    cx: &mut Context<'_, '_>,
+    cx: &mut CompileContext<'_, '_>,
     unit: &Unit,
 ) -> Option<LocalFingerprint> {
     // Build script output is only populated at this stage when it is
@@ -1708,7 +1719,7 @@ fn write_fingerprint(loc: &Path, fingerprint: &Fingerprint) -> CargoResult<()> {
 }
 
 /// Prepare for work when a package starts to build
-pub fn prepare_init(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
+pub fn prepare_init(cx: &mut CompileContext<'_, '_>, unit: &Unit) -> CargoResult<()> {
     let new1 = cx.files().fingerprint_dir(unit);
 
     // Doc tests have no output, thus no fingerprint.
@@ -1721,13 +1732,13 @@ pub fn prepare_init(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
 
 /// Returns the location that the dep-info file will show up at
 /// for the [`Unit`] specified.
-pub fn dep_info_loc(cx: &mut Context<'_, '_>, unit: &Unit) -> PathBuf {
+pub fn dep_info_loc(cx: &mut CompileContext<'_, '_>, unit: &Unit) -> PathBuf {
     cx.files().fingerprint_file_path(unit, "dep-")
 }
 
 /// Returns an absolute path that target directory.
 /// All paths are rewritten to be relative to this.
-fn target_root(cx: &Context<'_, '_>) -> PathBuf {
+fn target_root(cx: &CompileContext<'_, '_>) -> PathBuf {
     cx.bcx.ws.target_dir().into_path_unlocked()
 }
 

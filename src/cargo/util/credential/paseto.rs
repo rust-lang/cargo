@@ -1,6 +1,6 @@
 //! Credential provider that implements PASETO asymmetric tokens stored in Cargo's config.
 
-use anyhow::Context;
+use anyhow::Context as _;
 use cargo_credential::{
     Action, CacheControl, Credential, CredentialResponse, Error, Operation, RegistryInfo, Secret,
 };
@@ -16,7 +16,7 @@ use crate::{
     core::SourceId,
     ops::RegistryCredentialConfig,
     util::{auth::registry_credential_config_raw, command_prelude::opt, config},
-    Config,
+    GlobalContext,
 };
 
 /// The main body of an asymmetric token as describe in RFC 3231.
@@ -47,12 +47,12 @@ struct Footer<'a> {
 }
 
 pub(crate) struct PasetoCredential<'a> {
-    config: &'a Config,
+    gctx: &'a GlobalContext,
 }
 
 impl<'a> PasetoCredential<'a> {
-    pub fn new(config: &'a Config) -> Self {
-        Self { config }
+    pub fn new(gctx: &'a GlobalContext) -> Self {
+        Self { gctx }
     }
 }
 
@@ -70,7 +70,7 @@ impl<'a> Credential for PasetoCredential<'a> {
             SourceId::for_registry(&index_url)
         }?;
 
-        let reg_cfg = registry_credential_config_raw(self.config, &sid)?;
+        let reg_cfg = registry_credential_config_raw(self.gctx, &sid)?;
 
         let matches = Command::new("cargo:paseto")
             .no_binary_name(true)
@@ -196,14 +196,14 @@ impl<'a> Credential for PasetoCredential<'a> {
                         None => old_key_subject,
                     },
                 ));
-                config::save_credentials(self.config, Some(new_token), &sid)?;
+                config::save_credentials(self.gctx, Some(new_token), &sid)?;
                 Ok(CredentialResponse::Login)
             }
             Action::Logout => {
                 if reg_cfg.and_then(|c| c.secret_key).is_some() {
-                    config::save_credentials(self.config, None, &sid)?;
+                    config::save_credentials(self.gctx, None, &sid)?;
                     let reg_name = sid.display_registry_name();
-                    let _ = self.config.shell().status(
+                    let _ = self.gctx.shell().status(
                         "Logout",
                         format!("secret-key for `{reg_name}` has been removed from local storage"),
                     );

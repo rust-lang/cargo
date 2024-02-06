@@ -3,7 +3,7 @@
 use crate::core::Target;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{try_canonicalize, Config, StableHasher};
+use crate::util::{try_canonicalize, GlobalContext, StableHasher};
 use anyhow::Context as _;
 use serde::Serialize;
 use std::collections::BTreeSet;
@@ -51,7 +51,7 @@ impl CompileKind {
     /// If no targets are given then this returns a single-element vector with
     /// `CompileKind::Host`.
     pub fn from_requested_targets(
-        config: &Config,
+        gctx: &GlobalContext,
         targets: &[String],
     ) -> CargoResult<Vec<CompileKind>> {
         let dedup = |targets: &[String]| {
@@ -70,9 +70,9 @@ impl CompileKind {
             return dedup(targets);
         }
 
-        let kinds = match &config.build_config()?.target {
+        let kinds = match &gctx.build_config()?.target {
             None => Ok(vec![CompileKind::Host]),
-            Some(build_target_config) => dedup(&build_target_config.values(config)?),
+            Some(build_target_config) => dedup(&build_target_config.values(gctx)?),
         };
 
         kinds

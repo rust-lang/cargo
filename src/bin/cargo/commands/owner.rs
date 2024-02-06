@@ -33,11 +33,11 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let opts = OwnersOptions {
         krate: args.get_one::<String>("crate").cloned(),
         token: args.get_one::<String>("token").cloned().map(Secret::from),
-        reg_or_index: args.registry_or_index(config)?,
+        reg_or_index: args.registry_or_index(gctx)?,
         to_add: args
             .get_many::<String>("add")
             .map(|xs| xs.cloned().collect()),
@@ -46,6 +46,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
             .map(|xs| xs.cloned().collect()),
         list: args.flag("list"),
     };
-    ops::modify_owners(config, &opts)?;
+    ops::modify_owners(gctx, &opts)?;
     Ok(())
 }

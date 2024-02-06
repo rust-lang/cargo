@@ -9,7 +9,7 @@ use std::sync::Arc;
 use lazycell::LazyCell;
 use tracing::debug;
 
-use super::{BuildContext, CompileKind, Context, FileFlavor, Layout};
+use super::{BuildContext, CompileContext, CompileKind, FileFlavor, Layout};
 use crate::core::compiler::{CompileMode, CompileTarget, CrateType, FileType, Unit};
 use crate::core::{Target, TargetKind, Workspace};
 use crate::util::{self, CargoResult, StableHasher};
@@ -96,7 +96,7 @@ struct MetaInfo {
 
 /// Collection of information about the files emitted by the compiler, and the
 /// output directory structure.
-pub struct CompilationFiles<'a, 'cfg> {
+pub struct CompilationFiles<'a, 'gctx> {
     /// The target directory layout for the host (and target if it is the same as host).
     pub(super) host: Layout,
     /// The target directory layout for the target (if different from then host).
@@ -106,7 +106,7 @@ pub struct CompilationFiles<'a, 'cfg> {
     /// The root targets requested by the user on the command line (does not
     /// include dependencies).
     roots: Vec<Unit>,
-    ws: &'a Workspace<'cfg>,
+    ws: &'a Workspace<'gctx>,
     /// Metadata hash to use for each unit.
     metas: HashMap<Unit, MetaInfo>,
     /// For each Unit, a list all files produced.
@@ -137,15 +137,15 @@ impl OutputFile {
     }
 }
 
-impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
+impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     pub(super) fn new(
-        cx: &Context<'a, 'cfg>,
+        compile_ctx: &CompileContext<'a, 'gctx>,
         host: Layout,
         target: HashMap<CompileTarget, Layout>,
-    ) -> CompilationFiles<'a, 'cfg> {
+    ) -> CompilationFiles<'a, 'gctx> {
         let mut metas = HashMap::new();
-        for unit in &cx.bcx.roots {
-            metadata_of(unit, cx, &mut metas);
+        for unit in &compile_ctx.bcx.roots {
+            metadata_of(unit, compile_ctx, &mut metas);
         }
         let outputs = metas
             .keys()
@@ -153,11 +153,11 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
             .map(|unit| (unit, LazyCell::new()))
             .collect();
         CompilationFiles {
-            ws: cx.bcx.ws,
+            ws: compile_ctx.bcx.ws,
             host,
             target,
-            export_dir: cx.bcx.build_config.export_dir.clone(),
-            roots: cx.bcx.roots.clone(),
+            export_dir: compile_ctx.bcx.build_config.export_dir.clone(),
+            roots: compile_ctx.bcx.roots.clone(),
             metas,
             outputs,
         }
@@ -368,7 +368,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     pub(super) fn outputs(
         &self,
         unit: &Unit,
-        bcx: &BuildContext<'a, 'cfg>,
+        bcx: &BuildContext<'a, 'gctx>,
     ) -> CargoResult<Arc<Vec<OutputFile>>> {
         self.outputs[unit]
             .try_borrow_with(|| self.calc_outputs(unit, bcx))
@@ -432,7 +432,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     fn calc_outputs(
         &self,
         unit: &Unit,
-        bcx: &BuildContext<'a, 'cfg>,
+        bcx: &BuildContext<'a, 'gctx>,
     ) -> CargoResult<Arc<Vec<OutputFile>>> {
         let ret = match unit.mode {
             CompileMode::Doc { json, .. } => {
@@ -493,7 +493,7 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
     fn calc_outputs_rustc(
         &self,
         unit: &Unit,
-        bcx: &BuildContext<'a, 'cfg>,
+        bcx: &BuildContext<'a, 'gctx>,
     ) -> CargoResult<Vec<OutputFile>> {
         let out_dir = self.out_dir(unit);
 
@@ -557,14 +557,14 @@ impl<'a, 'cfg: 'a> CompilationFiles<'a, 'cfg> {
 /// See [`compute_metadata`] for how a single metadata hash is computed.
 fn metadata_of<'a>(
     unit: &Unit,
-    cx: &Context<'_, '_>,
+    compile_ctx: &CompileContext<'_, '_>,
     metas: &'a mut HashMap<Unit, MetaInfo>,
 ) -> &'a MetaInfo {
     if !metas.contains_key(unit) {
-        let meta = compute_metadata(unit, cx, metas);
+        let meta = compute_metadata(unit, compile_ctx, metas);
         metas.insert(unit.clone(), meta);
-        for dep in cx.unit_deps(unit) {
-            metadata_of(&dep.unit, cx, metas);
+        for dep in compile_ctx.unit_deps(unit) {
+            metadata_of(&dep.unit, compile_ctx, metas);
         }
     }
     &metas[unit]
@@ -573,10 +573,10 @@ fn metadata_of<'a>(
 /// Computes the metadata hash for the given [`Unit`].
 fn compute_metadata(
     unit: &Unit,
-    cx: &Context<'_, '_>,
+    compile_ctx: &CompileContext<'_, '_>,
     metas: &mut HashMap<Unit, MetaInfo>,
 ) -> MetaInfo {
-    let bcx = &cx.bcx;
+    let bcx = &compile_ctx.bcx;
     let mut hasher = StableHasher::new();
 
     METADATA_VERSION.hash(&mut hasher);
@@ -593,10 +593,10 @@ fn compute_metadata(
     unit.features.hash(&mut hasher);
 
     // Mix in the target-metadata of all the dependencies of this target.
-    let mut deps_metadata = cx
+    let mut deps_metadata = compile_ctx
         .unit_deps(unit)
         .iter()
-        .map(|dep| metadata_of(&dep.unit, cx, metas).meta_hash)
+        .map(|dep| metadata_of(&dep.unit, compile_ctx, metas).meta_hash)
         .collect::<Vec<_>>();
     deps_metadata.sort();
     deps_metadata.hash(&mut hasher);
@@ -606,7 +606,7 @@ fn compute_metadata(
     // settings like debuginfo and whatnot.
     unit.profile.hash(&mut hasher);
     unit.mode.hash(&mut hasher);
-    cx.lto[unit].hash(&mut hasher);
+    compile_ctx.lto[unit].hash(&mut hasher);
 
     // Artifacts compiled for the host should have a different
     // metadata piece than those compiled for the target, so make sure
@@ -622,17 +622,17 @@ fn compute_metadata(
 
     hash_rustc_version(bcx, &mut hasher);
 
-    if cx.bcx.ws.is_member(&unit.pkg) {
+    if compile_ctx.bcx.ws.is_member(&unit.pkg) {
         // This is primarily here for clippy. This ensures that the clippy
         // artifacts are separate from the `check` ones.
-        if let Some(path) = &cx.bcx.rustc().workspace_wrapper {
+        if let Some(path) = &compile_ctx.bcx.rustc().workspace_wrapper {
             path.hash(&mut hasher);
         }
     }
 
     // Seed the contents of `__CARGO_DEFAULT_LIB_METADATA` to the hasher if present.
     // This should be the release channel, to get a different hash for each channel.
-    if let Ok(ref channel) = cx.bcx.config.get_env("__CARGO_DEFAULT_LIB_METADATA") {
+    if let Ok(ref channel) = compile_ctx.bcx.gctx.get_env("__CARGO_DEFAULT_LIB_METADATA") {
         channel.hash(&mut hasher);
     }
 
@@ -654,7 +654,7 @@ fn compute_metadata(
 /// Hash the version of rustc being used during the build process.
 fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher) {
     let vers = &bcx.rustc().version;
-    if vers.pre.is_empty() || bcx.config.cli_unstable().separate_nightlies {
+    if vers.pre.is_empty() || bcx.gctx.cli_unstable().separate_nightlies {
         // For stable, keep the artifacts separate. This helps if someone is
         // testing multiple versions, to avoid recompiles.
         bcx.rustc().verbose_version.hash(hasher);
@@ -721,7 +721,7 @@ fn should_use_metadata(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
         || (unit.target.is_executable() && short_name == "wasm32-unknown-emscripten")
         || (unit.target.is_executable() && short_name.contains("msvc")))
         && unit.pkg.package_id().source_id().is_path()
-        && bcx.config.get_env("__CARGO_DEFAULT_LIB_METADATA").is_err()
+        && bcx.gctx.get_env("__CARGO_DEFAULT_LIB_METADATA").is_err()
     {
         return false;
     }

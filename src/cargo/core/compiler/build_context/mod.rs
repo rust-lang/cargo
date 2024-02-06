@@ -5,7 +5,7 @@ use crate::core::compiler::{BuildConfig, CompileKind, Unit};
 use crate::core::profiles::Profiles;
 use crate::core::PackageSet;
 use crate::core::Workspace;
-use crate::util::config::Config;
+use crate::util::config::GlobalContext;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::Rustc;
@@ -41,14 +41,14 @@ pub use self::target_info::{
 ///
 /// After a `BuildContext` is built, the next stage of building is handled in [`Context`].
 ///
-/// [`Context`]: crate::core::compiler::Context
+/// [`Context`]: crate::core::compiler::CompileContext
 /// [`ops::create_bcx`]: crate::ops::create_bcx
-pub struct BuildContext<'a, 'cfg> {
+pub struct BuildContext<'a, 'gctx> {
     /// The workspace the build is for.
-    pub ws: &'a Workspace<'cfg>,
+    pub ws: &'a Workspace<'gctx>,
 
-    /// The cargo configuration.
-    pub config: &'cfg Config,
+    /// The cargo context.
+    pub gctx: &'gctx GlobalContext,
 
     /// This contains a collection of compiler flags presets.
     pub profiles: Profiles,
@@ -62,10 +62,10 @@ pub struct BuildContext<'a, 'cfg> {
     /// Package downloader.
     ///
     /// This holds ownership of the `Package` objects.
-    pub packages: PackageSet<'cfg>,
+    pub packages: PackageSet<'gctx>,
 
     /// Information about rustc and the target platform.
-    pub target_data: RustcTargetData<'cfg>,
+    pub target_data: RustcTargetData<'gctx>,
 
     /// The root units of `unit_graph` (units requested on the command-line).
     pub roots: Vec<Unit>,
@@ -80,18 +80,18 @@ pub struct BuildContext<'a, 'cfg> {
     pub all_kinds: HashSet<CompileKind>,
 }
 
-impl<'a, 'cfg> BuildContext<'a, 'cfg> {
+impl<'a, 'gctx> BuildContext<'a, 'gctx> {
     pub fn new(
-        ws: &'a Workspace<'cfg>,
-        packages: PackageSet<'cfg>,
+        ws: &'a Workspace<'gctx>,
+        packages: PackageSet<'gctx>,
         build_config: &'a BuildConfig,
         profiles: Profiles,
         extra_compiler_args: HashMap<Unit, Vec<String>>,
-        target_data: RustcTargetData<'cfg>,
+        target_data: RustcTargetData<'gctx>,
         roots: Vec<Unit>,
         unit_graph: UnitGraph,
         scrape_units: Vec<Unit>,
-    ) -> CargoResult<BuildContext<'a, 'cfg>> {
+    ) -> CargoResult<BuildContext<'a, 'gctx>> {
         let all_kinds = unit_graph
             .keys()
             .map(|u| u.kind)
@@ -101,7 +101,7 @@ impl<'a, 'cfg> BuildContext<'a, 'cfg> {
 
         Ok(BuildContext {
             ws,
-            config: ws.config(),
+            gctx: ws.gctx(),
             packages,
             build_config,
             profiles,

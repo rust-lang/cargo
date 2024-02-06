@@ -1,7 +1,7 @@
 use crate::aliased_command;
 use crate::command_prelude::*;
-use cargo::drop_println;
 use cargo::util::errors::CargoResult;
+use cargo::{drop_println, GlobalContext};
 use cargo_util::paths::resolve_executable;
 use flate2::read::GzDecoder;
 use std::ffi::OsStr;
@@ -18,20 +18,20 @@ pub fn cli() -> Command {
         .arg(Arg::new("COMMAND").action(ArgAction::Set))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let subcommand = args.get_one::<String>("COMMAND");
     if let Some(subcommand) = subcommand {
-        if !try_help(config, subcommand)? {
+        if !try_help(gctx, subcommand)? {
             match check_builtin(&subcommand) {
                 Some(s) => {
                     crate::execute_internal_subcommand(
-                        config,
+                        gctx,
                         &[OsStr::new(s), OsStr::new("--help")],
                     )?;
                 }
                 None => {
                     crate::execute_external_subcommand(
-                        config,
+                        gctx,
                         subcommand,
                         &[OsStr::new(subcommand), OsStr::new("--help")],
                     )?;
@@ -45,12 +45,12 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     Ok(())
 }
 
-fn try_help(config: &Config, subcommand: &str) -> CargoResult<bool> {
-    let subcommand = match check_alias(config, subcommand) {
+fn try_help(gctx: &GlobalContext, subcommand: &str) -> CargoResult<bool> {
+    let subcommand = match check_alias(gctx, subcommand) {
         // If this alias is more than a simple subcommand pass-through, show the alias.
         Some(argv) if argv.len() > 1 => {
             let alias = argv.join(" ");
-            drop_println!(config, "`{}` is aliased to `{}`", subcommand, alias);
+            drop_println!(gctx, "`{}` is aliased to `{}`", subcommand, alias);
             return Ok(true);
         }
         // Otherwise, resolve the alias into its subcommand.
@@ -92,8 +92,8 @@ fn try_help(config: &Config, subcommand: &str) -> CargoResult<bool> {
 /// Checks if the given subcommand is an alias.
 ///
 /// Returns None if it is not an alias.
-fn check_alias(config: &Config, subcommand: &str) -> Option<Vec<String>> {
-    aliased_command(config, subcommand).ok().flatten()
+fn check_alias(gctx: &GlobalContext, subcommand: &str) -> Option<Vec<String>> {
+    aliased_command(gctx, subcommand).ok().flatten()
 }
 
 /// Checks if the given subcommand is a built-in command (not via an alias).

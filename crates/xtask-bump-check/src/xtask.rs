@@ -67,15 +67,15 @@ pub fn cli() -> clap::Command {
         )
 }
 
-pub fn exec(args: &clap::ArgMatches, config: &mut cargo::util::Config) -> cargo::CliResult {
-    config_configure(config, args)?;
+pub fn exec(args: &clap::ArgMatches, gctx: &mut cargo::util::GlobalContext) -> cargo::CliResult {
+    global_context_configure(gctx, args)?;
 
-    bump_check(args, config)?;
+    bump_check(args, gctx)?;
 
     Ok(())
 }
 
-fn config_configure(config: &mut Config, args: &ArgMatches) -> CliResult {
+fn global_context_configure(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let verbose = args.verbose();
     // quiet is unusual because it is redefined in some subcommands in order
     // to provide custom help text.
@@ -92,7 +92,7 @@ fn config_configure(config: &mut Config, args: &ArgMatches) -> CliResult {
     if let Some(values) = args.get_many::<String>("config") {
         config_args.extend(values.cloned());
     }
-    config.configure(
+    gctx.configure(
         verbose,
         quiet,
         color,
@@ -109,14 +109,14 @@ fn config_configure(config: &mut Config, args: &ArgMatches) -> CliResult {
 /// Main entry of `xtask-bump-check`.
 ///
 /// Assumption: version number are incremental. We never have point release for old versions.
-fn bump_check(args: &clap::ArgMatches, config: &cargo::util::Config) -> CargoResult<()> {
-    let ws = args.workspace(config)?;
+fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> CargoResult<()> {
+    let ws = args.workspace(gctx)?;
     let repo = git2::Repository::open(ws.root())?;
-    let base_commit = get_base_commit(config, args, &repo)?;
+    let base_commit = get_base_commit(gctx, args, &repo)?;
     let head_commit = get_head_commit(args, &repo)?;
     let referenced_commit = get_referenced_commit(&repo, &base_commit)?;
     let changed_members = changed(&ws, &repo, &base_commit, &head_commit)?;
-    let status = |msg: &str| config.shell().status(STATUS, msg);
+    let status = |msg: &str| gctx.shell().status(STATUS, msg);
 
     // Don't check against beta and stable branches,
     // as the publish of these crates are not tied with Rust release process.
@@ -128,7 +128,7 @@ fn bump_check(args: &clap::ArgMatches, config: &cargo::util::Config) -> CargoRes
 
     let mut needs_bump = Vec::new();
 
-    check_crates_io(config, &changed_members, &mut needs_bump)?;
+    check_crates_io(gctx, &changed_members, &mut needs_bump)?;
 
     if let Some(referenced_commit) = referenced_commit.as_ref() {
         status(&format!("compare against `{}`", referenced_commit.id()))?;
@@ -169,7 +169,7 @@ fn bump_check(args: &clap::ArgMatches, config: &cargo::util::Config) -> CargoRes
     cmd.arg("semver-checks")
         .arg("check-release")
         .arg("--workspace");
-    config.shell().status("Running", &cmd)?;
+    gctx.shell().status("Running", &cmd)?;
     cmd.exec()?;
 
     if let Some(referenced_commit) = referenced_commit.as_ref() {
@@ -181,7 +181,7 @@ fn bump_check(args: &clap::ArgMatches, config: &cargo::util::Config) -> CargoRes
         for krate in crates_not_check_against_channels {
             cmd.args(&["--exclude", krate]);
         }
-        config.shell().status("Running", &cmd)?;
+        gctx.shell().status("Running", &cmd)?;
         cmd.exec()?;
     }
 
@@ -192,7 +192,7 @@ fn bump_check(args: &clap::ArgMatches, config: &cargo::util::Config) -> CargoRes
 
 /// Returns the commit of upstream `master` branch if `base-rev` is missing.
 fn get_base_commit<'a>(
-    config: &Config,
+    gctx: &GlobalContext,
     args: &clap::ArgMatches,
     repo: &'a git2::Repository,
 ) -> CargoResult<git2::Commit<'a>> {
@@ -222,7 +222,7 @@ fn get_base_commit<'a>(
             let upstream_ref = upstream_branches[0].get();
             if upstream_branches.len() > 1 {
                 let name = upstream_ref.name().expect("name is valid UTF-8");
-                let _ = config.shell().warn(format!(
+                let _ = gctx.shell().warn(format!(
                     "multiple `{UPSTREAM_BRANCH}` found, picking {name}"
                 ));
             }
@@ -358,15 +358,15 @@ fn changed<'r, 'ws>(
 ///
 /// Assumption: We always release a version larger than all existing versions.
 fn check_crates_io<'a>(
-    config: &Config,
+    gctx: &GlobalContext,
     changed_members: &HashMap<&'a str, &'a Package>,
     needs_bump: &mut Vec<&'a Package>,
 ) -> CargoResult<()> {
-    let source_id = SourceId::crates_io(config)?;
-    let mut registry = PackageRegistry::new(config)?;
-    let _lock = config.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
+    let source_id = SourceId::crates_io(gctx)?;
+    let mut registry = PackageRegistry::new(gctx)?;
+    let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
     registry.lock_patches();
-    config.shell().status(
+    gctx.shell().status(
         STATUS,
         format_args!("compare against `{}`", source_id.display_registry_name()),
     )?;
@@ -402,11 +402,11 @@ fn check_crates_io<'a>(
 }
 
 /// Checkouts a temporary workspace to do further version comparisons.
-fn checkout_ws<'cfg, 'a>(
-    ws: &Workspace<'cfg>,
+fn checkout_ws<'gctx, 'a>(
+    ws: &Workspace<'gctx>,
     repo: &'a git2::Repository,
     referenced_commit: &git2::Commit<'a>,
-) -> CargoResult<Workspace<'cfg>> {
+) -> CargoResult<Workspace<'gctx>> {
     let repo_path = repo.path().as_os_str().to_str().unwrap();
     // Put it under `target/cargo-<short-id>`
     let short_id = &referenced_commit.id().to_string()[..7];
@@ -418,7 +418,7 @@ fn checkout_ws<'cfg, 'a>(
         .clone(repo_path, checkout_path)?;
     let obj = new_repo.find_object(referenced_commit.id(), None)?;
     new_repo.reset(&obj, git2::ResetType::Hard, None)?;
-    Workspace::new(&checkout_path.join("Cargo.toml"), ws.config())
+    Workspace::new(&checkout_path.join("Cargo.toml"), ws.gctx())
 }
 
 #[test]

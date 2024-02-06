@@ -4,13 +4,13 @@ use crate::core::Package;
 use crate::util::toml_mut::manifest::DepTable;
 use crate::util::toml_mut::manifest::LocalManifest;
 use crate::CargoResult;
-use crate::Config;
+use crate::GlobalContext;
 
 /// Remove a dependency from a Cargo.toml manifest file.
 #[derive(Debug)]
 pub struct RemoveOptions<'a> {
     /// Configuration information for Cargo operations
-    pub config: &'a Config,
+    pub gctx: &'a GlobalContext,
     /// Package to remove dependencies from
     pub spec: &'a Package,
     /// Dependencies to remove
@@ -40,7 +40,7 @@ pub fn remove(options: &RemoveOptions<'_>) -> CargoResult<()> {
             dep_table[0].clone()
         };
         options
-            .config
+            .gctx
             .shell()
             .status("Removing", format!("{dep} from {section}"))?;
 
@@ -54,7 +54,7 @@ pub fn remove(options: &RemoveOptions<'_>) -> CargoResult<()> {
 
     if options.dry_run {
         options
-            .config
+            .gctx
             .shell()
             .warn("aborting remove due to dry run")?;
     } else {

@@ -92,7 +92,7 @@ use crate::sources::registry::{LoadResponse, RegistryData};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::interning::InternedString;
 use crate::util::IntoUrl;
-use crate::util::{internal, CargoResult, Config, Filesystem, OptVersionReq};
+use crate::util::{internal, CargoResult, Filesystem, GlobalContext, OptVersionReq};
 use anyhow::bail;
 use cargo_util::{paths, registry::make_dep_path};
 use cargo_util_schemas::manifest::RustVersion;
@@ -130,7 +130,7 @@ const INDEX_V_MAX: u32 = 2;
 /// [`LocalRegistry`]: super::local::LocalRegistry
 /// [`RemoteRegistry`]: super::remote::RemoteRegistry
 /// [`HttpRegistry`]: super::http_remote::HttpRegistry
-pub struct RegistryIndex<'cfg> {
+pub struct RegistryIndex<'gctx> {
     source_id: SourceId,
     /// Root directory of the index for the registry.
     path: Filesystem,
@@ -143,8 +143,8 @@ pub struct RegistryIndex<'cfg> {
     /// to JSON files from the index, and the creates the optimized on-disk
     /// summary cache.
     summaries_cache: HashMap<InternedString, Summaries>,
-    /// [`Config`] reference for convenience.
-    config: &'cfg Config,
+    /// [`GlobalContext`] reference for convenience.
+    gctx: &'gctx GlobalContext,
 }
 
 /// An internal cache of summaries for a particular package.
@@ -429,18 +429,18 @@ struct RegistryDependency<'a> {
     lib: bool,
 }
 
-impl<'cfg> RegistryIndex<'cfg> {
+impl<'gctx> RegistryIndex<'gctx> {
     /// Creates an empty registry index at `path`.
     pub fn new(
         source_id: SourceId,
         path: &Filesystem,
-        config: &'cfg Config,
-    ) -> RegistryIndex<'cfg> {
+        gctx: &'gctx GlobalContext,
+    ) -> RegistryIndex<'gctx> {
         RegistryIndex {
             source_id,
             path: path.clone(),
             summaries_cache: HashMap::new(),
-            config,
+            gctx,
         }
     }
 
@@ -478,7 +478,7 @@ impl<'cfg> RegistryIndex<'cfg> {
     where
         'a: 'b,
     {
-        let bindeps = self.config.cli_unstable().bindeps;
+        let bindeps = self.gctx.cli_unstable().bindeps;
 
         let source_id = self.source_id;
 
@@ -563,7 +563,7 @@ impl<'cfg> RegistryIndex<'cfg> {
             path.as_ref(),
             self.source_id,
             load,
-            self.config,
+            self.gctx,
         ))?
         .unwrap_or_default();
         self.summaries_cache.insert(name, summaries);
@@ -585,7 +585,7 @@ impl<'cfg> RegistryIndex<'cfg> {
         load: &mut dyn RegistryData,
         f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
-        if self.config.offline() {
+        if self.gctx.offline() {
             // This should only return `Poll::Ready(Ok(()))` if there is at least 1 match.
             //
             // If there are 0 matches it should fall through and try again with online.
@@ -685,7 +685,7 @@ impl Summaries {
         relative: &Path,
         source_id: SourceId,
         load: &mut dyn RegistryData,
-        config: &Config,
+        gctx: &GlobalContext,
     ) -> Poll<CargoResult<Option<Summaries>>> {
         // First up, attempt to load the cache. This could fail for all manner
         // of reasons, but consider all of them non-fatal and just log their
@@ -708,7 +708,7 @@ impl Summaries {
 
         let response = ready!(load.load(root, relative, index_version.as_deref())?);
 
-        let bindeps = config.cli_unstable().bindeps;
+        let bindeps = gctx.cli_unstable().bindeps;
 
         match response {
             LoadResponse::CacheValid => {
@@ -774,7 +774,7 @@ impl Summaries {
                     // something in case of error.
                     if paths::create_dir_all(cache_path.parent().unwrap()).is_ok() {
                         let path = Filesystem::new(cache_path.clone());
-                        config.assert_package_cache_locked(CacheLockMode::DownloadExclusive, &path);
+                        gctx.assert_package_cache_locked(CacheLockMode::DownloadExclusive, &path);
                         if let Err(e) = fs::write(cache_path, &cache_bytes) {
                             tracing::info!("failed to write cache: {}", e);
                         }

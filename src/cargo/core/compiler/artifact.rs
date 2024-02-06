@@ -1,7 +1,7 @@
 //! Generate artifact information from unit dependencies for configuring the compiler environment.
 
 use crate::core::compiler::unit_graph::UnitDep;
-use crate::core::compiler::{Context, CrateType, FileFlavor, Unit};
+use crate::core::compiler::{CompileContext, CrateType, FileFlavor, Unit};
 use crate::core::dependency::ArtifactKind;
 use crate::core::{Dependency, Target, TargetKind};
 use crate::CargoResult;
@@ -11,7 +11,7 @@ use std::ffi::OsString;
 /// Return all environment variables for the given unit-dependencies
 /// if artifacts are present.
 pub fn get_env(
-    cx: &Context<'_, '_>,
+    cx: &CompileContext<'_, '_>,
     dependencies: &[UnitDep],
 ) -> CargoResult<HashMap<String, OsString>> {
     let mut env = HashMap::new();

@@ -16,7 +16,7 @@ use super::{Artifact, DiagDedupe, Job, JobId, Message};
 ///
 /// The job may execute on either a dedicated thread or the main thread. If the job executes on the
 /// main thread, the `output` field must be set to prevent a deadlock.
-pub struct JobState<'a, 'cfg> {
+pub struct JobState<'a, 'gctx> {
     /// Channel back to the main thread to coordinate messages and such.
     ///
     /// When the `output` field is `Some`, care must be taken to avoid calling `push_bounded` on
@@ -33,7 +33,7 @@ pub struct JobState<'a, 'cfg> {
     /// interleaved. In the future, it may be wrapped in a `Mutex` instead. In this case
     /// interleaving is still prevented as the lock would be held for the whole printing of an
     /// output message.
-    output: Option<&'a DiagDedupe<'cfg>>,
+    output: Option<&'a DiagDedupe<'gctx>>,
 
     /// The job id that this state is associated with, used when sending
     /// messages back to the main thread.
@@ -49,11 +49,11 @@ pub struct JobState<'a, 'cfg> {
     _marker: marker::PhantomData<&'a ()>,
 }
 
-impl<'a, 'cfg> JobState<'a, 'cfg> {
+impl<'a, 'gctx> JobState<'a, 'gctx> {
     pub(super) fn new(
         id: JobId,
         messages: Arc<Queue<Message>>,
-        output: Option<&'a DiagDedupe<'cfg>>,
+        output: Option<&'a DiagDedupe<'gctx>>,
         rmeta_required: bool,
     ) -> Self {
         Self {
@@ -81,7 +81,7 @@ impl<'a, 'cfg> JobState<'a, 'cfg> {
 
     pub fn stdout(&self, stdout: String) -> CargoResult<()> {
         if let Some(dedupe) = self.output {
-            writeln!(dedupe.config.shell().out(), "{}", stdout)?;
+            writeln!(dedupe.gctx.shell().out(), "{}", stdout)?;
         } else {
             self.messages.push_bounded(Message::Stdout(stdout));
         }
@@ -90,7 +90,7 @@ impl<'a, 'cfg> JobState<'a, 'cfg> {
 
     pub fn stderr(&self, stderr: String) -> CargoResult<()> {
         if let Some(dedupe) = self.output {
-            let mut shell = dedupe.config.shell();
+            let mut shell = dedupe.gctx.shell();
             shell.print_ansi_stderr(stderr.as_bytes())?;
             shell.err().write_all(b"\n")?;
         } else {

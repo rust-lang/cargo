@@ -1,6 +1,6 @@
 //! Credential provider that uses plaintext tokens in Cargo's config.
 
-use anyhow::Context;
+use anyhow::Context as _;
 use cargo_credential::{Action, CacheControl, Credential, CredentialResponse, Error, RegistryInfo};
 use url::Url;
 
@@ -8,16 +8,16 @@ use crate::{
     core::SourceId,
     ops::RegistryCredentialConfig,
     util::{auth::registry_credential_config_raw, config},
-    Config,
+    GlobalContext,
 };
 
 pub struct TokenCredential<'a> {
-    config: &'a Config,
+    gctx: &'a GlobalContext,
 }
 
 impl<'a> TokenCredential<'a> {
-    pub fn new(config: &'a Config) -> Self {
-        Self { config }
+    pub fn new(gctx: &'a GlobalContext) -> Self {
+        Self { gctx }
     }
 }
 
@@ -34,8 +34,7 @@ impl<'a> Credential for TokenCredential<'a> {
         } else {
             SourceId::for_registry(&index_url)
         }?;
-        let previous_token =
-            registry_credential_config_raw(self.config, &sid)?.and_then(|c| c.token);
+        let previous_token = registry_credential_config_raw(self.gctx, &sid)?.and_then(|c| c.token);
 
         match action {
             Action::Get(_) => {
@@ -54,11 +53,11 @@ impl<'a> Credential for TokenCredential<'a> {
 
                 crates_io::check_token(new_token.as_ref().expose()).map_err(Box::new)?;
                 config::save_credentials(
-                    self.config,
+                    self.gctx,
                     Some(RegistryCredentialConfig::Token(new_token)),
                     &sid,
                 )?;
-                let _ = self.config.shell().status(
+                let _ = self.gctx.shell().status(
                     "Login",
                     format!("token for `{}` saved", sid.display_registry_name()),
                 );
@@ -69,8 +68,8 @@ impl<'a> Credential for TokenCredential<'a> {
                     return Err(Error::NotFound);
                 }
                 let reg_name = sid.display_registry_name();
-                config::save_credentials(self.config, None, &sid)?;
-                let _ = self.config.shell().status(
+                config::save_credentials(self.gctx, None, &sid)?;
+                let _ = self.gctx.shell().status(
                     "Logout",
                     format!("token for `{reg_name}` has been removed from local storage"),
                 );

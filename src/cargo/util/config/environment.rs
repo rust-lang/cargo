@@ -28,15 +28,15 @@ fn make_case_insensitive_and_normalized_env(
     (case_insensitive_env, normalized_env)
 }
 
-/// A snapshot of the environment variables available to [`super::Config`].
+/// A snapshot of the environment variables available to [`super::GlobalContext`].
 ///
-/// Currently, the [`Config`](super::Config) supports lookup of environment variables
+/// Currently, the [`Context`](super::GlobalContext) supports lookup of environment variables
 /// through two different means:
 ///
-/// - [`Config::get_env`](super::Config::get_env)
-///   and [`Config::get_env_os`](super::Config::get_env_os)
+/// - [`Context::get_env`](super::GlobalContext::get_env)
+///   and [`Context::get_env_os`](super::GlobalContext::get_env_os)
 ///   for process environment variables (similar to [`std::env::var`] and [`std::env::var_os`]),
-/// - Typed Config Value API via [`Config::get`](super::Config::get).
+/// - Typed Config Value API via [`Context::get`](super::GlobalContext::get).
 ///   This is only available for `CARGO_` prefixed environment keys.
 ///
 /// This type contains the env var snapshot and helper methods for both APIs.
@@ -182,7 +182,7 @@ impl Env {
     /// Looks up a normalized `key` in the `normalized_env`.
     /// Returns the corresponding (non-normalized) env key if it exists, else `None`.
     ///
-    /// This is used by [`super::Config::check_environment_key_case_mismatch`].
+    /// This is used by [`super::GlobalContext::check_environment_key_case_mismatch`].
     pub(super) fn get_normalized(&self, key: &str) -> Option<&str> {
         self.normalized_env.get(key).map(|s| s.as_ref())
     }

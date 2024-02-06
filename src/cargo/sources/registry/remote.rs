@@ -11,7 +11,7 @@ use crate::sources::registry::{LoadResponse, RegistryConfig, RegistryData};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{Config, Filesystem};
+use crate::util::{Filesystem, GlobalContext};
 use anyhow::Context as _;
 use cargo_util::paths;
 use lazycell::LazyCell;
@@ -48,7 +48,7 @@ use tracing::{debug, trace};
 /// supporting Git-based index for a pretty long while.
 ///
 /// [`HttpRegistry`]: super::http_remote::HttpRegistry
-pub struct RemoteRegistry<'cfg> {
+pub struct RemoteRegistry<'gctx> {
     /// The name of this source, a unique string (across all sources) used as
     /// the directory name where its cached content is stored.
     name: InternedString,
@@ -61,7 +61,7 @@ pub struct RemoteRegistry<'cfg> {
     /// This reference is stored so that when a registry needs update, it knows
     /// where to fetch from.
     index_git_ref: GitReference,
-    config: &'cfg Config,
+    gctx: &'gctx GlobalContext,
     /// A Git [tree object] to help this registry find crate metadata from the
     /// underlying Git repository.
     ///
@@ -85,18 +85,22 @@ pub struct RemoteRegistry<'cfg> {
     quiet: bool,
 }
 
-impl<'cfg> RemoteRegistry<'cfg> {
+impl<'gctx> RemoteRegistry<'gctx> {
     /// Creates a Git-rebased remote registry for `source_id`.
     ///
     /// * `name` --- Name of a path segment where `.crate` tarballs and the
     ///   registry index are stored. Expect to be unique.
-    pub fn new(source_id: SourceId, config: &'cfg Config, name: &str) -> RemoteRegistry<'cfg> {
+    pub fn new(
+        source_id: SourceId,
+        gctx: &'gctx GlobalContext,
+        name: &str,
+    ) -> RemoteRegistry<'gctx> {
         RemoteRegistry {
             name: name.into(),
-            index_path: config.registry_index_path().join(name),
-            cache_path: config.registry_cache_path().join(name),
+            index_path: gctx.registry_index_path().join(name),
+            cache_path: gctx.registry_cache_path().join(name),
             source_id,
-            config,
+            gctx,
             index_git_ref: GitReference::DefaultBranch,
             tree: RefCell::new(None),
             repo: LazyCell::new(),
@@ -112,7 +116,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
         self.repo.try_borrow_with(|| {
             trace!("acquiring registry index lock");
             let path = self
-                .config
+                .gctx
                 .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &self.index_path);
 
             match git2::Repository::open(&path) {
@@ -201,7 +205,7 @@ impl<'cfg> RemoteRegistry<'cfg> {
 
     /// Whether the registry is up-to-date. See [`Self::mark_updated`] for more.
     fn is_updated(&self) -> bool {
-        self.config.updated_sources().contains(&self.source_id)
+        self.gctx.updated_sources().contains(&self.source_id)
     }
 
     /// Marks this registry as up-to-date.
@@ -210,14 +214,14 @@ impl<'cfg> RemoteRegistry<'cfg> {
     /// an expensive operation. This generally only happens when the resolver
     /// is run multiple times, such as during `cargo publish`.
     fn mark_updated(&self) {
-        self.config.updated_sources().insert(self.source_id);
+        self.gctx.updated_sources().insert(self.source_id);
     }
 }
 
-impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
+impl<'gctx> RegistryData for RemoteRegistry<'gctx> {
     fn prepare(&self) -> CargoResult<()> {
         self.repo()?;
-        self.config
+        self.gctx
             .deferred_global_last_use()?
             .mark_registry_index_used(global_cache_tracker::RegistryIndex {
                 encoded_registry_name: self.name,
@@ -230,7 +234,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     }
 
     fn assert_index_locked<'a>(&self, path: &'a Filesystem) -> &'a Path {
-        self.config
+        self.gctx
             .assert_package_cache_locked(CacheLockMode::DownloadExclusive, path)
     }
 
@@ -317,7 +321,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     fn config(&mut self) -> Poll<CargoResult<Option<RegistryConfig>>> {
         debug!("loading config");
         self.prepare()?;
-        self.config
+        self.gctx
             .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &self.index_path);
         match ready!(self.load(Path::new(""), Path::new(RegistryConfig::NAME), None)?) {
             LoadResponse::Data { raw_data, .. } => {
@@ -341,10 +345,10 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         }
         self.mark_updated();
 
-        if self.config.offline() {
+        if self.gctx.offline() {
             return Ok(());
         }
-        if self.config.cli_unstable().no_index_update {
+        if self.gctx.cli_unstable().no_index_update {
             return Ok(());
         }
 
@@ -356,17 +360,17 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
         //
         // This way if there's a problem the error gets printed before we even
         // hit the index, which may not actually read this configuration.
-        self.config.http()?;
+        self.gctx.http()?;
 
         self.prepare()?;
         self.head.set(None);
         *self.tree.borrow_mut() = None;
         self.current_sha.set(None);
         let _path = self
-            .config
+            .gctx
             .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &self.index_path);
         if !self.quiet {
-            self.config
+            self.gctx
                 .shell()
                 .status("Updating", self.source_id.display_index())?;
         }
@@ -379,7 +383,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
             repo,
             url.as_str(),
             &self.index_git_ref,
-            self.config,
+            self.gctx,
             RemoteKind::Registry,
         )
         .with_context(|| format!("failed to fetch `{}`", url))?;
@@ -413,7 +417,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
 
         download::download(
             &self.cache_path,
-            &self.config,
+            &self.gctx,
             self.name,
             pkg,
             checksum,
@@ -429,7 +433,7 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     ) -> CargoResult<File> {
         download::finish_download(
             &self.cache_path,
-            &self.config,
+            &self.gctx,
             self.name.clone(),
             pkg,
             checksum,
@@ -438,13 +442,13 @@ impl<'cfg> RegistryData for RemoteRegistry<'cfg> {
     }
 
     fn is_crate_downloaded(&self, pkg: PackageId) -> bool {
-        download::is_crate_downloaded(&self.cache_path, &self.config, pkg)
+        download::is_crate_downloaded(&self.cache_path, &self.gctx, pkg)
     }
 }
 
 /// Implemented to just be sure to drop `tree` field before our other fields.
 /// See SAFETY inside [`RemoteRegistry::tree()`] for more.
-impl<'cfg> Drop for RemoteRegistry<'cfg> {
+impl<'gctx> Drop for RemoteRegistry<'gctx> {
     fn drop(&mut self) {
         self.tree.borrow_mut().take();
     }

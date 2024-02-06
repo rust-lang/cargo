@@ -12,23 +12,23 @@ use std::task::Poll;
 /// The implementation is merely redirecting from the original to the replacement.
 ///
 /// [source replacement]: https://doc.rust-lang.org/nightly/cargo/reference/source-replacement.html
-pub struct ReplacedSource<'cfg> {
+pub struct ReplacedSource<'gctx> {
     /// The identifier of the original source.
     to_replace: SourceId,
     /// The identifier of the new replacement source.
     replace_with: SourceId,
-    inner: Box<dyn Source + 'cfg>,
+    inner: Box<dyn Source + 'gctx>,
 }
 
-impl<'cfg> ReplacedSource<'cfg> {
+impl<'gctx> ReplacedSource<'gctx> {
     /// Creates a replaced source.
     ///
     /// The `src` argument is the new replacement source.
     pub fn new(
         to_replace: SourceId,
         replace_with: SourceId,
-        src: Box<dyn Source + 'cfg>,
-    ) -> ReplacedSource<'cfg> {
+        src: Box<dyn Source + 'gctx>,
+    ) -> ReplacedSource<'gctx> {
         ReplacedSource {
             to_replace,
             replace_with,
@@ -45,7 +45,7 @@ impl<'cfg> ReplacedSource<'cfg> {
     }
 }
 
-impl<'cfg> Source for ReplacedSource<'cfg> {
+impl<'gctx> Source for ReplacedSource<'gctx> {
     fn source_id(&self) -> SourceId {
         self.to_replace
     }

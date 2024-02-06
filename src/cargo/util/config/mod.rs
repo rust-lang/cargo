@@ -162,7 +162,7 @@ pub struct CredentialCacheValue {
 /// Configuration information for cargo. This is not specific to a build, it is information
 /// relating to cargo itself.
 #[derive(Debug)]
-pub struct Config {
+pub struct GlobalContext {
     /// The location of the user's Cargo home directory. OS-dependent.
     home_path: Filesystem,
     /// Information about how to write messages to the shell
@@ -248,12 +248,12 @@ pub struct Config {
     pub ws_roots: RefCell<HashMap<PathBuf, WorkspaceRootConfig>>,
     /// The global cache tracker is a database used to track disk cache usage.
     global_cache_tracker: LazyCell<RefCell<GlobalCacheTracker>>,
-    /// A cache of modifications to make to [`Config::global_cache_tracker`],
+    /// A cache of modifications to make to [`GlobalContext::global_cache_tracker`],
     /// saved to disk in a batch to improve performance.
     deferred_global_last_use: LazyCell<RefCell<DeferredGlobalLastUse>>,
 }
 
-impl Config {
+impl GlobalContext {
     /// Creates a new config instance.
     ///
     /// This is typically used for tests or other special cases. `default` is
@@ -261,7 +261,7 @@ impl Config {
     ///
     /// This does only minimal initialization. In particular, it does not load
     /// any config files from disk. Those will be loaded lazily as-needed.
-    pub fn new(shell: Shell, cwd: PathBuf, homedir: PathBuf) -> Config {
+    pub fn new(shell: Shell, cwd: PathBuf, homedir: PathBuf) -> GlobalContext {
         static mut GLOBAL_JOBSERVER: *mut jobserver::Client = 0 as *mut _;
         static INIT: Once = Once::new();
 
@@ -281,7 +281,7 @@ impl Config {
             _ => true,
         };
 
-        Config {
+        GlobalContext {
             home_path: Filesystem::new(homedir),
             shell: RefCell::new(shell),
             cwd,
@@ -333,7 +333,7 @@ impl Config {
     ///
     /// This does only minimal initialization. In particular, it does not load
     /// any config files from disk. Those will be loaded lazily as-needed.
-    pub fn default() -> CargoResult<Config> {
+    pub fn default() -> CargoResult<GlobalContext> {
         let shell = Shell::new();
         let cwd = env::current_dir()
             .with_context(|| "couldn't get the current directory of the process")?;
@@ -343,7 +343,7 @@ impl Config {
                  This probably means that $HOME was not set."
             )
         })?;
-        Ok(Config::new(shell, cwd, homedir))
+        Ok(GlobalContext::new(shell, cwd, homedir))
     }
 
     /// Gets the user's Cargo home directory (OS-dependent).
@@ -806,7 +806,7 @@ impl Config {
         self.env.get_env_os(key)
     }
 
-    /// Check if the [`Config`] contains a given [`ConfigKey`].
+    /// Check if the [`GlobalContext`] contains a given [`ConfigKey`].
     ///
     /// See `ConfigMapAccess` for a description of `env_prefix_ok`.
     fn has_key(&self, key: &ConfigKey, env_prefix_ok: bool) -> CargoResult<bool> {
@@ -1124,7 +1124,7 @@ impl Config {
         self.load_values_from(&self.cwd)
     }
 
-    /// Like [`load_values`](Config::load_values) but without merging config values.
+    /// Like [`load_values`](GlobalContext::load_values) but without merging config values.
     ///
     /// This is primarily crafted for `cargo config` command.
     pub(crate) fn load_values_unmerged(&self) -> CargoResult<Vec<ConfigValue>> {
@@ -1143,7 +1143,7 @@ impl Config {
         Ok(result)
     }
 
-    /// Like [`load_includes`](Config::load_includes) but without merging config values.
+    /// Like [`load_includes`](GlobalContext::load_includes) but without merging config values.
     ///
     /// This is primarily crafted for `cargo config` command.
     fn load_unmerged_include(
@@ -1911,7 +1911,7 @@ impl Config {
     /// fetch `foo` if it is a map, though.
     pub fn get<'de, T: serde::de::Deserialize<'de>>(&self, key: &str) -> CargoResult<T> {
         let d = Deserializer {
-            config: self,
+            gctx: self,
             key: ConfigKey::from_str(key),
             env_prefix_ok: true,
         };
@@ -1921,8 +1921,8 @@ impl Config {
     /// Obtain a [`Path`] from a [`Filesystem`], verifying that the
     /// appropriate lock is already currently held.
     ///
-    /// Locks are usually acquired via [`Config::acquire_package_cache_lock`]
-    /// or [`Config::try_acquire_package_cache_lock`].
+    /// Locks are usually acquired via [`GlobalContext::acquire_package_cache_lock`]
+    /// or [`GlobalContext::try_acquire_package_cache_lock`].
     #[track_caller]
     pub fn assert_package_cache_locked<'a>(
         &self,
@@ -2268,7 +2268,7 @@ pub fn homedir(cwd: &Path) -> Option<PathBuf> {
 }
 
 pub fn save_credentials(
-    cfg: &Config,
+    gctx: &GlobalContext,
     token: Option<RegistryCredentialConfig>,
     registry: &SourceId,
 ) -> CargoResult<()> {
@@ -2284,8 +2284,8 @@ pub fn save_credentials(
     // If 'credentials' exists, write to that for backward compatibility reasons.
     // Otherwise write to 'credentials.toml'. There's no need to print the
     // warning here, because it would already be printed at load time.
-    let home_path = cfg.home_path.clone().into_path_unlocked();
-    let filename = match cfg.get_file_path(&home_path, "credentials", false)? {
+    let home_path = gctx.home_path.clone().into_path_unlocked();
+    let filename = match gctx.get_file_path(&home_path, "credentials", false)? {
         Some(path) => match path.file_name() {
             Some(filename) => Path::new(filename).to_owned(),
             None => Path::new("credentials.toml").to_owned(),
@@ -2294,9 +2294,9 @@ pub fn save_credentials(
     };
 
     let mut file = {
-        cfg.home_path.create_dir()?;
-        cfg.home_path
-            .open_rw_exclusive_create(filename, cfg, "credentials' config file")?
+        gctx.home_path.create_dir()?;
+        gctx.home_path
+            .open_rw_exclusive_create(filename, gctx, "credentials' config file")?
     };
 
     let mut contents = String::new();
@@ -2307,7 +2307,7 @@ pub fn save_credentials(
         )
     })?;
 
-    let mut toml = parse_document(&contents, file.path(), cfg)?;
+    let mut toml = parse_document(&contents, file.path(), gctx)?;
 
     // Move the old token location to the new one.
     if let Some(token) = toml.remove("token") {
@@ -2591,14 +2591,14 @@ impl<'de> Deserialize<'de> for BuildTargetConfigInner {
 
 impl BuildTargetConfig {
     /// Gets values of `build.target` as a list of strings.
-    pub fn values(&self, config: &Config) -> CargoResult<Vec<String>> {
+    pub fn values(&self, gctx: &GlobalContext) -> CargoResult<Vec<String>> {
         let map = |s: &String| {
             if s.ends_with(".json") {
                 // Path to a target specification file (in JSON).
                 // <https://doc.rust-lang.org/rustc/targets/custom.html>
                 self.inner
                     .definition
-                    .root(config)
+                    .root(gctx)
                     .join(s)
                     .to_str()
                     .expect("must be utf-8 in toml")
@@ -2753,7 +2753,7 @@ impl EnvConfigValue {
         }
     }
 
-    pub fn resolve<'a>(&'a self, config: &Config) -> Cow<'a, OsStr> {
+    pub fn resolve<'a>(&'a self, gctx: &GlobalContext) -> Cow<'a, OsStr> {
         match self.inner.val {
             EnvConfigValueInner::Simple(ref s) => Cow::Borrowed(OsStr::new(s.as_str())),
             EnvConfigValueInner::WithOptions {
@@ -2762,7 +2762,7 @@ impl EnvConfigValue {
                 ..
             } => {
                 if relative {
-                    let p = self.inner.definition.root(config).join(&value);
+                    let p = self.inner.definition.root(gctx).join(&value);
                     Cow::Owned(p.into_os_string())
                 } else {
                     Cow::Borrowed(OsStr::new(value.as_str()))
@@ -2774,7 +2774,7 @@ impl EnvConfigValue {
 
 pub type EnvConfig = HashMap<String, EnvConfigValue>;
 
-fn parse_document(toml: &str, _file: &Path, _config: &Config) -> CargoResult<toml::Table> {
+fn parse_document(toml: &str, _file: &Path, _gctx: &GlobalContext) -> CargoResult<toml::Table> {
     // At the moment, no compatibility checks are needed.
     toml.parse().map_err(Into::into)
 }
@@ -2874,11 +2874,11 @@ impl Tool {
 fn disables_multiplexing_for_bad_curl(
     curl_version: &str,
     http: &mut CargoHttpConfig,
-    config: &Config,
+    gctx: &GlobalContext,
 ) {
     use crate::util::network;
 
-    if network::proxy::http_proxy_exists(http, config) && http.multiplexing.is_none() {
+    if network::proxy::http_proxy_exists(http, gctx) && http.multiplexing.is_none() {
         let bad_curl_versions = ["7.87.0", "7.88.0", "7.88.1"];
         if bad_curl_versions
             .iter()
@@ -2894,18 +2894,18 @@ fn disables_multiplexing_for_bad_curl(
 mod tests {
     use super::disables_multiplexing_for_bad_curl;
     use super::CargoHttpConfig;
-    use super::Config;
+    use super::GlobalContext;
     use super::Shell;
 
     #[test]
     fn disables_multiplexing() {
-        let mut config = Config::new(Shell::new(), "".into(), "".into());
-        config.set_search_stop_path(std::path::PathBuf::new());
-        config.set_env(Default::default());
+        let mut gctx = GlobalContext::new(Shell::new(), "".into(), "".into());
+        gctx.set_search_stop_path(std::path::PathBuf::new());
+        gctx.set_env(Default::default());
 
         let mut http = CargoHttpConfig::default();
         http.proxy = Some("127.0.0.1:3128".into());
-        disables_multiplexing_for_bad_curl("7.88.1", &mut http, &config);
+        disables_multiplexing_for_bad_curl("7.88.1", &mut http, &gctx);
         assert_eq!(http.multiplexing, Some(false));
 
         let cases = [
@@ -2929,7 +2929,7 @@ mod tests {
                 proxy,
                 ..Default::default()
             };
-            disables_multiplexing_for_bad_curl(curl_v, &mut http, &config);
+            disables_multiplexing_for_bad_curl(curl_v, &mut http, &gctx);
             assert_eq!(http.multiplexing, result);
         }
     }

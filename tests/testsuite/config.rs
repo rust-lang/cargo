@@ -1,7 +1,9 @@
 //! Tests for config settings.
 
 use cargo::core::{PackageIdSpec, Shell};
-use cargo::util::config::{self, Config, Definition, JobsConfig, SslVersionConfig, StringList};
+use cargo::util::config::{
+    self, Definition, GlobalContext, JobsConfig, SslVersionConfig, StringList,
+};
 use cargo::CargoResult;
 use cargo_test_support::compare;
 use cargo_test_support::{panic_error, paths, project, symlink_supported, t};
@@ -16,8 +18,8 @@ use std::io;
 use std::os;
 use std::path::{Path, PathBuf};
 
-/// Helper for constructing a `Config` object.
-pub struct ConfigBuilder {
+/// Helper for constructing a `GlobalContext` object.
+pub struct GlobalContextBuilder {
     env: HashMap<String, String>,
     unstable: Vec<String>,
     config_args: Vec<String>,
@@ -26,9 +28,9 @@ pub struct ConfigBuilder {
     enable_nightly_features: bool,
 }
 
-impl ConfigBuilder {
-    pub fn new() -> ConfigBuilder {
-        ConfigBuilder {
+impl GlobalContextBuilder {
+    pub fn new() -> GlobalContextBuilder {
+        GlobalContextBuilder {
             env: HashMap::new(),
             unstable: Vec::new(),
             config_args: Vec::new(),
@@ -64,7 +66,7 @@ impl ConfigBuilder {
 
     /// Sets the current working directory where config files will be loaded.
     ///
-    /// Default is the root from [`ConfigBuilder::root`] or [`paths::root`].
+    /// Default is the root from [`GlobalContextBuilder::root`] or [`paths::root`].
     pub fn cwd(&mut self, path: impl AsRef<Path>) -> &mut Self {
         let path = path.as_ref();
         let cwd = self
@@ -89,22 +91,22 @@ impl ConfigBuilder {
     }
 
     /// Creates the `Config`.
-    pub fn build(&self) -> Config {
+    pub fn build(&self) -> GlobalContext {
         self.build_err().unwrap()
     }
 
     /// Creates the `Config`, returning a Result.
-    pub fn build_err(&self) -> CargoResult<Config> {
+    pub fn build_err(&self) -> CargoResult<GlobalContext> {
         let root = self.root.clone().unwrap_or_else(|| paths::root());
         let output = Box::new(fs::File::create(root.join("shell.out")).unwrap());
         let shell = Shell::from_write(output);
         let cwd = self.cwd.clone().unwrap_or_else(|| root.clone());
         let homedir = root.join("home").join(".cargo");
-        let mut config = Config::new(shell, cwd, homedir);
-        config.nightly_features_allowed = self.enable_nightly_features || !self.unstable.is_empty();
-        config.set_env(self.env.clone());
-        config.set_search_stop_path(&root);
-        config.configure(
+        let mut gctx = GlobalContext::new(shell, cwd, homedir);
+        gctx.nightly_features_allowed = self.enable_nightly_features || !self.unstable.is_empty();
+        gctx.set_env(self.env.clone());
+        gctx.set_search_stop_path(&root);
+        gctx.configure(
             0,
             false,
             None,
@@ -115,17 +117,17 @@ impl ConfigBuilder {
             &self.unstable,
             &self.config_args,
         )?;
-        Ok(config)
+        Ok(gctx)
     }
 }
 
-fn new_config() -> Config {
-    ConfigBuilder::new().build()
+fn new_gctx() -> GlobalContext {
+    GlobalContextBuilder::new().build()
 }
 
 /// Read the output from Config.
-pub fn read_output(config: Config) -> String {
-    drop(config); // Paranoid about flushing the file.
+pub fn read_output(gctx: GlobalContext) -> String {
+    drop(gctx); // Paranoid about flushing the file.
     let path = paths::root().join("shell.out");
     fs::read_to_string(path).unwrap()
 }
@@ -222,16 +224,16 @@ f1 = 123
 ",
     );
 
-    let config = new_config();
+    let gctx = new_gctx();
 
     #[derive(Debug, Deserialize, Eq, PartialEq)]
     struct S {
         f1: Option<i64>,
     }
-    let s: S = config.get("S").unwrap();
+    let s: S = gctx.get("S").unwrap();
     assert_eq!(s, S { f1: Some(123) });
-    let config = ConfigBuilder::new().env("CARGO_S_F1", "456").build();
-    let s: S = config.get("S").unwrap();
+    let gctx = GlobalContextBuilder::new().env("CARGO_S_F1", "456").build();
+    let s: S = gctx.get("S").unwrap();
     assert_eq!(s, S { f1: Some(456) });
 }
 
@@ -239,24 +241,24 @@ f1 = 123
 #[cargo_test]
 fn environment_variable_casing() {
     // Issue #11814: Environment variable names are case-insensitive on Windows.
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("Path", "abc")
         .env("Two-Words", "abc")
         .env("two_words", "def")
         .build();
 
-    let var = config.get_env("PATH").unwrap();
+    let var = gctx.get_env("PATH").unwrap();
     assert_eq!(var, String::from("abc"));
 
-    let var = config.get_env("path").unwrap();
+    let var = gctx.get_env("path").unwrap();
     assert_eq!(var, String::from("abc"));
 
-    let var = config.get_env("TWO-WORDS").unwrap();
+    let var = gctx.get_env("TWO-WORDS").unwrap();
     assert_eq!(var, String::from("abc"));
 
     // Make sure that we can still distinguish between dashes and underscores
     // in variable names.
-    let var = config.get_env("Two_Words").unwrap();
+    let var = gctx.get_env("Two_Words").unwrap();
     assert_eq!(var, String::from("def"));
 }
 
@@ -269,12 +271,12 @@ f1 = 1
 ",
     );
 
-    let config = new_config();
+    let gctx = new_gctx();
 
-    assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
+    assert_eq!(gctx.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
 
     // It should NOT have warned for the symlink.
-    let output = read_output(config);
+    let output = read_output(gctx);
     let expected = "\
 [WARNING] `[ROOT]/.cargo/config` is deprecated in favor of `config.toml`
 [NOTE] if you need to support cargo 1.38 or earlier, you can symlink `config` to `config.toml`";
@@ -298,12 +300,12 @@ f1 = 1
 
     symlink_config_to_config_toml();
 
-    let config = new_config();
+    let gctx = new_gctx();
 
-    assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
+    assert_eq!(gctx.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
 
     // It should NOT have warned for the symlink.
-    let output = read_output(config);
+    let output = read_output(gctx);
     assert_match("", &output);
 }
 
@@ -323,14 +325,14 @@ f1 = 2
 ",
     );
 
-    let config = new_config();
+    let gctx = new_gctx();
 
     // It should use the value from the one without the extension for
     // backwards compatibility.
-    assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
+    assert_eq!(gctx.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
 
     // But it also should have warned.
-    let output = read_output(config);
+    let output = read_output(gctx);
     let expected = "\
 [WARNING] both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
 ";
@@ -346,7 +348,7 @@ unused = 456
 ",
     );
 
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("CARGO_S_UNUSED2", "1")
         .env("CARGO_S2_UNUSED", "2")
         .build();
@@ -356,15 +358,15 @@ unused = 456
         f1: Option<i64>,
     }
     // This prints a warning (verified below).
-    let s: S = config.get("S").unwrap();
+    let s: S = gctx.get("S").unwrap();
     assert_eq!(s, S { f1: None });
     // This does not print anything, we cannot easily/reliably warn for
     // environment variables.
-    let s: S = config.get("S2").unwrap();
+    let s: S = gctx.get("S2").unwrap();
     assert_eq!(s, S { f1: None });
 
     // Verify the warnings.
-    let output = read_output(config);
+    let output = read_output(gctx);
     let expected = "\
 warning: unused config key `S.unused` in `[..]/.cargo/config.toml`
 ";
@@ -399,7 +401,7 @@ lto = false
 ",
     );
 
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .unstable_flag("advanced-env")
         .env("CARGO_PROFILE_DEV_CODEGEN_UNITS", "5")
         .env("CARGO_PROFILE_DEV_BUILD_OVERRIDE_CODEGEN_UNITS", "11")
@@ -408,7 +410,7 @@ lto = false
         .build();
 
     // TODO: don't use actual `tomlprofile`.
-    let p: cargo_toml::TomlProfile = config.get("profile.dev").unwrap();
+    let p: cargo_toml::TomlProfile = gctx.get("profile.dev").unwrap();
     let mut packages = BTreeMap::new();
     let key =
         cargo_toml::ProfilePackageSpec::Spec(::cargo::core::PackageIdSpec::parse("bar").unwrap());
@@ -448,7 +450,7 @@ lto = false
         }
     );
 
-    let p: cargo_toml::TomlProfile = config.get("profile.no-lto").unwrap();
+    let p: cargo_toml::TomlProfile = gctx.get("profile.no-lto").unwrap();
     assert_eq!(
         p,
         cargo_toml::TomlProfile {
@@ -463,25 +465,25 @@ lto = false
 #[cargo_test]
 fn profile_env_var_prefix() {
     // Check for a bug with collision on DEBUG vs DEBUG_ASSERTIONS.
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("CARGO_PROFILE_DEV_DEBUG_ASSERTIONS", "false")
         .build();
-    let p: cargo_toml::TomlProfile = config.get("profile.dev").unwrap();
+    let p: cargo_toml::TomlProfile = gctx.get("profile.dev").unwrap();
     assert_eq!(p.debug_assertions, Some(false));
     assert_eq!(p.debug, None);
 
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("CARGO_PROFILE_DEV_DEBUG", "1")
         .build();
-    let p: cargo_toml::TomlProfile = config.get("profile.dev").unwrap();
+    let p: cargo_toml::TomlProfile = gctx.get("profile.dev").unwrap();
     assert_eq!(p.debug_assertions, None);
     assert_eq!(p.debug, Some(cargo_toml::TomlDebugInfo::Limited));
 
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("CARGO_PROFILE_DEV_DEBUG_ASSERTIONS", "false")
         .env("CARGO_PROFILE_DEV_DEBUG", "1")
         .build();
-    let p: cargo_toml::TomlProfile = config.get("profile.dev").unwrap();
+    let p: cargo_toml::TomlProfile = gctx.get("profile.dev").unwrap();
     assert_eq!(p.debug_assertions, Some(false));
     assert_eq!(p.debug, Some(cargo_toml::TomlDebugInfo::Limited));
 }
@@ -499,31 +501,31 @@ c = ['c']
     );
 
     // advanced-env
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .unstable_flag("advanced-env")
         .env("CARGO_ENVB", "false")
         .env("CARGO_C", "['d']")
         .env("CARGO_ENVL", "['a', 'b']")
         .build();
-    assert_eq!(config.get::<VSOB>("a").unwrap(), VSOB::Bool(true));
+    assert_eq!(gctx.get::<VSOB>("a").unwrap(), VSOB::Bool(true));
     assert_eq!(
-        config.get::<VSOB>("b").unwrap(),
+        gctx.get::<VSOB>("b").unwrap(),
         VSOB::VecString(vec!["b".to_string()])
     );
     assert_eq!(
-        config.get::<VSOB>("c").unwrap(),
+        gctx.get::<VSOB>("c").unwrap(),
         VSOB::VecString(vec!["c".to_string(), "d".to_string()])
     );
-    assert_eq!(config.get::<VSOB>("envb").unwrap(), VSOB::Bool(false));
+    assert_eq!(gctx.get::<VSOB>("envb").unwrap(), VSOB::Bool(false));
     assert_eq!(
-        config.get::<VSOB>("envl").unwrap(),
+        gctx.get::<VSOB>("envl").unwrap(),
         VSOB::VecString(vec!["a".to_string(), "b".to_string()])
     );
 
     // Demonstrate where merging logic isn't very smart. This could be improved.
-    let config = ConfigBuilder::new().env("CARGO_A", "x y").build();
+    let gctx = GlobalContextBuilder::new().env("CARGO_A", "x y").build();
     assert_error(
-        config.get::<VSOB>("a").unwrap_err(),
+        gctx.get::<VSOB>("a").unwrap_err(),
         "\
 error in environment variable `CARGO_A`: could not load config key `a`
 
@@ -532,26 +534,28 @@ Caused by:
     );
 
     // Normal env.
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .unstable_flag("advanced-env")
         .env("CARGO_B", "d e")
         .env("CARGO_C", "f g")
         .build();
     assert_eq!(
-        config.get::<VSOB>("b").unwrap(),
+        gctx.get::<VSOB>("b").unwrap(),
         VSOB::VecString(vec!["b".to_string(), "d".to_string(), "e".to_string()])
     );
     assert_eq!(
-        config.get::<VSOB>("c").unwrap(),
+        gctx.get::<VSOB>("c").unwrap(),
         VSOB::VecString(vec!["c".to_string(), "f".to_string(), "g".to_string()])
     );
 
     // config-cli
     // This test demonstrates that ConfigValue::merge isn't very smart.
     // It would be nice if it was smarter.
-    let config = ConfigBuilder::new().config_arg("a = ['a']").build_err();
+    let gctx = GlobalContextBuilder::new()
+        .config_arg("a = ['a']")
+        .build_err();
     assert_error(
-        config.unwrap_err(),
+        gctx.unwrap_err(),
         "\
 failed to merge --config key `a` into `[..]/.cargo/config.toml`
 
@@ -561,7 +565,7 @@ expected boolean, but found array",
     );
 
     // config-cli and advanced-env
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .unstable_flag("advanced-env")
         .config_arg("b=['clib']")
         .config_arg("c=['clic']")
@@ -569,7 +573,7 @@ expected boolean, but found array",
         .env("CARGO_C", "['e1', 'e2']")
         .build();
     assert_eq!(
-        config.get::<VSOB>("b").unwrap(),
+        gctx.get::<VSOB>("b").unwrap(),
         VSOB::VecString(vec![
             "b".to_string(),
             "env1".to_string(),
@@ -578,7 +582,7 @@ expected boolean, but found array",
         ])
     );
     assert_eq!(
-        config.get::<VSOB>("c").unwrap(),
+        gctx.get::<VSOB>("c").unwrap(),
         VSOB::VecString(vec![
             "c".to_string(),
             "e1".to_string(),
@@ -597,11 +601,10 @@ opt-level = 'foo'
 ",
     );
 
-    let config = new_config();
+    let gctx = new_gctx();
 
     assert_error(
-        config
-            .get::<cargo_toml::TomlProfile>("profile.dev")
+        gctx.get::<cargo_toml::TomlProfile>("profile.dev")
             .unwrap_err(),
         "\
 error in [..]/.cargo/config.toml: could not load config key `profile.dev.opt-level`
@@ -610,12 +613,12 @@ Caused by:
   must be `0`, `1`, `2`, `3`, `s` or `z`, but found the string: \"foo\"",
     );
 
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("CARGO_PROFILE_DEV_OPT_LEVEL", "asdf")
         .build();
 
     assert_error(
-        config.get::<cargo_toml::TomlProfile>("profile.dev").unwrap_err(),
+        gctx.get::<cargo_toml::TomlProfile>("profile.dev").unwrap_err(),
         "\
 error in environment variable `CARGO_PROFILE_DEV_OPT_LEVEL`: could not load config key `profile.dev.opt-level`
 
@@ -636,7 +639,7 @@ asdf = 3
 ",
     );
 
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .unstable_flag("advanced-env")
         .env("CARGO_NEST_foo_f2", "3")
         .env("CARGO_NESTE_foo_f1", "1")
@@ -646,7 +649,7 @@ asdf = 3
 
     type Nested = HashMap<String, HashMap<String, u8>>;
 
-    let n: Nested = config.get("nest").unwrap();
+    let n: Nested = gctx.get("nest").unwrap();
     let mut expected = HashMap::new();
     let mut foo = HashMap::new();
     foo.insert("f1".to_string(), 1);
@@ -657,7 +660,7 @@ asdf = 3
     expected.insert("bar".to_string(), bar);
     assert_eq!(n, expected);
 
-    let n: Nested = config.get("neste").unwrap();
+    let n: Nested = gctx.get("neste").unwrap();
     assert_eq!(n, expected);
 }
 
@@ -672,24 +675,24 @@ big = 123456789
 ",
     );
 
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("CARGO_E_S", "asdf")
         .env("CARGO_E_BIG", "123456789")
         .build();
     assert_error(
-        config.get::<i64>("foo").unwrap_err(),
+        gctx.get::<i64>("foo").unwrap_err(),
         "missing config key `foo`",
     );
     assert_error(
-        config.get::<i64>("foo.bar").unwrap_err(),
+        gctx.get::<i64>("foo.bar").unwrap_err(),
         "missing config key `foo.bar`",
     );
     assert_error(
-        config.get::<i64>("S.f2").unwrap_err(),
+        gctx.get::<i64>("S.f2").unwrap_err(),
         "error in [..]/.cargo/config.toml: `S.f2` expected an integer, but found a string",
     );
     assert_error(
-        config.get::<u8>("S.big").unwrap_err(),
+        gctx.get::<u8>("S.big").unwrap_err(),
         "\
 error in [..].cargo/config.toml: could not load config key `S.big`
 
@@ -699,11 +702,11 @@ Caused by:
 
     // Environment variable type errors.
     assert_error(
-        config.get::<i64>("e.s").unwrap_err(),
+        gctx.get::<i64>("e.s").unwrap_err(),
         "error in environment variable `CARGO_E_S`: invalid digit found in string",
     );
     assert_error(
-        config.get::<i8>("e.big").unwrap_err(),
+        gctx.get::<i8>("e.big").unwrap_err(),
         "\
 error in environment variable `CARGO_E_BIG`: could not load config key `e.big`
 
@@ -719,7 +722,7 @@ Caused by:
         f3: i64,
         big: i64,
     }
-    assert_error(config.get::<S>("S").unwrap_err(), "missing field `f3`");
+    assert_error(gctx.get::<S>("S").unwrap_err(), "missing field `f3`");
 }
 
 #[cargo_test]
@@ -731,21 +734,23 @@ f1 = 1
 ",
     );
 
-    let config = ConfigBuilder::new().env("CARGO_BAR_ASDF", "3").build();
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_BAR_ASDF", "3")
+        .build();
 
-    assert_eq!(config.get::<Option<i32>>("a").unwrap(), None);
-    assert_eq!(config.get::<Option<i32>>("a.b").unwrap(), None);
-    assert_eq!(config.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
-    assert_eq!(config.get::<Option<i32>>("bar.asdf").unwrap(), Some(3));
-    assert_eq!(config.get::<Option<i32>>("bar.zzzz").unwrap(), None);
+    assert_eq!(gctx.get::<Option<i32>>("a").unwrap(), None);
+    assert_eq!(gctx.get::<Option<i32>>("a.b").unwrap(), None);
+    assert_eq!(gctx.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
+    assert_eq!(gctx.get::<Option<i32>>("bar.asdf").unwrap(), Some(3));
+    assert_eq!(gctx.get::<Option<i32>>("bar.zzzz").unwrap(), None);
 }
 
 #[cargo_test]
 fn config_bad_toml() {
     write_config_toml("asdf");
-    let config = new_config();
+    let gctx = new_gctx();
     assert_error(
-        config.get::<i32>("foo").unwrap_err(),
+        gctx.get::<i32>("foo").unwrap_err(),
         "\
 could not load Cargo configuration
 
@@ -782,7 +787,7 @@ l = ['y']
 
     type L = Vec<String>;
 
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .unstable_flag("advanced-env")
         .env("CARGO_L4", "['three', 'four']")
         .env("CARGO_L5", "['a']")
@@ -797,35 +802,32 @@ l = ['y']
         .env("CARGO_BAD_ENV", "[zzz]")
         .build();
 
-    assert_eq!(config.get::<L>("unset").unwrap(), vec![] as Vec<String>);
-    assert_eq!(config.get::<L>("l1").unwrap(), vec![] as Vec<String>);
-    assert_eq!(config.get::<L>("l2").unwrap(), vec!["one", "two"]);
+    assert_eq!(gctx.get::<L>("unset").unwrap(), vec![] as Vec<String>);
+    assert_eq!(gctx.get::<L>("l1").unwrap(), vec![] as Vec<String>);
+    assert_eq!(gctx.get::<L>("l2").unwrap(), vec!["one", "two"]);
     assert_error(
-        config.get::<L>("l3").unwrap_err(),
+        gctx.get::<L>("l3").unwrap_err(),
         "\
 invalid configuration for key `l3`
 expected a list, but found a integer for `l3` in [..]/.cargo/config.toml",
     );
     assert_eq!(
-        config.get::<L>("l4").unwrap(),
+        gctx.get::<L>("l4").unwrap(),
         vec!["one", "two", "three", "four"]
     );
-    assert_eq!(config.get::<L>("l5").unwrap(), vec!["a"]);
-    assert_eq!(config.get::<L>("env-empty").unwrap(), vec![] as Vec<String>);
-    assert_eq!(config.get::<L>("env-blank").unwrap(), vec![] as Vec<String>);
-    assert_eq!(config.get::<L>("env-num").unwrap(), vec!["1".to_string()]);
+    assert_eq!(gctx.get::<L>("l5").unwrap(), vec!["a"]);
+    assert_eq!(gctx.get::<L>("env-empty").unwrap(), vec![] as Vec<String>);
+    assert_eq!(gctx.get::<L>("env-blank").unwrap(), vec![] as Vec<String>);
+    assert_eq!(gctx.get::<L>("env-num").unwrap(), vec!["1".to_string()]);
     assert_error(
-        config.get::<L>("env-num-list").unwrap_err(),
+        gctx.get::<L>("env-num-list").unwrap_err(),
         "error in environment variable `CARGO_ENV_NUM_LIST`: \
          expected string, found integer",
     );
-    assert_eq!(
-        config.get::<L>("env-text").unwrap(),
-        vec!["asdf".to_string()]
-    );
+    assert_eq!(gctx.get::<L>("env-text").unwrap(), vec!["asdf".to_string()]);
     // "invalid number" here isn't the best error, but I think it's just toml.rs.
     assert_error(
-        config.get::<L>("bad-env").unwrap_err(),
+        gctx.get::<L>("bad-env").unwrap_err(),
         "\
 error in environment variable `CARGO_BAD_ENV`: could not parse TOML list: TOML parse error at line 1, column 2
   |
@@ -838,9 +840,7 @@ expected `]`
 
     // Try some other sequence-like types.
     assert_eq!(
-        config
-            .get::<(String, String, String, String)>("l4")
-            .unwrap(),
+        gctx.get::<(String, String, String, String)>("l4").unwrap(),
         (
             "one".to_string(),
             "two".to_string(),
@@ -848,13 +848,13 @@ expected `]`
             "four".to_string()
         )
     );
-    assert_eq!(config.get::<(String,)>("l5").unwrap(), ("a".to_string(),));
+    assert_eq!(gctx.get::<(String,)>("l5").unwrap(), ("a".to_string(),));
 
     // Tuple struct
     #[derive(Debug, Deserialize, Eq, PartialEq)]
     struct TupS(String, String);
     assert_eq!(
-        config.get::<TupS>("lepair").unwrap(),
+        gctx.get::<TupS>("lepair").unwrap(),
         TupS("a".to_string(), "b".to_string())
     );
 
@@ -863,21 +863,21 @@ expected `]`
     struct S {
         l: Option<Vec<String>>,
     }
-    assert_eq!(config.get::<S>("nested-empty").unwrap(), S { l: None });
+    assert_eq!(gctx.get::<S>("nested-empty").unwrap(), S { l: None });
     assert_eq!(
-        config.get::<S>("nested").unwrap(),
+        gctx.get::<S>("nested").unwrap(),
         S {
             l: Some(vec!["x".to_string()]),
         }
     );
     assert_eq!(
-        config.get::<S>("nested2").unwrap(),
+        gctx.get::<S>("nested2").unwrap(),
         S {
             l: Some(vec!["y".to_string(), "z".to_string()]),
         }
     );
     assert_eq!(
-        config.get::<S>("nestede").unwrap(),
+        gctx.get::<S>("nestede").unwrap(),
         S {
             l: Some(vec!["env".to_string()]),
         }
@@ -893,7 +893,7 @@ ns2 = 456
 ",
     );
 
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("CARGO_NSE", "987")
         .env("CARGO_NS2", "654")
         .build();
@@ -901,11 +901,11 @@ ns2 = 456
     #[derive(Debug, Deserialize, Eq, PartialEq)]
     #[serde(transparent)]
     struct NewS(i32);
-    assert_eq!(config.get::<NewS>("ns").unwrap(), NewS(123));
-    assert_eq!(config.get::<NewS>("ns2").unwrap(), NewS(654));
-    assert_eq!(config.get::<NewS>("nse").unwrap(), NewS(987));
+    assert_eq!(gctx.get::<NewS>("ns").unwrap(), NewS(123));
+    assert_eq!(gctx.get::<NewS>("ns2").unwrap(), NewS(654));
+    assert_eq!(gctx.get::<NewS>("nse").unwrap(), NewS(987));
     assert_error(
-        config.get::<NewS>("unset").unwrap_err(),
+        gctx.get::<NewS>("unset").unwrap_err(),
         "missing config key `unset`",
     );
 }
@@ -922,44 +922,39 @@ abs = '{}'
         paths::home().display(),
     ));
 
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("CARGO_EPATH", "a/b")
         .env("CARGO_P3", "d/e")
         .build();
 
     assert_eq!(
-        config
-            .get::<config::ConfigRelativePath>("p1")
+        gctx.get::<config::ConfigRelativePath>("p1")
             .unwrap()
-            .resolve_path(&config),
+            .resolve_path(&gctx),
         paths::root().join("foo/bar")
     );
     assert_eq!(
-        config
-            .get::<config::ConfigRelativePath>("p2")
+        gctx.get::<config::ConfigRelativePath>("p2")
             .unwrap()
-            .resolve_path(&config),
+            .resolve_path(&gctx),
         paths::root().join("../abc")
     );
     assert_eq!(
-        config
-            .get::<config::ConfigRelativePath>("p3")
+        gctx.get::<config::ConfigRelativePath>("p3")
             .unwrap()
-            .resolve_path(&config),
+            .resolve_path(&gctx),
         paths::root().join("d/e")
     );
     assert_eq!(
-        config
-            .get::<config::ConfigRelativePath>("abs")
+        gctx.get::<config::ConfigRelativePath>("abs")
             .unwrap()
-            .resolve_path(&config),
+            .resolve_path(&gctx),
         paths::home()
     );
     assert_eq!(
-        config
-            .get::<config::ConfigRelativePath>("epath")
+        gctx.get::<config::ConfigRelativePath>("epath")
             .unwrap()
-            .resolve_path(&config),
+            .resolve_path(&gctx),
         paths::root().join("a/b")
     );
 }
@@ -974,31 +969,31 @@ i64max = 9223372036854775807
 ",
     );
 
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("CARGO_EPOS", "123456789")
         .env("CARGO_ENEG", "-1")
         .env("CARGO_EI64MAX", "9223372036854775807")
         .build();
 
     assert_eq!(
-        config.get::<u64>("i64max").unwrap(),
+        gctx.get::<u64>("i64max").unwrap(),
         9_223_372_036_854_775_807
     );
     assert_eq!(
-        config.get::<i64>("i64max").unwrap(),
+        gctx.get::<i64>("i64max").unwrap(),
         9_223_372_036_854_775_807
     );
     assert_eq!(
-        config.get::<u64>("ei64max").unwrap(),
+        gctx.get::<u64>("ei64max").unwrap(),
         9_223_372_036_854_775_807
     );
     assert_eq!(
-        config.get::<i64>("ei64max").unwrap(),
+        gctx.get::<i64>("ei64max").unwrap(),
         9_223_372_036_854_775_807
     );
 
     assert_error(
-        config.get::<u32>("nneg").unwrap_err(),
+        gctx.get::<u32>("nneg").unwrap_err(),
         "\
 error in [..].cargo/config.toml: could not load config key `nneg`
 
@@ -1006,7 +1001,7 @@ Caused by:
   invalid value: integer `-123456789`, expected u32",
     );
     assert_error(
-        config.get::<u32>("eneg").unwrap_err(),
+        gctx.get::<u32>("eneg").unwrap_err(),
         "\
 error in environment variable `CARGO_ENEG`: could not load config key `eneg`
 
@@ -1014,7 +1009,7 @@ Caused by:
   invalid value: integer `-1`, expected u32",
     );
     assert_error(
-        config.get::<i8>("npos").unwrap_err(),
+        gctx.get::<i8>("npos").unwrap_err(),
         "\
 error in [..].cargo/config.toml: could not load config key `npos`
 
@@ -1022,7 +1017,7 @@ Caused by:
   invalid value: integer `123456789`, expected i8",
     );
     assert_error(
-        config.get::<i8>("epos").unwrap_err(),
+        gctx.get::<i8>("epos").unwrap_err(),
         "\
 error in environment variable `CARGO_EPOS`: could not load config key `epos`
 
@@ -1040,9 +1035,9 @@ hello = 'world'
 ",
     );
 
-    let config = new_config();
+    let gctx = new_gctx();
 
-    assert!(config
+    assert!(gctx
         .get::<Option<SslVersionConfig>>("http.ssl-version")
         .unwrap()
         .is_none());
@@ -1057,9 +1052,9 @@ ssl-version = 'tlsv1.2'
 ",
     );
 
-    let config = new_config();
+    let gctx = new_gctx();
 
-    let a = config
+    let a = gctx
         .get::<Option<SslVersionConfig>>("http.ssl-version")
         .unwrap()
         .unwrap();
@@ -1079,9 +1074,9 @@ ssl-version.max = 'tlsv1.3'
 ",
     );
 
-    let config = new_config();
+    let gctx = new_gctx();
 
-    let a = config
+    let a = gctx
         .get::<Option<SslVersionConfig>>("http.ssl-version")
         .unwrap()
         .unwrap();
@@ -1106,11 +1101,10 @@ ssl-version.max = 'tlsv1.3'
 ",
     );
 
-    let config = new_config();
+    let gctx = new_gctx();
 
     assert_error(
-        config
-            .get::<SslVersionConfig>("http.ssl-version")
+        gctx.get::<SslVersionConfig>("http.ssl-version")
             .unwrap_err(),
         "\
 could not load Cargo configuration
@@ -1138,8 +1132,10 @@ fn unstable_table_notation() {
 print-im-a-teapot = true
 ",
     );
-    let config = ConfigBuilder::new().nightly_features_allowed(true).build();
-    assert_eq!(config.cli_unstable().print_im_a_teapot, true);
+    let gctx = GlobalContextBuilder::new()
+        .nightly_features_allowed(true)
+        .build();
+    assert_eq!(gctx.cli_unstable().print_im_a_teapot, true);
 }
 
 #[cargo_test]
@@ -1150,8 +1146,10 @@ fn unstable_dotted_notation() {
 unstable.print-im-a-teapot = true
 ",
     );
-    let config = ConfigBuilder::new().nightly_features_allowed(true).build();
-    assert_eq!(config.cli_unstable().print_im_a_teapot, true);
+    let gctx = GlobalContextBuilder::new()
+        .nightly_features_allowed(true)
+        .build();
+    assert_eq!(gctx.cli_unstable().print_im_a_teapot, true);
 }
 
 #[cargo_test]
@@ -1162,13 +1160,15 @@ fn unstable_cli_precedence() {
 unstable.print-im-a-teapot = true
 ",
     );
-    let config = ConfigBuilder::new().nightly_features_allowed(true).build();
-    assert_eq!(config.cli_unstable().print_im_a_teapot, true);
+    let gctx = GlobalContextBuilder::new()
+        .nightly_features_allowed(true)
+        .build();
+    assert_eq!(gctx.cli_unstable().print_im_a_teapot, true);
 
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .unstable_flag("print-im-a-teapot=no")
         .build();
-    assert_eq!(config.cli_unstable().print_im_a_teapot, false);
+    assert_eq!(gctx.cli_unstable().print_im_a_teapot, false);
 }
 
 #[cargo_test]
@@ -1180,7 +1180,7 @@ fn unstable_invalid_flag_ignored_on_stable() {
 unstable.an-invalid-flag = 'yes'
 ",
     );
-    assert!(ConfigBuilder::new().build_err().is_ok());
+    assert!(GlobalContextBuilder::new().build_err().is_ok());
 }
 
 #[cargo_test]
@@ -1194,8 +1194,10 @@ print-im-a-teapot = true
 ",
     );
     // Enforce stable channel even when testing on nightly.
-    let config = ConfigBuilder::new().nightly_features_allowed(false).build();
-    assert_eq!(config.cli_unstable().print_im_a_teapot, false);
+    let gctx = GlobalContextBuilder::new()
+        .nightly_features_allowed(false)
+        .build();
+    assert_eq!(gctx.cli_unstable().print_im_a_teapot, false);
 }
 
 #[cargo_test]
@@ -1221,9 +1223,9 @@ fn table_merge_failure() {
     struct Table {
         key: StringList,
     }
-    let config = ConfigBuilder::new().cwd("foo").build();
+    let gctx = GlobalContextBuilder::new().cwd("foo").build();
     assert_error(
-        config.get::<Table>("table").unwrap_err(),
+        gctx.get::<Table>("table").unwrap_err(),
         "\
 could not load Cargo configuration
 
@@ -1246,9 +1248,9 @@ Caused by:
 fn non_string_in_array() {
     // Currently only strings are supported.
     write_config_toml("foo = [1, 2, 3]");
-    let config = new_config();
+    let gctx = new_gctx();
     assert_error(
-        config.get::<Vec<i32>>("foo").unwrap_err(),
+        gctx.get::<Vec<i32>>("foo").unwrap_err(),
         "\
 could not load Cargo configuration
 
@@ -1275,10 +1277,10 @@ fn struct_with_opt_inner_struct() {
     struct Foo {
         inner: Option<Inner>,
     }
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("CARGO_FOO_INNER_VALUE", "12")
         .build();
-    let f: Foo = config.get("foo").unwrap();
+    let f: Foo = gctx.get("foo").unwrap();
     assert_eq!(f.inner.unwrap().value.unwrap(), 12);
 }
 
@@ -1296,10 +1298,10 @@ fn struct_with_default_inner_struct() {
     struct Foo {
         inner: Inner,
     }
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("CARGO_FOO_INNER_VALUE", "12")
         .build();
-    let f: Foo = config.get("foo").unwrap();
+    let f: Foo = gctx.get("foo").unwrap();
     assert_eq!(f.inner.value, 12);
 }
 
@@ -1312,24 +1314,26 @@ fn overlapping_env_config() {
         debug: Option<u32>,
         debug_assertions: Option<bool>,
     }
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("CARGO_AMBIG_DEBUG_ASSERTIONS", "true")
         .build();
 
-    let s: Ambig = config.get("ambig").unwrap();
+    let s: Ambig = gctx.get("ambig").unwrap();
     assert_eq!(s.debug_assertions, Some(true));
     assert_eq!(s.debug, None);
 
-    let config = ConfigBuilder::new().env("CARGO_AMBIG_DEBUG", "0").build();
-    let s: Ambig = config.get("ambig").unwrap();
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_AMBIG_DEBUG", "0")
+        .build();
+    let s: Ambig = gctx.get("ambig").unwrap();
     assert_eq!(s.debug_assertions, None);
     assert_eq!(s.debug, Some(0));
 
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("CARGO_AMBIG_DEBUG", "1")
         .env("CARGO_AMBIG_DEBUG_ASSERTIONS", "true")
         .build();
-    let s: Ambig = config.get("ambig").unwrap();
+    let s: Ambig = gctx.get("ambig").unwrap();
     assert_eq!(s.debug_assertions, Some(true));
     assert_eq!(s.debug, Some(1));
 }
@@ -1348,22 +1352,24 @@ fn overlapping_env_with_defaults_errors_out() {
         debug: u32,
         debug_assertions: bool,
     }
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("CARGO_AMBIG_DEBUG_ASSERTIONS", "true")
         .build();
-    let err = config.get::<Ambig>("ambig").err().unwrap();
+    let err = gctx.get::<Ambig>("ambig").err().unwrap();
     assert!(format!("{}", err).contains("missing config key `ambig.debug`"));
 
-    let config = ConfigBuilder::new().env("CARGO_AMBIG_DEBUG", "5").build();
-    let s: Ambig = config.get("ambig").unwrap();
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_AMBIG_DEBUG", "5")
+        .build();
+    let s: Ambig = gctx.get("ambig").unwrap();
     assert_eq!(s.debug_assertions, bool::default());
     assert_eq!(s.debug, 5);
 
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("CARGO_AMBIG_DEBUG", "1")
         .env("CARGO_AMBIG_DEBUG_ASSERTIONS", "true")
         .build();
-    let s: Ambig = config.get("ambig").unwrap();
+    let s: Ambig = gctx.get("ambig").unwrap();
     assert_eq!(s.debug_assertions, true);
     assert_eq!(s.debug, 1);
 }
@@ -1391,19 +1397,19 @@ fn struct_with_overlapping_inner_struct_and_defaults() {
         inn: bool,
         inner: Inner,
     }
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("CARGO_PREFIXCONTAINER_INNER_VALUE", "12")
         .build();
-    let err = config
+    let err = gctx
         .get::<PrefixContainer>("prefixcontainer")
         .err()
         .unwrap();
     assert!(format!("{}", err).contains("missing config key `prefixcontainer.inn`"));
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("CARGO_PREFIXCONTAINER_INNER_VALUE", "12")
         .env("CARGO_PREFIXCONTAINER_INN", "true")
         .build();
-    let f: PrefixContainer = config.get("prefixcontainer").unwrap();
+    let f: PrefixContainer = gctx.get("prefixcontainer").unwrap();
     assert_eq!(f.inner.value, 12);
     assert_eq!(f.inn, true);
 
@@ -1420,10 +1426,10 @@ fn struct_with_overlapping_inner_struct_and_defaults() {
         inner_field: bool,
         inner: Inner,
     }
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("CARGO_INVERSEPREFIXCONTAINER_INNER_VALUE", "12")
         .build();
-    let f: InversePrefixContainer = config.get("inverseprefixcontainer").unwrap();
+    let f: InversePrefixContainer = gctx.get("inverseprefixcontainer").unwrap();
     assert_eq!(f.inner_field, bool::default());
     assert_eq!(f.inner.value, 12);
 }
@@ -1431,16 +1437,16 @@ fn struct_with_overlapping_inner_struct_and_defaults() {
 #[cargo_test]
 fn string_list_tricky_env() {
     // Make sure StringList handles typed env values.
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .env("CARGO_KEY1", "123")
         .env("CARGO_KEY2", "true")
         .env("CARGO_KEY3", "1 2")
         .build();
-    let x = config.get::<StringList>("key1").unwrap();
+    let x = gctx.get::<StringList>("key1").unwrap();
     assert_eq!(x.as_slice(), &["123".to_string()]);
-    let x = config.get::<StringList>("key2").unwrap();
+    let x = gctx.get::<StringList>("key2").unwrap();
     assert_eq!(x.as_slice(), &["true".to_string()]);
-    let x = config.get::<StringList>("key3").unwrap();
+    let x = gctx.get::<StringList>("key3").unwrap();
     assert_eq!(x.as_slice(), &["1".to_string(), "2".to_string()]);
 }
 
@@ -1448,35 +1454,35 @@ fn string_list_tricky_env() {
 fn string_list_wrong_type() {
     // What happens if StringList is given then wrong type.
     write_config_toml("some_list = 123");
-    let config = ConfigBuilder::new().build();
+    let gctx = GlobalContextBuilder::new().build();
     assert_error(
-        config.get::<StringList>("some_list").unwrap_err(),
+        gctx.get::<StringList>("some_list").unwrap_err(),
         "\
 invalid configuration for key `some_list`
 expected a string or array of strings, but found a integer for `some_list` in [..]/.cargo/config.toml",
     );
 
     write_config_toml("some_list = \"1 2\"");
-    let config = ConfigBuilder::new().build();
-    let x = config.get::<StringList>("some_list").unwrap();
+    let gctx = GlobalContextBuilder::new().build();
+    let x = gctx.get::<StringList>("some_list").unwrap();
     assert_eq!(x.as_slice(), &["1".to_string(), "2".to_string()]);
 }
 
 #[cargo_test]
 fn string_list_advanced_env() {
     // StringList with advanced env.
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .unstable_flag("advanced-env")
         .env("CARGO_KEY1", "[]")
         .env("CARGO_KEY2", "['1 2', '3']")
         .env("CARGO_KEY3", "[123]")
         .build();
-    let x = config.get::<StringList>("key1").unwrap();
+    let x = gctx.get::<StringList>("key1").unwrap();
     assert_eq!(x.as_slice(), &[] as &[String]);
-    let x = config.get::<StringList>("key2").unwrap();
+    let x = gctx.get::<StringList>("key2").unwrap();
     assert_eq!(x.as_slice(), &["1 2".to_string(), "3".to_string()]);
     assert_error(
-        config.get::<StringList>("key3").unwrap_err(),
+        gctx.get::<StringList>("key3").unwrap_err(),
         "error in environment variable `CARGO_KEY3`: expected string, found integer",
     );
 }
@@ -1490,9 +1496,9 @@ strip = 'debuginfo'
 ",
     );
 
-    let config = new_config();
+    let gctx = new_gctx();
 
-    let p: cargo_toml::TomlProfile = config.get("profile.release").unwrap();
+    let p: cargo_toml::TomlProfile = gctx.get("profile.release").unwrap();
     let strip = p.strip.unwrap();
     assert_eq!(
         strip,
@@ -1509,10 +1515,10 @@ target-dir = ''
 ",
     );
 
-    let config = new_config();
+    let gctx = new_gctx();
 
     assert_error(
-        config.target_dir().unwrap_err(),
+        gctx.target_dir().unwrap_err(),
         "the target directory is set to an empty string in [..]/.cargo/config.toml",
     );
 }
@@ -1591,7 +1597,7 @@ known-hosts = [
 ",
     );
 
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .cwd("foo")
         // environment variables don't actually work for known-hosts due to
         // space splitting, but this is included here just to validate that
@@ -1599,7 +1605,7 @@ known-hosts = [
         // in the future).
         .env("CARGO_NET_SSH_KNOWN_HOSTS", "env-example")
         .build();
-    let net_config = config.net_config().unwrap();
+    let net_config = gctx.net_config().unwrap();
     let kh = net_config
         .ssh
         .as_ref()
@@ -1623,8 +1629,8 @@ known-hosts = [
 
 #[cargo_test]
 fn debuginfo_parsing() {
-    let config = ConfigBuilder::new().build();
-    let p: cargo_toml::TomlProfile = config.get("profile.dev").unwrap();
+    let gctx = GlobalContextBuilder::new().build();
+    let p: cargo_toml::TomlProfile = gctx.get("profile.dev").unwrap();
     assert_eq!(p.debug, None);
 
     let env_test_cases = [
@@ -1636,10 +1642,10 @@ fn debuginfo_parsing() {
     ];
     for (expected, config_strs) in env_test_cases {
         for &val in config_strs {
-            let config = ConfigBuilder::new()
+            let gctx = GlobalContextBuilder::new()
                 .env("CARGO_PROFILE_DEV_DEBUG", val)
                 .build();
-            let debug: TomlDebugInfo = config.get("profile.dev.debug").unwrap();
+            let debug: TomlDebugInfo = gctx.get("profile.dev.debug").unwrap();
             assert_eq!(debug, expected, "failed to parse {val}");
         }
     }
@@ -1656,22 +1662,20 @@ fn debuginfo_parsing() {
     ];
     for (expected, config_strs) in toml_test_cases {
         for &val in config_strs {
-            let config = ConfigBuilder::new()
+            let gctx = GlobalContextBuilder::new()
                 .config_arg(format!("profile.dev.debug={val}"))
                 .build();
-            let debug: TomlDebugInfo = config.get("profile.dev.debug").unwrap();
+            let debug: TomlDebugInfo = gctx.get("profile.dev.debug").unwrap();
             assert_eq!(debug, expected, "failed to parse {val}");
         }
     }
 
     let toml_err_cases = ["\"\"", "\"unrecognized\"", "3"];
     for err_val in toml_err_cases {
-        let config = ConfigBuilder::new()
+        let gctx = GlobalContextBuilder::new()
             .config_arg(format!("profile.dev.debug={err_val}"))
             .build();
-        let err = config
-            .get::<TomlDebugInfo>("profile.dev.debug")
-            .unwrap_err();
+        let err = gctx.get::<TomlDebugInfo>("profile.dev.debug").unwrap_err();
         assert!(err
             .to_string()
             .ends_with("could not load config key `profile.dev.debug`"));
@@ -1686,9 +1690,9 @@ fn build_jobs_missing() {
 ",
     );
 
-    let config = new_config();
+    let gctx = new_gctx();
 
-    assert!(config
+    assert!(gctx
         .get::<Option<JobsConfig>>("build.jobs")
         .unwrap()
         .is_none());
@@ -1703,9 +1707,9 @@ jobs = \"default\"
 ",
     );
 
-    let config = new_config();
+    let gctx = new_gctx();
 
-    let a = config
+    let a = gctx
         .get::<Option<JobsConfig>>("build.jobs")
         .unwrap()
         .unwrap();
@@ -1725,9 +1729,9 @@ jobs = 2
 ",
     );
 
-    let config = new_config();
+    let gctx = new_gctx();
 
-    let a = config
+    let a = gctx
         .get::<Option<JobsConfig>>("build.jobs")
         .unwrap()
         .unwrap();
@@ -1740,8 +1744,8 @@ jobs = 2
 
 #[cargo_test]
 fn trim_paths_parsing() {
-    let config = ConfigBuilder::new().build();
-    let p: cargo_toml::TomlProfile = config.get("profile.dev").unwrap();
+    let gctx = GlobalContextBuilder::new().build();
+    let p: cargo_toml::TomlProfile = gctx.get("profile.dev").unwrap();
     assert_eq!(p.trim_paths, None);
 
     let test_cases = [
@@ -1751,17 +1755,17 @@ fn trim_paths_parsing() {
     ];
     for (expected, val) in test_cases {
         // env
-        let config = ConfigBuilder::new()
+        let gctx = GlobalContextBuilder::new()
             .env("CARGO_PROFILE_DEV_TRIM_PATHS", val)
             .build();
-        let trim_paths: TomlTrimPaths = config.get("profile.dev.trim-paths").unwrap();
+        let trim_paths: TomlTrimPaths = gctx.get("profile.dev.trim-paths").unwrap();
         assert_eq!(trim_paths, expected, "failed to parse {val}");
 
         // config.toml
-        let config = ConfigBuilder::new()
+        let gctx = GlobalContextBuilder::new()
             .config_arg(format!("profile.dev.trim-paths='{val}'"))
             .build();
-        let trim_paths: TomlTrimPaths = config.get("profile.dev.trim-paths").unwrap();
+        let trim_paths: TomlTrimPaths = gctx.get("profile.dev.trim-paths").unwrap();
         assert_eq!(trim_paths, expected, "failed to parse {val}");
     }
 
@@ -1769,17 +1773,17 @@ fn trim_paths_parsing() {
 
     for (expected, val) in test_cases {
         // env
-        let config = ConfigBuilder::new()
+        let gctx = GlobalContextBuilder::new()
             .env("CARGO_PROFILE_DEV_TRIM_PATHS", format!("{val}"))
             .build();
-        let trim_paths: TomlTrimPaths = config.get("profile.dev.trim-paths").unwrap();
+        let trim_paths: TomlTrimPaths = gctx.get("profile.dev.trim-paths").unwrap();
         assert_eq!(trim_paths, expected, "failed to parse {val}");
 
         // config.toml
-        let config = ConfigBuilder::new()
+        let gctx = GlobalContextBuilder::new()
             .config_arg(format!("profile.dev.trim-paths={val}"))
             .build();
-        let trim_paths: TomlTrimPaths = config.get("profile.dev.trim-paths").unwrap();
+        let trim_paths: TomlTrimPaths = gctx.get("profile.dev.trim-paths").unwrap();
         assert_eq!(trim_paths, expected, "failed to parse {val}");
     }
 
@@ -1791,9 +1795,9 @@ fn trim_paths_parsing() {
     .into();
     let val = r#"["diagnostics", "macro", "object"]"#;
     // config.toml
-    let config = ConfigBuilder::new()
+    let gctx = GlobalContextBuilder::new()
         .config_arg(format!("profile.dev.trim-paths={val}"))
         .build();
-    let trim_paths: TomlTrimPaths = config.get("profile.dev.trim-paths").unwrap();
+    let trim_paths: TomlTrimPaths = gctx.get("profile.dev.trim-paths").unwrap();
     assert_eq!(trim_paths, expected, "failed to parse {val}");
 }

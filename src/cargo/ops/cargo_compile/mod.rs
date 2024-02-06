@@ -13,7 +13,7 @@
 //!   from the resolver.  See also [`unit_dependencies`].
 //! 5. Construct the [`BuildContext`] with all of the information collected so
 //!   far. This is the end of the "front end" of compilation.
-//! 6. Create a [`Context`] which coordinates the compilation process
+//! 6. Create a [`CompileContext`] which coordinates the compilation process
 //!   and will perform the following steps:
 //!     1. Prepare the `target` directory (see [`Layout`]).
 //!     2. Create a [`JobQueue`]. The queue checks the
@@ -42,7 +42,7 @@ use std::sync::Arc;
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
 use crate::core::compiler::{standard_lib, CrateType, TargetInfo};
-use crate::core::compiler::{BuildConfig, BuildContext, Compilation, Context};
+use crate::core::compiler::{BuildConfig, BuildContext, Compilation, CompileContext};
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::Profiles;
@@ -52,7 +52,7 @@ use crate::core::{PackageId, PackageSet, SourceId, TargetKind, Workspace};
 use crate::drop_println;
 use crate::ops;
 use crate::ops::resolve::WorkspaceResolve;
-use crate::util::config::Config;
+use crate::util::config::GlobalContext;
 use crate::util::interning::InternedString;
 use crate::util::{profile, CargoResult, StableHasher};
 
@@ -101,11 +101,11 @@ pub struct CompileOptions {
 }
 
 impl CompileOptions {
-    pub fn new(config: &Config, mode: CompileMode) -> CargoResult<CompileOptions> {
+    pub fn new(gctx: &GlobalContext, mode: CompileMode) -> CargoResult<CompileOptions> {
         let jobs = None;
         let keep_going = false;
         Ok(CompileOptions {
-            build_config: BuildConfig::new(config, jobs, keep_going, &[], mode)?,
+            build_config: BuildConfig::new(gctx, jobs, keep_going, &[], mode)?,
             cli_features: CliFeatures::new_all(false),
             spec: ops::Packages::Packages(Vec::new()),
             filter: CompileFilter::Default {
@@ -150,12 +150,12 @@ pub fn compile_ws<'a>(
     let interner = UnitInterner::new();
     let bcx = create_bcx(ws, options, &interner)?;
     if options.build_config.unit_graph {
-        unit_graph::emit_serialized_unit_graph(&bcx.roots, &bcx.unit_graph, ws.config())?;
+        unit_graph::emit_serialized_unit_graph(&bcx.roots, &bcx.unit_graph, ws.gctx())?;
         return Compilation::new(&bcx);
     }
-    crate::core::gc::auto_gc(bcx.config);
+    crate::core::gc::auto_gc(bcx.gctx);
     let _p = profile::start("compiling");
-    let cx = Context::new(&bcx)?;
+    let cx = CompileContext::new(&bcx)?;
     cx.compile(exec)
 }
 
@@ -172,13 +172,13 @@ pub fn print<'a>(
         ref target_rustc_args,
         ..
     } = *options;
-    let config = ws.config();
-    let rustc = config.load_global_rustc(Some(ws))?;
+    let gctx = ws.gctx();
+    let rustc = gctx.load_global_rustc(Some(ws))?;
     for (index, kind) in build_config.requested_kinds.iter().enumerate() {
         if index != 0 {
-            drop_println!(config);
+            drop_println!(gctx);
         }
-        let target_info = TargetInfo::new(config, &build_config.requested_kinds, &rustc, *kind)?;
+        let target_info = TargetInfo::new(gctx, &build_config.requested_kinds, &rustc, *kind)?;
         let mut process = rustc.process();
         process.args(&target_info.rustflags);
         if let Some(args) = target_rustc_args {
@@ -197,11 +197,11 @@ pub fn print<'a>(
 ///
 /// For how it works and what data it collects,
 /// please see the [module-level documentation](self).
-pub fn create_bcx<'a, 'cfg>(
-    ws: &'a Workspace<'cfg>,
+pub fn create_bcx<'a, 'gctx>(
+    ws: &'a Workspace<'gctx>,
     options: &'a CompileOptions,
     interner: &'a UnitInterner,
-) -> CargoResult<BuildContext<'a, 'cfg>> {
+) -> CargoResult<BuildContext<'a, 'gctx>> {
     let CompileOptions {
         ref build_config,
         ref spec,
@@ -213,7 +213,7 @@ pub fn create_bcx<'a, 'cfg>(
         rustdoc_document_private_items,
         honor_rust_version,
     } = *options;
-    let config = ws.config();
+    let gctx = ws.gctx();
 
     // Perform some pre-flight validation.
     match build_config.mode {
@@ -222,21 +222,21 @@ pub fn create_bcx<'a, 'cfg>(
         | CompileMode::Check { .. }
         | CompileMode::Bench
         | CompileMode::RunCustomBuild => {
-            if ws.config().get_env("RUST_FLAGS").is_ok() {
-                config.shell().warn(
+            if ws.gctx().get_env("RUST_FLAGS").is_ok() {
+                gctx.shell().warn(
                     "Cargo does not read `RUST_FLAGS` environment variable. Did you mean `RUSTFLAGS`?",
                 )?;
             }
         }
         CompileMode::Doc { .. } | CompileMode::Doctest | CompileMode::Docscrape => {
-            if ws.config().get_env("RUSTDOC_FLAGS").is_ok() {
-                config.shell().warn(
+            if ws.gctx().get_env("RUSTDOC_FLAGS").is_ok() {
+                gctx.shell().warn(
                     "Cargo does not read `RUSTDOC_FLAGS` environment variable. Did you mean `RUSTDOCFLAGS`?"
                 )?;
             }
         }
     }
-    config.validate_term_config()?;
+    gctx.validate_term_config()?;
 
     let mut target_data = RustcTargetData::new(ws, &build_config.requested_kinds)?;
 
@@ -278,7 +278,7 @@ pub fn create_bcx<'a, 'cfg>(
         resolved_features,
     } = resolve;
 
-    let std_resolve_features = if let Some(crates) = &config.cli_unstable().build_std {
+    let std_resolve_features = if let Some(crates) = &gctx.cli_unstable().build_std {
         let (std_package_set, std_resolve, std_features) =
             standard_lib::resolve_std(ws, &mut target_data, &build_config, crates)?;
         pkg_set.add_set(std_package_set);
@@ -302,7 +302,7 @@ pub fn create_bcx<'a, 'cfg>(
     to_builds.sort_by_key(|p| p.package_id());
 
     for pkg in to_builds.iter() {
-        pkg.manifest().print_teapot(config);
+        pkg.manifest().print_teapot(gctx);
 
         if build_config.mode.is_any_test()
             && !ws.is_member(pkg)
@@ -332,7 +332,7 @@ pub fn create_bcx<'a, 'cfg>(
     let profiles = Profiles::new(ws, build_config.requested_profile)?;
     profiles.validate_packages(
         ws.profiles(),
-        &mut config.shell(),
+        &mut gctx.shell(),
         workspace_resolve.as_ref().unwrap_or(&resolve),
     )?;
 
@@ -375,7 +375,7 @@ pub fn create_bcx<'a, 'cfg>(
         override_rustc_crate_types(&mut units, args, interner)?;
     }
 
-    let should_scrape = build_config.mode.is_doc() && config.cli_unstable().rustdoc_scrape_examples;
+    let should_scrape = build_config.mode.is_doc() && gctx.cli_unstable().rustdoc_scrape_examples;
     let mut scrape_units = if should_scrape {
         UnitGenerator {
             mode: CompileMode::Docscrape,
@@ -386,7 +386,7 @@ pub fn create_bcx<'a, 'cfg>(
         Vec::new()
     };
 
-    let std_roots = if let Some(crates) = standard_lib::std_crates(config, Some(&units)) {
+    let std_roots = if let Some(crates) = standard_lib::std_crates(gctx, Some(&units)) {
         let (std_resolve, std_features) = std_resolve_features.as_ref().unwrap();
         standard_lib::generate_std_roots(
             &crates,
@@ -427,7 +427,7 @@ pub fn create_bcx<'a, 'cfg>(
         .iter()
         .any(CompileKind::is_host);
     let should_share_deps = host_kind_requested
-        || config.cli_unstable().bindeps
+        || gctx.cli_unstable().bindeps
             && unit_graph
                 .iter()
                 .any(|(unit, _)| unit.artifact_target_for_features.is_some());

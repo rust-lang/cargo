@@ -18,7 +18,7 @@
 //! type.
 //!
 //! There is a single global [`GlobalCacheTracker`] and
-//! [`DeferredGlobalLastUse`] stored in [`Config`].
+//! [`DeferredGlobalLastUse`] stored in [`GlobalContext`].
 //!
 //! The high-level interface for performing garbage collection is defined in
 //! the [`crate::core::gc`] module. The functions there are responsible for
@@ -121,8 +121,8 @@ use crate::util::cache_lock::CacheLockMode;
 use crate::util::interning::InternedString;
 use crate::util::sqlite::{self, basic_migration, Migration};
 use crate::util::{Filesystem, Progress, ProgressStyle};
-use crate::{CargoResult, Config};
-use anyhow::{bail, Context};
+use crate::{CargoResult, GlobalContext};
+use anyhow::{bail, Context as _};
 use cargo_util::paths;
 use rusqlite::{params, Connection, ErrorCode};
 use std::collections::{hash_map, HashMap};
@@ -346,16 +346,15 @@ impl GlobalCacheTracker {
     ///
     /// The caller is responsible for locking the package cache with
     /// [`CacheLockMode::DownloadExclusive`] before calling this.
-    pub fn new(config: &Config) -> CargoResult<GlobalCacheTracker> {
-        let db_path = Self::db_path(config);
+    pub fn new(gctx: &GlobalContext) -> CargoResult<GlobalCacheTracker> {
+        let db_path = Self::db_path(gctx);
         // A package cache lock is required to ensure only one cargo is
         // accessing at the same time. If there is concurrent access, we
         // want to rely on cargo's own "Blocking" system (which can
         // provide user feedback) rather than blocking inside sqlite
         // (which by default has a short timeout).
-        let db_path =
-            config.assert_package_cache_locked(CacheLockMode::DownloadExclusive, &db_path);
-        let mut conn = if config.cli_unstable().gc {
+        let db_path = gctx.assert_package_cache_locked(CacheLockMode::DownloadExclusive, &db_path);
+        let mut conn = if gctx.cli_unstable().gc {
             Connection::open(db_path)?
         } else {
             // To simplify things (so there aren't checks everywhere for being
@@ -371,8 +370,8 @@ impl GlobalCacheTracker {
     }
 
     /// The path to the database.
-    pub fn db_path(config: &Config) -> Filesystem {
-        config.home().join(GLOBAL_CACHE_FILENAME)
+    pub fn db_path(gctx: &GlobalContext) -> Filesystem {
+        gctx.home().join(GLOBAL_CACHE_FILENAME)
     }
 
     /// Given an encoded registry name, returns its ID.
@@ -548,24 +547,28 @@ impl GlobalCacheTracker {
     }
 
     /// Deletes files from the global cache based on the given options.
-    pub fn clean(&mut self, clean_ctx: &mut CleanContext<'_>, gc_opts: &GcOpts) -> CargoResult<()> {
-        self.clean_inner(clean_ctx, gc_opts)
+    pub fn clean(
+        &mut self,
+        clean_gctx: &mut CleanContext<'_>,
+        gc_opts: &GcOpts,
+    ) -> CargoResult<()> {
+        self.clean_inner(clean_gctx, gc_opts)
             .with_context(|| "failed to clean entries from the global cache")
     }
 
     fn clean_inner(
         &mut self,
-        clean_ctx: &mut CleanContext<'_>,
+        clean_gctx: &mut CleanContext<'_>,
         gc_opts: &GcOpts,
     ) -> CargoResult<()> {
         let _p = crate::util::profile::start("cleaning global cache files");
-        let config = clean_ctx.config;
+        let gctx = clean_gctx.gctx;
         let base = BasePaths {
-            index: config.registry_index_path().into_path_unlocked(),
-            git_db: config.git_db_path().into_path_unlocked(),
-            git_co: config.git_checkouts_path().into_path_unlocked(),
-            crate_dir: config.registry_cache_path().into_path_unlocked(),
-            src: config.registry_source_path().into_path_unlocked(),
+            index: gctx.registry_index_path().into_path_unlocked(),
+            git_db: gctx.git_db_path().into_path_unlocked(),
+            git_co: gctx.git_checkouts_path().into_path_unlocked(),
+            crate_dir: gctx.registry_cache_path().into_path_unlocked(),
+            src: gctx.registry_source_path().into_path_unlocked(),
         };
         let now = now();
         trace!(target: "gc", "cleaning {gc_opts:?}");
@@ -577,7 +580,7 @@ impl GlobalCacheTracker {
             Self::sync_db_with_files(
                 &tx,
                 now,
-                config,
+                gctx,
                 &base,
                 gc_opts.is_download_cache_size_set(),
                 &mut delete_paths,
@@ -654,9 +657,9 @@ impl GlobalCacheTracker {
             Self::get_registry_items_to_clean_size_both(&tx, max_size, &base, &mut delete_paths)?;
         }
 
-        clean_ctx.remove_paths(&delete_paths)?;
+        clean_gctx.remove_paths(&delete_paths)?;
 
-        if clean_ctx.dry_run {
+        if clean_gctx.dry_run {
             tx.rollback()?;
         } else {
             tx.commit()?;
@@ -706,7 +709,7 @@ impl GlobalCacheTracker {
     fn sync_db_with_files(
         conn: &Connection,
         now: Timestamp,
-        config: &Config,
+        gctx: &GlobalContext,
         base: &BasePaths,
         sync_size: bool,
         delete_paths: &mut Vec<PathBuf>,
@@ -761,7 +764,7 @@ impl GlobalCacheTracker {
         Self::populate_untracked(
             conn,
             now,
-            config,
+            gctx,
             REGISTRY_INDEX_TABLE,
             "registry_id",
             REGISTRY_SRC_TABLE,
@@ -771,7 +774,7 @@ impl GlobalCacheTracker {
         Self::populate_untracked(
             conn,
             now,
-            config,
+            gctx,
             GIT_DB_TABLE,
             "git_id",
             GIT_CO_TABLE,
@@ -783,7 +786,7 @@ impl GlobalCacheTracker {
         if sync_size {
             Self::update_null_sizes(
                 conn,
-                config,
+                gctx,
                 REGISTRY_INDEX_TABLE,
                 "registry_id",
                 REGISTRY_SRC_TABLE,
@@ -791,7 +794,7 @@ impl GlobalCacheTracker {
             )?;
             Self::update_null_sizes(
                 conn,
-                config,
+                gctx,
                 GIT_DB_TABLE,
                 "git_id",
                 GIT_CO_TABLE,
@@ -932,7 +935,7 @@ impl GlobalCacheTracker {
     fn populate_untracked(
         conn: &Connection,
         now: Timestamp,
-        config: &Config,
+        gctx: &GlobalContext,
         id_table_name: &str,
         id_column_name: &str,
         table_name: &str,
@@ -956,7 +959,7 @@ impl GlobalCacheTracker {
              VALUES (?1, ?2, ?3, ?4)
              ON CONFLICT DO NOTHING",
         ))?;
-        let mut progress = Progress::with_style("Scanning", ProgressStyle::Ratio, config);
+        let mut progress = Progress::with_style("Scanning", ProgressStyle::Ratio, gctx);
         // Compute the size of any directory not in the database.
         for id_name in id_names {
             let Some(id) = Self::id_from_name(conn, id_table_name, &id_name)? else {
@@ -996,7 +999,7 @@ impl GlobalCacheTracker {
     /// `update_db_for_removed` should be called before this is called.
     fn update_null_sizes(
         conn: &Connection,
-        config: &Config,
+        gctx: &GlobalContext,
         parent_table_name: &str,
         id_column_name: &str,
         table_name: &str,
@@ -1012,7 +1015,7 @@ impl GlobalCacheTracker {
         let mut update_stmt = conn.prepare_cached(&format!(
             "UPDATE {table_name} SET size = ?1 WHERE rowid = ?2"
         ))?;
-        let mut progress = Progress::with_style("Scanning", ProgressStyle::Ratio, config);
+        let mut progress = Progress::with_style("Scanning", ProgressStyle::Ratio, gctx);
         let rows: Vec<_> = null_stmt
             .query_map([], |row| {
                 Ok((row.get_unwrap(0), row.get_unwrap(1), row.get_unwrap(2)))
@@ -1589,13 +1592,13 @@ impl DeferredGlobalLastUse {
     /// error.
     ///
     /// This will log or display a warning to the user.
-    pub fn save_no_error(&mut self, config: &Config) {
-        if let Err(e) = self.save_with_config(config) {
+    pub fn save_no_error(&mut self, gctx: &GlobalContext) {
+        if let Err(e) = self.save_with_gctx(gctx) {
             // Because there is an assertion in auto-gc that checks if this is
             // empty, be sure to clear it so that assertion doesn't fail.
             self.clear();
             if !self.save_err_has_warned {
-                if is_silent_error(&e) && config.shell().verbosity() != Verbosity::Verbose {
+                if is_silent_error(&e) && gctx.shell().verbosity() != Verbosity::Verbose {
                     tracing::warn!("failed to save last-use data: {e:?}");
                 } else {
                     crate::display_warning_with_error(
@@ -1604,7 +1607,7 @@ impl DeferredGlobalLastUse {
                         used in its global cache. This information is used for \
                         automatically removing unused data in the cache.",
                         &e,
-                        &mut config.shell(),
+                        &mut gctx.shell(),
                     );
                     self.save_err_has_warned = true;
                 }
@@ -1612,8 +1615,8 @@ impl DeferredGlobalLastUse {
         }
     }
 
-    fn save_with_config(&mut self, config: &Config) -> CargoResult<()> {
-        let mut tracker = config.global_cache_tracker()?;
+    fn save_with_gctx(&mut self, gctx: &GlobalContext) -> CargoResult<()> {
+        let mut tracker = gctx.global_cache_tracker()?;
         self.save(&mut tracker)
     }
 

@@ -15,23 +15,23 @@ use crate::util::config::SslVersionConfig;
 use crate::util::config::SslVersionConfigRange;
 use crate::version;
 use crate::CargoResult;
-use crate::Config;
+use crate::GlobalContext;
 
 /// Creates a new HTTP handle with appropriate global configuration for cargo.
-pub fn http_handle(config: &Config) -> CargoResult<Easy> {
-    let (mut handle, timeout) = http_handle_and_timeout(config)?;
+pub fn http_handle(gctx: &GlobalContext) -> CargoResult<Easy> {
+    let (mut handle, timeout) = http_handle_and_timeout(gctx)?;
     timeout.configure(&mut handle)?;
     Ok(handle)
 }
 
-pub fn http_handle_and_timeout(config: &Config) -> CargoResult<(Easy, HttpTimeout)> {
-    if config.frozen() {
+pub fn http_handle_and_timeout(gctx: &GlobalContext) -> CargoResult<(Easy, HttpTimeout)> {
+    if gctx.frozen() {
         bail!(
             "attempting to make an HTTP request, but --frozen was \
              specified"
         )
     }
-    if config.offline() {
+    if gctx.offline() {
         bail!(
             "attempting to make an HTTP request, but --offline was \
              specified"
@@ -43,7 +43,7 @@ pub fn http_handle_and_timeout(config: &Config) -> CargoResult<(Easy, HttpTimeou
     // connect phase as well as a "low speed" timeout so if we don't receive
     // many bytes in a large-ish period of time then we time out.
     let mut handle = Easy::new();
-    let timeout = configure_http_handle(config, &mut handle)?;
+    let timeout = configure_http_handle(gctx, &mut handle)?;
     Ok((handle, timeout))
 }
 
@@ -51,22 +51,20 @@ pub fn http_handle_and_timeout(config: &Config) -> CargoResult<(Easy, HttpTimeou
 // such as proxies or custom certificate authorities.
 //
 // The custom transport, however, is not as well battle-tested.
-pub fn needs_custom_http_transport(config: &Config) -> CargoResult<bool> {
-    Ok(
-        super::proxy::http_proxy_exists(config.http_config()?, config)
-            || *config.http_config()? != Default::default()
-            || config.get_env_os("HTTP_TIMEOUT").is_some(),
-    )
+pub fn needs_custom_http_transport(gctx: &GlobalContext) -> CargoResult<bool> {
+    Ok(super::proxy::http_proxy_exists(gctx.http_config()?, gctx)
+        || *gctx.http_config()? != Default::default()
+        || gctx.get_env_os("HTTP_TIMEOUT").is_some())
 }
 
 /// Configure a libcurl http handle with the defaults options for Cargo
-pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<HttpTimeout> {
-    let http = config.http_config()?;
+pub fn configure_http_handle(gctx: &GlobalContext, handle: &mut Easy) -> CargoResult<HttpTimeout> {
+    let http = gctx.http_config()?;
     if let Some(proxy) = super::proxy::http_proxy(http) {
         handle.proxy(&proxy)?;
     }
     if let Some(cainfo) = &http.cainfo {
-        let cainfo = cainfo.resolve_path(config);
+        let cainfo = cainfo.resolve_path(gctx);
         handle.cainfo(&cainfo)?;
     }
     if let Some(check) = http.check_revoke {
@@ -187,7 +185,7 @@ pub fn configure_http_handle(config: &Config, handle: &mut Easy) -> CargoResult<
         })?;
     }
 
-    HttpTimeout::new(config)
+    HttpTimeout::new(gctx)
 }
 
 #[must_use]
@@ -197,14 +195,13 @@ pub struct HttpTimeout {
 }
 
 impl HttpTimeout {
-    pub fn new(config: &Config) -> CargoResult<HttpTimeout> {
-        let http_config = config.http_config()?;
+    pub fn new(gctx: &GlobalContext) -> CargoResult<HttpTimeout> {
+        let http_config = gctx.http_config()?;
         let low_speed_limit = http_config.low_speed_limit.unwrap_or(10);
         let seconds = http_config
             .timeout
             .or_else(|| {
-                config
-                    .get_env("HTTP_TIMEOUT")
+                gctx.get_env("HTTP_TIMEOUT")
                     .ok()
                     .and_then(|s| s.parse().ok())
             })

@@ -22,8 +22,8 @@
 use crate::core::global_cache_tracker::{self, GlobalCacheTracker};
 use crate::ops::CleanContext;
 use crate::util::cache_lock::{CacheLock, CacheLockMode};
-use crate::{CargoResult, Config};
-use anyhow::{format_err, Context};
+use crate::{CargoResult, GlobalContext};
+use anyhow::{format_err, Context as _};
 use serde::Deserialize;
 use std::time::Duration;
 
@@ -48,11 +48,11 @@ const DEFAULT_AUTO_FREQUENCY: &str = "1 day";
 ///
 /// It should be cheap to call this multiple times (subsequent calls are
 /// ignored), but try not to abuse that.
-pub fn auto_gc(config: &Config) {
-    if !config.cli_unstable().gc {
+pub fn auto_gc(gctx: &GlobalContext) {
+    if !gctx.cli_unstable().gc {
         return;
     }
-    if !config.network_allowed() {
+    if !gctx.network_allowed() {
         // As a conservative choice, auto-gc is disabled when offline. If the
         // user is indefinitely offline, we don't want to delete things they
         // may later depend on.
@@ -60,21 +60,21 @@ pub fn auto_gc(config: &Config) {
         return;
     }
 
-    if let Err(e) = auto_gc_inner(config) {
-        if global_cache_tracker::is_silent_error(&e) && !config.extra_verbose() {
+    if let Err(e) = auto_gc_inner(gctx) {
+        if global_cache_tracker::is_silent_error(&e) && !gctx.extra_verbose() {
             tracing::warn!(target: "gc", "failed to auto-clean cache data: {e:?}");
         } else {
             crate::display_warning_with_error(
                 "failed to auto-clean cache data",
                 &e,
-                &mut config.shell(),
+                &mut gctx.shell(),
             );
         }
     }
 }
 
-fn auto_gc_inner(config: &Config) -> CargoResult<()> {
-    let _lock = match config.try_acquire_package_cache_lock(CacheLockMode::MutateExclusive)? {
+fn auto_gc_inner(gctx: &GlobalContext) -> CargoResult<()> {
+    let _lock = match gctx.try_acquire_package_cache_lock(CacheLockMode::MutateExclusive)? {
         Some(lock) => lock,
         None => {
             tracing::debug!(target: "gc", "unable to acquire mutate lock, auto gc disabled");
@@ -82,12 +82,12 @@ fn auto_gc_inner(config: &Config) -> CargoResult<()> {
         }
     };
     // This should not be called when there are pending deferred entries, so check that.
-    let deferred = config.deferred_global_last_use()?;
+    let deferred = gctx.deferred_global_last_use()?;
     debug_assert!(deferred.is_empty());
-    let mut global_cache_tracker = config.global_cache_tracker()?;
-    let mut gc = Gc::new(config, &mut global_cache_tracker)?;
-    let mut clean_ctx = CleanContext::new(config);
-    gc.auto(&mut clean_ctx)?;
+    let mut global_cache_tracker = gctx.global_cache_tracker()?;
+    let mut gc = Gc::new(gctx, &mut global_cache_tracker)?;
+    let mut clean_gctx = CleanContext::new(gctx);
+    gc.auto(&mut clean_gctx)?;
     Ok(())
 }
 
@@ -172,8 +172,8 @@ impl GcOpts {
 
     /// Updates the configuration of this [`GcOpts`] to incorporate the
     /// settings from config.
-    pub fn update_for_auto_gc(&mut self, config: &Config) -> CargoResult<()> {
-        let auto_config = config
+    pub fn update_for_auto_gc(&mut self, gctx: &GlobalContext) -> CargoResult<()> {
+        let auto_config = gctx
             .get::<Option<AutoConfig>>("gc.auto")?
             .unwrap_or_default();
         self.update_for_auto_gc_config(&auto_config)
@@ -227,8 +227,8 @@ impl GcOpts {
 /// Garbage collector.
 ///
 /// See the module docs at [`crate::core::gc`] for more information on GC.
-pub struct Gc<'a, 'config> {
-    config: &'config Config,
+pub struct Gc<'a, 'gctx> {
+    gctx: &'gctx GlobalContext,
     global_cache_tracker: &'a mut GlobalCacheTracker,
     /// A lock on the package cache.
     ///
@@ -236,17 +236,17 @@ pub struct Gc<'a, 'config> {
     /// be allowed to write to the cache at the same time, or for others to
     /// read while we are modifying the cache.
     #[allow(dead_code)] // Held for drop.
-    lock: CacheLock<'config>,
+    lock: CacheLock<'gctx>,
 }
 
-impl<'a, 'config> Gc<'a, 'config> {
+impl<'a, 'gctx> Gc<'a, 'gctx> {
     pub fn new(
-        config: &'config Config,
+        gctx: &'gctx GlobalContext,
         global_cache_tracker: &'a mut GlobalCacheTracker,
-    ) -> CargoResult<Gc<'a, 'config>> {
-        let lock = config.acquire_package_cache_lock(CacheLockMode::MutateExclusive)?;
+    ) -> CargoResult<Gc<'a, 'gctx>> {
+        let lock = gctx.acquire_package_cache_lock(CacheLockMode::MutateExclusive)?;
         Ok(Gc {
-            config,
+            gctx,
             global_cache_tracker,
             lock,
         })
@@ -256,12 +256,12 @@ impl<'a, 'config> Gc<'a, 'config> {
     ///
     /// This returns immediately without doing work if garbage collection has
     /// been performed recently (since `gc.auto.frequency`).
-    fn auto(&mut self, clean_ctx: &mut CleanContext<'config>) -> CargoResult<()> {
-        if !self.config.cli_unstable().gc {
+    fn auto(&mut self, clean_gctx: &mut CleanContext<'gctx>) -> CargoResult<()> {
+        if !self.gctx.cli_unstable().gc {
             return Ok(());
         }
         let auto_config = self
-            .config
+            .gctx
             .get::<Option<AutoConfig>>("gc.auto")?
             .unwrap_or_default();
         let Some(freq) = parse_frequency(
@@ -279,8 +279,8 @@ impl<'a, 'config> Gc<'a, 'config> {
         }
         let mut gc_opts = GcOpts::default();
         gc_opts.update_for_auto_gc_config(&auto_config)?;
-        self.gc(clean_ctx, &gc_opts)?;
-        if !clean_ctx.dry_run {
+        self.gc(clean_gctx, &gc_opts)?;
+        if !clean_gctx.dry_run {
             self.global_cache_tracker.set_last_auto_gc()?;
         }
         Ok(())
@@ -289,10 +289,10 @@ impl<'a, 'config> Gc<'a, 'config> {
     /// Performs garbage collection based on the given options.
     pub fn gc(
         &mut self,
-        clean_ctx: &mut CleanContext<'config>,
+        clean_gctx: &mut CleanContext<'gctx>,
         gc_opts: &GcOpts,
     ) -> CargoResult<()> {
-        self.global_cache_tracker.clean(clean_ctx, gc_opts)?;
+        self.global_cache_tracker.clean(clean_gctx, gc_opts)?;
         // In the future, other gc operations go here, such as target cleaning.
         Ok(())
     }

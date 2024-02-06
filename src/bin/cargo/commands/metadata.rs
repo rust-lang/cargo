@@ -31,12 +31,12 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let ws = args.workspace(config)?;
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(gctx)?;
 
     let version = match args.get_one::<String>("format-version") {
         None => {
-            config.shell().warn(
+            gctx.shell().warn(
                 "please specify `--format-version` flag explicitly \
                  to avoid compatibility problems",
             )?;
@@ -53,6 +53,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     };
 
     let result = ops::output_metadata(&ws, &options)?;
-    config.shell().print_json(&result)?;
+    gctx.shell().print_json(&result)?;
     Ok(())
 }

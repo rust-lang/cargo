@@ -18,7 +18,7 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let root = args.get_one::<String>("root").map(String::as_str);
 
     if args.is_present_with_zero_values("package") {
@@ -34,6 +34,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         .unwrap_or_else(|| args.get_many::<String>("package").unwrap_or_default())
         .map(String::as_str)
         .collect();
-    ops::uninstall(root, specs, &values(args, "bin"), config)?;
+    ops::uninstall(root, specs, &values(args, "bin"), gctx)?;
     Ok(())
 }

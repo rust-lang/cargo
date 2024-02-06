@@ -77,9 +77,9 @@ use std::collections::{HashMap, HashSet};
 use tracing::{debug, trace};
 
 /// Result for `resolve_ws_with_opts`.
-pub struct WorkspaceResolve<'cfg> {
+pub struct WorkspaceResolve<'gctx> {
     /// Packages to be downloaded.
-    pub pkg_set: PackageSet<'cfg>,
+    pub pkg_set: PackageSet<'gctx>,
     /// The resolve for the entire workspace.
     ///
     /// This may be `None` for things like `cargo install` and `-Zavoid-dev-deps`.
@@ -108,7 +108,7 @@ version. This may also occur with an optional dependency that is not enabled.";
 /// This is a simple interface used by commands like `clean`, `fetch`, and
 /// `package`, which don't specify any options or features.
 pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolve)> {
-    let mut registry = PackageRegistry::new(ws.config())?;
+    let mut registry = PackageRegistry::new(ws.gctx())?;
     let resolve = resolve_with_registry(ws, &mut registry)?;
     let packages = get_resolved_packages(&resolve, registry)?;
     Ok((packages, resolve))
@@ -124,16 +124,16 @@ pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolv
 ///
 /// `specs` may be empty, which indicates it should resolve all workspace
 /// members. In this case, `opts.all_features` must be `true`.
-pub fn resolve_ws_with_opts<'cfg>(
-    ws: &Workspace<'cfg>,
-    target_data: &mut RustcTargetData<'cfg>,
+pub fn resolve_ws_with_opts<'gctx>(
+    ws: &Workspace<'gctx>,
+    target_data: &mut RustcTargetData<'gctx>,
     requested_targets: &[CompileKind],
     cli_features: &CliFeatures,
     specs: &[PackageIdSpec],
     has_dev_units: HasDevUnits,
     force_all_targets: ForceAllTargets,
-) -> CargoResult<WorkspaceResolve<'cfg>> {
-    let mut registry = PackageRegistry::new(ws.config())?;
+) -> CargoResult<WorkspaceResolve<'gctx>> {
+    let mut registry = PackageRegistry::new(ws.gctx())?;
     let mut add_patches = true;
     let resolve = if ws.ignore_lock() {
         None
@@ -156,13 +156,13 @@ pub fn resolve_ws_with_opts<'cfg>(
                 .iter()
                 .any(|r| replace_spec.matches(r) && !dep.matches_id(r))
             {
-                ws.config()
+                ws.gctx()
                     .shell()
                     .warn(format!("package replacement is not used: {}", replace_spec))?
             }
 
             if dep.features().len() != 0 || !dep.uses_default_features() {
-                ws.config()
+                ws.gctx()
                 .shell()
                 .warn(format!(
                     "replacement for `{}` uses the features mechanism. \
@@ -234,9 +234,9 @@ pub fn resolve_ws_with_opts<'cfg>(
     })
 }
 
-fn resolve_with_registry<'cfg>(
-    ws: &Workspace<'cfg>,
-    registry: &mut PackageRegistry<'cfg>,
+fn resolve_with_registry<'gctx>(
+    ws: &Workspace<'gctx>,
+    registry: &mut PackageRegistry<'gctx>,
 ) -> CargoResult<Resolve> {
     let prev = ops::load_pkg_lockfile(ws)?;
     let mut resolve = resolve_with_previous(
@@ -271,9 +271,9 @@ fn resolve_with_registry<'cfg>(
 ///
 /// If `register_patches` is true, then entries from the `[patch]` table in
 /// the manifest will be added to the given `PackageRegistry`.
-pub fn resolve_with_previous<'cfg>(
-    registry: &mut PackageRegistry<'cfg>,
-    ws: &Workspace<'cfg>,
+pub fn resolve_with_previous<'gctx>(
+    registry: &mut PackageRegistry<'gctx>,
+    ws: &Workspace<'gctx>,
     cli_features: &CliFeatures,
     has_dev_units: HasDevUnits,
     previous: Option<&Resolve>,
@@ -284,7 +284,7 @@ pub fn resolve_with_previous<'cfg>(
     // We only want one Cargo at a time resolving a crate graph since this can
     // involve a lot of frobbing of the global caches.
     let _lock = ws
-        .config()
+        .gctx()
         .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
     // Here we place an artificial limitation that all non-registry sources
@@ -314,10 +314,10 @@ pub fn resolve_with_previous<'cfg>(
     // While registering patches, we will record preferences for particular versions
     // of various packages.
     let mut version_prefs = VersionPreferences::default();
-    if ws.config().cli_unstable().minimal_versions {
+    if ws.gctx().cli_unstable().minimal_versions {
         version_prefs.version_ordering(VersionOrdering::MinimumVersionsFirst)
     }
-    if ws.config().cli_unstable().msrv_policy {
+    if ws.gctx().cli_unstable().msrv_policy {
         version_prefs.max_rust_version(ws.rust_version().cloned());
     }
 
@@ -505,7 +505,7 @@ pub fn resolve_with_previous<'cfg>(
         registry,
         &version_prefs,
         ResolveVersion::with_rust_version(ws.rust_version()),
-        Some(ws.config()),
+        Some(ws.gctx()),
     )?;
     let patches: Vec<_> = registry
         .patches()
@@ -521,9 +521,9 @@ pub fn resolve_with_previous<'cfg>(
     if let Some(previous) = previous {
         resolved.merge_from(previous)?;
     }
-    let config = ws.config();
-    let mut deferred = config.deferred_global_last_use()?;
-    deferred.save_no_error(config);
+    let gctx = ws.gctx();
+    let mut deferred = gctx.deferred_global_last_use()?;
+    deferred.save_no_error(gctx);
     Ok(resolved)
 }
 
@@ -533,8 +533,8 @@ pub fn add_overrides<'a>(
     registry: &mut PackageRegistry<'a>,
     ws: &Workspace<'a>,
 ) -> CargoResult<()> {
-    let config = ws.config();
-    let Some(paths) = config.get_list("paths")? else {
+    let gctx = ws.gctx();
+    let Some(paths) = gctx.get_list("paths")? else {
         return Ok(());
     };
 
@@ -542,12 +542,12 @@ pub fn add_overrides<'a>(
         // The path listed next to the string is the config file in which the
         // key was located, so we want to pop off the `.cargo/config` component
         // to get the directory containing the `.cargo` folder.
-        (def.root(config).join(s), def)
+        (def.root(gctx).join(s), def)
     });
 
     for (path, definition) in paths {
         let id = SourceId::for_path(&path)?;
-        let mut source = PathSource::new_recursive(&path, id, ws.config());
+        let mut source = PathSource::new_recursive(&path, id, ws.gctx());
         source.update().with_context(|| {
             format!(
                 "failed to update path override `{}` \
@@ -561,10 +561,10 @@ pub fn add_overrides<'a>(
     Ok(())
 }
 
-pub fn get_resolved_packages<'cfg>(
+pub fn get_resolved_packages<'gctx>(
     resolve: &Resolve,
-    registry: PackageRegistry<'cfg>,
-) -> CargoResult<PackageSet<'cfg>> {
+    registry: PackageRegistry<'gctx>,
+) -> CargoResult<PackageSet<'gctx>> {
     let ids: Vec<PackageId> = resolve.iter().collect();
     registry.get(&ids)
 }
@@ -854,7 +854,7 @@ fn emit_warnings_of_unused_patches(
                 for id in ids.iter() {
                     write!(msg, "\n    {}", id.display_registry_name())?;
                 }
-                ws.config().shell().warn(msg)?;
+                ws.gctx().shell().warn(msg)?;
             }
             _ => unemitted_unused_patches.push(unused),
         }
@@ -866,7 +866,7 @@ fn emit_warnings_of_unused_patches(
             .iter()
             .map(|pkgid| format!("Patch `{}` {}", pkgid, MESSAGE))
             .collect();
-        ws.config()
+        ws.gctx()
             .shell()
             .warn(format!("{}\n{}", warnings.join("\n"), UNUSED_PATCH_WARNING))?;
     }

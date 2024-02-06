@@ -15,8 +15,8 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let ws = args.workspace(config)?;
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(gctx)?;
     if ws.root_maybe().is_embedded() {
         return Err(anyhow::format_err!(
             "{} is unsupported by `cargo pkgid`",
@@ -32,6 +32,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         .or_else(|| args.get_one::<String>("package"))
         .map(String::as_str);
     let spec = ops::pkgid(&ws, spec)?;
-    cargo::drop_println!(config, "{}", spec);
+    cargo::drop_println!(gctx, "{}", spec);
     Ok(())
 }

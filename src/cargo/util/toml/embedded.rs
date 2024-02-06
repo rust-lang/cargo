@@ -4,7 +4,7 @@ use cargo_util_schemas::manifest::PackageName;
 
 use crate::util::restricted_names;
 use crate::CargoResult;
-use crate::Config;
+use crate::GlobalContext;
 
 const DEFAULT_EDITION: crate::core::features::Edition =
     crate::core::features::Edition::LATEST_STABLE;
@@ -13,7 +13,7 @@ const AUTO_FIELDS: &[&str] = &["autobins", "autoexamples", "autotests", "autoben
 pub(super) fn expand_manifest(
     content: &str,
     path: &std::path::Path,
-    config: &Config,
+    gctx: &GlobalContext,
 ) -> CargoResult<String> {
     let source = split_source(content)?;
     if let Some(frontmatter) = source.frontmatter {
@@ -36,7 +36,7 @@ pub(super) fn expand_manifest(
         rel_path.push("target");
         rel_path.push(&hash[0..2]);
         rel_path.push(&hash[2..]);
-        let target_dir = config.home().join(rel_path);
+        let target_dir = gctx.home().join(rel_path);
         let hacked_path = target_dir
             .join(
                 path.file_name()
@@ -58,13 +58,13 @@ pub(super) fn expand_manifest(
         }
         cargo_util::paths::write_if_changed(&hacked_path, hacked_source)?;
 
-        let manifest = expand_manifest_(&frontmatter, &hacked_path, config)
+        let manifest = expand_manifest_(&frontmatter, &hacked_path, gctx)
             .with_context(|| format!("failed to parse manifest at {}", path.display()))?;
         let manifest = toml::to_string_pretty(&manifest)?;
         Ok(manifest)
     } else {
         let frontmatter = "";
-        let manifest = expand_manifest_(frontmatter, path, config)
+        let manifest = expand_manifest_(frontmatter, path, gctx)
             .with_context(|| format!("failed to parse manifest at {}", path.display()))?;
         let manifest = toml::to_string_pretty(&manifest)?;
         Ok(manifest)
@@ -74,7 +74,7 @@ pub(super) fn expand_manifest(
 fn expand_manifest_(
     manifest: &str,
     path: &std::path::Path,
-    config: &Config,
+    gctx: &GlobalContext,
 ) -> CargoResult<toml::Table> {
     let mut manifest: toml::Table = toml::from_str(&manifest)?;
 
@@ -112,7 +112,7 @@ fn expand_manifest_(
         .entry("name".to_owned())
         .or_insert(toml::Value::String(name));
     package.entry("edition".to_owned()).or_insert_with(|| {
-        let _ = config.shell().warn(format_args!(
+        let _ = gctx.shell().warn(format_args!(
             "`package.edition` is unspecified, defaulting to `{}`",
             DEFAULT_EDITION
         ));
@@ -296,7 +296,7 @@ mod test_expand {
             expand_manifest(
                 $i,
                 std::path::Path::new("/home/me/test.rs"),
-                &Config::default().unwrap(),
+                &GlobalContext::default().unwrap(),
             )
             .unwrap_or_else(|err| panic!("{}", err))
         }};

@@ -1,7 +1,7 @@
 use crate::core::compiler::CompileKind;
 use crate::util::config::JobsConfig;
 use crate::util::interning::InternedString;
-use crate::util::{CargoResult, Config, RustfixDiagnosticServer};
+use crate::util::{CargoResult, GlobalContext, RustfixDiagnosticServer};
 use anyhow::{bail, Context as _};
 use cargo_util::ProcessBuilder;
 use serde::ser;
@@ -64,16 +64,16 @@ impl BuildConfig {
     /// * `target.$target.linker`
     /// * `target.$target.libfoo.metadata`
     pub fn new(
-        config: &Config,
+        gctx: &GlobalContext,
         jobs: Option<JobsConfig>,
         keep_going: bool,
         requested_targets: &[String],
         mode: CompileMode,
     ) -> CargoResult<BuildConfig> {
-        let cfg = config.build_config()?;
-        let requested_kinds = CompileKind::from_requested_targets(config, requested_targets)?;
-        if jobs.is_some() && config.jobserver_from_env().is_some() {
-            config.shell().warn(
+        let cfg = gctx.build_config()?;
+        let requested_kinds = CompileKind::from_requested_targets(gctx, requested_targets)?;
+        if jobs.is_some() && gctx.jobserver_from_env().is_some() {
+            gctx.shell().warn(
                 "a `-j` argument was passed to Cargo but Cargo is \
                  also configured with an external jobserver in \
                  its environment, ignoring the `-j` parameter",
@@ -97,7 +97,7 @@ impl BuildConfig {
             },
         };
 
-        if config.cli_unstable().build_std.is_some() && requested_kinds[0].is_host() {
+        if gctx.cli_unstable().build_std.is_some() && requested_kinds[0].is_host() {
             // TODO: This should eventually be fixed.
             anyhow::bail!("-Zbuild-std requires --target");
         }

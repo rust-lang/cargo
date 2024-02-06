@@ -3,7 +3,7 @@
 
 use crate::util::network::http::HttpTimeout;
 use crate::util::{human_readable_bytes, network, MetricsCounter, Progress};
-use crate::{CargoResult, Config};
+use crate::{CargoResult, GlobalContext};
 use cargo_util::paths;
 use gix::bstr::{BString, ByteSlice};
 use std::cell::RefCell;
@@ -17,7 +17,7 @@ use tracing::debug;
 /// In future this may change to be the gitoxide repository itself.
 pub fn with_retry_and_progress(
     repo_path: &std::path::Path,
-    config: &Config,
+    gctx: &GlobalContext,
     cb: &(dyn Fn(
         &std::path::Path,
         &AtomicBool,
@@ -28,11 +28,11 @@ pub fn with_retry_and_progress(
           + Sync),
 ) -> CargoResult<()> {
     std::thread::scope(|s| {
-        let mut progress_bar = Progress::new("Fetch", config);
-        let is_shallow = config.cli_unstable().git.map_or(false, |features| {
+        let mut progress_bar = Progress::new("Fetch", gctx);
+        let is_shallow = gctx.cli_unstable().git.map_or(false, |features| {
             features.shallow_deps || features.shallow_index
         });
-        network::retry::with_retry(config, || {
+        network::retry::with_retry(gctx, || {
             let progress_root: Arc<gix::progress::tree::Root> =
                 gix::progress::tree::root::Options {
                     initial_capacity: 10,
@@ -271,10 +271,10 @@ pub fn open_repo(
 
 /// Convert `git` related cargo configuration into the respective `git` configuration which can be
 /// used when opening new repositories.
-pub fn cargo_config_to_gitoxide_overrides(config: &Config) -> CargoResult<Vec<BString>> {
+pub fn cargo_config_to_gitoxide_overrides(gctx: &GlobalContext) -> CargoResult<Vec<BString>> {
     use gix::config::tree::{gitoxide, Core, Http, Key};
-    let timeout = HttpTimeout::new(config)?;
-    let http = config.http_config()?;
+    let timeout = HttpTimeout::new(gctx)?;
+    let http = gctx.http_config()?;
 
     let mut values = vec![
         gitoxide::Http::CONNECT_TIMEOUT.validated_assignment_fmt(&timeout.dur.as_millis())?,
@@ -291,7 +291,7 @@ pub fn cargo_config_to_gitoxide_overrides(config: &Config) -> CargoResult<Vec<BS
     }
     if let Some(cainfo) = &http.cainfo {
         values.push(
-            Http::SSL_CA_INFO.validated_assignment_fmt(&cainfo.resolve_path(config).display())?,
+            Http::SSL_CA_INFO.validated_assignment_fmt(&cainfo.resolve_path(gctx).display())?,
         );
     }
 

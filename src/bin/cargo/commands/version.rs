@@ -10,9 +10,9 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let verbose = args.verbose() > 0;
     let version = cli::get_version_string(verbose);
-    cargo::drop_print!(config, "{}", version);
+    cargo::drop_print!(gctx, "{}", version);
     Ok(())
 }

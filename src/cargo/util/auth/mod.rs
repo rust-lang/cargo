@@ -2,7 +2,7 @@
 
 use crate::{
     core::features::cargo_docs_link,
-    util::{config::ConfigKey, CanonicalUrl, CargoResult, Config, IntoUrl},
+    util::{config::ConfigKey, CanonicalUrl, CargoResult, GlobalContext, IntoUrl},
 };
 use anyhow::{bail, Context as _};
 use cargo_credential::{
@@ -75,24 +75,24 @@ impl RegistryConfigExtended {
 
 /// Get the list of credential providers for a registry source.
 fn credential_provider(
-    config: &Config,
+    gctx: &GlobalContext,
     sid: &SourceId,
     require_cred_provider_config: bool,
     show_warnings: bool,
 ) -> CargoResult<Vec<Vec<String>>> {
     let warn = |message: String| {
         if show_warnings {
-            config.shell().warn(message)
+            gctx.shell().warn(message)
         } else {
             Ok(())
         }
     };
 
-    let cfg = registry_credential_config_raw(config, sid)?;
+    let cfg = registry_credential_config_raw(gctx, sid)?;
     let mut global_provider_defined = true;
     let default_providers = || {
         global_provider_defined = false;
-        if config.cli_unstable().asymmetric_token {
+        if gctx.cli_unstable().asymmetric_token {
             // Enable the PASETO provider
             vec![
                 vec!["cargo:token".to_string()],
@@ -102,14 +102,14 @@ fn credential_provider(
             vec![vec!["cargo:token".to_string()]]
         }
     };
-    let global_providers = config
+    let global_providers = gctx
         .get::<Option<Vec<Value<String>>>>("registry.global-credential-providers")?
         .filter(|p| !p.is_empty())
         .map(|p| {
             p.iter()
                 .rev()
                 .map(PathAndArgs::from_whitespace_separated_string)
-                .map(|p| resolve_credential_alias(config, p))
+                .map(|p| resolve_credential_alias(gctx, p))
                 .collect()
         })
         .unwrap_or_else(default_providers);
@@ -123,7 +123,7 @@ fn credential_provider(
             secret_key,
             ..
         }) => {
-            let provider = resolve_credential_alias(config, provider);
+            let provider = resolve_credential_alias(gctx, provider);
             if let Some(token) = token {
                 if provider[0] != "cargo:token" {
                     warn(format!(
@@ -150,7 +150,7 @@ fn credential_provider(
             token: Some(token),
             secret_key: Some(secret_key),
             ..
-        }) if config.cli_unstable().asymmetric_token => {
+        }) if gctx.cli_unstable().asymmetric_token => {
             let token_pos = global_providers
                 .iter()
                 .position(|p| p.first().map(String::as_str) == Some("cargo:token"));
@@ -199,7 +199,7 @@ fn credential_provider(
         Some(RegistryConfig {
             secret_key: Some(token),
             ..
-        }) if config.cli_unstable().asymmetric_token => {
+        }) if gctx.cli_unstable().asymmetric_token => {
             if !global_providers
                 .iter()
                 .any(|p| p.first().map(String::as_str) == Some("cargo:paseto"))
@@ -228,24 +228,24 @@ fn credential_provider(
 
 /// Get the credential configuration for a `SourceId`.
 pub fn registry_credential_config_raw(
-    config: &Config,
+    gctx: &GlobalContext,
     sid: &SourceId,
 ) -> CargoResult<Option<RegistryConfig>> {
-    let mut cache = config.registry_config();
+    let mut cache = gctx.registry_config();
     if let Some(cfg) = cache.get(&sid) {
         return Ok(cfg.clone());
     }
-    let cfg = registry_credential_config_raw_uncached(config, sid)?;
+    let cfg = registry_credential_config_raw_uncached(gctx, sid)?;
     cache.insert(*sid, cfg.clone());
     return Ok(cfg);
 }
 
 fn registry_credential_config_raw_uncached(
-    config: &Config,
+    gctx: &GlobalContext,
     sid: &SourceId,
 ) -> CargoResult<Option<RegistryConfig>> {
     tracing::trace!("loading credential config for {}", sid);
-    config.load_credentials()?;
+    gctx.load_credentials()?;
     if !sid.is_remote_registry() {
         bail!(
             "{} does not support API commands.\n\
@@ -256,8 +256,8 @@ fn registry_credential_config_raw_uncached(
 
     // Handle crates.io specially, since it uses different configuration keys.
     if sid.is_crates_io() {
-        config.check_registry_index_not_set()?;
-        return Ok(config
+        gctx.check_registry_index_not_set()?;
+        return Ok(gctx
             .get::<Option<RegistryConfigExtended>>("registry")?
             .map(|c| c.to_registry_config()));
     }
@@ -277,7 +277,7 @@ fn registry_credential_config_raw_uncached(
     let name = {
         // Discover names from environment variables.
         let index = sid.canonical_url();
-        let mut names: Vec<_> = config
+        let mut names: Vec<_> = gctx
             .env()
             .filter_map(|(k, v)| {
                 Some((
@@ -293,7 +293,7 @@ fn registry_credential_config_raw_uncached(
 
         // Discover names from the configuration only if none were found in the environment.
         if names.len() == 0 {
-            if let Some(registries) = config.values()?.get("registries") {
+            if let Some(registries) = gctx.values()?.get("registries") {
                 let (registries, _) = registries.table("registries")?;
                 for (name, value) in registries {
                     if let Some(v) = value.table(&format!("registries.{name}"))?.0.get("index") {
@@ -323,7 +323,7 @@ fn registry_credential_config_raw_uncached(
     // the potentially confusing situation.
     if let Some(name) = name.as_deref() {
         if Some(name) != sid.alt_registry_key() {
-            config.shell().note(format!(
+            gctx.shell().note(format!(
                 "name of alternative registry `{}` set to `{name}`",
                 sid.url()
             ))?
@@ -332,7 +332,7 @@ fn registry_credential_config_raw_uncached(
 
     if let Some(name) = &name {
         tracing::debug!("found alternative registry name `{name}` for {sid}");
-        config.get::<Option<RegistryConfig>>(&format!("registries.{name}"))
+        gctx.get::<Option<RegistryConfig>>(&format!("registries.{name}"))
     } else {
         tracing::debug!("no registry name found for {sid}");
         Ok(None)
@@ -340,14 +340,14 @@ fn registry_credential_config_raw_uncached(
 }
 
 /// Use the `[credential-alias]` table to see if the provider name has been aliased.
-fn resolve_credential_alias(config: &Config, mut provider: PathAndArgs) -> Vec<String> {
+fn resolve_credential_alias(gctx: &GlobalContext, mut provider: PathAndArgs) -> Vec<String> {
     if provider.args.is_empty() {
         let name = provider.path.raw_value();
         let key = format!("credential-alias.{name}");
-        if let Ok(alias) = config.get::<Value<PathAndArgs>>(&key) {
+        if let Ok(alias) = gctx.get::<Value<PathAndArgs>>(&key) {
             tracing::debug!("resolving credential alias '{key}' -> '{alias:?}'");
             if BUILT_IN_PROVIDERS.contains(&name) {
-                let _ = config.shell().warn(format!(
+                let _ = gctx.shell().warn(format!(
                     "credential-alias `{name}` (defined in `{}`) will be \
                     ignored because it would shadow a built-in credential-provider",
                     alias.definition
@@ -361,7 +361,7 @@ fn resolve_credential_alias(config: &Config, mut provider: PathAndArgs) -> Vec<S
         0,
         provider
             .path
-            .resolve_program(config)
+            .resolve_program(gctx)
             .to_str()
             .unwrap()
             .to_string(),
@@ -401,7 +401,7 @@ pub struct AuthorizationError {
 
 impl AuthorizationError {
     pub fn new(
-        config: &Config,
+        gctx: &GlobalContext,
         sid: SourceId,
         login_url: Option<Url>,
         reason: AuthorizationErrorReason,
@@ -409,12 +409,12 @@ impl AuthorizationError {
         // Only display the _TOKEN environment variable suggestion if the `cargo:token` credential
         // provider is available for the source. Otherwise setting the environment variable will
         // have no effect.
-        let display_token_env_help = credential_provider(config, &sid, false, false)?
+        let display_token_env_help = credential_provider(gctx, &sid, false, false)?
             .iter()
             .any(|p| p.first().map(String::as_str) == Some("cargo:token"));
         Ok(AuthorizationError {
             sid,
-            default_registry: config.default_registry()?,
+            default_registry: gctx.default_registry()?,
             login_url,
             reason,
             display_token_env_help,
@@ -474,9 +474,9 @@ my-registry = {{ index = "{}" }}
 }
 
 /// Store a token in the cache for future calls.
-pub fn cache_token_from_commandline(config: &Config, sid: &SourceId, token: Secret<&str>) {
+pub fn cache_token_from_commandline(gctx: &GlobalContext, sid: &SourceId, token: Secret<&str>) {
     let url = sid.canonical_url();
-    config.credential_cache().insert(
+    gctx.credential_cache().insert(
         url.clone(),
         CredentialCacheValue {
             token_value: token.to_owned(),
@@ -498,7 +498,7 @@ static BUILT_IN_PROVIDERS: &[&'static str] = &[
 ];
 
 fn credential_action(
-    config: &Config,
+    gctx: &GlobalContext,
     sid: &SourceId,
     action: Action<'_>,
     headers: Vec<String>,
@@ -511,7 +511,7 @@ fn credential_action(
         name,
         headers,
     };
-    let providers = credential_provider(config, sid, require_cred_provider_config, true)?;
+    let providers = credential_provider(gctx, sid, require_cred_provider_config, true)?;
     let mut any_not_found = false;
     for provider in providers {
         let args: Vec<&str> = provider
@@ -523,9 +523,9 @@ fn credential_action(
         tracing::debug!("attempting credential provider: {args:?}");
         // If the available built-in providers are changed, update the `BUILT_IN_PROVIDERS` list.
         let provider: Box<dyn Credential> = match process {
-            "cargo:token" => Box::new(TokenCredential::new(config)),
-            "cargo:paseto" if config.cli_unstable().asymmetric_token => {
-                Box::new(PasetoCredential::new(config))
+            "cargo:token" => Box::new(TokenCredential::new(gctx)),
+            "cargo:paseto" if gctx.cli_unstable().asymmetric_token => {
+                Box::new(PasetoCredential::new(gctx))
             }
             "cargo:paseto" => bail!("cargo:paseto requires -Zasymmetric-token"),
             "cargo:token-from-stdout" => Box::new(BasicProcessCredential {}),
@@ -540,7 +540,7 @@ fn credential_action(
             }
             process => Box::new(CredentialProcessCredential::new(process)),
         };
-        config.shell().verbose(|c| {
+        gctx.shell().verbose(|c| {
             c.status(
                 "Credential",
                 format!(
@@ -575,23 +575,17 @@ fn credential_action(
 /// If a `login_url` is provided and a token is not available, the
 /// login_url will be included in the returned error.
 pub fn auth_token(
-    config: &Config,
+    gctx: &GlobalContext,
     sid: &SourceId,
     login_url: Option<&Url>,
     operation: Operation<'_>,
     headers: Vec<String>,
     require_cred_provider_config: bool,
 ) -> CargoResult<String> {
-    match auth_token_optional(
-        config,
-        sid,
-        operation,
-        headers,
-        require_cred_provider_config,
-    )? {
+    match auth_token_optional(gctx, sid, operation, headers, require_cred_provider_config)? {
         Some(token) => Ok(token.expose()),
         None => Err(AuthorizationError::new(
-            config,
+            gctx,
             *sid,
             login_url.cloned(),
             AuthorizationErrorReason::TokenMissing,
@@ -602,14 +596,14 @@ pub fn auth_token(
 
 /// Returns the token to use for the given registry.
 fn auth_token_optional(
-    config: &Config,
+    gctx: &GlobalContext,
     sid: &SourceId,
     operation: Operation<'_>,
     headers: Vec<String>,
     require_cred_provider_config: bool,
 ) -> CargoResult<Option<Secret<String>>> {
     tracing::trace!("token requested for {}", sid.display_registry_name());
-    let mut cache = config.credential_cache();
+    let mut cache = gctx.credential_cache();
     let url = sid.canonical_url();
     if let Some(cached_token) = cache.get(url) {
         if cached_token
@@ -628,7 +622,7 @@ fn auth_token_optional(
     }
 
     let credential_response = credential_action(
-        config,
+        gctx,
         sid,
         Action::Get(operation),
         headers,
@@ -672,12 +666,12 @@ fn auth_token_optional(
 }
 
 /// Log out from the given registry.
-pub fn logout(config: &Config, sid: &SourceId) -> CargoResult<()> {
-    let credential_response = credential_action(config, sid, Action::Logout, vec![], &[], false);
+pub fn logout(gctx: &GlobalContext, sid: &SourceId) -> CargoResult<()> {
+    let credential_response = credential_action(gctx, sid, Action::Logout, vec![], &[], false);
     if let Some(e) = credential_response.as_ref().err() {
         if let Some(e) = e.downcast_ref::<cargo_credential::Error>() {
             if matches!(e, cargo_credential::Error::NotFound) {
-                config.shell().status(
+                gctx.shell().status(
                     "Logout",
                     format!(
                         "not currently logged in to `{}`",
@@ -697,13 +691,13 @@ pub fn logout(config: &Config, sid: &SourceId) -> CargoResult<()> {
 
 /// Log in to the given registry.
 pub fn login(
-    config: &Config,
+    gctx: &GlobalContext,
     sid: &SourceId,
     options: LoginOptions<'_>,
     args: &[&str],
 ) -> CargoResult<()> {
     let credential_response =
-        credential_action(config, sid, Action::Login(options), vec![], args, false)?;
+        credential_action(gctx, sid, Action::Login(options), vec![], args, false)?;
     let CredentialResponse::Login = credential_response else {
         bail!("credential provider produced unexpected response for `login` request: {credential_response:?}")
     };

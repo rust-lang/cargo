@@ -3,7 +3,7 @@
 use crate::core::PackageId;
 use crate::sources::registry::{LoadResponse, MaybeLock, RegistryConfig, RegistryData};
 use crate::util::errors::CargoResult;
-use crate::util::{Config, Filesystem};
+use crate::util::{Filesystem, GlobalContext};
 use cargo_util::{paths, Sha256};
 use std::fs::File;
 use std::io::SeekFrom;
@@ -55,38 +55,38 @@ use std::task::Poll;
 /// ```
 ///
 /// For general concepts of registries, see the [module-level documentation](crate::sources::registry).
-pub struct LocalRegistry<'cfg> {
+pub struct LocalRegistry<'gctx> {
     /// Path to the registry index.
     index_path: Filesystem,
     /// Root path of this local registry.
     root: Filesystem,
     /// Path where this local registry extract `.crate` tarballs to.
     src_path: Filesystem,
-    config: &'cfg Config,
+    gctx: &'gctx GlobalContext,
     /// Whether this source has updated all package information it may contain.
     updated: bool,
     /// Disables status messages.
     quiet: bool,
 }
 
-impl<'cfg> LocalRegistry<'cfg> {
+impl<'gctx> LocalRegistry<'gctx> {
     /// Creates a local registry at `root`.
     ///
     /// * `name` --- Name of a path segment where `.crate` tarballs are stored.
     ///   Expect to be unique.
-    pub fn new(root: &Path, config: &'cfg Config, name: &str) -> LocalRegistry<'cfg> {
+    pub fn new(root: &Path, gctx: &'gctx GlobalContext, name: &str) -> LocalRegistry<'gctx> {
         LocalRegistry {
-            src_path: config.registry_source_path().join(name),
+            src_path: gctx.registry_source_path().join(name),
             index_path: Filesystem::new(root.join("index")),
             root: Filesystem::new(root.to_path_buf()),
-            config,
+            gctx,
             updated: false,
             quiet: false,
         }
     }
 }
 
-impl<'cfg> RegistryData for LocalRegistry<'cfg> {
+impl<'gctx> RegistryData for LocalRegistry<'gctx> {
     fn prepare(&self) -> CargoResult<()> {
         Ok(())
     }
@@ -181,7 +181,7 @@ impl<'cfg> RegistryData for LocalRegistry<'cfg> {
         }
 
         if !self.quiet {
-            self.config.shell().status("Unpacking", pkg)?;
+            self.gctx.shell().status("Unpacking", pkg)?;
         }
 
         // We don't actually need to download anything per-se, we just need to

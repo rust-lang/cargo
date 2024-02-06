@@ -23,8 +23,8 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let reg_or_index = args.registry_or_index(config)?;
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
+    let reg_or_index = args.registry_or_index(gctx)?;
     let limit = args.value_of_u32("limit")?;
     let limit = min(100, limit.unwrap_or(10));
     let query: Vec<&str> = args
@@ -33,6 +33,6 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         .map(String::as_str)
         .collect();
     let query: String = query.join("+");
-    ops::search(&query, config, reg_or_index, limit)?;
+    ops::search(&query, gctx, reg_or_index, limit)?;
     Ok(())
 }

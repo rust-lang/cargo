@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use tracing::trace;
 
 use super::types::ConflictMap;
-use crate::core::resolver::Context;
+use crate::core::resolver::ResolverContext;
 use crate::core::{Dependency, PackageId};
 
 /// This is a trie for storing a large number of sets designed to
@@ -171,7 +171,7 @@ impl ConflictCache {
     /// one that will allow for the most jump-back.
     pub fn find_conflicting(
         &self,
-        cx: &Context,
+        cx: &ResolverContext,
         dep: &Dependency,
         must_contain: Option<PackageId>,
     ) -> Option<&ConflictMap> {
@@ -186,7 +186,7 @@ impl ConflictCache {
         }
         out
     }
-    pub fn conflicting(&self, cx: &Context, dep: &Dependency) -> Option<&ConflictMap> {
+    pub fn conflicting(&self, cx: &ResolverContext, dep: &Dependency) -> Option<&ConflictMap> {
         self.find_conflicting(cx, dep, None)
     }
 

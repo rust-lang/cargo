@@ -1,6 +1,6 @@
 //! Tests for `CacheLock`.
 
-use crate::config::ConfigBuilder;
+use crate::config::GlobalContextBuilder;
 use cargo::util::cache_lock::{CacheLockMode, CacheLocker};
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::{retry, thread_wait_timeout, threaded_timeout};
@@ -10,21 +10,21 @@ use std::thread::JoinHandle;
 fn verify_lock_is_ok(mode: CacheLockMode) {
     let root = paths::root();
     threaded_timeout(10, move || {
-        let config = ConfigBuilder::new().root(root).build();
+        let gctx = GlobalContextBuilder::new().root(root).build();
         let locker = CacheLocker::new();
         // This would block if it is held.
-        let _lock = locker.lock(&config, mode).unwrap();
+        let _lock = locker.lock(&gctx, mode).unwrap();
         assert!(locker.is_locked(mode));
     });
 }
 
 /// Helper to acquire two locks from the same locker.
 fn a_b_nested(a: CacheLockMode, b: CacheLockMode) {
-    let config = ConfigBuilder::new().build();
+    let gctx = GlobalContextBuilder::new().build();
     let locker = CacheLocker::new();
-    let lock1 = locker.lock(&config, a).unwrap();
+    let lock1 = locker.lock(&gctx, a).unwrap();
     assert!(locker.is_locked(a));
-    let lock2 = locker.lock(&config, b).unwrap();
+    let lock2 = locker.lock(&gctx, b).unwrap();
     assert!(locker.is_locked(b));
     drop(lock2);
     drop(lock1);
@@ -37,12 +37,12 @@ fn a_b_nested(a: CacheLockMode, b: CacheLockMode) {
 /// Helper to acquire two locks from separate lockers, verifying that they
 /// don't block each other.
 fn a_then_b_separate_not_blocked(a: CacheLockMode, b: CacheLockMode, verify: CacheLockMode) {
-    let config = ConfigBuilder::new().build();
+    let gctx = GlobalContextBuilder::new().build();
     let locker1 = CacheLocker::new();
-    let lock1 = locker1.lock(&config, a).unwrap();
+    let lock1 = locker1.lock(&gctx, a).unwrap();
     assert!(locker1.is_locked(a));
     let locker2 = CacheLocker::new();
-    let lock2 = locker2.lock(&config, b).unwrap();
+    let lock2 = locker2.lock(&gctx, b).unwrap();
     assert!(locker2.is_locked(b));
     let thread = verify_lock_would_block(verify);
     // Unblock the thread.
@@ -55,9 +55,9 @@ fn a_then_b_separate_not_blocked(a: CacheLockMode, b: CacheLockMode, verify: Cac
 /// Helper to acquire two locks from separate lockers, verifying that the
 /// second one blocks.
 fn a_then_b_separate_blocked(a: CacheLockMode, b: CacheLockMode) {
-    let config = ConfigBuilder::new().build();
+    let gctx = GlobalContextBuilder::new().build();
     let locker = CacheLocker::new();
-    let lock = locker.lock(&config, a).unwrap();
+    let lock = locker.lock(&gctx, a).unwrap();
     assert!(locker.is_locked(a));
     let thread = verify_lock_would_block(b);
     // Unblock the thread.
@@ -74,9 +74,9 @@ fn verify_lock_would_block(mode: CacheLockMode) -> JoinHandle<()> {
     let root = paths::root();
     // Spawn a thread that will block on the lock.
     let thread = std::thread::spawn(move || {
-        let config = ConfigBuilder::new().root(root).build();
+        let gctx = GlobalContextBuilder::new().root(root).build();
         let locker2 = CacheLocker::new();
-        let lock2 = locker2.lock(&config, mode).unwrap();
+        let lock2 = locker2.lock(&gctx, mode).unwrap();
         assert!(locker2.is_locked(mode));
         drop(lock2);
     });
@@ -197,16 +197,16 @@ fn readonly() {
     let mut perms = std::fs::metadata(&cargo_home).unwrap().permissions();
     perms.set_readonly(true);
     std::fs::set_permissions(&cargo_home, perms).unwrap();
-    let config = ConfigBuilder::new().build();
+    let gctx = GlobalContextBuilder::new().build();
     let locker = CacheLocker::new();
     for mode in [
         CacheLockMode::Shared,
         CacheLockMode::DownloadExclusive,
         CacheLockMode::MutateExclusive,
     ] {
-        let _lock1 = locker.lock(&config, mode).unwrap();
+        let _lock1 = locker.lock(&gctx, mode).unwrap();
         // Make sure it can recursively acquire the lock, too.
-        let _lock2 = locker.lock(&config, mode).unwrap();
+        let _lock2 = locker.lock(&gctx, mode).unwrap();
     }
 }
 
@@ -278,16 +278,16 @@ fn mutate_then_shared_separate() {
 fn mutate_err_is_atomic() {
     // Verifies that when getting a mutate lock, that if the first lock
     // succeeds, but the second one fails, that the first lock is released.
-    let config = ConfigBuilder::new().build();
+    let gctx = GlobalContextBuilder::new().build();
     let locker = CacheLocker::new();
-    let cargo_home = config.home().as_path_unlocked();
+    let cargo_home = gctx.home().as_path_unlocked();
     let cache_path = cargo_home.join(".package-cache");
     // This is a hacky way to force an error acquiring the download lock. By
     // making it a directory, it is unable to open it.
     // TODO: Unfortunately this doesn't work on Windows. I don't have any
     // ideas on how to simulate an error on Windows.
     cache_path.mkdir_p();
-    match locker.lock(&config, CacheLockMode::MutateExclusive) {
+    match locker.lock(&gctx, CacheLockMode::MutateExclusive) {
         Ok(_) => panic!("did not expect lock to succeed"),
         Err(e) => {
             let msg = format!("{e:?}");

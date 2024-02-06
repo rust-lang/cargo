@@ -25,7 +25,7 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let (krate, version) = resolve_crate(
         args.get_one::<String>("crate").map(String::as_str),
         args.get_one::<String>("version").map(String::as_str),
@@ -35,11 +35,11 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     }
 
     ops::yank(
-        config,
+        gctx,
         krate.map(|s| s.to_string()),
         version.map(|s| s.to_string()),
         args.get_one::<String>("token").cloned().map(Secret::from),
-        args.registry_or_index(config)?,
+        args.registry_or_index(gctx)?,
         args.flag("undo"),
     )?;
     Ok(())

@@ -133,7 +133,7 @@ pub use self::job::{Job, Work};
 pub use self::job_state::JobState;
 use super::context::OutputFile;
 use super::timings::Timings;
-use super::{BuildContext, BuildPlan, CompileMode, Context, Unit};
+use super::{BuildContext, BuildPlan, CompileContext, CompileMode, Unit};
 use crate::core::compiler::descriptive_pkg_name;
 use crate::core::compiler::future_incompat::{
     self, FutureBreakageItem, FutureIncompatReportPackage,
@@ -145,16 +145,16 @@ use crate::util::errors::AlreadyPrintedError;
 use crate::util::machine_message::{self, Message as _};
 use crate::util::CargoResult;
 use crate::util::{self, internal, profile};
-use crate::util::{Config, DependencyQueue, Progress, ProgressStyle, Queue};
+use crate::util::{DependencyQueue, GlobalContext, Progress, ProgressStyle, Queue};
 
 /// This structure is backed by the `DependencyQueue` type and manages the
 /// queueing of compilation steps for each package. Packages enqueue units of
 /// work and then later on the entire graph is converted to DrainState and
 /// executed.
-pub struct JobQueue<'cfg> {
+pub struct JobQueue<'gctx> {
     queue: DependencyQueue<Unit, Artifact, Job>,
     counts: HashMap<PackageId, usize>,
-    timings: Timings<'cfg>,
+    timings: Timings<'gctx>,
 }
 
 /// This structure is backed by the `DependencyQueue` type and manages the
@@ -163,14 +163,14 @@ pub struct JobQueue<'cfg> {
 ///
 /// It is created from JobQueue when we have fully assembled the crate graph
 /// (i.e., all package dependencies are known).
-struct DrainState<'cfg> {
+struct DrainState<'gctx> {
     // This is the length of the DependencyQueue when starting out
     total_units: usize,
 
     queue: DependencyQueue<Unit, Artifact, Job>,
     messages: Arc<Queue<Message>>,
     /// Diagnostic deduplication support.
-    diag_dedupe: DiagDedupe<'cfg>,
+    diag_dedupe: DiagDedupe<'gctx>,
     /// Count of warnings, used to print a summary after the job succeeds
     warning_count: HashMap<JobId, WarningCount>,
     active: HashMap<JobId, Unit>,
@@ -178,9 +178,9 @@ struct DrainState<'cfg> {
     documented: HashSet<PackageId>,
     scraped: HashSet<PackageId>,
     counts: HashMap<PackageId, usize>,
-    progress: Progress<'cfg>,
+    progress: Progress<'gctx>,
     next_id: u32,
-    timings: Timings<'cfg>,
+    timings: Timings<'gctx>,
 
     /// Tokens that are currently owned by this Cargo, and may be "associated"
     /// with a rustc process. They may also be unused, though if so will be
@@ -195,7 +195,7 @@ struct DrainState<'cfg> {
     /// retrieved from the `queue`. We eagerly pull jobs off the main queue to
     /// allow us to request jobserver tokens pretty early.
     pending_queue: Vec<(Unit, Job, usize)>,
-    print: DiagnosticPrinter<'cfg>,
+    print: DiagnosticPrinter<'gctx>,
 
     /// How many jobs we've finished
     finished: usize,
@@ -291,16 +291,16 @@ impl std::fmt::Display for JobId {
 }
 
 /// Handler for deduplicating diagnostics.
-struct DiagDedupe<'cfg> {
+struct DiagDedupe<'gctx> {
     seen: RefCell<HashSet<u64>>,
-    config: &'cfg Config,
+    gctx: &'gctx GlobalContext,
 }
 
-impl<'cfg> DiagDedupe<'cfg> {
-    fn new(config: &'cfg Config) -> Self {
+impl<'gctx> DiagDedupe<'gctx> {
+    fn new(gctx: &'gctx GlobalContext) -> Self {
         DiagDedupe {
             seen: RefCell::new(HashSet::new()),
-            config,
+            gctx,
         }
     }
 
@@ -313,7 +313,7 @@ impl<'cfg> DiagDedupe<'cfg> {
         if !self.seen.borrow_mut().insert(h) {
             return Ok(false);
         }
-        let mut shell = self.config.shell();
+        let mut shell = self.gctx.shell();
         shell.print_ansi_stderr(diag.as_bytes())?;
         shell.err().write_all(b"\n")?;
         Ok(true)
@@ -374,8 +374,8 @@ enum Message {
     FutureIncompatReport(JobId, Vec<FutureBreakageItem>),
 }
 
-impl<'cfg> JobQueue<'cfg> {
-    pub fn new(bcx: &BuildContext<'_, 'cfg>) -> JobQueue<'cfg> {
+impl<'gctx> JobQueue<'gctx> {
+    pub fn new(bcx: &BuildContext<'_, 'gctx>) -> JobQueue<'gctx> {
         JobQueue {
             queue: DependencyQueue::new(),
             counts: HashMap::new(),
@@ -383,7 +383,12 @@ impl<'cfg> JobQueue<'cfg> {
         }
     }
 
-    pub fn enqueue(&mut self, cx: &Context<'_, 'cfg>, unit: &Unit, job: Job) -> CargoResult<()> {
+    pub fn enqueue(
+        &mut self,
+        cx: &CompileContext<'_, 'gctx>,
+        unit: &Unit,
+        job: Job,
+    ) -> CargoResult<()> {
         let dependencies = cx.unit_deps(unit);
         let mut queue_deps = dependencies
             .iter()
@@ -436,7 +441,7 @@ impl<'cfg> JobQueue<'cfg> {
             }
 
             fn depend_on_deps_of_deps(
-                cx: &Context<'_, '_>,
+                cx: &CompileContext<'_, '_>,
                 deps: &mut HashMap<Unit, Artifact>,
                 unit: Unit,
             ) {
@@ -462,11 +467,15 @@ impl<'cfg> JobQueue<'cfg> {
     /// This function will spawn off `config.jobs()` workers to build all of the
     /// necessary dependencies, in order. Freshness is propagated as far as
     /// possible along each dependency chain.
-    pub fn execute(mut self, cx: &mut Context<'_, '_>, plan: &mut BuildPlan) -> CargoResult<()> {
+    pub fn execute(
+        mut self,
+        cx: &mut CompileContext<'_, '_>,
+        plan: &mut BuildPlan,
+    ) -> CargoResult<()> {
         let _p = profile::start("executing the job graph");
         self.queue.queue_finished();
 
-        let progress = Progress::with_style("Building", ProgressStyle::Ratio, cx.bcx.config);
+        let progress = Progress::with_style("Building", ProgressStyle::Ratio, cx.bcx.gctx);
         let state = DrainState {
             total_units: self.queue.len(),
             queue: self.queue,
@@ -475,7 +484,7 @@ impl<'cfg> JobQueue<'cfg> {
             // typical messages. If you change this, please update the test
             // caching_large_output, too.
             messages: Arc::new(Queue::new(100)),
-            diag_dedupe: DiagDedupe::new(cx.bcx.config),
+            diag_dedupe: DiagDedupe::new(cx.bcx.gctx),
             warning_count: HashMap::new(),
             active: HashMap::new(),
             compiled: HashSet::new(),
@@ -487,7 +496,7 @@ impl<'cfg> JobQueue<'cfg> {
             timings: self.timings,
             tokens: Vec::new(),
             pending_queue: Vec::new(),
-            print: DiagnosticPrinter::new(cx.bcx.config, &cx.bcx.rustc().workspace_wrapper),
+            print: DiagnosticPrinter::new(cx.bcx.gctx, &cx.bcx.rustc().workspace_wrapper),
             finished: 0,
             per_package_future_incompat_reports: Vec::new(),
         };
@@ -525,10 +534,10 @@ impl<'cfg> JobQueue<'cfg> {
     }
 }
 
-impl<'cfg> DrainState<'cfg> {
+impl<'gctx> DrainState<'gctx> {
     fn spawn_work_if_possible<'s>(
         &mut self,
-        cx: &mut Context<'_, '_>,
+        cx: &mut CompileContext<'_, '_>,
         jobserver_helper: &HelperThread,
         scope: &'s Scope<'s, '_>,
     ) -> CargoResult<()> {
@@ -565,7 +574,7 @@ impl<'cfg> DrainState<'cfg> {
                 // NOTE: An error here will drop the job without starting it.
                 // That should be OK, since we want to exit as soon as
                 // possible during an error.
-                self.note_working_on(cx.bcx.config, cx.bcx.ws.root(), &unit, job.freshness())?;
+                self.note_working_on(cx.bcx.gctx, cx.bcx.ws.root(), &unit, job.freshness())?;
             }
             self.run(&unit, job, cx, scope);
         }
@@ -579,26 +588,23 @@ impl<'cfg> DrainState<'cfg> {
 
     fn handle_event(
         &mut self,
-        cx: &mut Context<'_, '_>,
+        cx: &mut CompileContext<'_, '_>,
         plan: &mut BuildPlan,
         event: Message,
     ) -> Result<(), ErrorToHandle> {
         match event {
             Message::Run(id, cmd) => {
-                cx.bcx
-                    .config
-                    .shell()
-                    .verbose(|c| c.status("Running", &cmd))?;
+                cx.bcx.gctx.shell().verbose(|c| c.status("Running", &cmd))?;
                 self.timings.unit_start(id, self.active[&id].clone());
             }
             Message::BuildPlanMsg(module_name, cmd, filenames) => {
                 plan.update(&module_name, &cmd, &filenames)?;
             }
             Message::Stdout(out) => {
-                writeln!(cx.bcx.config.shell().out(), "{}", out)?;
+                writeln!(cx.bcx.gctx.shell().out(), "{}", out)?;
             }
             Message::Stderr(err) => {
-                let mut shell = cx.bcx.config.shell();
+                let mut shell = cx.bcx.gctx.shell();
                 shell.print_ansi_stderr(err.as_bytes())?;
                 shell.err().write_all(b"\n")?;
             }
@@ -619,7 +625,7 @@ impl<'cfg> DrainState<'cfg> {
                 }
             }
             Message::Warning { id, warning } => {
-                cx.bcx.config.shell().warn(warning)?;
+                cx.bcx.gctx.shell().warn(warning)?;
                 self.bump_warning_count(id, true, false);
             }
             Message::WarningCount {
@@ -640,7 +646,7 @@ impl<'cfg> DrainState<'cfg> {
                         trace!("end: {:?}", id);
                         self.finished += 1;
                         self.report_warning_count(
-                            cx.bcx.config,
+                            cx.bcx.gctx,
                             id,
                             &cx.bcx.rustc().workspace_wrapper,
                         );
@@ -720,7 +726,7 @@ impl<'cfg> DrainState<'cfg> {
     /// because it is important for the loop to carefully handle errors.
     fn drain_the_queue<'s>(
         mut self,
-        cx: &mut Context<'_, '_>,
+        cx: &mut CompileContext<'_, '_>,
         plan: &mut BuildPlan,
         scope: &'s Scope<'s, '_>,
         jobserver_helper: &HelperThread,
@@ -745,7 +751,7 @@ impl<'cfg> DrainState<'cfg> {
         loop {
             if errors.count == 0 || cx.bcx.build_config.keep_going {
                 if let Err(e) = self.spawn_work_if_possible(cx, jobserver_helper, scope) {
-                    self.handle_error(&mut cx.bcx.config.shell(), &mut errors, e);
+                    self.handle_error(&mut cx.bcx.gctx.shell(), &mut errors, e);
                 }
             }
 
@@ -762,7 +768,7 @@ impl<'cfg> DrainState<'cfg> {
             // to the jobserver itself.
             for event in self.wait_for_events() {
                 if let Err(event_err) = self.handle_event(cx, plan, event) {
-                    self.handle_error(&mut cx.bcx.config.shell(), &mut errors, event_err);
+                    self.handle_error(&mut cx.bcx.gctx.shell(), &mut errors, event_err);
                 }
             }
         }
@@ -786,12 +792,12 @@ impl<'cfg> DrainState<'cfg> {
             opt_type += " + debuginfo";
         }
 
-        let time_elapsed = util::elapsed(cx.bcx.config.creation_time().elapsed());
+        let time_elapsed = util::elapsed(cx.bcx.gctx.creation_time().elapsed());
         if let Err(e) = self.timings.finished(cx, &errors.to_error()) {
-            self.handle_error(&mut cx.bcx.config.shell(), &mut errors, e);
+            self.handle_error(&mut cx.bcx.gctx.shell(), &mut errors, e);
         }
         if cx.bcx.build_config.emit_json() {
-            let mut shell = cx.bcx.config.shell();
+            let mut shell = cx.bcx.gctx.shell();
             let msg = machine_message::BuildFinished {
                 success: errors.count == 0,
             }
@@ -806,7 +812,7 @@ impl<'cfg> DrainState<'cfg> {
             // `display_error` inside `handle_error`.
             Some(anyhow::Error::new(AlreadyPrintedError::new(error)))
         } else if self.queue.is_empty() && self.pending_queue.is_empty() {
-            let profile_link = cx.bcx.config.shell().err_hyperlink(
+            let profile_link = cx.bcx.gctx.shell().err_hyperlink(
                 "https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles",
             );
             let message = format!(
@@ -816,7 +822,7 @@ impl<'cfg> DrainState<'cfg> {
             );
             if !cx.bcx.build_config.build_plan {
                 // It doesn't really matter if this fails.
-                let _ = cx.bcx.config.shell().status("Finished", message);
+                let _ = cx.bcx.gctx.shell().status("Finished", message);
                 future_incompat::save_and_display_report(
                     cx.bcx,
                     &self.per_package_future_incompat_reports,
@@ -907,7 +913,13 @@ impl<'cfg> DrainState<'cfg> {
     ///
     /// Fresh jobs block until finished (which should be very fast!), Dirty
     /// jobs will spawn a thread in the background and return immediately.
-    fn run<'s>(&mut self, unit: &Unit, job: Job, cx: &Context<'_, '_>, scope: &'s Scope<'s, '_>) {
+    fn run<'s>(
+        &mut self,
+        unit: &Unit,
+        job: Job,
+        cx: &CompileContext<'_, '_>,
+        scope: &'s Scope<'s, '_>,
+    ) {
         let id = JobId(self.next_id);
         self.next_id = self.next_id.checked_add(1).unwrap();
 
@@ -942,7 +954,7 @@ impl<'cfg> DrainState<'cfg> {
         &mut self,
         msg: Option<&str>,
         unit: &Unit,
-        cx: &mut Context<'_, '_>,
+        cx: &mut CompileContext<'_, '_>,
     ) -> CargoResult<()> {
         let outputs = cx.build_script_outputs.lock().unwrap();
         let Some(metadata) = cx.find_build_script_metadata(unit) else {
@@ -952,19 +964,19 @@ impl<'cfg> DrainState<'cfg> {
         if let Some(output) = outputs.get(metadata) {
             if !output.warnings.is_empty() {
                 if let Some(msg) = msg {
-                    writeln!(bcx.config.shell().err(), "{}\n", msg)?;
+                    writeln!(bcx.gctx.shell().err(), "{}\n", msg)?;
                 }
 
                 for warning in output.warnings.iter() {
                     let warning_with_package =
                         format!("{}@{}: {}", unit.pkg.name(), unit.pkg.version(), warning);
 
-                    bcx.config.shell().warn(warning_with_package)?;
+                    bcx.gctx.shell().warn(warning_with_package)?;
                 }
 
                 if msg.is_some() {
                     // Output an empty line.
-                    writeln!(bcx.config.shell().err())?;
+                    writeln!(bcx.gctx.shell().err())?;
                 }
             }
         }
@@ -995,7 +1007,7 @@ impl<'cfg> DrainState<'cfg> {
     /// Displays a final report of the warnings emitted by a particular job.
     fn report_warning_count(
         &mut self,
-        config: &Config,
+        gctx: &GlobalContext,
         id: JobId,
         rustc_workspace_wrapper: &Option<PathBuf>,
     ) {
@@ -1064,7 +1076,7 @@ impl<'cfg> DrainState<'cfg> {
         }
         // Errors are ignored here because it is tricky to handle them
         // correctly, and they aren't important.
-        let _ = config.shell().warn(message);
+        let _ = gctx.shell().warn(message);
     }
 
     fn finish(
@@ -1072,9 +1084,9 @@ impl<'cfg> DrainState<'cfg> {
         id: JobId,
         unit: &Unit,
         artifact: Artifact,
-        cx: &mut Context<'_, '_>,
+        cx: &mut CompileContext<'_, '_>,
     ) -> CargoResult<()> {
-        if unit.mode.is_run_custom_build() && unit.show_warnings(cx.bcx.config) {
+        if unit.mode.is_run_custom_build() && unit.show_warnings(cx.bcx.gctx) {
             self.emit_warnings(None, unit, cx)?;
         }
         let unlocked = self.queue.finish(unit, &artifact);
@@ -1096,7 +1108,7 @@ impl<'cfg> DrainState<'cfg> {
     // out any more information for a package after we've printed it once.
     fn note_working_on(
         &mut self,
-        config: &Config,
+        gctx: &GlobalContext,
         ws_root: &Path,
         unit: &Unit,
         fresh: &Freshness,
@@ -1115,25 +1127,24 @@ impl<'cfg> DrainState<'cfg> {
             // being a compiled package.
             Dirty(dirty_reason) => {
                 if !dirty_reason.is_fresh_build() {
-                    config
-                        .shell()
+                    gctx.shell()
                         .verbose(|shell| dirty_reason.present_to(shell, unit, ws_root))?;
                 }
 
                 if unit.mode.is_doc() {
                     self.documented.insert(unit.pkg.package_id());
-                    config.shell().status("Documenting", &unit.pkg)?;
+                    gctx.shell().status("Documenting", &unit.pkg)?;
                 } else if unit.mode.is_doc_test() {
                     // Skip doc test.
                 } else if unit.mode.is_doc_scrape() {
                     self.scraped.insert(unit.pkg.package_id());
-                    config.shell().status("Scraping", &unit.pkg)?;
+                    gctx.shell().status("Scraping", &unit.pkg)?;
                 } else {
                     self.compiled.insert(unit.pkg.package_id());
                     if unit.mode.is_check() {
-                        config.shell().status("Checking", &unit.pkg)?;
+                        gctx.shell().status("Checking", &unit.pkg)?;
                     } else {
-                        config.shell().status("Compiling", &unit.pkg)?;
+                        gctx.shell().status("Compiling", &unit.pkg)?;
                     }
                 }
             }
@@ -1143,14 +1154,14 @@ impl<'cfg> DrainState<'cfg> {
                     && !(unit.mode.is_doc_test() && self.compiled.contains(&unit.pkg.package_id()))
                 {
                     self.compiled.insert(unit.pkg.package_id());
-                    config.shell().verbose(|c| c.status("Fresh", &unit.pkg))?;
+                    gctx.shell().verbose(|c| c.status("Fresh", &unit.pkg))?;
                 }
             }
         }
         Ok(())
     }
 
-    fn back_compat_notice(&self, cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
+    fn back_compat_notice(&self, cx: &CompileContext<'_, '_>, unit: &Unit) -> CargoResult<()> {
         if unit.pkg.name() != "diesel"
             || unit.pkg.version() >= &Version::new(1, 4, 8)
             || cx.bcx.ws.resolve_behavior() == ResolveBehavior::V1
@@ -1167,7 +1178,7 @@ impl<'cfg> DrainState<'cfg> {
         {
             return Ok(());
         }
-        cx.bcx.config.shell().note(
+        cx.bcx.gctx.shell().note(
             "\
 This error may be due to an interaction between diesel and Cargo's new
 feature resolver. Try updating to diesel 1.4.8 to fix this error.

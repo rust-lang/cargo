@@ -23,7 +23,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 pub use crate::core::compiler::CompileMode;
-pub use crate::{CliError, CliResult, Config};
+pub use crate::{CliError, CliResult, GlobalContext};
 pub use clap::{value_parser, Arg, ArgAction, ArgMatches};
 
 pub use clap::Command;
@@ -492,18 +492,18 @@ pub trait ArgMatchesExt {
     }
 
     /// Returns value of the `name` command-line argument as an absolute path
-    fn value_of_path(&self, name: &str, config: &Config) -> Option<PathBuf> {
-        self._value_of(name).map(|path| config.cwd().join(path))
+    fn value_of_path(&self, name: &str, gctx: &GlobalContext) -> Option<PathBuf> {
+        self._value_of(name).map(|path| gctx.cwd().join(path))
     }
 
-    fn root_manifest(&self, config: &Config) -> CargoResult<PathBuf> {
-        root_manifest(self._value_of("manifest-path").map(Path::new), config)
+    fn root_manifest(&self, gctx: &GlobalContext) -> CargoResult<PathBuf> {
+        root_manifest(self._value_of("manifest-path").map(Path::new), gctx)
     }
 
-    fn workspace<'a>(&self, config: &'a Config) -> CargoResult<Workspace<'a>> {
-        let root = self.root_manifest(config)?;
-        let mut ws = Workspace::new(&root, config)?;
-        if config.cli_unstable().avoid_dev_deps {
+    fn workspace<'a>(&self, gctx: &'a GlobalContext) -> CargoResult<Workspace<'a>> {
+        let root = self.root_manifest(gctx)?;
+        let mut ws = Workspace::new(&root, gctx)?;
+        if gctx.cli_unstable().avoid_dev_deps {
             ws.set_require_optional_deps(false);
         }
         Ok(ws)
@@ -551,7 +551,7 @@ Run `{cmd}` to see possible targets."
 
     fn get_profile_name(
         &self,
-        config: &Config,
+        gctx: &GlobalContext,
         default: &str,
         profile_checking: ProfileChecking,
     ) -> CargoResult<InternedString> {
@@ -565,7 +565,7 @@ Run `{cmd}` to see possible targets."
             // `cargo fix` and `cargo check` has legacy handling of this profile name
             | (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => {
                 if self.maybe_flag("release") {
-                    config.shell().warn(
+                    gctx.shell().warn(
                         "the `--release` flag should not be specified with the `--profile` flag\n\
                          The `--release` flag will be ignored.\n\
                          This was historically accepted, but will become an error \
@@ -626,7 +626,7 @@ Run `{cmd}` to see possible targets."
 
     fn compile_options(
         &self,
-        config: &Config,
+        gctx: &GlobalContext,
         mode: CompileMode,
         workspace: Option<&Workspace<'_>>,
         profile_checking: ProfileChecking,
@@ -696,14 +696,14 @@ Run `{cmd}` to see possible targets."
         }
 
         let mut build_config = BuildConfig::new(
-            config,
+            gctx,
             self.jobs()?,
             self.keep_going(),
             &self.targets()?,
             mode,
         )?;
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
-        build_config.requested_profile = self.get_profile_name(config, "dev", profile_checking)?;
+        build_config.requested_profile = self.get_profile_name(gctx, "dev", profile_checking)?;
         build_config.build_plan = self.flag("build-plan");
         build_config.unit_graph = self.flag("unit-graph");
         build_config.future_incompat_report = self.flag("future-incompat-report");
@@ -714,14 +714,12 @@ Run `{cmd}` to see possible targets."
                     let timing_output = timing_output.to_ascii_lowercase();
                     let timing_output = match timing_output.as_str() {
                         "html" => {
-                            config
-                                .cli_unstable()
+                            gctx.cli_unstable()
                                 .fail_if_stable_opt("--timings=html", 7405)?;
                             TimingOutput::Html
                         }
                         "json" => {
-                            config
-                                .cli_unstable()
+                            gctx.cli_unstable()
                                 .fail_if_stable_opt("--timings=json", 7405)?;
                             TimingOutput::Json
                         }
@@ -736,13 +734,11 @@ Run `{cmd}` to see possible targets."
         }
 
         if build_config.build_plan {
-            config
-                .cli_unstable()
+            gctx.cli_unstable()
                 .fail_if_stable_opt("--build-plan", 5579)?;
         };
         if build_config.unit_graph {
-            config
-                .cli_unstable()
+            gctx.cli_unstable()
                 .fail_if_stable_opt("--unit-graph", 8002)?;
         }
 
@@ -794,12 +790,12 @@ Run `{cmd}` to see possible targets."
 
     fn compile_options_for_single_package(
         &self,
-        config: &Config,
+        gctx: &GlobalContext,
         mode: CompileMode,
         workspace: Option<&Workspace<'_>>,
         profile_checking: ProfileChecking,
     ) -> CargoResult<CompileOptions> {
-        let mut compile_opts = self.compile_options(config, mode, workspace, profile_checking)?;
+        let mut compile_opts = self.compile_options(gctx, mode, workspace, profile_checking)?;
         let spec = self._values_of("package");
         if spec.iter().any(restricted_names::is_glob_pattern) {
             anyhow::bail!("Glob patterns on package selection are not supported.")
@@ -808,7 +804,7 @@ Run `{cmd}` to see possible targets."
         Ok(compile_opts)
     }
 
-    fn new_options(&self, config: &Config) -> CargoResult<NewOptions> {
+    fn new_options(&self, gctx: &GlobalContext) -> CargoResult<NewOptions> {
         let vcs = self._value_of("vcs").map(|vcs| match vcs {
             "git" => VersionControl::Git,
             "hg" => VersionControl::Hg,
@@ -821,18 +817,18 @@ Run `{cmd}` to see possible targets."
             vcs,
             self.flag("bin"),
             self.flag("lib"),
-            self.value_of_path("path", config).unwrap(),
+            self.value_of_path("path", gctx).unwrap(),
             self._value_of("name").map(|s| s.to_string()),
             self._value_of("edition").map(|s| s.to_string()),
-            self.registry(config)?,
+            self.registry(gctx)?,
         )
     }
 
-    fn registry_or_index(&self, config: &Config) -> CargoResult<Option<RegistryOrIndex>> {
+    fn registry_or_index(&self, gctx: &GlobalContext) -> CargoResult<Option<RegistryOrIndex>> {
         let registry = self._value_of("registry");
         let index = self._value_of("index");
         let result = match (registry, index) {
-            (None, None) => config.default_registry()?.map(RegistryOrIndex::Registry),
+            (None, None) => gctx.default_registry()?.map(RegistryOrIndex::Registry),
             (None, Some(i)) => Some(RegistryOrIndex::Index(i.into_url()?)),
             (Some(r), None) => {
                 RegistryName::new(r)?;
@@ -846,9 +842,9 @@ Run `{cmd}` to see possible targets."
         Ok(result)
     }
 
-    fn registry(&self, config: &Config) -> CargoResult<Option<String>> {
+    fn registry(&self, gctx: &GlobalContext) -> CargoResult<Option<String>> {
         match self._value_of("registry").map(|s| s.to_string()) {
-            None => config.default_registry(),
+            None => gctx.default_registry(),
             Some(registry) => {
                 RegistryName::new(&registry)?;
                 Ok(Some(registry))
@@ -962,9 +958,9 @@ pub fn values_os(args: &ArgMatches, name: &str) -> Vec<OsString> {
     args._values_of_os(name)
 }
 
-pub fn root_manifest(manifest_path: Option<&Path>, config: &Config) -> CargoResult<PathBuf> {
+pub fn root_manifest(manifest_path: Option<&Path>, gctx: &GlobalContext) -> CargoResult<PathBuf> {
     if let Some(manifest_path) = manifest_path {
-        let path = config.cwd().join(manifest_path);
+        let path = gctx.cwd().join(manifest_path);
         // In general, we try to avoid normalizing paths in Cargo,
         // but in this particular case we need it to fix #3586.
         let path = paths::normalize_path(&path);
@@ -980,12 +976,12 @@ pub fn root_manifest(manifest_path: Option<&Path>, config: &Config) -> CargoResu
                 manifest_path.display()
             )
         }
-        if crate::util::toml::is_embedded(&path) && !config.cli_unstable().script {
+        if crate::util::toml::is_embedded(&path) && !gctx.cli_unstable().script {
             anyhow::bail!("embedded manifest `{}` requires `-Zscript`", path.display())
         }
         Ok(path)
     } else {
-        find_root_manifest_for_wd(config.cwd())
+        find_root_manifest_for_wd(gctx.cwd())
     }
 }
 

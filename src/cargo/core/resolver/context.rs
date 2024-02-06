@@ -15,7 +15,7 @@ use tracing::debug;
 // risk of being cloned *a lot* so we want to make this as cheap to clone as
 // possible.
 #[derive(Clone)]
-pub struct Context {
+pub struct ResolverContext {
     pub age: ContextAge,
     pub activations: Activations,
     /// list the features that are activated for each package
@@ -70,9 +70,9 @@ impl PackageId {
     }
 }
 
-impl Context {
-    pub fn new() -> Context {
-        Context {
+impl ResolverContext {
+    pub fn new() -> ResolverContext {
+        ResolverContext {
             age: 0,
             resolve_features: im_rc::HashMap::new(),
             links: im_rc::HashMap::new(),

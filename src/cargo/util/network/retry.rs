@@ -42,7 +42,7 @@
 //! - <https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Retry-After>
 
 use crate::util::errors::HttpNotSuccessful;
-use crate::{CargoResult, Config};
+use crate::{CargoResult, GlobalContext};
 use anyhow::Error;
 use rand::Rng;
 use std::cmp::min;
@@ -50,7 +50,7 @@ use std::time::Duration;
 
 /// State for managing retrying a network operation.
 pub struct Retry<'a> {
-    config: &'a Config,
+    gctx: &'a GlobalContext,
     /// The number of failed attempts that have been done so far.
     ///
     /// Starts at 0, and increases by one each time an attempt fails.
@@ -90,11 +90,11 @@ const INITIAL_RETRY_SLEEP_BASE_MS: u64 = 500;
 const INITIAL_RETRY_JITTER_MS: u64 = 1000;
 
 impl<'a> Retry<'a> {
-    pub fn new(config: &'a Config) -> CargoResult<Retry<'a>> {
+    pub fn new(gctx: &'a GlobalContext) -> CargoResult<Retry<'a>> {
         Ok(Retry {
-            config,
+            gctx,
             retries: 0,
-            max_retries: config.net_config()?.retry.unwrap_or(3) as u64,
+            max_retries: gctx.net_config()?.retry.unwrap_or(3) as u64,
         })
     }
 
@@ -112,7 +112,7 @@ impl<'a> Retry<'a> {
                     "spurious network error ({} tries remaining): {err_msg}",
                     self.max_retries - self.retries,
                 );
-                if let Err(e) = self.config.shell().warn(msg) {
+                if let Err(e) = self.gctx.shell().warn(msg) {
                     return RetryResult::Err(e);
                 }
                 self.retries += 1;
@@ -125,7 +125,7 @@ impl<'a> Retry<'a> {
 
     /// Gets the next sleep duration in milliseconds.
     fn next_sleep_ms(&self) -> u64 {
-        if let Ok(sleep) = self.config.get_env("__CARGO_TEST_FIXED_RETRY_SLEEP_MS") {
+        if let Ok(sleep) = self.gctx.get_env("__CARGO_TEST_FIXED_RETRY_SLEEP_MS") {
             return sleep.parse().expect("a u64");
         }
 
@@ -193,17 +193,17 @@ fn maybe_spurious(err: &Error) -> bool {
 /// # Examples
 ///
 /// ```
-/// # use crate::cargo::util::{CargoResult, Config};
+/// # use crate::cargo::util::{CargoResult, GlobalContext};
 /// # let download_something = || return Ok(());
-/// # let config = Config::default().unwrap();
+/// # let gctx = GlobalContext::default().unwrap();
 /// use cargo::util::network;
-/// let cargo_result = network::retry::with_retry(&config, || download_something());
+/// let cargo_result = network::retry::with_retry(&gctx, || download_something());
 /// ```
-pub fn with_retry<T, F>(config: &Config, mut callback: F) -> CargoResult<T>
+pub fn with_retry<T, F>(gctx: &GlobalContext, mut callback: F) -> CargoResult<T>
 where
     F: FnMut() -> CargoResult<T>,
 {
-    let mut retry = Retry::new(config)?;
+    let mut retry = Retry::new(gctx)?;
     loop {
         match retry.r#try(&mut callback) {
             RetryResult::Success(r) => return Ok(r),
@@ -235,9 +235,9 @@ fn with_retry_repeats_the_call_then_works() {
     }
     .into();
     let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
-    let config = Config::default().unwrap();
-    *config.shell() = Shell::from_write(Box::new(Vec::new()));
-    let result = with_retry(&config, || results.pop().unwrap());
+    let gctx = GlobalContext::default().unwrap();
+    *gctx.shell() = Shell::from_write(Box::new(Vec::new()));
+    let result = with_retry(&gctx, || results.pop().unwrap());
     assert!(result.is_ok())
 }
 
@@ -264,9 +264,9 @@ fn with_retry_finds_nested_spurious_errors() {
     });
     let error2 = anyhow::Error::from(error2.context("A second chained error"));
     let mut results: Vec<CargoResult<()>> = vec![Ok(()), Err(error1), Err(error2)];
-    let config = Config::default().unwrap();
-    *config.shell() = Shell::from_write(Box::new(Vec::new()));
-    let result = with_retry(&config, || results.pop().unwrap());
+    let gctx = GlobalContext::default().unwrap();
+    *gctx.shell() = Shell::from_write(Box::new(Vec::new()));
+    let result = with_retry(&gctx, || results.pop().unwrap());
     assert!(result.is_ok())
 }
 
@@ -283,9 +283,9 @@ fn default_retry_schedule() {
             headers: Vec::new(),
         }))
     };
-    let config = Config::default().unwrap();
-    *config.shell() = Shell::from_write(Box::new(Vec::new()));
-    let mut retry = Retry::new(&config).unwrap();
+    let gctx = GlobalContext::default().unwrap();
+    *gctx.shell() = Shell::from_write(Box::new(Vec::new()));
+    let mut retry = Retry::new(&gctx).unwrap();
     match retry.r#try(|| spurious()) {
         RetryResult::Retry(sleep) => {
             assert!(

@@ -5,7 +5,7 @@ use crate::ops;
 use crate::sources::path::PathSource;
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::cache_lock::CacheLockMode;
-use crate::util::{try_canonicalize, CargoResult, Config};
+use crate::util::{try_canonicalize, CargoResult, GlobalContext};
 use anyhow::{bail, Context as _};
 use cargo_util::{paths, Sha256};
 use serde::Serialize;
@@ -24,30 +24,26 @@ pub struct VendorOptions<'a> {
 }
 
 pub fn vendor(ws: &Workspace<'_>, opts: &VendorOptions<'_>) -> CargoResult<()> {
-    let config = ws.config();
+    let gctx = ws.gctx();
     let mut extra_workspaces = Vec::new();
     for extra in opts.extra.iter() {
-        let extra = config.cwd().join(extra);
-        let ws = Workspace::new(&extra, config)?;
+        let extra = gctx.cwd().join(extra);
+        let ws = Workspace::new(&extra, gctx)?;
         extra_workspaces.push(ws);
     }
     let workspaces = extra_workspaces.iter().chain(Some(ws)).collect::<Vec<_>>();
-    let _lock = config.acquire_package_cache_lock(CacheLockMode::MutateExclusive)?;
-    let vendor_config = sync(config, &workspaces, opts).with_context(|| "failed to sync")?;
+    let _lock = gctx.acquire_package_cache_lock(CacheLockMode::MutateExclusive)?;
+    let vendor_config = sync(gctx, &workspaces, opts).with_context(|| "failed to sync")?;
 
-    if config.shell().verbosity() != Verbosity::Quiet {
+    if gctx.shell().verbosity() != Verbosity::Quiet {
         if vendor_config.source.is_empty() {
-            crate::drop_eprintln!(config, "There is no dependency to vendor in this project.");
+            crate::drop_eprintln!(gctx, "There is no dependency to vendor in this project.");
         } else {
             crate::drop_eprint!(
-                config,
+                gctx,
                 "To use vendored sources, add this to your .cargo/config.toml for this project:\n\n"
             );
-            crate::drop_print!(
-                config,
-                "{}",
-                &toml::to_string_pretty(&vendor_config).unwrap()
-            );
+            crate::drop_print!(gctx, "{}", &toml::to_string_pretty(&vendor_config).unwrap());
         }
     }
 
@@ -81,7 +77,7 @@ enum VendorSource {
 }
 
 fn sync(
-    config: &Config,
+    gctx: &GlobalContext,
     workspaces: &[&Workspace<'_>],
     opts: &VendorOptions<'_>,
 ) -> CargoResult<VendorConfig> {
@@ -219,13 +215,13 @@ fn sync(
             continue;
         }
 
-        config.shell().status(
+        gctx.shell().status(
             "Vendoring",
             &format!("{} ({}) to {}", id, src.to_string_lossy(), dst.display()),
         )?;
 
         let _ = fs::remove_dir_all(&dst);
-        let pathsource = PathSource::new(src, id.source_id(), config);
+        let pathsource = PathSource::new(src, id.source_id(), gctx);
         let paths = pathsource.list_files(pkg)?;
         let mut map = BTreeMap::new();
         cp_sources(pkg, src, &paths, &dst, &mut map, &mut tmp_buf)

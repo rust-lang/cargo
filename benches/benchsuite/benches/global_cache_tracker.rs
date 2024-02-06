@@ -3,7 +3,7 @@
 use cargo::core::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCacheTracker};
 use cargo::util::cache_lock::CacheLockMode;
 use cargo::util::interning::InternedString;
-use cargo::util::Config;
+use cargo::util::GlobalContext;
 use criterion::{criterion_group, criterion_main, Criterion};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -25,7 +25,7 @@ fn cargo_home() -> PathBuf {
     p
 }
 
-fn initialize_config() -> Config {
+fn initialize_context() -> GlobalContext {
     // Set up config.
     let shell = cargo::core::Shell::new();
     let homedir = cargo_home();
@@ -33,42 +33,41 @@ fn initialize_config() -> Config {
         fs::create_dir_all(&homedir).unwrap();
     }
     let cwd = homedir.clone();
-    let mut config = Config::new(shell, cwd, homedir);
-    config.nightly_features_allowed = true;
-    config.set_search_stop_path(root());
-    config
-        .configure(
-            0,
-            false,
-            None,
-            false,
-            false,
-            false,
-            &None,
-            &["gc".to_string()],
-            &[],
-        )
-        .unwrap();
+    let mut gctx = GlobalContext::new(shell, cwd, homedir);
+    gctx.nightly_features_allowed = true;
+    gctx.set_search_stop_path(root());
+    gctx.configure(
+        0,
+        false,
+        None,
+        false,
+        false,
+        false,
+        &None,
+        &["gc".to_string()],
+        &[],
+    )
+    .unwrap();
     // Set up database sample.
-    let db_path = GlobalCacheTracker::db_path(&config).into_path_unlocked();
+    let db_path = GlobalCacheTracker::db_path(&gctx).into_path_unlocked();
     if db_path.exists() {
         fs::remove_file(&db_path).unwrap();
     }
     let sample = Path::new(env!("CARGO_MANIFEST_DIR")).join(GLOBAL_CACHE_SAMPLE);
     fs::copy(sample, &db_path).unwrap();
-    config
+    gctx
 }
 
 /// Benchmarks how long it takes to initialize `GlobalCacheTracker` with an already
 /// existing full database.
 fn global_tracker_init(c: &mut Criterion) {
-    let config = initialize_config();
-    let _lock = config
+    let gctx = initialize_context();
+    let _lock = gctx
         .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)
         .unwrap();
     c.bench_function("global_tracker_init", |b| {
         b.iter(|| {
-            GlobalCacheTracker::new(&config).unwrap();
+            GlobalCacheTracker::new(&gctx).unwrap();
         })
     });
 }
@@ -76,12 +75,12 @@ fn global_tracker_init(c: &mut Criterion) {
 /// Benchmarks how long it takes to save a `GlobalCacheTracker` when there are zero
 /// updates.
 fn global_tracker_empty_save(c: &mut Criterion) {
-    let config = initialize_config();
-    let _lock = config
+    let gctx = initialize_context();
+    let _lock = gctx
         .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)
         .unwrap();
     let mut deferred = DeferredGlobalLastUse::new();
-    let mut tracker = GlobalCacheTracker::new(&config).unwrap();
+    let mut tracker = GlobalCacheTracker::new(&gctx).unwrap();
 
     c.bench_function("global_tracker_empty_save", |b| {
         b.iter(|| {
@@ -112,12 +111,12 @@ fn load_random_sample() -> Vec<(InternedString, InternedString, u64)> {
 /// This runs for different sizes of number of crates to update (selecting
 /// from the random sample stored on disk).
 fn global_tracker_update(c: &mut Criterion) {
-    let config = initialize_config();
-    let _lock = config
+    let gctx = initialize_context();
+    let _lock = gctx
         .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)
         .unwrap();
     let sample = Path::new(env!("CARGO_MANIFEST_DIR")).join(GLOBAL_CACHE_SAMPLE);
-    let db_path = GlobalCacheTracker::db_path(&config).into_path_unlocked();
+    let db_path = GlobalCacheTracker::db_path(&gctx).into_path_unlocked();
 
     let random_sample = load_random_sample();
 
@@ -129,7 +128,7 @@ fn global_tracker_update(c: &mut Criterion) {
 
         fs::copy(&sample, &db_path).unwrap();
         let mut deferred = DeferredGlobalLastUse::new();
-        let mut tracker = GlobalCacheTracker::new(&config).unwrap();
+        let mut tracker = GlobalCacheTracker::new(&gctx).unwrap();
         group.bench_with_input(size.to_string(), &size, |b, &size| {
             b.iter(|| {
                 for (encoded_registry_name, name, size) in &random_sample[..size] {

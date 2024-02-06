@@ -25,9 +25,9 @@ pub fn cli() -> Command {
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     match args.subcommand() {
-        Some(("future-incompatibilities", args)) => report_future_incompatibilities(config, args),
+        Some(("future-incompatibilities", args)) => report_future_incompatibilities(gctx, args),
         Some((cmd, _)) => {
             unreachable!("unexpected command {}", cmd)
         }
@@ -37,15 +37,15 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     }
 }
 
-fn report_future_incompatibilities(config: &Config, args: &ArgMatches) -> CliResult {
-    let ws = args.workspace(config)?;
+fn report_future_incompatibilities(gctx: &GlobalContext, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(gctx)?;
     let reports = OnDiskReports::load(&ws)?;
     let id = args
         .value_of_u32("id")?
         .unwrap_or_else(|| reports.last_id());
     let krate = args.get_one::<String>("package").map(String::as_str);
     let report = reports.get_report(id, krate)?;
-    drop_println!(config, "{}", REPORT_PREAMBLE);
-    drop(config.shell().print_ansi_stdout(report.as_bytes()));
+    drop_println!(gctx, "{}", REPORT_PREAMBLE);
+    drop(gctx.shell().print_ansi_stdout(report.as_bytes()));
     Ok(())
 }

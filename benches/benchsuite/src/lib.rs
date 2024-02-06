@@ -1,6 +1,6 @@
 #![allow(clippy::disallowed_methods)]
 
-use cargo::Config;
+use cargo::GlobalContext;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -175,25 +175,24 @@ impl Fixtures {
             .collect()
     }
 
-    /// Creates a new Config.
-    pub fn make_config(&self, ws_root: &Path) -> Config {
+    /// Creates a new Context.
+    pub fn make_context(&self, ws_root: &Path) -> GlobalContext {
         let shell = cargo::core::Shell::new();
-        let mut config = Config::new(shell, ws_root.to_path_buf(), self.cargo_home());
+        let mut gctx = GlobalContext::new(shell, ws_root.to_path_buf(), self.cargo_home());
         // Configure is needed to set the target_dir which is needed to write
         // the .rustc_info.json file which is very expensive.
-        config
-            .configure(
-                0,
-                false,
-                None,
-                false,
-                false,
-                false,
-                &Some(self.target_dir()),
-                &[],
-                &[],
-            )
-            .unwrap();
-        config
+        gctx.configure(
+            0,
+            false,
+            None,
+            false,
+            false,
+            false,
+            &Some(self.target_dir()),
+            &[],
+            &[],
+        )
+        .unwrap();
+        gctx
     }
 }

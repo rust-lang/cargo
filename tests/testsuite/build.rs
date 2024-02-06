@@ -4,7 +4,7 @@ use cargo::{
     core::compiler::CompileMode,
     core::{Shell, Workspace},
     ops::CompileOptions,
-    Config,
+    GlobalContext,
 };
 use cargo_test_support::compare;
 use cargo_test_support::paths::{root, CargoPathExt};
@@ -602,9 +602,9 @@ fn cargo_compile_api_exposes_artifact_paths() {
         .build();
 
     let shell = Shell::from_write(Box::new(Vec::new()));
-    let config = Config::new(shell, env::current_dir().unwrap(), paths::home());
-    let ws = Workspace::new(&p.root().join("Cargo.toml"), &config).unwrap();
-    let compile_options = CompileOptions::new(ws.config(), CompileMode::Build).unwrap();
+    let gctx = GlobalContext::new(shell, env::current_dir().unwrap(), paths::home());
+    let ws = Workspace::new(&p.root().join("Cargo.toml"), &gctx).unwrap();
+    let compile_options = CompileOptions::new(ws.gctx(), CompileMode::Build).unwrap();
 
     let result = cargo::ops::compile(&ws, &compile_options).unwrap();
 

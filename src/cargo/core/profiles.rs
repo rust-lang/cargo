@@ -30,7 +30,7 @@ use crate::core::{
 };
 use crate::util::interning::InternedString;
 use crate::util::toml::validate_profile;
-use crate::util::{closest_msg, config, CargoResult, Config};
+use crate::util::{closest_msg, config, CargoResult, GlobalContext};
 use anyhow::{bail, Context as _};
 use cargo_util_schemas::manifest::TomlTrimPaths;
 use cargo_util_schemas::manifest::TomlTrimPathsValue;
@@ -69,13 +69,13 @@ pub struct Profiles {
 
 impl Profiles {
     pub fn new(ws: &Workspace<'_>, requested_profile: InternedString) -> CargoResult<Profiles> {
-        let config = ws.config();
-        let incremental = match config.get_env_os("CARGO_INCREMENTAL") {
+        let gctx = ws.gctx();
+        let incremental = match gctx.get_env_os("CARGO_INCREMENTAL") {
             Some(v) => Some(v == "1"),
-            None => config.build_config()?.incremental,
+            None => gctx.build_config()?.incremental,
         };
         let mut profiles = merge_config_profiles(ws, requested_profile)?;
-        let rustc_host = ws.config().load_global_rustc(Some(ws))?.host;
+        let rustc_host = ws.gctx().load_global_rustc(Some(ws))?.host;
 
         let mut profile_makers = Profiles {
             incremental,
@@ -87,7 +87,7 @@ impl Profiles {
         };
 
         let trim_paths_enabled = ws.unstable_features().is_enabled(Feature::trim_paths())
-            || config.cli_unstable().trim_paths;
+            || gctx.cli_unstable().trim_paths;
         Self::add_root_profiles(&mut profile_makers, &profiles, trim_paths_enabled);
 
         // Merge with predefined profiles.
@@ -1109,7 +1109,7 @@ impl UnitFor {
     /// whether `panic=abort` is supported for tests. Historical versions of
     /// rustc did not support this, but newer versions do with an unstable
     /// compiler flag.
-    pub fn new_test(config: &Config, root_compile_kind: CompileKind) -> UnitFor {
+    pub fn new_test(gctx: &GlobalContext, root_compile_kind: CompileKind) -> UnitFor {
         UnitFor {
             host: false,
             host_features: false,
@@ -1117,7 +1117,7 @@ impl UnitFor {
             // which inherits the panic setting from the dev/release profile
             // (basically avoid recompiles) but historical defaults required
             // that we always unwound.
-            panic_setting: if config.cli_unstable().panic_abort_tests {
+            panic_setting: if gctx.cli_unstable().panic_abort_tests {
                 PanicSetting::ReadProfile
             } else {
                 PanicSetting::AlwaysUnwind
@@ -1130,8 +1130,8 @@ impl UnitFor {
     /// This is a special case for unit tests of a proc-macro.
     ///
     /// Proc-macro unit tests are forced to be run on the host.
-    pub fn new_host_test(config: &Config, root_compile_kind: CompileKind) -> UnitFor {
-        let mut unit_for = UnitFor::new_test(config, root_compile_kind);
+    pub fn new_host_test(gctx: &GlobalContext, root_compile_kind: CompileKind) -> UnitFor {
+        let mut unit_for = UnitFor::new_test(gctx, root_compile_kind);
         unit_for.host = true;
         unit_for.host_features = true;
         unit_for
@@ -1299,7 +1299,7 @@ fn merge_config_profiles(
 /// Helper for fetching a profile from config.
 fn get_config_profile(ws: &Workspace<'_>, name: &str) -> CargoResult<Option<TomlProfile>> {
     let profile: Option<config::Value<TomlProfile>> =
-        ws.config().get(&format!("profile.{}", name))?;
+        ws.gctx().get(&format!("profile.{}", name))?;
     let Some(profile) = profile else {
         return Ok(None);
     };
@@ -1307,7 +1307,7 @@ fn get_config_profile(ws: &Workspace<'_>, name: &str) -> CargoResult<Option<Toml
     validate_profile(
         &profile.val,
         name,
-        ws.config().cli_unstable(),
+        ws.gctx().cli_unstable(),
         ws.unstable_features(),
         &mut warnings,
     )
@@ -1318,7 +1318,7 @@ fn get_config_profile(ws: &Workspace<'_>, name: &str) -> CargoResult<Option<Toml
         )
     })?;
     for warning in warnings {
-        ws.config().shell().warn(warning)?;
+        ws.gctx().shell().warn(warning)?;
     }
     Ok(Some(profile.val))
 }

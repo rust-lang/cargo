@@ -13,13 +13,13 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let reg = args.registry_or_index(config)?;
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
+    let reg = args.registry_or_index(gctx)?;
     assert!(
         !matches!(reg, Some(RegistryOrIndex::Index(..))),
         "must not be index URL"
     );
 
-    ops::registry_logout(config, reg)?;
+    ops::registry_logout(gctx, reg)?;
     Ok(())
 }

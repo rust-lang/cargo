@@ -31,18 +31,18 @@ use crate::core::resolver::Resolve;
 use crate::core::{Dependency, Package, PackageId, PackageSet, Target, TargetKind, Workspace};
 use crate::ops::resolve_all_features;
 use crate::util::interning::InternedString;
-use crate::util::Config;
+use crate::util::GlobalContext;
 use crate::CargoResult;
 
 const IS_NO_ARTIFACT_DEP: Option<&'static Artifact> = None;
 
 /// Collection of stuff used while creating the [`UnitGraph`].
-struct State<'a, 'cfg> {
-    ws: &'a Workspace<'cfg>,
-    config: &'cfg Config,
+struct State<'a, 'gctx> {
+    ws: &'a Workspace<'gctx>,
+    gctx: &'gctx GlobalContext,
     /// Stores the result of building the [`UnitGraph`].
     unit_dependencies: UnitGraph,
-    package_set: &'a PackageSet<'cfg>,
+    package_set: &'a PackageSet<'gctx>,
     usr_resolve: &'a Resolve,
     usr_features: &'a ResolvedFeatures,
     /// Like `usr_resolve` but for building standard library (`-Zbuild-std`).
@@ -53,7 +53,7 @@ struct State<'a, 'cfg> {
     is_std: bool,
     /// The mode we are compiling in. Used for preventing from building lib thrice.
     global_mode: CompileMode,
-    target_data: &'a RustcTargetData<'cfg>,
+    target_data: &'a RustcTargetData<'gctx>,
     profiles: &'a Profiles,
     interner: &'a UnitInterner,
     // Units for `-Zrustdoc-scrape-examples`.
@@ -81,9 +81,9 @@ impl IsArtifact {
 /// Then entry point for building a dependency graph of compilation units.
 ///
 /// You can find some information for arguments from doc of [`State`].
-pub fn build_unit_dependencies<'a, 'cfg>(
-    ws: &'a Workspace<'cfg>,
-    package_set: &'a PackageSet<'cfg>,
+pub fn build_unit_dependencies<'a, 'gctx>(
+    ws: &'a Workspace<'gctx>,
+    package_set: &'a PackageSet<'gctx>,
     resolve: &'a Resolve,
     features: &'a ResolvedFeatures,
     std_resolve: Option<&'a (Resolve, ResolvedFeatures)>,
@@ -91,7 +91,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
     scrape_units: &[Unit],
     std_roots: &HashMap<CompileKind, Vec<Unit>>,
     global_mode: CompileMode,
-    target_data: &'a RustcTargetData<'cfg>,
+    target_data: &'a RustcTargetData<'gctx>,
     profiles: &'a Profiles,
     interner: &'a UnitInterner,
 ) -> CargoResult<UnitGraph> {
@@ -107,7 +107,7 @@ pub fn build_unit_dependencies<'a, 'cfg>(
     };
     let mut state = State {
         ws,
-        config: ws.config(),
+        gctx: ws.gctx(),
         unit_dependencies: HashMap::new(),
         package_set,
         usr_resolve: resolve,
@@ -212,9 +212,9 @@ fn deps_of_roots(roots: &[Unit], state: &mut State<'_, '_>) -> CargoResult<()> {
             if unit.target.proc_macro() {
                 // Special-case for proc-macros, which are forced to for-host
                 // since they need to link with the proc_macro crate.
-                UnitFor::new_host_test(state.config, root_compile_kind)
+                UnitFor::new_host_test(state.gctx, root_compile_kind)
             } else {
-                UnitFor::new_test(state.config, root_compile_kind)
+                UnitFor::new_test(state.gctx, root_compile_kind)
             }
         } else if unit.target.is_custom_build() {
             // This normally doesn't happen, except `clean` aggressively
@@ -282,7 +282,7 @@ fn compute_deps(
         let dep_unit_for = unit_for.with_dependency(unit, dep_lib, unit_for.root_compile_kind());
 
         let start = ret.len();
-        if state.config.cli_unstable().dual_proc_macros
+        if state.gctx.cli_unstable().dual_proc_macros
             && dep_lib.proc_macro()
             && !unit.kind.is_host()
         {
@@ -984,7 +984,7 @@ fn connect_run_custom_build_deps(state: &mut State<'_, '_>) {
     }
 }
 
-impl<'a, 'cfg> State<'a, 'cfg> {
+impl<'a, 'gctx> State<'a, 'gctx> {
     /// Gets `std_resolve` during building std, otherwise `usr_resolve`.
     fn resolve(&self) -> &'a Resolve {
         if self.is_std {

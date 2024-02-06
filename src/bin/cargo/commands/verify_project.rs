@@ -13,16 +13,14 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    if let Err(e) = args.workspace(config) {
-        config
-            .shell()
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
+    if let Err(e) = args.workspace(gctx) {
+        gctx.shell()
             .print_json(&HashMap::from([("invalid", e.to_string())]))?;
         process::exit(1)
     }
 
-    config
-        .shell()
+    gctx.shell()
         .print_json(&HashMap::from([("success", "true")]))?;
     Ok(())
 }

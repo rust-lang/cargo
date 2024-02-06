@@ -373,7 +373,7 @@ fn named_config_profile() {
     // Exercises config named profiles.
     // foo -> middle -> bar -> dev
     // middle exists in Cargo.toml, the others in .cargo/config.toml
-    use super::config::ConfigBuilder;
+    use super::config::GlobalContextBuilder;
     use cargo::core::compiler::CompileKind;
     use cargo::core::profiles::{Profiles, UnitFor};
     use cargo::core::{PackageId, Workspace};
@@ -422,12 +422,12 @@ fn named_config_profile() {
         "#,
     )
     .unwrap();
-    let config = ConfigBuilder::new().build();
+    let gctx = GlobalContextBuilder::new().build();
     let profile_name = InternedString::new("foo");
-    let ws = Workspace::new(&paths::root().join("Cargo.toml"), &config).unwrap();
+    let ws = Workspace::new(&paths::root().join("Cargo.toml"), &gctx).unwrap();
     let profiles = Profiles::new(&ws, profile_name).unwrap();
 
-    let crates_io = cargo::core::SourceId::crates_io(&config).unwrap();
+    let crates_io = cargo::core::SourceId::crates_io(&gctx).unwrap();
     let a_pkg = PackageId::try_new("a", "0.1.0", crates_io).unwrap();
     let dep_pkg = PackageId::try_new("dep", "0.1.0", crates_io).unwrap();
 

@@ -169,7 +169,7 @@ impl OnDiskReports {
             .target_dir()
             .open_rw_exclusive_create(
                 FUTURE_INCOMPAT_FILE,
-                ws.config(),
+                ws.gctx(),
                 "Future incompatibility report",
             )
             .and_then(|file| {
@@ -182,7 +182,7 @@ impl OnDiskReports {
             crate::display_warning_with_error(
                 "failed to write on-disk future incompatible report",
                 &e,
-                &mut ws.config().shell(),
+                &mut ws.gctx().shell(),
             );
         }
 
@@ -193,7 +193,7 @@ impl OnDiskReports {
     pub fn load(ws: &Workspace<'_>) -> CargoResult<OnDiskReports> {
         let report_file = match ws.target_dir().open_ro_shared(
             FUTURE_INCOMPAT_FILE,
-            ws.config(),
+            ws.gctx(),
             "Future incompatible report",
         ) {
             Ok(r) => r,
@@ -299,11 +299,11 @@ fn render_report(per_package_reports: &[FutureIncompatReportPackage]) -> BTreeMa
 fn get_updates(ws: &Workspace<'_>, package_ids: &BTreeSet<PackageId>) -> Option<String> {
     // This in general ignores all errors since this is opportunistic.
     let _lock = ws
-        .config()
+        .gctx()
         .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)
         .ok()?;
     // Create a set of updated registry sources.
-    let map = SourceConfigMap::new(ws.config()).ok()?;
+    let map = SourceConfigMap::new(ws.gctx()).ok()?;
     let mut package_ids: BTreeSet<_> = package_ids
         .iter()
         .filter(|pkg_id| pkg_id.source_id().is_registry())
@@ -373,13 +373,13 @@ pub fn save_and_display_report(
     bcx: &BuildContext<'_, '_>,
     per_package_future_incompat_reports: &[FutureIncompatReportPackage],
 ) {
-    let should_display_message = match bcx.config.future_incompat_config() {
+    let should_display_message = match bcx.gctx.future_incompat_config() {
         Ok(config) => config.should_display_message(),
         Err(e) => {
             crate::display_warning_with_error(
                 "failed to read future-incompat config from disk",
                 &e,
-                &mut bcx.config.shell(),
+                &mut bcx.gctx.shell(),
             );
             true
         }
@@ -390,7 +390,7 @@ pub fn save_and_display_report(
         // `should_display_message` from the config file
         if bcx.build_config.future_incompat_report {
             drop(
-                bcx.config
+                bcx.gctx
                     .shell()
                     .note("0 dependencies had future-incompatible warnings"),
             );
@@ -418,7 +418,7 @@ pub fn save_and_display_report(
     let package_vers: Vec<_> = package_ids.iter().map(|pid| pid.to_string()).collect();
 
     if should_display_message || bcx.build_config.future_incompat_report {
-        drop(bcx.config.shell().warn(&format!(
+        drop(bcx.gctx.shell().warn(&format!(
             "the following packages contain code that will be rejected by a future \
              version of Rust: {}",
             package_vers.join(", ")
@@ -488,14 +488,14 @@ https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html#the-patch
     );
 
     if bcx.build_config.future_incompat_report {
-        drop(bcx.config.shell().note(&suggestion_message));
-        drop(bcx.config.shell().note(&format!(
+        drop(bcx.gctx.shell().note(&suggestion_message));
+        drop(bcx.gctx.shell().note(&format!(
             "this report can be shown with `cargo report \
              future-incompatibilities --id {}`",
             saved_report_id
         )));
     } else if should_display_message {
-        drop(bcx.config.shell().note(&format!(
+        drop(bcx.gctx.shell().note(&format!(
             "to see what the problems were, use the option \
              `--future-incompat-report`, or run `cargo report \
              future-incompatibilities --id {}`",

@@ -10,7 +10,7 @@ use crate::sources::source::Source;
 use crate::sources::IndexSummary;
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
-use crate::util::Config;
+use crate::util::GlobalContext;
 
 use anyhow::Context as _;
 use cargo_util::{paths, Sha256};
@@ -54,14 +54,14 @@ use serde::Deserialize;
 /// └── no-checksum-so-fails-the-entire-source-reading/
 ///    └── Cargo.toml
 /// ```
-pub struct DirectorySource<'cfg> {
+pub struct DirectorySource<'gctx> {
     /// The unique identifier of this source.
     source_id: SourceId,
     /// The root path of this source.
     root: PathBuf,
     /// Packages that this sources has discovered.
     packages: HashMap<PackageId, (Package, Checksum)>,
-    config: &'cfg Config,
+    gctx: &'gctx GlobalContext,
     updated: bool,
 }
 
@@ -77,25 +77,25 @@ struct Checksum {
     files: HashMap<String, String>,
 }
 
-impl<'cfg> DirectorySource<'cfg> {
-    pub fn new(path: &Path, id: SourceId, config: &'cfg Config) -> DirectorySource<'cfg> {
+impl<'gctx> DirectorySource<'gctx> {
+    pub fn new(path: &Path, id: SourceId, gctx: &'gctx GlobalContext) -> DirectorySource<'gctx> {
         DirectorySource {
             source_id: id,
             root: path.to_path_buf(),
-            config,
+            gctx,
             packages: HashMap::new(),
             updated: false,
         }
     }
 }
 
-impl<'cfg> Debug for DirectorySource<'cfg> {
+impl<'gctx> Debug for DirectorySource<'gctx> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "DirectorySource {{ root: {:?} }}", self.root)
     }
 }
 
-impl<'cfg> Source for DirectorySource<'cfg> {
+impl<'gctx> Source for DirectorySource<'gctx> {
     fn query(
         &mut self,
         dep: &Dependency,
@@ -172,7 +172,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
                 continue;
             }
 
-            let mut src = PathSource::new(&path, self.source_id, self.config);
+            let mut src = PathSource::new(&path, self.source_id, self.gctx);
             src.update()?;
             let mut pkg = src.root_package()?;
 

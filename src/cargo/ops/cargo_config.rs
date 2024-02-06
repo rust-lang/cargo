@@ -1,6 +1,6 @@
 //! Implementation of `cargo config` subcommand.
 
-use crate::util::config::{Config, ConfigKey, ConfigValue as CV, Definition};
+use crate::util::config::{ConfigKey, ConfigValue as CV, Definition, GlobalContext};
 use crate::util::errors::CargoResult;
 use crate::{drop_eprintln, drop_println};
 use anyhow::{bail, format_err, Error};
@@ -50,7 +50,7 @@ pub struct GetOptions<'a> {
     pub merged: bool,
 }
 
-pub fn get(config: &Config, opts: &GetOptions<'_>) -> CargoResult<()> {
+pub fn get(gctx: &GlobalContext, opts: &GetOptions<'_>) -> CargoResult<()> {
     if opts.show_origin && !matches!(opts.format, ConfigFormat::Toml) {
         bail!(
             "the `{}` format does not support --show-origin, try the `toml` format instead",
@@ -62,23 +62,23 @@ pub fn get(config: &Config, opts: &GetOptions<'_>) -> CargoResult<()> {
         None => ConfigKey::new(),
     };
     if opts.merged {
-        let cv = config
+        let cv = gctx
             .get_cv_with_env(&key)?
             .ok_or_else(|| format_err!("config value `{}` is not set", key))?;
         match opts.format {
-            ConfigFormat::Toml => print_toml(config, opts, &key, &cv),
-            ConfigFormat::Json => print_json(config, &key, &cv, true),
-            ConfigFormat::JsonValue => print_json(config, &key, &cv, false),
+            ConfigFormat::Toml => print_toml(gctx, opts, &key, &cv),
+            ConfigFormat::Json => print_json(gctx, &key, &cv, true),
+            ConfigFormat::JsonValue => print_json(gctx, &key, &cv, false),
         }
-        if let Some(env) = maybe_env(config, &key, &cv) {
+        if let Some(env) = maybe_env(gctx, &key, &cv) {
             match opts.format {
-                ConfigFormat::Toml => print_toml_env(config, &env),
-                ConfigFormat::Json | ConfigFormat::JsonValue => print_json_env(config, &env),
+                ConfigFormat::Toml => print_toml_env(gctx, &env),
+                ConfigFormat::Json | ConfigFormat::JsonValue => print_json_env(gctx, &env),
             }
         }
     } else {
         match &opts.format {
-            ConfigFormat::Toml => print_toml_unmerged(config, opts, &key)?,
+            ConfigFormat::Toml => print_toml_unmerged(gctx, opts, &key)?,
             format => bail!(
                 "the `{}` format does not support --merged=no, try the `toml` format instead",
                 format
@@ -89,18 +89,18 @@ pub fn get(config: &Config, opts: &GetOptions<'_>) -> CargoResult<()> {
 }
 
 /// Checks for environment variables that might be used.
-fn maybe_env<'config>(
-    config: &'config Config,
+fn maybe_env<'gctx>(
+    gctx: &'gctx GlobalContext,
     key: &ConfigKey,
     cv: &CV,
-) -> Option<Vec<(&'config str, &'config str)>> {
+) -> Option<Vec<(&'gctx str, &'gctx str)>> {
     // Only fetching a table is unable to load env values. Leaf entries should
     // work properly.
     match cv {
         CV::Table(_map, _def) => {}
         _ => return None,
     }
-    let mut env: Vec<_> = config
+    let mut env: Vec<_> = gctx
         .env()
         .filter(|(env_key, _val)| env_key.starts_with(&format!("{}_", key.as_env_key())))
         .collect();
@@ -112,7 +112,7 @@ fn maybe_env<'config>(
     }
 }
 
-fn print_toml(config: &Config, opts: &GetOptions<'_>, key: &ConfigKey, cv: &CV) {
+fn print_toml(gctx: &GlobalContext, opts: &GetOptions<'_>, key: &ConfigKey, cv: &CV) {
     let origin = |def: &Definition| -> String {
         if !opts.show_origin {
             return "".to_string();
@@ -120,10 +120,10 @@ fn print_toml(config: &Config, opts: &GetOptions<'_>, key: &ConfigKey, cv: &CV) 
         format!(" # {}", def)
     };
     match cv {
-        CV::Boolean(val, def) => drop_println!(config, "{} = {}{}", key, val, origin(def)),
-        CV::Integer(val, def) => drop_println!(config, "{} = {}{}", key, val, origin(def)),
+        CV::Boolean(val, def) => drop_println!(gctx, "{} = {}{}", key, val, origin(def)),
+        CV::Integer(val, def) => drop_println!(gctx, "{} = {}{}", key, val, origin(def)),
         CV::String(val, def) => drop_println!(
-            config,
+            gctx,
             "{} = {}{}",
             key,
             toml_edit::Value::from(val),
@@ -131,20 +131,20 @@ fn print_toml(config: &Config, opts: &GetOptions<'_>, key: &ConfigKey, cv: &CV) 
         ),
         CV::List(vals, _def) => {
             if opts.show_origin {
-                drop_println!(config, "{} = [", key);
+                drop_println!(gctx, "{} = [", key);
                 for (val, def) in vals {
                     drop_println!(
-                        config,
+                        gctx,
                         "    {}, # {}",
                         serde::Serialize::serialize(val, toml_edit::ser::ValueSerializer::new())
                             .unwrap(),
                         def
                     );
                 }
-                drop_println!(config, "]");
+                drop_println!(gctx, "]");
             } else {
                 let vals: toml_edit::Array = vals.iter().map(|x| &x.0).collect();
-                drop_println!(config, "{} = {}", key, vals);
+                drop_println!(gctx, "{} = {}", key, vals);
             }
         }
         CV::Table(table, _def) => {
@@ -155,35 +155,35 @@ fn print_toml(config: &Config, opts: &GetOptions<'_>, key: &ConfigKey, cv: &CV) 
                 // push or push_sensitive shouldn't matter here, since this is
                 // not dealing with environment variables.
                 subkey.push(table_key);
-                print_toml(config, opts, &subkey, val);
+                print_toml(gctx, opts, &subkey, val);
             }
         }
     }
 }
 
-fn print_toml_env(config: &Config, env: &[(&str, &str)]) {
+fn print_toml_env(gctx: &GlobalContext, env: &[(&str, &str)]) {
     drop_println!(
-        config,
+        gctx,
         "# The following environment variables may affect the loaded values."
     );
     for (env_key, env_value) in env {
         let val = shell_escape::escape(Cow::Borrowed(env_value));
-        drop_println!(config, "# {}={}", env_key, val);
+        drop_println!(gctx, "# {}={}", env_key, val);
     }
 }
 
-fn print_json_env(config: &Config, env: &[(&str, &str)]) {
+fn print_json_env(gctx: &GlobalContext, env: &[(&str, &str)]) {
     drop_eprintln!(
-        config,
+        gctx,
         "note: The following environment variables may affect the loaded values."
     );
     for (env_key, env_value) in env {
         let val = shell_escape::escape(Cow::Borrowed(env_value));
-        drop_eprintln!(config, "{}={}", env_key, val);
+        drop_eprintln!(gctx, "{}={}", env_key, val);
     }
 }
 
-fn print_json(config: &Config, key: &ConfigKey, cv: &CV, include_key: bool) {
+fn print_json(gctx: &GlobalContext, key: &ConfigKey, cv: &CV, include_key: bool) {
     let json_value = if key.is_root() || !include_key {
         cv_to_json(cv)
     } else {
@@ -199,7 +199,7 @@ fn print_json(config: &Config, key: &ConfigKey, cv: &CV, include_key: bool) {
         table[last_part] = cv_to_json(cv);
         root_table
     };
-    drop_println!(config, "{}", serde_json::to_string(&json_value).unwrap());
+    drop_println!(gctx, "{}", serde_json::to_string(&json_value).unwrap());
 
     // Helper for recursively converting a CV to JSON.
     fn cv_to_json(cv: &CV) -> serde_json::Value {
@@ -222,11 +222,15 @@ fn print_json(config: &Config, key: &ConfigKey, cv: &CV, include_key: bool) {
     }
 }
 
-fn print_toml_unmerged(config: &Config, opts: &GetOptions<'_>, key: &ConfigKey) -> CargoResult<()> {
+fn print_toml_unmerged(
+    gctx: &GlobalContext,
+    opts: &GetOptions<'_>,
+    key: &ConfigKey,
+) -> CargoResult<()> {
     let print_table = |cv: &CV| {
-        drop_println!(config, "# {}", cv.definition());
-        print_toml(config, opts, &ConfigKey::new(), cv);
-        drop_println!(config, "");
+        drop_println!(gctx, "# {}", cv.definition());
+        print_toml(gctx, opts, &ConfigKey::new(), cv);
+        drop_println!(gctx, "");
     };
     // This removes entries from the given CV so that all that remains is the
     // given key. Returns false if no entries were found.
@@ -261,7 +265,7 @@ fn print_toml_unmerged(config: &Config, opts: &GetOptions<'_>, key: &ConfigKey) 
         })
     }
 
-    let mut cli_args = config.cli_args_as_table()?;
+    let mut cli_args = gctx.cli_args_as_table()?;
     if trim_cv(&mut cli_args, key)? {
         print_table(&cli_args);
     }
@@ -284,23 +288,23 @@ fn print_toml_unmerged(config: &Config, opts: &GetOptions<'_>, key: &ConfigKey) 
     // TODO: It might be a good idea to teach the Config loader to support
     // environment variable aliases so that these special cases are less
     // special, and will just naturally get loaded as part of the config.
-    let mut env: Vec<_> = config
+    let mut env: Vec<_> = gctx
         .env()
         .filter(|(env_key, _val)| env_key.starts_with(key.as_env_key()))
         .collect();
     if !env.is_empty() {
         env.sort_by_key(|x| x.0);
-        drop_println!(config, "# Environment variables");
+        drop_println!(gctx, "# Environment variables");
         for (key, value) in env {
             // Displaying this in "shell" syntax instead of TOML, since that
             // somehow makes more sense to me.
             let val = shell_escape::escape(Cow::Borrowed(value));
-            drop_println!(config, "# {}={}", key, val);
+            drop_println!(gctx, "# {}={}", key, val);
         }
-        drop_println!(config, "");
+        drop_println!(gctx, "");
     }
 
-    let unmerged = config.load_values_unmerged()?;
+    let unmerged = gctx.load_values_unmerged()?;
     for mut cv in unmerged {
         if trim_cv(&mut cv, key)? {
             print_table(&cv);

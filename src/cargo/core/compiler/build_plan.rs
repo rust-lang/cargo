@@ -12,9 +12,9 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 
 use super::context::OutputFile;
-use super::{CompileKind, CompileMode, Context, Unit};
+use super::{CompileContext, CompileKind, CompileMode, Unit};
 use crate::core::TargetKind;
-use crate::util::{internal, CargoResult, Config};
+use crate::util::{internal, CargoResult, GlobalContext};
 use cargo_util::ProcessBuilder;
 
 #[derive(Debug, Serialize)]
@@ -107,7 +107,7 @@ impl BuildPlan {
         }
     }
 
-    pub fn add(&mut self, cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
+    pub fn add(&mut self, cx: &CompileContext<'_, '_>, unit: &Unit) -> CargoResult<()> {
         let id = self.plan.invocations.len();
         self.invocation_map.insert(unit.buildkey(), id);
         let deps = cx
@@ -144,9 +144,9 @@ impl BuildPlan {
         self.plan.inputs = inputs;
     }
 
-    pub fn output_plan(self, config: &Config) {
+    pub fn output_plan(self, gctx: &GlobalContext) {
         let encoded = serde_json::to_string(&self.plan).unwrap();
-        crate::drop_println!(config, "{}", encoded);
+        crate::drop_println!(gctx, "{}", encoded);
     }
 }
 

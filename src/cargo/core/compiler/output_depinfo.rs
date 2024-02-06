@@ -6,7 +6,7 @@ use std::collections::{BTreeSet, HashSet};
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
-use super::{fingerprint, Context, FileFlavor, Unit};
+use super::{fingerprint, CompileContext, FileFlavor, Unit};
 use crate::util::{internal, CargoResult};
 use cargo_util::paths;
 use tracing::debug;
@@ -43,7 +43,7 @@ fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResul
 /// [fingerprint dep-info]: super::fingerprint#fingerprint-dep-info-files
 fn add_deps_for_unit(
     deps: &mut BTreeSet<PathBuf>,
-    cx: &mut Context<'_, '_>,
+    cx: &mut CompileContext<'_, '_>,
     unit: &Unit,
     visited: &mut HashSet<Unit>,
 ) -> CargoResult<()> {
@@ -111,16 +111,16 @@ fn add_deps_for_unit(
 /// `Cargo.lock`.
 ///
 /// [`fingerprint`]: super::fingerprint#dep-info-files
-pub fn output_depinfo(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
+pub fn output_depinfo(cx: &mut CompileContext<'_, '_>, unit: &Unit) -> CargoResult<()> {
     let bcx = cx.bcx;
     let mut deps = BTreeSet::new();
     let mut visited = HashSet::new();
     let success = add_deps_for_unit(&mut deps, cx, unit, &mut visited).is_ok();
     let basedir_string;
-    let basedir = match bcx.config.build_config()?.dep_info_basedir.clone() {
+    let basedir = match bcx.gctx.build_config()?.dep_info_basedir.clone() {
         Some(value) => {
             basedir_string = value
-                .resolve_path(bcx.config)
+                .resolve_path(bcx.gctx)
                 .as_os_str()
                 .to_str()
                 .ok_or_else(|| anyhow::format_err!("build.dep-info-basedir path not utf-8"))?
