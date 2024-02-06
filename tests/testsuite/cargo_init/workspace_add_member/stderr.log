@@ -1,2 +1,3 @@
     Creating binary (application) package
+      Adding `foo` as member of workspace at `[ROOT]/case`
 note: see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

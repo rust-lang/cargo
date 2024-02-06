@@ -1065,6 +1065,7 @@ fn new_creates_members_list() {
     p.cargo("new --lib bar")
         .with_stderr("\
 [CREATING] library `bar` package
+[ADDING] `bar` as member of workspace at `[ROOT]/foo`
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 ")
         .run();
