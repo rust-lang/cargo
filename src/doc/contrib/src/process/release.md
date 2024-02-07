@@ -131,9 +131,9 @@ Cargo's library and its related dependencies (like `cargo-util`) are published
 to [crates.io] as part of the 6-week stable release process by the [Release
 team]. There is a [`publish.py` script] that is used by the Release team's
 automation scripts (see <https://github.com/rust-lang/simpleinfra/>) to handle
-determining which packages to publish. The test and build tool crates aren't
-published. This runs on the specific git commit associated with the cargo
-submodule in the `stable` branch in `rust-lang/rust` at the time of release.
+determining which packages to publish. The build tool crates aren't published.
+This runs on the specific git commit associated with the cargo submodule in the
+`stable` branch in `rust-lang/rust` at the time of release.
 
 On very rare cases, the Cargo team may decide to manually publish a new
 release to [crates.io]. For example, this may be necessary if there is a
