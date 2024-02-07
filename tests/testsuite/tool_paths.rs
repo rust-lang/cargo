@@ -441,7 +441,7 @@ fn target_in_environment_contains_lower_case() {
         .arg(target)
         .env(&env_key, "nonexistent-linker")
         .with_stderr_contains(format!(
-            "warning: Environment variables are expected to use uppercase \
+            "warning: environment variables are expected to use uppercase \
              letters and underscores, the variable `{}` will be ignored and \
              have no effect",
             env_key

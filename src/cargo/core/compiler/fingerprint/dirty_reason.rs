@@ -175,7 +175,7 @@ impl DirtyReason {
             DirtyReason::LocalLengthsChanged => {
                 s.dirty_because(unit, "the local lengths changed")?;
                 s.note(
-                    "This could happen because of added/removed `cargo::rerun-if` instructions in the build script",
+                    "this could happen because of added/removed `cargo::rerun-if` instructions in the build script",
                 )?;
 
                 Ok(())

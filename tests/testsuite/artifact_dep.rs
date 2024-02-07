@@ -2028,7 +2028,7 @@ fn publish_artifact_dep() {
 [PACKAGED] [..]
 [UPLOADING] foo v0.1.0 [..]
 [UPLOADED] foo v0.1.0 [..]
-note: Waiting [..]
+[NOTE] waiting [..]
 You may press ctrl-c [..]
 [PUBLISHED] foo v0.1.0 [..]
 ",

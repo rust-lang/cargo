@@ -91,7 +91,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
                 // Don't change the registry for crates.io and don't warn the user.
                 // crates.io will be defaulted even without this.
                 opts.config.shell().note(&format!(
-                    "Found `{}` as only allowed registry. Publishing to it automatically.",
+                    "found `{}` as only allowed registry. Publishing to it automatically.",
                     default_registry
                 ))?;
                 publish_registry = Some(default_registry.clone());
@@ -228,7 +228,7 @@ fn wait_for_publish(
         format!("{short_pkg_description} to {source_description}"),
     )?;
     config.shell().note(format!(
-        "Waiting for `{short_pkg_description}` to be available at {source_description}.\n\
+        "waiting for `{short_pkg_description}` to be available at {source_description}.\n\
         You may press ctrl-c to skip waiting; the crate should be available shortly."
     ))?;
     let mut progress = Progress::with_style("Waiting", ProgressStyle::Ratio, config);
@@ -265,7 +265,7 @@ fn wait_for_publish(
                 "timed out waiting for `{short_pkg_description}` to be available in {source_description}",
             ))?;
             config.shell().note(
-                "The registry may have a backlog that is delaying making the \
+                "the registry may have a backlog that is delaying making the \
                 crate available. The crate should be available soon.",
             )?;
             break false;

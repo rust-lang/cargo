@@ -566,7 +566,7 @@ fn check_repo_state(
             }
             config.shell().verbose(|shell| {
                 shell.warn(format!(
-                    "No (git) Cargo.toml found at `{}` in workdir `{}`",
+                    "no (git) Cargo.toml found at `{}` in workdir `{}`",
                     path.display(),
                     workdir.display()
                 ))
@@ -574,7 +574,7 @@ fn check_repo_state(
         }
     } else {
         config.shell().verbose(|shell| {
-            shell.warn(format!("No (git) VCS found for `{}`", p.root().display()))
+            shell.warn(format!("no (git) VCS found for `{}`", p.root().display()))
         })?;
     }
 

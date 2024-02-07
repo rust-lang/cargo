@@ -830,7 +830,7 @@ impl Config {
     fn check_environment_key_case_mismatch(&self, key: &ConfigKey) {
         if let Some(env_key) = self.env.get_normalized(key.as_env_key()) {
             let _ = self.shell().warn(format!(
-                "Environment variables are expected to use uppercase letters and underscores, \
+                "environment variables are expected to use uppercase letters and underscores, \
                 the variable `{}` will be ignored and have no effect",
                 env_key
             ));
@@ -1522,7 +1522,7 @@ impl Config {
                 if !skip_warning {
                     if possible_with_extension.exists() {
                         self.shell().warn(format!(
-                            "Both `{}` and `{}` exist. Using `{}`",
+                            "both `{}` and `{}` exist. Using `{}`",
                             possible.display(),
                             possible_with_extension.display(),
                             possible.display()
@@ -1533,7 +1533,7 @@ impl Config {
                             possible.display(),
                         ))?;
                         self.shell().note(
-                            format!("If you need to support cargo 1.38 or earlier, you can symlink `{filename_without_extension}` to `{filename_without_extension}.toml`"),
+                            format!("if you need to support cargo 1.38 or earlier, you can symlink `{filename_without_extension}` to `{filename_without_extension}.toml`"),
                         )?;
                     }
                 }
