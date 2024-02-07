@@ -810,7 +810,7 @@ Consider enabling some of the needed features by passing, e.g., `--features=\"b 
         .with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
-[WARNING] Target filter `bins` specified, but no targets matched. This is a no-op
+[WARNING] target filter `bins` specified, but no targets matched; this is a no-op
 [FINISHED] release [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
   bin \"foo_1\" requires the features: `b`, `c`
@@ -825,7 +825,7 @@ Consider enabling some of the needed features by passing, e.g., `--features=\"b 
         .with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
-[WARNING] Target filter `examples` specified, but no targets matched. This is a no-op
+[WARNING] target filter `examples` specified, but no targets matched; this is a no-op
 [FINISHED] release [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
   bin \"foo_1\" requires the features: `b`, `c`
@@ -840,7 +840,7 @@ Consider enabling some of the needed features by passing, e.g., `--features=\"b 
         .with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
-[WARNING] Target filters `bins`, `examples` specified, but no targets matched. This is a no-op
+[WARNING] target filters `bins`, `examples` specified, but no targets matched; this is a no-op
 [FINISHED] release [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
   bin \"foo_1\" requires the features: `b`, `c`

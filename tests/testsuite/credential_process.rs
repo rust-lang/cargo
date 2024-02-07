@@ -77,7 +77,7 @@ fn publish() {
 {"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"publish","name":"foo","vers":"0.1.0","cksum":"[..]"}
 [UPLOADING] foo v0.1.0 [..]
 [UPLOADED] foo v0.1.0 [..]
-note: Waiting [..]
+[NOTE] waiting [..]
 You may press ctrl-c [..]
 [PUBLISHED] foo v0.1.0 [..]
 "#,
@@ -541,7 +541,7 @@ fn token_caching() {
 {"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"publish","name":"foo","vers":"0.1.0","cksum":"[..]"}
 [UPLOADING] foo v0.1.0 [..]
 [UPLOADED] foo v0.1.0 [..]
-note: Waiting [..]
+[NOTE] waiting [..]
 You may press ctrl-c [..]
 [PUBLISHED] foo v0.1.0 [..]
 "#;

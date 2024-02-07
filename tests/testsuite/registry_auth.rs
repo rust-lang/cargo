@@ -478,7 +478,7 @@ fn token_not_logged() {
 [PACKAGED] 3 files[..]
 [UPLOADING] foo v0.1.0[..]
 [UPLOADED] foo v0.1.0 to registry `crates-io`
-note: Waiting [..]
+[NOTE] waiting [..]
 ";
     for line in lines.lines() {
         match_contains(line, &log, None).unwrap();

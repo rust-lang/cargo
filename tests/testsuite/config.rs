@@ -276,8 +276,8 @@ f1 = 1
     // It should NOT have warned for the symlink.
     let output = read_output(config);
     let expected = "\
-warning: `[ROOT]/.cargo/config` is deprecated in favor of `config.toml`
-note: If you need to support cargo 1.38 or earlier, you can symlink `config` to `config.toml`";
+[WARNING] `[ROOT]/.cargo/config` is deprecated in favor of `config.toml`
+[NOTE] if you need to support cargo 1.38 or earlier, you can symlink `config` to `config.toml`";
     assert_match(expected, &output);
 }
 
@@ -332,7 +332,7 @@ f1 = 2
     // But it also should have warned.
     let output = read_output(config);
     let expected = "\
-warning: Both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
+[WARNING] both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
 ";
     assert_match(expected, &output);
 }

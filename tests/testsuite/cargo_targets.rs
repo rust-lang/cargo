@@ -23,8 +23,8 @@ fn warn_unmatched_target_filters() {
     p.cargo("check --tests --bins --examples --benches")
         .with_stderr(
             "\
-[WARNING] Target filters `bins`, `tests`, `examples`, `benches` specified, \
-but no targets matched. This is a no-op
+[WARNING] target filters `bins`, `tests`, `examples`, `benches` specified, \
+but no targets matched; this is a no-op
 [FINISHED][..]
 ",
         )

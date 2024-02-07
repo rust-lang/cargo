@@ -113,7 +113,7 @@ fn publish_with_target() {
 [PACKAGED] [..]
 [UPLOADING] foo v0.0.0 ([CWD])
 [UPLOADED] foo v0.0.0 to registry `crates-io`
-note: Waiting [..]
+[NOTE] waiting [..]
 You may press ctrl-c [..]
 [PUBLISHED] foo v0.0.0 at registry `crates-io`
 ",

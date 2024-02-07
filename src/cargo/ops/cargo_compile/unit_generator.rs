@@ -537,7 +537,7 @@ Rustdoc did not scrape the following examples because they require dev-dependenc
                 }
 
                 return shell.warn(format!(
-                    "Target {}{} specified, but no targets matched. This is a no-op",
+                    "target {}{} specified, but no targets matched; this is a no-op",
                     if miss_count > 1 { "filters" } else { "filter" },
                     filters,
                 ));
