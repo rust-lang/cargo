@@ -42,7 +42,7 @@ static SUCCESS_OUTPUT: &'static str = "\
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
 [COMPILING] bar v0.0.1 (registry `alternative`)
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ";
 
 #[cargo_test]

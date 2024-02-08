@@ -396,7 +396,7 @@ fn build_script_doc() {
 [RUNNING] `[..]/build-script-build`
 [DOCUMENTING] foo [..]
 [RUNNING] `rustdoc [..] src/main.rs [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )

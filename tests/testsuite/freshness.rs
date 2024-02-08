@@ -29,7 +29,7 @@ fn modifying_and_moving() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -45,7 +45,7 @@ fn modifying_and_moving() {
 [DIRTY] foo v0.0.1 ([CWD]): the file `src/a.rs` has changed ([..])
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -71,7 +71,7 @@ fn modify_only_some_files() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -92,7 +92,7 @@ fn modify_only_some_files() {
 [DIRTY] foo v0.0.1 ([CWD]): the file `src/b.rs` has changed ([..])
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -139,7 +139,7 @@ fn rebuild_sub_package_then_while_package() {
 [COMPILING] b [..]
 [COMPILING] a [..]
 [COMPILING] foo [..]
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 ",
         )
         .run();
@@ -155,7 +155,7 @@ fn rebuild_sub_package_then_while_package() {
 [DIRTY] b v0.0.1 ([..]): the file `b/src/lib.rs` has changed ([..])
 [COMPILING] b [..]
 [RUNNING] `rustc --crate-name b [..]
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 ",
         )
         .run();
@@ -175,7 +175,7 @@ fn rebuild_sub_package_then_while_package() {
 [DIRTY] foo [..]: the dependency b was rebuilt ([..])
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name foo [..]
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 ",
         )
         .run();
@@ -203,7 +203,7 @@ fn changing_lib_features_caches_targets() {
         .with_stderr(
             "\
 [..]Compiling foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -212,7 +212,7 @@ fn changing_lib_features_caches_targets() {
         .with_stderr(
             "\
 [..]Compiling foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -220,13 +220,13 @@ fn changing_lib_features_caches_targets() {
     /* Targets should be cached from the first build */
 
     p.cargo("build")
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
         .run();
 
     p.cargo("build").with_stderr("[FINISHED] [..]").run();
 
     p.cargo("build --features foo")
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
         .run();
 }
 
@@ -252,7 +252,7 @@ fn changing_profiles_caches_targets() {
         .with_stderr(
             "\
 [..]Compiling foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -261,7 +261,7 @@ fn changing_profiles_caches_targets() {
         .with_stderr(
             "\
 [..]Compiling foo v0.0.1 ([..])
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] [..] (target[..]debug[..]deps[..]foo-[..][EXE])
 [DOCTEST] foo
 ",
@@ -271,13 +271,13 @@ fn changing_profiles_caches_targets() {
     /* Targets should be cached from the first build */
 
     p.cargo("build")
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
         .run();
 
     p.cargo("test foo")
         .with_stderr(
             "\
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] [..] (target[..]debug[..]deps[..]foo-[..][EXE])
 ",
         )
@@ -377,7 +377,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
             "\
 [..]Compiling dep_crate v0.0.1 ([..])
 [..]Compiling a v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target/debug/a[EXE]`
 ",
         )
@@ -389,7 +389,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
         .with_stderr(
             "\
 [..]Compiling a v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target/debug/a[EXE]`
 ",
         )
@@ -403,7 +403,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
             "\
 [..]Compiling dep_crate v0.0.1 ([..])
 [..]Compiling b v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target/debug/b[EXE]`
 ",
         )
@@ -415,7 +415,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
         .with_stderr(
             "\
 [..]Compiling b v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target/debug/b[EXE]`
 ",
         )
@@ -430,7 +430,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
         .with_stderr(
             "\
 [..]Compiling a v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target/debug/a[EXE]`
 ",
         )
@@ -445,7 +445,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
         .with_stderr(
             "\
 [..]Compiling b v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]target/debug/b[EXE]`
 ",
         )
@@ -482,7 +482,7 @@ fn changing_bin_features_caches_targets() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -492,7 +492,7 @@ fn changing_bin_features_caches_targets() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -509,10 +509,10 @@ fn changing_bin_features_caches_targets() {
 [DIRTY] foo v0.0.1 ([..]): the list of features changed
 [COMPILING] foo[..]
 [RUNNING] `rustc [..]
-[FINISHED] dev[..]",
+[FINISHED] `dev`[..]",
         );
     } else {
-        e.with_stderr("[FRESH] foo v0.0.1 ([..])\n[FINISHED] dev[..]");
+        e.with_stderr("[FRESH] foo v0.0.1 ([..])\n[FINISHED] `dev`[..]");
     }
     e.run();
     p.rename_run("foo", "off2").with_stdout("feature off").run();
@@ -524,13 +524,13 @@ fn changing_bin_features_caches_targets() {
 [DIRTY] foo v0.0.1 ([..]): the list of features changed
 [COMPILING] foo[..]
 [RUNNING] `rustc [..]
-[FINISHED] dev[..]",
+[FINISHED] `dev`[..]",
         );
     } else {
         e.with_stderr(
             "\
 [FRESH] foo v0.0.1 ([..])
-[FINISHED] dev[..]",
+[FINISHED] `dev`[..]",
         );
     }
     e.run();
@@ -620,7 +620,7 @@ fn no_rebuild_transitive_target_deps() {
 [COMPILING] c v0.0.1 ([..])
 [COMPILING] b v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[..][EXE])
 [EXECUTABLE] tests/foo.rs (target/debug/deps/foo-[..][EXE])
 ",
@@ -740,7 +740,7 @@ fn same_build_dir_cached_packages() {
 [COMPILING] c v0.0.1 ({dir}/c)
 [COMPILING] b v0.0.1 ({dir}/b)
 [COMPILING] a1 v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
             dir = p.url().to_file_path().unwrap().to_str().unwrap()
         ))
@@ -750,7 +750,7 @@ fn same_build_dir_cached_packages() {
         .with_stderr(
             "\
 [COMPILING] a2 v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -851,7 +851,7 @@ fn rebuild_if_environment_changes() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`
 ",
         )
@@ -875,7 +875,7 @@ fn rebuild_if_environment_changes() {
 [DIRTY] foo v0.0.1 ([CWD]): the metadata changed
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`
 ",
         )
@@ -920,7 +920,7 @@ fn no_rebuild_when_rename_dir() {
 
     p.cargo("build")
         .cwd(&new)
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
         .run();
 }
 
@@ -1217,7 +1217,7 @@ fn changing_rustflags_is_cached() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
     p.cargo("build -v")
@@ -1227,7 +1227,7 @@ fn changing_rustflags_is_cached() {
 [DIRTY] foo v0.0.1 ([..]): the rustflags changed
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
 
@@ -1237,7 +1237,7 @@ fn changing_rustflags_is_cached() {
 [DIRTY] foo v0.0.1 ([..]): the rustflags changed
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
     p.cargo("build -v")
@@ -1247,7 +1247,7 @@ fn changing_rustflags_is_cached() {
 [DIRTY] foo v0.0.1 ([..]): the rustflags changed
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
 }
@@ -1278,20 +1278,20 @@ fn update_dependency_mtime_does_not_rebuild() {
             "\
 [COMPILING] bar v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
     // This does not make new files, but it does update the mtime of the dependency.
     p.cargo("build -p bar -Z mtime-on-use")
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .env("RUSTFLAGS", "-C linker=cc")
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
         .run();
     // This should not recompile!
     p.cargo("build -Z mtime-on-use")
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .env("RUSTFLAGS", "-C linker=cc")
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
         .run();
 }
 
@@ -1357,7 +1357,7 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
     if is_coarse_mtime() {
@@ -1370,13 +1370,13 @@ fn fingerprint_cleaner_does_not_rebuild() {
     // This does not make new files, but it does update the mtime.
     p.cargo("build -Z mtime-on-use --features a")
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
         .run();
     fingerprint_cleaner(p.target_debug_dir(), timestamp);
     // This should not recompile!
     p.cargo("build -Z mtime-on-use --features a")
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
         .run();
     // But this should be cleaned and so need a rebuild
     p.cargo("build -Z mtime-on-use")
@@ -1384,7 +1384,7 @@ fn fingerprint_cleaner_does_not_rebuild() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
 }
@@ -1646,7 +1646,7 @@ fn rebuild_on_mid_build_file_modification() {
             "\
 [COMPILING] proc_macro_dep v0.1.0 ([..]/proc_macro_dep)
 [COMPILING] root v0.1.0 ([..]/root)
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1658,7 +1658,7 @@ fn rebuild_on_mid_build_file_modification() {
 [DIRTY] root v0.1.0 ([..]/root): the file `root/src/lib.rs` has changed ([..])
 [COMPILING] root v0.1.0 ([..]/root)
 [RUNNING] `rustc [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -2792,7 +2792,7 @@ fn verify_source_before_recompile() {
             "\
 [FRESH] bar v0.1.0
 [FRESH] foo v0.1.0 ([CWD])
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 ",
         )
         .run();
@@ -2831,7 +2831,7 @@ fn skip_mtime_check_in_selected_cargo_home_subdirs() {
             "\
 [CHECKING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]
-[FINISHED] dev [..]",
+[FINISHED] `dev` profile [..]",
         )
         .run();
     p.change_file("src/lib.rs", "illegal syntax");
@@ -2840,7 +2840,7 @@ fn skip_mtime_check_in_selected_cargo_home_subdirs() {
         .with_stderr(
             "\
 [FRESH] foo v0.5.0 ([CWD])
-[FINISHED] dev [..]",
+[FINISHED] `dev` profile [..]",
         )
         .run();
 }
@@ -2860,7 +2860,7 @@ fn use_mtime_cache_in_cargo_home() {
             "\
 [CHECKING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]
-[FINISHED] dev [..]",
+[FINISHED] `dev` profile [..]",
         )
         .run();
     p.change_file("src/lib.rs", "illegal syntax");

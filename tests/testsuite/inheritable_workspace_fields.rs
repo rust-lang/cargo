@@ -55,7 +55,7 @@ fn permit_additional_workspace_fields() {
         .with_stderr(
             "\
 [CHECKING] bar v0.1.0 ([CWD]/bar)
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -296,7 +296,7 @@ fn inherit_own_dependencies() {
 [DOWNLOADED] dep-build v0.8.2 ([..])
 [CHECKING] dep v0.1.2
 [CHECKING] bar v0.2.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -444,7 +444,7 @@ fn inherit_own_detailed_dependencies() {
 [DOWNLOADED] dep v0.1.2 ([..])
 [CHECKING] dep v0.1.2
 [CHECKING] bar v0.2.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -614,7 +614,7 @@ fn inherited_dependencies_union_features() {
 [CHECKING] [..]
 [CHECKING] dep v0.1.0
 [CHECKING] bar v0.2.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -839,7 +839,7 @@ fn inherit_dependencies() {
 [DOWNLOADED] dep-build v0.8.2 ([..])
 [CHECKING] dep v0.1.2
 [CHECKING] bar v0.2.0 ([CWD]/bar)
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -990,7 +990,7 @@ fn inherit_target_dependencies() {
 [DOWNLOADED] dep v0.1.2 ([..])
 [CHECKING] dep v0.1.2
 [CHECKING] bar v0.2.0 ([CWD]/bar)
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1033,7 +1033,7 @@ fn inherit_dependency_override_optional() {
             "\
 [UPDATING] `[..]` index
 [CHECKING] bar v0.2.0 ([CWD]/bar)
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1080,7 +1080,7 @@ fn inherit_dependency_features() {
 [CHECKING] fancy_dep v0.2.4
 [CHECKING] dep v0.1.0
 [CHECKING] bar v0.2.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1147,7 +1147,7 @@ fn inherit_detailed_dependencies() {
 [UPDATING] git repository `{}`\n\
 [CHECKING] detailed v0.5.0 ({}?branch=branchy#[..])\n\
 [CHECKING] bar v0.2.0 ([CWD]/bar)\n\
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
             path2url(&git_root),
             path2url(&git_root),
         ))
@@ -1188,7 +1188,7 @@ fn inherit_path_dependencies() {
             "\
 [CHECKING] dep v0.9.0 ([CWD]/dep)
 [CHECKING] bar v0.2.0 ([CWD]/bar)
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1458,7 +1458,7 @@ true for `workspace.dependencies.dep`, this could become a hard error in the fut
 [CHECKING] fancy_dep v0.2.4
 [CHECKING] dep v0.1.0
 [CHECKING] bar v0.2.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1506,7 +1506,7 @@ not specified for `workspace.dependencies.dep`, this could become a hard error i
 [CHECKING] fancy_dep v0.2.4
 [CHECKING] dep v0.1.0
 [CHECKING] bar v0.2.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1552,7 +1552,7 @@ fn inherit_def_feat_false_member_def_feat_true() {
 [CHECKING] fancy_dep v0.2.4
 [CHECKING] dep v0.1.0
 [CHECKING] bar v0.2.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1640,7 +1640,7 @@ fn warn_inherit_unused_manifest_key_dep() {
 [DOWNLOADED] dep v0.1.0 ([..])
 [CHECKING] [..]
 [CHECKING] bar v0.2.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1671,7 +1671,7 @@ fn warn_unused_workspace_package_field() {
             "\
 [WARNING] [CWD]/Cargo.toml: unused manifest key: workspace.package.name
 [CHECKING] foo v0.0.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1746,7 +1746,7 @@ fn warn_inherit_unused_manifest_key_package() {
 [WARNING] [CWD]/Cargo.toml: unused manifest key: package.rust-version.xyz
 [WARNING] [CWD]/Cargo.toml: unused manifest key: package.version.xyz
 [CHECKING] bar v1.2.3 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();

@@ -331,7 +331,7 @@ fn overrides_with_custom() {
 [RUNNING] `rustc --crate-name xxx [..] -C codegen-units=5 [..]`
 [RUNNING] `rustc --crate-name yyy [..] -C codegen-units=3 [..]`
 [RUNNING] `rustc --crate-name foo [..] -C codegen-units=7 [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -346,7 +346,7 @@ fn overrides_with_custom() {
 [RUNNING] `rustc --crate-name xxx [..] -C codegen-units=5 [..]`
 [RUNNING] `rustc --crate-name yyy [..] -C codegen-units=6 [..]`
 [RUNNING] `rustc --crate-name foo [..] -C codegen-units=2 [..]`
-[FINISHED] other [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `other` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -396,7 +396,7 @@ warning: the `--release` flag should not be specified with the `--profile` flag
 The `--release` flag will be ignored.
 This was historically accepted, but will become an error in a future release.
 [COMPILING] foo [..]
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 ",
         )
         .run();
@@ -419,7 +419,7 @@ warning: the `--release` flag should not be specified with the `--profile` flag
 The `--release` flag will be ignored.
 This was historically accepted, but will become an error in a future release.
 [CHECKING] foo [..]
-[FINISHED] test [..]
+[FINISHED] `test` profile [..]
 ",
         )
         .run();
@@ -429,7 +429,7 @@ This was historically accepted, but will become an error in a future release.
         .with_stderr(
             "\
 [COMPILING] foo [..]
-[FINISHED] release [..]
+[FINISHED] `release` profile [..]
 ",
         )
         .run();
@@ -437,7 +437,7 @@ This was historically accepted, but will become an error in a future release.
     p.cargo("build --profile=release --release")
         .with_stderr(
             "\
-[FINISHED] release [..]
+[FINISHED] `release` profile [..]
 ",
         )
         .run();
@@ -446,7 +446,7 @@ This was historically accepted, but will become an error in a future release.
         .with_stderr(
             "\
 [INSTALLING] foo [..]
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 [INSTALLING] [..]
 [INSTALLED] [..]
 [WARNING] be sure to add [..]
@@ -489,7 +489,7 @@ fn clean_custom_dirname() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 ",
         )
         .run();
@@ -500,7 +500,7 @@ fn clean_custom_dirname() {
         .with_stdout("")
         .with_stderr(
             "\
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 ",
         )
         .run();
@@ -511,7 +511,7 @@ fn clean_custom_dirname() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 ",
         )
         .run();
@@ -521,7 +521,7 @@ fn clean_custom_dirname() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -530,7 +530,7 @@ fn clean_custom_dirname() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[FINISHED] other [optimized] target(s) in [..]
+[FINISHED] `other` profile [optimized] target(s) in [..]
 ",
         )
         .run();

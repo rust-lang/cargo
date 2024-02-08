@@ -278,7 +278,7 @@ fn metabuild_fresh() {
             "\
 [FRESH] mb [..]
 [FRESH] foo [..]
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 ",
         )
         .run();

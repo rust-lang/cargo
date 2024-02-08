@@ -806,7 +806,8 @@ impl<'cfg> DrainState<'cfg> {
             // `display_error` inside `handle_error`.
             Some(anyhow::Error::new(AlreadyPrintedError::new(error)))
         } else if self.queue.is_empty() && self.pending_queue.is_empty() {
-            let message = format!("{profile_name} [{opt_type}] target(s) in {time_elapsed}",);
+            let message =
+                format!("`{profile_name}` profile [{opt_type}] target(s) in {time_elapsed}",);
             if !cx.bcx.build_config.build_plan {
                 // It doesn't really matter if this fails.
                 let _ = cx.bcx.config.shell().status("Finished", message);

@@ -164,7 +164,7 @@ fn builtin_alias_shadowing_external_subcommand() {
         .with_stderr(
             "\
 [COMPILING] foo v0.5.0 [..]
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] unittests src/main.rs [..]
 ",
         )
@@ -197,7 +197,7 @@ fn alias_shadowing_external_subcommand() {
 This was previously accepted but is being phased out; it will become a hard error in a future release.
 For more information, see issue #10049 <https://github.com/rust-lang/cargo/issues/10049>.
 [COMPILING] foo v0.5.0 [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -254,7 +254,7 @@ error: alias test-1 has unresolvable recursive definition: test-1 -> echo -> ech
             "\
 [WARNING] user-defined alias `build` is ignored, because it is shadowed by a built-in command
 [COMPILING] foo v0.5.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -350,7 +350,7 @@ fn alias_cannot_shadow_builtin_command() {
             "\
 [WARNING] user-defined alias `build` is ignored, because it is shadowed by a built-in command
 [COMPILING] foo v0.5.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -374,7 +374,7 @@ fn alias_override_builtin_alias() {
         .with_stderr(
             "\
 [COMPILING] foo v0.5.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`
 ",
         )
@@ -405,7 +405,7 @@ fn global_options_with_alias() {
             "\
 [CHECKING] foo [..]
 [RUNNING] `rustc [..]
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 ",
         )
         .run();

@@ -347,7 +347,7 @@ fn replay_non_json() {
 [CHECKING] foo [..]
 line 1
 line 2
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 ",
         )
         .run();
@@ -358,7 +358,7 @@ line 2
             "\
 line 1
 line 2
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 ",
         )
         .run();
@@ -407,7 +407,7 @@ fn caching_large_output() {
             "\
 [CHECKING] foo [..]
 {}warning: `foo` (lib) generated 250 warnings
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 ",
             expected
         ))
@@ -418,7 +418,7 @@ fn caching_large_output() {
         .with_stderr(&format!(
             "\
 {}warning: `foo` (lib) generated 250 warnings
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 ",
             expected
         ))

@@ -272,7 +272,7 @@ fn profile_config_all_options() {
             -C overflow-checks=off [..]\
             -C rpath [..]\
             -C incremental=[..]
-[FINISHED] release [optimized + debuginfo] [..]
+[FINISHED] `release` profile [optimized + debuginfo] [..]
 ",
         )
         .run();
@@ -318,7 +318,7 @@ fn profile_config_override_precedence() {
 [RUNNING] `rustc --crate-name bar [..] -C opt-level=2[..]-C codegen-units=2 [..]
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name foo [..]-C codegen-units=2 [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
 }

@@ -63,7 +63,7 @@ fn cargo_compile_simple_git_dep() {
             "[UPDATING] git repository `{}`\n\
              [COMPILING] dep1 v0.5.0 ({}#[..])\n\
              [COMPILING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
             path2url(&git_root),
             path2url(&git_root),
         ))
@@ -133,7 +133,7 @@ fn cargo_compile_git_dep_branch() {
             "[UPDATING] git repository `{}`\n\
              [COMPILING] dep1 v0.5.0 ({}?branch=branchy#[..])\n\
              [COMPILING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
             path2url(&git_root),
             path2url(&git_root),
         ))
@@ -208,7 +208,7 @@ fn cargo_compile_git_dep_tag() {
             "[UPDATING] git repository `{}`\n\
              [COMPILING] dep1 v0.5.0 ({}?tag=v0.1.0#[..])\n\
              [COMPILING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
             path2url(&git_root),
             path2url(&git_root),
         ))
@@ -277,7 +277,7 @@ fn cargo_compile_git_dep_pull_request() {
             "[UPDATING] git repository `{}`\n\
              [COMPILING] dep1 v0.5.0 ({}?rev=refs/pull/330/head#[..])\n\
              [COMPILING] foo v0.0.0 ([CWD])\n\
-             [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
             path2url(&git_root),
             path2url(&git_root),
         ))
@@ -583,7 +583,7 @@ fn recompilation() {
             "[UPDATING] git repository `{}`\n\
              [CHECKING] bar v0.5.0 ({}#[..])\n\
              [CHECKING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] dev [unoptimized + debuginfo] target(s) \
+             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) \
              in [..]\n",
             git_project.url(),
             git_project.url(),
@@ -631,7 +631,7 @@ fn recompilation() {
         .with_stderr(&format!(
             "[CHECKING] bar v0.5.0 ({}#[..])\n\
              [CHECKING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] dev [unoptimized + debuginfo] target(s) \
+             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) \
              in [..]\n",
             git_project.url(),
         ))
@@ -642,7 +642,7 @@ fn recompilation() {
     p.cargo("check")
         .with_stderr(
             "[CHECKING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] dev [unoptimized + debuginfo] target(s) \
+             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) \
              in [..]",
         )
         .run();
@@ -726,7 +726,7 @@ fn update_with_shared_deps() {
 [CHECKING] [..] v0.5.0 ([..])
 [CHECKING] [..] v0.5.0 ([..])
 [CHECKING] foo v0.5.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
             git = git_project.url(),
         ))
         .run();
@@ -794,7 +794,7 @@ Caused by:
 [CHECKING] [..] v0.5.0 ([CWD][..]dep[..])
 [CHECKING] [..] v0.5.0 ([CWD][..]dep[..])
 [CHECKING] foo v0.5.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
             git = git_project.url(),
         ))
         .run();
@@ -853,7 +853,7 @@ fn dep_with_submodule() {
 [UPDATING] git submodule `file://[..]/dep2`
 [CHECKING] dep1 [..]
 [CHECKING] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
         )
         .run();
 }
@@ -920,7 +920,7 @@ fn dep_with_relative_submodule() {
 [CHECKING] deployment [..]
 [CHECKING] base [..]
 [CHECKING] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
         )
         .run();
 }
@@ -1054,7 +1054,7 @@ fn dep_with_skipped_submodule() {
 [SKIPPING] git submodule `file://[..]/qux` [..]
 [CHECKING] bar [..]
 [CHECKING] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
         )
         .run();
 }
@@ -1115,7 +1115,7 @@ fn ambiguous_published_deps() {
         .with_stderr(
             "\
 [WARNING] skipping duplicate package `bar` found at `[..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`
 ",
         )
@@ -1178,7 +1178,7 @@ fn two_deps_only_update_one() {
              [CHECKING] [..] v0.5.0 ([..])\n\
              [CHECKING] [..] v0.5.0 ([..])\n\
              [CHECKING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
         )
         .run();
 
@@ -1276,7 +1276,7 @@ fn stale_cached_version() {
 [UPDATING] git repository `{bar}`
 [COMPILING] bar v0.0.0 ({bar}#[..])
 [COMPILING] foo v0.0.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
             bar = bar.url(),
         ))
@@ -1334,7 +1334,7 @@ fn dep_with_changed_submodule() {
              [UPDATING] git submodule `file://[..]/dep2`\n\
              [COMPILING] dep1 v0.5.0 ([..])\n\
              [COMPILING] foo v0.5.0 ([..])\n\
-             [FINISHED] dev [unoptimized + debuginfo] target(s) in \
+             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in \
              [..]\n\
              [RUNNING] `target/debug/foo[EXE]`\n",
         )
@@ -1388,7 +1388,7 @@ fn dep_with_changed_submodule() {
         .with_stderr(
             "[COMPILING] dep1 v0.5.0 ([..])\n\
              [COMPILING] foo v0.5.0 ([..])\n\
-             [FINISHED] dev [unoptimized + debuginfo] target(s) in \
+             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in \
              [..]\n\
              [RUNNING] `target/debug/foo[EXE]`\n",
         )
@@ -1448,7 +1448,7 @@ fn dev_deps_with_testing() {
             "\
 [UPDATING] git repository `{bar}`
 [CHECKING] foo v0.5.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
             bar = p2.url()
         ))
@@ -1461,7 +1461,7 @@ fn dev_deps_with_testing() {
             "\
 [COMPILING] [..] v0.5.0 ([..])
 [COMPILING] [..] v0.5.0 ([..]
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
         )
         .with_stdout_contains("test tests::foo ... ok")
@@ -1494,7 +1494,7 @@ fn git_build_cmd_freshness() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1553,7 +1553,7 @@ fn git_name_not_always_needed() {
             "\
 [UPDATING] git repository `{bar}`
 [CHECKING] foo v0.5.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
             bar = p2.url()
         ))
@@ -1596,7 +1596,7 @@ fn git_repo_changing_no_rebuild() {
 [UPDATING] git repository `{bar}`
 [COMPILING] [..]
 [CHECKING] [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
             bar = bar.url()
         ))
@@ -1633,7 +1633,7 @@ fn git_repo_changing_no_rebuild() {
 [UPDATING] git repository `{bar}`
 [CHECKING] [..]
 [CHECKING] [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
             bar = bar.url()
         ))
@@ -1825,7 +1825,7 @@ fn warnings_in_git_dep() {
             "[UPDATING] git repository `{}`\n\
              [CHECKING] bar v0.5.0 ({}#[..])\n\
              [CHECKING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
             bar.url(),
             bar.url(),
         ))
@@ -2010,7 +2010,7 @@ fn switch_deps_does_not_update_transitive() {
 [CHECKING] transitive [..]
 [CHECKING] dep [..]
 [CHECKING] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
             dep1.url(),
             transitive.url()
@@ -2040,7 +2040,7 @@ fn switch_deps_does_not_update_transitive() {
 [UPDATING] git repository `{}`
 [CHECKING] dep [..]
 [CHECKING] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
             dep2.url()
         ))
@@ -2156,7 +2156,7 @@ fn switch_sources() {
 [CHECKING] a v0.5.0 ([..]a1#[..]
 [CHECKING] b v0.5.0 ([..])
 [CHECKING] foo v0.5.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -2183,7 +2183,7 @@ fn switch_sources() {
 [CHECKING] a v0.5.1 ([..]a2#[..]
 [CHECKING] b v0.5.0 ([..])
 [CHECKING] foo v0.5.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -2311,7 +2311,7 @@ fn lints_are_suppressed() {
 [UPDATING] git repository `[..]`
 [CHECKING] a v0.5.0 ([..])
 [CHECKING] foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -2354,7 +2354,7 @@ fn denied_lints_are_allowed() {
 [UPDATING] git repository `[..]`
 [CHECKING] a v0.5.0 ([..])
 [CHECKING] foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -2492,7 +2492,7 @@ fn include_overrides_gitignore() {
 [COMPILING] foo v0.5.0 ([..])
 [RUNNING] `[..]build-script-build[..]`
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -3034,7 +3034,7 @@ fn default_not_master() {
 [UPDATING] git repository `[..]`
 [CHECKING] dep1 v0.5.0 ([..])
 [CHECKING] foo v0.5.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
 }
@@ -3677,7 +3677,7 @@ fn different_user_relative_submodules() {
 [UPDATING] git submodule `{}`
 [COMPILING] dep1 v0.5.0 ({}#[..])
 [COMPILING] foo v0.5.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
             path2url(&user1_git_project.root()),
             path2url(&user2_git_project.root()),

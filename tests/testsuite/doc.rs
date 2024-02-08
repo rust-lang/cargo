@@ -30,7 +30,7 @@ fn simple() {
             "\
 [..] foo v0.0.1 ([CWD])
 [..] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
@@ -69,7 +69,7 @@ fn doc_twice() {
         .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
@@ -111,7 +111,7 @@ fn doc_deps() {
 [..] bar v0.0.1 ([CWD]/bar)
 [..] bar v0.0.1 ([CWD]/bar)
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
@@ -165,7 +165,7 @@ fn doc_no_deps() {
             "\
 [CHECKING] bar v0.0.1 ([CWD]/bar)
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
@@ -415,7 +415,7 @@ fn doc_lib_bin_same_name_documents_lib() {
         .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
@@ -451,7 +451,7 @@ fn doc_lib_bin_same_name_documents_lib_when_requested() {
         .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
@@ -497,7 +497,7 @@ This is a known bug where multiple crates with the same name use
 the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [CHECKING] foo v0.0.1 ([CWD])
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
@@ -543,7 +543,7 @@ This is a known bug where multiple crates with the same name use
 the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [CHECKING] foo v0.0.1 ([CWD])
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
@@ -589,7 +589,7 @@ fn doc_lib_bin_example_same_name_documents_named_example_when_requested() {
             "\
 [CHECKING] foo v0.0.1 ([CWD])
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/ex1/index.html
 ",
         )
@@ -644,7 +644,7 @@ fn doc_lib_bin_example_same_name_documents_examples_when_requested() {
             "\
 [CHECKING] foo v0.0.1 ([CWD])
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/ex1/index.html
 [GENERATED] [CWD]/target/doc/ex2/index.html
 ",
@@ -703,7 +703,7 @@ fn doc_dash_p() {
 [..] b v0.0.1 ([CWD]/b)
 [..] b v0.0.1 ([CWD]/b)
 [DOCUMENTING] a v0.0.1 ([CWD]/a)
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/a/index.html
 ",
         )
@@ -731,7 +731,7 @@ fn doc_all_exclude() {
         .with_stderr(
             "\
 [DOCUMENTING] bar v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/bar/index.html
 ",
         )
@@ -759,7 +759,7 @@ fn doc_all_exclude_glob() {
         .with_stderr(
             "\
 [DOCUMENTING] bar v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/bar/index.html
 ",
         )
@@ -947,7 +947,7 @@ fn doc_release() {
             "\
 [DOCUMENTING] foo v0.0.1 ([..])
 [RUNNING] `rustdoc [..] src/lib.rs [..]`
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
@@ -1235,7 +1235,7 @@ fn doc_virtual_manifest_one_project() {
         .with_stderr(
             "\
 [DOCUMENTING] bar v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/bar/index.html
 ",
         )
@@ -1263,7 +1263,7 @@ fn doc_virtual_manifest_glob() {
         .with_stderr(
             "\
 [DOCUMENTING] baz v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/baz/index.html
 ",
         )
@@ -1675,7 +1675,7 @@ fn doc_cap_lints() {
 [DOCUMENTING] a v0.5.0 ([..])
 [CHECKING] a v0.5.0 ([..])
 [DOCUMENTING] foo v0.0.1 ([..])
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 [GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
@@ -1941,7 +1941,7 @@ fn bin_private_items() {
         .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
@@ -2002,7 +2002,7 @@ fn bin_private_items_deps() {
 [DOCUMENTING] bar v0.0.1 ([..])
 [CHECKING] bar v0.0.1 ([..])
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )

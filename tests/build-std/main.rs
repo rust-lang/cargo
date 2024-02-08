@@ -114,7 +114,7 @@ fn basic() {
         // There have been multiple bugs where every build triggers and update.
         .with_stderr(
             "[COMPILING] foo v0.0.1 [..]\n\
-             [FINISHED] dev [..]",
+             [FINISHED] `dev` profile [..]",
         )
         .run();
     p.cargo("run").build_std().target_host().run();
@@ -262,7 +262,7 @@ fn remap_path_scope() {
         .with_status(101)
         .with_stderr_contains(
             "\
-[FINISHED] release [optimized + debuginfo] [..]
+[FINISHED] `release` profile [optimized + debuginfo] [..]
 [RUNNING] [..]
 [..]thread '[..]' panicked at [..]src/main.rs:3:[..]",
         )

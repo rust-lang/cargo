@@ -464,7 +464,7 @@ fn cross_tests() {
         .with_stderr(&format!(
             "\
 [COMPILING] foo v0.0.0 ([CWD])
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] [..] (target/{triple}/debug/deps/foo-[..][EXE])
 [RUNNING] [..] (target/{triple}/debug/deps/bar-[..][EXE])",
             triple = target
@@ -494,7 +494,7 @@ fn no_cross_doctests() {
 
     let host_output = "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] [..] (target/debug/deps/foo-[..][EXE])
 [DOCTEST] foo
 ";
@@ -512,7 +512,7 @@ fn no_cross_doctests() {
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo [..]--crate-type lib[..]
 [RUNNING] `rustc --crate-name foo [..]--test[..]
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[CWD]/target/{target}/debug/deps/foo-[..][EXE]`
 [DOCTEST] foo
 [RUNNING] `rustdoc [..]--target {target}[..]`
@@ -545,7 +545,7 @@ test result: ok. 1 passed[..]
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo [..]
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [NOTE] skipping doctests for foo v0.0.1 ([ROOT]/foo) (lib), \
 cross-compilation doctests are not yet supported
 See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#doctest-xcompile \
@@ -565,7 +565,7 @@ for more information.
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo [..]--test[..]
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[CWD]/target/{triple}/debug/deps/foo-[..][EXE]`
 [NOTE] skipping doctests for foo v0.0.1 ([ROOT]/foo) (lib), \
 cross-compilation doctests are not yet supported
@@ -657,7 +657,7 @@ fn cross_with_a_build_script() {
 [RUNNING] `rustc [..] build.rs [..] --out-dir [CWD]/target/debug/build/foo-[..]`
 [RUNNING] `[CWD]/target/debug/build/foo-[..]/build-script-build`
 [RUNNING] `rustc [..] src/main.rs [..] --target {target} [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
             target = target,
         ))
@@ -902,7 +902,7 @@ fn plugin_build_script_right_arch() {
 [RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `[..]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -974,7 +974,7 @@ fn build_script_with_platform_specific_dependencies() {
 [RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `[CWD]/target/debug/build/foo-[..]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..] --target {target} [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
             target = target
         ))
@@ -1209,7 +1209,7 @@ fn cross_test_dylib() {
             "\
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] [..] (target/{arch}/debug/deps/foo-[..][EXE])
 [RUNNING] [..] (target/{arch}/debug/deps/test-[..][EXE])",
             arch = cross_compile::alternate()

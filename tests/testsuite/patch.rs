@@ -58,7 +58,7 @@ fn replace() {
 [CHECKING] bar v0.1.0 ([CWD]/bar)
 [CHECKING] baz v0.1.0
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -101,7 +101,7 @@ fn from_config() {
 [UPDATING] `dummy-registry` index
 [CHECKING] bar v0.1.1 ([..])
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -142,7 +142,7 @@ fn from_config_relative() {
 [UPDATING] `dummy-registry` index
 [CHECKING] bar v0.1.1 ([..])
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -186,7 +186,7 @@ fn from_config_precedence() {
 [UPDATING] `dummy-registry` index
 [CHECKING] bar v0.1.1 ([..])
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -226,7 +226,7 @@ fn nonexistent() {
 [UPDATING] `dummy-registry` index
 [CHECKING] bar v0.1.0 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -273,7 +273,7 @@ fn patch_git() {
 [UPDATING] git repository `file://[..]`
 [CHECKING] bar v0.1.0 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -321,7 +321,7 @@ fn patch_to_git() {
 [UPDATING] `dummy-registry` index
 [CHECKING] bar v0.1.0 (file://[..])
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -366,7 +366,7 @@ version. [..]
 [DOWNLOADED] bar v0.1.0 [..]
 [CHECKING] bar v0.1.0
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -442,7 +442,7 @@ version. [..]
 [DOWNLOADED] bar v0.1.0 [..]
 [CHECKING] bar v0.1.0
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -479,7 +479,7 @@ fn prefer_patch_version() {
 [UPDATING] `dummy-registry` index
 [CHECKING] bar v0.1.1 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -539,7 +539,7 @@ version. [..]
 [DOWNLOADED] bar v0.1.0 [..]
 [CHECKING] bar v0.1.0
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -612,7 +612,7 @@ version. [..]
 [DOWNLOADED] bar v0.1.0 [..]
 [CHECKING] bar v0.1.0
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -660,7 +660,7 @@ fn add_patch() {
 [DOWNLOADED] bar v0.1.0 [..]
 [CHECKING] bar v0.1.0
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -687,7 +687,7 @@ fn add_patch() {
             "\
 [CHECKING] bar v0.1.0 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -724,7 +724,7 @@ fn add_patch_from_config() {
 [DOWNLOADED] bar v0.1.0 [..]
 [CHECKING] bar v0.1.0
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -743,7 +743,7 @@ fn add_patch_from_config() {
             "\
 [CHECKING] bar v0.1.0 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -780,7 +780,7 @@ fn add_ignored_patch() {
 [DOWNLOADED] bar v0.1.0 [..]
 [CHECKING] bar v0.1.0
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -810,7 +810,7 @@ Check that [..]
 with the [..]
 what is [..]
 version. [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
     p.cargo("check")
@@ -831,7 +831,7 @@ version. [..]
             "\
 [CHECKING] bar v0.1.1 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 ",
         )
         .run();
@@ -870,7 +870,7 @@ default-features and features will not take effect because the patch dependency 
 [UPDATING] `dummy-registry` index
 [CHECKING] bar v0.1.0 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -918,7 +918,7 @@ default-features and features will not take effect because the patch dependency 
 [UPDATING] `dummy-registry` index
 [CHECKING] bar v0.1.0 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1008,7 +1008,7 @@ fn new_minor() {
 [UPDATING] `dummy-registry` index
 [CHECKING] bar v0.1.1 [..]
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1059,7 +1059,7 @@ fn transitive_new_minor() {
 [CHECKING] baz v0.1.1 [..]
 [CHECKING] bar v0.1.0 [..]
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1096,7 +1096,7 @@ fn new_major() {
 [UPDATING] `dummy-registry` index
 [CHECKING] bar v0.2.0 [..]
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1104,7 +1104,7 @@ fn new_major() {
     Package::new("bar", "0.2.0").publish();
     p.cargo("update").run();
     p.cargo("check")
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
         .run();
 
     p.change_file(
@@ -1127,7 +1127,7 @@ fn new_major() {
 [DOWNLOADED] bar v0.2.0 [..]
 [CHECKING] bar v0.2.0
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1178,7 +1178,7 @@ fn transitive_new_major() {
 [CHECKING] baz v0.2.0 [..]
 [CHECKING] bar v0.1.0 [..]
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1235,7 +1235,7 @@ fn shared_by_transitive() {
 [CHECKING] baz v0.1.2 [..]
 [CHECKING] bar v0.1.0 [..]
 [CHECKING] foo v0.1.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();

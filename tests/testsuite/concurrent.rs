@@ -434,7 +434,7 @@ fn debug_release_ok() {
         .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run_output(&a);
@@ -442,7 +442,7 @@ fn debug_release_ok() {
         .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 [..]
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 ",
         )
         .run_output(&b);

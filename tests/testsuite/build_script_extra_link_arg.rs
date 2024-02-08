@@ -266,7 +266,7 @@ fn link_arg_transitive_not_allowed() {
 [RUNNING] `rustc --crate-name bar [..]
 [COMPILING] foo v0.1.0 [..]
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 ",
         )
         .with_stderr_does_not_contain("--bogus")
