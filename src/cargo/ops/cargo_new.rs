@@ -844,11 +844,24 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
                 }
 
                 // Try to add the new package to the workspace members.
-                update_manifest_with_new_member(
+                if update_manifest_with_new_member(
                     &root_manifest_path,
                     &mut workspace_document,
                     &display_path,
-                )?;
+                )? {
+                    config.shell().status(
+                        "Adding",
+                        format!(
+                            "`{}` as member of workspace at `{}`",
+                            PathBuf::from(&display_path)
+                                .file_name()
+                                .unwrap()
+                                .to_str()
+                                .unwrap(),
+                            root_manifest_path.parent().unwrap().display()
+                        ),
+                    )?
+                }
             }
         }
     }
@@ -965,7 +978,7 @@ fn update_manifest_with_new_member(
     root_manifest_path: &Path,
     workspace_document: &mut toml_edit::Document,
     display_path: &str,
-) -> CargoResult<()> {
+) -> CargoResult<bool> {
     // If the members element already exist, check if one of the patterns
     // in the array already includes the new package's relative path.
     // - Add the relative path if the members don't match the new package's path.
@@ -983,7 +996,7 @@ fn update_manifest_with_new_member(
                     .with_context(|| format!("cannot build glob pattern from `{}`", pat))?;
 
                 if pattern.matches(&display_path) {
-                    return Ok(());
+                    return Ok(false);
                 }
             }
 
@@ -1003,7 +1016,8 @@ fn update_manifest_with_new_member(
     write_atomic(
         &root_manifest_path,
         workspace_document.to_string().to_string().as_bytes(),
-    )
+    )?;
+    Ok(true)
 }
 
 fn get_display_path(root_manifest_path: &Path, package_path: &Path) -> CargoResult<String> {
