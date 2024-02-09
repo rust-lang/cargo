@@ -316,7 +316,7 @@ fn features_are_unified_among_lib_and_bin_dep_of_same_target() {
 [COMPILING] d2 v0.0.1 ([CWD]/d2)
 [COMPILING] d1 v0.0.1 ([CWD]/d1)
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -568,7 +568,9 @@ fn build_script_with_bin_artifacts() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_contains("[COMPILING] foo [..]")
         .with_stderr_contains("[COMPILING] bar v0.5.0 ([CWD]/bar)")
-        .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr_contains(
+            "[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
+        )
         .run();
 
     let build_script_output = build_script_output_string(&p, "foo");
@@ -752,7 +754,7 @@ fn build_script_with_selected_dashed_bin_artifact_and_lib_true() {
             "\
 [COMPILING] bar-baz v0.5.0 ([CWD]/bar)
 [COMPILING] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
 
@@ -849,7 +851,7 @@ fn lib_with_selected_dashed_bin_artifact_and_lib_true() {
             "\
 [COMPILING] bar-baz v0.5.0 ([CWD]/bar)
 [COMPILING] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
 
@@ -895,7 +897,9 @@ fn allow_artifact_and_no_artifact_dep_to_same_package_within_different_dep_categ
     p.cargo("test -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_contains("[COMPILING] bar v0.5.0 ([CWD]/bar)")
-        .with_stderr_contains("[FINISHED] test [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr_contains(
+            "[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]",
+        )
         .run();
 }
 
@@ -1229,7 +1233,7 @@ fn no_cross_doctests_works_with_artifacts() {
             "\
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] [..] (target/{triple}/debug/deps/foo-[..][EXE])
 [DOCTEST] foo
 ",
@@ -1251,7 +1255,7 @@ fn no_cross_doctests_works_with_artifacts() {
 [RUNNING] `rustc --crate-name bar bar/src/main.rs [..]--target {triple} [..]
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo [..]
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]",
             triple = target
         ))
         .run();
@@ -1268,7 +1272,7 @@ fn no_cross_doctests_works_with_artifacts() {
             "[FRESH] bar v0.5.0 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo [..]--test[..]
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[CWD]/target/{triple}/debug/deps/foo-[..][EXE]`",
             triple = target
         ))
@@ -1702,7 +1706,7 @@ fn allow_artifact_and_non_artifact_dependency_to_same_crate_if_these_are_not_the
             "\
 [COMPILING] bar [..]
 [COMPILING] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1737,7 +1741,7 @@ fn prevent_no_lib_warning_with_artifact_dependencies() {
             "\
             [COMPILING] bar v0.5.0 ([CWD]/bar)\n\
             [CHECKING] foo v0.0.0 ([CWD])\n\
-            [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+            [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
 }
@@ -1771,7 +1775,7 @@ fn show_no_lib_warning_with_artifact_dependencies_that_have_no_lib_but_lib_true(
         .with_stderr_contains("[WARNING] foo v0.0.0 ([CWD]) ignoring invalid dependency `bar` which is missing a lib target")
         .with_stderr_contains("[COMPILING] bar v0.5.0 ([CWD]/bar)")
         .with_stderr_contains("[CHECKING] foo [..]")
-        .with_stderr_contains("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr_contains("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
         .run();
 }
 
@@ -1977,7 +1981,7 @@ fn env_vars_and_build_products_for_various_build_targets() {
             "\
 [COMPILING] bar [..]
 [COMPILING] foo [..]
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] unittests [..]
 [RUNNING] tests/main.rs [..]
 [DOCTEST] foo
@@ -2151,7 +2155,7 @@ fn doc_lib_true() {
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [DOCUMENTING] bar v0.0.1 ([CWD]/bar)
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
@@ -2230,7 +2234,7 @@ fn rustdoc_works_on_libs_with_artifacts_and_lib_false() {
             "\
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/foo/index.html
 ",
         )
@@ -2433,7 +2437,7 @@ fn calc_bin_artifact_fingerprint() {
             "\
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [CHECKING] foo v0.1.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -2450,7 +2454,7 @@ fn calc_bin_artifact_fingerprint() {
 [DIRTY] foo v0.1.0 ([CWD]): the dependency bar was rebuilt
 [CHECKING] foo v0.1.0 ([CWD])
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -2462,7 +2466,7 @@ fn calc_bin_artifact_fingerprint() {
             "\
 [FRESH] bar v0.5.0 ([CWD]/bar)
 [FRESH] foo v0.1.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -2516,7 +2520,7 @@ fn with_target_and_optional() {
 [RUNNING] `rustc --crate-name d1 [..]--crate-type bin[..]
 [CHECKING] foo v0.0.1 [..]
 [RUNNING] `rustc --crate-name foo [..]--cfg[..]d1[..]
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 ",
         )
         .run();
@@ -2567,7 +2571,7 @@ fn with_assumed_host_target_and_optional_build_dep() {
 [RUNNING] `rustc --crate-name d1 [..]--crate-type bin[..]
 [RUNNING] `[CWD]/target/debug/build/foo-[..]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]--cfg[..]d1[..]
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 ",
         )
         .run();
@@ -2690,7 +2694,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep() {
 [COMPILING] a v0.1.0 ([CWD]/a)
 [COMPILING] bar v0.1.0 ([CWD]/bar)
 [COMPILING] foo v0.1.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -2790,7 +2794,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_lib() {
 [COMPILING] a v0.1.0 ([CWD]/a)
 [COMPILING] bar v0.1.0 ([CWD]/bar)
 [COMPILING] foo v0.1.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -2915,7 +2919,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_and_proc_macro() {
 [COMPILING] c v0.1.0 ([CWD]/c)
 [COMPILING] bar v0.1.0 ([CWD]/bar)
 [COMPILING] foo v0.1.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -2974,7 +2978,7 @@ fn same_target_artifact_dep_sharing() {
 [COMPILING] a v0.1.0 ([CWD]/a)
 [COMPILING] bar v0.1.0 ([CWD]/bar)
 [COMPILING] foo v0.1.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();

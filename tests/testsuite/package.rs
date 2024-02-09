@@ -39,7 +39,7 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
@@ -63,7 +63,7 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
@@ -90,7 +90,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
@@ -117,7 +117,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
@@ -144,7 +144,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
@@ -257,7 +257,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
@@ -728,7 +728,7 @@ fn ignore_nested() {
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
@@ -750,7 +750,7 @@ src/main.rs
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
@@ -806,7 +806,7 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] 5 files, [..] ([..] compressed)
 ",
         )
@@ -2540,14 +2540,14 @@ See [..]
 [PACKAGING] bar v0.0.1 ([CWD]/bar)
 [VERIFYING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] bar v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
@@ -2592,7 +2592,7 @@ fn workspace_noconflict_readme() {
 [PACKAGING] bar v0.0.1 ([CWD]/bar)
 [VERIFYING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] bar v0.0.1 ([CWD]/[..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
@@ -2635,7 +2635,7 @@ warning: readme `../README.md` appears to be a path outside of the package, but 
 [PACKAGING] bar v0.0.1 ([CWD]/bar)
 [VERIFYING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] bar v0.0.1 ([CWD]/[..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
@@ -3073,7 +3073,7 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
@@ -3097,7 +3097,7 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
@@ -3139,7 +3139,7 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
@@ -3163,7 +3163,7 @@ See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
@@ -3200,7 +3200,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
    Packaging foo v0.0.0 ([CWD])
    Verifying foo v0.0.0 ([CWD])
    Compiling foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
-    Finished dev [unoptimized + debuginfo] target(s) in [..]s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in [..]s
     Packaged 4 files, [..]B ([..]B compressed)
 ",
         )

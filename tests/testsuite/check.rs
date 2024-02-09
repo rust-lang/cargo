@@ -302,7 +302,7 @@ fn dylib_check_preserves_build_cache() {
         .with_stderr(
             "\
 [..]Compiling foo v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -310,7 +310,7 @@ fn dylib_check_preserves_build_cache() {
     p.cargo("check").run();
 
     p.cargo("build")
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
         .run();
 }
 
@@ -438,7 +438,7 @@ fn check_all_exclude() {
         .with_stderr(
             "\
 [CHECKING] bar v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -465,7 +465,7 @@ fn check_all_exclude_glob() {
         .with_stderr(
             "\
 [CHECKING] bar v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -514,7 +514,7 @@ fn check_virtual_manifest_one_project() {
         .with_stderr(
             "\
 [CHECKING] bar v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -541,7 +541,7 @@ fn check_virtual_manifest_glob() {
         .with_stderr(
             "\
 [CHECKING] baz v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -556,7 +556,7 @@ fn exclude_warns_on_non_existing_package() {
             "\
 [WARNING] excluded package(s) `bar` not found in workspace `[CWD]`
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1049,7 +1049,7 @@ fn warn_manifest_package_and_project() {
             "\
 [WARNING] manifest at `[CWD]` contains both `project` and `package`, this could become a hard error in the future
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1100,7 +1100,7 @@ fn git_manifest_package_and_project() {
 [UPDATING] git repository `[..]`
 [CHECKING] bar v0.0.1 ([..])
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1125,7 +1125,7 @@ fn warn_manifest_with_project() {
             "\
 [WARNING] manifest at `[CWD]` contains `[project]` instead of `[package]`, this could become a hard error in the future
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1172,7 +1172,7 @@ fn git_manifest_with_project() {
 [UPDATING] git repository `[..]`
 [CHECKING] bar v0.0.1 ([..])
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1492,7 +1492,7 @@ fn check_unused_manifest_keys() {
 [CHECKING] [..]
 [CHECKING] [..]
 [CHECKING] bar v0.2.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1515,7 +1515,7 @@ fn versionless_package() {
         .with_stderr(
             "\
 [CHECKING] foo v0.0.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1556,7 +1556,7 @@ fn pkgid_querystring_works() {
         .with_stderr(
             "\
 [COMPILING] gitdep v1.0.0 (file:///[..]/gitdep?branch=master#[..])
-[FINISHED] dev [..]",
+[FINISHED] `dev` profile [..]",
         )
         .run();
 }

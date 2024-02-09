@@ -10,7 +10,7 @@ fn build_example() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name example1 [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -24,7 +24,7 @@ fn build_bin() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name bin1 [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -45,7 +45,7 @@ fn build_bench() {
 [RUNNING] `rustc --crate-name [..]`
 [RUNNING] `rustc --crate-name [..]`
 [RUNNING] `rustc --crate-name [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -66,7 +66,7 @@ fn build_test() {
 [RUNNING] `rustc --crate-name [..]`
 [RUNNING] `rustc --crate-name [..]`
 [RUNNING] `rustc --crate-name [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -80,7 +80,7 @@ fn check_example() {
             "\
 [CHECKING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name example1 [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -94,7 +94,7 @@ fn check_bin() {
             "\
 [CHECKING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name bin1 [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -108,7 +108,7 @@ fn check_bench() {
             "\
 [CHECKING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name bench1 [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -122,7 +122,7 @@ fn check_test() {
             "\
 [CHECKING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name test1 [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -136,7 +136,7 @@ fn doc_bin() {
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [RUNNING] `rustdoc --crate-type bin --crate-name bin1 [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/bin1/index.html
 ",
         )
@@ -152,7 +152,7 @@ fn fix_example() {
 [CHECKING] foo v0.0.1 ([CWD])
 [RUNNING] `[..] rustc --crate-name example1 [..]`
 [FIXING] examples/example1.rs
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -167,7 +167,7 @@ fn fix_bin() {
 [CHECKING] foo v0.0.1 ([CWD])
 [RUNNING] `[..] rustc --crate-name bin1 [..]`
 [FIXING] src/bin/bin1.rs
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -182,7 +182,7 @@ fn fix_bench() {
 [CHECKING] foo v0.0.1 ([CWD])
 [RUNNING] `[..] rustc --crate-name bench1 [..]`
 [FIXING] benches/bench1.rs
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -197,7 +197,7 @@ fn fix_test() {
 [CHECKING] foo v0.0.1 ([CWD])
 [RUNNING] `[..] rustc --crate-name test1 [..]`
 [FIXING] tests/test1.rs
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -225,7 +225,7 @@ fn test_example() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name example1 [..]`
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] [..]example1[..]
 ",
         )
@@ -240,7 +240,7 @@ fn test_bin() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name bin1 [..]`
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] [..]bin1[..]
 ",
         )
@@ -262,7 +262,7 @@ fn test_bench() {
 [RUNNING] `rustc --crate-name [..]`
 [RUNNING] `rustc --crate-name [..]`
 [RUNNING] `rustc --crate-name [..]`
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] [..]bench1[..]
 ",
         )
@@ -284,7 +284,7 @@ fn test_test() {
 [RUNNING] `rustc --crate-name [..]`
 [RUNNING] `rustc --crate-name [..]`
 [RUNNING] `rustc --crate-name [..]`
-[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] [..]test1[..]
 ",
         )
@@ -299,7 +299,7 @@ fn bench_example() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name example1 [..]`
-[FINISHED] bench [optimized] target(s) in [..]
+[FINISHED] `bench` profile [optimized] target(s) in [..]
 [RUNNING] `[..]example1[..] --bench`
 ",
         )
@@ -314,7 +314,7 @@ fn bench_bin() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name bin1 [..]`
-[FINISHED] bench [optimized] target(s) in [..]
+[FINISHED] `bench` profile [optimized] target(s) in [..]
 [RUNNING] `[..]bin1[..] --bench`
 ",
         )
@@ -336,7 +336,7 @@ fn bench_bench() {
 [RUNNING] `rustc --crate-name [..]`
 [RUNNING] `rustc --crate-name [..]`
 [RUNNING] `rustc --crate-name [..]`
-[FINISHED] bench [optimized] target(s) in [..]
+[FINISHED] `bench` profile [optimized] target(s) in [..]
 [RUNNING] `[..]bench1[..] --bench`
 ",
         )
@@ -358,7 +358,7 @@ fn bench_test() {
 [RUNNING] `rustc --crate-name [..]`
 [RUNNING] `rustc --crate-name [..]`
 [RUNNING] `rustc --crate-name [..]`
-[FINISHED] bench [optimized] target(s) in [..]
+[FINISHED] `bench` profile [optimized] target(s) in [..]
 [RUNNING] `[..]test1[..] --bench`
 ",
         )
@@ -373,7 +373,7 @@ fn install_example() {
             "\
 [INSTALLING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [..]/home/.cargo/bin/example1[EXE]
 [INSTALLED] package `foo v0.0.1 ([CWD])` (executable `example1[EXE]`)
 [WARNING] be sure to add [..]
@@ -390,7 +390,7 @@ fn install_bin() {
             "\
 [INSTALLING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [..]/home/.cargo/bin/bin1[EXE]
 [INSTALLED] package `foo v0.0.1 ([CWD])` (executable `bin1[EXE]`)
 [WARNING] be sure to add [..]
@@ -407,7 +407,7 @@ fn rustdoc_example() {
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [RUNNING] `rustdoc --crate-type bin --crate-name example1 [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/example1/index.html
 ",
         )
@@ -422,7 +422,7 @@ fn rustdoc_bin() {
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [RUNNING] `rustdoc --crate-type bin --crate-name bin1 [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/bin1/index.html
 ",
         )
@@ -437,7 +437,7 @@ fn rustdoc_bench() {
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [RUNNING] `rustdoc --crate-type bin --crate-name bench1 [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/bench1/index.html
 ",
         )
@@ -452,7 +452,7 @@ fn rustdoc_test() {
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [RUNNING] `rustdoc --crate-type bin --crate-name test1 [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/test1/index.html
 ",
         )
@@ -467,7 +467,7 @@ fn rustc_example() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name example1 [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -481,7 +481,7 @@ fn rustc_bin() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name bin1 [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -502,7 +502,7 @@ fn rustc_bench() {
 [RUNNING] `rustc --crate-name [..]`
 [RUNNING] `rustc --crate-name [..]`
 [RUNNING] `rustc --crate-name [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -523,7 +523,7 @@ fn rustc_test() {
 [RUNNING] `rustc --crate-name [..]`
 [RUNNING] `rustc --crate-name [..]`
 [RUNNING] `rustc --crate-name [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();

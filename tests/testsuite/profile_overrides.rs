@@ -35,7 +35,7 @@ fn profile_override_basic() {
 [RUNNING] `rustc --crate-name bar [..] -C opt-level=3 [..]`
 [CHECKING] foo [..]
 [RUNNING] `rustc --crate-name foo [..] -C opt-level=1 [..]`
-[FINISHED] dev [optimized + debuginfo] target(s) in [..]",
+[FINISHED] `dev` profile [optimized + debuginfo] target(s) in [..]",
         )
         .run();
 }
@@ -226,7 +226,7 @@ fn profile_override_hierarchy() {
 [RUNNING] `rustc --crate-name m2 m2/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=2 [..]
 [COMPILING] m1 [..]
 [RUNNING] `rustc --crate-name m1 m1/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=1 [..]
-[FINISHED] dev [unoptimized + debuginfo] [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] [..]
 ",
         )
         .run();

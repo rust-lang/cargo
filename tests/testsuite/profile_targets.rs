@@ -97,7 +97,7 @@ fn profile_selection_build() {
 [foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
-[FINISHED] dev [unoptimized + debuginfo] [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] [..]
 "
         )
         .with_stderr_does_not_contain("[..] -C debuginfo=0[..]")
@@ -108,7 +108,7 @@ fn profile_selection_build() {
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] [..]
 ",
         )
         .run();
@@ -131,7 +131,7 @@ fn profile_selection_build_release() {
 [foo 0.0.1] foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
 [RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
-[FINISHED] release [optimized] [..]
+[FINISHED] `release` profile [optimized] [..]
 ").run();
     p.cargo("build --release -vv")
         .with_stderr_unordered(
@@ -139,7 +139,7 @@ fn profile_selection_build_release() {
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
-[FINISHED] release [optimized] [..]
+[FINISHED] `release` profile [optimized] [..]
 ",
         )
         .run();
@@ -198,7 +198,7 @@ fn profile_selection_build_all_targets() {
 [RUNNING] `[..] rustc --crate-name bench1 benches/bench1.rs [..]--emit=[..]link[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]`
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]`
 [RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]`
-[FINISHED] dev [unoptimized + debuginfo] [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] [..]
 "
         )
         .with_stderr_does_not_contain("[..] -C debuginfo=0[..]")
@@ -209,7 +209,7 @@ fn profile_selection_build_all_targets() {
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] [..]
 ",
         )
         .run();
@@ -267,7 +267,7 @@ fn profile_selection_build_all_targets_release() {
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=2 --test [..]`
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]`
 [RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]`
-[FINISHED] release [optimized] [..]
+[FINISHED] `release` profile [optimized] [..]
 ").run();
     p.cargo("build --all-targets --release -vv")
         .with_stderr_unordered(
@@ -275,7 +275,7 @@ fn profile_selection_build_all_targets_release() {
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
-[FINISHED] release [optimized] [..]
+[FINISHED] `release` profile [optimized] [..]
 ",
         )
         .run();
@@ -323,7 +323,7 @@ fn profile_selection_test() {
 [RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=3 -C debuginfo=2 [..]
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]link[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C panic=abort[..]-C codegen-units=3 -C debuginfo=2 [..]
-[FINISHED] test [unoptimized + debuginfo] [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] [..]
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/test1-[..]`
@@ -336,7 +336,7 @@ fn profile_selection_test() {
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
-[FINISHED] test [unoptimized + debuginfo] [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] [..]
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/test1-[..]`
@@ -390,7 +390,7 @@ fn profile_selection_test_release() {
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=2 --test [..]
 [RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=[..]link -C opt-level=3[..]-C codegen-units=2 [..]
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
-[FINISHED] release [optimized] [..]
+[FINISHED] `release` profile [optimized] [..]
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/test1-[..]`
@@ -403,7 +403,7 @@ fn profile_selection_test_release() {
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
-[FINISHED] release [optimized] [..]
+[FINISHED] `release` profile [optimized] [..]
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/test1-[..]`
@@ -455,7 +455,7 @@ fn profile_selection_bench() {
 [RUNNING] `[..] rustc --crate-name bench1 benches/bench1.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=4 --test [..]
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=4 --test [..]
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=4 [..]
-[FINISHED] bench [optimized] [..]
+[FINISHED] `bench` profile [optimized] [..]
 [RUNNING] `[..]/deps/foo-[..] --bench`
 [RUNNING] `[..]/deps/foo-[..] --bench`
 [RUNNING] `[..]/deps/bench1-[..] --bench`
@@ -466,7 +466,7 @@ fn profile_selection_bench() {
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
-[FINISHED] bench [optimized] [..]
+[FINISHED] `bench` profile [optimized] [..]
 [RUNNING] `[..]/deps/foo-[..] --bench`
 [RUNNING] `[..]/deps/foo-[..] --bench`
 [RUNNING] `[..]/deps/bench1-[..] --bench`
@@ -522,7 +522,7 @@ fn profile_selection_check_all_targets() {
 [RUNNING] `[..] rustc --crate-name bench1 benches/bench1.rs [..]--emit=[..]metadata[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]
 [RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=[..]metadata -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]metadata -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
-[FINISHED] dev [unoptimized + debuginfo] [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] [..]
 ").run();
     // Starting with Rust 1.27, rustc emits `rmeta` files for bins, so
     // everything should be completely fresh. Previously, bins were being
@@ -534,7 +534,7 @@ fn profile_selection_check_all_targets() {
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
-[FINISHED] dev [unoptimized + debuginfo] [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] [..]
 ",
         )
         .run();
@@ -567,7 +567,7 @@ fn profile_selection_check_all_targets_release() {
 [RUNNING] `[..] rustc --crate-name bench1 benches/bench1.rs [..]--emit=[..]metadata -C opt-level=3[..]-C codegen-units=2 --test [..]
 [RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=[..]metadata -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]metadata -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
-[FINISHED] release [optimized] [..]
+[FINISHED] `release` profile [optimized] [..]
 ").run();
 
     p.cargo("check --all-targets --release -vv")
@@ -576,7 +576,7 @@ fn profile_selection_check_all_targets_release() {
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
-[FINISHED] release [optimized] [..]
+[FINISHED] `release` profile [optimized] [..]
 ",
         )
         .run();
@@ -623,7 +623,7 @@ fn profile_selection_check_all_targets_test() {
 [RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
 [RUNNING] `[..] rustc --crate-name bench1 benches/bench1.rs [..]--emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
 [RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
-[FINISHED] test [unoptimized + debuginfo] [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] [..]
 ").run();
 
     p.cargo("check --all-targets --profile=test -vv")
@@ -632,7 +632,7 @@ fn profile_selection_check_all_targets_test() {
 [FRESH] bar [..]
 [FRESH] bdep [..]
 [FRESH] foo [..]
-[FINISHED] test [unoptimized + debuginfo] [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] [..]
 ",
         )
         .run();
@@ -666,7 +666,7 @@ fn profile_selection_doc() {
 [foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [DOCUMENTING] foo [..]
 [RUNNING] `rustdoc [..]--crate-name foo src/lib.rs [..]
-[FINISHED] dev [unoptimized + debuginfo] [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] [..]
 [GENERATED] [CWD]/target/doc/foo/index.html
 ").run();
 }

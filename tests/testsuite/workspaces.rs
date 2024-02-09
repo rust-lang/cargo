@@ -107,14 +107,14 @@ fn non_virtual_default_members_build_other_member() {
     p.cargo("check")
         .with_stderr(
             "[CHECKING] baz v0.1.0 ([..])\n\
-             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+             [..] Finished `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
         )
         .run();
 
     p.cargo("check --manifest-path bar/Cargo.toml")
         .with_stderr(
             "[CHECKING] bar v0.1.0 ([..])\n\
-             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+             [..] Finished `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
         )
         .run();
 }
@@ -143,7 +143,7 @@ fn non_virtual_default_members_build_root_project() {
     p.cargo("check")
         .with_stderr(
             "[CHECKING] foo v0.1.0 ([..])\n\
-             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+             [..] Finished `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
         )
         .run();
 }
@@ -668,7 +668,7 @@ fn share_dependencies() {
 [DOWNLOADED] dep1 v0.1.3 ([..])
 [CHECKING] dep1 v0.1.3
 [CHECKING] foo v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -769,7 +769,7 @@ fn lock_works_for_everyone() {
 [DOWNLOADED] dep2 v0.1.0 ([..])
 [CHECKING] dep2 v0.1.0
 [CHECKING] foo v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -782,7 +782,7 @@ fn lock_works_for_everyone() {
 [DOWNLOADED] dep1 v0.1.0 ([..])
 [CHECKING] dep1 v0.1.0
 [CHECKING] bar v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -937,7 +937,7 @@ fn virtual_default_members_build_other_member() {
     p.cargo("check --manifest-path bar/Cargo.toml")
         .with_stderr(
             "[CHECKING] bar v0.1.0 ([..])\n\
-             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+             [..] Finished `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
         )
         .run();
 }
@@ -1982,7 +1982,7 @@ fn dep_used_with_separate_features() {
 [..]Compiling feat_lib v0.1.0 ([..])
 [..]Compiling caller1 v0.1.0 ([..])
 [..]Compiling caller2 v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1999,7 +1999,7 @@ fn dep_used_with_separate_features() {
             "\
 [..]Compiling feat_lib v0.1.0 ([..])
 [..]Compiling caller1 v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -2008,15 +2008,15 @@ fn dep_used_with_separate_features() {
     // features are being built separately. Should not rebuild anything.
     p.cargo("build")
         .cwd("caller2")
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
         .run();
     p.cargo("build")
         .cwd("caller1")
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
         .run();
     p.cargo("build")
         .cwd("caller2")
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
         .run();
 }
 

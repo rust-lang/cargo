@@ -15,7 +15,7 @@ fn simple() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`",
         )
         .with_stdout("hello")
@@ -120,7 +120,7 @@ fn verbose_arg_and_quiet_config() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`",
         )
         .with_stdout("hello")
@@ -161,7 +161,7 @@ fn verbose_config_alone() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`",
         )
         .with_stdout("hello")
@@ -240,7 +240,7 @@ fn exit_code() {
     let mut output = String::from(
         "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[..]`
 ",
     );
@@ -262,7 +262,7 @@ fn exit_code_verbose() {
         "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target[..]`
 ",
     );
@@ -336,7 +336,7 @@ fn specify_name() {
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..] src/lib.rs [..]`
 [RUNNING] `rustc [..] src/bin/a.rs [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/a[EXE]`",
         )
         .with_stdout("hello a.rs")
@@ -347,7 +347,7 @@ fn specify_name() {
             "\
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc [..] src/bin/b.rs [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/b[EXE]`",
         )
         .with_stdout("hello b.rs")
@@ -421,7 +421,7 @@ fn run_example() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/examples/a[EXE]`",
         )
         .with_stdout("example")
@@ -475,7 +475,7 @@ fn run_bin_example() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/examples/bar[EXE]`",
         )
         .with_stdout("example")
@@ -558,7 +558,7 @@ fn run_example_autodiscover_2015_with_autoexamples_enabled() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/examples/a[EXE]`",
         )
         .with_stdout("example")
@@ -588,7 +588,7 @@ fn run_example_autodiscover_2018() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/examples/a[EXE]`",
         )
         .with_stdout("example")
@@ -728,7 +728,7 @@ fn one_bin_multiple_examples() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/main[EXE]`",
         )
         .with_stdout("hello main.rs")
@@ -801,7 +801,7 @@ fn example_with_release_flag() {
         -C strip=debuginfo \
         -L dependency=[CWD]/target/release/deps \
          --extern bar=[CWD]/target/release/deps/libbar-[..].rlib`
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [RUNNING] `target/release/examples/a[EXE]`
 ",
         )
@@ -830,7 +830,7 @@ fast2",
         --out-dir [CWD]/target/debug/examples \
         -L dependency=[CWD]/target/debug/deps \
          --extern bar=[CWD]/target/debug/deps/libbar-[..].rlib`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/examples/a[EXE]`
 ",
         )
@@ -915,7 +915,7 @@ fn run_with_bin_dep() {
             "\
 [WARNING] foo v0.0.1 ([CWD]) ignoring invalid dependency `bar` which is missing a lib target
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`",
         )
         .with_stdout("hello")
@@ -973,7 +973,7 @@ fn run_with_bin_deps() {
 [WARNING] foo v0.0.1 ([CWD]) ignoring invalid dependency `bar1` which is missing a lib target
 [WARNING] foo v0.0.1 ([CWD]) ignoring invalid dependency `bar2` which is missing a lib target
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo[EXE]`",
         )
         .with_stdout("hello")
@@ -1063,7 +1063,7 @@ available binaries: bar1, bar2, foo1, foo2",
 [WARNING] foo1 v0.0.1 ([CWD]/foo1) ignoring invalid dependency `bar1` which is missing a lib target
 [WARNING] foo2 v0.0.1 ([CWD]/foo2) ignoring invalid dependency `bar2` which is missing a lib target
 [COMPILING] foo1 v0.0.1 ([CWD]/foo1)
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `target/debug/foo1[EXE]`",
         )
         .with_stdout("hello")
@@ -1085,7 +1085,7 @@ fn release_works() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [RUNNING] `target/release/foo[EXE]`
 ",
         )
@@ -1108,7 +1108,7 @@ fn release_short_works() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [RUNNING] `target/release/foo[EXE]`
 ",
         )
@@ -1169,7 +1169,7 @@ fn run_from_executable_folder() {
     p.cargo("run")
         .cwd(cwd)
         .with_stderr(
-            "[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n\
+            "[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n\
              [RUNNING] `./foo[EXE]`",
         )
         .with_stdout("hello")
@@ -1469,7 +1469,7 @@ fn print_env_verbose() {
             "\
 [COMPILING] a v0.0.1 ([CWD])
 [RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] rustc --crate-name a[..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] target/debug/a[EXE]`",
         )
         .run();

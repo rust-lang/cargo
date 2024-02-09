@@ -806,9 +806,13 @@ impl<'cfg> DrainState<'cfg> {
             // `display_error` inside `handle_error`.
             Some(anyhow::Error::new(AlreadyPrintedError::new(error)))
         } else if self.queue.is_empty() && self.pending_queue.is_empty() {
+            let profile_link = cx.bcx.config.shell().err_hyperlink(
+                "https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles",
+            );
             let message = format!(
-                "{} [{}] target(s) in {}",
-                profile_name, opt_type, time_elapsed
+                "{}`{profile_name}` profile [{opt_type}]{} target(s) in {time_elapsed}",
+                profile_link.open(),
+                profile_link.close()
             );
             if !cx.bcx.build_config.build_plan {
                 // It doesn't really matter if this fails.

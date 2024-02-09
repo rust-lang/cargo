@@ -733,7 +733,7 @@ fn doctest() {
             "\
 [FRESH] bar v0.1.0 [..]
 [FRESH] foo v0.1.0 [..]
-[FINISHED] release [..]
+[FINISHED] `release` profile [..]
 [DOCTEST] foo
 [RUNNING] `rustdoc [..]-C lto[..]
 ",

@@ -133,7 +133,7 @@ fn registry_upgrade() {
 [DOWNLOADED] foo v1.0.0 (registry [..])
 [INSTALLING] foo v1.0.0
 [COMPILING] foo v1.0.0
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v1.0.0` (executable `foo[EXE]`)
 [WARNING] be sure to add [..]
@@ -163,7 +163,7 @@ fn registry_upgrade() {
 [DOWNLOADED] foo v1.0.1 (registry [..])
 [INSTALLING] foo v1.0.1
 [COMPILING] foo v1.0.1
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [REPLACING] [CWD]/home/.cargo/bin/foo[EXE]
 [REPLACED] package `foo v1.0.0` with `foo v1.0.1` (executable `foo[EXE]`)
 [WARNING] be sure to add [..]
@@ -213,7 +213,7 @@ fn upgrade_force() {
 [UPDATING] `[..]` index
 [INSTALLING] foo v1.0.0
 [COMPILING] foo v1.0.0
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [REPLACING] [..]/.cargo/bin/foo[EXE]
 [REPLACED] package `foo v1.0.0` with `foo v1.0.0` (executable `foo[EXE]`)
 [WARNING] be sure to add `[..]/.cargo/bin` to your PATH [..]
@@ -603,17 +603,17 @@ fn multiple_report() {
 [DOWNLOADED] three v1.0.0 (registry `[..]`)
 [INSTALLING] one v1.0.0
 [COMPILING] one v1.0.0
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [..]/.cargo/bin/one[EXE]
 [INSTALLED] package `one v1.0.0` (executable `one[EXE]`)
 [INSTALLING] two v1.0.0
 [COMPILING] two v1.0.0
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [..]/.cargo/bin/two[EXE]
 [INSTALLED] package `two v1.0.0` (executable `two[EXE]`)
 [INSTALLING] three v1.0.0
 [COMPILING] three v1.0.0
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [..]/.cargo/bin/three[EXE]
 [INSTALLING] [..]/.cargo/bin/x[EXE]
 [INSTALLING] [..]/.cargo/bin/y[EXE]
@@ -636,7 +636,7 @@ fn multiple_report() {
 [DOWNLOADED] three v1.0.1 (registry `[..]`)
 [INSTALLING] three v1.0.1
 [COMPILING] three v1.0.1
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [REPLACING] [..]/.cargo/bin/three[EXE]
 [REPLACING] [..]/.cargo/bin/x[EXE]
 [REPLACING] [..]/.cargo/bin/y[EXE]
@@ -661,7 +661,7 @@ fn multiple_report() {
 [UPDATING] `[..]` index
 [INSTALLING] three v1.0.1
 [COMPILING] three v1.0.1
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [..]/.cargo/bin/x[EXE]
 [INSTALLED] package `three v1.0.1` (executable `x[EXE]`)
 [WARNING] be sure to add `[..]/.cargo/bin` to your PATH [..]
@@ -674,7 +674,7 @@ fn multiple_report() {
 [UPDATING] `[..]` index
 [INSTALLING] three v1.0.1
 [COMPILING] three v1.0.1
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [..]/.cargo/bin/three[EXE]
 [INSTALLING] [..]/.cargo/bin/y[EXE]
 [REPLACING] [..]/.cargo/bin/x[EXE]
@@ -739,7 +739,7 @@ fn deletes_orphaned() {
             "\
 [INSTALLING] foo v0.2.0 [..]
 [COMPILING] foo v0.2.0 [..]
-[FINISHED] release [..]
+[FINISHED] `release` profile [..]
 [INSTALLING] [..]/.cargo/bin/ex2[EXE]
 [REPLACING] [..]/.cargo/bin/ex1[EXE]
 [REPLACING] [..]/.cargo/bin/foo[EXE]
@@ -787,7 +787,7 @@ fn already_installed_exact_does_not_update() {
 [DOWNLOADED] foo v1.0.1 (registry [..])
 [INSTALLING] foo v1.0.1
 [COMPILING] foo v1.0.1
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [REPLACING] [CWD]/home/.cargo/bin/foo[EXE]
 [REPLACED] package `foo v1.0.0` with `foo v1.0.1` (executable `foo[EXE]`)
 [WARNING] be sure to add [..]
@@ -822,7 +822,7 @@ fn already_installed_updates_yank_status_on_upgrade() {
 [DOWNLOADED] foo v1.0.1 (registry [..])
 [INSTALLING] foo v1.0.1
 [COMPILING] foo v1.0.1
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [REPLACING] [CWD]/home/.cargo/bin/foo[EXE]
 [REPLACED] package `foo v1.0.0` with `foo v1.0.1` (executable `foo[EXE]`)
 [WARNING] be sure to add [..]
@@ -848,12 +848,12 @@ fn partially_already_installed_does_one_update() {
 [DOWNLOADED] baz v1.0.0 (registry [..])
 [INSTALLING] bar v1.0.0
 [COMPILING] bar v1.0.0
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/bar[EXE]
 [INSTALLED] package `bar v1.0.0` (executable `bar[EXE]`)
 [INSTALLING] baz v1.0.0
 [COMPILING] baz v1.0.0
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/baz[EXE]
 [INSTALLED] package `baz v1.0.0` (executable `baz[EXE]`)
 [SUMMARY] Successfully installed foo, bar, baz!

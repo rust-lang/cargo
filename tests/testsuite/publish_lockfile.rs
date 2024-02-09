@@ -76,7 +76,7 @@ fn package_lockfile() {
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
@@ -145,7 +145,7 @@ src/main.rs
 [VERIFYING] foo v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc --crate-name foo src/main.rs [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] 5 files, [..] ([..] compressed)
 ",
         )
@@ -397,7 +397,7 @@ dependencies = [
 [DOWNLOADED] bar v0.1.0 (registry `[..]`)
 [COMPILING] bar v0.1.0
 [COMPILING] foo v0.1.0
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [..]/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.1.0` (executable `foo[EXE]`)
 [WARNING] be sure to add [..]
@@ -415,7 +415,7 @@ dependencies = [
 [DOWNLOADED] bar v0.1.1 (registry `[..]`)
 [COMPILING] bar v0.1.1
 [COMPILING] foo v0.1.0
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [REPLACING] [..]/.cargo/bin/foo[EXE]
 [REPLACED] package `foo v0.1.0` with `foo v0.1.0` (executable `foo[EXE]`)
 [WARNING] be sure to add [..]
@@ -469,7 +469,7 @@ src/main.rs
 [VERIFYING] foo v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc --crate-name foo src/main.rs [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] 5 files, [..] ([..] compressed)
 ",
         )
@@ -566,7 +566,7 @@ See [..]
 [DOWNLOADED] serde v0.2.0 ([..])
 [COMPILING] serde v0.2.0
 [COMPILING] bar v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] 4 files, [..]
 [WARNING] manifest has no documentation, [..]
 See [..]
@@ -574,7 +574,7 @@ See [..]
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] serde v0.2.0
 [COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] 4 files, [..]
 ",
         )

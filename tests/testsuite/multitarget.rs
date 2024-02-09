@@ -131,7 +131,7 @@ fn simple_doc_open() {
         .with_stderr(
             "\
 [DOCUMENTING] foo v1.0.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [ERROR] only one `--target` argument is supported",
         )
         .with_status(101)

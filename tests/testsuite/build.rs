@@ -1440,7 +1440,7 @@ fn cargo_default_env_metadata_env_var() {
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps \
         --extern bar=[CWD]/target/debug/deps/{prefix}bar{suffix}`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
             prefix = env::consts::DLL_PREFIX,
             suffix = env::consts::DLL_SUFFIX,
         ))
@@ -1468,7 +1468,7 @@ fn cargo_default_env_metadata_env_var() {
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps \
         --extern bar=[CWD]/target/debug/deps/{prefix}bar-[..]{suffix}`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
             prefix = env::consts::DLL_PREFIX,
             suffix = env::consts::DLL_SUFFIX,
@@ -2331,7 +2331,7 @@ fn lto_build() {
         -C opt-level=3 \
         -C lto \
         [..]
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 ",
         )
         .run();
@@ -2349,7 +2349,7 @@ fn verbose_build() {
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -2368,7 +2368,7 @@ fn verbose_release_build() {
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/release/deps`
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 ",
         )
         .run();
@@ -2387,7 +2387,7 @@ fn verbose_release_build_short() {
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/release/deps`
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 ",
         )
         .run();
@@ -2447,7 +2447,7 @@ fn verbose_release_build_deps() {
         -L dependency=[CWD]/target/release/deps \
         --extern foo=[CWD]/target/release/deps/{prefix}foo{suffix} \
         --extern foo=[CWD]/target/release/deps/libfoo.rlib`
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 ",
             prefix = env::consts::DLL_PREFIX,
             suffix = env::consts::DLL_SUFFIX
@@ -3034,7 +3034,7 @@ fn lib_with_standard_name() {
         .with_stderr(
             "\
 [COMPILING] syntax v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -3150,7 +3150,7 @@ fn freshness_ignores_excluded() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -3204,7 +3204,7 @@ fn rebuild_preserves_out_dir() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -3214,7 +3214,7 @@ fn rebuild_preserves_out_dir() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -4405,7 +4405,7 @@ fn no_warn_about_package_metadata() {
     p.cargo("build")
         .with_stderr(
             "[..] foo v0.0.1 ([..])\n\
-             [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
         )
         .run();
 }
@@ -4442,7 +4442,7 @@ fn no_warn_about_workspace_metadata() {
     p.cargo("build")
         .with_stderr(
             "[..] foo v0.0.1 ([..])\n\
-             [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
         )
         .run();
 }
@@ -4511,7 +4511,7 @@ fn build_all_workspace() {
             "\
 [COMPILING] bar v0.1.0 ([..])
 [COMPILING] foo v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -4544,7 +4544,7 @@ fn build_all_exclude() {
             "\
 [COMPILING] foo v0.1.0 ([..])
 [COMPILING] bar v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -4613,7 +4613,7 @@ fn build_all_exclude_not_found() {
 [WARNING] excluded package(s) `baz` not found in workspace [..]
 [COMPILING] foo v0.1.0 ([..])
 [COMPILING] bar v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -4646,7 +4646,7 @@ fn build_all_exclude_glob() {
             "\
 [COMPILING] foo v0.1.0 ([..])
 [COMPILING] bar v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -4678,7 +4678,7 @@ fn build_all_exclude_glob_not_found() {
 [WARNING] excluded package pattern(s) `*z` not found in workspace [..]
 [COMPILING] [..] v0.1.0 ([..])
 [COMPILING] [..] v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -4727,7 +4727,7 @@ fn build_all_workspace_implicit_examples() {
         .with_stderr(
             "[..] Compiling bar v0.1.0 ([..])\n\
              [..] Compiling foo v0.1.0 ([..])\n\
-             [..] Finished dev [unoptimized + debuginfo] target(s) in [..]\n",
+             [..] Finished `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
         )
         .run();
     assert!(!p.bin("a").is_file());
@@ -4762,7 +4762,7 @@ fn build_all_virtual_manifest() {
             "\
 [COMPILING] baz v0.1.0 ([..])
 [COMPILING] bar v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -4790,7 +4790,7 @@ fn build_virtual_manifest_all_implied() {
             "\
 [COMPILING] baz v0.1.0 ([..])
 [COMPILING] bar v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -4817,7 +4817,7 @@ fn build_virtual_manifest_one_project() {
         .with_stderr(
             "\
 [COMPILING] bar v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -4844,7 +4844,7 @@ fn build_virtual_manifest_glob() {
         .with_stderr(
             "\
 [COMPILING] baz v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -4920,7 +4920,7 @@ fn build_all_virtual_manifest_implicit_examples() {
             "\
 [COMPILING] baz v0.1.0 ([..])
 [COMPILING] bar v0.1.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -4967,7 +4967,7 @@ fn build_all_member_dependency_same_name() {
              [DOWNLOADED] a v0.1.0 ([..])\n\
              [COMPILING] a v0.1.0\n\
              [COMPILING] a v0.1.0 ([..])\n\
-             [FINISHED] dev [unoptimized + debuginfo] target(s) in [..]\n",
+             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
         )
         .run();
 }
@@ -5323,7 +5323,7 @@ fn deterministic_cfg_flags() {
 --cfg[..]default[..]--cfg[..]f_a[..]--cfg[..]f_b[..]\
 --cfg[..]f_c[..]--cfg[..]f_d[..] \
 --cfg cfg_a --cfg cfg_b --cfg cfg_c --cfg cfg_d --cfg cfg_e`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
 }
@@ -6276,7 +6276,7 @@ fn build_lib_only() {
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
 }

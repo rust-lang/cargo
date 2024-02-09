@@ -357,7 +357,7 @@ fn relative_depinfo_paths_ws() {
     p.cargo("build -Z binary-dep-depinfo --target")
         .arg(&host)
         .masquerade_as_nightly_cargo(&["binary-dep-depinfo"])
-        .with_stderr("[FINISHED] dev [..]")
+        .with_stderr("[FINISHED] `dev` profile [..]")
         .run();
 }
 
@@ -479,7 +479,7 @@ fn relative_depinfo_paths_no_ws() {
     // Make sure it stays fresh.
     p.cargo("build -Z binary-dep-depinfo")
         .masquerade_as_nightly_cargo(&["binary-dep-depinfo"])
-        .with_stderr("[FINISHED] dev [..]")
+        .with_stderr("[FINISHED] `dev` profile [..]")
         .run();
 }
 

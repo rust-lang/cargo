@@ -43,7 +43,7 @@ fn simple() {
 [DOWNLOADED] foo v0.0.1 (registry [..])
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -70,7 +70,7 @@ fn install_the_same_version_twice() {
 [DOWNLOADED] foo v0.0.1 (registry [..])
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -118,7 +118,7 @@ fn simple_with_message_format() {
 [DOWNLOADED] foo v0.0.1 (registry [..])
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -197,7 +197,7 @@ fn with_index() {
 [DOWNLOADED] foo v0.0.1 (registry `{reg}`)
 [INSTALLING] foo v0.0.1 (registry `{reg}`)
 [COMPILING] foo v0.0.1 (registry `{reg}`)
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1 (registry `{reg}`)` (executable `foo[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -230,12 +230,12 @@ fn multiple_pkgs() {
 [ERROR] could not find `baz` in registry `[..]` with version `*`
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
 [INSTALLING] bar v0.0.2
 [COMPILING] bar v0.0.2
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/bar[EXE]
 [INSTALLED] package `bar v0.0.2` (executable `bar[EXE]`)
 [SUMMARY] Successfully installed foo, bar! Failed to install baz (see error(s) above).
@@ -290,12 +290,12 @@ fn multiple_pkgs_path_set() {
 [ERROR] could not find `baz` in registry `[..]` with version `*`
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
 [INSTALLING] bar v0.0.2
 [COMPILING] bar v0.0.2
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/bar[EXE]
 [INSTALLED] package `bar v0.0.2` (executable `bar[EXE]`)
 [SUMMARY] Successfully installed foo, bar! Failed to install baz (see error(s) above).
@@ -336,7 +336,7 @@ fn pick_max_version() {
 [DOWNLOADED] foo v0.2.1 (registry [..])
 [INSTALLING] foo v0.2.1
 [COMPILING] foo v0.2.1
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.2.1` (executable `foo[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -489,7 +489,7 @@ fn install_path() {
         .with_stderr(
             "\
 [INSTALLING] foo v0.0.1 [..]
-[FINISHED] release [..]
+[FINISHED] `release` profile [..]
 [REPLACING] [..]/.cargo/bin/foo[EXE]
 [REPLACED] package `foo v0.0.1 [..]` with `foo v0.0.1 [..]` (executable `foo[EXE]`)
 [WARNING] be sure to add [..]
@@ -508,7 +508,7 @@ fn install_target_dir() {
 [WARNING] Using `cargo install` [..]
 [INSTALLING] foo v0.0.1 [..]
 [COMPILING] foo v0.0.1 [..]
-[FINISHED] release [..]
+[FINISHED] `release` profile [..]
 [INSTALLING] [..]foo[EXE]
 [INSTALLED] package `foo v0.0.1 [..]foo[..]` (executable `foo[EXE]`)
 [WARNING] be sure to add [..]
@@ -585,7 +585,7 @@ fn install_relative_path_outside_current_ws() {
             "\
 [INSTALLING] foo v0.0.1 ([..]/bar/foo)
 [COMPILING] foo v0.0.1 ([..]/bar/foo)
-[FINISHED] release [..]
+[FINISHED] `release` profile [..]
 [INSTALLING] {home}/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1 ([..]/bar/foo)` (executable `foo[EXE]`)
 [WARNING] be sure to add [..]
@@ -898,7 +898,7 @@ fn install_force() {
             "\
 [INSTALLING] foo v0.2.0 ([..])
 [COMPILING] foo v0.2.0 ([..])
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [REPLACING] [CWD]/home/.cargo/bin/foo[EXE]
 [REPLACED] package `foo v0.0.1 ([..]/foo)` with `foo v0.2.0 ([..]/foo2)` (executable `foo[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -938,7 +938,7 @@ fn install_force_partial_overlap() {
             "\
 [INSTALLING] foo v0.2.0 ([..])
 [COMPILING] foo v0.2.0 ([..])
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo-bin3[EXE]
 [REPLACING] [CWD]/home/.cargo/bin/foo-bin2[EXE]
 [REMOVING] executable `[..]/bin/foo-bin1[EXE]` from previous version foo v0.0.1 [..]
@@ -982,7 +982,7 @@ fn install_force_bin() {
             "\
 [INSTALLING] foo v0.2.0 ([..])
 [COMPILING] foo v0.2.0 ([..])
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [REPLACING] [CWD]/home/.cargo/bin/foo-bin2[EXE]
 [REPLACED] package `foo v0.0.1 ([..]/foo)` with `foo v0.2.0 ([..]/foo2)` (executable `foo-bin2[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -1036,7 +1036,7 @@ fn git_repo() {
 [WARNING] no Cargo.lock file published in foo v0.1.0 ([..])
 [INSTALLING] foo v0.1.0 ([..])
 [COMPILING] foo v0.1.0 ([..])
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.1.0 ([..]/foo#[..])` (executable `foo[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -1240,7 +1240,7 @@ fn uninstall_cwd() {
             "\
 [INSTALLING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] {home}/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1 ([..]/foo)` (executable `foo[EXE]`)
 [WARNING] be sure to add `{home}/bin` to your PATH to be able to run the installed binaries",
@@ -1295,7 +1295,7 @@ fn do_not_rebuilds_on_local_install() {
         .with_stderr(
             "\
 [INSTALLING] [..]
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [..]
 [INSTALLED] package `foo v0.0.1 ([..]/foo)` (executable `foo[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -1928,7 +1928,7 @@ fn workspace_uses_workspace_target_dir() {
         .arg(p.root().join("bar"))
         .with_stderr(
             "[INSTALLING] [..]
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [..]
 [INSTALLED] package `bar v0.1.0 ([..]/bar)` (executable `bar[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -2169,7 +2169,7 @@ workspace: [..]/foo/Cargo.toml
 [DOWNLOADED] foo v0.1.0 (registry [..])
 [INSTALLING] foo v0.1.0
 [COMPILING] foo v0.1.0
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [..]foo[EXE]
 [INSTALLED] package `foo v0.1.0` (executable `foo[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -2271,7 +2271,7 @@ fn no_auto_fix_note() {
 [DOWNLOADED] auto_fix v0.0.1 (registry [..])
 [INSTALLING] auto_fix v0.0.1
 [COMPILING] auto_fix v0.0.1
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/auto_fix[EXE]
 [INSTALLED] package `auto_fix v0.0.1` (executable `auto_fix[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -2343,7 +2343,7 @@ fn sparse_install() {
 [INSTALLING] foo v0.0.1 (registry `dummy-registry`)
 [UPDATING] `dummy-registry` index
 [COMPILING] foo v0.0.1 (registry `dummy-registry`)
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1 (registry `dummy-registry`)` (executable `foo[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -2414,7 +2414,7 @@ fn self_referential() {
 [DOWNLOADED] foo v0.0.1 (registry [..])
 [COMPILING] foo v0.0.1
 [COMPILING] foo v0.0.2
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.2` (executable `foo[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -2459,7 +2459,7 @@ fn ambiguous_registry_vs_local_package() {
 [DOWNLOADED] foo v0.0.1 (registry [..])
 [COMPILING] foo v0.0.1
 [COMPILING] foo v0.1.0 ([..])
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.1.0 ([..])` (executable `foo[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -2559,7 +2559,7 @@ fn uninstall_running_binary() {
 [DOWNLOADED] foo v0.0.1 (registry [..])
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -2615,7 +2615,7 @@ fn uninstall_running_binary() {
 [UPDATING] `[..]` index
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
-[FINISHED] release [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries

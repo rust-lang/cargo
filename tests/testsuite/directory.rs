@@ -147,7 +147,7 @@ fn simple_install() {
 [INSTALLING] bar v0.1.0
 [COMPILING] foo v0.0.1
 [COMPILING] bar v0.1.0
-[FINISHED] release [optimized] target(s) in [..]s
+[FINISHED] `release` profile [optimized] target(s) in [..]s
 [INSTALLING] [..]bar[..]
 [INSTALLED] package `bar v0.1.0` (executable `bar[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -240,7 +240,7 @@ fn install_without_feature_dep() {
 [INSTALLING] bar v0.1.0
 [COMPILING] foo v0.0.1
 [COMPILING] bar v0.1.0
-[FINISHED] release [optimized] target(s) in [..]s
+[FINISHED] `release` profile [optimized] target(s) in [..]s
 [INSTALLING] [..]bar[..]
 [INSTALLED] package `bar v0.1.0` (executable `bar[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries

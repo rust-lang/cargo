@@ -80,7 +80,7 @@ fn exported_pub_dep() {
 [DOWNLOADED] pub_dep v0.1.0 ([..])
 [CHECKING] pub_dep v0.1.0
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run()
@@ -294,7 +294,7 @@ fn allow_priv_in_tests() {
 [DOWNLOADED] priv_dep v0.1.0 ([..])
 [CHECKING] priv_dep v0.1.0
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run()
@@ -338,7 +338,7 @@ fn allow_priv_in_benchs() {
 [DOWNLOADED] priv_dep v0.1.0 ([..])
 [CHECKING] priv_dep v0.1.0
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run()
@@ -383,7 +383,7 @@ fn allow_priv_in_bins() {
 [DOWNLOADED] priv_dep v0.1.0 ([..])
 [CHECKING] priv_dep v0.1.0
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run()
@@ -428,7 +428,7 @@ fn allow_priv_in_examples() {
 [DOWNLOADED] priv_dep v0.1.0 ([..])
 [CHECKING] priv_dep v0.1.0
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run()
@@ -474,7 +474,7 @@ fn allow_priv_in_custom_build() {
 [DOWNLOADED] priv_dep v0.1.0 ([..])
 [COMPILING] priv_dep v0.1.0
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run()
@@ -529,7 +529,7 @@ fn publish_package_with_public_dependency() {
 [CHECKING] pub_bar v0.1.0
 [CHECKING] bar v0.1.0
 [CHECKING] foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run()

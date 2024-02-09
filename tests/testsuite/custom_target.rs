@@ -244,13 +244,13 @@ fn custom_target_ignores_filepath() {
         .with_stderr(
             "\
 [..]Compiling foo v0.0.1 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
 
     // But not the second time, even though the path to the custom target is dfferent.
     p.cargo("build --lib --target b/custom-target.json")
-        .with_stderr("[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
         .run();
 }

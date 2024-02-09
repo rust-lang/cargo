@@ -22,7 +22,7 @@ fn build_lib_for_foo() {
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -45,7 +45,7 @@ fn lib() {
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -74,7 +74,7 @@ fn build_main_and_allow_unstable_options() {
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps \
         --extern {name}=[CWD]/target/debug/deps/lib{name}-[..].rlib`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
             name = "foo",
             version = "0.0.1"
@@ -113,7 +113,7 @@ fn build_with_args_to_one_of_multiple_binaries() {
         --out-dir [..]`
 [RUNNING] `rustc --crate-name bar src/bin/bar.rs [..]--crate-type bin --emit=[..]link[..]\
         -C debuginfo=2 [..]-C debug-assertions [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -207,7 +207,7 @@ fn build_with_crate_type_for_foo() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type cdylib [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -246,7 +246,7 @@ fn build_with_crate_type_for_foo_with_deps() {
 [RUNNING] `rustc --crate-name a a/src/lib.rs [..]--crate-type lib [..]
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type cdylib [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -261,7 +261,7 @@ fn build_with_crate_types_for_foo() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib,cdylib [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -293,7 +293,7 @@ fn build_with_crate_type_to_example() {
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib [..]
 [RUNNING] `rustc --crate-name ex examples/ex.rs [..]--crate-type cdylib [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -325,7 +325,7 @@ fn build_with_crate_types_to_example() {
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib [..]
 [RUNNING] `rustc --crate-name ex examples/ex.rs [..]--crate-type lib,cdylib [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -361,7 +361,7 @@ fn build_with_crate_types_to_one_of_multi_examples() {
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib [..]
 [RUNNING] `rustc --crate-name ex1 examples/ex1.rs [..]--crate-type lib,cdylib [..]
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -385,7 +385,7 @@ fn build_with_args_to_one_of_multiple_tests() {
         --out-dir [..]`
 [RUNNING] `rustc --crate-name bar tests/bar.rs [..]--emit=[..]link[..]-C debuginfo=2 [..]\
         -C debug-assertions [..]--test[..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -421,7 +421,7 @@ fn build_foo_with_bar_dependency() {
 [RUNNING] `[..] -C debuginfo=2 [..]`
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `[..] -C debuginfo=2 [..]-C debug-assertions [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -455,7 +455,7 @@ fn build_only_bar_dependency() {
             "\
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `rustc --crate-name bar [..]--crate-type lib [..] -C debug-assertions [..]`
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();

@@ -63,7 +63,7 @@ fn simple() {
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -78,7 +78,7 @@ fn simple() {
             "\
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -125,7 +125,7 @@ fn deps() {
 [CHECKING] baz v0.0.1
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -426,7 +426,7 @@ required by package `foo v0.0.1 ([..])`
 [DOWNLOADED] notyet v0.0.1 (registry `dummy-registry`)
 [CHECKING] notyet v0.0.1
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -496,7 +496,7 @@ Caused by:
 [DOWNLOADED] notyet v0.0.1 (registry `dummy-registry`)
 [COMPILING] notyet v0.0.1
 [COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 [PACKAGED] [..]
 ",
         )
@@ -541,7 +541,7 @@ fn lockfile_locks() {
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -593,7 +593,7 @@ fn lockfile_locks_transitively() {
 [CHECKING] baz v0.0.1
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -651,7 +651,7 @@ fn yanks_are_not_used() {
 [CHECKING] baz v0.0.1
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -921,7 +921,7 @@ fn update_with_lockfile_if_packages_missing() {
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -980,7 +980,7 @@ fn update_lockfile() {
 [DOWNLOADED] [..] v0.0.2 (registry `dummy-registry`)
 [CHECKING] bar v0.0.2
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -1003,7 +1003,7 @@ fn update_lockfile() {
 [DOWNLOADED] [..] v0.0.3 (registry `dummy-registry`)
 [CHECKING] bar v0.0.3
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -1073,7 +1073,7 @@ fn dev_dependency_not_used() {
 [DOWNLOADED] [..] v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -1167,7 +1167,7 @@ fn updating_a_dep() {
 [CHECKING] bar v0.0.1
 [CHECKING] a v0.0.1 ([CWD]/a)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -1203,7 +1203,7 @@ fn updating_a_dep() {
 [CHECKING] bar v0.1.0
 [CHECKING] a v0.0.1 ([CWD]/a)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -1276,7 +1276,7 @@ fn git_and_registry_dep() {
 [CHECKING] a v0.0.1
 [CHECKING] b v0.0.1 ([..])
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -1362,7 +1362,7 @@ fn update_publish_then_update() {
 [DOWNLOADED] a v0.1.1 (registry `dummy-registry`)
 [COMPILING] a v0.1.1
 [COMPILING] foo v0.5.0 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -1461,7 +1461,7 @@ fn update_transitive_dependency() {
 [CHECKING] b v0.1.1
 [CHECKING] a v0.1.0
 [CHECKING] foo v0.5.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -1823,7 +1823,7 @@ fn only_download_relevant() {
 [DOWNLOADED] baz v0.1.0 ([..])
 [CHECKING] baz v0.1.0
 [CHECKING] bar v0.5.0 ([..])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -2748,7 +2748,7 @@ Caused by:
             "\
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([..])
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 ",
         )
         .run();
@@ -2802,7 +2802,7 @@ internal server error
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [CHECKING] bar v0.0.1
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -3608,7 +3608,7 @@ fn differ_only_by_metadata() {
 [DOWNLOADED] [..] v0.0.1+b (registry `dummy-registry`)
 [CHECKING] baz v0.0.1+b
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -3659,7 +3659,7 @@ fn differ_only_by_metadata_with_lockfile() {
 [DOWNLOADED] [..] v0.0.1+b (registry `dummy-registry`)
 [CHECKING] baz v0.0.1+b
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();

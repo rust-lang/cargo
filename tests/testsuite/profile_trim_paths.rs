@@ -87,7 +87,7 @@ fn release_profile_default_to_object() {
     -Zremap-path-scope=object \
     --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[FINISHED] release [..]",
+[FINISHED] `release` profile [..]",
         )
         .run();
 }
@@ -125,7 +125,7 @@ fn one_option() {
     -Zremap-path-scope={option} \
     --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[FINISHED] dev [..]",
+[FINISHED] `dev` profile [..]",
             ))
             .run();
     }
@@ -162,7 +162,7 @@ fn multiple_options() {
     -Zremap-path-scope=diagnostics,macro,object \
     --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[FINISHED] dev [..]",
+[FINISHED] `dev` profile [..]",
         )
         .run();
 }
@@ -197,7 +197,7 @@ fn profile_merge_works() {
     -Zremap-path-scope=diagnostics \
     --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[FINISHED] custom [..]",
+[FINISHED] `custom` profile [..]",
         )
         .run();
 }
@@ -247,7 +247,7 @@ fn registry_dependency() {
     -Zremap-path-scope=object \
     --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 [RUNNING] `target/debug/foo[EXE]`"
         ))
         .run();
@@ -301,7 +301,7 @@ fn git_dependency() {
     -Zremap-path-scope=object \
     --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 [RUNNING] `target/debug/foo[EXE]`"
         ))
         .run();
@@ -347,7 +347,7 @@ fn path_dependency() {
     -Zremap-path-scope=object \
     --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 [RUNNING] `target/debug/foo[EXE]`"
         ))
         .run();
@@ -396,7 +396,7 @@ fn path_dependency_outside_workspace() {
     -Zremap-path-scope=object \
     --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[FINISHED] dev [..]
+[FINISHED] `dev` profile [..]
 [RUNNING] `target/debug/foo[EXE]`"
         ))
         .run();
@@ -578,7 +578,7 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
     -Zremap-path-scope=object \
     --remap-path-prefix=[CWD]=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[FINISHED] dev [..]",
+[FINISHED] `dev` profile [..]",
         ))
         .run();
 
