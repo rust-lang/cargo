@@ -227,8 +227,8 @@
 
 ### Changed
 
-- ❗️ Disallow `[lints]` in virtual workspaces.
-  This was an overlook and `[lints]` in virtual workspaces always has no effect.
+- ❗️ Disallow `[lints]` in virtual workspaces as they are ignored  and users likely meant `[workspace.lints]`.
+  This was an oversight in the initial implementation (e.g. a `[dependencies]` produces the same error).
   [#13155](https://github.com/rust-lang/cargo/pull/13155)
 - Disallow empty name in several places like package ID spec and `cargo new`.
   [#13152](https://github.com/rust-lang/cargo/pull/13152)
