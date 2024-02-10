@@ -275,7 +275,7 @@ impl Edition {
             Edition2015 => false,
             Edition2018 => true,
             Edition2021 => true,
-            Edition2024 => false,
+            Edition2024 => true,
         }
     }
 
