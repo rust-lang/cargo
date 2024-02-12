@@ -3664,3 +3664,42 @@ fn differ_only_by_metadata_with_lockfile() {
         )
         .run();
 }
+
+#[cargo_test]
+fn builtin_source_replacement() {
+    // errors for builtin source replacement of crates.io
+    // should not include mention of source replacement in the error message.
+    let server = RegistryBuilder::new().build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+
+                [dependencies]
+                bad-cksum = ">= 0.0.0"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let pkg = Package::new("bad-cksum", "0.0.1");
+    pkg.publish();
+    t!(File::create(&pkg.archive_dst()));
+
+    p.cargo("check -v")
+        .replace_crates_io(&server.index_url())
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..] index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bad-cksum [..]
+[ERROR] failed to verify the checksum of `bad-cksum v0.0.1`
+",
+        )
+        .run();
+}

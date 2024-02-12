@@ -275,10 +275,7 @@ fn not_found() {
             r#"[UPDATING] [..]
 [CREDENTIAL] [..]not_found[..] get crates-io
 {"v":1[..]
-[ERROR] failed to query replaced source registry `crates-io`
-
-Caused by:
-  no token found, please run `cargo login`
+[ERROR] no token found, please run `cargo login`
 "#,
         )
         .run();
@@ -314,10 +311,7 @@ fn all_not_found() {
             r#"[UPDATING] [..]
 [CREDENTIAL] [..]not_found[..] get crates-io
 {"v":1,"registry":{"index-url":"[..]","name":"crates-io","headers":[[..]"WWW-Authenticate: Cargo login_url=\"https://test-registry-login/me\""[..]]},"kind":"get","operation":"read"}
-[ERROR] failed to query replaced source registry `crates-io`
-
-Caused by:
-  no token found, please run `cargo login`
+[ERROR] no token found, please run `cargo login`
 "#,
         )
         .run();
@@ -353,10 +347,7 @@ fn all_not_supported() {
             r#"[UPDATING] [..]
 [CREDENTIAL] [..]not_supported[..] get crates-io
 {"v":1,"registry":{"index-url":"[..]","name":"crates-io","headers":[[..]"WWW-Authenticate: Cargo login_url=\"https://test-registry-login/me\""[..]]},"kind":"get","operation":"read"}
-[ERROR] failed to query replaced source registry `crates-io`
-
-Caused by:
-  no credential providers could handle the request
+[ERROR] no credential providers could handle the request
 "#,
         )
         .run();
