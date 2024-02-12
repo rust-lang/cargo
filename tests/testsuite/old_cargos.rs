@@ -291,7 +291,7 @@ fn new_features() {
 
     let toolchains = collect_all_toolchains();
 
-    let config_path = paths::home().join(".cargo/config.toml");
+    let config_path = paths::home().join(".cargo/config");
     let lock_path = p.root().join("Cargo.lock");
 
     struct ToolchainBehavior {
@@ -305,6 +305,11 @@ fn new_features() {
     let mut unexpected_results: Vec<Vec<String>> = Vec::new();
 
     for (version, toolchain) in &toolchains {
+        if version >= &Version::new(1, 15, 0) && version < &Version::new(1, 18, 0) {
+            // These versions do not stay within the sandbox, and chokes on
+            // Cargo's own `Cargo.toml`.
+            continue;
+        }
         let mut tc_result = Vec::new();
         // Write a config appropriate for this version.
         if version < &Version::new(1, 12, 0) {
@@ -347,7 +352,7 @@ fn new_features() {
             let stdout = std::str::from_utf8(&output.stdout).unwrap();
             let version = stdout
                 .trim()
-                .rsplitn(2, ':')
+                .rsplitn(2, ['@', ':'])
                 .next()
                 .expect("version after colon");
             Some(Version::parse(version).expect("parseable version"))
@@ -443,7 +448,22 @@ fn new_features() {
                 }
             }
             Err(e) => {
-                tc_result.push(format!("unlocked build failed: {}", e));
+                if version < &Version::new(1, 49, 0) {
+                    // Old versions don't like the dep: syntax.
+                    check_err_contains(
+                        &mut tc_result,
+                        e,
+                        "which is neither a dependency nor another feature",
+                    );
+                } else if version >= &Version::new(1, 49, 0) && version < &Version::new(1, 51, 0) {
+                    check_err_contains(
+                        &mut tc_result,
+                        e,
+                        "requires the `-Z namespaced-features` flag",
+                    );
+                } else {
+                    tc_result.push(format!("unlocked build failed: {}", e));
+                }
             }
         }
 
@@ -469,14 +489,29 @@ fn new_features() {
                 check_lock!(tc_result, "new-baz-dep", which, behavior.new_baz_dep, None);
             }
             Err(e) => {
-                // When version >= 1.51 and <= 1.59,
-                // 1.0.1 can't be used without -Znamespaced-features
-                // It gets filtered out of the index.
-                check_err_contains(
-                    &mut tc_result,
-                    e,
-                    "candidate versions found which didn't match: 1.0.2, 1.0.0",
-                );
+                if version < &Version::new(1, 49, 0) {
+                    // Old versions don't like the dep: syntax.
+                    check_err_contains(
+                        &mut tc_result,
+                        e,
+                        "which is neither a dependency nor another feature",
+                    );
+                } else if version >= &Version::new(1, 49, 0) && version < &Version::new(1, 51, 0) {
+                    check_err_contains(
+                        &mut tc_result,
+                        e,
+                        "requires the `-Z namespaced-features` flag",
+                    );
+                } else {
+                    // When version >= 1.51 and <= 1.59,
+                    // 1.0.1 can't be used without -Znamespaced-features
+                    // It gets filtered out of the index.
+                    check_err_contains(
+                        &mut tc_result,
+                        e,
+                        "candidate versions found which didn't match: 1.0.2, 1.0.0",
+                    );
+                }
             }
         }
 
@@ -503,13 +538,28 @@ fn new_features() {
                 }
             }
             Err(e) => {
-                // When version >= 1.51 and <= 1.59,
-                // baz can't lock to 1.0.1, it requires -Znamespaced-features
-                check_err_contains(
-                    &mut tc_result,
-                    e,
-                    "candidate versions found which didn't match: 1.0.0",
-                );
+                if version < &Version::new(1, 49, 0) {
+                    // Old versions don't like the dep: syntax.
+                    check_err_contains(
+                        &mut tc_result,
+                        e,
+                        "which is neither a dependency nor another feature",
+                    );
+                } else if version >= &Version::new(1, 49, 0) && version < &Version::new(1, 51, 0) {
+                    check_err_contains(
+                        &mut tc_result,
+                        e,
+                        "requires the `-Z namespaced-features` flag",
+                    );
+                } else {
+                    // When version >= 1.51 and <= 1.59,
+                    // baz can't lock to 1.0.1, it requires -Znamespaced-features
+                    check_err_contains(
+                        &mut tc_result,
+                        e,
+                        "candidate versions found which didn't match: 1.0.0",
+                    );
+                }
             }
         }
 
@@ -545,6 +595,7 @@ fn index_cache_rebuild() {
     // happening, and switching between versions should work correctly
     // (although it will thrash the cash, that's better than not working
     // correctly.
+    let registry = registry::init();
     Package::new("baz", "1.0.0").publish();
     Package::new("bar", "1.0.0").publish();
     Package::new("bar", "1.0.1")
@@ -565,6 +616,19 @@ fn index_cache_rebuild() {
             "#,
         )
         .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                    [source.crates-io]
+                    replace-with = 'dummy-registry'
+
+                    [source.dummy-registry]
+                    registry = '{}'
+                "#,
+                registry.index_url()
+            ),
+        )
         .build();
 
     // This version of Cargo errors on index entries that have overlapping
