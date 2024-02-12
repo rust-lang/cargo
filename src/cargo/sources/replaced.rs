@@ -6,8 +6,6 @@ use crate::sources::IndexSummary;
 use crate::util::errors::CargoResult;
 use std::task::Poll;
 
-use anyhow::Context as _;
-
 /// A source that replaces one source with the other. This manages the [source
 /// replacement] feature.
 ///
@@ -36,6 +34,14 @@ impl<'cfg> ReplacedSource<'cfg> {
             replace_with,
             inner: src,
         }
+    }
+
+    /// Is this source a built-in replacement of crates.io?
+    ///
+    /// Built-in source replacement of crates.io for sparse registry or tests
+    /// should not show messages indicating source replacement.
+    fn is_builtin_replacement(&self) -> bool {
+        self.replace_with.is_crates_io() && self.to_replace.is_crates_io()
     }
 }
 
@@ -70,10 +76,14 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
                 f(summary.map_summary(|s| s.map_source(replace_with, to_replace)))
             })
             .map_err(|e| {
-                e.context(format!(
-                    "failed to query replaced source {}",
-                    self.to_replace
-                ))
+                if self.is_builtin_replacement() {
+                    e
+                } else {
+                    e.context(format!(
+                        "failed to query replaced source {}",
+                        self.to_replace
+                    ))
+                }
             })
     }
 
@@ -87,10 +97,16 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
 
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         let id = id.with_source_id(self.replace_with);
-        let pkg = self
-            .inner
-            .download(id)
-            .with_context(|| format!("failed to download replaced source {}", self.to_replace))?;
+        let pkg = self.inner.download(id).map_err(|e| {
+            if self.is_builtin_replacement() {
+                e
+            } else {
+                e.context(format!(
+                    "failed to download replaced source {}",
+                    self.to_replace
+                ))
+            }
+        })?;
         Ok(match pkg {
             MaybePackage::Ready(pkg) => {
                 MaybePackage::Ready(pkg.map_source(self.replace_with, self.to_replace))
@@ -101,10 +117,16 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
 
     fn finish_download(&mut self, id: PackageId, data: Vec<u8>) -> CargoResult<Package> {
         let id = id.with_source_id(self.replace_with);
-        let pkg = self
-            .inner
-            .finish_download(id, data)
-            .with_context(|| format!("failed to download replaced source {}", self.to_replace))?;
+        let pkg = self.inner.finish_download(id, data).map_err(|e| {
+            if self.is_builtin_replacement() {
+                e
+            } else {
+                e.context(format!(
+                    "failed to download replaced source {}",
+                    self.to_replace
+                ))
+            }
+        })?;
         Ok(pkg.map_source(self.replace_with, self.to_replace))
     }
 
@@ -118,9 +140,7 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
     }
 
     fn describe(&self) -> String {
-        if self.replace_with.is_crates_io() && self.to_replace.is_crates_io() {
-            // Built-in source replacement of crates.io for sparse registry or tests
-            // doesn't need duplicate description (crates.io replacing crates.io).
+        if self.is_builtin_replacement() {
             self.inner.describe()
         } else {
             format!(
@@ -148,8 +168,15 @@ impl<'cfg> Source for ReplacedSource<'cfg> {
     }
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
-        self.inner
-            .block_until_ready()
-            .with_context(|| format!("failed to update replaced source {}", self.to_replace))
+        self.inner.block_until_ready().map_err(|e| {
+            if self.is_builtin_replacement() {
+                e
+            } else {
+                e.context(format!(
+                    "failed to update replaced source {}",
+                    self.to_replace
+                ))
+            }
+        })
     }
 }
