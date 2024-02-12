@@ -376,14 +376,16 @@ In other words, it is forbidden to have two packages link to the same native
 library. This helps prevent duplicate symbols between crates. Note, however,
 that there are [conventions in place](#-sys-packages) to alleviate this.
 
-As mentioned above in the output format, each build script can generate an
-arbitrary set of metadata in the form of key-value pairs. This metadata is
-passed to the build scripts of **dependent** packages. For example, if the
-package `bar` depends on `foo`, then if `foo` generates `key=value` as part of
-its build script metadata, then the build script of `bar` will have the
-environment variables `DEP_FOO_KEY=value`. See the ["Using another `sys`
-crate"][using-another-sys] for an example of
-how this can be used.
+Build scripts can generate an arbitrary set of metadata in the form of
+key-value pairs. This metadata is set with the `cargo::metadata=KEY=VALUE`
+instruction.
+
+The metadata is passed to the build scripts of **dependent** packages. For
+example, if the package `bar` depends on `foo`, then if `foo` generates
+`key=value` as part of its build script metadata, then the build script of
+`bar` will have the environment variables `DEP_FOO_KEY=value`. See the ["Using
+another `sys` crate"][using-another-sys] for an example of how this can be
+used.
 
 Note that metadata is only passed to immediate dependents, not transitive
 dependents.
