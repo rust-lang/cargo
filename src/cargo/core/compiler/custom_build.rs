@@ -716,7 +716,6 @@ impl BuildOutput {
             "rustc-link-arg-examples=",
             "rustc-link-arg=",
             "rustc-cfg=",
-            "rustc-check-cfg=",
             "rustc-env=",
             "warning=",
             "rerun-if-changed=",
