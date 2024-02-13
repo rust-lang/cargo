@@ -570,6 +570,11 @@ pub fn to_real_manifest(
         package.edition = Some(manifest::InheritableField::Value(edition.to_string()));
         edition
     } else {
+        warnings.push(format!(
+            "no edition set: defaulting to the {} edition while the latest is {}",
+            Edition::Edition2015,
+            Edition::LATEST_STABLE
+        ));
         Edition::Edition2015
     };
     // Add these lines if start a new unstable edition.
