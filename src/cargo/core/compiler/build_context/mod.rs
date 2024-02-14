@@ -20,7 +20,7 @@ pub use self::target_info::{
 /// before it gets started.
 ///
 /// It is intended that this is mostly static information. Stuff that mutates
-/// during the build can be found in the parent [`Context`]. (I say mostly,
+/// during the build can be found in the parent [`BuildRunner`]. (I say mostly,
 /// because this has internal caching, but nothing that should be observable
 /// or require &mut.)
 ///
@@ -39,9 +39,9 @@ pub use self::target_info::{
 /// since it is often too lower-level.
 /// Instead, [`ops::create_bcx`] is usually what you are looking for.
 ///
-/// After a `BuildContext` is built, the next stage of building is handled in [`Context`].
+/// After a `BuildContext` is built, the next stage of building is handled in [`BuildRunner`].
 ///
-/// [`Context`]: crate::core::compiler::CompileContext
+/// [`BuildRunner`]: crate::core::compiler::BuildRunner
 /// [`ops::create_bcx`]: crate::ops::create_bcx
 pub struct BuildContext<'a, 'gctx> {
     /// The workspace the build is for.

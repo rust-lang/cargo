@@ -30,8 +30,8 @@
 //!     The [`BuildContext`][core::compiler::BuildContext] is the result of the "front end" of the
 //!     build process. This contains the graph of work to perform and any settings necessary for
 //!     `rustc`. After this is built, the next stage of building is handled in
-//!     [`CompileContext`][core::compiler::CompileContext].
-//!   - [`core::compiler::context`]:
+//!     [`BuildRunner`][core::compiler::BuildRunner].
+//!   - [`core::compiler::build_runner`]:
 //!     The `Context` is the mutable state used during the build process. This
 //!     is the core of the build process, and everything is coordinated through
 //!     this.

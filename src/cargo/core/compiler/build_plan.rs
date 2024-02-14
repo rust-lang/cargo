@@ -11,8 +11,8 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
-use super::context::OutputFile;
-use super::{CompileContext, CompileKind, CompileMode, Unit};
+use super::build_runner::OutputFile;
+use super::{BuildRunner, CompileKind, CompileMode, Unit};
 use crate::core::TargetKind;
 use crate::util::{internal, CargoResult, GlobalContext};
 use cargo_util::ProcessBuilder;
@@ -107,10 +107,10 @@ impl BuildPlan {
         }
     }
 
-    pub fn add(&mut self, cx: &CompileContext<'_, '_>, unit: &Unit) -> CargoResult<()> {
+    pub fn add(&mut self, build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<()> {
         let id = self.plan.invocations.len();
         self.invocation_map.insert(unit.buildkey(), id);
-        let deps = cx
+        let deps = build_runner
             .unit_deps(unit)
             .iter()
             .map(|dep| self.invocation_map[&dep.unit.buildkey()])

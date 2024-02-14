@@ -22,7 +22,7 @@
 //! of a build script. Standard output is the chosen interprocess communication
 //! between Cargo and build script processes. A set of strings is defined for
 //! that purpose. These strings, a.k.a. instructions, are interpreted by
-//! [`BuildOutput::parse`] and stored in [`CompileContext::build_script_outputs`].
+//! [`BuildOutput::parse`] and stored in [`BuildRunner::build_script_outputs`].
 //! The entire execution work is constructed by [`build_work`].
 //!
 //! [build script]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html
@@ -31,9 +31,9 @@
 //! [`CompileMode::RunCustomBuild`]: super::CompileMode
 //! [instructions]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
 
-use super::{fingerprint, CompileContext, Job, Unit, Work};
+use super::{fingerprint, BuildRunner, Job, Unit, Work};
 use crate::core::compiler::artifact;
-use crate::core::compiler::context::Metadata;
+use crate::core::compiler::build_runner::Metadata;
 use crate::core::compiler::fingerprint::DirtyReason;
 use crate::core::compiler::job_queue::JobState;
 use crate::core::{profiles::ProfileRoot, PackageId, Target};
@@ -194,24 +194,24 @@ impl LinkArgTarget {
 }
 
 /// Prepares a `Work` that executes the target as a custom build script.
-pub fn prepare(compile_ctx: &mut CompileContext<'_, '_>, unit: &Unit) -> CargoResult<Job> {
+pub fn prepare(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     let _p = profile::start(format!(
         "build script prepare: {}/{}",
         unit.pkg,
         unit.target.name()
     ));
 
-    let metadata = compile_ctx.get_run_build_script_metadata(unit);
-    if compile_ctx
+    let metadata = build_runner.get_run_build_script_metadata(unit);
+    if build_runner
         .build_script_outputs
         .lock()
         .unwrap()
         .contains_key(metadata)
     {
         // The output is already set, thus the build script is overridden.
-        fingerprint::prepare_target(compile_ctx, unit, false)
+        fingerprint::prepare_target(build_runner, unit, false)
     } else {
-        build_work(compile_ctx, unit)
+        build_work(build_runner, unit)
     }
 }
 
@@ -250,23 +250,23 @@ fn emit_build_output(
 /// * Create the output dir (`OUT_DIR`) for the build script output.
 /// * Determine if the build script needs a re-run.
 /// * Run the build script and store its output.
-fn build_work(compile_ctx: &mut CompileContext<'_, '_>, unit: &Unit) -> CargoResult<Job> {
+fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<Job> {
     assert!(unit.mode.is_run_custom_build());
-    let bcx = &compile_ctx.bcx;
-    let dependencies = compile_ctx.unit_deps(unit);
+    let bcx = &build_runner.bcx;
+    let dependencies = build_runner.unit_deps(unit);
     let build_script_unit = dependencies
         .iter()
         .find(|d| !d.unit.mode.is_run_custom_build() && d.unit.target.is_custom_build())
         .map(|d| &d.unit)
         .expect("running a script not depending on an actual script");
-    let script_dir = compile_ctx.files().build_script_dir(build_script_unit);
-    let script_out_dir = compile_ctx.files().build_script_out_dir(unit);
-    let script_run_dir = compile_ctx.files().build_script_run_dir(unit);
+    let script_dir = build_runner.files().build_script_dir(build_script_unit);
+    let script_out_dir = build_runner.files().build_script_out_dir(unit);
+    let script_run_dir = build_runner.files().build_script_run_dir(unit);
     let build_plan = bcx.build_config.build_plan;
     let invocation_name = unit.buildkey();
 
     if let Some(deps) = unit.pkg.manifest().metabuild() {
-        prepare_metabuild(compile_ctx, build_script_unit, deps)?;
+        prepare_metabuild(build_runner, build_script_unit, deps)?;
     }
 
     // Building the command to execute
@@ -280,7 +280,7 @@ fn build_work(compile_ctx: &mut CompileContext<'_, '_>, unit: &Unit) -> CargoRes
     // `Profiles::get_profile_run_custom_build` so that those flags get
     // carried over.
     let to_exec = to_exec.into_os_string();
-    let mut cmd = compile_ctx.compilation.host_process(to_exec, &unit.pkg)?;
+    let mut cmd = build_runner.compilation.host_process(to_exec, &unit.pkg)?;
     let debug = unit.profile.debuginfo.is_turned_on();
     cmd.env("OUT_DIR", &script_out_dir)
         .env("CARGO_MANIFEST_DIR", unit.pkg.root())
@@ -298,14 +298,14 @@ fn build_work(compile_ctx: &mut CompileContext<'_, '_>, unit: &Unit) -> CargoRes
         .env("HOST", &bcx.host_triple())
         .env("RUSTC", &bcx.rustc().path)
         .env("RUSTDOC", &*bcx.gctx.rustdoc()?)
-        .inherit_jobserver(&compile_ctx.jobserver);
+        .inherit_jobserver(&build_runner.jobserver);
 
     // Find all artifact dependencies and make their file and containing directory discoverable using environment variables.
-    for (var, value) in artifact::get_env(compile_ctx, dependencies)? {
+    for (var, value) in artifact::get_env(build_runner, dependencies)? {
         cmd.env(&var, value);
     }
 
-    if let Some(linker) = &compile_ctx.compilation.target_linker(unit.kind) {
+    if let Some(linker) = &build_runner.compilation.target_linker(unit.kind) {
         cmd.env("RUSTC_LINKER", linker);
     }
 
@@ -352,7 +352,7 @@ fn build_work(compile_ctx: &mut CompileContext<'_, '_>, unit: &Unit) -> CargoRes
         cmd.env_remove("RUSTC_WRAPPER");
     }
     cmd.env_remove("RUSTC_WORKSPACE_WRAPPER");
-    if compile_ctx.bcx.ws.is_member(&unit.pkg) {
+    if build_runner.bcx.ws.is_member(&unit.pkg) {
         if let Some(wrapper) = bcx.rustc().workspace_wrapper.as_ref() {
             cmd.env("RUSTC_WORKSPACE_WRAPPER", wrapper);
         }
@@ -363,7 +363,7 @@ fn build_work(compile_ctx: &mut CompileContext<'_, '_>, unit: &Unit) -> CargoRes
     );
     cmd.env_remove("RUSTFLAGS");
 
-    if compile_ctx.bcx.ws.gctx().extra_verbose() {
+    if build_runner.bcx.ws.gctx().extra_verbose() {
         cmd.display_env_vars();
     }
 
@@ -376,7 +376,7 @@ fn build_work(compile_ctx: &mut CompileContext<'_, '_>, unit: &Unit) -> CargoRes
         .iter()
         .filter_map(|dep| {
             if dep.unit.mode.is_run_custom_build() {
-                let dep_metadata = compile_ctx.get_run_build_script_metadata(&dep.unit);
+                let dep_metadata = build_runner.get_run_build_script_metadata(&dep.unit);
                 Some((
                     dep.unit.pkg.manifest().links().unwrap().to_string(),
                     dep.unit.pkg.package_id(),
@@ -389,12 +389,12 @@ fn build_work(compile_ctx: &mut CompileContext<'_, '_>, unit: &Unit) -> CargoRes
         .collect::<Vec<_>>();
     let library_name = unit.pkg.library().map(|t| t.crate_name());
     let pkg_descr = unit.pkg.to_string();
-    let build_script_outputs = Arc::clone(&compile_ctx.build_script_outputs);
+    let build_script_outputs = Arc::clone(&build_runner.build_script_outputs);
     let id = unit.pkg.package_id();
     let output_file = script_run_dir.join("output");
     let err_file = script_run_dir.join("stderr");
     let root_output_file = script_run_dir.join("root-output");
-    let host_target_root = compile_ctx.files().host_dest().to_path_buf();
+    let host_target_root = build_runner.files().host_dest().to_path_buf();
     let all = (
         id,
         library_name.clone(),
@@ -403,17 +403,17 @@ fn build_work(compile_ctx: &mut CompileContext<'_, '_>, unit: &Unit) -> CargoRes
         output_file.clone(),
         script_out_dir.clone(),
     );
-    let build_scripts = compile_ctx.build_scripts.get(unit).cloned();
+    let build_scripts = build_runner.build_scripts.get(unit).cloned();
     let json_messages = bcx.build_config.emit_json();
     let extra_verbose = bcx.gctx.extra_verbose();
-    let (prev_output, prev_script_out_dir) = prev_build_output(compile_ctx, unit);
-    let metadata_hash = compile_ctx.get_run_build_script_metadata(unit);
+    let (prev_output, prev_script_out_dir) = prev_build_output(build_runner, unit);
+    let metadata_hash = build_runner.get_run_build_script_metadata(unit);
 
     paths::create_dir_all(&script_dir)?;
     paths::create_dir_all(&script_out_dir)?;
 
-    let nightly_features_allowed = compile_ctx.bcx.gctx.nightly_features_allowed;
-    let extra_check_cfg = compile_ctx.bcx.gctx.cli_unstable().check_cfg;
+    let nightly_features_allowed = build_runner.bcx.gctx.nightly_features_allowed;
+    let extra_check_cfg = build_runner.bcx.gctx.cli_unstable().check_cfg;
     let targets: Vec<Target> = unit.pkg.targets().to_vec();
     let msrv = unit.pkg.rust_version().cloned();
     // Need a separate copy for the fresh closure.
@@ -421,7 +421,7 @@ fn build_work(compile_ctx: &mut CompileContext<'_, '_>, unit: &Unit) -> CargoRes
     let msrv_fresh = msrv.clone();
 
     let env_profile_name = unit.profile.name.to_uppercase();
-    let built_with_debuginfo = compile_ctx
+    let built_with_debuginfo = build_runner
         .bcx
         .unit_graph
         .get(unit)
@@ -608,10 +608,10 @@ fn build_work(compile_ctx: &mut CompileContext<'_, '_>, unit: &Unit) -> CargoRes
         Ok(())
     });
 
-    let mut job = if compile_ctx.bcx.build_config.build_plan {
+    let mut job = if build_runner.bcx.build_config.build_plan {
         Job::new_dirty(Work::noop(), DirtyReason::FreshBuild)
     } else {
-        fingerprint::prepare_target(compile_ctx, unit, false)?
+        fingerprint::prepare_target(build_runner, unit, false)?
     };
     if job.freshness().is_dirty() {
         job.before(dirty);
@@ -1065,12 +1065,12 @@ impl BuildOutput {
 ///
 /// [metabuild]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#metabuild
 fn prepare_metabuild(
-    compile_ctx: &CompileContext<'_, '_>,
+    build_runner: &BuildRunner<'_, '_>,
     unit: &Unit,
     deps: &[String],
 ) -> CargoResult<()> {
     let mut output = Vec::new();
-    let available_deps = compile_ctx.unit_deps(unit);
+    let available_deps = build_runner.unit_deps(unit);
     // Filter out optional dependencies, and look up the actual lib name.
     let meta_deps: Vec<_> = deps
         .iter()
@@ -1090,7 +1090,7 @@ fn prepare_metabuild(
     let path = unit
         .pkg
         .manifest()
-        .metabuild_path(compile_ctx.bcx.ws.target_dir());
+        .metabuild_path(build_runner.bcx.ws.target_dir());
     paths::create_dir_all(path.parent().unwrap())?;
     paths::write_if_changed(path, &output)?;
     Ok(())
@@ -1114,7 +1114,7 @@ impl BuildDeps {
     }
 }
 
-/// Computes several maps in [`CompileContext`].
+/// Computes several maps in [`BuildRunner`].
 ///
 /// - [`build_scripts`]: A map that tracks which build scripts each package
 ///   depends on.
@@ -1132,15 +1132,15 @@ impl BuildDeps {
 /// The given set of units to this function is the initial set of
 /// targets/profiles which are being built.
 ///
-/// [`build_scripts`]: CompileContext::build_scripts
-/// [`build_explicit_deps`]: CompileContext::build_explicit_deps
-/// [`build_script_outputs`]: CompileContext::build_script_outputs
-pub fn build_map(compile_ctx: &mut CompileContext<'_, '_>) -> CargoResult<()> {
+/// [`build_scripts`]: BuildRunner::build_scripts
+/// [`build_explicit_deps`]: BuildRunner::build_explicit_deps
+/// [`build_script_outputs`]: BuildRunner::build_script_outputs
+pub fn build_map(build_runner: &mut BuildRunner<'_, '_>) -> CargoResult<()> {
     let mut ret = HashMap::new();
-    for unit in &compile_ctx.bcx.roots {
-        build(&mut ret, compile_ctx, unit)?;
+    for unit in &build_runner.bcx.roots {
+        build(&mut ret, build_runner, unit)?;
     }
-    compile_ctx
+    build_runner
         .build_scripts
         .extend(ret.into_iter().map(|(k, v)| (k, Arc::new(v))));
     return Ok(());
@@ -1149,7 +1149,7 @@ pub fn build_map(compile_ctx: &mut CompileContext<'_, '_>) -> CargoResult<()> {
     // memoizes all of its return values as it goes along.
     fn build<'a>(
         out: &'a mut HashMap<Unit, BuildScripts>,
-        compile_ctx: &mut CompileContext<'_, '_>,
+        build_runner: &mut BuildRunner<'_, '_>,
         unit: &Unit,
     ) -> CargoResult<&'a BuildScripts> {
         // Do a quick pre-flight check to see if we've already calculated the
@@ -1161,13 +1161,13 @@ pub fn build_map(compile_ctx: &mut CompileContext<'_, '_>) -> CargoResult<()> {
         // If there is a build script override, pre-fill the build output.
         if unit.mode.is_run_custom_build() {
             if let Some(links) = unit.pkg.manifest().links() {
-                if let Some(output) = compile_ctx
+                if let Some(output) = build_runner
                     .bcx
                     .target_data
                     .script_override(links, unit.kind)
                 {
-                    let metadata = compile_ctx.get_run_build_script_metadata(unit);
-                    compile_ctx.build_script_outputs.lock().unwrap().insert(
+                    let metadata = build_runner.get_run_build_script_metadata(unit);
+                    build_runner.build_script_outputs.lock().unwrap().insert(
                         unit.pkg.package_id(),
                         metadata,
                         output.clone(),
@@ -1180,21 +1180,21 @@ pub fn build_map(compile_ctx: &mut CompileContext<'_, '_>) -> CargoResult<()> {
 
         // If a package has a build script, add itself as something to inspect for linking.
         if !unit.target.is_custom_build() && unit.pkg.has_custom_build() {
-            let script_meta = compile_ctx
+            let script_meta = build_runner
                 .find_build_script_metadata(unit)
                 .expect("has_custom_build should have RunCustomBuild");
             add_to_link(&mut ret, unit.pkg.package_id(), script_meta);
         }
 
         if unit.mode.is_run_custom_build() {
-            parse_previous_explicit_deps(compile_ctx, unit);
+            parse_previous_explicit_deps(build_runner, unit);
         }
 
         // We want to invoke the compiler deterministically to be cache-friendly
         // to rustc invocation caching schemes, so be sure to generate the same
         // set of build script dependency orderings via sorting the targets that
         // come out of the `Context`.
-        let mut dependencies: Vec<Unit> = compile_ctx
+        let mut dependencies: Vec<Unit> = build_runner
             .unit_deps(unit)
             .iter()
             .map(|d| d.unit.clone())
@@ -1202,7 +1202,7 @@ pub fn build_map(compile_ctx: &mut CompileContext<'_, '_>) -> CargoResult<()> {
         dependencies.sort_by_key(|u| u.pkg.package_id());
 
         for dep_unit in dependencies.iter() {
-            let dep_scripts = build(out, compile_ctx, dep_unit)?;
+            let dep_scripts = build(out, build_runner, dep_unit)?;
 
             if dep_unit.target.for_host() {
                 ret.plugins.extend(dep_scripts.to_link.iter().cloned());
@@ -1228,12 +1228,12 @@ pub fn build_map(compile_ctx: &mut CompileContext<'_, '_>) -> CargoResult<()> {
     }
 
     /// Load any dependency declarations from a previous build script run.
-    fn parse_previous_explicit_deps(compile_ctx: &mut CompileContext<'_, '_>, unit: &Unit) {
-        let script_run_dir = compile_ctx.files().build_script_run_dir(unit);
+    fn parse_previous_explicit_deps(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) {
+        let script_run_dir = build_runner.files().build_script_run_dir(unit);
         let output_file = script_run_dir.join("output");
-        let (prev_output, _) = prev_build_output(compile_ctx, unit);
+        let (prev_output, _) = prev_build_output(build_runner, unit);
         let deps = BuildDeps::new(&output_file, prev_output.as_ref());
-        compile_ctx.build_explicit_deps.insert(unit.clone(), deps);
+        build_runner.build_explicit_deps.insert(unit.clone(), deps);
     }
 }
 
@@ -1243,11 +1243,11 @@ pub fn build_map(compile_ctx: &mut CompileContext<'_, '_>) -> CargoResult<()> {
 /// Also returns the directory containing the output, typically used later in
 /// processing.
 fn prev_build_output(
-    compile_ctx: &mut CompileContext<'_, '_>,
+    build_runner: &mut BuildRunner<'_, '_>,
     unit: &Unit,
 ) -> (Option<BuildOutput>, PathBuf) {
-    let script_out_dir = compile_ctx.files().build_script_out_dir(unit);
-    let script_run_dir = compile_ctx.files().build_script_run_dir(unit);
+    let script_out_dir = build_runner.files().build_script_out_dir(unit);
+    let script_run_dir = build_runner.files().build_script_run_dir(unit);
     let root_output_file = script_run_dir.join("root-output");
     let output_file = script_run_dir.join("output");
 
@@ -1262,8 +1262,8 @@ fn prev_build_output(
             &unit.pkg.to_string(),
             &prev_script_out_dir,
             &script_out_dir,
-            compile_ctx.bcx.gctx.cli_unstable().check_cfg,
-            compile_ctx.bcx.gctx.nightly_features_allowed,
+            build_runner.bcx.gctx.cli_unstable().check_cfg,
+            build_runner.bcx.gctx.nightly_features_allowed,
             unit.pkg.targets(),
             &unit.pkg.rust_version().cloned(),
         )

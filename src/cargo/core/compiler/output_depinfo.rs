@@ -6,7 +6,7 @@ use std::collections::{BTreeSet, HashSet};
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
-use super::{fingerprint, CompileContext, FileFlavor, Unit};
+use super::{fingerprint, BuildRunner, FileFlavor, Unit};
 use crate::util::{internal, CargoResult};
 use cargo_util::paths;
 use tracing::debug;
@@ -43,7 +43,7 @@ fn render_filename<P: AsRef<Path>>(path: P, basedir: Option<&str>) -> CargoResul
 /// [fingerprint dep-info]: super::fingerprint#fingerprint-dep-info-files
 fn add_deps_for_unit(
     deps: &mut BTreeSet<PathBuf>,
-    cx: &mut CompileContext<'_, '_>,
+    build_runner: &mut BuildRunner<'_, '_>,
     unit: &Unit,
     visited: &mut HashSet<Unit>,
 ) -> CargoResult<()> {
@@ -55,10 +55,12 @@ fn add_deps_for_unit(
     // generate a dep info file, so we just keep on going below
     if !unit.mode.is_run_custom_build() {
         // Add dependencies from rustc dep-info output (stored in fingerprint directory)
-        let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
-        if let Some(paths) =
-            fingerprint::parse_dep_info(unit.pkg.root(), cx.files().host_root(), &dep_info_loc)?
-        {
+        let dep_info_loc = fingerprint::dep_info_loc(build_runner, unit);
+        if let Some(paths) = fingerprint::parse_dep_info(
+            unit.pkg.root(),
+            build_runner.files().host_root(),
+            &dep_info_loc,
+        )? {
             for path in paths.files {
                 deps.insert(path);
             }
@@ -73,8 +75,13 @@ fn add_deps_for_unit(
     }
 
     // Add rerun-if-changed dependencies
-    if let Some(metadata) = cx.find_build_script_metadata(unit) {
-        if let Some(output) = cx.build_script_outputs.lock().unwrap().get(metadata) {
+    if let Some(metadata) = build_runner.find_build_script_metadata(unit) {
+        if let Some(output) = build_runner
+            .build_script_outputs
+            .lock()
+            .unwrap()
+            .get(metadata)
+        {
             for path in &output.rerun_if_changed {
                 // The paths we have saved from the unit are of arbitrary relativeness and may be
                 // relative to the crate root of the dependency.
@@ -85,10 +92,10 @@ fn add_deps_for_unit(
     }
 
     // Recursively traverse all transitive dependencies
-    let unit_deps = Vec::from(cx.unit_deps(unit)); // Create vec due to mutable borrow.
+    let unit_deps = Vec::from(build_runner.unit_deps(unit)); // Create vec due to mutable borrow.
     for dep in unit_deps {
         if dep.unit.is_local() {
-            add_deps_for_unit(deps, cx, &dep.unit, visited)?;
+            add_deps_for_unit(deps, build_runner, &dep.unit, visited)?;
         }
     }
     Ok(())
@@ -111,11 +118,11 @@ fn add_deps_for_unit(
 /// `Cargo.lock`.
 ///
 /// [`fingerprint`]: super::fingerprint#dep-info-files
-pub fn output_depinfo(cx: &mut CompileContext<'_, '_>, unit: &Unit) -> CargoResult<()> {
-    let bcx = cx.bcx;
+pub fn output_depinfo(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<()> {
+    let bcx = build_runner.bcx;
     let mut deps = BTreeSet::new();
     let mut visited = HashSet::new();
-    let success = add_deps_for_unit(&mut deps, cx, unit, &mut visited).is_ok();
+    let success = add_deps_for_unit(&mut deps, build_runner, unit, &mut visited).is_ok();
     let basedir_string;
     let basedir = match bcx.gctx.build_config()?.dep_info_basedir.clone() {
         Some(value) => {
@@ -134,7 +141,7 @@ pub fn output_depinfo(cx: &mut CompileContext<'_, '_>, unit: &Unit) -> CargoResu
         .map(|f| render_filename(f, basedir))
         .collect::<CargoResult<Vec<_>>>()?;
 
-    for output in cx
+    for output in build_runner
         .outputs(unit)?
         .iter()
         .filter(|o| !matches!(o.flavor, FileFlavor::DebugInfo | FileFlavor::Auxiliary))

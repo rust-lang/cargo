@@ -1,4 +1,4 @@
-//! [`CompileContext`] is the mutable state used during the build process.
+//! [`BuildRunner`] is the mutable state used during the build process.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -36,7 +36,7 @@ pub use self::compilation_files::{Metadata, OutputFile};
 /// throughout the entire build process. Everything is coordinated through this.
 ///
 /// [`BuildContext`]: crate::core::compiler::BuildContext
-pub struct CompileContext<'a, 'gctx> {
+pub struct BuildRunner<'a, 'gctx> {
     /// Mostly static information about the build task.
     pub bcx: &'a BuildContext<'a, 'gctx>,
     /// A large collection of information about the result of the entire compilation.
@@ -88,7 +88,7 @@ pub struct CompileContext<'a, 'gctx> {
     pub failed_scrape_units: Arc<Mutex<HashSet<Metadata>>>,
 }
 
-impl<'a, 'gctx> CompileContext<'a, 'gctx> {
+impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
     pub fn new(bcx: &'a BuildContext<'a, 'gctx>) -> CargoResult<Self> {
         // Load up the jobserver that we'll use to manage our parallelism. This
         // is the same as the GNU make implementation of a jobserver, and

@@ -1,6 +1,6 @@
 //! Utilities for building with rustdoc.
 
-use crate::core::compiler::context::CompileContext;
+use crate::core::compiler::build_runner::BuildRunner;
 use crate::core::compiler::unit::Unit;
 use crate::core::compiler::{BuildContext, CompileKind};
 use crate::sources::CRATES_IO_REGISTRY;
@@ -108,11 +108,11 @@ impl hash::Hash for RustdocExternMap {
 /// [1]: https://doc.rust-lang.org/nightly/rustdoc/unstable-features.html#--extern-html-root-url-control-how-rustdoc-links-to-non-local-crates
 /// [2]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#rustdoc-map
 pub fn add_root_urls(
-    compiler_ctx: &CompileContext<'_, '_>,
+    build_runner: &BuildRunner<'_, '_>,
     unit: &Unit,
     rustdoc: &mut ProcessBuilder,
 ) -> CargoResult<()> {
-    let gctx = compiler_ctx.bcx.gctx;
+    let gctx = build_runner.bcx.gctx;
     if !gctx.cli_unstable().rustdoc_map {
         tracing::debug!("`doc.extern-map` ignored, requires -Zrustdoc-map flag");
         return Ok(());
@@ -135,7 +135,7 @@ pub fn add_root_urls(
             }
         })
         .collect();
-    for dep in compiler_ctx.unit_deps(unit) {
+    for dep in build_runner.unit_deps(unit) {
         if dep.unit.target.is_linkable() && !dep.unit.mode.is_doc() {
             for (registry, location) in &map.registries {
                 let sid = dep.unit.pkg.package_id().source_id();
@@ -172,7 +172,7 @@ pub fn add_root_urls(
     let std_url = match &map.std {
         None | Some(RustdocExternMode::Remote) => None,
         Some(RustdocExternMode::Local) => {
-            let sysroot = &compiler_ctx.bcx.target_data.info(CompileKind::Host).sysroot;
+            let sysroot = &build_runner.bcx.target_data.info(CompileKind::Host).sysroot;
             let html_root = sysroot.join("share").join("doc").join("rust").join("html");
             if html_root.exists() {
                 let url = Url::from_file_path(&html_root).map_err(|()| {
@@ -211,11 +211,11 @@ pub fn add_root_urls(
 ///
 /// [1]: https://doc.rust-lang.org/nightly/rustdoc/unstable-features.html?highlight=output-format#-w--output-format-output-format
 pub fn add_output_format(
-    compiler_ctx: &CompileContext<'_, '_>,
+    build_runner: &BuildRunner<'_, '_>,
     unit: &Unit,
     rustdoc: &mut ProcessBuilder,
 ) -> CargoResult<()> {
-    let gctx = compiler_ctx.bcx.gctx;
+    let gctx = build_runner.bcx.gctx;
     if !gctx.cli_unstable().unstable_options {
         tracing::debug!("`unstable-options` is ignored, required -Zunstable-options flag");
         return Ok(());

@@ -13,7 +13,7 @@
 //!   from the resolver.  See also [`unit_dependencies`].
 //! 5. Construct the [`BuildContext`] with all of the information collected so
 //!   far. This is the end of the "front end" of compilation.
-//! 6. Create a [`CompileContext`] which coordinates the compilation process
+//! 6. Create a [`BuildRunner`] which coordinates the compilation process
 //!   and will perform the following steps:
 //!     1. Prepare the `target` directory (see [`Layout`]).
 //!     2. Create a [`JobQueue`]. The queue checks the
@@ -42,7 +42,7 @@ use std::sync::Arc;
 use crate::core::compiler::unit_dependencies::build_unit_dependencies;
 use crate::core::compiler::unit_graph::{self, UnitDep, UnitGraph};
 use crate::core::compiler::{standard_lib, CrateType, TargetInfo};
-use crate::core::compiler::{BuildConfig, BuildContext, Compilation, CompileContext};
+use crate::core::compiler::{BuildConfig, BuildContext, BuildRunner, Compilation};
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, RustcTargetData, Unit};
 use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::Profiles;
@@ -155,8 +155,8 @@ pub fn compile_ws<'a>(
     }
     crate::core::gc::auto_gc(bcx.gctx);
     let _p = profile::start("compiling");
-    let cx = CompileContext::new(&bcx)?;
-    cx.compile(exec)
+    let build_runner = BuildRunner::new(&bcx)?;
+    build_runner.compile(exec)
 }
 
 /// Executes `rustc --print <VALUE>`.

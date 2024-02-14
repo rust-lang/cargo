@@ -9,7 +9,7 @@
 
 use crate::core::compiler::apply_env_config;
 use crate::core::compiler::{
-    BuildOutput, CompileContext, CompileKind, CompileMode, CompileTarget, CrateType,
+    BuildOutput, BuildRunner, CompileKind, CompileMode, CompileTarget, CrateType,
 };
 use crate::core::{Dependency, Package, Target, TargetKind, Workspace};
 use crate::util::config::{GlobalContext, StringList, TargetConfig};
@@ -1033,15 +1033,23 @@ impl RustDocFingerprint {
     /// the rustdoc fingerprint info in order to guarantee that we won't end up with mixed
     /// versions of the `js/html/css` files that `rustdoc` autogenerates which do not have
     /// any versioning.
-    pub fn check_rustdoc_fingerprint(cx: &CompileContext<'_, '_>) -> CargoResult<()> {
-        if cx.bcx.gctx.cli_unstable().skip_rustdoc_fingerprint {
+    pub fn check_rustdoc_fingerprint(build_runner: &BuildRunner<'_, '_>) -> CargoResult<()> {
+        if build_runner
+            .bcx
+            .gctx
+            .cli_unstable()
+            .skip_rustdoc_fingerprint
+        {
             return Ok(());
         }
         let actual_rustdoc_target_data = RustDocFingerprint {
-            rustc_vv: cx.bcx.rustc().verbose_version.clone(),
+            rustc_vv: build_runner.bcx.rustc().verbose_version.clone(),
         };
 
-        let fingerprint_path = cx.files().host_root().join(".rustdoc_fingerprint.json");
+        let fingerprint_path = build_runner
+            .files()
+            .host_root()
+            .join(".rustdoc_fingerprint.json");
         let write_fingerprint = || -> CargoResult<()> {
             paths::write(
                 &fingerprint_path,
@@ -1076,10 +1084,11 @@ impl RustDocFingerprint {
             "fingerprint {:?} mismatch, clearing doc directories",
             fingerprint_path
         );
-        cx.bcx
+        build_runner
+            .bcx
             .all_kinds
             .iter()
-            .map(|kind| cx.files().layout(*kind).doc())
+            .map(|kind| build_runner.files().layout(*kind).doc())
             .filter(|path| path.exists())
             .try_for_each(|path| clean_doc(path))?;
         write_fingerprint()?;

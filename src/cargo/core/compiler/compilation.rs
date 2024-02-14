@@ -166,7 +166,7 @@ impl<'gctx> Compilation<'gctx> {
     ///
     /// `is_primary` is true if this is a "primary package", which means it
     /// was selected by the user on the command-line (such as with a `-p`
-    /// flag), see [`crate::core::compiler::CompileContext::primary_packages`].
+    /// flag), see [`crate::core::compiler::BuildRunner::primary_packages`].
     ///
     /// `is_workspace` is true if this is a workspace member.
     pub fn rustc_process(

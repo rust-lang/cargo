@@ -4,7 +4,7 @@
 //! long it takes for different units to compile.
 use super::{CompileMode, Unit};
 use crate::core::compiler::job_queue::JobId;
-use crate::core::compiler::{BuildContext, CompileContext, TimingOutput};
+use crate::core::compiler::{BuildContext, BuildRunner, TimingOutput};
 use crate::core::PackageId;
 use crate::util::cpu::State;
 use crate::util::machine_message::{self, Message};
@@ -288,7 +288,7 @@ impl<'gctx> Timings<'gctx> {
     /// Call this when all units are finished.
     pub fn finished(
         &mut self,
-        cx: &CompileContext<'_, '_>,
+        build_runner: &BuildRunner<'_, '_>,
         error: &Option<anyhow::Error>,
     ) -> CargoResult<()> {
         if !self.enabled {
@@ -298,7 +298,7 @@ impl<'gctx> Timings<'gctx> {
         self.unit_times
             .sort_unstable_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
         if self.report_html {
-            self.report_html(cx, error)
+            self.report_html(build_runner, error)
                 .with_context(|| "failed to save timing report")?;
         }
         Ok(())
@@ -307,12 +307,12 @@ impl<'gctx> Timings<'gctx> {
     /// Save HTML report to disk.
     fn report_html(
         &self,
-        cx: &CompileContext<'_, '_>,
+        build_runner: &BuildRunner<'_, '_>,
         error: &Option<anyhow::Error>,
     ) -> CargoResult<()> {
         let duration = self.start.elapsed().as_secs_f64();
         let timestamp = self.start_str.replace(&['-', ':'][..], "");
-        let timings_path = cx.files().host_root().join("cargo-timings");
+        let timings_path = build_runner.files().host_root().join("cargo-timings");
         paths::create_dir_all(&timings_path)?;
         let filename = timings_path.join(format!("cargo-timing-{}.html", timestamp));
         let mut f = BufWriter::new(paths::create(&filename)?);
@@ -322,7 +322,7 @@ impl<'gctx> Timings<'gctx> {
             .map(|(name, _targets)| name.as_str())
             .collect();
         f.write_all(HTML_TMPL.replace("{ROOTS}", &roots.join(", ")).as_bytes())?;
-        self.write_summary_table(&mut f, duration, cx.bcx, error)?;
+        self.write_summary_table(&mut f, duration, build_runner.bcx, error)?;
         f.write_all(HTML_CANVAS.as_bytes())?;
         self.write_unit_table(&mut f)?;
         // It helps with pixel alignment to use whole numbers.
