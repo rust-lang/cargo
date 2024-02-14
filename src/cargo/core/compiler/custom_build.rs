@@ -32,10 +32,10 @@
 //! [instructions]: https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
 
 use super::{fingerprint, BuildRunner, Job, Unit, Work};
-use crate::core::compiler::artifact;
 use crate::core::compiler::build_runner::Metadata;
 use crate::core::compiler::fingerprint::DirtyReason;
 use crate::core::compiler::job_queue::JobState;
+use crate::core::compiler::{artifact, CompileKind};
 use crate::core::{profiles::ProfileRoot, PackageId, Target};
 use crate::util::errors::CargoResult;
 use crate::util::machine_message::{self, Message};
@@ -316,6 +316,15 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
     if let Some(trim_paths) = unit.profile.trim_paths.as_ref() {
         cmd.env("CARGO_TRIM_PATHS", trim_paths.to_string());
     }
+
+    // Pass along sysroots used by the host/target.
+    let host_sysroot = &bcx.target_data.info(CompileKind::Host).sysroot;
+    let target_sysroot = match unit.kind {
+        CompileKind::Host => host_sysroot,
+        CompileKind::Target(_) => &bcx.target_data.info(unit.kind).sysroot,
+    };
+    cmd.env("RUSTC_HOST_SYSROOT", host_sysroot);
+    cmd.env("RUSTC_TARGET_SYSROOT", target_sysroot);
 
     // Be sure to pass along all enabled features for this package, this is the
     // last piece of statically known information that we have.

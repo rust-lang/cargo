@@ -392,6 +392,8 @@ let out_dir = env::var("OUT_DIR").unwrap();
                    changed by editing `.cargo/config.toml`; see the documentation
                    about [cargo configuration][cargo-config] for more
                    information.
+* `RUSTC_HOST_SYSROOT` --- The path to the `rustc` sysroot for the host.
+* `RUSTC_TARGET_SYSROOT` --- The path to the `rustc` sysroot for the target.
 * `CARGO_ENCODED_RUSTFLAGS` --- extra flags that Cargo invokes `rustc` with,
   separated by a `0x1f` character (ASCII Unit Separator). See
   [`build.rustflags`]. Note that since Rust 1.55, `RUSTFLAGS` is removed from
