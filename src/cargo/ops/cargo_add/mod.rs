@@ -208,6 +208,10 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
                     let new_feature: toml_edit::Value =
                         [format!("dep:{dep_name}")].iter().collect();
                     table[dep_key] = toml_edit::value(new_feature);
+                    options
+                        .config
+                        .shell()
+                        .status("Adding", format!("feature `{dep_key}`"))?;
                 }
             }
         }
