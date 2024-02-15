@@ -15,7 +15,7 @@ use cargo_test_support::{basic_manifest, project, Project};
 // We use a special flag to force it to generate a report.
 const FUTURE_EXAMPLE: &'static str = "fn main() { let x = 1; }";
 // Some text that will be displayed when the lint fires.
-const FUTURE_OUTPUT: &'static str = "[..]unused_variables[..]";
+const FUTURE_OUTPUT: &'static str = "[..]unused variable[..]";
 
 fn simple_project() -> Project {
     project()
