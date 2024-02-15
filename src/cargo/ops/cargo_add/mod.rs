@@ -1003,7 +1003,6 @@ fn print_action_msg(shell: &mut Shell, dep: &DependencyUI, section: &[String]) -
         format!("{} for target `{}`", &section[2], &section[1])
     };
     write!(message, " {section}")?;
-    write!(message, ".")?;
     shell.status("Adding", message)
 }
 

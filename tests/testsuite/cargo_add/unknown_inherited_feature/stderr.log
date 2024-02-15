@@ -1,4 +1,4 @@
-      Adding foo (workspace) to dependencies.
+      Adding foo (workspace) to dependencies
 error: unrecognized feature for crate foo: not_recognized
 disabled features:
     merge, merge-base, unrelated
