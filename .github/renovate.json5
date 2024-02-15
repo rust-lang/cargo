@@ -45,6 +45,7 @@
       matchPackageNames: [
         'MSRV:1',
       ],
+      extractVersion: '^(?<version>\\d+\\.\\d+)',  // Drop the patch version
       schedule: [
         '* * * * *',
       ],
