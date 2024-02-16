@@ -1,4 +1,6 @@
 use cargo_test_support::compare::assert_ui;
+use cargo_test_support::current_dir;
+use cargo_test_support::file;
 use cargo_test_support::prelude::*;
 use cargo_test_support::Project;
 
@@ -19,8 +21,7 @@ fn case() {
             .publish();
     }
 
-    let project =
-        Project::from_template("tests/testsuite/cargo_add/build_prefer_existing_version/in");
+    let project = Project::from_template(current_dir!().join("in"));
     let project_root = project.root();
     let cwd = &project_root;
 
@@ -30,11 +31,8 @@ fn case() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_matches_path("tests/testsuite/cargo_add/build_prefer_existing_version/stdout.log")
-        .stderr_matches_path("tests/testsuite/cargo_add/build_prefer_existing_version/stderr.log");
+        .stdout_matches(file!["stdout.log"])
+        .stderr_matches(file!["stderr.log"]);
 
-    assert_ui().subset_matches(
-        "tests/testsuite/cargo_add/build_prefer_existing_version/out",
-        &project_root,
-    );
+    assert_ui().subset_matches(current_dir!().join("out"), &project_root);
 }
