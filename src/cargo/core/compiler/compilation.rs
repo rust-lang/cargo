@@ -280,7 +280,12 @@ impl<'cfg> Compilation<'cfg> {
         is_rustc_tool: bool,
     ) -> CargoResult<ProcessBuilder> {
         let mut search_path = Vec::new();
+        // this divides rustc/rustdoc invocations and other executions of build artifacts
         if is_rustc_tool {
+            search_path.extend(super::filter_dynamic_search_path(
+                self.native_dirs.iter(),
+                &self.root_output[&CompileKind::Host],
+            ));
             search_path.push(self.deps_output[&CompileKind::Host].clone());
             search_path.push(self.sysroot_host_libdir.clone());
         } else {
