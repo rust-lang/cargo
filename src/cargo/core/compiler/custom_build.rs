@@ -1077,9 +1077,6 @@ fn prepare_metabuild(cx: &Context<'_, '_>, unit: &Unit, deps: &[String]) -> Carg
                 .map(|d| d.unit.target.crate_name())
         })
         .collect();
-    for dep in &meta_deps {
-        output.push(format!("use {};\n", dep));
-    }
     output.push("fn main() {\n".to_string());
     for dep in &meta_deps {
         output.push(format!("    {}::metabuild();\n", dep));
