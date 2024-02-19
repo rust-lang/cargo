@@ -1506,15 +1506,14 @@ pub fn extern_args(
         |dep: &UnitDep, extern_crate_name: InternedString, noprelude: bool| -> CargoResult<()> {
             let mut value = OsString::new();
             let mut opts = Vec::new();
-            if unit
+            let is_public_dependency_enabled = unit
                 .pkg
                 .manifest()
                 .unstable_features()
                 .require(Feature::public_dependency())
                 .is_ok()
-                && !dep.public
-                && unit.target.is_lib()
-            {
+                || build_runner.bcx.gctx.cli_unstable().public_dependency;
+            if !dep.public && unit.target.is_lib() && is_public_dependency_enabled {
                 opts.push("priv");
                 *unstable_opts = true;
             }
