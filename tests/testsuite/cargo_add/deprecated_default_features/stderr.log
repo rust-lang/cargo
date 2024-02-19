@@ -1,1 +1,0 @@
-error: Use of `default_features` in `my-package` is unsupported, please switch to `default-features`

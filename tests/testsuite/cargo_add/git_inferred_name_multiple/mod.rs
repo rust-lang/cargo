@@ -69,7 +69,7 @@ fn case() {
         .assert()
         .code(101)
         .stdout_matches(str![""])
-        .stderr_matches(file!["stderr.log"]);
+        .stderr_matches(file!["stderr.term.svg"]);
 
     assert_ui().subset_matches(current_dir!().join("out"), &project_root);
 }

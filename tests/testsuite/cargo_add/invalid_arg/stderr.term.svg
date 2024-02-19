@@ -1,0 +1,46 @@
+<svg width="740px" height="200px" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .fg { fill: #AAAAAA }
+    .bg { background: #000000 }
+    .fg-cyan { fill: #00AAAA }
+    .fg-green { fill: #00AA00 }
+    .fg-red { fill: #AA0000 }
+    .fg-yellow { fill: #AA5500 }
+    .container {
+      padding: 0 10px;
+      line-height: 18px;
+    }
+    .bold { font-weight: bold; }
+    tspan {
+      font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+      white-space: pre;
+      line-height: 18px;
+    }
+  </style>
+
+  <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
+
+  <text xml:space="preserve" class="container fg">
+    <tspan x="10px" y="28px"><tspan class="fg-red bold">error:</tspan><tspan> unexpected argument '</tspan><tspan class="fg-yellow bold">--flag</tspan><tspan>' found</tspan>
+</tspan>
+    <tspan x="10px" y="46px">
+</tspan>
+    <tspan x="10px" y="64px"><tspan>  </tspan><tspan class="fg-cyan bold">tip:</tspan><tspan> a similar argument exists: '</tspan><tspan class="fg-cyan bold">--tag</tspan><tspan>'</tspan>
+</tspan>
+    <tspan x="10px" y="82px">
+</tspan>
+    <tspan x="10px" y="100px"><tspan class="fg-green bold">Usage:</tspan><tspan> </tspan><tspan class="fg-cyan bold">cargo add</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">[OPTIONS] &lt;DEP&gt;[@&lt;VERSION&gt;] ...</tspan>
+</tspan>
+    <tspan x="10px" y="118px"><tspan class="bold">       </tspan><tspan class="fg-cyan bold">cargo add</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">[OPTIONS]</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">--path</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">&lt;PATH&gt; ...</tspan>
+</tspan>
+    <tspan x="10px" y="136px"><tspan class="bold">       </tspan><tspan class="fg-cyan bold">cargo add</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">[OPTIONS]</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">--git</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">&lt;URL&gt; ...</tspan>
+</tspan>
+    <tspan x="10px" y="154px">
+</tspan>
+    <tspan x="10px" y="172px"><tspan class="bold">For more information, try '</tspan><tspan class="fg-cyan bold">--help</tspan><tspan>'.</tspan>
+</tspan>
+    <tspan x="10px" y="190px">
+</tspan>
+  </text>
+
+</svg>

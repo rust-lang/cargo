@@ -1,0 +1,296 @@
+<svg width="860px" height="2468px" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .fg { fill: #AAAAAA }
+    .bg { background: #000000 }
+    .fg-cyan { fill: #00AAAA }
+    .fg-green { fill: #00AA00 }
+    .container {
+      padding: 0 10px;
+      line-height: 18px;
+    }
+    .bold { font-weight: bold; }
+    tspan {
+      font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+      white-space: pre;
+      line-height: 18px;
+    }
+  </style>
+
+  <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
+
+  <text xml:space="preserve" class="container fg">
+    <tspan x="10px" y="28px"><tspan>Add dependencies to a Cargo.toml manifest file</tspan>
+</tspan>
+    <tspan x="10px" y="46px">
+</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-green bold">Usage:</tspan><tspan> </tspan><tspan class="fg-cyan bold">cargo add</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">[OPTIONS] &lt;DEP&gt;[@&lt;VERSION&gt;] ...</tspan>
+</tspan>
+    <tspan x="10px" y="82px"><tspan class="bold">       </tspan><tspan class="fg-cyan bold">cargo add</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">[OPTIONS]</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">--path</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">&lt;PATH&gt; ...</tspan>
+</tspan>
+    <tspan x="10px" y="100px"><tspan class="bold">       </tspan><tspan class="fg-cyan bold">cargo add</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">[OPTIONS]</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">--git</tspan><tspan class="bold"> </tspan><tspan class="fg-cyan bold">&lt;URL&gt; ...</tspan>
+</tspan>
+    <tspan x="10px" y="118px">
+</tspan>
+    <tspan x="10px" y="136px"><tspan class="fg-green bold">Arguments:</tspan>
+</tspan>
+    <tspan x="10px" y="154px"><tspan>  </tspan><tspan class="fg-cyan">[DEP_ID]...</tspan>
+</tspan>
+    <tspan x="10px" y="172px"><tspan>          Reference to a package to add as a dependency</tspan>
+</tspan>
+    <tspan x="10px" y="190px"><tspan>          </tspan>
+</tspan>
+    <tspan x="10px" y="208px"><tspan>          You can reference a package by:</tspan>
+</tspan>
+    <tspan x="10px" y="226px"><tspan>          - `&lt;name&gt;`, like `cargo add serde` (latest version will be used)</tspan>
+</tspan>
+    <tspan x="10px" y="244px"><tspan>          - `&lt;name&gt;@&lt;version-req&gt;`, like `cargo add serde@1` or `cargo add serde@=1.0.38`</tspan>
+</tspan>
+    <tspan x="10px" y="262px">
+</tspan>
+    <tspan x="10px" y="280px"><tspan class="fg-green bold">Options:</tspan>
+</tspan>
+    <tspan x="10px" y="298px"><tspan>      </tspan><tspan class="fg-cyan bold">--no-default-features</tspan>
+</tspan>
+    <tspan x="10px" y="316px"><tspan>          Disable the default features</tspan>
+</tspan>
+    <tspan x="10px" y="334px">
+</tspan>
+    <tspan x="10px" y="352px"><tspan>      </tspan><tspan class="fg-cyan bold">--default-features</tspan>
+</tspan>
+    <tspan x="10px" y="370px"><tspan>          Re-enable the default features</tspan>
+</tspan>
+    <tspan x="10px" y="388px">
+</tspan>
+    <tspan x="10px" y="406px"><tspan>  </tspan><tspan class="fg-cyan bold">-F</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--features</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FEATURES&gt;</tspan>
+</tspan>
+    <tspan x="10px" y="424px"><tspan>          Space or comma separated list of features to activate</tspan>
+</tspan>
+    <tspan x="10px" y="442px">
+</tspan>
+    <tspan x="10px" y="460px"><tspan>      </tspan><tspan class="fg-cyan bold">--optional</tspan>
+</tspan>
+    <tspan x="10px" y="478px"><tspan>          Mark the dependency as optional</tspan>
+</tspan>
+    <tspan x="10px" y="496px"><tspan>          </tspan>
+</tspan>
+    <tspan x="10px" y="514px"><tspan>          The package name will be exposed as feature of your crate.</tspan>
+</tspan>
+    <tspan x="10px" y="532px">
+</tspan>
+    <tspan x="10px" y="550px"><tspan>      </tspan><tspan class="fg-cyan bold">--no-optional</tspan>
+</tspan>
+    <tspan x="10px" y="568px"><tspan>          Mark the dependency as required</tspan>
+</tspan>
+    <tspan x="10px" y="586px"><tspan>          </tspan>
+</tspan>
+    <tspan x="10px" y="604px"><tspan>          The package will be removed from your features.</tspan>
+</tspan>
+    <tspan x="10px" y="622px">
+</tspan>
+    <tspan x="10px" y="640px"><tspan>      </tspan><tspan class="fg-cyan bold">--public</tspan>
+</tspan>
+    <tspan x="10px" y="658px"><tspan>          Mark the dependency as public (unstable)</tspan>
+</tspan>
+    <tspan x="10px" y="676px"><tspan>          </tspan>
+</tspan>
+    <tspan x="10px" y="694px"><tspan>          The dependency can be referenced in your library's public API.</tspan>
+</tspan>
+    <tspan x="10px" y="712px">
+</tspan>
+    <tspan x="10px" y="730px"><tspan>      </tspan><tspan class="fg-cyan bold">--no-public</tspan>
+</tspan>
+    <tspan x="10px" y="748px"><tspan>          Mark the dependency as private (unstable)</tspan>
+</tspan>
+    <tspan x="10px" y="766px"><tspan>          </tspan>
+</tspan>
+    <tspan x="10px" y="784px"><tspan>          While you can use the crate in your implementation, it cannot be referenced in your public</tspan>
+</tspan>
+    <tspan x="10px" y="802px"><tspan>          API.</tspan>
+</tspan>
+    <tspan x="10px" y="820px">
+</tspan>
+    <tspan x="10px" y="838px"><tspan>      </tspan><tspan class="fg-cyan bold">--rename</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;NAME&gt;</tspan>
+</tspan>
+    <tspan x="10px" y="856px"><tspan>          Rename the dependency</tspan>
+</tspan>
+    <tspan x="10px" y="874px"><tspan>          </tspan>
+</tspan>
+    <tspan x="10px" y="892px"><tspan>          Example uses:</tspan>
+</tspan>
+    <tspan x="10px" y="910px"><tspan>          - Depending on multiple versions of a crate</tspan>
+</tspan>
+    <tspan x="10px" y="928px"><tspan>          - Depend on crates with the same name from different registries</tspan>
+</tspan>
+    <tspan x="10px" y="946px">
+</tspan>
+    <tspan x="10px" y="964px"><tspan>      </tspan><tspan class="fg-cyan bold">--ignore-rust-version</tspan>
+</tspan>
+    <tspan x="10px" y="982px"><tspan>          Ignore `rust-version` specification in packages (unstable)</tspan>
+</tspan>
+    <tspan x="10px" y="1000px">
+</tspan>
+    <tspan x="10px" y="1018px"><tspan>  </tspan><tspan class="fg-cyan bold">-n</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--dry-run</tspan>
+</tspan>
+    <tspan x="10px" y="1036px"><tspan>          Don't actually write the manifest</tspan>
+</tspan>
+    <tspan x="10px" y="1054px">
+</tspan>
+    <tspan x="10px" y="1072px"><tspan>  </tspan><tspan class="fg-cyan bold">-v</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--verbose</tspan><tspan class="fg-cyan">...</tspan>
+</tspan>
+    <tspan x="10px" y="1090px"><tspan>          Use verbose output (-vv very verbose/build.rs output)</tspan>
+</tspan>
+    <tspan x="10px" y="1108px">
+</tspan>
+    <tspan x="10px" y="1126px"><tspan>  </tspan><tspan class="fg-cyan bold">-q</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--quiet</tspan>
+</tspan>
+    <tspan x="10px" y="1144px"><tspan>          Do not print cargo log messages</tspan>
+</tspan>
+    <tspan x="10px" y="1162px">
+</tspan>
+    <tspan x="10px" y="1180px"><tspan>      </tspan><tspan class="fg-cyan bold">--color</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;WHEN&gt;</tspan>
+</tspan>
+    <tspan x="10px" y="1198px"><tspan>          Coloring: auto, always, never</tspan>
+</tspan>
+    <tspan x="10px" y="1216px">
+</tspan>
+    <tspan x="10px" y="1234px"><tspan>      </tspan><tspan class="fg-cyan bold">--config</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;KEY=VALUE&gt;</tspan>
+</tspan>
+    <tspan x="10px" y="1252px"><tspan>          Override a configuration value</tspan>
+</tspan>
+    <tspan x="10px" y="1270px">
+</tspan>
+    <tspan x="10px" y="1288px"><tspan>  </tspan><tspan class="fg-cyan bold">-Z</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FLAG&gt;</tspan>
+</tspan>
+    <tspan x="10px" y="1306px"><tspan>          Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details</tspan>
+</tspan>
+    <tspan x="10px" y="1324px">
+</tspan>
+    <tspan x="10px" y="1342px"><tspan>  </tspan><tspan class="fg-cyan bold">-h</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--help</tspan>
+</tspan>
+    <tspan x="10px" y="1360px"><tspan>          Print help (see a summary with '-h')</tspan>
+</tspan>
+    <tspan x="10px" y="1378px">
+</tspan>
+    <tspan x="10px" y="1396px"><tspan class="fg-green bold">Manifest Options:</tspan>
+</tspan>
+    <tspan x="10px" y="1414px"><tspan>      </tspan><tspan class="fg-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan>
+</tspan>
+    <tspan x="10px" y="1432px"><tspan>          Path to Cargo.toml</tspan>
+</tspan>
+    <tspan x="10px" y="1450px">
+</tspan>
+    <tspan x="10px" y="1468px"><tspan>      </tspan><tspan class="fg-cyan bold">--frozen</tspan>
+</tspan>
+    <tspan x="10px" y="1486px"><tspan>          Require Cargo.lock and cache are up to date</tspan>
+</tspan>
+    <tspan x="10px" y="1504px">
+</tspan>
+    <tspan x="10px" y="1522px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan>
+</tspan>
+    <tspan x="10px" y="1540px"><tspan>          Require Cargo.lock is up to date</tspan>
+</tspan>
+    <tspan x="10px" y="1558px">
+</tspan>
+    <tspan x="10px" y="1576px"><tspan>      </tspan><tspan class="fg-cyan bold">--offline</tspan>
+</tspan>
+    <tspan x="10px" y="1594px"><tspan>          Run without accessing the network</tspan>
+</tspan>
+    <tspan x="10px" y="1612px">
+</tspan>
+    <tspan x="10px" y="1630px"><tspan class="fg-green bold">Package Selection:</tspan>
+</tspan>
+    <tspan x="10px" y="1648px"><tspan>  </tspan><tspan class="fg-cyan bold">-p</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--package</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;SPEC&gt;</tspan><tspan class="fg-cyan">]</tspan>
+</tspan>
+    <tspan x="10px" y="1666px"><tspan>          Package to modify</tspan>
+</tspan>
+    <tspan x="10px" y="1684px">
+</tspan>
+    <tspan x="10px" y="1702px"><tspan class="fg-green bold">Source:</tspan>
+</tspan>
+    <tspan x="10px" y="1720px"><tspan>      </tspan><tspan class="fg-cyan bold">--path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan>
+</tspan>
+    <tspan x="10px" y="1738px"><tspan>          Filesystem path to local crate to add</tspan>
+</tspan>
+    <tspan x="10px" y="1756px">
+</tspan>
+    <tspan x="10px" y="1774px"><tspan>      </tspan><tspan class="fg-cyan bold">--git</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;URI&gt;</tspan>
+</tspan>
+    <tspan x="10px" y="1792px"><tspan>          Git repository location</tspan>
+</tspan>
+    <tspan x="10px" y="1810px"><tspan>          </tspan>
+</tspan>
+    <tspan x="10px" y="1828px"><tspan>          Without any other information, cargo will use latest commit on the main branch.</tspan>
+</tspan>
+    <tspan x="10px" y="1846px">
+</tspan>
+    <tspan x="10px" y="1864px"><tspan>      </tspan><tspan class="fg-cyan bold">--branch</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;BRANCH&gt;</tspan>
+</tspan>
+    <tspan x="10px" y="1882px"><tspan>          Git branch to download the crate from</tspan>
+</tspan>
+    <tspan x="10px" y="1900px">
+</tspan>
+    <tspan x="10px" y="1918px"><tspan>      </tspan><tspan class="fg-cyan bold">--tag</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;TAG&gt;</tspan>
+</tspan>
+    <tspan x="10px" y="1936px"><tspan>          Git tag to download the crate from</tspan>
+</tspan>
+    <tspan x="10px" y="1954px">
+</tspan>
+    <tspan x="10px" y="1972px"><tspan>      </tspan><tspan class="fg-cyan bold">--rev</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;REV&gt;</tspan>
+</tspan>
+    <tspan x="10px" y="1990px"><tspan>          Git reference to download the crate from</tspan>
+</tspan>
+    <tspan x="10px" y="2008px"><tspan>          </tspan>
+</tspan>
+    <tspan x="10px" y="2026px"><tspan>          This is the catch all, handling hashes to named references in remote repositories.</tspan>
+</tspan>
+    <tspan x="10px" y="2044px">
+</tspan>
+    <tspan x="10px" y="2062px"><tspan>      </tspan><tspan class="fg-cyan bold">--registry</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;NAME&gt;</tspan>
+</tspan>
+    <tspan x="10px" y="2080px"><tspan>          Package registry for this dependency</tspan>
+</tspan>
+    <tspan x="10px" y="2098px">
+</tspan>
+    <tspan x="10px" y="2116px"><tspan class="fg-green bold">Section:</tspan>
+</tspan>
+    <tspan x="10px" y="2134px"><tspan>      </tspan><tspan class="fg-cyan bold">--dev</tspan>
+</tspan>
+    <tspan x="10px" y="2152px"><tspan>          Add as development dependency</tspan>
+</tspan>
+    <tspan x="10px" y="2170px"><tspan>          </tspan>
+</tspan>
+    <tspan x="10px" y="2188px"><tspan>          Dev-dependencies are not used when compiling a package for building, but are used for</tspan>
+</tspan>
+    <tspan x="10px" y="2206px"><tspan>          compiling tests, examples, and benchmarks.</tspan>
+</tspan>
+    <tspan x="10px" y="2224px"><tspan>          </tspan>
+</tspan>
+    <tspan x="10px" y="2242px"><tspan>          These dependencies are not propagated to other packages which depend on this package.</tspan>
+</tspan>
+    <tspan x="10px" y="2260px">
+</tspan>
+    <tspan x="10px" y="2278px"><tspan>      </tspan><tspan class="fg-cyan bold">--build</tspan>
+</tspan>
+    <tspan x="10px" y="2296px"><tspan>          Add as build dependency</tspan>
+</tspan>
+    <tspan x="10px" y="2314px"><tspan>          </tspan>
+</tspan>
+    <tspan x="10px" y="2332px"><tspan>          Build-dependencies are the only dependencies available for use by build scripts</tspan>
+</tspan>
+    <tspan x="10px" y="2350px"><tspan>          (`build.rs` files).</tspan>
+</tspan>
+    <tspan x="10px" y="2368px">
+</tspan>
+    <tspan x="10px" y="2386px"><tspan>      </tspan><tspan class="fg-cyan bold">--target</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;TARGET&gt;</tspan>
+</tspan>
+    <tspan x="10px" y="2404px"><tspan>          Add as dependency to the given target platform</tspan>
+</tspan>
+    <tspan x="10px" y="2422px">
+</tspan>
+    <tspan x="10px" y="2440px"><tspan>Run `</tspan><tspan class="fg-cyan bold">cargo help add</tspan><tspan class="bold">` for more detailed information.</tspan>
+</tspan>
+    <tspan x="10px" y="2458px">
+</tspan>
+  </text>
+
+</svg>

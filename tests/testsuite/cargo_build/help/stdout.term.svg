@@ -1,0 +1,142 @@
+<svg width="818px" height="1082px" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .fg { fill: #AAAAAA }
+    .bg { background: #000000 }
+    .fg-cyan { fill: #00AAAA }
+    .fg-green { fill: #00AA00 }
+    .container {
+      padding: 0 10px;
+      line-height: 18px;
+    }
+    .bold { font-weight: bold; }
+    tspan {
+      font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+      white-space: pre;
+      line-height: 18px;
+    }
+  </style>
+
+  <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
+
+  <text xml:space="preserve" class="container fg">
+    <tspan x="10px" y="28px"><tspan>Compile a local package and all of its dependencies</tspan>
+</tspan>
+    <tspan x="10px" y="46px">
+</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-green bold">Usage:</tspan><tspan> </tspan><tspan class="fg-cyan bold">cargo[EXE] build</tspan><tspan> </tspan><tspan class="fg-cyan">[OPTIONS]</tspan>
+</tspan>
+    <tspan x="10px" y="82px">
+</tspan>
+    <tspan x="10px" y="100px"><tspan class="fg-green bold">Options:</tspan>
+</tspan>
+    <tspan x="10px" y="118px"><tspan>      </tspan><tspan class="fg-cyan bold">--ignore-rust-version</tspan><tspan>     Ignore `rust-version` specification in packages</tspan>
+</tspan>
+    <tspan x="10px" y="136px"><tspan>      </tspan><tspan class="fg-cyan bold">--future-incompat-report</tspan><tspan>  Outputs a future incompatibility report at the end of the build</tspan>
+</tspan>
+    <tspan x="10px" y="154px"><tspan>      </tspan><tspan class="fg-cyan bold">--message-format</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FMT&gt;</tspan><tspan>    Error format</tspan>
+</tspan>
+    <tspan x="10px" y="172px"><tspan>  </tspan><tspan class="fg-cyan bold">-v</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--verbose</tspan><tspan class="fg-cyan">...</tspan><tspan>              Use verbose output (-vv very verbose/build.rs output)</tspan>
+</tspan>
+    <tspan x="10px" y="190px"><tspan>  </tspan><tspan class="fg-cyan bold">-q</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--quiet</tspan><tspan>                   Do not print cargo log messages</tspan>
+</tspan>
+    <tspan x="10px" y="208px"><tspan>      </tspan><tspan class="fg-cyan bold">--color</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;WHEN&gt;</tspan><tspan>            Coloring: auto, always, never</tspan>
+</tspan>
+    <tspan x="10px" y="226px"><tspan>      </tspan><tspan class="fg-cyan bold">--config</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;KEY=VALUE&gt;</tspan><tspan>      Override a configuration value</tspan>
+</tspan>
+    <tspan x="10px" y="244px"><tspan>  </tspan><tspan class="fg-cyan bold">-Z</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FLAG&gt;</tspan><tspan>                     Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for</tspan>
+</tspan>
+    <tspan x="10px" y="262px"><tspan>                                details</tspan>
+</tspan>
+    <tspan x="10px" y="280px"><tspan>  </tspan><tspan class="fg-cyan bold">-h</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--help</tspan><tspan>                    Print help</tspan>
+</tspan>
+    <tspan x="10px" y="298px">
+</tspan>
+    <tspan x="10px" y="316px"><tspan class="fg-green bold">Package Selection:</tspan>
+</tspan>
+    <tspan x="10px" y="334px"><tspan>  </tspan><tspan class="fg-cyan bold">-p</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--package</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;SPEC&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>  Package to build (see `cargo help pkgid`)</tspan>
+</tspan>
+    <tspan x="10px" y="352px"><tspan>      </tspan><tspan class="fg-cyan bold">--workspace</tspan><tspan>         Build all packages in the workspace</tspan>
+</tspan>
+    <tspan x="10px" y="370px"><tspan>      </tspan><tspan class="fg-cyan bold">--exclude</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;SPEC&gt;</tspan><tspan>    Exclude packages from the build</tspan>
+</tspan>
+    <tspan x="10px" y="388px"><tspan>      </tspan><tspan class="fg-cyan bold">--all</tspan><tspan>               Alias for --workspace (deprecated)</tspan>
+</tspan>
+    <tspan x="10px" y="406px">
+</tspan>
+    <tspan x="10px" y="424px"><tspan class="fg-green bold">Target Selection:</tspan>
+</tspan>
+    <tspan x="10px" y="442px"><tspan>      </tspan><tspan class="fg-cyan bold">--lib</tspan><tspan>               Build only this package's library</tspan>
+</tspan>
+    <tspan x="10px" y="460px"><tspan>      </tspan><tspan class="fg-cyan bold">--bins</tspan><tspan>              Build all binaries</tspan>
+</tspan>
+    <tspan x="10px" y="478px"><tspan>      </tspan><tspan class="fg-cyan bold">--bin</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;NAME&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>      Build only the specified binary</tspan>
+</tspan>
+    <tspan x="10px" y="496px"><tspan>      </tspan><tspan class="fg-cyan bold">--examples</tspan><tspan>          Build all examples</tspan>
+</tspan>
+    <tspan x="10px" y="514px"><tspan>      </tspan><tspan class="fg-cyan bold">--example</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;NAME&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>  Build only the specified example</tspan>
+</tspan>
+    <tspan x="10px" y="532px"><tspan>      </tspan><tspan class="fg-cyan bold">--tests</tspan><tspan>             Build all test targets</tspan>
+</tspan>
+    <tspan x="10px" y="550px"><tspan>      </tspan><tspan class="fg-cyan bold">--test</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;NAME&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>     Build only the specified test target</tspan>
+</tspan>
+    <tspan x="10px" y="568px"><tspan>      </tspan><tspan class="fg-cyan bold">--benches</tspan><tspan>           Build all bench targets</tspan>
+</tspan>
+    <tspan x="10px" y="586px"><tspan>      </tspan><tspan class="fg-cyan bold">--bench</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;NAME&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>    Build only the specified bench target</tspan>
+</tspan>
+    <tspan x="10px" y="604px"><tspan>      </tspan><tspan class="fg-cyan bold">--all-targets</tspan><tspan>       Build all targets</tspan>
+</tspan>
+    <tspan x="10px" y="622px">
+</tspan>
+    <tspan x="10px" y="640px"><tspan class="fg-green bold">Feature Selection:</tspan>
+</tspan>
+    <tspan x="10px" y="658px"><tspan>  </tspan><tspan class="fg-cyan bold">-F</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--features</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FEATURES&gt;</tspan><tspan>  Space or comma separated list of features to activate</tspan>
+</tspan>
+    <tspan x="10px" y="676px"><tspan>      </tspan><tspan class="fg-cyan bold">--all-features</tspan><tspan>         Activate all available features</tspan>
+</tspan>
+    <tspan x="10px" y="694px"><tspan>      </tspan><tspan class="fg-cyan bold">--no-default-features</tspan><tspan>  Do not activate the `default` feature</tspan>
+</tspan>
+    <tspan x="10px" y="712px">
+</tspan>
+    <tspan x="10px" y="730px"><tspan class="fg-green bold">Compilation Options:</tspan>
+</tspan>
+    <tspan x="10px" y="748px"><tspan>  </tspan><tspan class="fg-cyan bold">-r</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--release</tspan><tspan>                 Build artifacts in release mode, with optimizations</tspan>
+</tspan>
+    <tspan x="10px" y="766px"><tspan>      </tspan><tspan class="fg-cyan bold">--profile</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PROFILE-NAME&gt;</tspan><tspan>  Build artifacts with the specified profile</tspan>
+</tspan>
+    <tspan x="10px" y="784px"><tspan>  </tspan><tspan class="fg-cyan bold">-j</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--jobs</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;N&gt;</tspan><tspan>                Number of parallel jobs, defaults to # of CPUs.</tspan>
+</tspan>
+    <tspan x="10px" y="802px"><tspan>      </tspan><tspan class="fg-cyan bold">--keep-going</tspan><tspan>              Do not abort the build as soon as there is an error</tspan>
+</tspan>
+    <tspan x="10px" y="820px"><tspan>      </tspan><tspan class="fg-cyan bold">--target</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;TRIPLE&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>       Build for the target triple</tspan>
+</tspan>
+    <tspan x="10px" y="838px"><tspan>      </tspan><tspan class="fg-cyan bold">--target-dir</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;DIRECTORY&gt;</tspan><tspan>  Directory for all generated artifacts</tspan>
+</tspan>
+    <tspan x="10px" y="856px"><tspan>      </tspan><tspan class="fg-cyan bold">--out-dir</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>          Copy final artifacts to this directory (unstable)</tspan>
+</tspan>
+    <tspan x="10px" y="874px"><tspan>      </tspan><tspan class="fg-cyan bold">--build-plan</tspan><tspan>              Output the build plan in JSON (unstable)</tspan>
+</tspan>
+    <tspan x="10px" y="892px"><tspan>      </tspan><tspan class="fg-cyan bold">--unit-graph</tspan><tspan>              Output build graph in JSON (unstable)</tspan>
+</tspan>
+    <tspan x="10px" y="910px"><tspan>      </tspan><tspan class="fg-cyan bold">--timings</tspan><tspan class="fg-cyan">[=</tspan><tspan class="fg-cyan">&lt;FMTS&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>        Timing output formats (unstable) (comma separated): html, json</tspan>
+</tspan>
+    <tspan x="10px" y="928px">
+</tspan>
+    <tspan x="10px" y="946px"><tspan class="fg-green bold">Manifest Options:</tspan>
+</tspan>
+    <tspan x="10px" y="964px"><tspan>      </tspan><tspan class="fg-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.toml</tspan>
+</tspan>
+    <tspan x="10px" y="982px"><tspan>      </tspan><tspan class="fg-cyan bold">--frozen</tspan><tspan>                Require Cargo.lock and cache are up to date</tspan>
+</tspan>
+    <tspan x="10px" y="1000px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan><tspan>                Require Cargo.lock is up to date</tspan>
+</tspan>
+    <tspan x="10px" y="1018px"><tspan>      </tspan><tspan class="fg-cyan bold">--offline</tspan><tspan>               Run without accessing the network</tspan>
+</tspan>
+    <tspan x="10px" y="1036px">
+</tspan>
+    <tspan x="10px" y="1054px"><tspan>Run `</tspan><tspan class="fg-cyan bold">cargo help build</tspan><tspan class="bold">` for more detailed information.</tspan>
+</tspan>
+    <tspan x="10px" y="1072px">
+</tspan>
+  </text>
+
+</svg>

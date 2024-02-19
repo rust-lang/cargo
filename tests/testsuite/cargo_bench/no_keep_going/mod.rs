@@ -17,5 +17,5 @@ fn case() {
         .assert()
         .code(1)
         .stdout_matches(str![""])
-        .stderr_matches(file!["stderr.log"]);
+        .stderr_matches(file!["stderr.term.svg"]);
 }

@@ -1,4 +1,0 @@
-    Creating binary (application) package
-warning: the path `[ROOT]/case/test:ing/.` contains invalid PATH characters (usually `:`, `;`, or `"`)
-It is recommended to use a different name to avoid problems.
-note: see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

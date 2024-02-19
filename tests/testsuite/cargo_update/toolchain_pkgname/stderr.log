@@ -1,2 +1,0 @@
-error: invalid character `+` in package name: `+stable`
-    Use `cargo +stable update` if you meant to use the `stable` toolchain.
