@@ -140,8 +140,6 @@ fn build_resolve_graph(
         crate::core::resolver::features::ForceAllTargets::No
     };
 
-    let max_rust_version = ws.rust_version();
-
     // Note that even with --filter-platform we end up downloading host dependencies as well,
     // as that is the behavior of download_accessible.
     let ws_resolve = ops::resolve_ws_with_opts(
@@ -152,7 +150,6 @@ fn build_resolve_graph(
         &specs,
         HasDevUnits::Yes,
         force_all,
-        max_rust_version,
     )?;
 
     let package_map: BTreeMap<PackageId, Package> = ws_resolve

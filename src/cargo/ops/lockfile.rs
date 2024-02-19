@@ -64,9 +64,10 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
     // out lock file updates as they're otherwise already updated, and changes
     // which don't touch dependencies won't seemingly spuriously update the lock
     // file.
-    let default_version = ResolveVersion::default();
+    let default_version = ResolveVersion::with_rust_version(ws.rust_version());
     let current_version = resolve.version();
     let next_lockfile_bump = ws.config().cli_unstable().next_lockfile_bump;
+    tracing::debug!("lockfile - current: {current_version:?}, default: {default_version:?}");
 
     if current_version < default_version {
         resolve.set_version(default_version);

@@ -1,3 +1,6 @@
+use cargo_util_schemas::core::PartialVersion;
+use cargo_util_schemas::manifest::RustVersion;
+
 use super::encode::Metadata;
 use crate::core::dependency::DepKind;
 use crate::core::{Dependency, PackageId, PackageIdSpec, PackageIdSpecQuery, Summary, Target};
@@ -48,7 +51,7 @@ pub struct Resolve {
 
 /// A version to indicate how a `Cargo.lock` should be serialized.
 ///
-/// When creating a new lockfile, the version with `#[default]` is used.
+/// When creating a new lockfile, the version in [`ResolveVersion::default`] is used.
 /// If an old version of lockfile already exists, it will stay as-is.
 ///
 /// It's important that if a new version is added that this is not updated
@@ -64,25 +67,30 @@ pub struct Resolve {
 ///
 /// It's theorized that we can add more here over time to track larger changes
 /// to the `Cargo.lock` format, but we've yet to see how that strategy pans out.
-#[derive(Default, PartialEq, Eq, Clone, Copy, Debug, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, PartialOrd, Ord)]
 pub enum ResolveVersion {
     /// Historical baseline for when this abstraction was added.
     V1,
     /// A more compact format, more amenable to avoiding source-control merge
     /// conflicts. The `dependencies` arrays are compressed and checksums are
-    /// listed inline. Introduced in 2019 in version 1.38. New lockfiles use
-    /// V2 by default from 1.41 to 1.52.
+    /// listed inline.
+    ///
+    /// * Introduced in 2019 in version 1.38.
+    /// * New lockfiles use V2 by default from 1.41 to 1.52.
     V2,
     /// A format that explicitly lists a `version` at the top of the file as
     /// well as changing how git dependencies are encoded. Dependencies with
     /// `branch = "master"` are no longer encoded the same way as those without
-    /// branch specifiers. Introduced in 2020 in version 1.47. New lockfiles use
-    /// V3 by default staring in 1.53.
-    #[default]
+    /// branch specifiers.
+    ///
+    /// * Introduced in 2020 in version 1.47.
+    /// * New lockfiles use V3 by default starting in 1.53.
     V3,
     /// SourceId URL serialization is aware of URL encoding. For example,
     /// `?branch=foo bar` is now encoded as `?branch=foo+bar` and can be decoded
-    /// back and forth correctly. Introduced in 2024 in version 1.77.
+    /// back and forth correctly.
+    ///
+    /// * Introduced in 2024 in version 1.78.
     V4,
     /// Unstable. Will collect a certain amount of changes and then go.
     ///
@@ -91,6 +99,17 @@ pub enum ResolveVersion {
 }
 
 impl ResolveVersion {
+    /// Gets the default lockfile version.
+    ///
+    /// This is intended to be private.
+    /// You shall use [`ResolveVersion::with_rust_version`] always.
+    ///
+    /// Update this and the description of enum variants of [`ResolveVersion`]
+    /// when we're changing the default lockfile version.
+    fn default() -> ResolveVersion {
+        ResolveVersion::V3
+    }
+
     /// The maximum version of lockfile made into the stable channel.
     ///
     /// Any version larger than this needs `-Znext-lockfile-bump` to enable.
@@ -98,6 +117,40 @@ impl ResolveVersion {
     /// Update this when you're going to stabilize a new lockfile format.
     pub fn max_stable() -> ResolveVersion {
         ResolveVersion::V4
+    }
+
+    /// Gets the default lockfile version for the given Rust version.
+    pub fn with_rust_version(rust_version: Option<&RustVersion>) -> Self {
+        let Some(rust_version) = rust_version else {
+            return ResolveVersion::default();
+        };
+
+        let rust_1_41 = PartialVersion {
+            major: 1,
+            minor: Some(41),
+            patch: None,
+            pre: None,
+            build: None,
+        }
+        .try_into()
+        .expect("PartialVersion 1.41");
+        let rust_1_53 = PartialVersion {
+            major: 1,
+            minor: Some(53),
+            patch: None,
+            pre: None,
+            build: None,
+        }
+        .try_into()
+        .expect("PartialVersion 1.53");
+
+        if rust_version >= &rust_1_53 {
+            ResolveVersion::V3
+        } else if rust_version >= &rust_1_41 {
+            ResolveVersion::V2
+        } else {
+            ResolveVersion::V1
+        }
     }
 }
 

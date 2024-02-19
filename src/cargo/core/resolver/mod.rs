@@ -118,6 +118,8 @@ mod version_prefs;
 /// * `version_prefs` - this represents a preference for some versions over others,
 ///   based on the lock file or other reasons such as `[patch]`es.
 ///
+/// * `resolve_version` - this controls how the lockfile will be serialized.
+///
 /// * `config` - a location to print warnings and such, or `None` if no warnings
 ///   should be printed
 pub fn resolve(
@@ -125,6 +127,7 @@ pub fn resolve(
     replacements: &[(PackageIdSpec, Dependency)],
     registry: &mut dyn Registry,
     version_prefs: &VersionPreferences,
+    resolve_version: ResolveVersion,
     config: Option<&Config>,
 ) -> CargoResult<Resolve> {
     let _p = profile::start("resolving");
@@ -169,7 +172,7 @@ pub fn resolve(
         cksums,
         BTreeMap::new(),
         Vec::new(),
-        ResolveVersion::default(),
+        resolve_version,
         summaries,
     );
 
