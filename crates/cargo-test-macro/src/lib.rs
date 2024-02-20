@@ -74,6 +74,12 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
                 requires_reason = true;
                 set_ignore!(is_not_nightly, "requires nightly");
             }
+            "requires_rustup_stable" => {
+                set_ignore!(
+                    !has_rustup_stable(),
+                    "rustup or stable toolchain not installed"
+                );
+            }
             s if s.starts_with("requires_") => {
                 let command = &s[9..];
                 set_ignore!(!has_command(command), "{command} not installed");
@@ -204,35 +210,45 @@ fn version() -> (u32, bool) {
     unsafe { VERSION }
 }
 
-fn has_command(command: &str) -> bool {
-    let output = match Command::new(command).arg("--version").output() {
+fn check_command(command_name: &str, args: &[&str]) -> bool {
+    let mut command = Command::new(command_name);
+    command.args(args);
+    let output = match command.output() {
         Ok(output) => output,
         Err(e) => {
             // * hg is not installed on GitHub macOS or certain constrained
             //   environments like Docker. Consider installing it if Cargo
             //   gains more hg support, but otherwise it isn't critical.
             // * lldb is not pre-installed on Ubuntu and Windows, so skip.
-            if is_ci() && !["hg", "lldb"].contains(&command) {
-                panic!(
-                    "expected command `{}` to be somewhere in PATH: {}",
-                    command, e
-                );
+            if is_ci() && !matches!(command_name, "hg" | "lldb") {
+                panic!("expected command `{command_name}` to be somewhere in PATH: {e}",);
             }
             return false;
         }
     };
     if !output.status.success() {
         panic!(
-            "expected command `{}` to be runnable, got error {}:\n\
+            "expected command `{command_name}` to be runnable, got error {}:\n\
             stderr:{}\n\
             stdout:{}\n",
-            command,
             output.status,
             String::from_utf8_lossy(&output.stderr),
             String::from_utf8_lossy(&output.stdout)
         );
     }
     true
+}
+
+fn has_command(command: &str) -> bool {
+    check_command(command, &["--version"])
+}
+
+fn has_rustup_stable() -> bool {
+    if option_env!("CARGO_TEST_DISABLE_NIGHTLY").is_some() {
+        // This cannot run on rust-lang/rust CI due to the lack of rustup.
+        return false;
+    }
+    check_command("cargo", &["+stable", "--version"])
 }
 
 /// Whether or not this running in a Continuous Integration environment.
