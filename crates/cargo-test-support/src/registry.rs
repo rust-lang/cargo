@@ -536,6 +536,7 @@ pub struct Package {
     alternative: bool,
     invalid_json: bool,
     proc_macro: bool,
+    generate_checksum: bool,
     links: Option<String>,
     rust_version: Option<String>,
     cargo_features: Vec<String>,
@@ -1210,6 +1211,7 @@ impl Package {
             alternative: false,
             invalid_json: false,
             proc_macro: false,
+            generate_checksum: true,
             links: None,
             rust_version: None,
             cargo_features: Vec::new(),
@@ -1224,6 +1226,12 @@ impl Package {
     /// this.
     pub fn local(&mut self, local: bool) -> &mut Package {
         self.local = local;
+        self
+    }
+
+    /// Call with `true` to prevent a checksum being generated for the package.
+    pub fn skip_checksum(&mut self, local: bool) -> &mut Package {
+        self.generate_checksum = !local;
         self
     }
 
@@ -1433,9 +1441,11 @@ impl Package {
                 })
             })
             .collect::<Vec<_>>();
-        let cksum = {
+        let cksum = if self.generate_checksum {
             let c = t!(fs::read(&self.archive_dst()));
             cksum(&c)
+        } else {
+            String::new()
         };
         let name = if self.invalid_json {
             serde_json::json!(1)
