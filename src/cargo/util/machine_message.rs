@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use cargo_util_schemas::core::PackageIdSpec;
 use serde::ser;
 use serde::Serialize;
-use serde_json::{self, json, value::RawValue};
+use serde_json::{json, value::RawValue};
 
 use crate::core::compiler::CompileMode;
 use crate::core::Target;

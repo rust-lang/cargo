@@ -20,7 +20,6 @@ use std::time::{self, Duration};
 
 use anyhow::{bail, Result};
 use cargo_util::{is_ci, ProcessBuilder, ProcessError};
-use serde_json;
 use url::Url;
 
 use self::paths::CargoPathExt;
