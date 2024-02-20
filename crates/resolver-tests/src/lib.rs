@@ -1,7 +1,6 @@
 #![allow(clippy::print_stderr)]
 
 use std::cell::RefCell;
-use std::cmp::PartialEq;
 use std::cmp::{max, min};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
@@ -26,7 +25,7 @@ use proptest::collection::{btree_map, vec};
 use proptest::prelude::*;
 use proptest::sample::Index;
 use proptest::string::string_regex;
-use varisat::{self, ExtendFormula};
+use varisat::ExtendFormula;
 
 pub fn resolve(deps: Vec<Dependency>, registry: &[Summary]) -> CargoResult<Vec<PackageId>> {
     resolve_with_config(deps, registry, &Config::default().unwrap())

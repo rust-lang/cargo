@@ -1,7 +1,7 @@
 use crate::aliased_command;
 use crate::command_prelude::*;
+use cargo::drop_println;
 use cargo::util::errors::CargoResult;
-use cargo::{drop_println, Config};
 use cargo_util::paths::resolve_executable;
 use flate2::read::GzDecoder;
 use std::ffi::OsStr;

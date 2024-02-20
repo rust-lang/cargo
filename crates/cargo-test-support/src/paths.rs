@@ -1,4 +1,4 @@
-use filetime::{self, FileTime};
+use filetime::FileTime;
 
 use std::cell::RefCell;
 use std::env;

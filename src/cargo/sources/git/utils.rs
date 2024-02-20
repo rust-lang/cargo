@@ -10,7 +10,7 @@ use crate::util::{human_readable_bytes, network, Config, IntoUrl, MetricsCounter
 use anyhow::{anyhow, Context as _};
 use cargo_util::{paths, ProcessBuilder};
 use curl::easy::List;
-use git2::{self, ErrorClass, ObjectType, Oid};
+use git2::{ErrorClass, ObjectType, Oid};
 use serde::ser;
 use serde::Serialize;
 use std::borrow::Cow;

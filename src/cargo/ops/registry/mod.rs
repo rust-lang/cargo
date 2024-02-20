@@ -15,7 +15,7 @@ use std::task::Poll;
 
 use anyhow::{bail, format_err, Context as _};
 use cargo_credential::{Operation, Secret};
-use crates_io::{self, Registry};
+use crates_io::Registry;
 use url::Url;
 
 use crate::core::SourceId;

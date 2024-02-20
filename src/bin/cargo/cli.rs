@@ -1,8 +1,8 @@
 use anyhow::{anyhow, Context as _};
 use cargo::core::shell::Shell;
 use cargo::core::{features, CliUnstable};
-use cargo::{self, drop_print, drop_println, CargoResult, CliResult, Config};
-use clap::{builder::UnknownArgumentValueParser, Arg, ArgMatches};
+use cargo::{drop_print, drop_println, CargoResult};
+use clap::builder::UnknownArgumentValueParser;
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::ffi::OsStr;

@@ -948,8 +948,6 @@ impl Display for WorkspaceSource {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
-
     use crate::util::toml_mut::manifest::LocalManifest;
     use cargo_util::paths;
 
