@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Context as _};
 use cargo::core::shell::Shell;
 use cargo::core::{features, CliUnstable};
-use cargo::{drop_print, drop_println, CargoResult, GlobalContext};
+use cargo::{drop_print, drop_println, CargoResult};
 use clap::builder::UnknownArgumentValueParser;
 use itertools::Itertools;
 use std::collections::HashMap;
