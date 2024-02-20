@@ -48,9 +48,6 @@ pub struct TargetInfo {
     support_split_debuginfo: Vec<String>,
     /// Path to the sysroot.
     pub sysroot: PathBuf,
-    /// Path to the "lib" or "bin" directory that rustc uses for its dynamic
-    /// libraries.
-    pub sysroot_host_libdir: PathBuf,
     /// Path to the "lib" directory in the sysroot which rustc uses for linking
     /// target libraries.
     pub sysroot_target_libdir: PathBuf,
@@ -224,19 +221,17 @@ impl TargetInfo {
                 return error_missing_print_output("sysroot", &process, &output, &error);
             };
             let sysroot = PathBuf::from(line);
-            let sysroot_host_libdir = if cfg!(windows) {
-                sysroot.join("bin")
-            } else {
-                sysroot.join("lib")
+            let sysroot_target_libdir = {
+                let mut libdir = sysroot.clone();
+                libdir.push("lib");
+                libdir.push("rustlib");
+                libdir.push(match &kind {
+                    CompileKind::Host => rustc.host.as_str(),
+                    CompileKind::Target(target) => target.short_name(),
+                });
+                libdir.push("lib");
+                libdir
             };
-            let mut sysroot_target_libdir = sysroot.clone();
-            sysroot_target_libdir.push("lib");
-            sysroot_target_libdir.push("rustlib");
-            sysroot_target_libdir.push(match &kind {
-                CompileKind::Host => rustc.host.as_str(),
-                CompileKind::Target(target) => target.short_name(),
-            });
-            sysroot_target_libdir.push("lib");
 
             let support_split_debuginfo = {
                 // HACK: abuse `--print=crate-name` to use `___` as a delimiter.
@@ -303,7 +298,6 @@ impl TargetInfo {
                 crate_type_process,
                 crate_types: RefCell::new(map),
                 sysroot,
-                sysroot_host_libdir,
                 sysroot_target_libdir,
                 rustflags,
                 rustdocflags: extra_args(
