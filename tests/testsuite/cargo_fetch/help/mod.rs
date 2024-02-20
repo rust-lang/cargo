@@ -1,5 +1,6 @@
 use cargo_test_support::file;
 use cargo_test_support::prelude::*;
+use cargo_test_support::str;
 
 #[cargo_test]
 fn case() {
@@ -9,5 +10,5 @@ fn case() {
         .assert()
         .success()
         .stdout_matches(file!["stdout.log"])
-        .stderr_matches(file!["stderr.log"]);
+        .stderr_matches(str![""]);
 }

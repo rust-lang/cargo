@@ -1,6 +1,7 @@
 use cargo_test_support::file;
 use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
+use cargo_test_support::str;
 
 #[cargo_test]
 fn case() {
@@ -11,7 +12,7 @@ fn case() {
         .current_dir(&cwd)
         .assert()
         .code(101)
-        .stdout_matches(file!["stdout.log"])
+        .stdout_matches(str![""])
         .stderr_matches(file!["stderr.log"]);
 
     assert!(!cwd.join("Cargo.toml").is_file());
