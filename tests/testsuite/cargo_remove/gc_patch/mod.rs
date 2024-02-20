@@ -4,6 +4,7 @@ use cargo_test_support::current_dir;
 use cargo_test_support::file;
 use cargo_test_support::git;
 use cargo_test_support::project;
+use cargo_test_support::str;
 use cargo_test_support::CargoCommand;
 
 #[cargo_test]
@@ -71,7 +72,7 @@ fn case() {
         .current_dir(&in_project.root())
         .assert()
         .success()
-        .stdout_matches(file!["stdout.log"])
+        .stdout_matches(str![""])
         .stderr_matches(file!["stderr.log"]);
 
     assert_ui().subset_matches(current_dir!().join("out"), &in_project.root());
