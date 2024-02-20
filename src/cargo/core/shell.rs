@@ -236,18 +236,10 @@ impl Shell {
             ..
         } = self.output
         {
-            let cfg = match color {
-                Some("always") => ColorChoice::Always,
-                Some("never") => ColorChoice::Never,
-
-                Some("auto") | None => ColorChoice::CargoAuto,
-
-                Some(arg) => anyhow::bail!(
-                    "argument for --color must be auto, always, or \
-                     never, but found `{}`",
-                    arg
-                ),
-            };
+            let cfg = color
+                .map(|c| c.parse())
+                .transpose()?
+                .unwrap_or(ColorChoice::CargoAuto);
             *color_choice = cfg;
             let stdout_choice = cfg.to_anstream_color_choice();
             let stderr_choice = cfg.to_anstream_color_choice();
@@ -496,6 +488,25 @@ impl ColorChoice {
             ColorChoice::Never => anstream::ColorChoice::Never,
             ColorChoice::CargoAuto => anstream::ColorChoice::Auto,
         }
+    }
+}
+
+impl std::str::FromStr for ColorChoice {
+    type Err = anyhow::Error;
+    fn from_str(color: &str) -> Result<Self, Self::Err> {
+        let cfg = match color {
+            "always" => ColorChoice::Always,
+            "never" => ColorChoice::Never,
+
+            "auto" => ColorChoice::CargoAuto,
+
+            arg => anyhow::bail!(
+                "argument for --color must be auto, always, or \
+                     never, but found `{}`",
+                arg
+            ),
+        };
+        Ok(cfg)
     }
 }
 
