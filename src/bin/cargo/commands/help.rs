@@ -39,7 +39,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
             }
         }
     } else {
-        let mut cmd = crate::cli::cli();
+        let mut cmd = crate::cli::cli(gctx);
         let _ = cmd.print_help();
     }
     Ok(())

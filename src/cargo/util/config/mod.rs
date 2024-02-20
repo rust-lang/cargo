@@ -2636,14 +2636,14 @@ impl BuildTargetConfig {
 }
 
 #[derive(Deserialize, Default)]
-struct TermConfig {
-    verbose: Option<bool>,
-    quiet: Option<bool>,
-    color: Option<String>,
-    hyperlinks: Option<bool>,
+pub struct TermConfig {
+    pub verbose: Option<bool>,
+    pub quiet: Option<bool>,
+    pub color: Option<String>,
+    pub hyperlinks: Option<bool>,
     #[serde(default)]
     #[serde(deserialize_with = "progress_or_string")]
-    progress: Option<ProgressConfig>,
+    pub progress: Option<ProgressConfig>,
 }
 
 #[derive(Debug, Default, Deserialize)]
