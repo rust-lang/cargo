@@ -499,7 +499,7 @@ impl GlobalCacheTracker {
         let mut stmt = self.conn.prepare_cached(
             "SELECT git_db.name, git_checkout.name, git_checkout.size, git_checkout.timestamp
              FROM git_db, git_checkout
-             WHERE git_checkout.registry_id = git_db.id",
+             WHERE git_checkout.git_id = git_db.id",
         )?;
         let rows = stmt
             .query_map([], |row| {
