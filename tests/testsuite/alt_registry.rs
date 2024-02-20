@@ -731,7 +731,7 @@ fn bad_registry_name() {
         "init",
         "install foo",
         "login",
-        "owner",
+        "owner list",
         "publish",
         "search",
         "yank --version 0.0.1",
@@ -798,7 +798,7 @@ fn no_api() {
         .with_stderr_contains(&err)
         .run();
 
-    p.cargo("owner --registry alternative --list")
+    p.cargo("owner list --registry alternative")
         .with_status(101)
         .with_stderr_contains(&err)
         .run();
@@ -1410,7 +1410,7 @@ fn both_index_and_default() {
     let p = project().file("src/lib.rs", "").build();
     for cmd in &[
         "publish",
-        "owner",
+        "owner list",
         "search",
         "yank --version 1.0.0",
         "install foo",

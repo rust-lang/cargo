@@ -153,8 +153,7 @@ _cargo() {
                         '--allow-dirty[fix code even if the working directory is dirty]' \
                         '--allow-staged[fix code even if the working directory has staged changes]' \
                         '--ignore-rust-version[Ignore rust-version specification in packages]'
-                ;;
-
+                        ;;
                 generate-lockfile)
                     _arguments -s -S $common $manifest
                         ;;
@@ -218,9 +217,11 @@ _cargo() {
                     _arguments -s -S $common $registry \
                         '(-a --add)'{-a,--add}'[specify name of a user or team to invite as an owner]:name' \
                         '--index=[specify registry index]:index' \
+                        '--crate=[Crate name that you want to manage the owner]:crate' \
                         '(-l --list)'{-l,--list}'[list owners of a crate]' \
                         '(-r --remove)'{-r,--remove}'[specify name of a user or team to remove as an owner]:name' \
                         '--token=[specify API token to use when authenticating]:token' \
+                        '(--add -a --remove -r --list -l 1): :_cargo_owner_subcommand' \
                         '*: :_guard "^-*" "crate"'
                         ;;
 
@@ -376,6 +377,17 @@ _cargo() {
             esac
             ;;
     esac
+}
+
+_cargo_owner_subcommand() {
+    local -a subcommands
+
+    subcommands=(
+        'add:specify name of a user or team to invite as an owner'
+        'remove:specify name of a user or team to remove as an owner'
+        'list:list owners of a crate'
+    )
+    _describe -t subcommands 'command' subcommands
 }
 
 _cargo_unstable_flags() {
