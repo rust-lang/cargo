@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Context as _};
-use cargo::core::shell::Shell;
 use cargo::core::{features, CliUnstable};
 use cargo::{drop_print, drop_println, CargoResult};
 use clap::builder::UnknownArgumentValueParser;
@@ -15,7 +14,11 @@ use crate::command_prelude::*;
 use crate::util::is_rustup;
 use cargo::util::style;
 
-pub fn main(lazy_gctx: &mut LazyContext) -> CliResult {
+pub fn main(gctx: &mut GlobalContext) -> CliResult {
+    // CAUTION: Be careful with using `config` until it is configured below.
+    // In general, try to avoid loading config values unless necessary (like
+    // the [alias] table).
+
     let args = cli().try_get_matches()?;
 
     // Update the process-level notion of cwd
@@ -38,13 +41,8 @@ pub fn main(lazy_gctx: &mut LazyContext) -> CliResult {
             .into());
         }
         std::env::set_current_dir(&new_cwd).context("could not change to requested directory")?;
-        lazy_gctx.get_mut().reload_cwd()?;
+        gctx.reload_cwd()?;
     }
-
-    // CAUTION: Be careful with using `config` until it is configured below.
-    // In general, try to avoid loading config values unless necessary (like
-    // the [alias] table).
-    let gctx = lazy_gctx.get_mut();
 
     let (expanded_args, global_args) = expand_aliases(gctx, args, vec![])?;
 
@@ -643,43 +641,6 @@ See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a sp
             .action(ArgAction::Append)
             .global(true))
         .subcommands(commands::builtin())
-}
-
-/// Delay loading [`GlobalContext`] until access.
-///
-/// In the common path, the [`GlobalContext`] is dependent on CLI parsing and shouldn't be loaded until
-/// after that is done but some other paths (like fix or earlier errors) might need access to it,
-/// so this provides a way to share the instance and the implementation across these different
-/// accesses.
-pub struct LazyContext {
-    gctx: Option<GlobalContext>,
-}
-
-impl LazyContext {
-    pub fn new() -> Self {
-        Self { gctx: None }
-    }
-
-    /// Get the config, loading it if needed
-    ///
-    /// On error, the process is terminated
-    pub fn get(&mut self) -> &GlobalContext {
-        self.get_mut()
-    }
-
-    /// Get the config, loading it if needed
-    ///
-    /// On error, the process is terminated
-    pub fn get_mut(&mut self) -> &mut GlobalContext {
-        self.gctx
-            .get_or_insert_with(|| match GlobalContext::default() {
-                Ok(cfg) => cfg,
-                Err(e) => {
-                    let mut shell = Shell::new();
-                    cargo::exit_with_error(e.into(), &mut shell)
-                }
-            })
-    }
 }
 
 #[test]
