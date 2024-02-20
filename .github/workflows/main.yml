@@ -116,6 +116,8 @@ jobs:
       CARGO_PROFILE_TEST_DEBUG: 1
       CARGO_INCREMENTAL: 0
       CARGO_PUBLIC_NETWORK_TESTS: 1
+      # Workaround for https://github.com/rust-lang/rustup/issues/3036
+      RUSTUP_WINDOWS_PATH_ADD_BIN: 0
     strategy:
       matrix:
         include:
@@ -170,7 +172,6 @@ jobs:
     - name: Configure extra test environment
       run: echo CARGO_CONTAINER_TESTS=1 >> $GITHUB_ENV
       if: matrix.os == 'ubuntu-latest'
-
     - run: cargo test -p cargo
     - name: Clear intermediate test output
       run: ci/clean-test-output.sh
