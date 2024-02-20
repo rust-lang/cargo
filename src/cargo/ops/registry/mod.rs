@@ -23,7 +23,7 @@ use crate::sources::source::Source;
 use crate::sources::{RegistrySource, SourceConfigMap};
 use crate::util::auth;
 use crate::util::cache_lock::CacheLockMode;
-use crate::util::config::{Config, PathAndArgs};
+use crate::util::config::{GlobalContext, PathAndArgs};
 use crate::util::errors::CargoResult;
 use crate::util::network::http::http_handle;
 
@@ -115,25 +115,25 @@ impl RegistryCredentialConfig {
 /// * `force_update`: If `true`, forces the index to be updated.
 /// * `token_required`: If `true`, the token will be set.
 fn registry(
-    config: &Config,
+    gctx: &GlobalContext,
     token_from_cmdline: Option<Secret<&str>>,
     reg_or_index: Option<&RegistryOrIndex>,
     force_update: bool,
     token_required: Option<Operation<'_>>,
 ) -> CargoResult<(Registry, RegistrySourceIds)> {
-    let source_ids = get_source_id(config, reg_or_index)?;
+    let source_ids = get_source_id(gctx, reg_or_index)?;
 
     let is_index = reg_or_index.map(|v| v.is_index()).unwrap_or_default();
     if is_index && token_required.is_some() && token_from_cmdline.is_none() {
         bail!("command-line argument --index requires --token to be specified");
     }
     if let Some(token) = token_from_cmdline {
-        auth::cache_token_from_commandline(config, &source_ids.original, token);
+        auth::cache_token_from_commandline(gctx, &source_ids.original, token);
     }
 
     let cfg = {
-        let _lock = config.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
-        let mut src = RegistrySource::remote(source_ids.replacement, &HashSet::new(), config)?;
+        let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
+        let mut src = RegistrySource::remote(source_ids.replacement, &HashSet::new(), gctx)?;
         // Only update the index if `force_update` is set.
         if force_update {
             src.invalidate_cache()
@@ -154,7 +154,7 @@ fn registry(
     let token = if token_required.is_some() || cfg.auth_required {
         let operation = token_required.unwrap_or(Operation::Read);
         Some(auth::auth_token(
-            config,
+            gctx,
             &source_ids.original,
             None,
             operation,
@@ -164,7 +164,7 @@ fn registry(
     } else {
         None
     };
-    let handle = http_handle(config)?;
+    let handle = http_handle(gctx)?;
     Ok((
         Registry::new_handle(api_host, token, handle, cfg.auth_required),
         source_ids,
@@ -185,19 +185,19 @@ fn registry(
 /// The return value is a pair of `SourceId`s: The first may be a built-in replacement of
 /// crates.io (such as index.crates.io), while the second is always the original source.
 fn get_source_id(
-    config: &Config,
+    gctx: &GlobalContext,
     reg_or_index: Option<&RegistryOrIndex>,
 ) -> CargoResult<RegistrySourceIds> {
     let sid = match reg_or_index {
-        None => SourceId::crates_io(config)?,
+        None => SourceId::crates_io(gctx)?,
         Some(RegistryOrIndex::Index(url)) => SourceId::for_registry(url)?,
-        Some(RegistryOrIndex::Registry(r)) => SourceId::alt_registry(config, r)?,
+        Some(RegistryOrIndex::Registry(r)) => SourceId::alt_registry(gctx, r)?,
     };
     // Load source replacements that are built-in to Cargo.
-    let builtin_replacement_sid = SourceConfigMap::empty(config)?
+    let builtin_replacement_sid = SourceConfigMap::empty(gctx)?
         .load(sid, &HashSet::new())?
         .replaced_source_id();
-    let replacement_sid = SourceConfigMap::new(config)?
+    let replacement_sid = SourceConfigMap::new(gctx)?
         .load(sid, &HashSet::new())?
         .replaced_source_id();
     if reg_or_index.is_none() && replacement_sid != builtin_replacement_sid {

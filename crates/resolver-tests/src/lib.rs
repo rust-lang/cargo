@@ -18,7 +18,7 @@ use cargo::core::{Dependency, PackageId, Registry, Summary};
 use cargo::core::{GitReference, SourceId};
 use cargo::sources::source::QueryKind;
 use cargo::sources::IndexSummary;
-use cargo::util::{CargoResult, Config, IntoUrl};
+use cargo::util::{CargoResult, GlobalContext, IntoUrl};
 use cargo_util_schemas::manifest::RustVersion;
 
 use proptest::collection::{btree_map, vec};
@@ -28,7 +28,7 @@ use proptest::string::string_regex;
 use varisat::ExtendFormula;
 
 pub fn resolve(deps: Vec<Dependency>, registry: &[Summary]) -> CargoResult<Vec<PackageId>> {
-    resolve_with_config(deps, registry, &Config::default().unwrap())
+    resolve_with_global_context(deps, registry, &GlobalContext::default().unwrap())
 }
 
 pub fn resolve_and_validated(
@@ -36,7 +36,8 @@ pub fn resolve_and_validated(
     registry: &[Summary],
     sat_resolve: Option<SatResolve>,
 ) -> CargoResult<Vec<PackageId>> {
-    let resolve = resolve_with_config_raw(deps.clone(), registry, &Config::default().unwrap());
+    let resolve =
+        resolve_with_global_context_raw(deps.clone(), registry, &GlobalContext::default().unwrap());
 
     match resolve {
         Err(e) => {
@@ -83,19 +84,19 @@ pub fn resolve_and_validated(
     }
 }
 
-pub fn resolve_with_config(
+pub fn resolve_with_global_context(
     deps: Vec<Dependency>,
     registry: &[Summary],
-    config: &Config,
+    gctx: &GlobalContext,
 ) -> CargoResult<Vec<PackageId>> {
-    let resolve = resolve_with_config_raw(deps, registry, config)?;
+    let resolve = resolve_with_global_context_raw(deps, registry, gctx)?;
     Ok(resolve.sort())
 }
 
-pub fn resolve_with_config_raw(
+pub fn resolve_with_global_context_raw(
     deps: Vec<Dependency>,
     registry: &[Summary],
-    config: &Config,
+    gctx: &GlobalContext,
 ) -> CargoResult<Resolve> {
     struct MyRegistry<'a> {
         list: &'a [Summary],
@@ -166,7 +167,7 @@ pub fn resolve_with_config_raw(
     let opts = ResolveOpts::everything();
     let start = Instant::now();
     let mut version_prefs = VersionPreferences::default();
-    if config.cli_unstable().minimal_versions {
+    if gctx.cli_unstable().minimal_versions {
         version_prefs.version_ordering(VersionOrdering::MinimumVersionsFirst)
     }
     let resolve = resolver::resolve(
@@ -175,7 +176,7 @@ pub fn resolve_with_config_raw(
         &mut registry,
         &version_prefs,
         ResolveVersion::with_rust_version(None),
-        Some(config),
+        Some(gctx),
     );
 
     // The largest test in our suite takes less then 30 sec.
@@ -245,6 +246,7 @@ fn sat_at_most_one_by_key<K: std::hash::Hash + Eq>(
 /// so the selected packages may not match the real resolver.
 #[derive(Clone)]
 pub struct SatResolve(Rc<RefCell<SatResolveInner>>);
+
 struct SatResolveInner {
     solver: varisat::Solver<'static>,
     var_for_is_packages_used: HashMap<PackageId, varisat::Var>,
@@ -518,9 +520,11 @@ pub fn remove_dep(sum: &Summary, ind: usize) -> Summary {
 pub fn dep(name: &str) -> Dependency {
     dep_req(name, "*")
 }
+
 pub fn dep_req(name: &str, req: &str) -> Dependency {
     Dependency::parse(name, Some(req), registry_loc()).unwrap()
 }
+
 pub fn dep_req_kind(name: &str, req: &str, kind: DepKind) -> Dependency {
     let mut dep = dep_req(name, req);
     dep.set_kind(kind);
@@ -533,6 +537,7 @@ pub fn dep_loc(name: &str, location: &str) -> Dependency {
     let source_id = SourceId::for_git(&url, master).unwrap();
     Dependency::parse(name, Some("1.0.0"), source_id).unwrap()
 }
+
 pub fn dep_kind(name: &str, kind: DepKind) -> Dependency {
     dep(name).set_kind(kind).clone()
 }

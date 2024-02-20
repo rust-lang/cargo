@@ -56,10 +56,10 @@ pub fn cli() -> clap::Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let dry_run = args.dry_run();
 
-    let workspace = args.workspace(config)?;
+    let workspace = args.workspace(gctx)?;
 
     if args.is_present_with_zero_values("package") {
         print_available_packages(&workspace)?;
@@ -100,7 +100,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     let section = parse_section(args);
 
     let options = RemoveOptions {
-        config,
+        gctx,
         spec,
         dependencies,
         section,
@@ -113,22 +113,22 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         gc_workspace(&workspace)?;
 
         // Reload the workspace since we've changed dependencies
-        let ws = args.workspace(config)?;
+        let ws = args.workspace(gctx)?;
         let resolve = {
             // HACK: Avoid unused patch warnings by temporarily changing the verbosity.
             // In rare cases, this might cause index update messages to not show up
-            let verbosity = ws.config().shell().verbosity();
-            ws.config()
+            let verbosity = ws.gctx().shell().verbosity();
+            ws.gctx()
                 .shell()
                 .set_verbosity(cargo::core::Verbosity::Quiet);
             let resolve = resolve_ws(&ws);
-            ws.config().shell().set_verbosity(verbosity);
+            ws.gctx().shell().set_verbosity(verbosity);
             resolve?.1
         };
 
         // Attempt to gc unused patches and re-resolve if anything is removed
         if gc_unused_patches(&workspace, &resolve)? {
-            let ws = args.workspace(config)?;
+            let ws = args.workspace(gctx)?;
             resolve_ws(&ws)?;
         }
     }
@@ -243,7 +243,7 @@ fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
                         if !spec_has_match(
                             &PackageIdSpec::parse(key)?,
                             &dependencies,
-                            workspace.config(),
+                            workspace.gctx(),
                         )? {
                             *item = toml_edit::Item::None;
                             is_modified = true;
@@ -262,7 +262,7 @@ fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
             if !spec_has_match(
                 &PackageIdSpec::parse(key.get())?,
                 &dependencies,
-                workspace.config(),
+                workspace.gctx(),
             )? {
                 *item = toml_edit::Item::None;
                 is_modified = true;
@@ -284,7 +284,7 @@ fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
 fn spec_has_match(
     spec: &PackageIdSpec,
     dependencies: &[Dependency],
-    config: &Config,
+    gctx: &GlobalContext,
 ) -> CargoResult<bool> {
     for dep in dependencies {
         if spec.name() != &dep.name {
@@ -300,7 +300,7 @@ fn spec_has_match(
             continue;
         }
 
-        match dep.source_id(config)? {
+        match dep.source_id(gctx)? {
             MaybeWorkspace::Other(source_id) => {
                 if spec.url().map(|u| u == source_id.url()).unwrap_or(true) {
                     return Ok(true);
@@ -332,7 +332,7 @@ fn gc_unused_patches(workspace: &Workspace<'_>, resolve: &Resolve) -> CargoResul
 
                     // Generate a PackageIdSpec url for querying
                     let url = if let MaybeWorkspace::Other(source_id) =
-                        dep.source_id(workspace.config())?
+                        dep.source_id(workspace.gctx())?
                     {
                         format!("{}#{}", source_id.url(), dep.name)
                     } else {

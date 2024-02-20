@@ -11,7 +11,7 @@ use crate::core::GitReference;
 use crate::core::SourceId;
 use crate::core::Summary;
 use crate::CargoResult;
-use crate::Config;
+use crate::GlobalContext;
 
 /// A dependency handled by Cargo.
 ///
@@ -173,14 +173,14 @@ impl Dependency {
     }
 
     /// Get the SourceID for this dependency.
-    pub fn source_id(&self, config: &Config) -> CargoResult<MaybeWorkspace<SourceId>> {
+    pub fn source_id(&self, gctx: &GlobalContext) -> CargoResult<MaybeWorkspace<SourceId>> {
         match &self.source.as_ref() {
             Some(Source::Registry(_)) | None => {
                 if let Some(r) = self.registry() {
-                    let source_id = SourceId::alt_registry(config, r)?;
+                    let source_id = SourceId::alt_registry(gctx, r)?;
                     Ok(MaybeWorkspace::Other(source_id))
                 } else {
-                    let source_id = SourceId::crates_io(config)?;
+                    let source_id = SourceId::crates_io(gctx)?;
                     Ok(MaybeWorkspace::Other(source_id))
                 }
             }
@@ -193,9 +193,9 @@ impl Dependency {
     /// Query to find this dependency.
     pub fn query(
         &self,
-        config: &Config,
+        gctx: &GlobalContext,
     ) -> CargoResult<MaybeWorkspace<crate::core::dependency::Dependency>> {
-        let source_id = self.source_id(config)?;
+        let source_id = self.source_id(gctx)?;
         match source_id {
             MaybeWorkspace::Workspace(workspace) => Ok(MaybeWorkspace::Workspace(workspace)),
             MaybeWorkspace::Other(source_id) => Ok(MaybeWorkspace::Other(

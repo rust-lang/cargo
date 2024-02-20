@@ -17,7 +17,7 @@ mod utils;
 /// For `-Zgitoxide` integration.
 pub mod fetch {
     use crate::core::features::GitFeatures;
-    use crate::Config;
+    use crate::GlobalContext;
 
     /// The kind remote repository to fetch.
     #[derive(Debug, Copy, Clone)]
@@ -35,11 +35,10 @@ pub mod fetch {
         pub(crate) fn to_shallow_setting(
             &self,
             repo_is_shallow: bool,
-            config: &Config,
+            gctx: &GlobalContext,
         ) -> gix::remote::fetch::Shallow {
             let has_feature = |cb: &dyn Fn(GitFeatures) -> bool| {
-                config
-                    .cli_unstable()
+                gctx.cli_unstable()
                     .git
                     .map_or(false, |features| cb(features))
             };

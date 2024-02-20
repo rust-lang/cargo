@@ -9,10 +9,10 @@
 
 use crate::core::compiler::apply_env_config;
 use crate::core::compiler::{
-    BuildOutput, CompileKind, CompileMode, CompileTarget, Context, CrateType,
+    BuildOutput, BuildRunner, CompileKind, CompileMode, CompileTarget, CrateType,
 };
 use crate::core::{Dependency, Package, Target, TargetKind, Workspace};
-use crate::util::config::{Config, StringList, TargetConfig};
+use crate::util::config::{GlobalContext, StringList, TargetConfig};
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Rustc};
 use anyhow::Context as _;
@@ -151,19 +151,13 @@ impl TargetInfo {
     ///
     /// Search `Tricky` to learn why querying `rustc` several times is needed.
     pub fn new(
-        config: &Config,
+        gctx: &GlobalContext,
         requested_kinds: &[CompileKind],
         rustc: &Rustc,
         kind: CompileKind,
     ) -> CargoResult<TargetInfo> {
-        let mut rustflags = extra_args(
-            config,
-            requested_kinds,
-            &rustc.host,
-            None,
-            kind,
-            Flags::Rust,
-        )?;
+        let mut rustflags =
+            extra_args(gctx, requested_kinds, &rustc.host, None, kind, Flags::Rust)?;
         let mut turn = 0;
         loop {
             let extra_fingerprint = kind.fingerprint_hash();
@@ -176,7 +170,7 @@ impl TargetInfo {
             //
             // Search `--print` to see what we query so far.
             let mut process = rustc.workspace_process();
-            apply_env_config(config, &mut process)?;
+            apply_env_config(gctx, &mut process)?;
             process
                 .arg("-")
                 .arg("--crate-name")
@@ -187,7 +181,7 @@ impl TargetInfo {
 
             // Removes `FD_CLOEXEC` set by `jobserver::Client` to pass jobserver
             // as environment variables specify.
-            if let Some(client) = config.jobserver_from_env() {
+            if let Some(client) = gctx.jobserver_from_env() {
                 process.inherit_jobserver(client);
             }
 
@@ -278,7 +272,7 @@ impl TargetInfo {
             // recalculate `rustflags` from above now that we have `cfg`
             // information
             let new_flags = extra_args(
-                config,
+                gctx,
                 requested_kinds,
                 &rustc.host,
                 Some(&cfg),
@@ -302,7 +296,7 @@ impl TargetInfo {
                 continue;
             }
             if !reached_fixed_point {
-                config.shell().warn("non-trivial mutual dependency between target-specific configuration and RUSTFLAGS")?;
+                gctx.shell().warn("non-trivial mutual dependency between target-specific configuration and RUSTFLAGS")?;
             }
 
             return Ok(TargetInfo {
@@ -313,7 +307,7 @@ impl TargetInfo {
                 sysroot_target_libdir,
                 rustflags,
                 rustdocflags: extra_args(
-                    config,
+                    gctx,
                     requested_kinds,
                     &rustc.host,
                     Some(&cfg),
@@ -705,14 +699,14 @@ impl Flags {
 /// sources, _regardless of the value of `target-applies-to-host`_. This is counterintuitive, but
 /// necessary to retain backwards compatibility with older versions of Cargo.
 fn extra_args(
-    config: &Config,
+    gctx: &GlobalContext,
     requested_kinds: &[CompileKind],
     host_triple: &str,
     target_cfg: Option<&[Cfg]>,
     kind: CompileKind,
     flags: Flags,
 ) -> CargoResult<Vec<String>> {
-    let target_applies_to_host = config.target_applies_to_host()?;
+    let target_applies_to_host = gctx.target_applies_to_host()?;
 
     // Host artifacts should not generally pick up rustflags from anywhere except [host].
     //
@@ -728,7 +722,7 @@ fn extra_args(
             // --target. Or, phrased differently, no `--target` behaves the same as `--target
             // <host>`, and host artifacts are always "special" (they don't pick up `RUSTFLAGS` for
             // example).
-            return Ok(rustflags_from_host(config, flags, host_triple)?.unwrap_or_else(Vec::new));
+            return Ok(rustflags_from_host(gctx, flags, host_triple)?.unwrap_or_else(Vec::new));
         }
     }
 
@@ -736,13 +730,13 @@ fn extra_args(
     // NOTE: It is impossible to have a [host] section and reach this logic with kind.is_host(),
     // since [host] implies `target-applies-to-host = false`, which always early-returns above.
 
-    if let Some(rustflags) = rustflags_from_env(config, flags) {
+    if let Some(rustflags) = rustflags_from_env(gctx, flags) {
         Ok(rustflags)
     } else if let Some(rustflags) =
-        rustflags_from_target(config, host_triple, target_cfg, kind, flags)?
+        rustflags_from_target(gctx, host_triple, target_cfg, kind, flags)?
     {
         Ok(rustflags)
-    } else if let Some(rustflags) = rustflags_from_build(config, flags)? {
+    } else if let Some(rustflags) = rustflags_from_build(gctx, flags)? {
         Ok(rustflags)
     } else {
         Ok(Vec::new())
@@ -751,10 +745,10 @@ fn extra_args(
 
 /// Gets compiler flags from environment variables.
 /// See [`extra_args`] for more.
-fn rustflags_from_env(config: &Config, flags: Flags) -> Option<Vec<String>> {
+fn rustflags_from_env(gctx: &GlobalContext, flags: Flags) -> Option<Vec<String>> {
     // First try CARGO_ENCODED_RUSTFLAGS from the environment.
     // Prefer this over RUSTFLAGS since it's less prone to encoding errors.
-    if let Ok(a) = config.get_env(format!("CARGO_ENCODED_{}", flags.as_env())) {
+    if let Ok(a) = gctx.get_env(format!("CARGO_ENCODED_{}", flags.as_env())) {
         if a.is_empty() {
             return Some(Vec::new());
         }
@@ -762,7 +756,7 @@ fn rustflags_from_env(config: &Config, flags: Flags) -> Option<Vec<String>> {
     }
 
     // Then try RUSTFLAGS from the environment
-    if let Ok(a) = config.get_env(flags.as_env()) {
+    if let Ok(a) = gctx.get_env(flags.as_env()) {
         let args = a
             .split(' ')
             .map(str::trim)
@@ -778,7 +772,7 @@ fn rustflags_from_env(config: &Config, flags: Flags) -> Option<Vec<String>> {
 /// Gets compiler flags from `[target]` section in the config.
 /// See [`extra_args`] for more.
 fn rustflags_from_target(
-    config: &Config,
+    gctx: &GlobalContext,
     host_triple: &str,
     target_cfg: Option<&[Cfg]>,
     kind: CompileKind,
@@ -792,13 +786,12 @@ fn rustflags_from_target(
         CompileKind::Target(target) => target.short_name(),
     };
     let key = format!("target.{}.{}", target, flag.as_key());
-    if let Some(args) = config.get::<Option<StringList>>(&key)? {
+    if let Some(args) = gctx.get::<Option<StringList>>(&key)? {
         rustflags.extend(args.as_slice().iter().cloned());
     }
     // ...including target.'cfg(...)'.rustflags
     if let Some(target_cfg) = target_cfg {
-        config
-            .target_cfgs()?
+        gctx.target_cfgs()?
             .iter()
             .filter_map(|(key, cfg)| {
                 match flag {
@@ -827,11 +820,11 @@ fn rustflags_from_target(
 /// Gets compiler flags from `[host]` section in the config.
 /// See [`extra_args`] for more.
 fn rustflags_from_host(
-    config: &Config,
+    gctx: &GlobalContext,
     flag: Flags,
     host_triple: &str,
 ) -> CargoResult<Option<Vec<String>>> {
-    let target_cfg = config.host_cfg_triple(host_triple)?;
+    let target_cfg = gctx.host_cfg_triple(host_triple)?;
     let list = match flag {
         Flags::Rust => &target_cfg.rustflags,
         Flags::Rustdoc => {
@@ -844,9 +837,9 @@ fn rustflags_from_host(
 
 /// Gets compiler flags from `[build]` section in the config.
 /// See [`extra_args`] for more.
-fn rustflags_from_build(config: &Config, flag: Flags) -> CargoResult<Option<Vec<String>>> {
+fn rustflags_from_build(gctx: &GlobalContext, flag: Flags) -> CargoResult<Option<Vec<String>>> {
     // Then the `build.rustflags` value.
-    let build = config.build_config()?;
+    let build = gctx.build_config()?;
     let list = match flag {
         Flags::Rust => &build.rustflags,
         Flags::Rustdoc => &build.rustdocflags,
@@ -855,12 +848,12 @@ fn rustflags_from_build(config: &Config, flag: Flags) -> CargoResult<Option<Vec<
 }
 
 /// Collection of information about `rustc` and the host and target.
-pub struct RustcTargetData<'cfg> {
+pub struct RustcTargetData<'gctx> {
     /// Information about `rustc` itself.
     pub rustc: Rustc,
 
     /// Config
-    pub config: &'cfg Config,
+    pub gctx: &'gctx GlobalContext,
     requested_kinds: Vec<CompileKind>,
 
     /// Build information for the "host", which is information about when
@@ -876,21 +869,21 @@ pub struct RustcTargetData<'cfg> {
     target_info: HashMap<CompileTarget, TargetInfo>,
 }
 
-impl<'cfg> RustcTargetData<'cfg> {
+impl<'gctx> RustcTargetData<'gctx> {
     pub fn new(
-        ws: &Workspace<'cfg>,
+        ws: &Workspace<'gctx>,
         requested_kinds: &[CompileKind],
-    ) -> CargoResult<RustcTargetData<'cfg>> {
-        let config = ws.config();
-        let rustc = config.load_global_rustc(Some(ws))?;
+    ) -> CargoResult<RustcTargetData<'gctx>> {
+        let gctx = ws.gctx();
+        let rustc = gctx.load_global_rustc(Some(ws))?;
         let mut target_config = HashMap::new();
         let mut target_info = HashMap::new();
-        let target_applies_to_host = config.target_applies_to_host()?;
-        let host_info = TargetInfo::new(config, requested_kinds, &rustc, CompileKind::Host)?;
+        let target_applies_to_host = gctx.target_applies_to_host()?;
+        let host_info = TargetInfo::new(gctx, requested_kinds, &rustc, CompileKind::Host)?;
         let host_config = if target_applies_to_host {
-            config.target_cfg_triple(&rustc.host)?
+            gctx.target_cfg_triple(&rustc.host)?
         } else {
-            config.host_cfg_triple(&rustc.host)?
+            gctx.host_cfg_triple(&rustc.host)?
         };
 
         // This is a hack. The unit_dependency graph builder "pretends" that
@@ -901,12 +894,12 @@ impl<'cfg> RustcTargetData<'cfg> {
         if requested_kinds.iter().any(CompileKind::is_host) {
             let ct = CompileTarget::new(&rustc.host)?;
             target_info.insert(ct, host_info.clone());
-            target_config.insert(ct, config.target_cfg_triple(&rustc.host)?);
+            target_config.insert(ct, gctx.target_cfg_triple(&rustc.host)?);
         };
 
         let mut res = RustcTargetData {
             rustc,
-            config,
+            gctx,
             requested_kinds: requested_kinds.into(),
             host_config,
             host_info,
@@ -950,12 +943,12 @@ impl<'cfg> RustcTargetData<'cfg> {
         if let CompileKind::Target(target) = kind {
             if !self.target_config.contains_key(&target) {
                 self.target_config
-                    .insert(target, self.config.target_cfg_triple(target.short_name())?);
+                    .insert(target, self.gctx.target_cfg_triple(target.short_name())?);
             }
             if !self.target_info.contains_key(&target) {
                 self.target_info.insert(
                     target,
-                    TargetInfo::new(self.config, &self.requested_kinds, &self.rustc, kind)?,
+                    TargetInfo::new(self.gctx, &self.requested_kinds, &self.rustc, kind)?,
                 );
             }
         }
@@ -1040,15 +1033,23 @@ impl RustDocFingerprint {
     /// the rustdoc fingerprint info in order to guarantee that we won't end up with mixed
     /// versions of the `js/html/css` files that `rustdoc` autogenerates which do not have
     /// any versioning.
-    pub fn check_rustdoc_fingerprint(cx: &Context<'_, '_>) -> CargoResult<()> {
-        if cx.bcx.config.cli_unstable().skip_rustdoc_fingerprint {
+    pub fn check_rustdoc_fingerprint(build_runner: &BuildRunner<'_, '_>) -> CargoResult<()> {
+        if build_runner
+            .bcx
+            .gctx
+            .cli_unstable()
+            .skip_rustdoc_fingerprint
+        {
             return Ok(());
         }
         let actual_rustdoc_target_data = RustDocFingerprint {
-            rustc_vv: cx.bcx.rustc().verbose_version.clone(),
+            rustc_vv: build_runner.bcx.rustc().verbose_version.clone(),
         };
 
-        let fingerprint_path = cx.files().host_root().join(".rustdoc_fingerprint.json");
+        let fingerprint_path = build_runner
+            .files()
+            .host_root()
+            .join(".rustdoc_fingerprint.json");
         let write_fingerprint = || -> CargoResult<()> {
             paths::write(
                 &fingerprint_path,
@@ -1083,10 +1084,11 @@ impl RustDocFingerprint {
             "fingerprint {:?} mismatch, clearing doc directories",
             fingerprint_path
         );
-        cx.bcx
+        build_runner
+            .bcx
             .all_kinds
             .iter()
-            .map(|kind| cx.files().layout(*kind).doc())
+            .map(|kind| build_runner.files().layout(*kind).doc())
             .filter(|path| path.exists())
             .try_for_each(|path| clean_doc(path))?;
         write_fingerprint()?;

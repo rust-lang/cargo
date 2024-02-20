@@ -10,7 +10,7 @@ use std::io::IsTerminal;
 use crate::util::auth;
 use crate::util::auth::AuthorizationError;
 use crate::CargoResult;
-use crate::Config;
+use crate::GlobalContext;
 use cargo_credential::LoginOptions;
 use cargo_credential::Secret;
 
@@ -19,20 +19,14 @@ use super::registry;
 use super::RegistryOrIndex;
 
 pub fn registry_login(
-    config: &Config,
+    gctx: &GlobalContext,
     token_from_cmdline: Option<Secret<&str>>,
     reg_or_index: Option<&RegistryOrIndex>,
     args: &[&str],
 ) -> CargoResult<()> {
-    let source_ids = get_source_id(config, reg_or_index)?;
+    let source_ids = get_source_id(gctx, reg_or_index)?;
 
-    let login_url = match registry(
-        config,
-        token_from_cmdline.clone(),
-        reg_or_index,
-        false,
-        None,
-    ) {
+    let login_url = match registry(gctx, token_from_cmdline.clone(), reg_or_index, false, None) {
         Ok((registry, _)) => Some(format!("{}/me", registry.host())),
         Err(e) if e.is::<AuthorizationError>() => e
             .downcast::<AuthorizationError>()
@@ -58,6 +52,6 @@ pub fn registry_login(
         login_url: login_url.as_deref(),
     };
 
-    auth::login(config, &source_ids.original, options, args)?;
+    auth::login(gctx, &source_ids.original, options, args)?;
     Ok(())
 }

@@ -1,7 +1,7 @@
 //! Support for deserializing configuration via `serde`
 
 use crate::util::config::value;
-use crate::util::config::{Config, ConfigError, ConfigKey};
+use crate::util::config::{ConfigError, ConfigKey, GlobalContext};
 use crate::util::config::{ConfigValue as CV, Definition, Value};
 use serde::{de, de::IntoDeserializer};
 use std::collections::HashSet;
@@ -10,8 +10,8 @@ use std::vec;
 /// Serde deserializer used to convert config values to a target type using
 /// `Config::get`.
 #[derive(Clone)]
-pub(super) struct Deserializer<'config> {
-    pub(super) config: &'config Config,
+pub(super) struct Deserializer<'gctx> {
+    pub(super) gctx: &'gctx GlobalContext,
     /// The current key being deserialized.
     pub(super) key: ConfigKey,
     /// Whether or not this key part is allowed to be an inner table. For
@@ -30,7 +30,7 @@ macro_rules! deserialize_method {
             V: de::Visitor<'de>,
         {
             let v = self
-                .config
+                .gctx
                 .$getter(&self.key)?
                 .ok_or_else(|| ConfigError::missing(&self.key))?;
             let Value { val, definition } = v;
@@ -40,14 +40,14 @@ macro_rules! deserialize_method {
     };
 }
 
-impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
+impl<'de, 'gctx> de::Deserializer<'de> for Deserializer<'gctx> {
     type Error = ConfigError;
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
         V: de::Visitor<'de>,
     {
-        let cv = self.config.get_cv_with_env(&self.key)?;
+        let cv = self.gctx.get_cv_with_env(&self.key)?;
         if let Some(cv) = cv {
             let res: (Result<V::Value, ConfigError>, Definition) = match cv {
                 CV::Integer(i, def) => (visitor.visit_i64(i), def),
@@ -80,7 +80,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
     where
         V: de::Visitor<'de>,
     {
-        if self.config.has_key(&self.key, self.env_prefix_ok)? {
+        if self.gctx.has_key(&self.key, self.env_prefix_ok)? {
             visitor.visit_some(self)
         } else {
             // Treat missing values as `None`.
@@ -156,7 +156,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
             return visitor.visit_newtype_struct(self);
         };
 
-        let vals = self.config.get_list_or_string(&self.key, merge)?;
+        let vals = self.gctx.get_list_or_string(&self.key, merge)?;
         let vals: Vec<String> = vals.into_iter().map(|vd| vd.0).collect();
         visitor.visit_newtype_struct(vals.into_deserializer())
     }
@@ -171,7 +171,7 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
         V: de::Visitor<'de>,
     {
         let value = self
-            .config
+            .gctx
             .get_string_priv(&self.key)?
             .ok_or_else(|| ConfigError::missing(&self.key))?;
 
@@ -189,8 +189,8 @@ impl<'de, 'config> de::Deserializer<'de> for Deserializer<'config> {
     }
 }
 
-struct ConfigMapAccess<'config> {
-    de: Deserializer<'config>,
+struct ConfigMapAccess<'gctx> {
+    de: Deserializer<'gctx>,
     /// The fields that this map should deserialize.
     fields: Vec<KeyKind>,
     /// Current field being deserialized.
@@ -203,19 +203,19 @@ enum KeyKind {
     CaseSensitive(String),
 }
 
-impl<'config> ConfigMapAccess<'config> {
-    fn new_map(de: Deserializer<'config>) -> Result<ConfigMapAccess<'config>, ConfigError> {
+impl<'gctx> ConfigMapAccess<'gctx> {
+    fn new_map(de: Deserializer<'gctx>) -> Result<ConfigMapAccess<'gctx>, ConfigError> {
         let mut fields = Vec::new();
-        if let Some(mut v) = de.config.get_table(&de.key)? {
+        if let Some(mut v) = de.gctx.get_table(&de.key)? {
             // `v: Value<HashMap<String, CV>>`
             for (key, _value) in v.val.drain() {
                 fields.push(KeyKind::CaseSensitive(key));
             }
         }
-        if de.config.cli_unstable().advanced_env {
+        if de.gctx.cli_unstable().advanced_env {
             // `CARGO_PROFILE_DEV_PACKAGE_`
             let env_prefix = format!("{}_", de.key.as_env_key());
-            for env_key in de.config.env_keys() {
+            for env_key in de.gctx.env_keys() {
                 // `CARGO_PROFILE_DEV_PACKAGE_bar_OPT_LEVEL = 3`
                 if let Some(rest) = env_key.strip_prefix(&env_prefix) {
                     // `rest = bar_OPT_LEVEL`
@@ -233,10 +233,10 @@ impl<'config> ConfigMapAccess<'config> {
     }
 
     fn new_struct(
-        de: Deserializer<'config>,
+        de: Deserializer<'gctx>,
         given_fields: &'static [&'static str],
-    ) -> Result<ConfigMapAccess<'config>, ConfigError> {
-        let table = de.config.get_table(&de.key)?;
+    ) -> Result<ConfigMapAccess<'gctx>, ConfigError> {
+        let table = de.gctx.get_table(&de.key)?;
 
         // Assume that if we're deserializing a struct it exhaustively lists all
         // possible fields on this key that we're *supposed* to use, so take
@@ -248,7 +248,7 @@ impl<'config> ConfigMapAccess<'config> {
                 .iter()
                 .filter(|(k, _v)| !given_fields.iter().any(|gk| gk == k));
             for (unused_key, unused_value) in unused_keys {
-                de.config.shell().warn(format!(
+                de.gctx.shell().warn(format!(
                     "unused config key `{}.{}` in `{}`",
                     de.key,
                     unused_key,
@@ -264,7 +264,7 @@ impl<'config> ConfigMapAccess<'config> {
         for field in given_fields {
             let mut field_key = de.key.clone();
             field_key.push(field);
-            for env_key in de.config.env_keys() {
+            for env_key in de.gctx.env_keys() {
                 if env_key.starts_with(field_key.as_env_key()) {
                     fields.insert(KeyKind::Normal(field.to_string()));
                 }
@@ -287,7 +287,7 @@ impl<'config> ConfigMapAccess<'config> {
     }
 }
 
-impl<'de, 'config> de::MapAccess<'de> for ConfigMapAccess<'config> {
+impl<'de, 'gctx> de::MapAccess<'de> for ConfigMapAccess<'gctx> {
     type Error = ConfigError;
 
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
@@ -346,7 +346,7 @@ impl<'de, 'config> de::MapAccess<'de> for ConfigMapAccess<'config> {
         });
 
         let result = seed.deserialize(Deserializer {
-            config: self.de.config,
+            gctx: self.de.gctx,
             key: self.de.key.clone(),
             env_prefix_ok,
         });
@@ -362,11 +362,11 @@ struct ConfigSeqAccess {
 impl ConfigSeqAccess {
     fn new(de: Deserializer<'_>) -> Result<ConfigSeqAccess, ConfigError> {
         let mut res = Vec::new();
-        if let Some(v) = de.config._get_list(&de.key)? {
+        if let Some(v) = de.gctx._get_list(&de.key)? {
             res.extend(v.val);
         }
 
-        de.config.get_env_list(&de.key, &mut res)?;
+        de.gctx.get_env_list(&de.key, &mut res)?;
 
         Ok(ConfigSeqAccess {
             list_iter: res.into_iter(),
@@ -401,12 +401,12 @@ impl<'de> de::SeqAccess<'de> for ConfigSeqAccess {
 /// fields into the location that this configuration value was defined in.
 ///
 /// See more comments in `value.rs` for the protocol used here.
-struct ValueDeserializer<'config> {
+struct ValueDeserializer<'gctx> {
     hits: u32,
     definition: Definition,
     /// The deserializer, used to actually deserialize a Value struct.
     /// This is `None` if deserializing a string.
-    de: Option<Deserializer<'config>>,
+    de: Option<Deserializer<'gctx>>,
     /// A string value to deserialize.
     ///
     /// This is used for situations where you can't address a string via a
@@ -417,13 +417,13 @@ struct ValueDeserializer<'config> {
     str_value: Option<String>,
 }
 
-impl<'config> ValueDeserializer<'config> {
-    fn new(de: Deserializer<'config>) -> Result<ValueDeserializer<'config>, ConfigError> {
+impl<'gctx> ValueDeserializer<'gctx> {
+    fn new(de: Deserializer<'gctx>) -> Result<ValueDeserializer<'gctx>, ConfigError> {
         // Figure out where this key is defined.
         let definition = {
             let env = de.key.as_env_key();
             let env_def = Definition::Environment(env.to_string());
-            match (de.config.env.contains_key(env), de.config.get_cv(&de.key)?) {
+            match (de.gctx.env.contains_key(env), de.gctx.get_cv(&de.key)?) {
                 (true, Some(cv)) => {
                     // Both, pick highest priority.
                     if env_def.is_higher_priority(cv.definition()) {
@@ -447,7 +447,7 @@ impl<'config> ValueDeserializer<'config> {
         })
     }
 
-    fn new_with_string(s: String, definition: Definition) -> ValueDeserializer<'config> {
+    fn new_with_string(s: String, definition: Definition) -> ValueDeserializer<'gctx> {
         ValueDeserializer {
             hits: 0,
             definition,
@@ -457,7 +457,7 @@ impl<'config> ValueDeserializer<'config> {
     }
 }
 
-impl<'de, 'config> de::MapAccess<'de> for ValueDeserializer<'config> {
+impl<'de, 'gctx> de::MapAccess<'de> for ValueDeserializer<'gctx> {
     type Error = ConfigError;
 
     fn next_key_seed<K>(&mut self, seed: K) -> Result<Option<K::Value>, Self::Error>
@@ -517,7 +517,7 @@ impl<'de, 'config> de::MapAccess<'de> for ValueDeserializer<'config> {
 // sequence (like `Vec<String>` or `Vec<Value<String>>`). `Value<String>` is
 // handled by deserialize_struct, and the plain `String` is handled by all the
 // other functions here.
-impl<'de, 'config> de::Deserializer<'de> for ValueDeserializer<'config> {
+impl<'de, 'gctx> de::Deserializer<'de> for ValueDeserializer<'gctx> {
     type Error = ConfigError;
 
     fn deserialize_str<V>(self, visitor: V) -> Result<V::Value, Self::Error>

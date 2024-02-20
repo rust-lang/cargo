@@ -3,8 +3,8 @@ use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::toml_mut::is_sorted;
 use crate::util::{existing_vcs_repo, FossilRepo, GitRepo, HgRepo, PijulRepo};
-use crate::util::{restricted_names, Config};
-use anyhow::{anyhow, Context};
+use crate::util::{restricted_names, GlobalContext};
+use anyhow::{anyhow, Context as _};
 use cargo_util::paths::{self, write_atomic};
 use cargo_util_schemas::manifest::PackageName;
 use serde::de;
@@ -437,11 +437,10 @@ fn calculate_new_project_kind(
     requested_kind
 }
 
-pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
+pub fn new(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<()> {
     let path = &opts.path;
     let name = get_name(path, opts)?;
-    config
-        .shell()
+    gctx.shell()
         .status("Creating", format!("{} `{}` package", opts.kind, name))?;
 
     if path.exists() {
@@ -451,11 +450,11 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
             path.display()
         )
     }
-    check_path(path, &mut config.shell())?;
+    check_path(path, &mut gctx.shell())?;
 
     let is_bin = opts.kind.is_bin();
 
-    check_name(name, opts.name.is_none(), is_bin, &mut config.shell())?;
+    check_name(name, opts.name.is_none(), is_bin, &mut gctx.shell())?;
 
     let mkopts = MkOptions {
         version_control: opts.version_control,
@@ -466,7 +465,7 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
         registry: opts.registry.as_deref(),
     };
 
-    mk(config, &mkopts).with_context(|| {
+    mk(gctx, &mkopts).with_context(|| {
         format!(
             "Failed to create package `{}` at `{}`",
             name,
@@ -476,9 +475,9 @@ pub fn new(opts: &NewOptions, config: &Config) -> CargoResult<()> {
     Ok(())
 }
 
-pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
+pub fn init(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<NewProjectKind> {
     // This is here just as a random location to exercise the internal error handling.
-    if config.get_env_os("__CARGO_TEST_INTERNAL_ERROR").is_some() {
+    if gctx.get_env_os("__CARGO_TEST_INTERNAL_ERROR").is_some() {
         return Err(crate::util::internal("internal error test"));
     }
 
@@ -487,14 +486,13 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
     let mut src_paths_types = vec![];
     detect_source_paths_and_types(path, name, &mut src_paths_types)?;
     let kind = calculate_new_project_kind(opts.kind, opts.auto_detect_kind, &src_paths_types);
-    config
-        .shell()
+    gctx.shell()
         .status("Creating", format!("{} package", opts.kind))?;
 
     if path.join("Cargo.toml").exists() {
         anyhow::bail!("`cargo init` cannot be run on existing Cargo packages")
     }
-    check_path(path, &mut config.shell())?;
+    check_path(path, &mut gctx.shell())?;
 
     let has_bin = kind.is_bin();
 
@@ -507,7 +505,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
         } else {
             NewProjectKind::Lib
         };
-        config.shell().warn(format!(
+        gctx.shell().warn(format!(
             "file `{}` seems to be a {} file",
             src_paths_types[0].relative_path, file_type
         ))?;
@@ -523,7 +521,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
         )
     }
 
-    check_name(name, opts.name.is_none(), has_bin, &mut config.shell())?;
+    check_name(name, opts.name.is_none(), has_bin, &mut gctx.shell())?;
 
     let mut version_control = opts.version_control;
 
@@ -570,7 +568,7 @@ pub fn init(opts: &NewOptions, config: &Config) -> CargoResult<NewProjectKind> {
         registry: opts.registry.as_deref(),
     };
 
-    mk(config, &mkopts).with_context(|| {
+    mk(gctx, &mkopts).with_context(|| {
         format!(
             "Failed to create package `{}` at `{}`",
             name,
@@ -713,7 +711,7 @@ fn write_ignore_file(base_path: &Path, list: &IgnoreList, vcs: VersionControl) -
 }
 
 /// Initializes the correct VCS system based on the provided config.
-fn init_vcs(path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()> {
+fn init_vcs(path: &Path, vcs: VersionControl, gctx: &GlobalContext) -> CargoResult<()> {
     match vcs {
         VersionControl::Git => {
             if !path.join(".git").exists() {
@@ -721,22 +719,22 @@ fn init_vcs(path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()
                 // directory in the root of a posix filesystem.
                 // See: https://github.com/libgit2/libgit2/issues/5130
                 paths::create_dir_all(path)?;
-                GitRepo::init(path, config.cwd())?;
+                GitRepo::init(path, gctx.cwd())?;
             }
         }
         VersionControl::Hg => {
             if !path.join(".hg").exists() {
-                HgRepo::init(path, config.cwd())?;
+                HgRepo::init(path, gctx.cwd())?;
             }
         }
         VersionControl::Pijul => {
             if !path.join(".pijul").exists() {
-                PijulRepo::init(path, config.cwd())?;
+                PijulRepo::init(path, gctx.cwd())?;
             }
         }
         VersionControl::Fossil => {
             if !path.join(".fossil").exists() {
-                FossilRepo::init(path, config.cwd())?;
+                FossilRepo::init(path, gctx.cwd())?;
             }
         }
         VersionControl::NoVcs => {
@@ -747,10 +745,10 @@ fn init_vcs(path: &Path, vcs: VersionControl, config: &Config) -> CargoResult<()
     Ok(())
 }
 
-fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
+fn mk(gctx: &GlobalContext, opts: &MkOptions<'_>) -> CargoResult<()> {
     let path = opts.path;
     let name = opts.name;
-    let cfg = config.get::<CargoNewConfig>("cargo-new")?;
+    let cfg = gctx.get::<CargoNewConfig>("cargo-new")?;
 
     // Using the push method with multiple arguments ensures that the entries
     // for all mutually-incompatible VCS in terms of syntax are in sync.
@@ -758,7 +756,7 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
     ignore.push("/target", "^target$", "target");
 
     let vcs = opts.version_control.unwrap_or_else(|| {
-        let in_existing_vcs = existing_vcs_repo(path.parent().unwrap_or(path), config.cwd());
+        let in_existing_vcs = existing_vcs_repo(path.parent().unwrap_or(path), gctx.cwd());
         match (cfg.version_control, in_existing_vcs) {
             (None, false) => VersionControl::Git,
             (Some(opt), false) => opt,
@@ -766,7 +764,7 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
         }
     });
 
-    init_vcs(path, vcs, config)?;
+    init_vcs(path, vcs, gctx)?;
     write_ignore_file(path, &ignore, vcs)?;
 
     // Create `Cargo.toml` file with necessary `[lib]` and `[[bin]]` sections, if needed.
@@ -849,7 +847,7 @@ fn mk(config: &Config, opts: &MkOptions<'_>) -> CargoResult<()> {
                     &mut workspace_document,
                     &display_path,
                 )? {
-                    config.shell().status(
+                    gctx.shell().status(
                         "Adding",
                         format!(
                             "`{}` as member of workspace at `{}`",
@@ -914,16 +912,16 @@ mod tests {
         }
     }
 
-    if let Err(e) = Workspace::new(&path.join("Cargo.toml"), config) {
+    if let Err(e) = Workspace::new(&path.join("Cargo.toml"), gctx) {
         crate::display_warning_with_error(
             "compiling this new package may not work due to invalid \
              workspace configuration",
             &e,
-            &mut config.shell(),
+            &mut gctx.shell(),
         );
     }
 
-    config.shell().note(
+    gctx.shell().note(
         "see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html",
     )?;
 

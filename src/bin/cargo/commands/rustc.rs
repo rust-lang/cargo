@@ -58,8 +58,8 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let ws = args.workspace(config)?;
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(gctx)?;
     // This is a legacy behavior that changes the behavior based on the profile.
     // If we want to support this more formally, I think adding a --mode flag
     // would be warranted.
@@ -70,7 +70,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         _ => CompileMode::Build,
     };
     let mut compile_opts = args.compile_options_for_single_package(
-        config,
+        gctx,
         mode,
         Some(&ws),
         ProfileChecking::LegacyRustc,
@@ -85,8 +85,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         Some(target_args)
     };
     if let Some(opt_value) = args.get_one::<String>(PRINT_ARG_NAME) {
-        config
-            .cli_unstable()
+        gctx.cli_unstable()
             .fail_if_stable_opt(PRINT_ARG_NAME, 9357)?;
         ops::print(&ws, &compile_opts, opt_value)?;
         return Ok(());

@@ -4,12 +4,12 @@
 //! long it takes for different units to compile.
 use super::{CompileMode, Unit};
 use crate::core::compiler::job_queue::JobId;
-use crate::core::compiler::{BuildContext, Context, TimingOutput};
+use crate::core::compiler::{BuildContext, BuildRunner, TimingOutput};
 use crate::core::PackageId;
 use crate::util::cpu::State;
 use crate::util::machine_message::{self, Message};
 use crate::util::style;
-use crate::util::{CargoResult, Config};
+use crate::util::{CargoResult, GlobalContext};
 use anyhow::Context as _;
 use cargo_util::paths;
 use std::collections::HashMap;
@@ -24,8 +24,8 @@ use std::time::{Duration, Instant, SystemTime};
 /// receives messages from spawned off threads.
 ///
 /// [`JobQueue`]: super::JobQueue
-pub struct Timings<'cfg> {
-    config: &'cfg Config,
+pub struct Timings<'gctx> {
+    gctx: &'gctx GlobalContext,
     /// Whether or not timings should be captured.
     enabled: bool,
     /// If true, saves an HTML report to disk.
@@ -95,8 +95,8 @@ struct Concurrency {
     inactive: usize,
 }
 
-impl<'cfg> Timings<'cfg> {
-    pub fn new(bcx: &BuildContext<'_, 'cfg>, root_units: &[Unit]) -> Timings<'cfg> {
+impl<'gctx> Timings<'gctx> {
+    pub fn new(bcx: &BuildContext<'_, 'gctx>, root_units: &[Unit]) -> Timings<'gctx> {
         let has_report = |what| bcx.build_config.timing_outputs.contains(&what);
         let report_html = has_report(TimingOutput::Html);
         let report_json = has_report(TimingOutput::Json);
@@ -132,11 +132,11 @@ impl<'cfg> Timings<'cfg> {
         };
 
         Timings {
-            config: bcx.config,
+            gctx: bcx.gctx,
             enabled,
             report_html,
             report_json,
-            start: bcx.config.creation_time(),
+            start: bcx.gctx.creation_time(),
             start_str,
             root_targets,
             profile,
@@ -229,7 +229,7 @@ impl<'cfg> Timings<'cfg> {
                 rmeta_time: unit_time.rmeta_time,
             }
             .to_json_string();
-            crate::drop_println!(self.config, "{}", msg);
+            crate::drop_println!(self.gctx, "{}", msg);
         }
         self.unit_times.push(unit_time);
     }
@@ -288,7 +288,7 @@ impl<'cfg> Timings<'cfg> {
     /// Call this when all units are finished.
     pub fn finished(
         &mut self,
-        cx: &Context<'_, '_>,
+        build_runner: &BuildRunner<'_, '_>,
         error: &Option<anyhow::Error>,
     ) -> CargoResult<()> {
         if !self.enabled {
@@ -298,17 +298,21 @@ impl<'cfg> Timings<'cfg> {
         self.unit_times
             .sort_unstable_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
         if self.report_html {
-            self.report_html(cx, error)
+            self.report_html(build_runner, error)
                 .with_context(|| "failed to save timing report")?;
         }
         Ok(())
     }
 
     /// Save HTML report to disk.
-    fn report_html(&self, cx: &Context<'_, '_>, error: &Option<anyhow::Error>) -> CargoResult<()> {
+    fn report_html(
+        &self,
+        build_runner: &BuildRunner<'_, '_>,
+        error: &Option<anyhow::Error>,
+    ) -> CargoResult<()> {
         let duration = self.start.elapsed().as_secs_f64();
         let timestamp = self.start_str.replace(&['-', ':'][..], "");
-        let timings_path = cx.files().host_root().join("cargo-timings");
+        let timings_path = build_runner.files().host_root().join("cargo-timings");
         paths::create_dir_all(&timings_path)?;
         let filename = timings_path.join(format!("cargo-timing-{}.html", timestamp));
         let mut f = BufWriter::new(paths::create(&filename)?);
@@ -318,7 +322,7 @@ impl<'cfg> Timings<'cfg> {
             .map(|(name, _targets)| name.as_str())
             .collect();
         f.write_all(HTML_TMPL.replace("{ROOTS}", &roots.join(", ")).as_bytes())?;
-        self.write_summary_table(&mut f, duration, cx.bcx, error)?;
+        self.write_summary_table(&mut f, duration, build_runner.bcx, error)?;
         f.write_all(HTML_CANVAS.as_bytes())?;
         self.write_unit_table(&mut f)?;
         // It helps with pixel alignment to use whole numbers.
@@ -343,7 +347,7 @@ impl<'cfg> Timings<'cfg> {
         let unstamped_filename = timings_path.join("cargo-timing.html");
         paths::link_or_copy(&filename, &unstamped_filename)?;
 
-        let mut shell = self.config.shell();
+        let mut shell = self.gctx.shell();
         let timing_path = std::env::current_dir().unwrap_or_default().join(&filename);
         let link = shell.err_file_hyperlink(&timing_path);
         let msg = format!(

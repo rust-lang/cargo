@@ -125,10 +125,10 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     match args.subcommand() {
         Some(("gc", args)) => {
-            return gc(config, args);
+            return gc(gctx, args);
         }
         Some((cmd, _)) => {
             unreachable!("unexpected command {}", cmd)
@@ -136,17 +136,17 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         None => {}
     }
 
-    let ws = args.workspace(config)?;
+    let ws = args.workspace(gctx)?;
 
     if args.is_present_with_zero_values("package") {
         print_available_packages(&ws)?;
     }
 
     let opts = CleanOptions {
-        config,
+        gctx,
         spec: values(args, "package"),
         targets: args.targets()?,
-        requested_profile: args.get_profile_name(config, "dev", ProfileChecking::Custom)?,
+        requested_profile: args.get_profile_name(gctx, "dev", ProfileChecking::Custom)?,
         profile_specified: args.contains_id("profile") || args.flag("release"),
         doc: args.flag("doc"),
         dry_run: args.dry_run(),
@@ -155,13 +155,13 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     Ok(())
 }
 
-fn gc(config: &Config, args: &ArgMatches) -> CliResult {
-    config.cli_unstable().fail_if_stable_command(
-        config,
+fn gc(gctx: &GlobalContext, args: &ArgMatches) -> CliResult {
+    gctx.cli_unstable().fail_if_stable_command(
+        gctx,
         "clean gc",
         12633,
         "gc",
-        config.cli_unstable().gc,
+        gctx.cli_unstable().gc,
     )?;
 
     let size_opt = |opt| -> Option<u64> { args.get_one::<u64>(opt).copied() };
@@ -183,13 +183,13 @@ fn gc(config: &Config, args: &ArgMatches) -> CliResult {
     // If the user sets any options, then only perform the options requested.
     // If no options are set, do the default behavior.
     if !gc_opts.is_download_cache_opt_set() {
-        gc_opts.update_for_auto_gc(config)?;
+        gc_opts.update_for_auto_gc(gctx)?;
     }
 
-    let _lock = config.acquire_package_cache_lock(CacheLockMode::MutateExclusive)?;
-    let mut cache_track = GlobalCacheTracker::new(&config)?;
-    let mut gc = Gc::new(config, &mut cache_track)?;
-    let mut clean_ctx = CleanContext::new(config);
+    let _lock = gctx.acquire_package_cache_lock(CacheLockMode::MutateExclusive)?;
+    let mut cache_track = GlobalCacheTracker::new(&gctx)?;
+    let mut gc = Gc::new(gctx, &mut cache_track)?;
+    let mut clean_ctx = CleanContext::new(gctx);
     clean_ctx.dry_run = args.dry_run();
     gc.gc(&mut clean_ctx, &gc_opts)?;
     clean_ctx.display_summary()?;

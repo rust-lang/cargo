@@ -8,7 +8,7 @@
 //! from configuration, but also record where it was deserialized from when it
 //! was read.
 
-use crate::util::config::Config;
+use crate::util::config::GlobalContext;
 use serde::de;
 use std::cmp::Ordering;
 use std::fmt;
@@ -87,10 +87,10 @@ impl Definition {
     ///
     /// If from a file, it is the directory above `.cargo/config`.
     /// CLI and env are the current working directory.
-    pub fn root<'a>(&'a self, config: &'a Config) -> &'a Path {
+    pub fn root<'a>(&'a self, gctx: &'a GlobalContext) -> &'a Path {
         match self {
             Definition::Path(p) | Definition::Cli(Some(p)) => p.parent().unwrap().parent().unwrap(),
-            Definition::Environment(_) | Definition::Cli(None) => config.cwd(),
+            Definition::Environment(_) | Definition::Cli(None) => gctx.cwd(),
         }
     }
 

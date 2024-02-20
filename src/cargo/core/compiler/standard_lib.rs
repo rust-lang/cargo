@@ -9,7 +9,7 @@ use crate::core::resolver::HasDevUnits;
 use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::errors::CargoResult;
-use crate::Config;
+use crate::GlobalContext;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
@@ -33,8 +33,8 @@ pub fn parse_unstable_flag(value: Option<&str>) -> Vec<String> {
     crates.into_iter().map(|s| s.to_string()).collect()
 }
 
-pub(crate) fn std_crates(config: &Config, units: Option<&[Unit]>) -> Option<Vec<String>> {
-    let crates = config.cli_unstable().build_std.as_ref()?.clone();
+pub(crate) fn std_crates(gctx: &GlobalContext, units: Option<&[Unit]>) -> Option<Vec<String>> {
+    let crates = gctx.cli_unstable().build_std.as_ref()?.clone();
 
     // Only build libtest if it looks like it is needed.
     let mut crates = crates.clone();
@@ -60,14 +60,14 @@ pub(crate) fn std_crates(config: &Config, units: Option<&[Unit]>) -> Option<Vec<
 }
 
 /// Resolve the standard library dependencies.
-pub fn resolve_std<'cfg>(
-    ws: &Workspace<'cfg>,
-    target_data: &mut RustcTargetData<'cfg>,
+pub fn resolve_std<'gctx>(
+    ws: &Workspace<'gctx>,
+    target_data: &mut RustcTargetData<'gctx>,
     build_config: &BuildConfig,
     crates: &[String],
-) -> CargoResult<(PackageSet<'cfg>, Resolve, ResolvedFeatures)> {
+) -> CargoResult<(PackageSet<'gctx>, Resolve, ResolvedFeatures)> {
     if build_config.build_plan {
-        ws.config()
+        ws.gctx()
             .shell()
             .warn("-Zbuild-std does not currently fully support --build-plan")?;
     }
@@ -111,7 +111,7 @@ pub fn resolve_std<'cfg>(
         None,
     );
 
-    let config = ws.config();
+    let gctx = ws.gctx();
     // This is a delicate hack. In order for features to resolve correctly,
     // the resolver needs to run a specific "current" member of the workspace.
     // Thus, in order to set the features for `std`, we need to set `sysroot`
@@ -123,7 +123,7 @@ pub fn resolve_std<'cfg>(
     let current_manifest = src_path.join("library/sysroot/Cargo.toml");
     // TODO: Consider doing something to enforce --locked? Or to prevent the
     // lock file from being written, such as setting ephemeral.
-    let mut std_ws = Workspace::new_virtual(src_path, current_manifest, virtual_manifest, config)?;
+    let mut std_ws = Workspace::new_virtual(src_path, current_manifest, virtual_manifest, gctx)?;
     // Don't require optional dependencies in this workspace, aka std's own
     // `[dev-dependencies]`. No need for us to generate a `Resolve` which has
     // those included because we'll never use them anyway.
@@ -134,7 +134,7 @@ pub fn resolve_std<'cfg>(
     spec_pkgs.push("sysroot".to_string());
     let spec = Packages::Packages(spec_pkgs);
     let specs = spec.to_package_id_specs(&std_ws)?;
-    let features = match &config.cli_unstable().build_std_features {
+    let features = match &gctx.cli_unstable().build_std_features {
         Some(list) => list.clone(),
         None => vec![
             "panic-unwind".to_string(),
@@ -221,7 +221,7 @@ pub fn generate_std_roots(
 }
 
 fn detect_sysroot_src_path(target_data: &RustcTargetData<'_>) -> CargoResult<PathBuf> {
-    if let Some(s) = target_data.config.get_env_os("__CARGO_TESTS_ONLY_SRC_ROOT") {
+    if let Some(s) = target_data.gctx.get_env_os("__CARGO_TESTS_ONLY_SRC_ROOT") {
         return Ok(s.into());
     }
 
@@ -240,7 +240,7 @@ fn detect_sysroot_src_path(target_data: &RustcTargetData<'_>) -> CargoResult<Pat
              library, try:\n        rustup component add rust-src",
             lock
         );
-        match target_data.config.get_env("RUSTUP_TOOLCHAIN") {
+        match target_data.gctx.get_env("RUSTUP_TOOLCHAIN") {
             Ok(rustup_toolchain) => {
                 anyhow::bail!("{} --toolchain {}", msg, rustup_toolchain);
             }

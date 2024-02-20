@@ -20,8 +20,8 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let reg = args.registry_or_index(config)?;
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
+    let reg = args.registry_or_index(gctx)?;
     assert!(
         !matches!(reg, Some(RegistryOrIndex::Index(..))),
         "must not be index URL"
@@ -33,7 +33,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         .map(String::as_str)
         .collect::<Vec<_>>();
     ops::registry_login(
-        config,
+        gctx,
         args.get_one::<String>("token").map(|s| s.as_str().into()),
         reg.as_ref(),
         &extra_args,

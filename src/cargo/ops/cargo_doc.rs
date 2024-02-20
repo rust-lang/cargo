@@ -1,7 +1,7 @@
 use crate::core::compiler::{Compilation, CompileKind};
 use crate::core::{Shell, Workspace};
 use crate::ops;
-use crate::util::config::{Config, PathAndArgs};
+use crate::util::config::{GlobalContext, PathAndArgs};
 use crate::util::CargoResult;
 use anyhow::{bail, Error};
 use std::path::Path;
@@ -66,16 +66,16 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
 
         if path.exists() {
             let config_browser = {
-                let cfg: Option<PathAndArgs> = ws.config().get("doc.browser")?;
-                cfg.map(|path_args| (path_args.path.resolve_program(ws.config()), path_args.args))
+                let cfg: Option<PathAndArgs> = ws.gctx().get("doc.browser")?;
+                cfg.map(|path_args| (path_args.path.resolve_program(ws.gctx()), path_args.args))
             };
-            let mut shell = ws.config().shell();
+            let mut shell = ws.gctx().shell();
             let link = shell.err_file_hyperlink(&path);
             shell.status(
                 "Opening",
                 format!("{}{}{}", link.open(), path.display(), link.close()),
             )?;
-            open_docs(&path, &mut shell, config_browser, ws.config())?;
+            open_docs(&path, &mut shell, config_browser, ws.gctx())?;
         }
     } else {
         for name in &compilation.root_crate_names {
@@ -83,7 +83,7 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
                 let path =
                     path_by_output_format(&compilation, &kind, &name, &options.output_format);
                 if path.exists() {
-                    let mut shell = ws.config().shell();
+                    let mut shell = ws.gctx().shell();
                     let link = shell.err_file_hyperlink(&path);
                     shell.status(
                         "Generated",
@@ -119,10 +119,10 @@ fn open_docs(
     path: &Path,
     shell: &mut Shell,
     config_browser: Option<(PathBuf, Vec<String>)>,
-    config: &Config,
+    gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let browser =
-        config_browser.or_else(|| Some((PathBuf::from(config.get_env_os("BROWSER")?), Vec::new())));
+        config_browser.or_else(|| Some((PathBuf::from(gctx.get_env_os("BROWSER")?), Vec::new())));
 
     match browser {
         Some((browser, initial_args)) => {

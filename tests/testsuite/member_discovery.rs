@@ -1,7 +1,7 @@
 //! Tests for workspace member discovery.
 
 use cargo::core::{Shell, Workspace};
-use cargo::util::config::Config;
+use cargo::util::config::GlobalContext;
 
 use cargo_test_support::install::cargo_home;
 use cargo_test_support::project;
@@ -33,12 +33,12 @@ fn bad_file_member_exclusion() {
 
     // Prevent this test from accessing the network by setting up .cargo/config.
     registry::init();
-    let config = Config::new(
+    let gctx = GlobalContext::new(
         Shell::from_write(Box::new(Vec::new())),
         cargo_home(),
         cargo_home(),
     );
-    let ws = Workspace::new(&p.root().join("Cargo.toml"), &config).unwrap();
+    let ws = Workspace::new(&p.root().join("Cargo.toml"), &gctx).unwrap();
     assert_eq!(ws.members().count(), 1);
     assert_eq!(ws.members().next().unwrap().name(), "bar");
 }

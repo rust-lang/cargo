@@ -14,11 +14,11 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let ws = args.workspace(config)?;
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(gctx)?;
 
     let opts = FetchOptions {
-        config,
+        gctx,
         targets: args.targets()?,
     };
     let _ = ops::fetch(&ws, &opts)?;

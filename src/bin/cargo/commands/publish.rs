@@ -29,9 +29,9 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let reg_or_index = args.registry_or_index(config)?;
-    let ws = args.workspace(config)?;
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
+    let reg_or_index = args.registry_or_index(gctx)?;
+    let ws = args.workspace(gctx)?;
     if ws.root_maybe().is_embedded() {
         return Err(anyhow::format_err!(
             "{} is unsupported by `cargo publish`",
@@ -43,7 +43,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     ops::publish(
         &ws,
         &PublishOpts {
-            config,
+            gctx,
             token: args
                 .get_one::<String>("token")
                 .map(|s| s.to_string().into()),

@@ -45,25 +45,19 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let ws = args.workspace(config)?;
-    let mut compile_opts = args.compile_options(
-        config,
-        CompileMode::Build,
-        Some(&ws),
-        ProfileChecking::Custom,
-    )?;
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(gctx)?;
+    let mut compile_opts =
+        args.compile_options(gctx, CompileMode::Build, Some(&ws), ProfileChecking::Custom)?;
 
-    if let Some(out_dir) = args.value_of_path("out-dir", config) {
+    if let Some(out_dir) = args.value_of_path("out-dir", gctx) {
         compile_opts.build_config.export_dir = Some(out_dir);
-    } else if let Some(out_dir) = config.build_config()?.out_dir.as_ref() {
-        let out_dir = out_dir.resolve_path(config);
+    } else if let Some(out_dir) = gctx.build_config()?.out_dir.as_ref() {
+        let out_dir = out_dir.resolve_path(gctx);
         compile_opts.build_config.export_dir = Some(out_dir);
     }
     if compile_opts.build_config.export_dir.is_some() {
-        config
-            .cli_unstable()
-            .fail_if_stable_opt("--out-dir", 6790)?;
+        gctx.cli_unstable().fail_if_stable_opt("--out-dir", 6790)?;
     }
     ops::compile(&ws, &compile_opts)?;
     Ok(())

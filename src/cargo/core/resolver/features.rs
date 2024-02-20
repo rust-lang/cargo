@@ -172,7 +172,7 @@ impl FeatureOpts {
         force_all_targets: ForceAllTargets,
     ) -> CargoResult<FeatureOpts> {
         let mut opts = FeatureOpts::default();
-        let unstable_flags = ws.config().cli_unstable();
+        let unstable_flags = ws.gctx().cli_unstable();
         let mut enable = |feat_opts: &Vec<String>| {
             for opt in feat_opts {
                 match opt.as_ref() {
@@ -407,13 +407,13 @@ pub type DiffMap = BTreeMap<PackageFeaturesKey, BTreeSet<InternedString>>;
 ///
 /// [`resolve`]: Self::resolve
 /// [module-level documentation]: crate::core::resolver::features
-pub struct FeatureResolver<'a, 'cfg> {
-    ws: &'a Workspace<'cfg>,
-    target_data: &'a mut RustcTargetData<'cfg>,
+pub struct FeatureResolver<'a, 'gctx> {
+    ws: &'a Workspace<'gctx>,
+    target_data: &'a mut RustcTargetData<'gctx>,
     /// The platforms to build for, requested by the user.
     requested_targets: &'a [CompileKind],
     resolve: &'a Resolve,
-    package_set: &'a PackageSet<'cfg>,
+    package_set: &'a PackageSet<'gctx>,
     /// Options that change how the feature resolver operates.
     opts: FeatureOpts,
     /// Map of features activated for each package.
@@ -441,14 +441,14 @@ pub struct FeatureResolver<'a, 'cfg> {
         HashMap<(PackageId, FeaturesFor, InternedString), HashSet<InternedString>>,
 }
 
-impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
+impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
     /// Runs the resolution algorithm and returns a new [`ResolvedFeatures`]
     /// with the result.
     pub fn resolve(
-        ws: &Workspace<'cfg>,
-        target_data: &'a mut RustcTargetData<'cfg>,
+        ws: &Workspace<'gctx>,
+        target_data: &'a mut RustcTargetData<'gctx>,
         resolve: &Resolve,
-        package_set: &'a PackageSet<'cfg>,
+        package_set: &'a PackageSet<'gctx>,
         cli_features: &CliFeatures,
         specs: &[PackageIdSpec],
         requested_targets: &[CompileKind],
@@ -943,7 +943,7 @@ impl<'a, 'cfg> FeatureResolver<'a, 'cfg> {
             let r_features = self.resolve.features(*pkg_id);
             if !r_features.iter().eq(features.iter()) {
                 crate::drop_eprintln!(
-                    self.ws.config(),
+                    self.ws.gctx(),
                     "{}/{:?} features mismatch\nresolve: {:?}\nnew: {:?}\n",
                     pkg_id,
                     dep_kind,

@@ -4,10 +4,10 @@ use std::task::Poll;
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::sources::source::QueryKind;
 use crate::util::edit_distance::edit_distance;
-use crate::util::{Config, OptVersionReq, VersionExt};
+use crate::util::{GlobalContext, OptVersionReq, VersionExt};
 use anyhow::Error;
 
-use super::context::Context;
+use super::context::ResolverContext;
 use super::types::{ConflictMap, ConflictReason};
 
 /// Error during resolution providing a path of `PackageId`s.
@@ -70,18 +70,19 @@ impl From<(PackageId, ConflictReason)> for ActivateError {
 }
 
 pub(super) fn activation_error(
-    cx: &Context,
+    resolver_gctx: &ResolverContext,
     registry: &mut dyn Registry,
     parent: &Summary,
     dep: &Dependency,
     conflicting_activations: &ConflictMap,
     candidates: &[Summary],
-    config: Option<&Config>,
+    gctx: Option<&GlobalContext>,
 ) -> ResolveError {
     let to_resolve_err = |err| {
         ResolveError::new(
             err,
-            cx.parents
+            resolver_gctx
+                .parents
                 .path_to_bottom(&parent.package_id())
                 .into_iter()
                 .map(|(node, _)| node)
@@ -93,7 +94,10 @@ pub(super) fn activation_error(
     if !candidates.is_empty() {
         let mut msg = format!("failed to select a version for `{}`.", dep.package_name());
         msg.push_str("\n    ... required by ");
-        msg.push_str(&describe_path_in_context(cx, &parent.package_id()));
+        msg.push_str(&describe_path_in_context(
+            resolver_gctx,
+            &parent.package_id(),
+        ));
 
         msg.push_str("\nversions that meet the requirements `");
         msg.push_str(&dep.version_req().to_string());
@@ -137,7 +141,7 @@ pub(super) fn activation_error(
                     msg.push_str("`, but it conflicts with a previous package which links to `");
                     msg.push_str(link);
                     msg.push_str("` as well:\n");
-                    msg.push_str(&describe_path_in_context(cx, p));
+                    msg.push_str(&describe_path_in_context(resolver_gctx, p));
                     msg.push_str("\nOnly one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. ");
                     msg.push_str("Try to adjust your dependencies so that only one package uses the `links = \"");
                     msg.push_str(link);
@@ -206,7 +210,7 @@ pub(super) fn activation_error(
             for (p, r) in &conflicting_activations {
                 if let ConflictReason::Semver = r {
                     msg.push_str("\n\n  previously selected ");
-                    msg.push_str(&describe_path_in_context(cx, p));
+                    msg.push_str(&describe_path_in_context(resolver_gctx, p));
                 }
             }
         }
@@ -274,7 +278,10 @@ pub(super) fn activation_error(
             registry.describe_source(dep.source_id()),
         );
         msg.push_str("required by ");
-        msg.push_str(&describe_path_in_context(cx, &parent.package_id()));
+        msg.push_str(&describe_path_in_context(
+            resolver_gctx,
+            &parent.package_id(),
+        ));
 
         // If we have a pre-release candidate, then that may be what our user is looking for
         if let Some(pre) = candidates.iter().find(|c| c.version().is_prerelease()) {
@@ -356,13 +363,16 @@ pub(super) fn activation_error(
         }
         msg.push_str(&format!("location searched: {}\n", dep.source_id()));
         msg.push_str("required by ");
-        msg.push_str(&describe_path_in_context(cx, &parent.package_id()));
+        msg.push_str(&describe_path_in_context(
+            resolver_gctx,
+            &parent.package_id(),
+        ));
 
         msg
     };
 
-    if let Some(config) = config {
-        if config.offline() {
+    if let Some(gctx) = gctx {
+        if gctx.offline() {
             msg.push_str(
                 "\nAs a reminder, you're using offline mode (--offline) \
                  which can sometimes cause surprising resolution failures, \
@@ -377,7 +387,7 @@ pub(super) fn activation_error(
 
 /// Returns String representation of dependency chain for a particular `pkgid`
 /// within given context.
-pub(super) fn describe_path_in_context(cx: &Context, id: &PackageId) -> String {
+pub(super) fn describe_path_in_context(cx: &ResolverContext, id: &PackageId) -> String {
     let iter = cx
         .parents
         .path_to_bottom(id)

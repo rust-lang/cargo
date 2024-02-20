@@ -9,7 +9,7 @@ use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::sources::IndexSummary;
-use crate::util::{internal, CargoResult, Config};
+use crate::util::{internal, CargoResult, GlobalContext};
 use anyhow::Context as _;
 use cargo_util::paths;
 use filetime::FileTime;
@@ -26,7 +26,7 @@ use walkdir::WalkDir;
 ///
 /// It also provides convenient methods like [`PathSource::list_files`] to
 /// list all files in a package, given its ability to walk the filesystem.
-pub struct PathSource<'cfg> {
+pub struct PathSource<'gctx> {
     /// The unique identifier of this source.
     source_id: SourceId,
     /// The root path of this source.
@@ -38,21 +38,21 @@ pub struct PathSource<'cfg> {
     /// Whether this source should discover nested packages recursively.
     /// See [`PathSource::new_recursive`] for more.
     recursive: bool,
-    config: &'cfg Config,
+    gctx: &'gctx GlobalContext,
 }
 
-impl<'cfg> PathSource<'cfg> {
+impl<'gctx> PathSource<'gctx> {
     /// Invoked with an absolute path to a directory that contains a `Cargo.toml`.
     ///
     /// This source will only return the package at precisely the `path`
     /// specified, and it will be an error if there's not a package at `path`.
-    pub fn new(path: &Path, source_id: SourceId, config: &'cfg Config) -> PathSource<'cfg> {
+    pub fn new(path: &Path, source_id: SourceId, gctx: &'gctx GlobalContext) -> PathSource<'gctx> {
         PathSource {
             source_id,
             path: path.to_path_buf(),
             updated: false,
             packages: Vec::new(),
-            config,
+            gctx,
             recursive: false,
         }
     }
@@ -65,10 +65,14 @@ impl<'cfg> PathSource<'cfg> {
     ///
     /// Note that this should be used with care and likely shouldn't be chosen
     /// by default!
-    pub fn new_recursive(root: &Path, id: SourceId, config: &'cfg Config) -> PathSource<'cfg> {
+    pub fn new_recursive(
+        root: &Path,
+        id: SourceId,
+        gctx: &'gctx GlobalContext,
+    ) -> PathSource<'gctx> {
         PathSource {
             recursive: true,
-            ..PathSource::new(root, id, config)
+            ..PathSource::new(root, id, gctx)
         }
     }
 
@@ -103,10 +107,10 @@ impl<'cfg> PathSource<'cfg> {
         if self.updated {
             Ok(self.packages.clone())
         } else if self.recursive {
-            ops::read_packages(&self.path, self.source_id, self.config)
+            ops::read_packages(&self.path, self.source_id, self.gctx)
         } else {
             let path = self.path.join("Cargo.toml");
-            let (pkg, _) = ops::read_package(&path, self.source_id, self.config)?;
+            let (pkg, _) = ops::read_package(&path, self.source_id, self.gctx)?;
             Ok(vec![pkg])
         }
     }
@@ -469,7 +473,7 @@ impl<'cfg> PathSource<'cfg> {
                     }
                 }
                 Err(err) if err.loop_ancestor().is_some() => {
-                    self.config.shell().warn(err)?;
+                    self.gctx.shell().warn(err)?;
                 }
                 Err(err) => match err.path() {
                     // If an error occurs with a path, filter it again.
@@ -537,13 +541,13 @@ impl<'cfg> PathSource<'cfg> {
     }
 }
 
-impl<'cfg> Debug for PathSource<'cfg> {
+impl<'gctx> Debug for PathSource<'gctx> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "the paths source")
     }
 }
 
-impl<'cfg> Source for PathSource<'cfg> {
+impl<'gctx> Source for PathSource<'gctx> {
     fn query(
         &mut self,
         dep: &Dependency,

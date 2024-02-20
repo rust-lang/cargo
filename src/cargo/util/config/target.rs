@@ -1,4 +1,4 @@
-use super::{Config, ConfigKey, ConfigRelativePath, OptValue, PathAndArgs, StringList, CV};
+use super::{ConfigKey, ConfigRelativePath, GlobalContext, OptValue, PathAndArgs, StringList, CV};
 use crate::core::compiler::{BuildOutput, LinkArgTarget};
 use crate::util::CargoResult;
 use serde::Deserialize;
@@ -38,14 +38,16 @@ pub struct TargetConfig {
 }
 
 /// Loads all of the `target.'cfg()'` tables.
-pub(super) fn load_target_cfgs(config: &Config) -> CargoResult<Vec<(String, TargetCfgConfig)>> {
+pub(super) fn load_target_cfgs(
+    gctx: &GlobalContext,
+) -> CargoResult<Vec<(String, TargetCfgConfig)>> {
     // Load all [target] tables, filter out the cfg() entries.
     let mut result = Vec::new();
     // Use a BTreeMap so the keys are sorted. This is important for
     // deterministic ordering of rustflags, which affects fingerprinting and
     // rebuilds. We may perhaps one day wish to ensure a deterministic
     // ordering via the order keys were defined in files perhaps.
-    let target: BTreeMap<String, TargetCfgConfig> = config.get("target")?;
+    let target: BTreeMap<String, TargetCfgConfig> = gctx.get("target")?;
     tracing::debug!("Got all targets {:#?}", target);
     for (key, cfg) in target {
         if key.starts_with("cfg(") {
@@ -54,7 +56,7 @@ pub(super) fn load_target_cfgs(config: &Config) -> CargoResult<Vec<(String, Targ
             // solution might be to create a special "Any" type, but I think
             // that will be quite difficult with the current design.
             for other_key in cfg.other.keys() {
-                config.shell().warn(format!(
+                gctx.shell().warn(format!(
                     "unused key `{}` in [target] config table `{}`",
                     other_key, key
                 ))?;
@@ -66,14 +68,14 @@ pub(super) fn load_target_cfgs(config: &Config) -> CargoResult<Vec<(String, Targ
 }
 
 /// Returns true if the `[target]` table should be applied to host targets.
-pub(super) fn get_target_applies_to_host(config: &Config) -> CargoResult<bool> {
-    if config.cli_unstable().target_applies_to_host {
-        if let Ok(target_applies_to_host) = config.get::<bool>("target-applies-to-host") {
+pub(super) fn get_target_applies_to_host(gctx: &GlobalContext) -> CargoResult<bool> {
+    if gctx.cli_unstable().target_applies_to_host {
+        if let Ok(target_applies_to_host) = gctx.get::<bool>("target-applies-to-host") {
             Ok(target_applies_to_host)
         } else {
-            Ok(!config.cli_unstable().host_config)
+            Ok(!gctx.cli_unstable().host_config)
         }
-    } else if config.cli_unstable().host_config {
+    } else if gctx.cli_unstable().host_config {
         anyhow::bail!(
             "the -Zhost-config flag requires the -Ztarget-applies-to-host flag to be set"
         );
@@ -83,15 +85,15 @@ pub(super) fn get_target_applies_to_host(config: &Config) -> CargoResult<bool> {
 }
 
 /// Loads a single `[host]` table for the given triple.
-pub(super) fn load_host_triple(config: &Config, triple: &str) -> CargoResult<TargetConfig> {
-    if config.cli_unstable().host_config {
+pub(super) fn load_host_triple(gctx: &GlobalContext, triple: &str) -> CargoResult<TargetConfig> {
+    if gctx.cli_unstable().host_config {
         let host_triple_prefix = format!("host.{}", triple);
         let host_triple_key = ConfigKey::from_str(&host_triple_prefix);
-        let host_prefix = match config.get_cv(&host_triple_key)? {
+        let host_prefix = match gctx.get_cv(&host_triple_key)? {
             Some(_) => host_triple_prefix,
             None => "host".to_string(),
         };
-        load_config_table(config, &host_prefix)
+        load_config_table(gctx, &host_prefix)
     } else {
         Ok(TargetConfig {
             runner: None,
@@ -103,24 +105,24 @@ pub(super) fn load_host_triple(config: &Config, triple: &str) -> CargoResult<Tar
 }
 
 /// Loads a single `[target]` table for the given triple.
-pub(super) fn load_target_triple(config: &Config, triple: &str) -> CargoResult<TargetConfig> {
-    load_config_table(config, &format!("target.{}", triple))
+pub(super) fn load_target_triple(gctx: &GlobalContext, triple: &str) -> CargoResult<TargetConfig> {
+    load_config_table(gctx, &format!("target.{}", triple))
 }
 
 /// Loads a single table for the given prefix.
-fn load_config_table(config: &Config, prefix: &str) -> CargoResult<TargetConfig> {
+fn load_config_table(gctx: &GlobalContext, prefix: &str) -> CargoResult<TargetConfig> {
     // This needs to get each field individually because it cannot fetch the
     // struct all at once due to `links_overrides`. Can't use `serde(flatten)`
     // because it causes serde to use `deserialize_map` which means the config
     // deserializer does not know which keys to deserialize, which means
     // environment variables would not work.
-    let runner: OptValue<PathAndArgs> = config.get(&format!("{}.runner", prefix))?;
-    let rustflags: OptValue<StringList> = config.get(&format!("{}.rustflags", prefix))?;
-    let linker: OptValue<ConfigRelativePath> = config.get(&format!("{}.linker", prefix))?;
+    let runner: OptValue<PathAndArgs> = gctx.get(&format!("{}.runner", prefix))?;
+    let rustflags: OptValue<StringList> = gctx.get(&format!("{}.rustflags", prefix))?;
+    let linker: OptValue<ConfigRelativePath> = gctx.get(&format!("{}.linker", prefix))?;
     // Links do not support environment variables.
     let target_key = ConfigKey::from_str(prefix);
-    let links_overrides = match config.get_table(&target_key)? {
-        Some(links) => parse_links_overrides(&target_key, links.val, config)?,
+    let links_overrides = match gctx.get_table(&target_key)? {
+        Some(links) => parse_links_overrides(&target_key, links.val, gctx)?,
         None => BTreeMap::new(),
     };
     Ok(TargetConfig {
@@ -134,7 +136,7 @@ fn load_config_table(config: &Config, prefix: &str) -> CargoResult<TargetConfig>
 fn parse_links_overrides(
     target_key: &ConfigKey,
     links: HashMap<String, CV>,
-    config: &Config,
+    gctx: &GlobalContext,
 ) -> CargoResult<BTreeMap<String, BuildOutput>> {
     let mut links_overrides = BTreeMap::new();
 
@@ -203,11 +205,11 @@ fn parse_links_overrides(
                     output.cfgs.extend(list.iter().map(|v| v.0.clone()));
                 }
                 "rustc-check-cfg" => {
-                    if config.cli_unstable().check_cfg {
+                    if gctx.cli_unstable().check_cfg {
                         let list = value.list(key)?;
                         output.check_cfgs.extend(list.iter().map(|v| v.0.clone()));
                     } else {
-                        config.shell().warn(format!(
+                        gctx.shell().warn(format!(
                             "target config `{}.{}` requires -Zcheck-cfg flag",
                             target_key, key
                         ))?;

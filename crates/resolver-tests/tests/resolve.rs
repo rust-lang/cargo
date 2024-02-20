@@ -2,13 +2,13 @@ use std::io::IsTerminal;
 
 use cargo::core::dependency::DepKind;
 use cargo::core::Dependency;
-use cargo::util::Config;
+use cargo::util::GlobalContext;
 use cargo_util::is_ci;
 
 use resolver_tests::{
     assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names, names, pkg, pkg_id,
     pkg_loc, registry, registry_strategy, remove_dep, resolve, resolve_and_validated,
-    resolve_with_config, PrettyPrintRegistry, SatResolve, ToDep, ToPkgId,
+    resolve_with_global_context, PrettyPrintRegistry, SatResolve, ToDep, ToPkgId,
 };
 
 use proptest::prelude::*;
@@ -58,9 +58,9 @@ proptest! {
     fn prop_minimum_version_errors_the_same(
             PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
     ) {
-        let mut config = Config::default().unwrap();
-        config.nightly_features_allowed = true;
-        config
+        let mut gctx = GlobalContext::default().unwrap();
+        gctx.nightly_features_allowed = true;
+        gctx
             .configure(
                 1,
                 false,
@@ -86,10 +86,10 @@ proptest! {
                 &reg,
             );
 
-            let mres = resolve_with_config(
+            let mres = resolve_with_global_context(
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
-                &config,
+                &gctx,
             );
 
             prop_assert_eq!(
@@ -107,9 +107,9 @@ proptest! {
     fn prop_direct_minimum_version_error_implications(
             PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
     ) {
-        let mut config = Config::default().unwrap();
-        config.nightly_features_allowed = true;
-        config
+        let mut gctx = GlobalContext::default().unwrap();
+        gctx.nightly_features_allowed = true;
+        gctx
             .configure(
                 1,
                 false,
@@ -135,10 +135,10 @@ proptest! {
                 &reg,
             );
 
-            let mres = resolve_with_config(
+            let mres = resolve_with_global_context(
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
-                &config,
+                &gctx,
             );
 
             if res.is_err() {
@@ -435,31 +435,30 @@ fn test_resolving_minimum_version_with_transitive_deps() {
         pkg!("bar" => [dep_req("util", ">=1.0.1")]),
     ]);
 
-    let mut config = Config::default().unwrap();
+    let mut gctx = GlobalContext::default().unwrap();
     // -Z minimal-versions
     // When the minimal-versions config option is specified then the lowest
     // possible version of a package should be selected. "util 1.0.0" can't be
     // selected because of the requirements of "bar", so the minimum version
     // must be 1.1.1.
-    config.nightly_features_allowed = true;
-    config
-        .configure(
-            1,
-            false,
-            None,
-            false,
-            false,
-            false,
-            &None,
-            &["minimal-versions".to_string()],
-            &[],
-        )
-        .unwrap();
+    gctx.nightly_features_allowed = true;
+    gctx.configure(
+        1,
+        false,
+        None,
+        false,
+        false,
+        false,
+        &None,
+        &["minimal-versions".to_string()],
+        &[],
+    )
+    .unwrap();
 
-    let res = resolve_with_config(
+    let res = resolve_with_global_context(
         vec![dep_req("foo", "1.0.0"), dep_req("bar", "1.0.0")],
         &reg,
-        &config,
+        &gctx,
     )
     .unwrap();
 

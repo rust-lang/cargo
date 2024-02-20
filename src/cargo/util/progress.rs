@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use crate::core::shell::Verbosity;
 use crate::util::config::ProgressWhen;
-use crate::util::{CargoResult, Config};
+use crate::util::{CargoResult, GlobalContext};
 use cargo_util::is_ci;
 use unicode_width::UnicodeWidthChar;
 
@@ -26,8 +26,8 @@ use unicode_width::UnicodeWidthChar;
 /// too fast. It should usually be fine to call [`Progress::tick`] as often as
 /// needed, though be cautious if the tick rate is very high or it is
 /// expensive to compute the progress value.
-pub struct Progress<'cfg> {
-    state: Option<State<'cfg>>,
+pub struct Progress<'gctx> {
+    state: Option<State<'gctx>>,
 }
 
 /// Indicates the style of information for displaying the amount of progress.
@@ -60,8 +60,8 @@ struct Throttle {
     last_update: Instant,
 }
 
-struct State<'cfg> {
-    config: &'cfg Config,
+struct State<'gctx> {
+    gctx: &'gctx GlobalContext,
     format: Format,
     name: String,
     done: bool,
@@ -76,7 +76,7 @@ struct Format {
     max_print: usize,
 }
 
-impl<'cfg> Progress<'cfg> {
+impl<'gctx> Progress<'gctx> {
     /// Creates a new progress bar.
     ///
     /// The first parameter is the text displayed to the left of the bar, such
@@ -87,35 +87,39 @@ impl<'cfg> Progress<'cfg> {
     ///
     /// The progress bar may be created in a disabled state if the user has
     /// disabled progress display (such as with the `--quiet` option).
-    pub fn with_style(name: &str, style: ProgressStyle, cfg: &'cfg Config) -> Progress<'cfg> {
+    pub fn with_style(
+        name: &str,
+        style: ProgressStyle,
+        gctx: &'gctx GlobalContext,
+    ) -> Progress<'gctx> {
         // report no progress when -q (for quiet) or TERM=dumb are set
         // or if running on Continuous Integration service like Travis where the
         // output logs get mangled.
-        let dumb = match cfg.get_env("TERM") {
+        let dumb = match gctx.get_env("TERM") {
             Ok(term) => term == "dumb",
             Err(_) => false,
         };
-        let progress_config = cfg.progress_config();
+        let progress_config = gctx.progress_config();
         match progress_config.when {
-            ProgressWhen::Always => return Progress::new_priv(name, style, cfg),
+            ProgressWhen::Always => return Progress::new_priv(name, style, gctx),
             ProgressWhen::Never => return Progress { state: None },
             ProgressWhen::Auto => {}
         }
-        if cfg.shell().verbosity() == Verbosity::Quiet || dumb || is_ci() {
+        if gctx.shell().verbosity() == Verbosity::Quiet || dumb || is_ci() {
             return Progress { state: None };
         }
-        Progress::new_priv(name, style, cfg)
+        Progress::new_priv(name, style, gctx)
     }
 
-    fn new_priv(name: &str, style: ProgressStyle, cfg: &'cfg Config) -> Progress<'cfg> {
-        let progress_config = cfg.progress_config();
+    fn new_priv(name: &str, style: ProgressStyle, gctx: &'gctx GlobalContext) -> Progress<'gctx> {
+        let progress_config = gctx.progress_config();
         let width = progress_config
             .width
-            .or_else(|| cfg.shell().err_width().progress_max_width());
+            .or_else(|| gctx.shell().err_width().progress_max_width());
 
         Progress {
             state: width.map(|n| State {
-                config: cfg,
+                gctx,
                 format: Format {
                     style,
                     max_width: n,
@@ -145,8 +149,8 @@ impl<'cfg> Progress<'cfg> {
     /// Creates a new `Progress` with the [`ProgressStyle::Percentage`] style.
     ///
     /// See [`Progress::with_style`] for more information.
-    pub fn new(name: &str, cfg: &'cfg Config) -> Progress<'cfg> {
-        Self::with_style(name, ProgressStyle::Percentage, cfg)
+    pub fn new(name: &str, gctx: &'gctx GlobalContext) -> Progress<'gctx> {
+        Self::with_style(name, ProgressStyle::Percentage, gctx)
     }
 
     /// Updates the state of the progress bar.
@@ -262,7 +266,7 @@ impl Throttle {
     }
 }
 
-impl<'cfg> State<'cfg> {
+impl<'gctx> State<'gctx> {
     fn tick(&mut self, cur: usize, max: usize, msg: &str) -> CargoResult<()> {
         if self.done {
             return Ok(());
@@ -297,8 +301,8 @@ impl<'cfg> State<'cfg> {
         }
 
         // Only update if the line has changed.
-        if self.config.shell().is_cleared() || self.last_line.as_ref() != Some(&line) {
-            let mut shell = self.config.shell();
+        if self.gctx.shell().is_cleared() || self.last_line.as_ref() != Some(&line) {
+            let mut shell = self.gctx.shell();
             shell.set_needs_clear(false);
             shell.status_header(&self.name)?;
             write!(shell.err(), "{}\r", line)?;
@@ -311,15 +315,15 @@ impl<'cfg> State<'cfg> {
 
     fn clear(&mut self) {
         // No need to clear if the progress is not currently being displayed.
-        if self.last_line.is_some() && !self.config.shell().is_cleared() {
-            self.config.shell().err_erase_line();
+        if self.last_line.is_some() && !self.gctx.shell().is_cleared() {
+            self.gctx.shell().err_erase_line();
             self.last_line = None;
         }
     }
 
     fn try_update_max_width(&mut self) {
         if self.fixed_width.is_none() {
-            if let Some(n) = self.config.shell().err_width().progress_max_width() {
+            if let Some(n) = self.gctx.shell().err_width().progress_max_width() {
                 self.format.max_width = n;
             }
         }
@@ -404,7 +408,7 @@ impl Format {
     }
 }
 
-impl<'cfg> Drop for State<'cfg> {
+impl<'gctx> Drop for State<'gctx> {
     fn drop(&mut self) {
         self.clear();
     }

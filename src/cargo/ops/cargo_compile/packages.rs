@@ -63,7 +63,7 @@ impl Packages {
                     .map(Package::package_id)
                     .map(|id| id.to_spec())
                     .collect();
-                let warn = |e| ws.config().shell().warn(e);
+                let warn = |e| ws.gctx().shell().warn(e);
                 let names = ids
                     .into_iter()
                     .map(|id| id.to_string())

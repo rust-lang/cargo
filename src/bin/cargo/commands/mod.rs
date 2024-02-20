@@ -43,7 +43,7 @@ pub fn builtin() -> Vec<Command> {
     ]
 }
 
-pub type Exec = fn(&mut Config, &ArgMatches) -> CliResult;
+pub type Exec = fn(&mut GlobalContext, &ArgMatches) -> CliResult;
 
 pub fn builtin_exec(cmd: &str) -> Option<Exec> {
     let f = match cmd {

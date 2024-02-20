@@ -9,6 +9,6 @@ pub fn cli() -> Command {
         .override_help(REMOVED)
 }
 
-pub fn exec(_config: &mut Config, _args: &ArgMatches) -> CliResult {
+pub fn exec(_gctx: &mut GlobalContext, _args: &ArgMatches) -> CliResult {
     Err(anyhow::format_err!(REMOVED).into())
 }

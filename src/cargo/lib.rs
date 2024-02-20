@@ -30,8 +30,8 @@
 //!     The [`BuildContext`][core::compiler::BuildContext] is the result of the "front end" of the
 //!     build process. This contains the graph of work to perform and any settings necessary for
 //!     `rustc`. After this is built, the next stage of building is handled in
-//!     [`Context`][core::compiler::Context].
-//!   - [`core::compiler::context`]:
+//!     [`BuildRunner`][core::compiler::BuildRunner].
+//!   - [`core::compiler::build_runner`]:
 //!     The `Context` is the mutable state used during the build process. This
 //!     is the core of the build process, and everything is coordinated through
 //!     this.
@@ -47,7 +47,7 @@
 //! - [`util::config`]:
 //!   This directory contains the config parser. It makes heavy use of
 //!   [serde](https://serde.rs/) to merge and translate config values. The
-//!   [`util::Config`] is usually accessed from the
+//!   [`util::GlobalContext`] is usually accessed from the
 //!   [`core::Workspace`]
 //!   though references to it are scattered around for more convenient access.
 //! - [`util::toml`]:
@@ -111,7 +111,7 @@
 //!     - `target/debug/.fingerprint`: Tracker whether nor not a crate needs to be rebuilt.  See [`core::compiler::fingerprint`]
 //! - `$CARGO_HOME/`:
 //!   - `registry/`: Package registry cache which is managed in [`sources::registry`].  Be careful
-//!     as the lock [`util::Config::acquire_package_cache_lock`] must be manually acquired.
+//!     as the lock [`util::GlobalContext::acquire_package_cache_lock`] must be manually acquired.
 //!     - `index`/: Fast-to-access crate metadata (no need to download / extract `*.crate` files)
 //!     - `cache/*/*.crate`: Local cache of published crates
 //!     - `src/*/*`: Extracted from `*.crate` by [`sources::registry::RegistrySource`]
@@ -143,7 +143,7 @@ use anyhow::Error;
 use tracing::debug;
 
 pub use crate::util::errors::{AlreadyPrintedError, InternalError, VerboseError};
-pub use crate::util::{indented_lines, CargoResult, CliError, CliResult, Config};
+pub use crate::util::{indented_lines, CargoResult, CliError, CliResult, GlobalContext};
 pub use crate::version::version;
 
 pub const CARGO_ENV: &str = "CARGO";

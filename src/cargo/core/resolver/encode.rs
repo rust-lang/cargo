@@ -158,8 +158,8 @@ impl EncodableResolve {
         let mut checksums = HashMap::new();
 
         let mut version = match self.version {
-            Some(n @ 5) if ws.config().nightly_features_allowed => {
-                if ws.config().cli_unstable().next_lockfile_bump {
+            Some(n @ 5) if ws.gctx().nightly_features_allowed => {
+                if ws.gctx().cli_unstable().next_lockfile_bump {
                     ResolveVersion::V5
                 } else {
                     anyhow::bail!("lock file version `{n}` requires `-Znext-lockfile-bump`");

@@ -5,13 +5,16 @@
 
 use crate::util::auth;
 use crate::CargoResult;
-use crate::Config;
+use crate::GlobalContext;
 
 use super::get_source_id;
 use super::RegistryOrIndex;
 
-pub fn registry_logout(config: &Config, reg_or_index: Option<RegistryOrIndex>) -> CargoResult<()> {
-    let source_ids = get_source_id(config, reg_or_index.as_ref())?;
-    auth::logout(config, &source_ids.original)?;
+pub fn registry_logout(
+    gctx: &GlobalContext,
+    reg_or_index: Option<RegistryOrIndex>,
+) -> CargoResult<()> {
+    let source_ids = get_source_id(gctx, reg_or_index.as_ref())?;
+    auth::logout(gctx, &source_ids.original)?;
     Ok(())
 }

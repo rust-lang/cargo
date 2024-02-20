@@ -13,7 +13,7 @@
 //!
 //! * [`BuildContext`] is a static context containing all information you need
 //!   before a build gets started.
-//! * [`Context`] is the center of the world, coordinating a running build and
+//! * [`BuildRunner`] is the center of the world, coordinating a running build and
 //!   collecting information from it.
 //! * [`custom_build`] is the home of build script executions and output parsing.
 //! * [`fingerprint`] not only defines but also executes a set of rules to
@@ -35,9 +35,9 @@ pub mod artifact;
 mod build_config;
 pub(crate) mod build_context;
 mod build_plan;
+pub(crate) mod build_runner;
 mod compilation;
 mod compile_kind;
-pub(crate) mod context;
 mod crate_type;
 mod custom_build;
 pub(crate) mod fingerprint;
@@ -72,9 +72,9 @@ pub use self::build_context::{
     BuildContext, FileFlavor, FileType, RustDocFingerprint, RustcTargetData, TargetInfo,
 };
 use self::build_plan::BuildPlan;
+pub use self::build_runner::{BuildRunner, Metadata};
 pub use self::compilation::{Compilation, Doctest, UnitOutput};
 pub use self::compile_kind::{CompileKind, CompileTarget};
-pub use self::context::{Context, Metadata};
 pub use self::crate_type::CrateType;
 pub use self::custom_build::LinkArgTarget;
 pub use self::custom_build::{BuildOutput, BuildScriptOutputs, BuildScripts};
@@ -108,7 +108,7 @@ pub trait Executor: Send + Sync + 'static {
     /// Called after a rustc process invocation is prepared up-front for a given
     /// unit of work (may still be modified for runtime-known dependencies, when
     /// the work is actually executed).
-    fn init(&self, _cx: &Context<'_, '_>, _unit: &Unit) {}
+    fn init(&self, _build_runner: &BuildRunner<'_, '_>, _unit: &Unit) {}
 
     /// In case of an `Err`, Cargo will not continue with the build process for
     /// this package.
@@ -158,42 +158,45 @@ impl Executor for DefaultExecutor {
 /// Note that **no actual work is executed as part of this**, that's all done
 /// next as part of [`JobQueue::execute`] function which will run everything
 /// in order with proper parallelism.
-fn compile<'cfg>(
-    cx: &mut Context<'_, 'cfg>,
-    jobs: &mut JobQueue<'cfg>,
+fn compile<'gctx>(
+    build_runner: &mut BuildRunner<'_, 'gctx>,
+    jobs: &mut JobQueue<'gctx>,
     plan: &mut BuildPlan,
     unit: &Unit,
     exec: &Arc<dyn Executor>,
     force_rebuild: bool,
 ) -> CargoResult<()> {
-    let bcx = cx.bcx;
+    let bcx = build_runner.bcx;
     let build_plan = bcx.build_config.build_plan;
-    if !cx.compiled.insert(unit.clone()) {
+    if !build_runner.compiled.insert(unit.clone()) {
         return Ok(());
     }
 
     // Build up the work to be done to compile this unit, enqueuing it once
     // we've got everything constructed.
     let p = profile::start(format!("preparing: {}/{}", unit.pkg, unit.target.name()));
-    fingerprint::prepare_init(cx, unit)?;
+    fingerprint::prepare_init(build_runner, unit)?;
 
     let job = if unit.mode.is_run_custom_build() {
-        custom_build::prepare(cx, unit)?
+        custom_build::prepare(build_runner, unit)?
     } else if unit.mode.is_doc_test() {
         // We run these targets later, so this is just a no-op for now.
         Job::new_fresh()
     } else if build_plan {
-        Job::new_dirty(rustc(cx, unit, &exec.clone())?, DirtyReason::FreshBuild)
+        Job::new_dirty(
+            rustc(build_runner, unit, &exec.clone())?,
+            DirtyReason::FreshBuild,
+        )
     } else {
         let force = exec.force_rebuild(unit) || force_rebuild;
-        let mut job = fingerprint::prepare_target(cx, unit, force)?;
+        let mut job = fingerprint::prepare_target(build_runner, unit, force)?;
         job.before(if job.freshness().is_dirty() {
             let work = if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
-                rustdoc(cx, unit)?
+                rustdoc(build_runner, unit)?
             } else {
-                rustc(cx, unit, exec)?
+                rustc(build_runner, unit, exec)?
             };
-            work.then(link_targets(cx, unit, false)?)
+            work.then(link_targets(build_runner, unit, false)?)
         } else {
             // We always replay the output cache,
             // since it might contain future-incompat-report messages
@@ -201,26 +204,26 @@ fn compile<'cfg>(
                 unit.pkg.package_id(),
                 PathBuf::from(unit.pkg.manifest_path()),
                 &unit.target,
-                cx.files().message_cache_path(unit),
-                cx.bcx.build_config.message_format,
-                unit.show_warnings(bcx.config),
+                build_runner.files().message_cache_path(unit),
+                build_runner.bcx.build_config.message_format,
+                unit.show_warnings(bcx.gctx),
             );
             // Need to link targets on both the dirty and fresh.
-            work.then(link_targets(cx, unit, true)?)
+            work.then(link_targets(build_runner, unit, true)?)
         });
 
         job
     };
-    jobs.enqueue(cx, unit, job)?;
+    jobs.enqueue(build_runner, unit, job)?;
     drop(p);
 
     // Be sure to compile all dependencies of this target as well.
-    let deps = Vec::from(cx.unit_deps(unit)); // Create vec due to mutable borrow.
+    let deps = Vec::from(build_runner.unit_deps(unit)); // Create vec due to mutable borrow.
     for dep in deps {
-        compile(cx, jobs, plan, &dep.unit, exec, false)?;
+        compile(build_runner, jobs, plan, &dep.unit, exec, false)?;
     }
     if build_plan {
-        plan.add(cx, unit)?;
+        plan.add(build_runner, unit)?;
     }
 
     Ok(())
@@ -229,13 +232,13 @@ fn compile<'cfg>(
 /// Generates the warning message used when fallible doc-scrape units fail,
 /// either for rustdoc or rustc.
 fn make_failed_scrape_diagnostic(
-    cx: &Context<'_, '_>,
+    build_runner: &BuildRunner<'_, '_>,
     unit: &Unit,
     top_line: impl Display,
 ) -> String {
     let manifest_path = unit.pkg.manifest_path();
     let relative_manifest_path = manifest_path
-        .strip_prefix(cx.bcx.ws.root())
+        .strip_prefix(build_runner.bcx.ws.root())
         .unwrap_or(&manifest_path);
 
     format!(
@@ -248,65 +251,72 @@ fn make_failed_scrape_diagnostic(
 }
 
 /// Creates a unit of work invoking `rustc` for building the `unit`.
-fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> CargoResult<Work> {
-    let mut rustc = prepare_rustc(cx, unit)?;
-    let build_plan = cx.bcx.build_config.build_plan;
+fn rustc(
+    build_runner: &mut BuildRunner<'_, '_>,
+    unit: &Unit,
+    exec: &Arc<dyn Executor>,
+) -> CargoResult<Work> {
+    let mut rustc = prepare_rustc(build_runner, unit)?;
+    let build_plan = build_runner.bcx.build_config.build_plan;
 
     let name = unit.pkg.name();
     let buildkey = unit.buildkey();
 
-    let outputs = cx.outputs(unit)?;
-    let root = cx.files().out_dir(unit);
+    let outputs = build_runner.outputs(unit)?;
+    let root = build_runner.files().out_dir(unit);
 
     // Prepare the native lib state (extra `-L` and `-l` flags).
-    let build_script_outputs = Arc::clone(&cx.build_script_outputs);
+    let build_script_outputs = Arc::clone(&build_runner.build_script_outputs);
     let current_id = unit.pkg.package_id();
     let manifest_path = PathBuf::from(unit.pkg.manifest_path());
-    let build_scripts = cx.build_scripts.get(unit).cloned();
+    let build_scripts = build_runner.build_scripts.get(unit).cloned();
 
     // If we are a binary and the package also contains a library, then we
     // don't pass the `-l` flags.
     let pass_l_flag = unit.target.is_lib() || !unit.pkg.targets().iter().any(|t| t.is_lib());
 
-    let dep_info_name = if cx.files().use_extra_filename(unit) {
+    let dep_info_name = if build_runner.files().use_extra_filename(unit) {
         format!(
             "{}-{}.d",
             unit.target.crate_name(),
-            cx.files().metadata(unit)
+            build_runner.files().metadata(unit)
         )
     } else {
         format!("{}.d", unit.target.crate_name())
     };
     let rustc_dep_info_loc = root.join(dep_info_name);
-    let dep_info_loc = fingerprint::dep_info_loc(cx, unit);
+    let dep_info_loc = fingerprint::dep_info_loc(build_runner, unit);
 
-    let mut output_options = OutputOptions::new(cx, unit);
+    let mut output_options = OutputOptions::new(build_runner, unit);
     let package_id = unit.pkg.package_id();
     let target = Target::clone(&unit.target);
     let mode = unit.mode;
 
-    exec.init(cx, unit);
+    exec.init(build_runner, unit);
     let exec = exec.clone();
 
-    let root_output = cx.files().host_dest().to_path_buf();
-    let target_dir = cx.bcx.ws.target_dir().into_path_unlocked();
+    let root_output = build_runner.files().host_dest().to_path_buf();
+    let target_dir = build_runner.bcx.ws.target_dir().into_path_unlocked();
     let pkg_root = unit.pkg.root().to_path_buf();
     let cwd = rustc
         .get_cwd()
-        .unwrap_or_else(|| cx.bcx.config.cwd())
+        .unwrap_or_else(|| build_runner.bcx.gctx.cwd())
         .to_path_buf();
-    let fingerprint_dir = cx.files().fingerprint_dir(unit);
-    let script_metadata = cx.find_build_script_metadata(unit);
+    let fingerprint_dir = build_runner.files().fingerprint_dir(unit);
+    let script_metadata = build_runner.find_build_script_metadata(unit);
     let is_local = unit.is_local();
     let artifact = unit.artifact;
 
-    let hide_diagnostics_for_scrape_unit = cx.bcx.unit_can_fail_for_docscraping(unit)
-        && !matches!(cx.bcx.config.shell().verbosity(), Verbosity::Verbose);
+    let hide_diagnostics_for_scrape_unit = build_runner.bcx.unit_can_fail_for_docscraping(unit)
+        && !matches!(
+            build_runner.bcx.gctx.shell().verbosity(),
+            Verbosity::Verbose
+        );
     let failed_scrape_diagnostic = hide_diagnostics_for_scrape_unit.then(|| {
         // If this unit is needed for doc-scraping, then we generate a diagnostic that
         // describes the set of reverse-dependencies that cause the unit to be needed.
         let target_desc = unit.target.description_named();
-        let mut for_scrape_units = cx
+        let mut for_scrape_units = build_runner
             .bcx
             .scrape_units_have_dep_on(unit)
             .into_iter()
@@ -314,7 +324,7 @@ fn rustc(cx: &mut Context<'_, '_>, unit: &Unit, exec: &Arc<dyn Executor>) -> Car
             .collect::<Vec<_>>();
         for_scrape_units.sort();
         let for_scrape_units = for_scrape_units.join(", ");
-        make_failed_scrape_diagnostic(cx, unit, format_args!("failed to check {target_desc} in package `{name}` as a prerequisite for scraping examples from: {for_scrape_units}"))
+        make_failed_scrape_diagnostic(build_runner, unit, format_args!("failed to check {target_desc} in package `{name}` as a prerequisite for scraping examples from: {for_scrape_units}"))
     });
     if hide_diagnostics_for_scrape_unit {
         output_options.show_diagnostics = false;
@@ -512,21 +522,28 @@ fn verbose_if_simple_exit_code(err: Error) -> Error {
 
 /// Link the compiled target (often of form `foo-{metadata_hash}`) to the
 /// final target. This must happen during both "Fresh" and "Compile".
-fn link_targets(cx: &mut Context<'_, '_>, unit: &Unit, fresh: bool) -> CargoResult<Work> {
-    let bcx = cx.bcx;
-    let outputs = cx.outputs(unit)?;
-    let export_dir = cx.files().export_dir();
+fn link_targets(
+    build_runner: &mut BuildRunner<'_, '_>,
+    unit: &Unit,
+    fresh: bool,
+) -> CargoResult<Work> {
+    let bcx = build_runner.bcx;
+    let outputs = build_runner.outputs(unit)?;
+    let export_dir = build_runner.files().export_dir();
     let package_id = unit.pkg.package_id();
     let manifest_path = PathBuf::from(unit.pkg.manifest_path());
     let profile = unit.profile.clone();
     let unit_mode = unit.mode;
     let features = unit.features.iter().map(|s| s.to_string()).collect();
     let json_messages = bcx.build_config.emit_json();
-    let executable = cx.get_executable(unit)?;
+    let executable = build_runner.get_executable(unit)?;
     let mut target = Target::clone(&unit.target);
     if let TargetSourcePath::Metabuild = target.src_path() {
         // Give it something to serialize.
-        let path = unit.pkg.manifest().metabuild_path(cx.bcx.ws.target_dir());
+        let path = unit
+            .pkg
+            .manifest()
+            .metabuild_path(build_runner.bcx.ws.target_dir());
         target.set_src_path(TargetSourcePath::Path(path));
     }
 
@@ -655,20 +672,20 @@ where
 /// This builds a static view of the invocation. Flags depending on the
 /// completion of other units will be added later in runtime, such as flags
 /// from build scripts.
-fn prepare_rustc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilder> {
-    let is_primary = cx.is_primary_package(unit);
-    let is_workspace = cx.bcx.ws.is_member(&unit.pkg);
+fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilder> {
+    let is_primary = build_runner.is_primary_package(unit);
+    let is_workspace = build_runner.bcx.ws.is_member(&unit.pkg);
 
-    let mut base = cx
+    let mut base = build_runner
         .compilation
         .rustc_process(unit, is_primary, is_workspace)?;
-    build_base_args(cx, &mut base, unit)?;
+    build_base_args(build_runner, &mut base, unit)?;
 
-    base.inherit_jobserver(&cx.jobserver);
-    build_deps_args(&mut base, cx, unit)?;
-    add_cap_lints(cx.bcx, unit, &mut base);
-    base.args(cx.bcx.rustflags_args(unit));
-    if cx.bcx.config.cli_unstable().binary_dep_depinfo {
+    base.inherit_jobserver(&build_runner.jobserver);
+    build_deps_args(&mut base, build_runner, unit)?;
+    add_cap_lints(build_runner.bcx, unit, &mut base);
+    base.args(build_runner.bcx.rustflags_args(unit));
+    if build_runner.bcx.gctx.cli_unstable().binary_dep_depinfo {
         base.arg("-Z").arg("binary-dep-depinfo");
     }
 
@@ -677,10 +694,10 @@ fn prepare_rustc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilde
     }
 
     if unit.target.is_test() || unit.target.is_bench() {
-        let tmp = cx.files().layout(unit.kind).prepare_tmp()?;
+        let tmp = build_runner.files().layout(unit.kind).prepare_tmp()?;
         base.env("CARGO_TARGET_TMPDIR", tmp.display().to_string());
     }
-    if cx.bcx.config.nightly_features_allowed {
+    if build_runner.bcx.gctx.nightly_features_allowed {
         // This must come after `build_base_args` (which calls `add_path_args`) so that the `cwd`
         // is set correctly.
         base.env(
@@ -700,11 +717,11 @@ fn prepare_rustc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilde
 /// This builds a static view of the invocation. Flags depending on the
 /// completion of other units will be added later in runtime, such as flags
 /// from build scripts.
-fn prepare_rustdoc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilder> {
-    let bcx = cx.bcx;
+fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilder> {
+    let bcx = build_runner.bcx;
     // script_metadata is not needed here, it is only for tests.
-    let mut rustdoc = cx.compilation.rustdoc_process(unit, None)?;
-    rustdoc.inherit_jobserver(&cx.jobserver);
+    let mut rustdoc = build_runner.compilation.rustdoc_process(unit, None)?;
+    rustdoc.inherit_jobserver(&build_runner.jobserver);
     let crate_name = unit.target.crate_name();
     rustdoc.arg("--crate-name").arg(&crate_name);
     add_path_args(bcx.ws, unit, &mut rustdoc);
@@ -713,24 +730,24 @@ fn prepare_rustdoc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuil
     if let CompileKind::Target(target) = unit.kind {
         rustdoc.arg("--target").arg(target.rustc_target());
     }
-    let doc_dir = cx.files().out_dir(unit);
+    let doc_dir = build_runner.files().out_dir(unit);
     rustdoc.arg("-o").arg(&doc_dir);
     rustdoc.args(&features_args(unit));
-    rustdoc.args(&check_cfg_args(cx, unit));
+    rustdoc.args(&check_cfg_args(build_runner, unit));
 
-    add_error_format_and_color(cx, &mut rustdoc);
-    add_allow_features(cx, &mut rustdoc);
+    add_error_format_and_color(build_runner, &mut rustdoc);
+    add_allow_features(build_runner, &mut rustdoc);
 
     rustdoc.args(unit.pkg.manifest().lint_rustflags());
-    if let Some(args) = cx.bcx.extra_args_for(unit) {
+    if let Some(args) = build_runner.bcx.extra_args_for(unit) {
         rustdoc.args(args);
     }
 
-    let metadata = cx.metadata_for_doc_units[unit];
+    let metadata = build_runner.metadata_for_doc_units[unit];
     rustdoc.arg("-C").arg(format!("metadata={}", metadata));
 
     if unit.mode.is_doc_scrape() {
-        debug_assert!(cx.bcx.scrape_units.contains(unit));
+        debug_assert!(build_runner.bcx.scrape_units.contains(unit));
 
         if unit.target.is_test() {
             rustdoc.arg("--scrape-tests");
@@ -740,10 +757,10 @@ fn prepare_rustdoc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuil
 
         rustdoc
             .arg("--scrape-examples-output-path")
-            .arg(scrape_output_path(cx, unit)?);
+            .arg(scrape_output_path(build_runner, unit)?);
 
         // Only scrape example for items from crates in the workspace, to reduce generated file size
-        for pkg in cx.bcx.packages.packages() {
+        for pkg in build_runner.bcx.packages.packages() {
             let names = pkg
                 .targets()
                 .iter()
@@ -755,14 +772,14 @@ fn prepare_rustdoc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuil
         }
     }
 
-    if should_include_scrape_units(cx.bcx, unit) {
+    if should_include_scrape_units(build_runner.bcx, unit) {
         rustdoc.arg("-Zunstable-options");
     }
 
-    build_deps_args(&mut rustdoc, cx, unit)?;
-    rustdoc::add_root_urls(cx, unit, &mut rustdoc)?;
+    build_deps_args(&mut rustdoc, build_runner, unit)?;
+    rustdoc::add_root_urls(build_runner, unit, &mut rustdoc)?;
 
-    rustdoc::add_output_format(cx, unit, &mut rustdoc)?;
+    rustdoc::add_output_format(build_runner, unit, &mut rustdoc)?;
 
     rustdoc.args(bcx.rustdocflags_args(unit));
 
@@ -774,11 +791,11 @@ fn prepare_rustdoc(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuil
 }
 
 /// Creates a unit of work invoking `rustdoc` for documenting the `unit`.
-fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
-    let mut rustdoc = prepare_rustdoc(cx, unit)?;
+fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<Work> {
+    let mut rustdoc = prepare_rustdoc(build_runner, unit)?;
 
     let crate_name = unit.target.crate_name();
-    let doc_dir = cx.files().out_dir(unit);
+    let doc_dir = build_runner.files().out_dir(unit);
     // Create the documentation directory ahead of time as rustdoc currently has
     // a bug where concurrent invocations will race to create this directory if
     // it doesn't already exist.
@@ -786,30 +803,39 @@ fn rustdoc(cx: &mut Context<'_, '_>, unit: &Unit) -> CargoResult<Work> {
 
     let target_desc = unit.target.description_named();
     let name = unit.pkg.name();
-    let build_script_outputs = Arc::clone(&cx.build_script_outputs);
+    let build_script_outputs = Arc::clone(&build_runner.build_script_outputs);
     let package_id = unit.pkg.package_id();
     let manifest_path = PathBuf::from(unit.pkg.manifest_path());
     let target = Target::clone(&unit.target);
-    let mut output_options = OutputOptions::new(cx, unit);
-    let script_metadata = cx.find_build_script_metadata(unit);
-    let scrape_outputs = if should_include_scrape_units(cx.bcx, unit) {
+    let mut output_options = OutputOptions::new(build_runner, unit);
+    let script_metadata = build_runner.find_build_script_metadata(unit);
+    let scrape_outputs = if should_include_scrape_units(build_runner.bcx, unit) {
         Some(
-            cx.bcx
+            build_runner
+                .bcx
                 .scrape_units
                 .iter()
-                .map(|unit| Ok((cx.files().metadata(unit), scrape_output_path(cx, unit)?)))
+                .map(|unit| {
+                    Ok((
+                        build_runner.files().metadata(unit),
+                        scrape_output_path(build_runner, unit)?,
+                    ))
+                })
                 .collect::<CargoResult<HashMap<_, _>>>()?,
         )
     } else {
         None
     };
 
-    let failed_scrape_units = Arc::clone(&cx.failed_scrape_units);
-    let hide_diagnostics_for_scrape_unit = cx.bcx.unit_can_fail_for_docscraping(unit)
-        && !matches!(cx.bcx.config.shell().verbosity(), Verbosity::Verbose);
+    let failed_scrape_units = Arc::clone(&build_runner.failed_scrape_units);
+    let hide_diagnostics_for_scrape_unit = build_runner.bcx.unit_can_fail_for_docscraping(unit)
+        && !matches!(
+            build_runner.bcx.gctx.shell().verbosity(),
+            Verbosity::Verbose
+        );
     let failed_scrape_diagnostic = hide_diagnostics_for_scrape_unit.then(|| {
         make_failed_scrape_diagnostic(
-            cx,
+            build_runner,
             unit,
             format_args!("failed to scan {target_desc} in package `{name}` for example code usage"),
         )
@@ -898,7 +924,7 @@ fn append_crate_version_flag(unit: &Unit, rustdoc: &mut ProcessBuilder) {
 fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuilder) {
     // If this is an upstream dep we don't want warnings from, turn off all
     // lints.
-    if !unit.show_warnings(bcx.config) {
+    if !unit.show_warnings(bcx.gctx) {
         cmd.arg("--cap-lints").arg("allow");
 
     // If this is an upstream dep but we *do* want warnings, make sure that they
@@ -911,8 +937,8 @@ fn add_cap_lints(bcx: &BuildContext<'_, '_>, unit: &Unit, cmd: &mut ProcessBuild
 /// Forwards [`-Zallow-features`] if it is set for cargo.
 ///
 /// [`-Zallow-features`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#allow-features
-fn add_allow_features(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
-    if let Some(allow) = &cx.bcx.config.cli_unstable().allow_features {
+fn add_allow_features(build_runner: &BuildRunner<'_, '_>, cmd: &mut ProcessBuilder) {
+    if let Some(allow) = &build_runner.bcx.gctx.cli_unstable().allow_features {
         use std::fmt::Write;
         let mut arg = String::from("-Zallow-features=");
         for f in allow {
@@ -932,11 +958,11 @@ fn add_allow_features(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
 /// which Cargo will extract and display to the user.
 ///
 /// [`--error-format`]: https://doc.rust-lang.org/nightly/rustc/command-line-arguments.html#--error-format-control-how-errors-are-produced
-fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
+fn add_error_format_and_color(build_runner: &BuildRunner<'_, '_>, cmd: &mut ProcessBuilder) {
     cmd.arg("--error-format=json");
     let mut json = String::from("--json=diagnostic-rendered-ansi,artifacts,future-incompat");
 
-    match cx.bcx.build_config.message_format {
+    match build_runner.bcx.build_config.message_format {
         MessageFormat::Short | MessageFormat::Json { short: true, .. } => {
             json.push_str(",diagnostic-short");
         }
@@ -944,17 +970,21 @@ fn add_error_format_and_color(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder) {
     }
     cmd.arg(json);
 
-    let config = cx.bcx.config;
-    if let Some(width) = config.shell().err_width().diagnostic_terminal_width() {
+    let gctx = build_runner.bcx.gctx;
+    if let Some(width) = gctx.shell().err_width().diagnostic_terminal_width() {
         cmd.arg(format!("--diagnostic-width={width}"));
     }
 }
 
 /// Adds essential rustc flags and environment variables to the command to execute.
-fn build_base_args(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) -> CargoResult<()> {
+fn build_base_args(
+    build_runner: &BuildRunner<'_, '_>,
+    cmd: &mut ProcessBuilder,
+    unit: &Unit,
+) -> CargoResult<()> {
     assert!(!unit.mode.is_run_custom_build());
 
-    let bcx = cx.bcx;
+    let bcx = build_runner.bcx;
     let Profile {
         ref opt_level,
         codegen_backend,
@@ -979,8 +1009,8 @@ fn build_base_args(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) 
     edition.cmd_edition_arg(cmd);
 
     add_path_args(bcx.ws, unit, cmd);
-    add_error_format_and_color(cx, cmd);
-    add_allow_features(cx, cmd);
+    add_error_format_and_color(build_runner, cmd);
+    add_allow_features(build_runner, cmd);
 
     let mut contains_dy_lib = false;
     if !test {
@@ -1002,7 +1032,7 @@ fn build_base_args(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) 
     }
 
     let prefer_dynamic = (unit.target.for_host() && !unit.target.is_custom_build())
-        || (contains_dy_lib && !cx.is_primary_package(unit));
+        || (contains_dy_lib && !build_runner.is_primary_package(unit));
     if prefer_dynamic {
         cmd.arg("-C").arg("prefer-dynamic");
     }
@@ -1015,7 +1045,7 @@ fn build_base_args(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) 
         cmd.arg("-C").arg(format!("panic={}", panic));
     }
 
-    cmd.args(&lto_args(cx, unit));
+    cmd.args(&lto_args(build_runner, unit));
 
     if let Some(backend) = codegen_backend {
         cmd.arg("-Z").arg(&format!("codegen-backend={}", backend));
@@ -1036,7 +1066,7 @@ fn build_base_args(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) 
         // Windows the only stable valid value for split-debuginfo is "packed",
         // while on Linux "unpacked" is also stable.
         if let Some(split) = split_debuginfo {
-            if cx
+            if build_runner
                 .bcx
                 .target_data
                 .info(unit.kind)
@@ -1048,12 +1078,12 @@ fn build_base_args(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) 
     }
 
     if let Some(trim_paths) = trim_paths {
-        trim_paths_args(cmd, cx, unit, &trim_paths)?;
+        trim_paths_args(cmd, build_runner, unit, &trim_paths)?;
     }
 
     cmd.args(unit.pkg.manifest().lint_rustflags());
     cmd.args(&profile_rustflags);
-    if let Some(args) = cx.bcx.extra_args_for(unit) {
+    if let Some(args) = build_runner.bcx.extra_args_for(unit) {
         cmd.args(args);
     }
 
@@ -1096,11 +1126,11 @@ fn build_base_args(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) 
     }
 
     cmd.args(&features_args(unit));
-    cmd.args(&check_cfg_args(cx, unit));
+    cmd.args(&check_cfg_args(build_runner, unit));
 
-    let meta = cx.files().metadata(unit);
+    let meta = build_runner.files().metadata(unit);
     cmd.arg("-C").arg(&format!("metadata={}", meta));
-    if cx.files().use_extra_filename(unit) {
+    if build_runner.files().use_extra_filename(unit) {
         cmd.arg("-C").arg(&format!("extra-filename=-{}", meta));
     }
 
@@ -1108,7 +1138,8 @@ fn build_base_args(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) 
         cmd.arg("-C").arg("rpath");
     }
 
-    cmd.arg("--out-dir").arg(&cx.files().out_dir(unit));
+    cmd.arg("--out-dir")
+        .arg(&build_runner.files().out_dir(unit));
 
     fn opt(cmd: &mut ProcessBuilder, key: &str, prefix: &str, val: Option<&OsStr>) {
         if let Some(val) = val {
@@ -1126,13 +1157,18 @@ fn build_base_args(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) 
         cmd,
         "-C",
         "linker=",
-        cx.compilation
+        build_runner
+            .compilation
             .target_linker(unit.kind)
             .as_ref()
             .map(|s| s.as_ref()),
     );
     if incremental {
-        let dir = cx.files().layout(unit.kind).incremental().as_os_str();
+        let dir = build_runner
+            .files()
+            .layout(unit.kind)
+            .incremental()
+            .as_os_str();
         opt(cmd, "-C", "incremental=", Some(dir));
     }
 
@@ -1161,9 +1197,11 @@ fn build_base_args(cx: &Context<'_, '_>, cmd: &mut ProcessBuilder, unit: &Unit) 
             .iter()
             .filter(|target| target.is_bin())
         {
-            let exe_path = cx
-                .files()
-                .bin_link_for_target(bin_target, unit.kind, cx.bcx)?;
+            let exe_path = build_runner.files().bin_link_for_target(
+                bin_target,
+                unit.kind,
+                build_runner.bcx,
+            )?;
             let name = bin_target
                 .binary_filename()
                 .unwrap_or(bin_target.name().to_string());
@@ -1193,7 +1231,7 @@ fn features_args(unit: &Unit) -> Vec<OsString> {
 /// [`-Ztrim-paths`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#profile-trim-paths-option
 fn trim_paths_args(
     cmd: &mut ProcessBuilder,
-    cx: &Context<'_, '_>,
+    build_runner: &BuildRunner<'_, '_>,
     unit: &Unit,
     trim_paths: &TomlTrimPaths,
 ) -> CargoResult<()> {
@@ -1206,7 +1244,7 @@ fn trim_paths_args(
     cmd.arg(format!("-Zremap-path-scope={trim_paths}"));
 
     let sysroot_remap = {
-        let sysroot = &cx.bcx.target_data.info(unit.kind).sysroot;
+        let sysroot = &build_runner.bcx.target_data.info(unit.kind).sysroot;
         let mut remap = OsString::from("--remap-path-prefix=");
         remap.push(sysroot);
         remap.push("/lib/rustlib/src/rust"); // See also `detect_sysroot_src_path()`.
@@ -1214,16 +1252,16 @@ fn trim_paths_args(
         remap.push("/rustc/");
         // This remap logic aligns with rustc:
         // <https://github.com/rust-lang/rust/blob/c2ef3516/src/bootstrap/src/lib.rs#L1113-L1116>
-        if let Some(commit_hash) = cx.bcx.rustc().commit_hash.as_ref() {
+        if let Some(commit_hash) = build_runner.bcx.rustc().commit_hash.as_ref() {
             remap.push(commit_hash);
         } else {
-            remap.push(cx.bcx.rustc().version.to_string());
+            remap.push(build_runner.bcx.rustc().version.to_string());
         }
         remap
     };
     let package_remap = {
         let pkg_root = unit.pkg.root();
-        let ws_root = cx.bcx.ws.root();
+        let ws_root = build_runner.bcx.ws.root();
         let mut remap = OsString::from("--remap-path-prefix=");
         // Remap rules for dependencies
         //
@@ -1234,10 +1272,22 @@ fn trim_paths_args(
         //     * otherwise remapped to `<pkg>-<version>`.
         let source_id = unit.pkg.package_id().source_id();
         if source_id.is_git() {
-            remap.push(cx.bcx.config.git_checkouts_path().as_path_unlocked());
+            remap.push(
+                build_runner
+                    .bcx
+                    .gctx
+                    .git_checkouts_path()
+                    .as_path_unlocked(),
+            );
             remap.push("=");
         } else if source_id.is_registry() {
-            remap.push(cx.bcx.config.registry_source_path().as_path_unlocked());
+            remap.push(
+                build_runner
+                    .bcx
+                    .gctx
+                    .registry_source_path()
+                    .as_path_unlocked(),
+            );
             remap.push("=");
         } else if pkg_root.strip_prefix(ws_root).is_ok() {
             remap.push(ws_root);
@@ -1264,8 +1314,8 @@ fn trim_paths_args(
 /// See unstable feature [`check-cfg`].
 ///
 /// [`check-cfg`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#check-cfg
-fn check_cfg_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
-    if cx.bcx.config.cli_unstable().check_cfg {
+fn check_cfg_args(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Vec<OsString> {
+    if build_runner.bcx.gctx.cli_unstable().check_cfg {
         // The routine below generates the --check-cfg arguments. Our goals here are to
         // enable the checking of conditionals and pass the list of declared features.
         //
@@ -1315,13 +1365,13 @@ fn check_cfg_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
 }
 
 /// Adds LTO related codegen flags.
-fn lto_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
+fn lto_args(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Vec<OsString> {
     let mut result = Vec::new();
     let mut push = |arg: &str| {
         result.push(OsString::from("-C"));
         result.push(OsString::from(arg));
     };
-    match cx.lto[unit] {
+    match build_runner.lto[unit] {
         lto::Lto::Run(None) => push("lto"),
         lto::Lto::Run(Some(s)) => push(&format!("lto={}", s)),
         lto::Lto::Off => {
@@ -1340,11 +1390,15 @@ fn lto_args(cx: &Context<'_, '_>, unit: &Unit) -> Vec<OsString> {
 ///
 /// [`-L`]: https://doc.rust-lang.org/nightly/rustc/command-line-arguments.html#-l-add-a-directory-to-the-library-search-path
 /// [`--extern`]: https://doc.rust-lang.org/nightly/rustc/command-line-arguments.html#--extern-specify-where-an-external-library-is-located
-fn build_deps_args(cmd: &mut ProcessBuilder, cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<()> {
-    let bcx = cx.bcx;
+fn build_deps_args(
+    cmd: &mut ProcessBuilder,
+    build_runner: &BuildRunner<'_, '_>,
+    unit: &Unit,
+) -> CargoResult<()> {
+    let bcx = build_runner.bcx;
     cmd.arg("-L").arg(&{
         let mut deps = OsString::from("dependency=");
-        deps.push(cx.files().deps_dir(unit));
+        deps.push(build_runner.files().deps_dir(unit));
         deps
     });
 
@@ -1353,12 +1407,12 @@ fn build_deps_args(cmd: &mut ProcessBuilder, cx: &Context<'_, '_>, unit: &Unit) 
     if !unit.kind.is_host() {
         cmd.arg("-L").arg(&{
             let mut deps = OsString::from("dependency=");
-            deps.push(cx.files().host_deps());
+            deps.push(build_runner.files().host_deps());
             deps
         });
     }
 
-    let deps = cx.unit_deps(unit);
+    let deps = build_runner.unit_deps(unit);
 
     // If there is not one linkable target but should, rustc fails later
     // on if there is an `extern crate` for it. This may turn into a hard
@@ -1370,7 +1424,7 @@ fn build_deps_args(cmd: &mut ProcessBuilder, cx: &Context<'_, '_>, unit: &Unit) 
         if let Some(dep) = deps.iter().find(|dep| {
             !dep.unit.mode.is_doc() && dep.unit.target.is_lib() && !dep.unit.artifact.is_true()
         }) {
-            bcx.config.shell().warn(format!(
+            bcx.gctx.shell().warn(format!(
                 "The package `{}` \
                  provides no linkable target. The compiler might raise an error while compiling \
                  `{}`. Consider adding 'dylib' or 'rlib' to key `crate-type` in `{}`'s \
@@ -1386,15 +1440,18 @@ fn build_deps_args(cmd: &mut ProcessBuilder, cx: &Context<'_, '_>, unit: &Unit) 
 
     for dep in deps {
         if dep.unit.mode.is_run_custom_build() {
-            cmd.env("OUT_DIR", &cx.files().build_script_out_dir(&dep.unit));
+            cmd.env(
+                "OUT_DIR",
+                &build_runner.files().build_script_out_dir(&dep.unit),
+            );
         }
     }
 
-    for arg in extern_args(cx, unit, &mut unstable_opts)? {
+    for arg in extern_args(build_runner, unit, &mut unstable_opts)? {
         cmd.arg(arg);
     }
 
-    for (var, env) in artifact::get_env(cx, deps)? {
+    for (var, env) in artifact::get_env(build_runner, deps)? {
         cmd.env(&var, env);
     }
 
@@ -1437,12 +1494,12 @@ fn add_custom_flags(
 
 /// Generates a list of `--extern` arguments.
 pub fn extern_args(
-    cx: &Context<'_, '_>,
+    build_runner: &BuildRunner<'_, '_>,
     unit: &Unit,
     unstable_opts: &mut bool,
 ) -> CargoResult<Vec<OsString>> {
     let mut result = Vec::new();
-    let deps = cx.unit_deps(unit);
+    let deps = build_runner.unit_deps(unit);
 
     // Closure to add one dependency to `result`.
     let mut link_to =
@@ -1479,9 +1536,9 @@ pub fn extern_args(
                 result.push(value);
             };
 
-            let outputs = cx.outputs(&dep.unit)?;
+            let outputs = build_runner.outputs(&dep.unit)?;
 
-            if cx.only_requires_rmeta(unit, &dep.unit) || dep.unit.mode.is_check() {
+            if build_runner.only_requires_rmeta(unit, &dep.unit) || dep.unit.mode.is_check() {
                 // Example: rlib dependency for an rlib, rmeta is all that is required.
                 let output = outputs
                     .iter()
@@ -1545,13 +1602,13 @@ struct OutputOptions {
 }
 
 impl OutputOptions {
-    fn new(cx: &Context<'_, '_>, unit: &Unit) -> OutputOptions {
-        let path = cx.files().message_cache_path(unit);
+    fn new(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> OutputOptions {
+        let path = build_runner.files().message_cache_path(unit);
         // Remove old cache, ignore ENOENT, which is the common case.
         drop(fs::remove_file(&path));
         let cache_cell = Some((path, LazyCell::new()));
         OutputOptions {
-            format: cx.bcx.build_config.message_format,
+            format: build_runner.bcx.build_config.message_format,
             cache_cell,
             show_diagnostics: true,
             warnings_seen: 0,
@@ -1852,15 +1909,15 @@ fn descriptive_pkg_name(name: &str, target: &Target, mode: &CompileMode) -> Stri
 }
 
 /// Applies environment variables from config `[env]` to [`ProcessBuilder`].
-fn apply_env_config(config: &crate::Config, cmd: &mut ProcessBuilder) -> CargoResult<()> {
-    for (key, value) in config.env_config()?.iter() {
+fn apply_env_config(gctx: &crate::GlobalContext, cmd: &mut ProcessBuilder) -> CargoResult<()> {
+    for (key, value) in gctx.env_config()?.iter() {
         // never override a value that has already been set by cargo
         if cmd.get_envs().contains_key(key) {
             continue;
         }
 
-        if value.is_force() || config.get_env_os(key).is_none() {
-            cmd.env(key, value.resolve(config));
+        if value.is_force() || gctx.get_env_os(key).is_none() {
+            cmd.env(key, value.resolve(gctx));
         }
     }
     Ok(())
@@ -1872,7 +1929,9 @@ fn should_include_scrape_units(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool 
 }
 
 /// Gets the file path of function call information output from `rustdoc`.
-fn scrape_output_path(cx: &Context<'_, '_>, unit: &Unit) -> CargoResult<PathBuf> {
+fn scrape_output_path(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<PathBuf> {
     assert!(unit.mode.is_doc() || unit.mode.is_doc_scrape());
-    cx.outputs(unit).map(|outputs| outputs[0].path.clone())
+    build_runner
+        .outputs(unit)
+        .map(|outputs| outputs[0].path.clone())
 }

@@ -79,7 +79,7 @@
 //!    [`unstable_cli_options!`]. Flags can take an optional value if you want.
 //! 2. Update the [`CliUnstable::add`] function to parse the flag.
 //! 3. Wherever the new functionality is implemented, call
-//!    [`Config::cli_unstable`] to get an instance of [`CliUnstable`]
+//!    [`GlobalContext::cli_unstable`] to get an instance of [`CliUnstable`]
 //!    and check if the option has been enabled on the [`CliUnstable`] instance.
 //!    Nightly gating is already handled, so no need to worry about that.
 //!    If warning when feature is used without the gate, be sure to gracefully degrade (with a
@@ -112,7 +112,7 @@
 //!    and summarize it similar to the other entries. Update the rest of the
 //!    documentation to add the new feature.
 //!
-//! [`Config::cli_unstable`]: crate::util::config::Config::cli_unstable
+//! [`GlobalContext::cli_unstable`]: crate::util::config::GlobalContext::cli_unstable
 //! [`fail_if_stable_opt`]: CliUnstable::fail_if_stable_opt
 //! [`features!`]: macro.features.html
 //! [`unstable_cli_options!`]: macro.unstable_cli_options.html
@@ -130,7 +130,7 @@ use serde::{Deserialize, Serialize};
 use crate::core::resolver::ResolveBehavior;
 use crate::util::errors::CargoResult;
 use crate::util::indented_lines;
-use crate::Config;
+use crate::GlobalContext;
 
 pub const SEE_CHANNELS: &str =
     "See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information \
@@ -311,6 +311,7 @@ impl fmt::Display for Edition {
         }
     }
 }
+
 impl FromStr for Edition {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Error> {
@@ -401,12 +402,12 @@ macro_rules! features {
         impl Features {
             fn status(&mut self, feature: &str) -> Option<(&mut bool, &'static Feature)> {
                 if feature.contains("_") {
-                    return None
+                    return None;
                 }
                 let feature = feature.replace("-", "_");
                 $(
                     if feature == stringify!($feature) {
-                        return Some((&mut self.$feature, Feature::$feature()))
+                        return Some((&mut self.$feature, Feature::$feature()));
                     }
                 )*
                 None
@@ -514,15 +515,15 @@ impl Features {
     /// Creates a new unstable features context.
     pub fn new(
         features: &[String],
-        config: &Config,
+        gctx: &GlobalContext,
         warnings: &mut Vec<String>,
         is_local: bool,
     ) -> CargoResult<Features> {
         let mut ret = Features::default();
-        ret.nightly_features_allowed = config.nightly_features_allowed;
+        ret.nightly_features_allowed = gctx.nightly_features_allowed;
         ret.is_local = is_local;
         for feature in features {
-            ret.add(feature, config, warnings)?;
+            ret.add(feature, gctx, warnings)?;
             ret.activated.push(feature.to_string());
         }
         Ok(ret)
@@ -531,7 +532,7 @@ impl Features {
     fn add(
         &mut self,
         feature_name: &str,
-        config: &Config,
+        gctx: &GlobalContext,
         warnings: &mut Vec<String>,
     ) -> CargoResult<()> {
         let nightly_features_allowed = self.nightly_features_allowed;
@@ -580,7 +581,7 @@ impl Features {
                 see_docs()
             ),
             Status::Unstable => {
-                if let Some(allow) = &config.cli_unstable().allow_features {
+                if let Some(allow) = &gctx.cli_unstable().allow_features {
                     if !allow.contains(feature_name) {
                         bail!(
                             "the feature `{}` is not in the list of allowed features: [{}]",
@@ -1201,7 +1202,7 @@ impl CliUnstable {
     /// unstable subcommand.
     pub fn fail_if_stable_command(
         &self,
-        config: &Config,
+        gctx: &GlobalContext,
         command: &str,
         issue: u32,
         z_name: &str,
@@ -1215,7 +1216,7 @@ impl CliUnstable {
             information about the `cargo {}` command.",
             issue, command
         );
-        if config.nightly_features_allowed {
+        if gctx.nightly_features_allowed {
             bail!(
                 "the `cargo {command}` command is unstable, pass `-Z {z_name}` \
                  to enable it\n\

@@ -7,14 +7,14 @@
 //! ## Usage
 //!
 //! There is a global [`CacheLocker`] held inside cargo's venerable
-//! [`Config`]. The `CacheLocker` manages creating and tracking the locks
+//! [`GlobalContext`]. The `CacheLocker` manages creating and tracking the locks
 //! being held. There are methods on `Config` for managing the locks:
 //!
-//! - [`Config::acquire_package_cache_lock`] --- Acquires a lock. May block if
+//! - [`GlobalContext::acquire_package_cache_lock`] --- Acquires a lock. May block if
 //!   another process holds a lock.
-//! - [`Config::try_acquire_package_cache_lock`] --- Acquires a lock, returning
+//! - [`GlobalContext::try_acquire_package_cache_lock`] --- Acquires a lock, returning
 //!   immediately if it would block.
-//! - [`Config::assert_package_cache_locked`] --- This is used to ensure the
+//! - [`GlobalContext::assert_package_cache_locked`] --- This is used to ensure the
 //!   proper lock is being held.
 //!
 //! Lower-level code that accesses the package cache typically just use
@@ -89,8 +89,8 @@
 
 use super::FileLock;
 use crate::CargoResult;
-use crate::Config;
-use anyhow::Context;
+use crate::GlobalContext;
+use anyhow::Context as _;
 use std::cell::RefCell;
 use std::io;
 
@@ -201,46 +201,45 @@ impl RecursiveLock {
     /// Acquires a shared lock.
     fn lock_shared(
         &mut self,
-        config: &Config,
+        gctx: &GlobalContext,
         description: &'static str,
         blocking: BlockingMode,
     ) -> LockingResult {
         match blocking {
             Blocking => {
-                self.lock_shared_blocking(config, description);
+                self.lock_shared_blocking(gctx, description);
                 LockAcquired
             }
-            NonBlocking => self.lock_shared_nonblocking(config),
+            NonBlocking => self.lock_shared_nonblocking(gctx),
         }
     }
 
     /// Acquires a shared lock, blocking if held by another locker.
-    fn lock_shared_blocking(&mut self, config: &Config, description: &'static str) {
+    fn lock_shared_blocking(&mut self, gctx: &GlobalContext, description: &'static str) {
         if self.count == 0 {
             self.is_exclusive = false;
-            self.lock =
-                match config
-                    .home()
-                    .open_ro_shared_create(self.filename, config, description)
-                {
-                    Ok(lock) => Some(lock),
-                    Err(e) => {
-                        // There is no error here because locking is mostly a
-                        // best-effort attempt. If cargo home is read-only, we don't
-                        // want to fail just because we couldn't create the lock file.
-                        tracing::warn!("failed to acquire cache lock {}: {e:?}", self.filename);
-                        None
-                    }
-                };
+            self.lock = match gctx
+                .home()
+                .open_ro_shared_create(self.filename, gctx, description)
+            {
+                Ok(lock) => Some(lock),
+                Err(e) => {
+                    // There is no error here because locking is mostly a
+                    // best-effort attempt. If cargo home is read-only, we don't
+                    // want to fail just because we couldn't create the lock file.
+                    tracing::warn!("failed to acquire cache lock {}: {e:?}", self.filename);
+                    None
+                }
+            };
         }
         self.increment();
     }
 
     /// Acquires a shared lock, returns [`WouldBlock`] if held by another locker.
-    fn lock_shared_nonblocking(&mut self, config: &Config) -> LockingResult {
+    fn lock_shared_nonblocking(&mut self, gctx: &GlobalContext) -> LockingResult {
         if self.count == 0 {
             self.is_exclusive = false;
-            self.lock = match config.home().try_open_ro_shared_create(self.filename) {
+            self.lock = match gctx.home().try_open_ro_shared_create(self.filename) {
                 Ok(Some(lock)) => Some(lock),
                 Ok(None) => {
                     return WouldBlock;
@@ -259,7 +258,7 @@ impl RecursiveLock {
     /// Acquires an exclusive lock.
     fn lock_exclusive(
         &mut self,
-        config: &Config,
+        gctx: &GlobalContext,
         description: &'static str,
         blocking: BlockingMode,
     ) -> CargoResult<LockingResult> {
@@ -271,24 +270,24 @@ impl RecursiveLock {
         }
         match blocking {
             Blocking => {
-                self.lock_exclusive_blocking(config, description)?;
+                self.lock_exclusive_blocking(gctx, description)?;
                 Ok(LockAcquired)
             }
-            NonBlocking => self.lock_exclusive_nonblocking(config),
+            NonBlocking => self.lock_exclusive_nonblocking(gctx),
         }
     }
 
     /// Acquires an exclusive lock, blocking if held by another locker.
     fn lock_exclusive_blocking(
         &mut self,
-        config: &Config,
+        gctx: &GlobalContext,
         description: &'static str,
     ) -> CargoResult<()> {
         if self.count == 0 {
             self.is_exclusive = true;
-            match config
+            match gctx
                 .home()
-                .open_rw_exclusive_create(self.filename, config, description)
+                .open_rw_exclusive_create(self.filename, gctx, description)
             {
                 Ok(lock) => self.lock = Some(lock),
                 Err(e) => {
@@ -304,7 +303,7 @@ impl RecursiveLock {
                         // may only be reading from the package cache. In that
                         // case, cargo isn't writing anything, and we don't want
                         // to fail on that.
-                        self.lock_shared_blocking(config, description);
+                        self.lock_shared_blocking(gctx, description);
                         // This has to pretend it is exclusive for recursive locks to work.
                         self.is_exclusive = true;
                         return Ok(());
@@ -319,15 +318,15 @@ impl RecursiveLock {
     }
 
     /// Acquires an exclusive lock, returns [`WouldBlock`] if held by another locker.
-    fn lock_exclusive_nonblocking(&mut self, config: &Config) -> CargoResult<LockingResult> {
+    fn lock_exclusive_nonblocking(&mut self, gctx: &GlobalContext) -> CargoResult<LockingResult> {
         if self.count == 0 {
             self.is_exclusive = true;
-            match config.home().try_open_rw_exclusive_create(self.filename) {
+            match gctx.home().try_open_rw_exclusive_create(self.filename) {
                 Ok(Some(lock)) => self.lock = Some(lock),
                 Ok(None) => return Ok(WouldBlock),
                 Err(e) => {
                     if maybe_readonly(&e) {
-                        let result = self.lock_shared_nonblocking(config);
+                        let result = self.lock_shared_nonblocking(gctx);
                         // This has to pretend it is exclusive for recursive locks to work.
                         self.is_exclusive = true;
                         return Ok(result);
@@ -361,7 +360,7 @@ struct CacheState {
 impl CacheState {
     fn lock(
         &mut self,
-        config: &Config,
+        gctx: &GlobalContext,
         mode: CacheLockMode,
         blocking: BlockingMode,
     ) -> CargoResult<LockingResult> {
@@ -379,14 +378,14 @@ impl CacheState {
         }
         match mode {
             Shared => {
-                if self.mutate_lock.lock_shared(config, SHARED_DESCR, blocking) == WouldBlock {
+                if self.mutate_lock.lock_shared(gctx, SHARED_DESCR, blocking) == WouldBlock {
                     return Ok(WouldBlock);
                 }
             }
             DownloadExclusive => {
                 if self
                     .cache_lock
-                    .lock_exclusive(config, DOWNLOAD_EXCLUSIVE_DESCR, blocking)?
+                    .lock_exclusive(gctx, DOWNLOAD_EXCLUSIVE_DESCR, blocking)?
                     == WouldBlock
                 {
                     return Ok(WouldBlock);
@@ -395,7 +394,7 @@ impl CacheState {
             MutateExclusive => {
                 if self
                     .mutate_lock
-                    .lock_exclusive(config, MUTATE_EXCLUSIVE_DESCR, blocking)?
+                    .lock_exclusive(gctx, MUTATE_EXCLUSIVE_DESCR, blocking)?
                     == WouldBlock
                 {
                     return Ok(WouldBlock);
@@ -406,7 +405,7 @@ impl CacheState {
                 // this acquires both locks.
                 match self
                     .cache_lock
-                    .lock_exclusive(config, DOWNLOAD_EXCLUSIVE_DESCR, blocking)
+                    .lock_exclusive(gctx, DOWNLOAD_EXCLUSIVE_DESCR, blocking)
                 {
                     Ok(LockAcquired) => {}
                     Ok(WouldBlock) => return Ok(WouldBlock),
@@ -486,9 +485,9 @@ impl CacheLocker {
 
     /// Acquires a lock with the given mode, possibly blocking if another
     /// cargo is holding the lock.
-    pub fn lock(&self, config: &Config, mode: CacheLockMode) -> CargoResult<CacheLock<'_>> {
+    pub fn lock(&self, gctx: &GlobalContext, mode: CacheLockMode) -> CargoResult<CacheLock<'_>> {
         let mut state = self.state.borrow_mut();
-        let _ = state.lock(config, mode, Blocking)?;
+        let _ = state.lock(gctx, mode, Blocking)?;
         Ok(CacheLock { mode, locker: self })
     }
 
@@ -496,11 +495,11 @@ impl CacheLocker {
     /// is holding the lock.
     pub fn try_lock(
         &self,
-        config: &Config,
+        gctx: &GlobalContext,
         mode: CacheLockMode,
     ) -> CargoResult<Option<CacheLock<'_>>> {
         let mut state = self.state.borrow_mut();
-        if state.lock(config, mode, NonBlocking)? == LockAcquired {
+        if state.lock(gctx, mode, NonBlocking)? == LockAcquired {
             Ok(Some(CacheLock { mode, locker: self }))
         } else {
             Ok(None)

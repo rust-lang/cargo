@@ -9,14 +9,14 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 
-use anyhow::{Context, Error};
+use anyhow::{Context as _, Error};
 use cargo_util::ProcessBuilder;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
 use crate::core::Edition;
 use crate::util::errors::CargoResult;
-use crate::util::Config;
+use crate::util::GlobalContext;
 
 const DIAGNOSTICS_SERVER_VAR: &str = "__CARGO_FIX_DIAGNOSTICS_SERVER";
 
@@ -51,8 +51,8 @@ pub enum Message {
 }
 
 impl Message {
-    pub fn post(&self, config: &Config) -> Result<(), Error> {
-        let addr = config
+    pub fn post(&self, gctx: &GlobalContext) -> Result<(), Error> {
+        let addr = gctx
             .get_env(DIAGNOSTICS_SERVER_VAR)
             .context("diagnostics collector misconfigured")?;
         let mut client =
@@ -76,8 +76,8 @@ impl Message {
 
 /// A printer that will print diagnostics messages to the shell.
 pub struct DiagnosticPrinter<'a> {
-    /// The config to get the shell to print to.
-    config: &'a Config,
+    /// The context to get the shell to print to.
+    gctx: &'a GlobalContext,
     /// An optional wrapper to be used in addition to `rustc.wrapper` for workspace crates.
     /// This is used to get the correct bug report URL. For instance,
     /// if `clippy-driver` is set as the value for the wrapper,
@@ -89,11 +89,11 @@ pub struct DiagnosticPrinter<'a> {
 
 impl<'a> DiagnosticPrinter<'a> {
     pub fn new(
-        config: &'a Config,
+        gctx: &'a GlobalContext,
         workspace_wrapper: &'a Option<PathBuf>,
     ) -> DiagnosticPrinter<'a> {
         DiagnosticPrinter {
-            config,
+            gctx,
             workspace_wrapper,
             dedupe: HashSet::new(),
         }
@@ -109,31 +109,31 @@ impl<'a> DiagnosticPrinter<'a> {
                 if !self.dedupe.insert(msg.clone()) {
                     return Ok(());
                 }
-                self.config.shell().status(
+                self.gctx.shell().status(
                     "Migrating",
                     &format!("{} from {} edition to {}", file, from_edition, to_edition),
                 )
             }
             Message::Fixing { file } => self
-                .config
+                .gctx
                 .shell()
                 .verbose(|shell| shell.status("Fixing", file)),
             Message::Fixed { file, fixes } => {
                 let msg = if *fixes == 1 { "fix" } else { "fixes" };
                 let msg = format!("{} ({} {})", file, fixes, msg);
-                self.config.shell().status("Fixed", msg)
+                self.gctx.shell().status("Fixed", msg)
             }
             Message::ReplaceFailed { file, message } => {
                 let msg = format!("error applying suggestions to `{}`\n", file);
-                self.config.shell().warn(&msg)?;
+                self.gctx.shell().warn(&msg)?;
                 write!(
-                    self.config.shell().err(),
+                    self.gctx.shell().err(),
                     "The full error message was:\n\n> {}\n\n",
                     message,
                 )?;
                 let issue_link = get_bug_report_url(self.workspace_wrapper);
                 write!(
-                    self.config.shell().err(),
+                    self.gctx.shell().err(),
                     "{}",
                     gen_please_report_this_bug_text(issue_link)
                 )?;
@@ -146,54 +146,50 @@ impl<'a> DiagnosticPrinter<'a> {
                 abnormal_exit,
             } => {
                 if let Some(ref krate) = *krate {
-                    self.config.shell().warn(&format!(
+                    self.gctx.shell().warn(&format!(
                         "failed to automatically apply fixes suggested by rustc \
                          to crate `{}`",
                         krate,
                     ))?;
                 } else {
-                    self.config
+                    self.gctx
                         .shell()
                         .warn("failed to automatically apply fixes suggested by rustc")?;
                 }
                 if !files.is_empty() {
                     writeln!(
-                        self.config.shell().err(),
+                        self.gctx.shell().err(),
                         "\nafter fixes were automatically applied the compiler \
                          reported errors within these files:\n"
                     )?;
                     for file in files {
-                        writeln!(self.config.shell().err(), "  * {}", file)?;
+                        writeln!(self.gctx.shell().err(), "  * {}", file)?;
                     }
-                    writeln!(self.config.shell().err())?;
+                    writeln!(self.gctx.shell().err())?;
                 }
                 let issue_link = get_bug_report_url(self.workspace_wrapper);
                 write!(
-                    self.config.shell().err(),
+                    self.gctx.shell().err(),
                     "{}",
                     gen_please_report_this_bug_text(issue_link)
                 )?;
                 if !errors.is_empty() {
                     writeln!(
-                        self.config.shell().err(),
+                        self.gctx.shell().err(),
                         "The following errors were reported:"
                     )?;
                     for error in errors {
-                        write!(self.config.shell().err(), "{}", error)?;
+                        write!(self.gctx.shell().err(), "{}", error)?;
                         if !error.ends_with('\n') {
-                            writeln!(self.config.shell().err())?;
+                            writeln!(self.gctx.shell().err())?;
                         }
                     }
                 }
                 if let Some(exit) = abnormal_exit {
-                    writeln!(
-                        self.config.shell().err(),
-                        "rustc exited abnormally: {}",
-                        exit
-                    )?;
+                    writeln!(self.gctx.shell().err(), "rustc exited abnormally: {}", exit)?;
                 }
                 writeln!(
-                    self.config.shell().err(),
+                    self.gctx.shell().err(),
                     "Original diagnostics will follow.\n"
                 )?;
                 Ok(())
@@ -207,7 +203,7 @@ impl<'a> DiagnosticPrinter<'a> {
                     message: "".to_string(), // Dummy, so that this only long-warns once.
                     edition: *edition,
                 }) {
-                    self.config.shell().warn(&format!("\
+                    self.gctx.shell().warn(&format!("\
 {}
 
 If you are trying to migrate from the previous edition ({prev_edition}), the
@@ -224,7 +220,7 @@ https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-proje
                         message, this_edition=edition, prev_edition=edition.previous().unwrap()
                     ))
                 } else {
-                    self.config.shell().warn(message)
+                    self.gctx.shell().warn(message)
                 }
             }
         }

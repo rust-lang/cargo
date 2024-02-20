@@ -99,7 +99,7 @@ impl HelperDef for OptionHelper<'_> {
         &self,
         h: &Helper<'rc>,
         r: &'reg Handlebars<'reg>,
-        ctx: &'rc Context,
+        gctx: &'rc Context,
         rc: &mut RenderContext<'reg, 'rc>,
         out: &mut dyn Output,
     ) -> HelperResult {
@@ -137,10 +137,10 @@ impl HelperDef for OptionHelper<'_> {
             }
         };
         // Render the block.
-        let block = t.renders(r, ctx, rc)?;
+        let block = t.renders(r, gctx, rc)?;
 
         // Get the name of this page.
-        let man_name = ctx
+        let man_name = gctx
             .data()
             .get("man_name")
             .expect("expected man_name in context")
@@ -167,7 +167,7 @@ impl HelperDef for ManLinkHelper<'_> {
         &self,
         h: &Helper<'rc>,
         _r: &'reg Handlebars<'reg>,
-        _ctx: &'rc Context,
+        _gctx: &'rc Context,
         _rc: &mut RenderContext<'reg, 'rc>,
         out: &mut dyn Output,
     ) -> HelperResult {
@@ -200,7 +200,7 @@ impl HelperDef for ManLinkHelper<'_> {
 fn set_decorator(
     d: &Decorator<'_>,
     _: &Handlebars<'_>,
-    _ctx: &Context,
+    _gctx: &Context,
     rc: &mut RenderContext<'_, '_>,
 ) -> Result<(), RenderError> {
     let data_to_set = d.hash();
@@ -212,13 +212,13 @@ fn set_decorator(
 
 /// Sets a variable to a value within the context.
 fn set_in_context(rc: &mut RenderContext<'_, '_>, key: &str, value: serde_json::Value) {
-    let mut ctx = match rc.context() {
+    let mut gctx = match rc.context() {
         Some(c) => (*c).clone(),
         None => Context::wraps(serde_json::Value::Object(serde_json::Map::new())).unwrap(),
     };
-    if let serde_json::Value::Object(m) = ctx.data_mut() {
+    if let serde_json::Value::Object(m) = gctx.data_mut() {
         m.insert(key.to_string(), value);
-        rc.set_context(ctx);
+        rc.set_context(gctx);
     } else {
         panic!("expected object in context");
     }
@@ -226,11 +226,11 @@ fn set_in_context(rc: &mut RenderContext<'_, '_>, key: &str, value: serde_json::
 
 /// Removes a variable from the context.
 fn remove_from_context(rc: &mut RenderContext<'_, '_>, key: &str) {
-    let ctx = rc.context().expect("cannot remove from null context");
-    let mut ctx = (*ctx).clone();
-    if let serde_json::Value::Object(m) = ctx.data_mut() {
+    let gctx = rc.context().expect("cannot remove from null context");
+    let mut gctx = (*gctx).clone();
+    if let serde_json::Value::Object(m) = gctx.data_mut() {
         m.remove(key);
-        rc.set_context(ctx);
+        rc.set_context(gctx);
     } else {
         panic!("expected object in context");
     }

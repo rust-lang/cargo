@@ -30,13 +30,13 @@ pub fn cli() -> Command {
         )
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    config.cli_unstable().fail_if_stable_command(
-        config,
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
+    gctx.cli_unstable().fail_if_stable_command(
+        gctx,
         "config",
         9301,
         "unstable-options",
-        config.cli_unstable().unstable_options,
+        gctx.cli_unstable().unstable_options,
     )?;
     match args.subcommand() {
         Some(("get", args)) => {
@@ -46,7 +46,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
                 show_origin: args.flag("show-origin"),
                 merged: args.get_one::<String>("merged").map(String::as_str) == Some("yes"),
             };
-            cargo_config::get(config, &opts)?;
+            cargo_config::get(gctx, &opts)?;
         }
         Some((cmd, _)) => {
             unreachable!("unexpected command {}", cmd)

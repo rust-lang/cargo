@@ -40,8 +40,8 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let ws = args.workspace(config)?;
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(gctx)?;
     if ws.root_maybe().is_embedded() {
         return Err(anyhow::format_err!(
             "{} is unsupported by `cargo package`",
@@ -54,7 +54,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     ops::package(
         &ws,
         &PackageOpts {
-            config,
+            gctx,
             verify: !args.flag("no-verify"),
             list: args.flag("list"),
             check_metadata: !args.flag("no-metadata"),

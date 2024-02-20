@@ -14,7 +14,7 @@ use std::path::{Display, Path, PathBuf};
 
 use crate::util::errors::CargoResult;
 use crate::util::style;
-use crate::util::Config;
+use crate::util::GlobalContext;
 use anyhow::Context as _;
 use cargo_util::paths;
 use sys::*;
@@ -200,14 +200,14 @@ impl Filesystem {
     /// This function will create a file at `path` if it doesn't already exist
     /// (including intermediate directories), and then it will acquire an
     /// exclusive lock on `path`. If the process must block waiting for the
-    /// lock, the `msg` is printed to [`Config`].
+    /// lock, the `msg` is printed to [`GlobalContext`].
     ///
     /// The returned file can be accessed to look at the path and also has
     /// read/write access to the underlying file.
     pub fn open_rw_exclusive_create<P>(
         &self,
         path: P,
-        config: &Config,
+        gctx: &GlobalContext,
         msg: &str,
     ) -> CargoResult<FileLock>
     where
@@ -216,7 +216,7 @@ impl Filesystem {
         let mut opts = OpenOptions::new();
         opts.read(true).write(true).create(true);
         let (path, f) = self.open(path.as_ref(), &opts, true)?;
-        acquire(config, msg, &path, &|| try_lock_exclusive(&f), &|| {
+        acquire(gctx, msg, &path, &|| try_lock_exclusive(&f), &|| {
             lock_exclusive(&f)
         })?;
         Ok(FileLock { f: Some(f), path })
@@ -244,17 +244,22 @@ impl Filesystem {
     ///
     /// This function will fail if `path` doesn't already exist, but if it does
     /// then it will acquire a shared lock on `path`. If the process must block
-    /// waiting for the lock, the `msg` is printed to [`Config`].
+    /// waiting for the lock, the `msg` is printed to [`GlobalContext`].
     ///
     /// The returned file can be accessed to look at the path and also has read
     /// access to the underlying file. Any writes to the file will return an
     /// error.
-    pub fn open_ro_shared<P>(&self, path: P, config: &Config, msg: &str) -> CargoResult<FileLock>
+    pub fn open_ro_shared<P>(
+        &self,
+        path: P,
+        gctx: &GlobalContext,
+        msg: &str,
+    ) -> CargoResult<FileLock>
     where
         P: AsRef<Path>,
     {
         let (path, f) = self.open(path.as_ref(), &OpenOptions::new().read(true), false)?;
-        acquire(config, msg, &path, &|| try_lock_shared(&f), &|| {
+        acquire(gctx, msg, &path, &|| try_lock_shared(&f), &|| {
             lock_shared(&f)
         })?;
         Ok(FileLock { f: Some(f), path })
@@ -268,13 +273,13 @@ impl Filesystem {
     pub fn open_ro_shared_create<P: AsRef<Path>>(
         &self,
         path: P,
-        config: &Config,
+        gctx: &GlobalContext,
         msg: &str,
     ) -> CargoResult<FileLock> {
         let mut opts = OpenOptions::new();
         opts.read(true).write(true).create(true);
         let (path, f) = self.open(path.as_ref(), &opts, true)?;
-        acquire(config, msg, &path, &|| try_lock_shared(&f), &|| {
+        acquire(gctx, msg, &path, &|| try_lock_shared(&f), &|| {
             lock_shared(&f)
         })?;
         Ok(FileLock { f: Some(f), path })
@@ -375,13 +380,13 @@ fn try_acquire(path: &Path, lock_try: &dyn Fn() -> io::Result<()>) -> CargoResul
 /// This function will acquire the lock on a `path`, printing out a nice message
 /// to the console if we have to wait for it. It will first attempt to use `try`
 /// to acquire a lock on the crate, and in the case of contention it will emit a
-/// status message based on `msg` to [`Config`]'s shell, and then use `block` to
+/// status message based on `msg` to [`GlobalContext`]'s shell, and then use `block` to
 /// block waiting to acquire a lock.
 ///
 /// Returns an error if the lock could not be acquired or if any error other
 /// than a contention error happens.
 fn acquire(
-    config: &Config,
+    gctx: &GlobalContext,
     msg: &str,
     path: &Path,
     lock_try: &dyn Fn() -> io::Result<()>,
@@ -391,8 +396,7 @@ fn acquire(
         return Ok(());
     }
     let msg = format!("waiting for file lock on {}", msg);
-    config
-        .shell()
+    gctx.shell()
         .status_with_color("Blocking", &msg, &style::NOTE)?;
 
     lock_block().with_context(|| format!("failed to lock file: {}", path.display()))?;

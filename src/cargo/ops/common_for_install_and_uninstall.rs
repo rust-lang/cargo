@@ -20,7 +20,7 @@ use crate::sources::source::Source;
 use crate::sources::PathSource;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
-use crate::util::Config;
+use crate::util::GlobalContext;
 use crate::util::{FileLock, Filesystem};
 
 /// On-disk tracking for which package installed which binary.
@@ -98,11 +98,11 @@ pub struct CrateListingV1 {
 
 impl InstallTracker {
     /// Create an InstallTracker from information on disk.
-    pub fn load(config: &Config, root: &Filesystem) -> CargoResult<InstallTracker> {
+    pub fn load(gctx: &GlobalContext, root: &Filesystem) -> CargoResult<InstallTracker> {
         let v1_lock =
-            root.open_rw_exclusive_create(Path::new(".crates.toml"), config, "crate metadata")?;
+            root.open_rw_exclusive_create(Path::new(".crates.toml"), gctx, "crate metadata")?;
         let v2_lock =
-            root.open_rw_exclusive_create(Path::new(".crates2.json"), config, "crate metadata")?;
+            root.open_rw_exclusive_create(Path::new(".crates2.json"), gctx, "crate metadata")?;
 
         let v1 = (|| -> CargoResult<_> {
             let mut contents = String::new();
@@ -544,30 +544,30 @@ impl InstallInfo {
 }
 
 /// Determines the root directory where installation is done.
-pub fn resolve_root(flag: Option<&str>, config: &Config) -> CargoResult<Filesystem> {
-    let config_root = config.get_path("install.root")?;
+pub fn resolve_root(flag: Option<&str>, gctx: &GlobalContext) -> CargoResult<Filesystem> {
+    let config_root = gctx.get_path("install.root")?;
     Ok(flag
         .map(PathBuf::from)
-        .or_else(|| config.get_env_os("CARGO_INSTALL_ROOT").map(PathBuf::from))
+        .or_else(|| gctx.get_env_os("CARGO_INSTALL_ROOT").map(PathBuf::from))
         .or_else(move || config_root.map(|v| v.val))
         .map(Filesystem::new)
-        .unwrap_or_else(|| config.home().clone()))
+        .unwrap_or_else(|| gctx.home().clone()))
 }
 
 /// Determines the `PathSource` from a `SourceId`.
-pub fn path_source(source_id: SourceId, config: &Config) -> CargoResult<PathSource<'_>> {
+pub fn path_source(source_id: SourceId, gctx: &GlobalContext) -> CargoResult<PathSource<'_>> {
     let path = source_id
         .url()
         .to_file_path()
         .map_err(|()| format_err!("path sources must have a valid path"))?;
-    Ok(PathSource::new(&path, source_id, config))
+    Ok(PathSource::new(&path, source_id, gctx))
 }
 
 /// Gets a Package based on command-line requirements.
 pub fn select_dep_pkg<T>(
     source: &mut T,
     dep: Dependency,
-    config: &Config,
+    gctx: &GlobalContext,
     needs_update: bool,
     current_rust_version: Option<&semver::Version>,
 ) -> CargoResult<Package>
@@ -577,7 +577,7 @@ where
     // This operation may involve updating some sources or making a few queries
     // which may involve frobbing caches, as a result make sure we synchronize
     // with other global Cargos
-    let _lock = config.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
+    let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
     if needs_update {
         source.invalidate_cache();
@@ -643,7 +643,7 @@ cannot install package `{name} {ver}`, it requires rustc {msrv} or newer, while 
 )
                 }
             }
-            let pkg = Box::new(source).download_now(summary.package_id(), config)?;
+            let pkg = Box::new(source).download_now(summary.package_id(), gctx)?;
             Ok(pkg)
         }
         None => {
@@ -688,7 +688,7 @@ pub fn select_pkg<T, F>(
     source: &mut T,
     dep: Option<Dependency>,
     mut list_all: F,
-    config: &Config,
+    gctx: &GlobalContext,
     current_rust_version: Option<&semver::Version>,
 ) -> CargoResult<Package>
 where
@@ -698,12 +698,12 @@ where
     // This operation may involve updating some sources or making a few queries
     // which may involve frobbing caches, as a result make sure we synchronize
     // with other global Cargos
-    let _lock = config.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
+    let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
     source.invalidate_cache();
 
     return if let Some(dep) = dep {
-        select_dep_pkg(source, dep, config, false, current_rust_version)
+        select_dep_pkg(source, dep, gctx, false, current_rust_version)
     } else {
         let candidates = list_all(source)?;
         let binaries = candidates

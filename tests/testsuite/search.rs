@@ -93,18 +93,18 @@ fn not_update() {
     use cargo::core::{Shell, SourceId};
     use cargo::sources::source::Source;
     use cargo::sources::RegistrySource;
-    use cargo::util::Config;
+    use cargo::util::GlobalContext;
 
     let sid = SourceId::for_registry(registry.index_url()).unwrap();
-    let cfg = Config::new(
+    let gctx = GlobalContext::new(
         Shell::from_write(Box::new(Vec::new())),
         paths::root(),
         paths::home().join(".cargo"),
     );
-    let lock = cfg
+    let lock = gctx
         .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)
         .unwrap();
-    let mut regsrc = RegistrySource::remote(sid, &HashSet::new(), &cfg).unwrap();
+    let mut regsrc = RegistrySource::remote(sid, &HashSet::new(), &gctx).unwrap();
     regsrc.invalidate_cache();
     regsrc.block_until_ready().unwrap();
     drop(lock);

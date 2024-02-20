@@ -5,14 +5,14 @@ use crate::ops;
 use crate::util::edit_distance;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
-use crate::util::{human_readable_bytes, Config, Progress, ProgressStyle};
+use crate::util::{human_readable_bytes, GlobalContext, Progress, ProgressStyle};
 use anyhow::bail;
 use cargo_util::paths;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub struct CleanOptions<'cfg> {
-    pub config: &'cfg Config,
+pub struct CleanOptions<'gctx> {
+    pub gctx: &'gctx GlobalContext,
     /// A list of packages to clean. If empty, everything is cleaned.
     pub spec: Vec<String>,
     /// The target arch triple to clean, or None for the host arch
@@ -27,9 +27,9 @@ pub struct CleanOptions<'cfg> {
     pub dry_run: bool,
 }
 
-pub struct CleanContext<'cfg> {
-    pub config: &'cfg Config,
-    progress: Box<dyn CleaningProgressBar + 'cfg>,
+pub struct CleanContext<'gctx> {
+    pub gctx: &'gctx GlobalContext,
+    progress: Box<dyn CleaningProgressBar + 'gctx>,
     pub dry_run: bool,
     num_files_removed: u64,
     num_dirs_removed: u64,
@@ -39,9 +39,9 @@ pub struct CleanContext<'cfg> {
 /// Cleans various caches.
 pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     let mut target_dir = ws.target_dir();
-    let config = opts.config;
-    let mut ctx = CleanContext::new(config);
-    ctx.dry_run = opts.dry_run;
+    let gctx = opts.gctx;
+    let mut clean_gctx = CleanContext::new(gctx);
+    clean_gctx.dry_run = opts.dry_run;
 
     if opts.doc {
         if !opts.spec.is_empty() {
@@ -55,7 +55,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         }
         // If the doc option is set, we just want to delete the doc directory.
         target_dir = target_dir.join("doc");
-        ctx.remove_paths(&[target_dir.into_path_unlocked()])?;
+        clean_gctx.remove_paths(&[target_dir.into_path_unlocked()])?;
     } else {
         let profiles = Profiles::new(&ws, opts.requested_profile)?;
 
@@ -73,25 +73,25 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         // Note that we don't bother grabbing a lock here as we're just going to
         // blow it all away anyway.
         if opts.spec.is_empty() {
-            ctx.remove_paths(&[target_dir.into_path_unlocked()])?;
+            clean_gctx.remove_paths(&[target_dir.into_path_unlocked()])?;
         } else {
-            clean_specs(&mut ctx, &ws, &profiles, &opts.targets, &opts.spec)?;
+            clean_specs(&mut clean_gctx, &ws, &profiles, &opts.targets, &opts.spec)?;
         }
     }
 
-    ctx.display_summary()?;
+    clean_gctx.display_summary()?;
     Ok(())
 }
 
 fn clean_specs(
-    ctx: &mut CleanContext<'_>,
+    clean_ctx: &mut CleanContext<'_>,
     ws: &Workspace<'_>,
     profiles: &Profiles,
     targets: &[String],
     spec: &[String],
 ) -> CargoResult<()> {
     // Clean specific packages.
-    let requested_kinds = CompileKind::from_requested_targets(ctx.config, targets)?;
+    let requested_kinds = CompileKind::from_requested_targets(clean_ctx.gctx, targets)?;
     let target_data = RustcTargetData::new(ws, &requested_kinds)?;
     let (pkg_set, resolve) = ops::resolve_ws(ws)?;
     let prof_dir_name = profiles.get_dir_name();
@@ -134,7 +134,7 @@ fn clean_specs(
         // Translate the spec to a Package.
         let spec = PackageIdSpec::parse(spec_str)?;
         if spec.partial_version().is_some() {
-            ctx.config.shell().warn(&format!(
+            clean_ctx.gctx.shell().warn(&format!(
                 "version qualifier in `-p {}` is ignored, \
                 cleaning all versions of `{}` found",
                 spec_str,
@@ -142,7 +142,7 @@ fn clean_specs(
             ))?;
         }
         if spec.url().is_some() {
-            ctx.config.shell().warn(&format!(
+            clean_ctx.gctx.shell().warn(&format!(
                 "url qualifier in `-p {}` ignored, \
                 cleaning all versions of `{}` found",
                 spec_str,
@@ -167,16 +167,17 @@ fn clean_specs(
     }
     let packages = pkg_set.get_many(pkg_ids)?;
 
-    ctx.progress = Box::new(CleaningPackagesBar::new(ctx.config, packages.len()));
+    clean_ctx.progress = Box::new(CleaningPackagesBar::new(clean_ctx.gctx, packages.len()));
 
     for pkg in packages {
         let pkg_dir = format!("{}-*", pkg.name());
-        ctx.progress.on_cleaning_package(&pkg.name())?;
+        clean_ctx.progress.on_cleaning_package(&pkg.name())?;
 
         // Clean fingerprints.
         for (_, layout) in &layouts_with_host {
             let dir = escape_glob_path(layout.fingerprint())?;
-            ctx.rm_rf_package_glob_containing_hash(&pkg.name(), &Path::new(&dir).join(&pkg_dir))?;
+            clean_ctx
+                .rm_rf_package_glob_containing_hash(&pkg.name(), &Path::new(&dir).join(&pkg_dir))?;
         }
 
         for target in pkg.targets() {
@@ -184,7 +185,7 @@ fn clean_specs(
                 // Get both the build_script_build and the output directory.
                 for (_, layout) in &layouts_with_host {
                     let dir = escape_glob_path(layout.build())?;
-                    ctx.rm_rf_package_glob_containing_hash(
+                    clean_ctx.rm_rf_package_glob_containing_hash(
                         &pkg.name(),
                         &Path::new(&dir).join(&pkg_dir),
                     )?;
@@ -218,35 +219,35 @@ fn clean_specs(
                         let dir_glob = escape_glob_path(dir)?;
                         let dir_glob = Path::new(&dir_glob);
 
-                        ctx.rm_rf_glob(&dir_glob.join(&hashed_name))?;
-                        ctx.rm_rf(&dir.join(&unhashed_name))?;
+                        clean_ctx.rm_rf_glob(&dir_glob.join(&hashed_name))?;
+                        clean_ctx.rm_rf(&dir.join(&unhashed_name))?;
                         // Remove dep-info file generated by rustc. It is not tracked in
                         // file_types. It does not have a prefix.
                         let hashed_dep_info = dir_glob.join(format!("{}-*.d", crate_name));
-                        ctx.rm_rf_glob(&hashed_dep_info)?;
+                        clean_ctx.rm_rf_glob(&hashed_dep_info)?;
                         let unhashed_dep_info = dir.join(format!("{}.d", crate_name));
-                        ctx.rm_rf(&unhashed_dep_info)?;
+                        clean_ctx.rm_rf(&unhashed_dep_info)?;
                         // Remove split-debuginfo files generated by rustc.
                         let split_debuginfo_obj = dir_glob.join(format!("{}.*.o", crate_name));
-                        ctx.rm_rf_glob(&split_debuginfo_obj)?;
+                        clean_ctx.rm_rf_glob(&split_debuginfo_obj)?;
                         let split_debuginfo_dwo = dir_glob.join(format!("{}.*.dwo", crate_name));
-                        ctx.rm_rf_glob(&split_debuginfo_dwo)?;
+                        clean_ctx.rm_rf_glob(&split_debuginfo_dwo)?;
                         let split_debuginfo_dwp = dir_glob.join(format!("{}.*.dwp", crate_name));
-                        ctx.rm_rf_glob(&split_debuginfo_dwp)?;
+                        clean_ctx.rm_rf_glob(&split_debuginfo_dwp)?;
 
                         // Remove the uplifted copy.
                         if let Some(uplift_dir) = uplift_dir {
                             let uplifted_path = uplift_dir.join(file_type.uplift_filename(target));
-                            ctx.rm_rf(&uplifted_path)?;
+                            clean_ctx.rm_rf(&uplifted_path)?;
                             // Dep-info generated by Cargo itself.
                             let dep_info = uplifted_path.with_extension("d");
-                            ctx.rm_rf(&dep_info)?;
+                            clean_ctx.rm_rf(&dep_info)?;
                         }
                     }
                     // TODO: what to do about build_script_build?
                     let dir = escape_glob_path(layout.incremental())?;
                     let incremental = Path::new(&dir).join(format!("{}-*", crate_name));
-                    ctx.rm_rf_glob(&incremental)?;
+                    clean_ctx.rm_rf_glob(&incremental)?;
                 }
             }
         }
@@ -262,13 +263,13 @@ fn escape_glob_path(pattern: &Path) -> CargoResult<String> {
     Ok(glob::Pattern::escape(pattern))
 }
 
-impl<'cfg> CleanContext<'cfg> {
-    pub fn new(config: &'cfg Config) -> Self {
+impl<'gctx> CleanContext<'gctx> {
+    pub fn new(gctx: &'gctx GlobalContext) -> Self {
         // This progress bar will get replaced, this is just here to avoid needing
         // an Option until the actual bar is created.
-        let progress = CleaningFolderBar::new(config, 0);
+        let progress = CleaningFolderBar::new(gctx, 0);
         CleanContext {
-            config,
+            gctx,
             progress: Box::new(progress),
             dry_run: false,
             num_files_removed: 0,
@@ -326,7 +327,7 @@ impl<'cfg> CleanContext<'cfg> {
             Ok(meta) => meta,
             Err(e) => {
                 if e.kind() != std::io::ErrorKind::NotFound {
-                    self.config
+                    self.gctx
                         .shell()
                         .warn(&format!("cannot access {}: {e}", path.display()))?;
                 }
@@ -336,7 +337,7 @@ impl<'cfg> CleanContext<'cfg> {
 
         // dry-run displays paths while walking, so don't print here.
         if !self.dry_run {
-            self.config
+            self.gctx
                 .shell()
                 .verbose(|shell| shell.status("Removing", path.display()))?;
         }
@@ -368,7 +369,7 @@ impl<'cfg> CleanContext<'cfg> {
                 // like it can be surprising or even frightening if cargo says it
                 // is removing something without actually removing it. And I can't
                 // come up with a different verb to use as the status.
-                self.config
+                self.gctx
                     .shell()
                     .verbose(|shell| Ok(writeln!(shell.out(), "{}", entry.path().display())?))?;
             }
@@ -414,11 +415,11 @@ impl<'cfg> CleanContext<'cfg> {
             (1, _) => format!("1 file"),
             (2.., _) => format!("{} files", self.num_files_removed),
         };
-        self.config
+        self.gctx
             .shell()
             .status(status, format!("{file_count}{byte_count}"))?;
         if self.dry_run {
-            self.config
+            self.gctx
                 .shell()
                 .warn("no files deleted due to --dry-run")?;
         }
@@ -435,7 +436,7 @@ impl<'cfg> CleanContext<'cfg> {
             .iter()
             .map(|path| walkdir::WalkDir::new(path).into_iter().count())
             .sum();
-        self.progress = Box::new(CleaningFolderBar::new(self.config, num_paths));
+        self.progress = Box::new(CleaningFolderBar::new(self.gctx, num_paths));
         for path in paths {
             self.rm_rf(path)?;
         }
@@ -451,16 +452,16 @@ trait CleaningProgressBar {
     }
 }
 
-struct CleaningFolderBar<'cfg> {
-    bar: Progress<'cfg>,
+struct CleaningFolderBar<'gctx> {
+    bar: Progress<'gctx>,
     max: usize,
     cur: usize,
 }
 
-impl<'cfg> CleaningFolderBar<'cfg> {
-    fn new(cfg: &'cfg Config, max: usize) -> Self {
+impl<'gctx> CleaningFolderBar<'gctx> {
+    fn new(gctx: &'gctx GlobalContext, max: usize) -> Self {
         Self {
-            bar: Progress::with_style("Cleaning", ProgressStyle::Percentage, cfg),
+            bar: Progress::with_style("Cleaning", ProgressStyle::Percentage, gctx),
             max,
             cur: 0,
         }
@@ -471,7 +472,7 @@ impl<'cfg> CleaningFolderBar<'cfg> {
     }
 }
 
-impl<'cfg> CleaningProgressBar for CleaningFolderBar<'cfg> {
+impl<'gctx> CleaningProgressBar for CleaningFolderBar<'gctx> {
     fn display_now(&mut self) -> CargoResult<()> {
         self.bar.tick_now(self.cur_progress(), self.max, "")
     }
@@ -482,18 +483,18 @@ impl<'cfg> CleaningProgressBar for CleaningFolderBar<'cfg> {
     }
 }
 
-struct CleaningPackagesBar<'cfg> {
-    bar: Progress<'cfg>,
+struct CleaningPackagesBar<'gctx> {
+    bar: Progress<'gctx>,
     max: usize,
     cur: usize,
     num_files_folders_cleaned: usize,
     package_being_cleaned: String,
 }
 
-impl<'cfg> CleaningPackagesBar<'cfg> {
-    fn new(cfg: &'cfg Config, max: usize) -> Self {
+impl<'gctx> CleaningPackagesBar<'gctx> {
+    fn new(gctx: &'gctx GlobalContext, max: usize) -> Self {
         Self {
-            bar: Progress::with_style("Cleaning", ProgressStyle::Ratio, cfg),
+            bar: Progress::with_style("Cleaning", ProgressStyle::Ratio, gctx),
             max,
             cur: 0,
             num_files_folders_cleaned: 0,
@@ -513,7 +514,7 @@ impl<'cfg> CleaningPackagesBar<'cfg> {
     }
 }
 
-impl<'cfg> CleaningProgressBar for CleaningPackagesBar<'cfg> {
+impl<'gctx> CleaningProgressBar for CleaningPackagesBar<'gctx> {
     fn display_now(&mut self) -> CargoResult<()> {
         self.bar
             .tick_now(self.cur_progress(), self.max, &self.format_message())

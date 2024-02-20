@@ -51,11 +51,10 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let ws = args.workspace(config)?;
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(gctx)?;
     let output_format = if let Some(output_format) = args._value_of("output-format") {
-        config
-            .cli_unstable()
+        gctx.cli_unstable()
             .fail_if_stable_opt("--output-format", 12103)?;
         output_format.parse()?
     } else {
@@ -63,7 +62,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
     };
 
     let mut compile_opts = args.compile_options_for_single_package(
-        config,
+        gctx,
         CompileMode::Doc {
             deps: false,
             json: matches!(output_format, OutputFormat::Json),

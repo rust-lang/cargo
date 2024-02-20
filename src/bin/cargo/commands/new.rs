@@ -19,9 +19,9 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let opts = args.new_options(config)?;
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
+    let opts = args.new_options(gctx)?;
 
-    ops::new(&opts, config)?;
+    ops::new(&opts, gctx)?;
     Ok(())
 }

@@ -7,7 +7,7 @@ use crate::core::{Resolve, SourceId, Workspace};
 use crate::ops;
 use crate::sources::source::QueryKind;
 use crate::util::cache_lock::CacheLockMode;
-use crate::util::config::Config;
+use crate::util::config::GlobalContext;
 use crate::util::style;
 use crate::util::CargoResult;
 use anstyle::Style;
@@ -16,7 +16,7 @@ use std::collections::{BTreeMap, HashSet};
 use tracing::debug;
 
 pub struct UpdateOptions<'a> {
-    pub config: &'a Config,
+    pub gctx: &'a GlobalContext,
     pub to_update: Vec<String>,
     pub precise: Option<&'a str>,
     pub recursive: bool,
@@ -25,7 +25,7 @@ pub struct UpdateOptions<'a> {
 }
 
 pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
-    let mut registry = PackageRegistry::new(ws.config())?;
+    let mut registry = PackageRegistry::new(ws.gctx())?;
     let mut resolve = ops::resolve_with_previous(
         &mut registry,
         ws,
@@ -52,7 +52,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     // Updates often require a lot of modifications to the registry, so ensure
     // that we're synchronized against other Cargos.
     let _lock = ws
-        .config()
+        .gctx()
         .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
     let previous_resolve = match ops::load_pkg_lockfile(ws)? {
@@ -64,7 +64,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 // Precise option specified, so calculate a previous_resolve required
                 // by precise package update later.
                 Some(_) => {
-                    let mut registry = PackageRegistry::new(opts.config)?;
+                    let mut registry = PackageRegistry::new(opts.gctx)?;
                     ops::resolve_with_previous(
                         &mut registry,
                         ws,
@@ -79,7 +79,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             }
         }
     };
-    let mut registry = PackageRegistry::new(opts.config)?;
+    let mut registry = PackageRegistry::new(opts.gctx)?;
     let mut to_avoid = HashSet::new();
 
     if opts.to_update.is_empty() {
@@ -156,7 +156,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
 
     // Summarize what is changing for the user.
     let print_change = |status: &str, msg: String, color: &Style| {
-        opts.config.shell().status_with_color(status, msg, color)
+        opts.gctx.shell().status_with_color(status, msg, color)
     };
     let mut unchanged_behind = 0;
     for ResolvedPackageVersions {
@@ -268,8 +268,8 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
 
             if let Some(latest) = latest {
                 unchanged_behind += 1;
-                if opts.config.shell().verbosity() == Verbosity::Verbose {
-                    opts.config.shell().status_with_color(
+                if opts.gctx.shell().verbosity() == Verbosity::Verbose {
+                    opts.gctx.shell().status_with_color(
                         "Unchanged",
                         format!("{package}{latest}"),
                         &anstyle::Style::new().bold(),
@@ -278,19 +278,19 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             }
         }
     }
-    if opts.config.shell().verbosity() == Verbosity::Verbose {
-        opts.config.shell().note(
+    if opts.gctx.shell().verbosity() == Verbosity::Verbose {
+        opts.gctx.shell().note(
             "to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`",
         )?;
     } else {
         if 0 < unchanged_behind {
-            opts.config.shell().note(format!(
+            opts.gctx.shell().note(format!(
                 "pass `--verbose` to see {unchanged_behind} unchanged dependencies behind latest"
             ))?;
         }
     }
     if opts.dry_run {
-        opts.config
+        opts.gctx
             .shell()
             .warn("not updating lockfile due to dry run")?;
     } else {

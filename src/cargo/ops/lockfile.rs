@@ -12,7 +12,7 @@ pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
         return Ok(None);
     }
 
-    let mut f = lock_root.open_ro_shared("Cargo.lock", ws.config(), "Cargo.lock file")?;
+    let mut f = lock_root.open_ro_shared("Cargo.lock", ws.gctx(), "Cargo.lock file")?;
 
     let mut s = String::new();
     f.read_to_string(&mut s)
@@ -43,8 +43,8 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
         }
     }
 
-    if !ws.config().lock_update_allowed() {
-        let flag = if ws.config().locked() {
+    if !ws.gctx().lock_update_allowed() {
+        let flag = if ws.gctx().locked() {
             "--locked"
         } else {
             "--frozen"
@@ -66,7 +66,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
     // file.
     let default_version = ResolveVersion::with_rust_version(ws.rust_version());
     let current_version = resolve.version();
-    let next_lockfile_bump = ws.config().cli_unstable().next_lockfile_bump;
+    let next_lockfile_bump = ws.gctx().cli_unstable().next_lockfile_bump;
     tracing::debug!("lockfile - current: {current_version:?}, default: {default_version:?}");
 
     if current_version < default_version {
@@ -79,7 +79,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
 
     // Ok, if that didn't work just write it out
     lock_root
-        .open_rw_exclusive_create("Cargo.lock", ws.config(), "Cargo.lock file")
+        .open_rw_exclusive_create("Cargo.lock", ws.gctx(), "Cargo.lock file")
         .and_then(|mut f| {
             f.file().set_len(0)?;
             f.write_all(out.as_bytes())?;
@@ -100,7 +100,7 @@ fn resolve_to_string_orig(
 ) -> (Option<String>, String, Filesystem) {
     // Load the original lock file if it exists.
     let lock_root = lock_root(ws);
-    let orig = lock_root.open_ro_shared("Cargo.lock", ws.config(), "Cargo.lock file");
+    let orig = lock_root.open_ro_shared("Cargo.lock", ws.gctx(), "Cargo.lock file");
     let orig = orig.and_then(|mut f| {
         let mut s = String::new();
         f.read_to_string(&mut s)?;
@@ -196,7 +196,7 @@ fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
     // If we want to try and avoid updating the lock file, parse both and
     // compare them; since this is somewhat expensive, don't do it in the
     // common case where we can update lock files.
-    if !ws.config().lock_update_allowed() {
+    if !ws.gctx().lock_update_allowed() {
         let res: CargoResult<bool> = (|| {
             let old: resolver::EncodableResolve = toml::from_str(orig)?;
             let new: resolver::EncodableResolve = toml::from_str(current)?;

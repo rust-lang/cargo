@@ -46,15 +46,11 @@ pub fn cli() -> Command {
         ))
 }
 
-pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
-    let ws = args.workspace(config)?;
+pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
+    let ws = args.workspace(gctx)?;
 
-    let mut compile_opts = args.compile_options(
-        config,
-        CompileMode::Build,
-        Some(&ws),
-        ProfileChecking::Custom,
-    )?;
+    let mut compile_opts =
+        args.compile_options(gctx, CompileMode::Build, Some(&ws), ProfileChecking::Custom)?;
 
     // Disallow `spec` to be an glob pattern
     if let Packages::Packages(opt_in) = &compile_opts.spec {
@@ -87,7 +83,7 @@ pub fn exec(config: &mut Config, args: &ArgMatches) -> CliResult {
         }
     };
 
-    ops::run(&ws, &compile_opts, &values_os(args, "args")).map_err(|err| to_run_error(config, err))
+    ops::run(&ws, &compile_opts, &values_os(args, "args")).map_err(|err| to_run_error(gctx, err))
 }
 
 /// See also `util/toml/mod.rs`s `is_embedded`
@@ -98,15 +94,15 @@ pub fn is_manifest_command(arg: &str) -> bool {
         || path.file_name() == Some(OsStr::new("Cargo.toml"))
 }
 
-pub fn exec_manifest_command(config: &mut Config, cmd: &str, args: &[OsString]) -> CliResult {
+pub fn exec_manifest_command(gctx: &mut GlobalContext, cmd: &str, args: &[OsString]) -> CliResult {
     let manifest_path = Path::new(cmd);
-    match (manifest_path.is_file(), config.cli_unstable().script) {
+    match (manifest_path.is_file(), gctx.cli_unstable().script) {
         (true, true) => {}
         (true, false) => {
             return Err(anyhow::anyhow!("running the file `{cmd}` requires `-Zscript`").into());
         }
         (false, true) => {
-            let possible_commands = crate::list_commands(config);
+            let possible_commands = crate::list_commands(gctx);
             let is_dir = if manifest_path.is_dir() {
                 format!("\n\t`{cmd}` is a directory")
             } else {
@@ -143,7 +139,7 @@ pub fn exec_manifest_command(config: &mut Config, cmd: &str, args: &[OsString]) 
         (false, false) => {
             // HACK: duplicating the above for minor tweaks but this will all go away on
             // stabilization
-            let possible_commands = crate::list_commands(config);
+            let possible_commands = crate::list_commands(gctx);
             let suggested_command = if let Some(suggested_command) = possible_commands
                 .keys()
                 .filter(|c| cmd.starts_with(c.as_str()))
@@ -174,25 +170,25 @@ pub fn exec_manifest_command(config: &mut Config, cmd: &str, args: &[OsString]) 
         }
     }
 
-    let manifest_path = root_manifest(Some(manifest_path), config)?;
+    let manifest_path = root_manifest(Some(manifest_path), gctx)?;
 
     // Treat `cargo foo.rs` like `cargo install --path foo` and re-evaluate the config based on the
     // location where the script resides, rather than the environment from where it's being run.
     let parent_path = manifest_path
         .parent()
         .expect("a file should always have a parent");
-    config.reload_rooted_at(parent_path)?;
+    gctx.reload_rooted_at(parent_path)?;
 
-    let mut ws = Workspace::new(&manifest_path, config)?;
-    if config.cli_unstable().avoid_dev_deps {
+    let mut ws = Workspace::new(&manifest_path, gctx)?;
+    if gctx.cli_unstable().avoid_dev_deps {
         ws.set_require_optional_deps(false);
     }
 
     let mut compile_opts =
-        cargo::ops::CompileOptions::new(config, cargo::core::compiler::CompileMode::Build)?;
+        cargo::ops::CompileOptions::new(gctx, cargo::core::compiler::CompileMode::Build)?;
     compile_opts.spec = cargo::ops::Packages::Default;
 
-    cargo::ops::run(&ws, &compile_opts, args).map_err(|err| to_run_error(config, err))
+    cargo::ops::run(&ws, &compile_opts, args).map_err(|err| to_run_error(gctx, err))
 }
 
 fn suggested_script(cmd: &str) -> Option<String> {
@@ -228,7 +224,7 @@ fn suggested_script(cmd: &str) -> Option<String> {
     }
 }
 
-fn to_run_error(config: &cargo::util::Config, err: anyhow::Error) -> CliError {
+fn to_run_error(gctx: &GlobalContext, err: anyhow::Error) -> CliError {
     let proc_err = match err.downcast_ref::<ProcessError>() {
         Some(e) => e,
         None => return CliError::new(err, 101),
@@ -244,7 +240,7 @@ fn to_run_error(config: &cargo::util::Config, err: anyhow::Error) -> CliError {
     // If `-q` was passed then we suppress extra error information about
     // a failed process, we assume the process itself printed out enough
     // information about why it failed so we don't do so as well
-    let is_quiet = config.shell().verbosity() == Verbosity::Quiet;
+    let is_quiet = gctx.shell().verbosity() == Verbosity::Quiet;
     if is_quiet {
         CliError::code(exit_code)
     } else {

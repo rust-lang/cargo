@@ -3,8 +3,8 @@ use crate::core::{PackageIdSpec, PackageIdSpecQuery, SourceId};
 use crate::ops::common_for_install_and_uninstall::*;
 use crate::sources::PathSource;
 use crate::util::errors::CargoResult;
-use crate::util::Config;
 use crate::util::Filesystem;
+use crate::util::GlobalContext;
 use anyhow::bail;
 use std::collections::BTreeSet;
 use std::env;
@@ -13,28 +13,28 @@ pub fn uninstall(
     root: Option<&str>,
     specs: Vec<&str>,
     bins: &[String],
-    config: &Config,
+    gctx: &GlobalContext,
 ) -> CargoResult<()> {
     if specs.len() > 1 && !bins.is_empty() {
         bail!("A binary can only be associated with a single installed package, specifying multiple specs with --bin is redundant.");
     }
 
-    let root = resolve_root(root, config)?;
+    let root = resolve_root(root, gctx)?;
     let scheduled_error = if specs.len() == 1 {
-        uninstall_one(&root, specs[0], bins, config)?;
+        uninstall_one(&root, specs[0], bins, gctx)?;
         false
     } else if specs.is_empty() {
-        uninstall_cwd(&root, bins, config)?;
+        uninstall_cwd(&root, bins, gctx)?;
         false
     } else {
         let mut succeeded = vec![];
         let mut failed = vec![];
         for spec in specs {
             let root = root.clone();
-            match uninstall_one(&root, spec, bins, config) {
+            match uninstall_one(&root, spec, bins, gctx) {
                 Ok(()) => succeeded.push(spec),
                 Err(e) => {
-                    crate::display_error(&e, &mut config.shell());
+                    crate::display_error(&e, &mut gctx.shell());
                     failed.push(spec)
                 }
             }
@@ -55,7 +55,7 @@ pub fn uninstall(
         }
 
         if !succeeded.is_empty() || !failed.is_empty() {
-            config.shell().status("Summary", summary.join(" "))?;
+            gctx.shell().status("Summary", summary.join(" "))?;
         }
 
         !failed.is_empty()
@@ -72,27 +72,27 @@ pub fn uninstall_one(
     root: &Filesystem,
     spec: &str,
     bins: &[String],
-    config: &Config,
+    gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let tracker = InstallTracker::load(config, root)?;
+    let tracker = InstallTracker::load(gctx, root)?;
     let all_pkgs = tracker.all_installed_bins().map(|(pkg_id, _set)| *pkg_id);
     let pkgid = PackageIdSpec::query_str(spec, all_pkgs)?;
-    uninstall_pkgid(root, tracker, pkgid, bins, config)
+    uninstall_pkgid(root, tracker, pkgid, bins, gctx)
 }
 
-fn uninstall_cwd(root: &Filesystem, bins: &[String], config: &Config) -> CargoResult<()> {
-    let tracker = InstallTracker::load(config, root)?;
-    let source_id = SourceId::for_path(config.cwd())?;
-    let mut src = path_source(source_id, config)?;
+fn uninstall_cwd(root: &Filesystem, bins: &[String], gctx: &GlobalContext) -> CargoResult<()> {
+    let tracker = InstallTracker::load(gctx, root)?;
+    let source_id = SourceId::for_path(gctx.cwd())?;
+    let mut src = path_source(source_id, gctx)?;
     let pkg = select_pkg(
         &mut src,
         None,
         |path: &mut PathSource<'_>| path.read_packages(),
-        config,
+        gctx,
         None,
     )?;
     let pkgid = pkg.package_id();
-    uninstall_pkgid(root, tracker, pkgid, bins, config)
+    uninstall_pkgid(root, tracker, pkgid, bins, gctx)
 }
 
 fn uninstall_pkgid(
@@ -100,7 +100,7 @@ fn uninstall_pkgid(
     mut tracker: InstallTracker,
     pkgid: PackageId,
     bins: &[String],
-    config: &Config,
+    gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let installed = match tracker.installed_bins(pkgid) {
         Some(bins) => bins.clone(),
@@ -145,7 +145,7 @@ fn uninstall_pkgid(
 
     for bin in to_remove {
         let bin_path = dst.join(&bin);
-        config.shell().status("Removing", bin_path.display())?;
+        gctx.shell().status("Removing", bin_path.display())?;
         tracker.remove_bin_then_save(pkgid, &bin, &bin_path)?;
     }
 

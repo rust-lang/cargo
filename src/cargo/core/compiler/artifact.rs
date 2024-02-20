@@ -1,7 +1,7 @@
 //! Generate artifact information from unit dependencies for configuring the compiler environment.
 
 use crate::core::compiler::unit_graph::UnitDep;
-use crate::core::compiler::{Context, CrateType, FileFlavor, Unit};
+use crate::core::compiler::{BuildRunner, CrateType, FileFlavor, Unit};
 use crate::core::dependency::ArtifactKind;
 use crate::core::{Dependency, Target, TargetKind};
 use crate::CargoResult;
@@ -11,12 +11,12 @@ use std::ffi::OsString;
 /// Return all environment variables for the given unit-dependencies
 /// if artifacts are present.
 pub fn get_env(
-    cx: &Context<'_, '_>,
+    build_runner: &BuildRunner<'_, '_>,
     dependencies: &[UnitDep],
 ) -> CargoResult<HashMap<String, OsString>> {
     let mut env = HashMap::new();
     for unit_dep in dependencies.iter().filter(|d| d.unit.artifact.is_true()) {
-        for artifact_path in cx
+        for artifact_path in build_runner
             .outputs(&unit_dep.unit)?
             .iter()
             .filter_map(|f| (f.flavor == FileFlavor::Normal).then(|| &f.path))

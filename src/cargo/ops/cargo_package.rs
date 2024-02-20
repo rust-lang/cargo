@@ -17,7 +17,7 @@ use crate::util::cache_lock::CacheLockMode;
 use crate::util::config::JobsConfig;
 use crate::util::errors::CargoResult;
 use crate::util::toml::{prepare_for_publish, to_real_manifest};
-use crate::util::{self, human_readable_bytes, restricted_names, Config, FileLock};
+use crate::util::{self, human_readable_bytes, restricted_names, FileLock, GlobalContext};
 use crate::{drop_println, ops};
 use anyhow::Context as _;
 use cargo_util::paths;
@@ -28,8 +28,8 @@ use tar::{Archive, Builder, EntryType, Header, HeaderMode};
 use tracing::debug;
 use unicase::Ascii as UncasedAscii;
 
-pub struct PackageOpts<'cfg> {
-    pub config: &'cfg Config,
+pub struct PackageOpts<'gctx> {
+    pub gctx: &'gctx GlobalContext,
     pub list: bool,
     pub check_metadata: bool,
     pub allow_dirty: bool,
@@ -87,16 +87,16 @@ pub fn package_one(
     pkg: &Package,
     opts: &PackageOpts<'_>,
 ) -> CargoResult<Option<FileLock>> {
-    let config = ws.config();
-    let mut src = PathSource::new(pkg.root(), pkg.package_id().source_id(), config);
+    let gctx = ws.gctx();
+    let mut src = PathSource::new(pkg.root(), pkg.package_id().source_id(), gctx);
     src.update()?;
 
     if opts.check_metadata {
-        check_metadata(pkg, config)?;
+        check_metadata(pkg, gctx)?;
     }
 
     if !pkg.manifest().exclude().is_empty() && !pkg.manifest().include().is_empty() {
-        config.shell().warn(
+        gctx.shell().warn(
             "both package.include and package.exclude are specified; \
              the exclude list will be ignored",
         )?;
@@ -107,7 +107,7 @@ pub fn package_one(
     // dirty.
     let vcs_info = if !opts.allow_dirty {
         // This will error if a dirty repo is found.
-        check_repo_state(pkg, &src_files, config)?
+        check_repo_state(pkg, &src_files, gctx)?
     } else {
         None
     };
@@ -118,7 +118,7 @@ pub fn package_one(
 
     if opts.list {
         for ar_file in ar_files {
-            drop_println!(config, "{}", ar_file.rel_str);
+            drop_println!(gctx, "{}", ar_file.rel_str);
         }
 
         return Ok(None);
@@ -133,15 +133,14 @@ pub fn package_one(
     let dir = ws.target_dir().join("package");
     let mut dst = {
         let tmp = format!(".{}", filename);
-        dir.open_rw_exclusive_create(&tmp, config, "package scratch space")?
+        dir.open_rw_exclusive_create(&tmp, gctx, "package scratch space")?
     };
 
     // Package up and test a temporary tarball and only move it to the final
     // location if it actually passes all our tests. Any previously existing
     // tarball can be assumed as corrupt or invalid, so we just blow it away if
     // it exists.
-    config
-        .shell()
+    gctx.shell()
         .status("Packaging", pkg.package_id().to_string())?;
     dst.file().set_len(0)?;
     let uncompressed_size = tar(ws, pkg, ar_files, dst.file(), &filename)
@@ -171,7 +170,7 @@ pub fn package_one(
         filecount, uncompressed.0, uncompressed.1, compressed.0, compressed.1,
     );
     // It doesn't really matter if this fails.
-    drop(config.shell().status("Packaged", message));
+    drop(gctx.shell().status("Packaged", message));
 
     return Ok(Some(dst));
 }
@@ -196,7 +195,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
             ws,
             pkg,
             &PackageOpts {
-                config: opts.config,
+                gctx: opts.gctx,
                 list: opts.list,
                 check_metadata: opts.check_metadata,
                 allow_dirty: opts.allow_dirty,
@@ -234,7 +233,7 @@ fn build_ar_list(
 
     for src_file in &src_files {
         let rel_path = src_file.strip_prefix(&root)?;
-        check_filename(rel_path, &mut ws.config().shell())?;
+        check_filename(rel_path, &mut ws.gctx().shell())?;
         let rel_str = rel_path.to_str().ok_or_else(|| {
             anyhow::format_err!("non-utf8 path in source directory: {}", rel_path.display())
         })?;
@@ -277,7 +276,7 @@ fn build_ar_list(
                 contents: FileContents::Generated(GeneratedFile::Manifest),
             });
     } else {
-        ws.config().shell().warn(&format!(
+        ws.gctx().shell().warn(&format!(
             "no `Cargo.toml` file found when packaging `{}` (note the case of the file name).",
             pkg.name()
         ))?;
@@ -379,7 +378,7 @@ fn check_for_file_and_add(
             // The file exists somewhere outside of the package.
             let file_name = file_path.file_name().unwrap();
             if result.iter().any(|ar| ar.rel_path == file_name) {
-                ws.config().shell().warn(&format!(
+                ws.gctx().shell().warn(&format!(
                     "{} `{}` appears to be a path outside of the package, \
                             but there is already a file named `{}` in the root of the package. \
                             The archived crate will contain the copy in the root of the package. \
@@ -413,7 +412,7 @@ fn warn_on_nonexistent_file(
     } else {
         format!(" (relative to `{}`)", pkg.root().display())
     };
-    ws.config().shell().warn(&format!(
+    ws.gctx().shell().warn(&format!(
         "{manifest_key_name} `{}` does not appear to exist{}.\n\
                 Please update the {manifest_key_name} setting in the manifest at `{}`\n\
                 This may become a hard error in the future.",
@@ -450,7 +449,7 @@ fn error_custom_build_file_not_in_package(
 
 /// Construct `Cargo.lock` for the package to be published.
 fn build_lock(ws: &Workspace<'_>, orig_pkg: &Package) -> CargoResult<String> {
-    let config = ws.config();
+    let gctx = ws.gctx();
     let orig_resolve = ops::load_pkg_lockfile(ws)?;
 
     // Convert Package -> TomlManifest -> Manifest -> Package
@@ -458,12 +457,12 @@ fn build_lock(ws: &Workspace<'_>, orig_pkg: &Package) -> CargoResult<String> {
     let package_root = orig_pkg.root();
     let source_id = orig_pkg.package_id().source_id();
     let (manifest, _nested_paths) =
-        to_real_manifest(toml_manifest, false, source_id, package_root, config)?;
+        to_real_manifest(toml_manifest, false, source_id, package_root, gctx)?;
     let new_pkg = Package::new(manifest, orig_pkg.manifest_path());
 
     // Regenerate Cargo.lock using the old one as a guide.
-    let tmp_ws = Workspace::ephemeral(new_pkg, ws.config(), None, true)?;
-    let mut tmp_reg = PackageRegistry::new(ws.config())?;
+    let tmp_ws = Workspace::ephemeral(new_pkg, ws.gctx(), None, true)?;
+    let mut tmp_reg = PackageRegistry::new(ws.gctx())?;
     let mut new_resolve = ops::resolve_with_previous(
         &mut tmp_reg,
         &tmp_ws,
@@ -477,10 +476,10 @@ fn build_lock(ws: &Workspace<'_>, orig_pkg: &Package) -> CargoResult<String> {
     let pkg_set = ops::get_resolved_packages(&new_resolve, tmp_reg)?;
 
     if let Some(orig_resolve) = orig_resolve {
-        compare_resolve(config, tmp_ws.current()?, &orig_resolve, &new_resolve)?;
+        compare_resolve(gctx, tmp_ws.current()?, &orig_resolve, &new_resolve)?;
     }
     check_yanked(
-        config,
+        gctx,
         &pkg_set,
         &new_resolve,
         "consider updating to a version that is not yanked",
@@ -491,7 +490,7 @@ fn build_lock(ws: &Workspace<'_>, orig_pkg: &Package) -> CargoResult<String> {
 
 // Checks that the package has some piece of metadata that a human can
 // use to tell what the package is about.
-fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
+fn check_metadata(pkg: &Package, gctx: &GlobalContext) -> CargoResult<()> {
     let md = pkg.manifest().metadata();
 
     let mut missing = vec![];
@@ -520,7 +519,7 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
         }
         things.push_str(missing.last().unwrap());
 
-        config.shell().warn(&format!(
+        gctx.shell().warn(&format!(
             "manifest has no {things}.\n\
              See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.",
             things = things
@@ -537,7 +536,7 @@ fn check_metadata(pkg: &Package, config: &Config) -> CargoResult<()> {
 fn check_repo_state(
     p: &Package,
     src_files: &[PathBuf],
-    config: &Config,
+    gctx: &GlobalContext,
 ) -> CargoResult<Option<VcsInfo>> {
     if let Ok(repo) = git2::Repository::discover(p.root()) {
         if let Some(workdir) = repo.workdir() {
@@ -561,7 +560,7 @@ fn check_repo_state(
                     }));
                 }
             }
-            config.shell().verbose(|shell| {
+            gctx.shell().verbose(|shell| {
                 shell.warn(format!(
                     "no (git) Cargo.toml found at `{}` in workdir `{}`",
                     path.display(),
@@ -570,7 +569,7 @@ fn check_repo_state(
             })?;
         }
     } else {
-        config.shell().verbose(|shell| {
+        gctx.shell().verbose(|shell| {
             shell.warn(format!("no (git) VCS found for `{}`", p.root().display()))
         })?;
     }
@@ -689,7 +688,7 @@ fn tar(
 
     // Put all package files into a compressed archive.
     let mut ar = Builder::new(encoder);
-    let config = ws.config();
+    let gctx = ws.gctx();
 
     let base_name = format!("{}-{}", pkg.name(), pkg.version());
     let base_path = Path::new(&base_name);
@@ -702,8 +701,7 @@ fn tar(
             contents,
         } = ar_file;
         let ar_path = base_path.join(&rel_path);
-        config
-            .shell()
+        gctx.shell()
             .verbose(|shell| shell.status("Archiving", &rel_str))?;
         let mut header = Header::new_gnu();
         match contents {
@@ -748,12 +746,12 @@ fn tar(
 
 /// Generate warnings when packaging Cargo.lock, and the resolve have changed.
 fn compare_resolve(
-    config: &Config,
+    gctx: &GlobalContext,
     current_pkg: &Package,
     orig_resolve: &Resolve,
     new_resolve: &Resolve,
 ) -> CargoResult<()> {
-    if config.shell().verbosity() != Verbosity::Verbose {
+    if gctx.shell().verbosity() != Verbosity::Verbose {
         return Ok(());
     }
     let new_set: BTreeSet<PackageId> = new_resolve.iter().collect();
@@ -828,20 +826,20 @@ fn compare_resolve(
             "package `{}` added to the packaged Cargo.lock file{}",
             pkg_id, extra
         );
-        config.shell().note(msg)?;
+        gctx.shell().note(msg)?;
     }
     Ok(())
 }
 
 pub fn check_yanked(
-    config: &Config,
+    gctx: &GlobalContext,
     pkg_set: &PackageSet<'_>,
     resolve: &Resolve,
     hint: &str,
 ) -> CargoResult<()> {
     // Checking the yanked status involves taking a look at the registry and
     // maybe updating files, so be sure to lock it here.
-    let _lock = config.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
+    let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
     let mut sources = pkg_set.sources_mut();
     let mut pending: Vec<PackageId> = resolve.iter().collect();
@@ -866,7 +864,7 @@ pub fn check_yanked(
 
     for (pkg_id, is_yanked) in results {
         if is_yanked? {
-            config.shell().warn(format!(
+            gctx.shell().warn(format!(
                 "package `{}` in Cargo.lock is yanked in registry `{}`, {}",
                 pkg_id,
                 pkg_id.source_id().display_registry_name(),
@@ -883,9 +881,9 @@ fn run_verify(
     tar: &FileLock,
     opts: &PackageOpts<'_>,
 ) -> CargoResult<()> {
-    let config = ws.config();
+    let gctx = ws.gctx();
 
-    config.shell().status("Verifying", pkg)?;
+    gctx.shell().status("Verifying", pkg)?;
 
     let f = GzDecoder::new(tar.file());
     let dst = tar
@@ -903,10 +901,10 @@ fn run_verify(
     // Manufacture an ephemeral workspace to ensure that even if the top-level
     // package has a workspace we can still build our new crate.
     let id = SourceId::for_path(&dst)?;
-    let mut src = PathSource::new(&dst, id, ws.config());
+    let mut src = PathSource::new(&dst, id, ws.gctx());
     let new_pkg = src.root_package()?;
     let pkg_fingerprint = hash_all(&dst)?;
-    let ws = Workspace::ephemeral(new_pkg, config, None, true)?;
+    let ws = Workspace::ephemeral(new_pkg, gctx, None, true)?;
 
     let rustc_args = if pkg
         .manifest()
@@ -926,7 +924,7 @@ fn run_verify(
         &ws,
         &ops::CompileOptions {
             build_config: BuildConfig::new(
-                config,
+                gctx,
                 opts.jobs.clone(),
                 opts.keep_going,
                 &opts.targets,

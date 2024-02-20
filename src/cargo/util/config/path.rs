@@ -1,4 +1,4 @@
-use super::{Config, UnmergedStringList, Value};
+use super::{GlobalContext, UnmergedStringList, Value};
 use serde::{de::Error, Deserialize};
 use std::path::PathBuf;
 
@@ -28,8 +28,8 @@ impl ConfigRelativePath {
     ///
     /// This will always return an absolute path where it's relative to the
     /// location for configuration for this value.
-    pub fn resolve_path(&self, config: &Config) -> PathBuf {
-        self.0.definition.root(config).join(&self.0.val)
+    pub fn resolve_path(&self, gctx: &GlobalContext) -> PathBuf {
+        self.0.definition.root(gctx).join(&self.0.val)
     }
 
     /// Resolves this configuration-relative path to either an absolute path or
@@ -38,8 +38,8 @@ impl ConfigRelativePath {
     /// Values which don't look like a filesystem path (don't contain `/` or
     /// `\`) will be returned as-is, and everything else will fall through to an
     /// absolute path.
-    pub fn resolve_program(&self, config: &Config) -> PathBuf {
-        config.string_to_path(&self.0.val, &self.0.definition)
+    pub fn resolve_program(&self, gctx: &GlobalContext) -> PathBuf {
+        gctx.string_to_path(&self.0.val, &self.0.definition)
     }
 }
 

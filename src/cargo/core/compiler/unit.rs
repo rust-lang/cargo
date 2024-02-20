@@ -7,7 +7,7 @@ use crate::core::profiles::Profile;
 use crate::core::Package;
 use crate::util::hex::short_hash;
 use crate::util::interning::InternedString;
-use crate::util::Config;
+use crate::util::GlobalContext;
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::fmt;
@@ -104,8 +104,8 @@ impl UnitInner {
     }
 
     /// Returns whether or not warnings should be displayed for this unit.
-    pub fn show_warnings(&self, config: &Config) -> bool {
-        self.is_local() || config.extra_verbose()
+    pub fn show_warnings(&self, gctx: &GlobalContext) -> bool {
+        self.is_local() || gctx.extra_verbose()
     }
 }
 

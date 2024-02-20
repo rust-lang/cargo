@@ -6,8 +6,8 @@ use crate::sources::source::Source;
 use crate::sources::{DirectorySource, CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::sources::{GitSource, PathSource, RegistrySource};
 use crate::util::interning::InternedString;
-use crate::util::{config, CanonicalUrl, CargoResult, Config, IntoUrl};
-use anyhow::Context;
+use crate::util::{config, CanonicalUrl, CargoResult, GlobalContext, IntoUrl};
+use anyhow::Context as _;
 use serde::de;
 use serde::ser;
 use std::cmp::{self, Ordering};
@@ -249,26 +249,26 @@ impl SourceId {
     ///
     /// This is the main cargo registry by default, but it can be overridden in
     /// a `.cargo/config.toml`.
-    pub fn crates_io(config: &Config) -> CargoResult<SourceId> {
-        config.crates_io_source_id()
+    pub fn crates_io(gctx: &GlobalContext) -> CargoResult<SourceId> {
+        gctx.crates_io_source_id()
     }
 
     /// Returns the `SourceId` corresponding to the main repository, using the
     /// sparse HTTP index if allowed.
-    pub fn crates_io_maybe_sparse_http(config: &Config) -> CargoResult<SourceId> {
-        if Self::crates_io_is_sparse(config)? {
-            config.check_registry_index_not_set()?;
+    pub fn crates_io_maybe_sparse_http(gctx: &GlobalContext) -> CargoResult<SourceId> {
+        if Self::crates_io_is_sparse(gctx)? {
+            gctx.check_registry_index_not_set()?;
             let url = CRATES_IO_HTTP_INDEX.into_url().unwrap();
             let key = KeyOf::Registry(CRATES_IO_REGISTRY.into());
             SourceId::new(SourceKind::SparseRegistry, url, Some(key))
         } else {
-            Self::crates_io(config)
+            Self::crates_io(gctx)
         }
     }
 
     /// Returns whether to access crates.io over the sparse protocol.
-    pub fn crates_io_is_sparse(config: &Config) -> CargoResult<bool> {
-        let proto: Option<config::Value<String>> = config.get("registries.crates-io.protocol")?;
+    pub fn crates_io_is_sparse(gctx: &GlobalContext) -> CargoResult<bool> {
+        let proto: Option<config::Value<String>> = gctx.get("registries.crates-io.protocol")?;
         let is_sparse = match proto.as_ref().map(|v| v.val.as_str()) {
             Some("sparse") => true,
             Some("git") => false,
@@ -282,11 +282,11 @@ impl SourceId {
     }
 
     /// Gets the `SourceId` associated with given name of the remote registry.
-    pub fn alt_registry(config: &Config, key: &str) -> CargoResult<SourceId> {
+    pub fn alt_registry(gctx: &GlobalContext, key: &str) -> CargoResult<SourceId> {
         if key == CRATES_IO_REGISTRY {
-            return Self::crates_io(config);
+            return Self::crates_io(gctx);
         }
-        let url = config.get_registry_index(key)?;
+        let url = gctx.get_registry_index(key)?;
         Self::for_alt_registry(&url, key)
     }
 
@@ -381,22 +381,22 @@ impl SourceId {
     /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.
     pub fn load<'a>(
         self,
-        config: &'a Config,
+        gctx: &'a GlobalContext,
         yanked_whitelist: &HashSet<PackageId>,
     ) -> CargoResult<Box<dyn Source + 'a>> {
         trace!("loading SourceId; {}", self);
         match self.inner.kind {
-            SourceKind::Git(..) => Ok(Box::new(GitSource::new(self, config)?)),
+            SourceKind::Git(..) => Ok(Box::new(GitSource::new(self, gctx)?)),
             SourceKind::Path => {
                 let path = self
                     .inner
                     .url
                     .to_file_path()
                     .expect("path sources cannot be remote");
-                Ok(Box::new(PathSource::new(&path, self, config)))
+                Ok(Box::new(PathSource::new(&path, self, gctx)))
             }
             SourceKind::Registry | SourceKind::SparseRegistry => Ok(Box::new(
-                RegistrySource::remote(self, yanked_whitelist, config)?,
+                RegistrySource::remote(self, yanked_whitelist, gctx)?,
             )),
             SourceKind::LocalRegistry => {
                 let path = self
@@ -408,7 +408,7 @@ impl SourceId {
                     self,
                     &path,
                     yanked_whitelist,
-                    config,
+                    gctx,
                 )))
             }
             SourceKind::Directory => {
@@ -417,7 +417,7 @@ impl SourceId {
                     .url
                     .to_file_path()
                     .expect("path sources cannot be remote");
-                Ok(Box::new(DirectorySource::new(&path, self, config)))
+                Ok(Box::new(DirectorySource::new(&path, self, gctx)))
             }
         }
     }
@@ -754,7 +754,7 @@ impl KeyOf {
 #[cfg(test)]
 mod tests {
     use super::{GitReference, SourceId, SourceKind};
-    use crate::util::{Config, IntoUrl};
+    use crate::util::{GlobalContext, IntoUrl};
 
     #[test]
     fn github_sources_equal() {
@@ -792,8 +792,8 @@ mod tests {
     #[test]
     #[cfg(all(target_endian = "little", target_pointer_width = "64"))]
     fn test_cratesio_hash() {
-        let config = Config::default().unwrap();
-        let crates_io = SourceId::crates_io(&config).unwrap();
+        let gctx = GlobalContext::default().unwrap();
+        let crates_io = SourceId::crates_io(&gctx).unwrap();
         assert_eq!(crate::util::hex::short_hash(&crates_io), "1ecc6299db9ec823");
     }
 

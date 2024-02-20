@@ -7,21 +7,21 @@ use crate::core::{EitherManifest, Package, PackageId, SourceId};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_project_manifest_exact;
 use crate::util::toml::read_manifest;
-use crate::util::Config;
+use crate::util::GlobalContext;
 use cargo_util::paths;
 use tracing::{info, trace};
 
 pub fn read_package(
     path: &Path,
     source_id: SourceId,
-    config: &Config,
+    gctx: &GlobalContext,
 ) -> CargoResult<(Package, Vec<PathBuf>)> {
     trace!(
         "read_package; path={}; source-id={}",
         path.display(),
         source_id
     );
-    let (manifest, nested) = read_manifest(path, source_id, config)?;
+    let (manifest, nested) = read_manifest(path, source_id, gctx)?;
     let manifest = match manifest {
         EitherManifest::Real(manifest) => manifest,
         EitherManifest::Virtual(..) => anyhow::bail!(
@@ -37,7 +37,7 @@ pub fn read_package(
 pub fn read_packages(
     path: &Path,
     source_id: SourceId,
-    config: &Config,
+    gctx: &GlobalContext,
 ) -> CargoResult<Vec<Package>> {
     let mut all_packages = HashMap::new();
     let mut visited = HashSet::<PathBuf>::new();
@@ -77,7 +77,7 @@ pub fn read_packages(
                 dir,
                 &mut all_packages,
                 source_id,
-                config,
+                gctx,
                 &mut visited,
                 &mut errors,
             )?;
@@ -141,7 +141,7 @@ fn read_nested_packages(
     path: &Path,
     all_packages: &mut HashMap<PackageId, Package>,
     source_id: SourceId,
-    config: &Config,
+    gctx: &GlobalContext,
     visited: &mut HashSet<PathBuf>,
     errors: &mut Vec<anyhow::Error>,
 ) -> CargoResult<()> {
@@ -151,7 +151,7 @@ fn read_nested_packages(
 
     let manifest_path = find_project_manifest_exact(path, "Cargo.toml")?;
 
-    let (manifest, nested) = match read_manifest(&manifest_path, source_id, config) {
+    let (manifest, nested) = match read_manifest(&manifest_path, source_id, gctx) {
         Err(err) => {
             // Ignore malformed manifests found on git repositories
             //
@@ -187,7 +187,7 @@ fn read_nested_packages(
             // by users so we can hide the warning about those since the user is unlikely
             // to care about those cases.
             if pkg.publish().is_none() {
-                let _ = config.shell().warn(format!(
+                let _ = gctx.shell().warn(format!(
                     "skipping duplicate package `{}` found at `{}`",
                     pkg.name(),
                     path.display()
@@ -208,7 +208,7 @@ fn read_nested_packages(
         for p in nested.iter() {
             let path = paths::normalize_path(&path.join(p));
             let result =
-                read_nested_packages(&path, all_packages, source_id, config, visited, errors);
+                read_nested_packages(&path, all_packages, source_id, gctx, visited, errors);
             // Ignore broken manifests found on git repositories.
             //
             // A well formed manifest might still fail to load due to reasons
