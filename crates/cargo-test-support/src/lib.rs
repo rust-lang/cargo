@@ -13,7 +13,6 @@ use std::fs;
 use std::os;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
-use std::str;
 use std::sync::OnceLock;
 use std::thread::JoinHandle;
 use std::time::{self, Duration};
@@ -36,6 +35,7 @@ macro_rules! t {
 
 pub use snapbox::file;
 pub use snapbox::path::current_dir;
+pub use snapbox::str;
 
 #[track_caller]
 pub fn panic_error(what: &str, err: impl Into<anyhow::Error>) -> ! {
@@ -972,8 +972,8 @@ impl Execs {
 
     fn match_output(&self, code: Option<i32>, stdout: &[u8], stderr: &[u8]) -> Result<()> {
         self.verify_checks_output(stdout, stderr);
-        let stdout = str::from_utf8(stdout).expect("stdout is not utf8");
-        let stderr = str::from_utf8(stderr).expect("stderr is not utf8");
+        let stdout = std::str::from_utf8(stdout).expect("stdout is not utf8");
+        let stderr = std::str::from_utf8(stderr).expect("stderr is not utf8");
         let cwd = self.get_cwd();
 
         match self.expect_exit_code {
@@ -1211,7 +1211,7 @@ pub trait TestEnv: Sized {
                     .exec_with_output()
                 {
                     Ok(output) => {
-                        let s = str::from_utf8(&output.stdout).expect("utf8").trim();
+                        let s = std::str::from_utf8(&output.stdout).expect("utf8").trim();
                         let mut p = PathBuf::from(s);
                         p.pop();
                         p
