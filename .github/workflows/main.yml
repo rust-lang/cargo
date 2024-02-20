@@ -156,6 +156,10 @@ jobs:
     - uses: actions/checkout@v4
     - name: Dump Environment
       run: ci/dump-environment.sh
+    # Some tests require stable. Make sure it is set to the most recent stable
+    # so that we can predictably handle updates if necessary (and not randomly
+    # when GitHub updates its image).
+    - run: rustup update --no-self-update stable
     - run: rustup update --no-self-update ${{ matrix.rust }} && rustup default ${{ matrix.rust }}
     - run: rustup target add ${{ matrix.other }}
     - run: rustup component add rustc-dev llvm-tools-preview rust-docs
