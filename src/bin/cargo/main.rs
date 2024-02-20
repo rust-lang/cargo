@@ -20,6 +20,7 @@ fn main() {
     setup_logger();
 
     let mut lazy_gctx = cli::LazyContext::new();
+    lazy_gctx.get();
 
     let result = if let Some(lock_addr) = cargo::ops::fix_get_proxy_lock_addr() {
         cargo::ops::fix_exec_rustc(lazy_gctx.get(), &lock_addr).map_err(|e| CliError::from(e))

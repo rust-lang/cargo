@@ -565,6 +565,25 @@ impl GlobalContext {
         self.search_stop_path = Some(path);
     }
 
+    /// Switches the working directory to [`std::env::current_dir`]
+    ///
+    /// There is not a need to also call [`Self::reload_rooted_at`].
+    pub fn reload_cwd(&mut self) -> CargoResult<()> {
+        let cwd = env::current_dir()
+            .with_context(|| "couldn't get the current directory of the process")?;
+        let homedir = homedir(&cwd).ok_or_else(|| {
+            anyhow!(
+                "Cargo couldn't find your home directory. \
+                 This probably means that $HOME was not set."
+            )
+        })?;
+
+        self.cwd = cwd;
+        self.home_path = Filesystem::new(homedir);
+        self.reload_rooted_at(self.cwd.clone())?;
+        Ok(())
+    }
+
     /// Reloads on-disk configuration values, starting at the given path and
     /// walking up its ancestors.
     pub fn reload_rooted_at<P: AsRef<Path>>(&mut self, path: P) -> CargoResult<()> {

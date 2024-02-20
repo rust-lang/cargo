@@ -19,8 +19,6 @@ pub fn main(lazy_gctx: &mut LazyContext) -> CliResult {
     let args = cli().try_get_matches()?;
 
     // Update the process-level notion of cwd
-    // This must be completed before config is initialized
-    assert_eq!(lazy_gctx.is_init(), false);
     if let Some(new_cwd) = args.get_one::<std::path::PathBuf>("directory") {
         // This is a temporary hack. This cannot access `Config`, so this is a bit messy.
         // This does not properly parse `-Z` flags that appear after the subcommand.
@@ -40,6 +38,7 @@ pub fn main(lazy_gctx: &mut LazyContext) -> CliResult {
             .into());
         }
         std::env::set_current_dir(&new_cwd).context("could not change to requested directory")?;
+        lazy_gctx.get_mut().reload_cwd()?;
     }
 
     // CAUTION: Be careful with using `config` until it is configured below.
@@ -659,13 +658,6 @@ pub struct LazyContext {
 impl LazyContext {
     pub fn new() -> Self {
         Self { gctx: None }
-    }
-
-    /// Check whether the config is loaded
-    ///
-    /// This is useful for asserts in case the environment needs to be setup before loading
-    pub fn is_init(&self) -> bool {
-        self.gctx.is_some()
     }
 
     /// Get the config, loading it if needed
