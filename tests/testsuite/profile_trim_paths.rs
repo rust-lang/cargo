@@ -1,12 +1,10 @@
 //! Tests for `-Ztrim-paths`.
 
 use cargo_test_support::basic_manifest;
-use cargo_test_support::compare::match_contains;
 use cargo_test_support::git;
 use cargo_test_support::paths;
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
-use cargo_util::is_ci;
 
 #[cargo_test]
 fn gated_manifest() {
@@ -696,6 +694,9 @@ fn custom_build_env_var_trim_paths() {
 #[cfg(unix)]
 #[cargo_test(requires_lldb, nightly, reason = "-Zremap-path-scope is unstable")]
 fn lldb_works_after_trimmed() {
+    use cargo_test_support::compare::match_contains;
+    use cargo_util::is_ci;
+
     if !is_ci() {
         // On macOS lldb requires elevated privileges to run developer tools.
         // See rust-lang/cargo#13413
