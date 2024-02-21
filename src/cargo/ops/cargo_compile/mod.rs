@@ -5,7 +5,7 @@
 //! rough outline is:
 //!
 //! 1. Resolve the dependency graph (see [`ops::resolve`]).
-//! 2. Download any packages needed (see [`PackageSet`].
+//! 2. Download any packages needed (see [`PackageSet`]).
 //! 3. Generate a list of top-level "units" of work for the targets the user
 //!   requested on the command-line. Each [`Unit`] corresponds to a compiler
 //!   invocation. This is done in this module ([`UnitGenerator::generate_root_units`]).
