@@ -9,44 +9,6 @@ use crate::util::errors::CargoResult;
 use crate::util::hostname;
 use crate::util::style::*;
 
-pub enum TtyWidth {
-    NoTty,
-    Known(usize),
-    Guess(usize),
-}
-
-impl TtyWidth {
-    /// Returns the width of the terminal to use for diagnostics (which is
-    /// relayed to rustc via `--diagnostic-width`).
-    pub fn diagnostic_terminal_width(&self) -> Option<usize> {
-        // ALLOWED: For testing cargo itself only.
-        #[allow(clippy::disallowed_methods)]
-        if let Ok(width) = std::env::var("__CARGO_TEST_TTY_WIDTH_DO_NOT_USE_THIS") {
-            return Some(width.parse().unwrap());
-        }
-        match *self {
-            TtyWidth::NoTty | TtyWidth::Guess(_) => None,
-            TtyWidth::Known(width) => Some(width),
-        }
-    }
-
-    /// Returns the width used by progress bars for the tty.
-    pub fn progress_max_width(&self) -> Option<usize> {
-        match *self {
-            TtyWidth::NoTty => None,
-            TtyWidth::Known(width) | TtyWidth::Guess(width) => Some(width),
-        }
-    }
-}
-
-/// The requested verbosity of output.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Verbosity {
-    Verbose,
-    Normal,
-    Quiet,
-}
-
 /// An abstraction around console output that remembers preferences for output
 /// verbosity and color.
 pub struct Shell {
@@ -75,31 +37,6 @@ impl fmt::Debug for Shell {
                 .finish(),
         }
     }
-}
-
-/// A `Write`able object, either with or without color support
-enum ShellOut {
-    /// A plain write object without color support
-    Write(AutoStream<Box<dyn Write>>),
-    /// Color-enabled stdio, with information on whether color should be used
-    Stream {
-        stdout: AutoStream<std::io::Stdout>,
-        stderr: AutoStream<std::io::Stderr>,
-        stderr_tty: bool,
-        color_choice: ColorChoice,
-        hyperlinks: bool,
-    },
-}
-
-/// Whether messages should use color output
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum ColorChoice {
-    /// Force color output
-    Always,
-    /// Force disable color output
-    Never,
-    /// Intelligently guess whether to use color output
-    CargoAuto,
 }
 
 impl Shell {
@@ -299,18 +236,10 @@ impl Shell {
             ..
         } = self.output
         {
-            let cfg = match color {
-                Some("always") => ColorChoice::Always,
-                Some("never") => ColorChoice::Never,
-
-                Some("auto") | None => ColorChoice::CargoAuto,
-
-                Some(arg) => anyhow::bail!(
-                    "argument for --color must be auto, always, or \
-                     never, but found `{}`",
-                    arg
-                ),
-            };
+            let cfg = color
+                .map(|c| c.parse())
+                .transpose()?
+                .unwrap_or(ColorChoice::CargoAuto);
             *color_choice = cfg;
             let stdout_choice = cfg.to_anstream_color_choice();
             let stderr_choice = cfg.to_anstream_color_choice();
@@ -444,6 +373,20 @@ impl Default for Shell {
     }
 }
 
+/// A `Write`able object, either with or without color support
+enum ShellOut {
+    /// A plain write object without color support
+    Write(AutoStream<Box<dyn Write>>),
+    /// Color-enabled stdio, with information on whether color should be used
+    Stream {
+        stdout: AutoStream<std::io::Stdout>,
+        stderr: AutoStream<std::io::Stderr>,
+        stderr_tty: bool,
+        color_choice: ColorChoice,
+        hyperlinks: bool,
+    },
+}
+
 impl ShellOut {
     /// Prints out a message with a status. The status comes first, and is bold plus the given
     /// color. The status can be justified, in which case the max width that will right align is
@@ -488,6 +431,55 @@ impl ShellOut {
     }
 }
 
+pub enum TtyWidth {
+    NoTty,
+    Known(usize),
+    Guess(usize),
+}
+
+impl TtyWidth {
+    /// Returns the width of the terminal to use for diagnostics (which is
+    /// relayed to rustc via `--diagnostic-width`).
+    pub fn diagnostic_terminal_width(&self) -> Option<usize> {
+        // ALLOWED: For testing cargo itself only.
+        #[allow(clippy::disallowed_methods)]
+        if let Ok(width) = std::env::var("__CARGO_TEST_TTY_WIDTH_DO_NOT_USE_THIS") {
+            return Some(width.parse().unwrap());
+        }
+        match *self {
+            TtyWidth::NoTty | TtyWidth::Guess(_) => None,
+            TtyWidth::Known(width) => Some(width),
+        }
+    }
+
+    /// Returns the width used by progress bars for the tty.
+    pub fn progress_max_width(&self) -> Option<usize> {
+        match *self {
+            TtyWidth::NoTty => None,
+            TtyWidth::Known(width) | TtyWidth::Guess(width) => Some(width),
+        }
+    }
+}
+
+/// The requested verbosity of output.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Verbosity {
+    Verbose,
+    Normal,
+    Quiet,
+}
+
+/// Whether messages should use color output
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum ColorChoice {
+    /// Force color output
+    Always,
+    /// Force disable color output
+    Never,
+    /// Intelligently guess whether to use color output
+    CargoAuto,
+}
+
 impl ColorChoice {
     /// Converts our color choice to anstream's version.
     fn to_anstream_color_choice(self) -> anstream::ColorChoice {
@@ -496,6 +488,25 @@ impl ColorChoice {
             ColorChoice::Never => anstream::ColorChoice::Never,
             ColorChoice::CargoAuto => anstream::ColorChoice::Auto,
         }
+    }
+}
+
+impl std::str::FromStr for ColorChoice {
+    type Err = anyhow::Error;
+    fn from_str(color: &str) -> Result<Self, Self::Err> {
+        let cfg = match color {
+            "always" => ColorChoice::Always,
+            "never" => ColorChoice::Never,
+
+            "auto" => ColorChoice::CargoAuto,
+
+            arg => anyhow::bail!(
+                "argument for --color must be auto, always, or \
+                     never, but found `{}`",
+                arg
+            ),
+        };
+        Ok(cfg)
     }
 }
 

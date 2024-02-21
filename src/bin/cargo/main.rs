@@ -1,5 +1,6 @@
 #![allow(clippy::self_named_module_files)] // false positive in `commands/build.rs`
 
+use cargo::core::shell::Shell;
 use cargo::util::network::http::http_handle;
 use cargo::util::network::http::needs_custom_http_transport;
 use cargo::util::{self, closest_msg, command_prelude, CargoResult};
@@ -19,17 +20,23 @@ use crate::command_prelude::*;
 fn main() {
     setup_logger();
 
-    let mut lazy_gctx = cli::LazyContext::new();
+    let mut gctx = match GlobalContext::default() {
+        Ok(gctx) => gctx,
+        Err(e) => {
+            let mut shell = Shell::new();
+            cargo::exit_with_error(e.into(), &mut shell)
+        }
+    };
 
     let result = if let Some(lock_addr) = cargo::ops::fix_get_proxy_lock_addr() {
-        cargo::ops::fix_exec_rustc(lazy_gctx.get(), &lock_addr).map_err(|e| CliError::from(e))
+        cargo::ops::fix_exec_rustc(&gctx, &lock_addr).map_err(|e| CliError::from(e))
     } else {
         let _token = cargo::util::job::setup();
-        cli::main(&mut lazy_gctx)
+        cli::main(&mut gctx)
     };
 
     match result {
-        Err(e) => cargo::exit_with_error(e, &mut lazy_gctx.get_mut().shell()),
+        Err(e) => cargo::exit_with_error(e, &mut *gctx.shell()),
         Ok(()) => {}
     }
 }

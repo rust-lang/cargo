@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Context as _};
-use cargo::core::shell::Shell;
 use cargo::core::{features, CliUnstable};
+use cargo::util::config::TermConfig;
 use cargo::{drop_print, drop_println, CargoResult};
 use clap::builder::UnknownArgumentValueParser;
 use itertools::Itertools;
@@ -13,14 +13,17 @@ use super::commands;
 use super::list_commands;
 use crate::command_prelude::*;
 use crate::util::is_rustup;
+use cargo::core::shell::ColorChoice;
 use cargo::util::style;
 
-pub fn main(lazy_gctx: &mut LazyContext) -> CliResult {
-    let args = cli().try_get_matches()?;
+pub fn main(gctx: &mut GlobalContext) -> CliResult {
+    // CAUTION: Be careful with using `config` until it is configured below.
+    // In general, try to avoid loading config values unless necessary (like
+    // the [alias] table).
+
+    let args = cli(gctx).try_get_matches()?;
 
     // Update the process-level notion of cwd
-    // This must be completed before config is initialized
-    assert_eq!(lazy_gctx.is_init(), false);
     if let Some(new_cwd) = args.get_one::<std::path::PathBuf>("directory") {
         // This is a temporary hack. This cannot access `Config`, so this is a bit messy.
         // This does not properly parse `-Z` flags that appear after the subcommand.
@@ -40,12 +43,8 @@ pub fn main(lazy_gctx: &mut LazyContext) -> CliResult {
             .into());
         }
         std::env::set_current_dir(&new_cwd).context("could not change to requested directory")?;
+        gctx.reload_cwd()?;
     }
-
-    // CAUTION: Be careful with using `config` until it is configured below.
-    // In general, try to avoid loading config values unless necessary (like
-    // the [alias] table).
-    let gctx = lazy_gctx.get_mut();
 
     let (expanded_args, global_args) = expand_aliases(gctx, args, vec![])?;
 
@@ -175,7 +174,7 @@ Run with `{literal}cargo -Z{literal:#} {placeholder}[FLAG] [COMMAND]{placeholder
         Some((cmd, args)) => (cmd, args),
         _ => {
             // No subcommand provided.
-            cli().print_help()?;
+            cli(gctx).print_help()?;
             return Ok(());
         }
     };
@@ -338,7 +337,7 @@ For more information, see issue #12207 <https://github.com/rust-lang/cargo/issue
                 // Note that an alias to an external command will not receive
                 // these arguments. That may be confusing, but such is life.
                 let global_args = GlobalArgs::new(sub_args);
-                let new_args = cli().no_binary_name(true).try_get_matches_from(alias)?;
+                let new_args = cli(gctx).no_binary_name(true).try_get_matches_from(alias)?;
 
                 let new_cmd = new_args.subcommand_name().expect("subcommand is required");
                 already_expanded.push(cmd.to_string());
@@ -514,7 +513,19 @@ impl GlobalArgs {
     }
 }
 
-pub fn cli() -> Command {
+pub fn cli(gctx: &GlobalContext) -> Command {
+    // Don't let config errors get in the way of parsing arguments
+    let term = gctx.get::<TermConfig>("term").unwrap_or_default();
+    let color = term
+        .color
+        .and_then(|c| c.parse().ok())
+        .unwrap_or(ColorChoice::CargoAuto);
+    let color = match color {
+        ColorChoice::Always => clap::ColorChoice::Always,
+        ColorChoice::Never => clap::ColorChoice::Never,
+        ColorChoice::CargoAuto => clap::ColorChoice::Auto,
+    };
+
     let usage = if is_rustup() {
         color_print::cstr!("<cyan,bold>cargo</> <cyan>[+toolchain] [OPTIONS] [COMMAND]</>\n       <cyan,bold>cargo</> <cyan>[+toolchain] [OPTIONS]</> <cyan,bold>-Zscript</> <cyan><<MANIFEST_RS>> [ARGS]...</>")
     } else {
@@ -539,6 +550,7 @@ pub fn cli() -> Command {
         // We also want these to come before auto-generated `--help`
         .next_display_order(800)
         .allow_external_subcommands(true)
+        .color(color)
         .styles(styles)
         // Provide a custom help subcommand for calling into man pages
         .disable_help_subcommand(true)
@@ -646,53 +658,10 @@ See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a sp
         .subcommands(commands::builtin())
 }
 
-/// Delay loading [`GlobalContext`] until access.
-///
-/// In the common path, the [`GlobalContext`] is dependent on CLI parsing and shouldn't be loaded until
-/// after that is done but some other paths (like fix or earlier errors) might need access to it,
-/// so this provides a way to share the instance and the implementation across these different
-/// accesses.
-pub struct LazyContext {
-    gctx: Option<GlobalContext>,
-}
-
-impl LazyContext {
-    pub fn new() -> Self {
-        Self { gctx: None }
-    }
-
-    /// Check whether the config is loaded
-    ///
-    /// This is useful for asserts in case the environment needs to be setup before loading
-    pub fn is_init(&self) -> bool {
-        self.gctx.is_some()
-    }
-
-    /// Get the config, loading it if needed
-    ///
-    /// On error, the process is terminated
-    pub fn get(&mut self) -> &GlobalContext {
-        self.get_mut()
-    }
-
-    /// Get the config, loading it if needed
-    ///
-    /// On error, the process is terminated
-    pub fn get_mut(&mut self) -> &mut GlobalContext {
-        self.gctx
-            .get_or_insert_with(|| match GlobalContext::default() {
-                Ok(cfg) => cfg,
-                Err(e) => {
-                    let mut shell = Shell::new();
-                    cargo::exit_with_error(e.into(), &mut shell)
-                }
-            })
-    }
-}
-
 #[test]
 fn verify_cli() {
-    cli().debug_assert();
+    let gctx = GlobalContext::default().unwrap();
+    cli(&gctx).debug_assert();
 }
 
 #[test]
