@@ -1,5 +1,7 @@
 mod add_basic;
 mod add_multiple;
+mod add_no_vendored_package_with_alter_registry;
+mod add_no_vendored_package_with_vendor;
 mod add_normalized_name_external;
 mod add_toolchain;
 mod build;
