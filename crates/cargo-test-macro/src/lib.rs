@@ -1,4 +1,5 @@
 use proc_macro::*;
+use std::path::Path;
 use std::process::Command;
 use std::sync::Once;
 
@@ -73,6 +74,12 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
             "nightly" => {
                 requires_reason = true;
                 set_ignore!(is_not_nightly, "requires nightly");
+            }
+            "requires_rustup_stable" => {
+                set_ignore!(
+                    !has_rustup_stable(),
+                    "rustup or stable toolchain not installed"
+                );
             }
             s if s.starts_with("requires_") => {
                 let command = &s[9..];
@@ -204,35 +211,62 @@ fn version() -> (u32, bool) {
     unsafe { VERSION }
 }
 
-fn has_command(command: &str) -> bool {
-    let output = match Command::new(command).arg("--version").output() {
+fn check_command(command_path: &Path, args: &[&str]) -> bool {
+    let mut command = Command::new(command_path);
+    let command_name = command.get_program().to_str().unwrap().to_owned();
+    command.args(args);
+    let output = match command.output() {
         Ok(output) => output,
         Err(e) => {
             // * hg is not installed on GitHub macOS or certain constrained
             //   environments like Docker. Consider installing it if Cargo
             //   gains more hg support, but otherwise it isn't critical.
             // * lldb is not pre-installed on Ubuntu and Windows, so skip.
-            if is_ci() && !["hg", "lldb"].contains(&command) {
-                panic!(
-                    "expected command `{}` to be somewhere in PATH: {}",
-                    command, e
-                );
+            if is_ci() && !matches!(command_name.as_str(), "hg" | "lldb") {
+                panic!("expected command `{command_name}` to be somewhere in PATH: {e}",);
             }
             return false;
         }
     };
     if !output.status.success() {
         panic!(
-            "expected command `{}` to be runnable, got error {}:\n\
+            "expected command `{command_name}` to be runnable, got error {}:\n\
             stderr:{}\n\
             stdout:{}\n",
-            command,
             output.status,
             String::from_utf8_lossy(&output.stderr),
             String::from_utf8_lossy(&output.stdout)
         );
     }
     true
+}
+
+fn has_command(command: &str) -> bool {
+    check_command(Path::new(command), &["--version"])
+}
+
+fn has_rustup_stable() -> bool {
+    if option_env!("CARGO_TEST_DISABLE_NIGHTLY").is_some() {
+        // This cannot run on rust-lang/rust CI due to the lack of rustup.
+        return false;
+    }
+    if cfg!(windows) && !is_ci() && option_env!("RUSTUP_WINDOWS_PATH_ADD_BIN").is_none() {
+        // There is an issue with rustup that doesn't allow recursive cargo
+        // invocations. Disable this on developer machines if the environment
+        // variable is not enabled. This can be removed once
+        // https://github.com/rust-lang/rustup/issues/3036 is resolved.
+        return false;
+    }
+    // Cargo mucks with PATH on Windows, adding sysroot host libdir, which is
+    // "bin", which circumvents the rustup wrapper. Use the path directly from
+    // CARGO_HOME.
+    let home = match option_env!("CARGO_HOME") {
+        Some(home) => home,
+        None if is_ci() => panic!("expected to run under rustup"),
+        None => return false,
+    };
+    let cargo = Path::new(home).join("bin/cargo");
+    check_command(&cargo, &["+stable", "--version"])
 }
 
 /// Whether or not this running in a Continuous Integration environment.

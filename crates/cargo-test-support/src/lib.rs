@@ -764,6 +764,13 @@ impl Execs {
         self
     }
 
+    pub fn args<T: AsRef<OsStr>>(&mut self, args: &[T]) -> &mut Self {
+        if let Some(ref mut p) = self.process_builder {
+            p.args(args);
+        }
+        self
+    }
+
     pub fn cwd<T: AsRef<OsStr>>(&mut self, path: T) -> &mut Self {
         if let Some(ref mut p) = self.process_builder {
             if let Some(cwd) = p.get_cwd() {

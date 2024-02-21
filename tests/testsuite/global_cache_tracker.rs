@@ -14,11 +14,12 @@ use cargo::GlobalContext;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::{
-    basic_manifest, cargo_process, execs, git, project, retry, sleep_ms, thread_wait_timeout,
-    Project,
+    basic_manifest, cargo_process, execs, git, process, project, retry, sleep_ms,
+    thread_wait_timeout, Execs, Project,
 };
 use itertools::Itertools;
 use std::fmt::Write;
+use std::path::Path;
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::time::{Duration, SystemTime};
@@ -151,6 +152,14 @@ fn populate_cache(
     deferred.save(&mut tracker).unwrap();
 
     (cache_dir, src_dir)
+}
+
+fn rustup_cargo() -> Execs {
+    // Get the path to the rustup cargo wrapper. This is necessary because
+    // cargo adds the "deps" directory into PATH on Windows, which points to
+    // the wrong cargo.
+    let rustup_cargo = Path::new(&std::env::var_os("CARGO_HOME").unwrap()).join("bin/cargo");
+    execs().with_process_builder(process(rustup_cargo))
 }
 
 #[cargo_test]
@@ -1862,4 +1871,151 @@ fn clean_gc_quiet_is_quiet() {
 ",
         )
         .run();
+}
+
+#[cargo_test(requires_rustup_stable)]
+fn compatible_with_older_cargo() {
+    // Ensures that db stays backwards compatible across versions.
+
+    // T-4 months: Current version, build the database.
+    Package::new("old", "1.0.0").publish();
+    Package::new("middle", "1.0.0").publish();
+    Package::new("new", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                old = "1.0"
+                middle = "1.0"
+                new = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    // Populate the last-use data.
+    p.cargo("check -Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(4))
+        .run();
+    assert_eq!(
+        get_registry_names("src"),
+        ["middle-1.0.0", "new-1.0.0", "old-1.0.0"]
+    );
+    assert_eq!(
+        get_registry_names("cache"),
+        ["middle-1.0.0.crate", "new-1.0.0.crate", "old-1.0.0.crate"]
+    );
+
+    // T-2 months: Stable version, make sure it reads and deletes old src.
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            new = "1.0"
+            middle = "1.0"
+        "#,
+    );
+    rustup_cargo()
+        .args(&["+stable", "check", "-Zgc"])
+        .cwd(p.root())
+        .masquerade_as_nightly_cargo(&["gc"])
+        .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(2))
+        .run();
+    assert_eq!(get_registry_names("src"), ["middle-1.0.0", "new-1.0.0"]);
+    assert_eq!(
+        get_registry_names("cache"),
+        ["middle-1.0.0.crate", "new-1.0.0.crate", "old-1.0.0.crate"]
+    );
+
+    // T-0 months: Current version, make sure it can read data from stable,
+    // deletes old crate and middle src.
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            new = "1.0"
+        "#,
+    );
+    p.cargo("check -Zgc")
+        .masquerade_as_nightly_cargo(&["gc"])
+        .run();
+    assert_eq!(get_registry_names("src"), ["new-1.0.0"]);
+    assert_eq!(
+        get_registry_names("cache"),
+        ["middle-1.0.0.crate", "new-1.0.0.crate"]
+    );
+}
+
+#[cargo_test(requires_rustup_stable)]
+fn forward_compatible() {
+    // Checks that db created in an older version can be read in a newer version.
+    Package::new("bar", "1.0.0").publish();
+    let git_project = git::new("from_git", |p| {
+        p.file("Cargo.toml", &basic_manifest("from_git", "1.0.0"))
+            .file("src/lib.rs", "")
+    });
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+
+                    [dependencies]
+                    bar = "1.0.0"
+                    from_git = {{ git = '{}' }}
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    rustup_cargo()
+        .args(&["+stable", "check", "-Zgc"])
+        .cwd(p.root())
+        .masquerade_as_nightly_cargo(&["gc"])
+        .run();
+
+    let config = GlobalContextBuilder::new().unstable_flag("gc").build();
+    let lock = config
+        .acquire_package_cache_lock(CacheLockMode::MutateExclusive)
+        .unwrap();
+    let tracker = GlobalCacheTracker::new(&config).unwrap();
+    // Don't want to check the actual index name here, since although the
+    // names are semi-stable, they might change over long periods of time.
+    let indexes = tracker.registry_index_all().unwrap();
+    assert_eq!(indexes.len(), 1);
+    let crates = tracker.registry_crate_all().unwrap();
+    let names: Vec<_> = crates
+        .iter()
+        .map(|(krate, _timestamp)| krate.crate_filename)
+        .collect();
+    assert_eq!(names, &["bar-1.0.0.crate"]);
+    let srcs = tracker.registry_src_all().unwrap();
+    let names: Vec<_> = srcs
+        .iter()
+        .map(|(src, _timestamp)| src.package_dir)
+        .collect();
+    assert_eq!(names, &["bar-1.0.0"]);
+    let dbs: Vec<_> = tracker.git_db_all().unwrap();
+    assert_eq!(dbs.len(), 1);
+    let cos: Vec<_> = tracker.git_checkout_all().unwrap();
+    assert_eq!(cos.len(), 1);
+    drop(lock);
 }

@@ -116,6 +116,8 @@ jobs:
       CARGO_PROFILE_TEST_DEBUG: 1
       CARGO_INCREMENTAL: 0
       CARGO_PUBLIC_NETWORK_TESTS: 1
+      # Workaround for https://github.com/rust-lang/rustup/issues/3036
+      RUSTUP_WINDOWS_PATH_ADD_BIN: 0
     strategy:
       matrix:
         include:
@@ -156,6 +158,10 @@ jobs:
     - uses: actions/checkout@v4
     - name: Dump Environment
       run: ci/dump-environment.sh
+    # Some tests require stable. Make sure it is set to the most recent stable
+    # so that we can predictably handle updates if necessary (and not randomly
+    # when GitHub updates its image).
+    - run: rustup update --no-self-update stable
     - run: rustup update --no-self-update ${{ matrix.rust }} && rustup default ${{ matrix.rust }}
     - run: rustup target add ${{ matrix.other }}
     - run: rustup component add rustc-dev llvm-tools-preview rust-docs
@@ -166,7 +172,6 @@ jobs:
     - name: Configure extra test environment
       run: echo CARGO_CONTAINER_TESTS=1 >> $GITHUB_ENV
       if: matrix.os == 'ubuntu-latest'
-
     - run: cargo test -p cargo
     - name: Clear intermediate test output
       run: ci/clean-test-output.sh
