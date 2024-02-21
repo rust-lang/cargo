@@ -8,7 +8,7 @@ use std::collections::HashSet;
 use std::vec;
 
 /// Serde deserializer used to convert config values to a target type using
-/// `Config::get`.
+/// [`GlobalContext::get`].
 #[derive(Clone)]
 pub(super) struct Deserializer<'gctx> {
     pub(super) gctx: &'gctx GlobalContext,

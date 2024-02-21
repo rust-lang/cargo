@@ -28,18 +28,20 @@ fn make_case_insensitive_and_normalized_env(
     (case_insensitive_env, normalized_env)
 }
 
-/// A snapshot of the environment variables available to [`super::GlobalContext`].
+/// A snapshot of the environment variables available to [`GlobalContext`].
 ///
-/// Currently, the [`Context`](super::GlobalContext) supports lookup of environment variables
+/// Currently, the [`GlobalContext`] supports lookup of environment variables
 /// through two different means:
 ///
-/// - [`Context::get_env`](super::GlobalContext::get_env)
-///   and [`Context::get_env_os`](super::GlobalContext::get_env_os)
+/// - [`GlobalContext::get_env`](super::GlobalContext::get_env)
+///   and [`GlobalContext::get_env_os`](super::GlobalContext::get_env_os)
 ///   for process environment variables (similar to [`std::env::var`] and [`std::env::var_os`]),
-/// - Typed Config Value API via [`Context::get`](super::GlobalContext::get).
+/// - Typed Config Value API via [`GlobalContext::get`](super::GlobalContext::get).
 ///   This is only available for `CARGO_` prefixed environment keys.
 ///
 /// This type contains the env var snapshot and helper methods for both APIs.
+///
+/// [`GlobalContext`]: super::GlobalContext
 #[derive(Debug)]
 pub struct Env {
     /// A snapshot of the process's environment variables.
@@ -68,8 +70,8 @@ impl Env {
     pub fn new() -> Self {
         // ALLOWED: This is the only permissible usage of `std::env::vars{_os}`
         // within cargo. If you do need access to individual variables without
-        // interacting with `Config` system, please use `std::env::var{_os}`
-        // and justify the validity of the usage.
+        // interacting with the config system in [`GlobalContext`], please use
+        // `std::env::var{_os}` and justify the validity of the usage.
         #[allow(clippy::disallowed_methods)]
         let env: HashMap<_, _> = std::env::vars_os().collect();
         let (case_insensitive_env, normalized_env) = make_case_insensitive_and_normalized_env(&env);
@@ -105,9 +107,10 @@ impl Env {
         self.env.keys().filter_map(|k| k.to_str())
     }
 
-    /// Get the value of environment variable `key` through the `Config` snapshot.
+    /// Get the value of environment variable `key` through the snapshot in
+    /// [`GlobalContext`](super::GlobalContext).
     ///
-    /// This can be used similarly to `std::env::var_os`.
+    /// This can be used similarly to [`std::env::var_os`].
     /// On Windows, we check for case mismatch since environment keys are case-insensitive.
     pub fn get_env_os(&self, key: impl AsRef<OsStr>) -> Option<OsString> {
         match self.env.get(key.as_ref()) {
@@ -152,7 +155,7 @@ impl Env {
     /// Get the value of environment variable `key` as a `&str`.
     /// Returns `None` if `key` is not in `self.env` or if the value is not valid UTF-8.
     ///
-    /// This is intended for use in private methods of `Config`,
+    /// This is intended for use in private methods of [`GlobalContext`](super::GlobalContext),
     /// and does not check for env key case mismatch.
     ///
     /// This is case-sensitive on Windows (even though environment keys on Windows are usually
@@ -172,7 +175,7 @@ impl Env {
 
     /// Check if the environment contains `key`.
     ///
-    /// This is intended for use in private methods of `Config`,
+    /// This is intended for use in private methods of [`GlobalContext`](super::GlobalContext),
     /// and does not check for env key case mismatch.
     /// See the docstring of [`Env::get_str`] for more context.
     pub(super) fn contains_key(&self, key: impl AsRef<OsStr>) -> bool {

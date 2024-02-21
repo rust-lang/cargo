@@ -120,7 +120,7 @@ impl<'gctx> SourceConfigMap<'gctx> {
         Ok(base)
     }
 
-    /// Returns the `Config` this source config map is associated with.
+    /// Returns the [`GlobalContext`] this source config map is associated with.
     pub fn gctx(&self) -> &'gctx GlobalContext {
         self.gctx
     }

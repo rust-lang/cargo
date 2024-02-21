@@ -28,11 +28,14 @@ pub struct JobState<'a, 'gctx> {
     /// output messages are processed on the same thread as they are sent from. `output`
     /// defines where to output in this case.
     ///
-    /// Currently the `Shell` inside `Config` is wrapped in a `RefCell` and thus can't be passed
-    /// between threads. This means that it isn't possible for multiple output messages to be
-    /// interleaved. In the future, it may be wrapped in a `Mutex` instead. In this case
+    /// Currently the [`Shell`] inside [`GlobalContext`] is wrapped in a `RefCell` and thus can't
+    /// be passed between threads. This means that it isn't possible for multiple output messages
+    /// to be interleaved. In the future, it may be wrapped in a `Mutex` instead. In this case
     /// interleaving is still prevented as the lock would be held for the whole printing of an
     /// output message.
+    ///
+    /// [`Shell`]: crate::core::Shell
+    /// [`GlobalContext`]: crate::GlobalContext
     output: Option<&'a DiagDedupe<'gctx>>,
 
     /// The job id that this state is associated with, used when sending
