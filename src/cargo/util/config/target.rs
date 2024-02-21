@@ -21,12 +21,14 @@ pub struct TargetCfgConfig {
 }
 
 /// Config definition of a `[target]` table or `[host]`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct TargetConfig {
     /// Process to run as a wrapper for `cargo run`, `test`, and `bench` commands.
     pub runner: OptValue<PathAndArgs>,
     /// Additional rustc flags to pass.
     pub rustflags: OptValue<StringList>,
+    /// Additional rustdoc flags to pass.
+    pub rustdocflags: OptValue<StringList>,
     /// The path of the linker for this target.
     pub linker: OptValue<ConfigRelativePath>,
     /// Build script override for the given library name.
@@ -95,12 +97,7 @@ pub(super) fn load_host_triple(gctx: &GlobalContext, triple: &str) -> CargoResul
         };
         load_config_table(gctx, &host_prefix)
     } else {
-        Ok(TargetConfig {
-            runner: None,
-            rustflags: None,
-            linker: None,
-            links_overrides: BTreeMap::new(),
-        })
+        Ok(TargetConfig::default())
     }
 }
 
@@ -116,9 +113,10 @@ fn load_config_table(gctx: &GlobalContext, prefix: &str) -> CargoResult<TargetCo
     // because it causes serde to use `deserialize_map` which means the config
     // deserializer does not know which keys to deserialize, which means
     // environment variables would not work.
-    let runner: OptValue<PathAndArgs> = gctx.get(&format!("{}.runner", prefix))?;
-    let rustflags: OptValue<StringList> = gctx.get(&format!("{}.rustflags", prefix))?;
-    let linker: OptValue<ConfigRelativePath> = gctx.get(&format!("{}.linker", prefix))?;
+    let runner: OptValue<PathAndArgs> = gctx.get(&format!("{prefix}.runner"))?;
+    let rustflags: OptValue<StringList> = gctx.get(&format!("{prefix}.rustflags"))?;
+    let rustdocflags: OptValue<StringList> = gctx.get(&format!("{prefix}.rustdocflags"))?;
+    let linker: OptValue<ConfigRelativePath> = gctx.get(&format!("{prefix}.linker"))?;
     // Links do not support environment variables.
     let target_key = ConfigKey::from_str(prefix);
     let links_overrides = match gctx.get_table(&target_key)? {
@@ -128,6 +126,7 @@ fn load_config_table(gctx: &GlobalContext, prefix: &str) -> CargoResult<TargetCo
     Ok(TargetConfig {
         runner,
         rustflags,
+        rustdocflags,
         linker,
         links_overrides,
     })
@@ -144,7 +143,7 @@ fn parse_links_overrides(
         // Skip these keys, it shares the namespace with `TargetConfig`.
         match lib_name.as_str() {
             // `ar` is a historical thing.
-            "ar" | "linker" | "runner" | "rustflags" => continue,
+            "ar" | "linker" | "runner" | "rustflags" | "rustdocflags" => continue,
             _ => {}
         }
         let mut output = BuildOutput::default();

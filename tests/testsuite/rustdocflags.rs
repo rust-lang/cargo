@@ -1,6 +1,8 @@
 //! Tests for setting custom rustdoc flags.
 
 use cargo_test_support::project;
+use cargo_test_support::rustc_host;
+use cargo_test_support::rustc_host_env;
 
 #[cargo_test]
 fn parses_env() {
@@ -157,5 +159,74 @@ fn not_affected_by_target_rustflags() {
     // `cargo doc` shouldn't fail.
     p.cargo("doc -v")
         .with_stderr_contains("[RUNNING] `rustdoc [..] --cfg foo[..]`")
+        .run();
+}
+
+#[cargo_test]
+fn target_triple_rustdocflags_works() {
+    let host = rustc_host();
+    let host_env = rustc_host_env();
+    let p = project().file("src/lib.rs", "").build();
+
+    // target.triple.rustdocflags in env works
+    p.cargo("doc -v")
+        .env(
+            &format!("CARGO_TARGET_{host_env}_RUSTDOCFLAGS"),
+            "--cfg=foo",
+        )
+        .with_stderr_contains("[RUNNING] `rustdoc[..]--cfg[..]foo[..]`")
+        .run();
+
+    // target.triple.rustdocflags in config works
+    p.cargo("doc -v")
+        .arg("--config")
+        .arg(format!("target.{host}.rustdocflags=['--cfg', 'foo']"))
+        .with_stderr_contains("[RUNNING] `rustdoc[..]--cfg[..]foo[..]`")
+        .run();
+}
+
+#[cargo_test]
+fn target_triple_rustdocflags_works_through_cargo_test() {
+    let host = rustc_host();
+    let host_env = rustc_host_env();
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                //! ```
+                //! assert!(cfg!(foo));
+                //! ```
+            "#,
+        )
+        .build();
+
+    // target.triple.rustdocflags in env works
+    p.cargo("test --doc -v")
+        .env(
+            &format!("CARGO_TARGET_{host_env}_RUSTDOCFLAGS"),
+            "--cfg=foo",
+        )
+        .with_stderr_contains("[RUNNING] `rustdoc[..]--test[..]--cfg[..]foo[..]`")
+        .with_stdout_contains(
+            "\
+running 1 test
+test src/lib.rs - (line 2) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]",
+        )
+        .run();
+
+    // target.triple.rustdocflags in config works
+    p.cargo("test --doc -v")
+        .arg("--config")
+        .arg(format!("target.{host}.rustdocflags=['--cfg', 'foo']"))
+        .with_stderr_contains("[RUNNING] `rustdoc[..]--test[..]--cfg[..]foo[..]`")
+        .with_stdout_contains(
+            "\
+running 1 test
+test src/lib.rs - (line 2) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]",
+        )
         .run();
 }
