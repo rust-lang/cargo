@@ -1,4 +1,5 @@
 use proc_macro::*;
+use std::path::Path;
 use std::process::Command;
 use std::sync::Once;
 
@@ -210,8 +211,9 @@ fn version() -> (u32, bool) {
     unsafe { VERSION }
 }
 
-fn check_command(command_name: &str, args: &[&str]) -> bool {
-    let mut command = Command::new(command_name);
+fn check_command(command_path: &Path, args: &[&str]) -> bool {
+    let mut command = Command::new(command_path);
+    let command_name = command.get_program().to_str().unwrap().to_owned();
     command.args(args);
     let output = match command.output() {
         Ok(output) => output,
@@ -220,7 +222,7 @@ fn check_command(command_name: &str, args: &[&str]) -> bool {
             //   environments like Docker. Consider installing it if Cargo
             //   gains more hg support, but otherwise it isn't critical.
             // * lldb is not pre-installed on Ubuntu and Windows, so skip.
-            if is_ci() && !matches!(command_name, "hg" | "lldb") {
+            if is_ci() && !matches!(command_name.as_str(), "hg" | "lldb") {
                 panic!("expected command `{command_name}` to be somewhere in PATH: {e}",);
             }
             return false;
@@ -240,7 +242,7 @@ fn check_command(command_name: &str, args: &[&str]) -> bool {
 }
 
 fn has_command(command: &str) -> bool {
-    check_command(command, &["--version"])
+    check_command(Path::new(command), &["--version"])
 }
 
 fn has_rustup_stable() -> bool {
@@ -255,7 +257,16 @@ fn has_rustup_stable() -> bool {
         // https://github.com/rust-lang/rustup/issues/3036 is resolved.
         return false;
     }
-    check_command("cargo", &["+stable", "--version"])
+    // Cargo mucks with PATH on Windows, adding sysroot host libdir, which is
+    // "bin", which circumvents the rustup wrapper. Use the path directly from
+    // CARGO_HOME.
+    let home = match option_env!("CARGO_HOME") {
+        Some(home) => home,
+        None if is_ci() => panic!("expected to run under rustup"),
+        None => return false,
+    };
+    let cargo = Path::new(home).join("bin/cargo");
+    check_command(&cargo, &["+stable", "--version"])
 }
 
 /// Whether or not this running in a Continuous Integration environment.

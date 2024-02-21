@@ -14,11 +14,12 @@ use cargo::GlobalContext;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::{
-    basic_manifest, cargo_process, execs, git, project, retry, sleep_ms, thread_wait_timeout,
-    Project,
+    basic_manifest, cargo_process, execs, git, process, project, retry, sleep_ms,
+    thread_wait_timeout, Execs, Project,
 };
 use itertools::Itertools;
 use std::fmt::Write;
+use std::path::Path;
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::time::{Duration, SystemTime};
@@ -151,6 +152,14 @@ fn populate_cache(
     deferred.save(&mut tracker).unwrap();
 
     (cache_dir, src_dir)
+}
+
+fn rustup_cargo() -> Execs {
+    // Get the path to the rustup cargo wrapper. This is necessary because
+    // cargo adds the "deps" directory into PATH on Windows, which points to
+    // the wrong cargo.
+    let rustup_cargo = Path::new(&std::env::var_os("CARGO_HOME").unwrap()).join("bin/cargo");
+    execs().with_process_builder(process(rustup_cargo))
 }
 
 #[cargo_test]
@@ -1915,12 +1924,11 @@ fn compatible_with_older_cargo() {
             middle = "1.0"
         "#,
     );
-    p.process("cargo")
+    rustup_cargo()
         .args(&["+stable", "check", "-Zgc"])
+        .cwd(p.root())
         .masquerade_as_nightly_cargo(&["gc"])
         .env("__CARGO_TEST_LAST_USE_NOW", months_ago_unix(2))
-        // Necessary since `process` removes rustup.
-        .env("PATH", std::env::var_os("PATH").unwrap())
         .run();
     assert_eq!(get_registry_names("src"), ["middle-1.0.0", "new-1.0.0"]);
     assert_eq!(
@@ -1978,11 +1986,10 @@ fn forward_compatible() {
         .file("src/lib.rs", "")
         .build();
 
-    p.process("cargo")
+    rustup_cargo()
         .args(&["+stable", "check", "-Zgc"])
+        .cwd(p.root())
         .masquerade_as_nightly_cargo(&["gc"])
-        // Necessary since `process` removes rustup.
-        .env("PATH", std::env::var_os("PATH").unwrap())
         .run();
 
     let config = GlobalContextBuilder::new().unstable_flag("gc").build();
