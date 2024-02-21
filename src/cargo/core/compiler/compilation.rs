@@ -74,9 +74,6 @@ pub struct Compilation<'gctx> {
     /// May be for the host or for a specific target.
     pub deps_output: HashMap<CompileKind, PathBuf>,
 
-    /// The path to the host libdir for the compiler used
-    sysroot_host_libdir: PathBuf,
-
     /// The path to libstd for each target
     sysroot_target_libdir: HashMap<CompileKind, PathBuf>,
 
@@ -128,11 +125,6 @@ impl<'gctx> Compilation<'gctx> {
             native_dirs: BTreeSet::new(),
             root_output: HashMap::new(),
             deps_output: HashMap::new(),
-            sysroot_host_libdir: bcx
-                .target_data
-                .info(CompileKind::Host)
-                .sysroot_host_libdir
-                .clone(),
             sysroot_target_libdir: get_sysroot_target_libdir(bcx)?,
             tests: Vec::new(),
             binaries: Vec::new(),
@@ -282,7 +274,6 @@ impl<'gctx> Compilation<'gctx> {
         let mut search_path = Vec::new();
         if is_rustc_tool {
             search_path.push(self.deps_output[&CompileKind::Host].clone());
-            search_path.push(self.sysroot_host_libdir.clone());
         } else {
             search_path.extend(super::filter_dynamic_search_path(
                 self.native_dirs.iter(),
