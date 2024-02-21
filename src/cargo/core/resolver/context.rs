@@ -229,10 +229,3 @@ impl ResolverContext {
         graph
     }
 }
-
-impl Graph<PackageId, im_rc::HashSet<Dependency>> {
-    pub fn parents_of(&self, p: PackageId) -> impl Iterator<Item = (PackageId, bool)> + '_ {
-        self.edges(&p)
-            .map(|(grand, d)| (*grand, d.iter().any(|x| x.is_public())))
-    }
-}
