@@ -543,23 +543,23 @@ struct DepFingerprint {
 /// recompiled. Inputs to the fingerprint include source code modifications,
 /// compiler flags, compiler version, etc. This structure is not simply a
 /// `String` due to the fact that some fingerprints cannot be calculated lazily.
-/// 如果指纹发生变化，则需要重新编译包本身；指纹的输入包括：代码修改、编译器标志、编译器版本；
 /// 
 /// Path sources, for example, use the mtime of the corresponding dep-info file
 /// as a fingerprint (all source files must be modified *before* this mtime).
 /// This dep-info file is not generated, however, until after the crate is
 /// compiled. As a result, this structure can be thought of as a fingerprint
-/// to-be. The actual value can be calculated via `hash_u64()`, but the operation
+/// to-be. The actual value can be calculated via [`hash_u64()`], but the operation
 /// may fail as some files may not have been generated.
 ///
 /// Note that dependencies are taken into account for fingerprints because rustc
 /// requires that whenever an upstream crate is recompiled that all downstream
 /// dependents are also recompiled. This is typically tracked through
-/// `DependencyQueue`, but it also needs to be retained here because Cargo can
-/// be interrupted while executing, losing the state of the `DependencyQueue`
+/// [`DependencyQueue`], but it also needs to be retained here because Cargo can
+/// be interrupted while executing, losing the state of the [`DependencyQueue`]
 /// graph.
-/// 上游包重新编译的时候，所有下游依赖项也会重新编译。
-/// 通过DependencyQueue进行跟踪，但也需要保留在这里，因为 Cargo 在执行时可能会被中断，从而丢失“DependencyQueue”图的状态。
+///
+/// [`hash_u64()`]: crate::core::compiler::fingerprint::Fingerprint::hash_u64
+/// [`DependencyQueue`]: crate::util::DependencyQueue
 #[derive(Serialize, Deserialize)]
 pub struct Fingerprint {
     /// Hash of the version of `rustc` used.
