@@ -554,7 +554,7 @@ impl<'cfg> Source for PathSource<'cfg> {
         for s in self.packages.iter().map(|p| p.summary()) {
             let matched = match kind {
                 QueryKind::Exact => dep.matches(s),
-                QueryKind::Fuzzy => true,
+                QueryKind::Alternatives => true,
                 QueryKind::Normalized => dep.matches(s),
             };
             if matched {

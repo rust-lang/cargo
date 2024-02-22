@@ -108,7 +108,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
         let packages = self.packages.values().map(|p| &p.0);
         let matches = packages.filter(|pkg| match kind {
             QueryKind::Exact => dep.matches(pkg.summary()),
-            QueryKind::Fuzzy => true,
+            QueryKind::Alternatives => true,
             QueryKind::Normalized => dep.matches(pkg.summary()),
         });
         for summary in matches.map(|pkg| pkg.summary().clone()) {
