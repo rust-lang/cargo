@@ -793,6 +793,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
                     let matched = match kind {
                         QueryKind::Exact => dep.matches(s.as_summary()),
                         QueryKind::Fuzzy => true,
+                        QueryKind::Normalized => true,
                     };
                     if !matched {
                         return;
@@ -831,7 +832,7 @@ impl<'cfg> Source for RegistrySource<'cfg> {
                 return Poll::Ready(Ok(()));
             }
             let mut any_pending = false;
-            if kind == QueryKind::Fuzzy {
+            if kind == QueryKind::Fuzzy || kind == QueryKind::Normalized {
                 // Attempt to handle misspellings by searching for a chain of related
                 // names to the original name. The resolver will later
                 // reject any candidates that have the wrong name, and with this it'll

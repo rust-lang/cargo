@@ -555,6 +555,7 @@ impl<'cfg> Source for PathSource<'cfg> {
             let matched = match kind {
                 QueryKind::Exact => dep.matches(s),
                 QueryKind::Fuzzy => true,
+                QueryKind::Normalized => dep.matches(s),
             };
             if matched {
                 f(IndexSummary::Candidate(s.clone()))

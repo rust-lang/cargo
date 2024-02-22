@@ -113,6 +113,7 @@ pub fn resolve_with_config_raw(
                 let matched = match kind {
                     QueryKind::Exact => dep.matches(summary),
                     QueryKind::Fuzzy => true,
+                    QueryKind::Normalized => true,
                 };
                 if matched {
                     self.used.insert(summary.package_id());

@@ -109,6 +109,7 @@ impl<'cfg> Source for DirectorySource<'cfg> {
         let matches = packages.filter(|pkg| match kind {
             QueryKind::Exact => dep.matches(pkg.summary()),
             QueryKind::Fuzzy => true,
+            QueryKind::Normalized => dep.matches(pkg.summary()),
         });
         for summary in matches.map(|pkg| pkg.summary().clone()) {
             f(IndexSummary::Candidate(summary));

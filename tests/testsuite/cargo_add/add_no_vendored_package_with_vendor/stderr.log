@@ -1,2 +1,1 @@
-warning: translating `cbindgen` to `aa`
-      Adding aa v0.0.0 to dependencies
+error: the crate `cbindgen` could not be found in registry index.

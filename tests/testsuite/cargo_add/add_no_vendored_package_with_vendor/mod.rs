@@ -15,7 +15,7 @@ fn case() {
         .arg_line("cbindgen")
         .current_dir(cwd)
         .assert()
-        .success()
+        .failure()
         .stdout_matches(file!["stdout.log"])
         .stderr_matches(file!["stderr.log"]);
 
