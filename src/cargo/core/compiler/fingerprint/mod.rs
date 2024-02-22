@@ -543,7 +543,7 @@ struct DepFingerprint {
 /// recompiled. Inputs to the fingerprint include source code modifications,
 /// compiler flags, compiler version, etc. This structure is not simply a
 /// `String` due to the fact that some fingerprints cannot be calculated lazily.
-/// 
+///
 /// Path sources, for example, use the mtime of the corresponding dep-info file
 /// as a fingerprint (all source files must be modified *before* this mtime).
 /// This dep-info file is not generated, however, until after the crate is

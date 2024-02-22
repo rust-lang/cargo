@@ -154,13 +154,10 @@ impl Executor for DefaultExecutor {
 /// Starting from the `unit`, this function recursively calls itself to build
 /// all jobs for dependencies of the `unit`. Each of these jobs represents
 /// compiling a particular package.
-/// 从“unit”开始, 该函数递归调用自身来构建“unit”依赖项的所有作业。
-/// 这些作业中的每一个都代表编译一个特定的包。
 ///
 /// Note that **no actual work is executed as part of this**, that's all done
 /// next as part of [`JobQueue::execute`] function which will run everything
 /// in order with proper parallelism.
-/// 在这个过程中，没有执行任何实际工作，属于[`JobQueue::execute`]的一部分，之后再以并行的方式进行；
 fn compile<'gctx>(
     build_runner: &mut BuildRunner<'_, 'gctx>,
     jobs: &mut JobQueue<'gctx>,
