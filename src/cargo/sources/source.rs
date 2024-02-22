@@ -183,7 +183,10 @@ pub enum QueryKind {
     /// Path/Git sources may return all dependencies that are at that URI,
     /// whereas an `Registry` source may return dependencies that have the same
     /// canonicalization.
-    Fuzzy,
+    Alternatives,
+    /// Match a denpendency in all ways and will normalize the package name.
+    /// Each source defines what normalizing means.
+    Normalized,
 }
 
 /// A download status that represents if a [`Package`] has already been

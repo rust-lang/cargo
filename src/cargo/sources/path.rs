@@ -558,7 +558,8 @@ impl<'gctx> Source for PathSource<'gctx> {
         for s in self.packages.iter().map(|p| p.summary()) {
             let matched = match kind {
                 QueryKind::Exact => dep.matches(s),
-                QueryKind::Fuzzy => true,
+                QueryKind::Alternatives => true,
+                QueryKind::Normalized => dep.matches(s),
             };
             if matched {
                 f(IndexSummary::Candidate(s.clone()))
