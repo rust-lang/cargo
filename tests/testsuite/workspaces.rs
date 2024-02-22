@@ -438,6 +438,7 @@ fn invalid_members() {
         .with_stderr(
             "\
 [ERROR] failed to load manifest for workspace member `[..]/foo`
+referenced by workspace at `[..]/foo/Cargo.toml`
 
 Caused by:
   failed to read `[..]foo/foo/Cargo.toml`
@@ -910,8 +911,8 @@ fn virtual_default_member_is_not_a_member() {
         .with_status(101)
         .with_stderr(
             "\
-error: package `[..]something-else` is listed in workspace’s default-members \
-but is not a member.
+error: package `[..]something-else` is listed in default-members but is not a member\n\
+for workspace at [..]Cargo.toml.
 ",
         )
         .run();
@@ -1672,8 +1673,8 @@ fn excluded_default_members_still_must_be_members() {
         .with_status(101)
         .with_stderr(
             "\
-error: package `[..]bar` is listed in workspace’s default-members \
-but is not a member.
+error: package `[..]bar` is listed in default-members but is not a member\n\
+for workspace at [..]foo/Cargo.toml.
 ",
         )
         .run();
@@ -1902,6 +1903,7 @@ fn glob_syntax_invalid_members() {
         .with_stderr(
             "\
 [ERROR] failed to load manifest for workspace member `[..]/crates/bar`
+referenced by workspace at `[..]/Cargo.toml`
 
 Caused by:
   failed to read `[..]foo/crates/bar/Cargo.toml`
@@ -2388,6 +2390,7 @@ fn member_dep_missing() {
         .with_stderr(
             "\
 [ERROR] failed to load manifest for workspace member `[..]/bar`
+referenced by workspace at `[..]/Cargo.toml`
 
 Caused by:
   failed to load manifest for dependency `baz`

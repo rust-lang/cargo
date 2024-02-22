@@ -697,8 +697,10 @@ impl<'gctx> Workspace<'gctx> {
             self.find_path_deps(&path.join("Cargo.toml"), &root_manifest_path, false)
                 .with_context(|| {
                     format!(
-                        "failed to load manifest for workspace member `{}`",
-                        path.display()
+                        "failed to load manifest for workspace member `{}`\n\
+                        referenced by workspace at `{}`",
+                        path.display(),
+                        root_manifest_path.display()
                     )
                 })?;
         }
@@ -722,9 +724,10 @@ impl<'gctx> Workspace<'gctx> {
                         continue;
                     }
                     bail!(
-                        "package `{}` is listed in workspace’s default-members \
-                         but is not a member.",
-                        path.display()
+                        "package `{}` is listed in default-members but is not a member\n\
+                        for workspace at {}.",
+                        path.display(),
+                        root_manifest_path.display()
                     )
                 }
                 self.default_members.push(manifest_path)
