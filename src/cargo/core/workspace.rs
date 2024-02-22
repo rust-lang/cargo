@@ -724,8 +724,8 @@ impl<'gctx> Workspace<'gctx> {
                         continue;
                     }
                     bail!(
-                        "package `{}` is listed in default-members\n\
-                        for workspace at {} but is not a member.",
+                        "package `{}` is listed in default-members but is not a member\n\
+                        for workspace at {}.",
                         path.display(),
                         root_manifest_path.display()
                     )

@@ -911,8 +911,8 @@ fn virtual_default_member_is_not_a_member() {
         .with_status(101)
         .with_stderr(
             "\
-error: package `[..]something-else` is listed in default-members\n\
-for workspace at [..]Cargo.toml but is not a member.
+error: package `[..]something-else` is listed in default-members but is not a member\n\
+for workspace at [..]Cargo.toml.
 ",
         )
         .run();
@@ -1673,8 +1673,8 @@ fn excluded_default_members_still_must_be_members() {
         .with_status(101)
         .with_stderr(
             "\
-error: package `[..]bar` is listed in default-members\n\
-for workspace at [..]foo/Cargo.toml but is not a member.
+error: package `[..]bar` is listed in default-members but is not a member\n\
+for workspace at [..]foo/Cargo.toml.
 ",
         )
         .run();
