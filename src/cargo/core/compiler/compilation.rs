@@ -293,6 +293,18 @@ impl<'gctx> Compilation<'gctx> {
     ) -> CargoResult<ProcessBuilder> {
         let mut search_path = Vec::new();
         if tool_kind.is_rustc_tool() {
+            if matches!(tool_kind, ToolKind::Rustdoc) {
+                // HACK: `rustdoc --test` not only compiles but executes doctests.
+                // Ideally only execution phase should have search paths appended,
+                // so the executions can find native libs just like other tests.
+                // However, there is no way to separate these two phase, so this
+                // hack is added for both phases.
+                // TODO: handle doctest-xcompile
+                search_path.extend(super::filter_dynamic_search_path(
+                    self.native_dirs.iter(),
+                    &self.root_output[&CompileKind::Host],
+                ));
+            }
             search_path.push(self.deps_output[&CompileKind::Host].clone());
         } else {
             search_path.extend(super::filter_dynamic_search_path(

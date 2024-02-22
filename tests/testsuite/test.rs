@@ -2801,8 +2801,8 @@ fn doctest_with_library_paths() {
                     pub fn assert_search_path() {{
                         let search_path = std::env::var_os("{}").unwrap();
                         let paths = std::env::split_paths(&search_path).collect::<Vec<_>>();
-                        assert!(!paths.contains(&r#"{}"#.into()));
-                        assert!(!paths.contains(&r#"{}"#.into()));
+                        assert!(paths.contains(&r#"{}"#.into()));
+                        assert!(paths.contains(&r#"{}"#.into()));
                     }}
                 "##,
                 dylib_path_envvar(),
