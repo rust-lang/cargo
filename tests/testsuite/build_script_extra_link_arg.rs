@@ -40,6 +40,7 @@ fn build_script_extra_link_arg_bin_single() {
 
                 name = "foobar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [[bin]]
@@ -177,6 +178,7 @@ fn cdylib_link_arg_transitive() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [lib]
                 crate-type = ["cdylib"]
@@ -243,6 +245,7 @@ fn link_arg_transitive_not_allowed() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [lib]
                 crate-type = ["cdylib"]

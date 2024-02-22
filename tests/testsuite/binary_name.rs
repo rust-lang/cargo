@@ -12,6 +12,7 @@ fn gated() {
                 [package]
                 name =  "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [[bin]]
                 name = "foo"
@@ -47,6 +48,7 @@ fn binary_name1() {
                 [package]
                 name =  "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [[bin]]
                 name = "foo"
@@ -129,6 +131,7 @@ fn binary_name2() {
                 [package]
                 name =  "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [[bin]]
                 name = "foo"
@@ -215,6 +218,7 @@ fn check_env_vars() {
                 [package]
                 name =  "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [[bin]]
                 name = "foo"
@@ -267,6 +271,7 @@ fn check_msg_format_json() {
                 [package]
                 name =  "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [[bin]]
                 name = "foo"

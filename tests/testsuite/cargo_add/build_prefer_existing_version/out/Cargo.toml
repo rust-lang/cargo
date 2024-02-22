@@ -4,6 +4,7 @@ exclude = ["dependency"]
 [package]
 name = "cargo-list-test-fixture"
 version = "0.0.0"
+edition = "2015"
 
 [dependencies]
 cargo-list-test-fixture-dependency = { version = "0.0.0", path = "dependency", optional = true, default-features = false, features = ["one", "two"], registry = "alternative" }

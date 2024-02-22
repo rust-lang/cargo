@@ -145,6 +145,7 @@ fn rustdoc_foo_with_bar_dependency() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -188,6 +189,7 @@ fn rustdoc_only_bar_dependency() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -252,6 +254,7 @@ fn features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -275,6 +278,7 @@ fn proc_macro_crate_type() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lib]

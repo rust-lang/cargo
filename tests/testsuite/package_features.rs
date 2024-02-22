@@ -23,6 +23,7 @@ fn virtual_no_default_features() {
             [package]
             name = "a"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             dep1 = {version = "1.0", optional = true}
@@ -38,6 +39,7 @@ fn virtual_no_default_features() {
             [package]
             name = "b"
             version = "0.1.0"
+            edition = "2015"
 
             [features]
             default = ["f1"]
@@ -96,6 +98,7 @@ fn virtual_typo_member_feature() {
             [package]
             name = "a"
             version = "0.1.0"
+            edition = "2015"
             resolver = "2"
 
             [features]
@@ -129,6 +132,7 @@ fn virtual_features() {
             [package]
             name = "a"
             version = "0.1.0"
+            edition = "2015"
 
             [features]
             f1 = []
@@ -173,6 +177,7 @@ fn virtual_with_specific() {
             [package]
             name = "a"
             version = "0.1.0"
+            edition = "2015"
 
             [features]
             f1 = []
@@ -194,6 +199,7 @@ fn virtual_with_specific() {
             [package]
             name = "b"
             version = "0.1.0"
+            edition = "2015"
 
             [features]
             f2 = []
@@ -234,6 +240,7 @@ fn other_member_from_current() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             bar = { path="bar", features=["f3"] }
@@ -249,6 +256,7 @@ fn other_member_from_current() {
             [package]
             name = "bar"
             version = "0.1.0"
+            edition = "2015"
 
             [features]
             f1 = []
@@ -316,6 +324,7 @@ fn feature_default_resolver() {
             [package]
             name = "a"
             version = "0.1.0"
+            edition = "2015"
 
             [features]
             test = []
@@ -366,6 +375,7 @@ fn virtual_member_slash() {
             [package]
             name = "a"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             b = {path="../b", optional=true}
@@ -395,6 +405,7 @@ fn virtual_member_slash() {
             [package]
             name = "b"
             version = "0.1.0"
+            edition = "2015"
 
             [features]
             bfeat = []
@@ -454,6 +465,7 @@ fn non_member() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
             resolver = "2"
 
             [dependencies]
@@ -511,6 +523,7 @@ fn resolver1_member_features() {
                 [package]
                 name = "member1"
                 version = "0.1.0"
+                edition = "2015"
 
                 [features]
                 m1-feature = []
@@ -557,6 +570,7 @@ fn non_member_feature() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 resolver = "{}"
 
                 [dependencies]

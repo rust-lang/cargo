@@ -3,6 +3,7 @@
 [package]
 name = "your-face"
 version = "0.0.0"
+edition = "2015"
 
 [features]
 mouth = []

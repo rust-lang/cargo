@@ -17,6 +17,7 @@ fn simple() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
             "#,
@@ -48,6 +49,7 @@ fn doc_no_libs() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [[bin]]
@@ -94,6 +96,7 @@ fn doc_deps() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -149,6 +152,7 @@ fn doc_no_deps() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -185,6 +189,7 @@ fn doc_only_bin() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -219,6 +224,7 @@ fn doc_multiple_targets_same_name_lib() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 [lib]
                 name = "foo_lib"
             "#,
@@ -230,6 +236,7 @@ fn doc_multiple_targets_same_name_lib() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 [lib]
                 name = "foo_lib"
             "#,
@@ -267,6 +274,7 @@ fn doc_multiple_targets_same_name() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 [[bin]]
                 name = "foo_lib"
                 path = "src/foo_lib.rs"
@@ -279,6 +287,7 @@ fn doc_multiple_targets_same_name() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 [lib]
                 name = "foo_lib"
             "#,
@@ -323,6 +332,7 @@ fn doc_multiple_targets_same_name_bin() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
             "#,
         )
         .file("foo/src/bin/foo-cli.rs", "")
@@ -332,6 +342,7 @@ fn doc_multiple_targets_same_name_bin() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
             "#,
         )
         .file("bar/src/bin/foo-cli.rs", "")
@@ -367,6 +378,7 @@ fn doc_multiple_targets_same_name_undoced() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 [[bin]]
                 name = "foo-cli"
             "#,
@@ -378,6 +390,7 @@ fn doc_multiple_targets_same_name_undoced() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 [[bin]]
                 name = "foo-cli"
                 doc = false
@@ -673,6 +686,7 @@ fn doc_dash_p() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.a]
@@ -686,6 +700,7 @@ fn doc_dash_p() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.b]
@@ -817,6 +832,7 @@ fn target_specific_not_documented() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [target.foo.dependencies]
@@ -840,6 +856,7 @@ fn output_not_captured() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -874,6 +891,7 @@ fn target_specific_documented() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [target.foo.dependencies]
@@ -915,6 +933,7 @@ fn no_document_build_deps() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [build-dependencies]
@@ -963,6 +982,7 @@ fn doc_multiple_deps() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -995,6 +1015,7 @@ fn features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -1011,6 +1032,7 @@ fn features() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -1128,6 +1150,7 @@ fn plugins_no_use_target() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -1148,6 +1171,7 @@ fn doc_all_workspace() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = "bar" }
@@ -1286,6 +1310,7 @@ fn doc_all_member_dependency_same_name() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "0.1.0"
@@ -1353,6 +1378,7 @@ fn doc_extern_map_local() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1382,6 +1408,7 @@ fn open_no_doc_crate() {
             [package]
             name = "a"
             version = "0.0.1"
+            edition = "2015"
             authors = []
 
             [lib]
@@ -1414,6 +1441,7 @@ fn doc_workspace_open_different_library_and_package_names() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 [lib]
                 name = "foolib"
             "#,
@@ -1462,6 +1490,7 @@ fn doc_workspace_open_binary() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 [[bin]]
                 name = "foobin"
                 path = "src/main.rs"
@@ -1493,6 +1522,7 @@ fn doc_workspace_open_binary_and_library() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 [lib]
                 name = "foolib"
                 [[bin]]
@@ -1545,6 +1575,7 @@ fn doc_target_edition() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -1574,6 +1605,7 @@ fn issue_5345() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [target.'cfg(all(windows, target_arch = "x86"))'.dependencies]
@@ -1657,6 +1689,7 @@ fn doc_cap_lints() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -1883,6 +1916,7 @@ fn doc_example_with_deps() {
             [package]
             name = "a"
             version = "0.0.1"
+            edition = "2015"
 
             [dependencies]
             b = {path = "../b"}
@@ -1896,6 +1930,7 @@ fn doc_example_with_deps() {
             [package]
             name = "b"
             version = "0.0.1"
+            edition = "2015"
             "#,
         )
         .file("b/src/lib.rs", "")
@@ -1919,6 +1954,7 @@ fn bin_private_items() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
             "#,
         )
@@ -1972,6 +2008,7 @@ fn bin_private_items_deps() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -2026,6 +2063,7 @@ fn crate_versions() {
                 [package]
                 name = "foo"
                 version = "1.2.4"
+                edition = "2015"
                 authors = []
             "#,
         )
@@ -2058,6 +2096,7 @@ fn crate_versions_flag_is_overridden() {
                 [package]
                 name = "foo"
                 version = "1.2.4"
+                edition = "2015"
                 authors = []
             "#,
         )
@@ -2103,6 +2142,7 @@ fn doc_test_in_workspace() {
                 [package]
                 name = "crate-a"
                 version = "0.1.0"
+                edition = "2015"
             "#,
         )
         .file(
@@ -2119,6 +2159,7 @@ fn doc_test_in_workspace() {
                 [package]
                 name = "crate-b"
                 version = "0.1.0"
+                edition = "2015"
             "#,
         )
         .file(
@@ -2168,6 +2209,7 @@ fn doc_test_include_file() {
                 [package]
                 name = "root"
                 version = "0.1.0"
+                edition = "2015"
             "#,
         )
         .file(
@@ -2196,6 +2238,7 @@ fn doc_test_include_file() {
                 [package]
                 name = "child"
                 version = "0.1.0"
+                edition = "2015"
             "#,
         )
         .file(
@@ -2268,6 +2311,7 @@ LLVM version: 9.0
             [package]
             name = "foo"
             version = "1.2.4"
+            edition = "2015"
             authors = []
         "#,
         )
@@ -2351,6 +2395,7 @@ LLVM version: 9.0
             [package]
             name = "foo"
             version = "1.2.4"
+            edition = "2015"
             authors = []
         "#,
         )
@@ -2532,6 +2577,7 @@ fn doc_lib_false() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [lib]
                 doc = false
@@ -2548,6 +2594,7 @@ fn doc_lib_false() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
 
                 [lib]
                 doc = false
@@ -2584,6 +2631,7 @@ fn doc_lib_false_dep() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = "bar" }
@@ -2596,6 +2644,7 @@ fn doc_lib_false_dep() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
 
                 [lib]
                 doc = false

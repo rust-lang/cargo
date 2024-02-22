@@ -161,6 +161,7 @@ fn fails_with_crate_type_to_multi_examples() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
 
             [[example]]
@@ -229,6 +230,7 @@ fn build_with_crate_type_for_foo_with_deps() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
 
             [dependencies]
@@ -276,6 +278,7 @@ fn build_with_crate_type_to_example() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
 
             [[example]]
@@ -308,6 +311,7 @@ fn build_with_crate_types_to_example() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
 
             [[example]]
@@ -340,6 +344,7 @@ fn build_with_crate_types_to_one_of_multi_examples() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
 
             [[example]]
@@ -400,6 +405,7 @@ fn build_foo_with_bar_dependency() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -436,6 +442,7 @@ fn build_only_bar_dependency() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -509,6 +516,7 @@ fn fail_with_multiple_packages() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -586,6 +594,7 @@ fn rustc_with_other_profile() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dev-dependencies]

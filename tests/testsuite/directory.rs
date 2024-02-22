@@ -91,6 +91,7 @@ fn simple() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -129,6 +130,7 @@ fn simple_install() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -171,6 +173,7 @@ fn simple_install_fail() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -218,6 +221,7 @@ fn install_without_feature_dep() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -262,6 +266,7 @@ fn not_there() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -309,6 +314,7 @@ fn multiple() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -341,6 +347,7 @@ fn crates_io_then_directory() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -398,6 +405,7 @@ fn crates_io_then_bad_checksum() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -457,6 +465,7 @@ fn bad_file_checksum() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -502,6 +511,7 @@ fn only_dot_files_ok() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -535,6 +545,7 @@ fn random_files_ok() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -568,6 +579,7 @@ fn git_lock_file_doesnt_change() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -629,6 +641,7 @@ fn git_override_requires_lockfile() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -685,6 +698,7 @@ fn workspace_different_locations() {
                 [package]
                 name = 'foo'
                 version = '0.1.0'
+                edition = "2015"
 
                 [dependencies]
                 baz = "*"
@@ -700,6 +714,7 @@ fn workspace_different_locations() {
                 [package]
                 name = 'bar'
                 version = '0.1.0'
+                edition = "2015"
 
                 [dependencies]
                 baz = "*"
@@ -748,6 +763,7 @@ fn version_missing() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]

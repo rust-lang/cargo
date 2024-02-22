@@ -14,6 +14,7 @@ fn with_deps() {
                 [package]
                 name = "test"
                 version = "0.0.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "*"
@@ -41,6 +42,7 @@ fn shared_deps() {
                 [package]
                 name = "test"
                 version = "0.0.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "*"
@@ -71,6 +73,7 @@ fn build_dep_not_ltod() {
                 [package]
                 name = "test"
                 version = "0.0.0"
+                edition = "2015"
 
                 [build-dependencies]
                 bar = "*"
@@ -155,6 +158,7 @@ fn complicated() {
                 [package]
                 name = "test"
                 version = "0.0.0"
+                edition = "2015"
 
                 [lib]
                 crate-type = ['cdylib', 'staticlib']
@@ -232,6 +236,7 @@ fn off_in_manifest_works() {
                 [package]
                 name = "test"
                 version = "0.0.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "*"
@@ -275,6 +280,7 @@ fn between_builds() {
                 [package]
                 name = "test"
                 version = "0.0.0"
+                edition = "2015"
 
                 [profile.release]
                 lto = true
@@ -312,6 +318,7 @@ fn test_all() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
 
                 [profile.release]
                 lto = true
@@ -335,6 +342,7 @@ fn test_all_and_bench() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
 
                 [profile.release]
                 lto = true
@@ -377,6 +385,7 @@ fn project_with_dep(crate_types: &str) -> Project {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
 
                 [workspace]
 
@@ -404,6 +413,7 @@ fn project_with_dep(crate_types: &str) -> Project {
                     [package]
                     name = "bar"
                     version = "0.0.0"
+                    edition = "2015"
 
                     [dependencies]
                     registry = "*"
@@ -751,6 +761,7 @@ fn dylib_rlib_bin() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [lib]
                 crate-type = ["dylib", "rlib"]
@@ -787,6 +798,7 @@ fn fresh_swapping_commands() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"

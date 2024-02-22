@@ -16,6 +16,7 @@ fn build_bin_default_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -71,6 +72,7 @@ fn build_bin_arg_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -97,6 +99,7 @@ fn build_bin_multiple_required_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -142,6 +145,7 @@ fn build_example_default_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -179,6 +183,7 @@ fn build_example_arg_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -205,6 +210,7 @@ fn build_example_multiple_required_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -275,6 +281,7 @@ fn test_default_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -333,6 +340,7 @@ fn test_arg_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -366,6 +374,7 @@ fn test_multiple_required_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -423,6 +432,7 @@ fn bench_default_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -491,6 +501,7 @@ fn bench_arg_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -534,6 +545,7 @@ fn bench_multiple_required_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -611,6 +623,7 @@ fn install_default_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -701,6 +714,7 @@ fn install_arg_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -728,6 +742,7 @@ fn install_multiple_required_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -866,6 +881,7 @@ fn dep_feature_in_toml() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -908,6 +924,7 @@ fn dep_feature_in_toml() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -967,6 +984,7 @@ fn dep_feature_in_cmd_line() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1019,6 +1037,7 @@ fn dep_feature_in_cmd_line() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -1130,6 +1149,7 @@ fn test_skips_compiling_bin_with_missing_required_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -1196,6 +1216,7 @@ fn run_default() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -1233,6 +1254,7 @@ fn run_default_multiple_required_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]

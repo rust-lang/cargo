@@ -13,6 +13,7 @@ fn pl_manifest(name: &str, version: &str, extra: &str) -> String {
         [package]
         name = "{}"
         version = "{}"
+        edition = "2015"
         authors = []
         license = "MIT"
         description = "foo"
@@ -36,6 +37,7 @@ fn removed() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
             publish-lockfile = true
             license = "MIT"
             description = "foo"
@@ -517,6 +519,7 @@ fn use_workspace_root_lockfile() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -535,6 +538,7 @@ fn use_workspace_root_lockfile() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "bar"

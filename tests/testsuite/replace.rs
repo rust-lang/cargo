@@ -22,6 +22,7 @@ fn override_simple() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -69,6 +70,7 @@ fn override_with_features() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -118,6 +120,7 @@ fn override_with_setting_default_features() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -159,6 +162,7 @@ fn missing_version() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -193,6 +197,7 @@ fn invalid_semver_version() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -230,6 +235,7 @@ fn different_version() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -276,6 +282,7 @@ fn transitive() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -325,6 +332,7 @@ fn persists_across_rebuilds() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -374,6 +382,7 @@ fn replace_registry_with_path() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -428,6 +437,7 @@ fn use_a_spec_to_select() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -484,6 +494,7 @@ fn override_adds_some_deps() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -501,6 +512,7 @@ fn override_adds_some_deps() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -569,6 +581,7 @@ fn locked_means_locked_yes_no_seriously_i_mean_locked() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -586,6 +599,7 @@ fn locked_means_locked_yes_no_seriously_i_mean_locked() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -624,6 +638,7 @@ fn override_wrong_name() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -671,6 +686,7 @@ fn override_with_nothing() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -715,6 +731,7 @@ fn override_wrong_version() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [replace]
@@ -754,6 +771,7 @@ fn multiple_specs() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -808,6 +826,7 @@ fn test_override_dep() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -852,6 +871,7 @@ fn update() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -890,6 +910,7 @@ fn no_override_self() {
                 [package]
                 name = "near"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -907,6 +928,7 @@ fn no_override_self() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -943,6 +965,7 @@ fn override_an_override() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1012,6 +1035,7 @@ fn override_an_override() {
                 [package]
                 name = "chrono"
                 version = "0.2.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1046,6 +1070,7 @@ fn overriding_nonexistent_no_spurious() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1065,6 +1090,7 @@ fn overriding_nonexistent_no_spurious() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -1114,6 +1140,7 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
                 [package]
                 name = "first_crate"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "0.1.0"
@@ -1164,6 +1191,7 @@ fn replace_to_path_dep() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1180,6 +1208,7 @@ fn replace_to_path_dep() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1210,6 +1239,7 @@ fn override_with_default_feature() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1228,6 +1258,7 @@ fn override_with_default_feature() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -1247,6 +1278,7 @@ fn override_with_default_feature() {
                 [package]
                 name = "another2"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1270,6 +1302,7 @@ fn override_plus_dep() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1286,6 +1319,7 @@ fn override_plus_dep() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1318,6 +1352,7 @@ fn override_generic_matching_other_versions() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -1368,6 +1403,7 @@ fn override_respects_spec_metadata() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -1425,6 +1461,7 @@ fn override_spec_metadata_is_optional() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]

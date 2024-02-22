@@ -54,6 +54,7 @@ fn inactivate_targets() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             common = "1.0"
@@ -134,6 +135,7 @@ fn inactive_target_optional() {
             [package]
             name = "dep1"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             common = {version="1.0", features=["f1"]}
@@ -152,6 +154,7 @@ fn inactive_target_optional() {
             [package]
             name = "dep2"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             common = "1.0"
@@ -211,6 +214,7 @@ fn itarget_proc_macro() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             pm = "1.0"
@@ -819,6 +823,7 @@ fn required_features_host_dep() {
             [package]
             name = "bdep"
             version = "0.1.0"
+            edition = "2015"
 
             [features]
             f1 = []
@@ -922,6 +927,7 @@ fn required_features_inactive_dep() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
             resolver = "2"
 
             [target.'cfg(whatever)'.dependencies]
@@ -1073,6 +1079,7 @@ fn proc_macro_ws() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [features]
             feat1 = []
@@ -1085,6 +1092,7 @@ fn proc_macro_ws() {
             [package]
             name = "pm"
             version = "0.1.0"
+            edition = "2015"
 
             [lib]
             proc-macro = true
@@ -1134,6 +1142,7 @@ fn has_dev_dep_for_test() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dev-dependencies]
             dep = { path = 'dep', features = ['f1'] }
@@ -1154,6 +1163,7 @@ fn has_dev_dep_for_test() {
             [package]
             name = "dep"
             version = "0.1.0"
+            edition = "2015"
 
             [features]
             f1 = []
@@ -1235,6 +1245,7 @@ fn build_dep_activated() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 # This should never be selected.
                 [target.'{}'.build-dependencies]
@@ -1270,6 +1281,7 @@ fn resolver_bad_setting() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
             resolver = "foo"
             "#,
         )
@@ -1317,6 +1329,7 @@ fn resolver_original() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 resolver = "{}"
 
                 [dependencies]
@@ -1354,6 +1367,7 @@ fn resolver_not_both() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
             resolver = "2"
             "#,
         )
@@ -1390,6 +1404,7 @@ fn resolver_ws_member() {
             [package]
             name = "a"
             version = "0.1.0"
+            edition = "2015"
             resolver = "2"
             "#,
         )
@@ -1463,6 +1478,7 @@ fn resolver_ws_root_and_member() {
             [package]
             name = "a"
             version = "0.1.0"
+            edition = "2015"
             resolver = "2"
             "#,
         )
@@ -1557,6 +1573,7 @@ fn resolver_enables_new_features() {
             [package]
             name = "b"
             version = "0.1.0"
+            edition = "2015"
 
             [features]
             ping = []
@@ -1623,6 +1640,7 @@ fn install_resolve_behavior() {
             [package]
             name = "foo"
             version = "1.0.0"
+            edition = "2015"
             resolver = "2"
 
             [target.'cfg(whatever)'.dependencies]
@@ -1657,6 +1675,7 @@ fn package_includes_resolve_behavior() {
             [package]
             name = "a"
             version = "0.1.0"
+            edition = "2015"
             authors = ["Zzz"]
             description = "foo"
             license = "MIT"
@@ -1671,6 +1690,7 @@ fn package_includes_resolve_behavior() {
     let rewritten_toml = format!(
         r#"{}
 [package]
+edition = "2015"
 name = "a"
 version = "0.1.0"
 authors = ["Zzz"]
@@ -1702,6 +1722,7 @@ fn tree_all() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 resolver = "2"
 
                 [target.'cfg(whatever)'.dependencies]
@@ -1745,6 +1766,7 @@ fn shared_dep_same_but_dependencies() {
                 [package]
                 name = "bin1"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 dep = { path = "../dep" }
@@ -1757,6 +1779,7 @@ fn shared_dep_same_but_dependencies() {
                 [package]
                 name = "bin2"
                 version = "0.1.0"
+                edition = "2015"
 
                 [build-dependencies]
                 dep = { path = "../dep" }
@@ -1771,6 +1794,7 @@ fn shared_dep_same_but_dependencies() {
                 [package]
                 name = "dep"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 subdep = { path = "../subdep" }
@@ -1786,6 +1810,7 @@ fn shared_dep_same_but_dependencies() {
                 [package]
                 name = "subdep"
                 version = "0.1.0"
+                edition = "2015"
 
                 [features]
                 feat = []
@@ -1850,6 +1875,7 @@ fn test_proc_macro() {
                 [package]
                 name = "runtime"
                 version = "0.1.0"
+                edition = "2015"
                 resolver = "2"
 
                 [dependencies]
@@ -1865,6 +1891,7 @@ fn test_proc_macro() {
                 [package]
                 name = "the-macro"
                 version = "0.1.0"
+                edition = "2015"
                 [lib]
                 proc-macro = true
                 test = false
@@ -1891,6 +1918,7 @@ fn test_proc_macro() {
                 [package]
                 name = "the-macro-support"
                 version = "0.1.0"
+                edition = "2015"
                 [dependencies]
                 shared = { path = "../shared" }
             "#,
@@ -1907,6 +1935,7 @@ fn test_proc_macro() {
                 [package]
                 name = "shared"
                 version = "0.1.0"
+                edition = "2015"
                 [features]
                 b = []
             "#,
@@ -1935,6 +1964,7 @@ fn doc_optional() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 resolver = "2"
 
                 [target.'cfg(whatever)'.dependencies]
@@ -2019,6 +2049,7 @@ fn minimal_download() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 normal = "1.0"
@@ -2244,6 +2275,7 @@ fn pm_with_int_shared() {
                 [package]
                 name = "pm"
                 version = "0.1.0"
+                edition = "2015"
 
                 [lib]
                 proc-macro = true
@@ -2272,6 +2304,7 @@ fn pm_with_int_shared() {
                 [package]
                 name = "shared"
                 version = "0.1.0"
+                edition = "2015"
 
                 [features]
                 norm-feat = []
@@ -2340,6 +2373,7 @@ fn doc_proc_macro() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 resolver = "2"
 
                 [dependencies]
@@ -2353,6 +2387,7 @@ fn doc_proc_macro() {
                 [package]
                 name = "pm"
                 version = "0.1.0"
+                edition = "2015"
 
                 [lib]
                 proc-macro = true
@@ -2397,6 +2432,7 @@ fn edition_2021_default_2() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 common = "1.0"

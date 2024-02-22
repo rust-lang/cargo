@@ -12,6 +12,7 @@ fn source_config_env() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             somedep = "1.0"

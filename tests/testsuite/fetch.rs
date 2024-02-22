@@ -40,6 +40,7 @@ fn fetch_all_platform_dependencies_when_no_target_is_given() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [target.{host}.dependencies]
@@ -87,6 +88,7 @@ fn fetch_platform_specific_dependencies() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [target.{host}.dependencies]
@@ -124,6 +126,7 @@ fn fetch_warning() {
             [package]
             name = "foo"
             version = "1.0.0"
+            edition = "2015"
             misspelled = "wut"
             "#,
         )

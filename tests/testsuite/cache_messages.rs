@@ -255,6 +255,7 @@ fn very_verbose() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             bar = "1.0"
@@ -288,6 +289,7 @@ fn doesnt_create_extra_files() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 dep = "1.0"

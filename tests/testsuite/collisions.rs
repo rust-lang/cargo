@@ -24,6 +24,7 @@ fn collision_dylib() {
             [package]
             name = "a"
             version = "1.0.0"
+            edition = "2015"
 
             [lib]
             crate-type = ["dylib"]
@@ -36,6 +37,7 @@ fn collision_dylib() {
             [package]
             name = "b"
             version = "1.0.0"
+            edition = "2015"
 
             [lib]
             crate-type = ["dylib"]
@@ -128,6 +130,7 @@ fn collision_doc() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             foo2 = { path = "foo2" }
@@ -140,6 +143,7 @@ fn collision_doc() {
             [package]
             name = "foo2"
             version = "0.1.0"
+            edition = "2015"
 
             [lib]
             name = "foo"
@@ -178,6 +182,7 @@ fn collision_doc_multiple_versions() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"
@@ -254,6 +259,7 @@ fn collision_doc_host_target_feature_split() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 resolver = "2"
 
                 [dependencies]
@@ -328,6 +334,7 @@ fn collision_doc_profile_split() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 pm = { path = "pm" }
@@ -344,6 +351,7 @@ fn collision_doc_profile_split() {
                 [package]
                 name = "pm"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 common = "1.0"
@@ -402,6 +410,7 @@ fn collision_doc_sources() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"
@@ -457,6 +466,7 @@ fn collision_doc_target() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar2 = { version = "2.0", package="bar" }
@@ -509,6 +519,7 @@ fn collision_with_root() {
                 [package]
                 name = "abc"
                 version = "1.0.0"
+                edition = "2015"
 
                 [dependencies]
                 foo-macro = "1.0"
@@ -521,6 +532,7 @@ fn collision_with_root() {
                 [package]
                 name = "foo-macro"
                 version = "1.0.0"
+                edition = "2015"
 
                 [lib]
                 proc-macro = true

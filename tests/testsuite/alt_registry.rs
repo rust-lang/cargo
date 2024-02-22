@@ -17,6 +17,7 @@ fn depend_on_alt_registry() {
                 name = "foo"
                 version = "0.0.1"
                 authors = []
+                edition = "2015"
 
                 [dependencies.bar]
                 version = "0.0.1"
@@ -66,6 +67,7 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
                 name = "foo"
                 version = "0.0.1"
                 authors = []
+                edition = "2015"
 
                 [dependencies.bar]
                 version = "0.0.1"
@@ -108,6 +110,7 @@ fn depend_on_alt_registry_depends_on_same_registry() {
                 name = "foo"
                 version = "0.0.1"
                 authors = []
+                edition = "2015"
 
                 [dependencies.bar]
                 version = "0.0.1"
@@ -150,6 +153,7 @@ fn depend_on_alt_registry_depends_on_crates_io() {
                 name = "foo"
                 version = "0.0.1"
                 authors = []
+                edition = "2015"
 
                 [dependencies.bar]
                 version = "0.0.1"
@@ -194,6 +198,7 @@ fn registry_and_path_dep_works() {
                 name = "foo"
                 version = "0.0.1"
                 authors = []
+                edition = "2015"
 
                 [dependencies.bar]
                 path = "bar"
@@ -228,6 +233,7 @@ fn registry_incompatible_with_git() {
                 name = "foo"
                 version = "0.0.1"
                 authors = []
+                edition = "2015"
 
                 [dependencies.bar]
                 git = ""
@@ -258,6 +264,7 @@ fn cannot_publish_to_crates_io_with_registry_dependency() {
                 name = "foo"
                 version = "0.0.1"
                 authors = []
+                edition = "2015"
                 [dependencies.bar]
                 version = "0.0.1"
                 registry = "alternative"
@@ -301,6 +308,7 @@ fn publish_with_registry_dependency() {
                 name = "foo"
                 version = "0.0.1"
                 authors = []
+                edition = "2015"
 
                 [dependencies.bar]
                 version = "0.0.1"
@@ -385,6 +393,7 @@ fn alt_registry_and_crates_io_deps() {
                 name = "foo"
                 version = "0.0.1"
                 authors = []
+                edition = "2015"
 
                 [dependencies]
                 crates_io_dep = "0.0.1"
@@ -542,6 +551,7 @@ fn publish_with_crates_io_dep() {
                 name = "foo"
                 version = "0.0.1"
                 authors = ["me"]
+                edition = "2015"
                 license = "MIT"
                 description = "foo"
 
@@ -658,6 +668,7 @@ fn patch_alt_reg() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = { version = "0.1.0", registry = "alternative" }
@@ -699,6 +710,7 @@ fn bad_registry_name() {
                 name = "foo"
                 version = "0.0.1"
                 authors = []
+                edition = "2015"
 
                 [dependencies.bar]
                 version = "0.0.1"
@@ -715,14 +727,14 @@ fn bad_registry_name() {
 [ERROR] invalid character ` ` in registry name: `bad name`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
 
 
- --> Cargo.toml:7:17
-  |
-7 |                   [dependencies.bar]
-  |  _________________^
-8 | |                 version = \"0.0.1\"
-9 | |                 registry = \"bad name\"
-  | |_____________________________________^
-  |
+  --> Cargo.toml:8:17
+   |
+ 8 |                   [dependencies.bar]
+   |  _________________^
+ 9 | |                 version = \"0.0.1\"
+10 | |                 registry = \"bad name\"
+   | |_____________________________________^
+   |
 ",
         )
         .run();
@@ -758,6 +770,7 @@ fn no_api() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies.bar]
                 version = "0.0.1"
@@ -825,6 +838,7 @@ fn alt_reg_metadata() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 altdep = { version = "0.0.1", registry = "alternative" }
@@ -1139,6 +1153,7 @@ fn unknown_registry() {
                 name = "foo"
                 version = "0.0.1"
                 authors = []
+                edition = "2015"
 
                 [dependencies.bar]
                 version = "0.0.1"
@@ -1315,6 +1330,7 @@ fn registries_index_relative_url() {
                 name = "foo"
                 version = "0.0.1"
                 authors = []
+                edition = "2015"
 
                 [dependencies.bar]
                 version = "0.0.1"
@@ -1362,6 +1378,7 @@ fn registries_index_relative_path_not_allowed() {
                 name = "foo"
                 version = "0.0.1"
                 authors = []
+                edition = "2015"
 
                 [dependencies.bar]
                 version = "0.0.1"
@@ -1440,6 +1457,7 @@ fn sparse_lockfile() {
                 name = "a"
                 version = "0.5.0"
                 authors = []
+                edition = "2015"
 
                 [dependencies]
                 foo = { registry = 'alternative', version = '0.1.0'}
@@ -1490,6 +1508,7 @@ fn publish_with_transitive_dep() {
                 [package]
                 name = "a"
                 version = "0.5.0"
+                edition = "2015"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1504,6 +1523,7 @@ fn publish_with_transitive_dep() {
                 name = "b"
                 version = "0.6.0"
                 publish = ["Alt-2"]
+                edition = "2015"
 
                 [dependencies]
                 a = { version = "0.5.0", registry = "Alt-1" }
@@ -1605,6 +1625,7 @@ fn empty_dependency_registry() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = { version = "0.1.0", registry = "" }
@@ -1626,9 +1647,9 @@ fn empty_dependency_registry() {
 [ERROR] registry name cannot be empty
 
 
- --> Cargo.toml:7:23
+ --> Cargo.toml:8:23
   |
-7 |                 bar = { version = \"0.1.0\", registry = \"\" }
+8 |                 bar = { version = \"0.1.0\", registry = \"\" }
   |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
 ",

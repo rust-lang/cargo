@@ -44,6 +44,7 @@ fn simple() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -103,6 +104,7 @@ fn deps() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -154,6 +156,7 @@ fn nonexistent() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -197,6 +200,7 @@ fn wrong_case() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -243,6 +247,7 @@ fn mis_hyphenated() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -287,6 +292,7 @@ fn wrong_version() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -346,6 +352,7 @@ fn bad_cksum() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -396,6 +403,7 @@ fn update_registry() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -453,6 +461,7 @@ fn package_with_path_deps() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -522,6 +531,7 @@ fn lockfile_locks() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -571,6 +581,7 @@ fn lockfile_locks_transitively() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -624,6 +635,7 @@ fn yanks_are_not_used() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -676,6 +688,7 @@ fn relying_on_a_yank_is_bad() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -722,6 +735,7 @@ fn yanks_in_lockfiles_are_ok() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -772,6 +786,7 @@ fn yanks_in_lockfiles_are_ok_for_other_update() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -836,6 +851,7 @@ fn yanks_in_lockfiles_are_ok_with_new_dep() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -860,6 +876,7 @@ fn yanks_in_lockfiles_are_ok_with_new_dep() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
 
             [dependencies]
@@ -901,6 +918,7 @@ fn update_with_lockfile_if_packages_missing() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -946,6 +964,7 @@ fn update_lockfile() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1053,6 +1072,7 @@ fn dev_dependency_not_used() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1100,6 +1120,7 @@ fn bad_license_file(registry: &TestRegistry) {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license-file = "foo"
                 description = "bar"
@@ -1134,6 +1155,7 @@ fn updating_a_dep() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.a]
@@ -1147,6 +1169,7 @@ fn updating_a_dep() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1185,6 +1208,7 @@ fn updating_a_dep() {
         [package]
         name = "a"
         version = "0.0.1"
+        edition = "2015"
         authors = []
 
         [dependencies]
@@ -1233,6 +1257,7 @@ fn git_and_registry_dep() {
                 [package]
                 name = "b"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1249,6 +1274,7 @@ fn git_and_registry_dep() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -1307,6 +1333,7 @@ fn update_publish_then_update() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1335,6 +1362,7 @@ fn update_publish_then_update() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1387,6 +1415,7 @@ fn fetch_downloads() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1428,6 +1457,7 @@ fn update_transitive_dependency() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1486,6 +1516,7 @@ fn update_backtracking_ok() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1545,6 +1576,7 @@ fn update_multiple_packages() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1616,6 +1648,7 @@ fn bundled_crate_in_registry() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1635,6 +1668,7 @@ fn bundled_crate_in_registry() {
                 [package]
                 name = "baz"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1668,6 +1702,7 @@ fn update_same_prefix_oh_my_how_was_this_a_bug() {
                 [package]
                 name = "ugh"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1705,6 +1740,7 @@ fn use_semver() {
                 [package]
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1745,6 +1781,7 @@ fn use_semver_package_incorrectly() {
             [package]
             name = "a"
             version = "0.1.1-alpha.0"
+            edition = "2015"
             authors = []
             "#,
         )
@@ -1754,6 +1791,7 @@ fn use_semver_package_incorrectly() {
             [package]
             name = "b"
             version = "0.1.0"
+            edition = "2015"
             authors = []
 
             [dependencies]
@@ -1798,6 +1836,7 @@ fn only_download_relevant() {
                 [package]
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [target.foo.dependencies]
@@ -1848,6 +1887,7 @@ fn resolve_and_backtracking() {
                 [package]
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1884,6 +1924,7 @@ fn upstream_warnings_on_extra_verbose() {
                 [package]
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1912,6 +1953,7 @@ fn disallow_network_http() {
                 [package]
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1948,6 +1990,7 @@ fn disallow_network_git() {
                 [package]
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1998,6 +2041,7 @@ fn add_dep_dont_update_registry() {
                 [package]
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2011,6 +2055,7 @@ fn add_dep_dont_update_registry() {
                 [package]
                 name = "baz"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2030,6 +2075,7 @@ fn add_dep_dont_update_registry() {
         [package]
         name = "bar"
         version = "0.5.0"
+        edition = "2015"
         authors = []
 
         [dependencies]
@@ -2067,6 +2113,7 @@ fn bump_version_dont_update_registry() {
                 [package]
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2080,6 +2127,7 @@ fn bump_version_dont_update_registry() {
                 [package]
                 name = "baz"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2099,6 +2147,7 @@ fn bump_version_dont_update_registry() {
         [package]
         name = "bar"
         version = "0.6.0"
+        edition = "2015"
         authors = []
 
         [dependencies]
@@ -2137,6 +2186,7 @@ fn toml_lies_but_index_is_truth() {
                 [package]
                 name = "bar"
                 version = "0.3.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2153,6 +2203,7 @@ fn toml_lies_but_index_is_truth() {
                 [package]
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2191,6 +2242,7 @@ fn vv_prints_warnings() {
                 [package]
                 name = "fo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2226,6 +2278,7 @@ fn bad_and_or_malicious_packages_rejected() {
                 [package]
                 name = "fo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2276,6 +2329,7 @@ fn git_init_templatedir_missing() {
                 [package]
                 name = "fo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2350,6 +2404,7 @@ fn rename_deps_and_features() {
                 [package]
                 name = "a"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2393,6 +2448,7 @@ fn ignore_invalid_json_lines() {
                 [package]
                 name = "a"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2427,6 +2483,7 @@ fn readonly_registry_still_works() {
                 [package]
                 name = "a"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2491,6 +2548,7 @@ fn registry_index_rejected() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             dep = "0.1"
@@ -2533,6 +2591,7 @@ fn package_lock_inside_package_is_overwritten() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2571,6 +2630,7 @@ fn package_lock_as_a_symlink_inside_package_is_overwritten() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2627,6 +2687,7 @@ fn ignores_unknown_index_version() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"
@@ -2658,6 +2719,7 @@ fn unknown_index_version_error() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"
@@ -2707,6 +2769,7 @@ fn reach_max_unpack_size() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = ">= 0.0.0"
@@ -2777,6 +2840,7 @@ fn sparse_retry_single() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2834,6 +2898,7 @@ fn sparse_retry_multiple() {
         [package]
         name = "foo"
         version = "0.1.0"
+        edition = "2015"
 
         [dependencies]
         "#
@@ -2914,6 +2979,7 @@ fn dl_retry_single() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"
@@ -2975,6 +3041,7 @@ fn dl_retry_multiple() {
         [package]
         name = "foo"
         version = "0.1.0"
+        edition = "2015"
 
         [dependencies]
         "#
@@ -3040,6 +3107,7 @@ fn deleted_entry() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "0.1"
@@ -3154,6 +3222,7 @@ fn corrupted_ok_overwritten() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1"
@@ -3212,6 +3281,7 @@ fn not_found_permutations() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -3259,6 +3329,7 @@ fn default_auth_error() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 license = "MIT"
                 description = "foo"
             "#,
@@ -3357,6 +3428,7 @@ fn debug_header_message_index() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"
@@ -3417,6 +3489,7 @@ fn debug_header_message_dl() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"
@@ -3470,6 +3543,7 @@ fn set_mask_during_unpacking() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"
@@ -3519,6 +3593,7 @@ fn unpack_again_when_cargo_ok_is_unrecognized() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"
@@ -3588,6 +3663,7 @@ fn differ_only_by_metadata() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -3630,6 +3706,7 @@ fn differ_only_by_metadata_with_lockfile() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -3678,6 +3755,7 @@ fn builtin_source_replacement() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bad-cksum = ">= 0.0.0"

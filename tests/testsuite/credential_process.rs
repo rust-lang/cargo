@@ -53,6 +53,7 @@ fn get_token_test() -> (Project, TestRegistry) {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 description = "foo"
                 license = "MIT"
                 homepage = "https://example.com/"
@@ -517,6 +518,7 @@ fn token_caching() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 description = "foo"
                 license = "MIT"
                 homepage = "https://example.com/"
@@ -596,6 +598,7 @@ fn basic_provider() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 [dependencies.bar]
                 version = "0.0.1"

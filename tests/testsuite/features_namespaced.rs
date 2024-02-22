@@ -19,6 +19,7 @@ fn dependency_with_crate_syntax() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = {version="1.0", features=["feat"]}
@@ -53,6 +54,7 @@ fn namespaced_invalid_feature() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -85,6 +87,7 @@ fn namespaced_invalid_dependency() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [features]
                 bar = ["dep:baz"]
@@ -116,6 +119,7 @@ fn namespaced_non_optional_dependency() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [features]
                 bar = ["dep:baz"]
@@ -154,6 +158,7 @@ fn namespaced_implicit_feature() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [features]
                 bar = ["baz"]
@@ -198,6 +203,7 @@ fn namespaced_shadowed_dep() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [features]
                 baz = []
@@ -234,6 +240,7 @@ fn namespaced_shadowed_non_optional() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [features]
                 baz = []
@@ -258,6 +265,7 @@ fn namespaced_implicit_non_optional() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [features]
                 bar = ["baz"]
@@ -292,6 +300,7 @@ fn namespaced_same_name() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [features]
                 baz = ["dep:baz"]
@@ -350,6 +359,7 @@ fn no_implicit_feature() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 regex = { version = "1.0", optional = true }
@@ -421,6 +431,7 @@ fn crate_syntax_bad_name() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { version="1.0", optional=true }
@@ -437,9 +448,9 @@ fn crate_syntax_bad_name() {
         .with_stderr(
             "\
 [ERROR] feature named `dep:bar` is not allowed to start with `dep:`
-  --> Cargo.toml:10:17
+  --> Cargo.toml:11:17
    |
-10 |                 \"dep:bar\" = []
+11 |                 \"dep:bar\" = []
    |                 ^^^^^^^^^
    |
 ",
@@ -461,6 +472,7 @@ fn crate_syntax_in_dep() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { version = "1.0", features = ["dep:baz"] }
@@ -494,6 +506,7 @@ fn crate_syntax_cli() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { version = "1.0", optional=true }
@@ -533,6 +546,7 @@ fn crate_required_features() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { version = "1.0", optional=true }
@@ -568,6 +582,7 @@ fn json_exposed() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { version = "1.0", optional=true }
@@ -644,6 +659,7 @@ fn crate_feature_with_explicit() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { version="1.0", optional = true }
@@ -692,6 +708,7 @@ fn optional_explicit_without_crate() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { version = "1.0", optional = true }
@@ -733,6 +750,7 @@ fn tree() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { version = "1.0", features = ["feat1"], optional=true }
@@ -821,6 +839,7 @@ fn tree_no_implicit() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { version = "1.0", optional=true }
@@ -874,6 +893,7 @@ fn publish_no_implicit() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 description = "foo"
                 license = "MIT"
                 homepage = "https://example.com/"
@@ -956,6 +976,7 @@ You may press ctrl-c [..]
             &format!(
                 r#"{}
 [package]
+edition = "2015"
 name = "foo"
 version = "0.1.0"
 description = "foo"
@@ -992,6 +1013,7 @@ fn publish() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 description = "foo"
                 license = "MIT"
                 homepage = "https://example.com/"
@@ -1072,6 +1094,7 @@ You may press ctrl-c [..]
             &format!(
                 r#"{}
 [package]
+edition = "2015"
 name = "foo"
 version = "0.1.0"
 description = "foo"
@@ -1108,6 +1131,7 @@ fn namespaced_feature_together() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"
@@ -1138,6 +1162,7 @@ Caused by:
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             bar = {version = "1.0", optional = true }
@@ -1166,6 +1191,7 @@ Caused by:
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             bar = {version = "1.0", optional = true }
@@ -1194,6 +1220,7 @@ Caused by:
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             bar = {version = "1.0", optional = true }
@@ -1230,6 +1257,7 @@ fn dep_feature_when_hidden() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = "bar", optional = true }
@@ -1246,6 +1274,7 @@ fn dep_feature_when_hidden() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
 
                 [features]
                 bar_feat = []

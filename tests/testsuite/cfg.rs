@@ -13,6 +13,7 @@ fn cfg_easy() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [target.'cfg(unix)'.dependencies]
@@ -39,6 +40,7 @@ fn dont_include() {
                     [package]
                     name = "a"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [target.'cfg({})'.dependencies]
@@ -76,6 +78,7 @@ fn works_through_the_registry() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -119,6 +122,7 @@ fn ignore_version_from_other_platform() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [target.'cfg({})'.dependencies]
@@ -159,6 +163,7 @@ fn bad_target_spec() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [target.'cfg(4)'.dependencies]
@@ -190,6 +195,7 @@ fn bad_target_spec2() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [target.'cfg(bar =)'.dependencies]
@@ -222,6 +228,7 @@ fn multiple_match_ok() {
                     [package]
                     name = "a"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [target.'cfg(unix)'.dependencies]
@@ -257,6 +264,7 @@ fn any_ok() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [target."cfg(any(windows, unix))".dependencies]
@@ -281,6 +289,7 @@ fn cfg_looks_at_rustflags_for_target() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [target.'cfg(with_b)'.dependencies]
@@ -493,6 +502,7 @@ fn exclusive_dep_kinds() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [target.'cfg(abc)'.dependencies]
                 bar = "1.0"

@@ -42,6 +42,7 @@ fn case() {
                  [package]\n\
                  name = \"my-project\"\n\
                  version = \"0.1.0\"\n\
+                 edition = \"2015\"\n\
                  \n\
                  [dependencies]\n\
                  bar = {{ git = \"{git_project1}\" }}\n\

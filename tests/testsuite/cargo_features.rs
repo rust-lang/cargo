@@ -12,6 +12,7 @@ fn feature_required() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 im-a-teapot = true
             "#,
@@ -77,6 +78,7 @@ fn feature_required_dependency() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 im-a-teapot = true
             "#,
         )
@@ -89,6 +91,7 @@ fn feature_required_dependency() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"
@@ -168,6 +171,7 @@ fn unknown_feature() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
             "#,
         )
@@ -197,6 +201,7 @@ fn stable_feature_warns() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
             "#,
         )
@@ -226,6 +231,7 @@ fn allow_features() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 im-a-teapot = true
             "#,
@@ -289,6 +295,7 @@ fn allow_features_to_rustc() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
             "#,
         )
@@ -329,6 +336,7 @@ fn allow_features_in_cfg() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 im-a-teapot = true
             "#,
@@ -421,6 +429,7 @@ fn nightly_feature_requires_nightly() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 im-a-teapot = true
             "#,
@@ -463,6 +472,7 @@ fn nightly_feature_requires_nightly_in_dep() {
                 [package]
                 name = "b"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -478,6 +488,7 @@ fn nightly_feature_requires_nightly_in_dep() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 im-a-teapot = true
             "#,
@@ -532,6 +543,7 @@ fn cant_publish() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 im-a-teapot = true
             "#,
@@ -576,6 +588,7 @@ fn z_flags_rejected() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 im-a-teapot = true
             "#,
@@ -631,6 +644,7 @@ fn publish_allowed() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
             "#,
         )
@@ -669,6 +683,7 @@ fn wrong_position() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 cargo-features = ["test-dummy-unstable"]
             "#,
         )
@@ -680,9 +695,9 @@ fn wrong_position() {
         .with_stderr(
             "\
 [ERROR] the field `cargo-features` should be set at the top of Cargo.toml before any tables
- --> Cargo.toml:5:34
+ --> Cargo.toml:6:34
   |
-5 |                 cargo-features = [\"test-dummy-unstable\"]
+6 |                 cargo-features = [\"test-dummy-unstable\"]
   |                                  ^^^^^^^^^^^^^^^^^^^^^^^
   |
 ",

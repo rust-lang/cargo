@@ -18,6 +18,7 @@ fn check_with_invalid_artifact_dependency() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -62,6 +63,7 @@ Caused by:
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -94,6 +96,7 @@ Caused by:
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -129,6 +132,7 @@ fn check_with_invalid_target_triple() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -158,6 +162,7 @@ fn build_without_nightly_aborts_with_error() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -191,6 +196,7 @@ fn disallow_artifact_and_no_artifact_dep_to_same_package_within_the_same_dep_cat
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -222,6 +228,7 @@ fn features_are_unified_among_lib_and_bin_dep_of_same_target() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -253,6 +260,7 @@ fn features_are_unified_among_lib_and_bin_dep_of_same_target() {
                 [package]
                 name = "d1"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -293,6 +301,7 @@ fn features_are_unified_among_lib_and_bin_dep_of_same_target() {
                 [package]
                 name = "d2"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -335,6 +344,7 @@ fn features_are_not_unified_among_lib_and_bin_dep_of_different_target() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -369,6 +379,7 @@ fn features_are_not_unified_among_lib_and_bin_dep_of_different_target() {
                 [package]
                 name = "d1"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -400,6 +411,7 @@ fn features_are_not_unified_among_lib_and_bin_dep_of_different_target() {
                 [package]
                 name = "d2"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -438,6 +450,7 @@ fn feature_resolution_works_for_cfg_target_specification() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -462,6 +475,7 @@ fn feature_resolution_works_for_cfg_target_specification() {
                 [package]
                 name = "d1"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [target.'$TARGET'.dependencies]
@@ -491,6 +505,7 @@ fn feature_resolution_works_for_cfg_target_specification() {
                 [package]
                 name = "d2"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
             "#,
         )
@@ -512,6 +527,7 @@ fn build_script_with_bin_artifacts() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -553,6 +569,7 @@ fn build_script_with_bin_artifacts() {
                 [package]
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -622,6 +639,7 @@ fn build_script_with_bin_artifact_and_lib_false() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -665,6 +683,7 @@ fn lib_with_bin_artifact_and_lib_false() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -706,6 +725,7 @@ fn build_script_with_selected_dashed_bin_artifact_and_lib_true() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -725,6 +745,7 @@ fn build_script_with_selected_dashed_bin_artifact_and_lib_true() {
                 [package]
                 name = "bar-baz"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [[bin]]
@@ -802,6 +823,7 @@ fn lib_with_selected_dashed_bin_artifact_and_lib_true() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -830,6 +852,7 @@ fn lib_with_selected_dashed_bin_artifact_and_lib_true() {
                 [package]
                 name = "bar-baz"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -871,6 +894,7 @@ fn allow_artifact_and_no_artifact_dep_to_same_package_within_different_dep_categ
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -912,6 +936,7 @@ fn normal_build_deps_are_picked_up_in_presence_of_an_artifact_build_dep_to_the_s
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -949,6 +974,7 @@ fn disallow_using_example_binaries_as_artifacts() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -982,6 +1008,7 @@ fn allow_artifact_and_non_artifact_dependency_to_same_crate() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -1032,6 +1059,7 @@ fn build_script_deps_adopt_specified_target_unconditionally() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -1094,6 +1122,7 @@ fn build_script_deps_adopt_do_not_allow_multiple_targets_under_different_name_an
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -1149,6 +1178,7 @@ fn non_build_script_deps_adopt_specified_target_unconditionally() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -1200,6 +1230,7 @@ fn no_cross_doctests_works_with_artifacts() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -1292,6 +1323,7 @@ fn build_script_deps_adopts_target_platform_if_target_equals_target() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -1345,6 +1377,7 @@ fn profile_override_basic() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [build-dependencies]
@@ -1401,6 +1434,7 @@ fn dependencies_of_dependencies_work_in_artifacts() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -1423,6 +1457,7 @@ fn dependencies_of_dependencies_work_in_artifacts() {
                 [package]
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1477,6 +1512,7 @@ fn targets_are_picked_up_from_non_workspace_artifact_deps() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1522,6 +1558,7 @@ fn index_version_filtering() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"
@@ -1577,6 +1614,7 @@ fn proc_macro_in_artifact_dep() {
                 [package]
                 name = "pm"
                 version = "1.0.0"
+                edition = "2015"
 
                 [lib]
                 proc-macro = true
@@ -1628,6 +1666,7 @@ fn allow_dep_renames_with_multiple_versions() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -1674,6 +1713,7 @@ fn allow_artifact_and_non_artifact_dependency_to_same_crate_if_these_are_not_the
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -1721,6 +1761,7 @@ fn prevent_no_lib_warning_with_artifact_dependencies() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -1755,6 +1796,7 @@ fn show_no_lib_warning_with_artifact_dependencies_that_have_no_lib_but_lib_true(
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -1820,6 +1862,7 @@ fn check_missing_crate_type_in_package_fails() {
                         [package]
                         name = "foo"
                         version = "0.0.0"
+                        edition = "2015"
                         authors = []
 
                         [dependencies]
@@ -1851,6 +1894,7 @@ fn check_target_equals_target_in_non_build_dependency_errors() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -1880,6 +1924,7 @@ fn env_vars_and_build_products_for_various_build_targets() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -1960,6 +2005,7 @@ fn env_vars_and_build_products_for_various_build_targets() {
                 [package]
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -2004,6 +2050,7 @@ fn publish_artifact_dep() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
             authors = []
             license = "MIT"
             description = "foo"
@@ -2095,6 +2142,7 @@ You may press ctrl-c [..]
             &format!(
                 r#"{}
 [package]
+edition = "2015"
 name = "foo"
 version = "0.1.0"
 authors = []
@@ -2133,6 +2181,7 @@ fn doc_lib_true() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -2192,6 +2241,7 @@ fn rustdoc_works_on_libs_with_artifacts_and_lib_false() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 resolver = "2"
 
@@ -2218,6 +2268,7 @@ fn rustdoc_works_on_libs_with_artifacts_and_lib_false() {
                 [package]
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -2323,6 +2374,7 @@ fn build_script_features_for_shared_dependency() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 resolver = "2"
 
                 [dependencies]
@@ -2346,6 +2398,7 @@ fn build_script_features_for_shared_dependency() {
                 [package]
                 name = "d1"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 common = { path = "../common", features = ["f2"] }
@@ -2363,6 +2416,7 @@ fn build_script_features_for_shared_dependency() {
                 [package]
                 name = "common"
                 version = "0.0.1"
+                edition = "2015"
 
                 [features]
                 f1 = []
@@ -2414,6 +2468,7 @@ fn calc_bin_artifact_fingerprint() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 resolver = "2"
 
                 [dependencies]
@@ -2609,6 +2664,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 a = { path = "../a", features = ["feature"] }
@@ -2652,6 +2708,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep() {
                 [package]
                 name = "b"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 c = { path = "../c" }
@@ -2673,6 +2730,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep() {
                 [package]
                 name = "c"
                 version = "0.1.0"
+                edition = "2015"
 
                 [features]
                 feature = []
@@ -2752,6 +2810,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_lib() {
                 [package]
                 name = "a"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 b = { path = "../b", optional = true }
@@ -2772,6 +2831,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_lib() {
                 [package]
                 name = "b"
                 version = "0.1.0"
+                edition = "2015"
 
                 [features]
                 feature = []
@@ -2826,6 +2886,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_and_proc_macro() {
             [package]
             name = "bar"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             b = { path = "../b" }
@@ -2880,6 +2941,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_and_proc_macro() {
             [package]
             name = "a"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             d = { path = "../d" }
@@ -2901,6 +2963,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_and_proc_macro() {
             [package]
             name = "d"
             version = "0.1.0"
+            edition = "2015"
 
             [features]
             feature = []
@@ -2936,6 +2999,7 @@ fn same_target_artifact_dep_sharing() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 a = {{ path = "a" }}
@@ -2950,6 +3014,7 @@ fn same_target_artifact_dep_sharing() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 a = { path = "../a" }
@@ -2967,6 +3032,7 @@ fn same_target_artifact_dep_sharing() {
                 [package]
                 name = "a"
                 version = "0.1.0"
+                edition = "2015"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -2993,6 +3059,7 @@ fn check_transitive_artifact_dependency_with_different_target() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = "bar/" }
@@ -3005,6 +3072,7 @@ fn check_transitive_artifact_dependency_with_different_target() {
                 [package]
                 name = "bar"
                 version = "0.0.0"
+                edition = "2015"
 
                 [dependencies]
                 baz = { path = "baz/", artifact = "bin", target = "custom-target" }
@@ -3017,6 +3085,7 @@ fn check_transitive_artifact_dependency_with_different_target() {
                 [package]
                 name = "baz"
                 version = "0.0.0"
+                edition = "2015"
 
                 [dependencies]
             "#,

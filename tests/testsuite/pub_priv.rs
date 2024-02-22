@@ -18,6 +18,7 @@ fn exported_priv_warning() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 priv_dep = "0.1.0"
@@ -57,6 +58,7 @@ fn exported_pub_dep() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 pub_dep = {version = "0.1.0", public = true}
@@ -126,6 +128,7 @@ fn requires_feature() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 pub_dep = { version = "0.1.0", public = true }
@@ -165,6 +168,7 @@ fn pub_dev_dependency() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dev-dependencies]
                 pub_dep = {version = "0.1.0", public = true}
@@ -206,6 +210,7 @@ fn pub_dev_dependency_without_feature() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dev-dependencies]
                 pub_dep = {version = "0.1.0", public = true}
@@ -253,6 +258,7 @@ fn workspace_pub_disallowed() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [workspace.dependencies]
                 foo1 = "0.1.0"
@@ -305,6 +311,7 @@ fn allow_priv_in_tests() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 priv_dep = {version = "0.1.0", public = false}
@@ -349,6 +356,7 @@ fn allow_priv_in_benchs() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 priv_dep = {version = "0.1.0", public = false}
@@ -393,6 +401,7 @@ fn allow_priv_in_bins() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 priv_dep = {version = "0.1.0", public = false}
@@ -438,6 +447,7 @@ fn allow_priv_in_examples() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 priv_dep = {version = "0.1.0", public = false}
@@ -483,6 +493,7 @@ fn allow_priv_in_custom_build() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [build-dependencies]
                 priv_dep = "0.1.0"
@@ -539,6 +550,7 @@ fn publish_package_with_public_dependency() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             [dependencies]
             bar = {version = "0.1.0", public = true}
         "#,
@@ -588,6 +600,7 @@ fn verify_mix_cargo_feature_z() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 dep = "0.1.0"
@@ -637,6 +650,7 @@ fn verify_z_public_dependency() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 dep = "0.1.0"

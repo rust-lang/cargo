@@ -12,6 +12,7 @@ fn inherits_on_release() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [profile.release]
@@ -40,6 +41,7 @@ fn missing_inherits() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [profile.release-lto]
@@ -69,6 +71,7 @@ fn invalid_profile_name() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [profile.'.release-lto']
@@ -84,9 +87,9 @@ fn invalid_profile_name() {
         .with_stderr(
             "\
 [ERROR] invalid character `.` in profile name: `.release-lto`, allowed characters are letters, numbers, underscore, and hyphen
- --> Cargo.toml:7:26
+ --> Cargo.toml:8:26
   |
-7 |                 [profile.'.release-lto']
+8 |                 [profile.'.release-lto']
   |                          ^^^^^^^^^^^^^^
   |
 ",
@@ -107,6 +110,7 @@ fn invalid_dir_name() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [profile.'release-lto']
@@ -139,6 +143,7 @@ fn dir_name_disabled() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [profile.release-lto]
                 inherits = "release"
@@ -172,6 +177,7 @@ fn invalid_inherits() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [profile.'release-lto']
@@ -200,6 +206,7 @@ fn non_existent_inherits() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [profile.release-lto]
@@ -229,6 +236,7 @@ fn self_inherits() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [profile.release-lto]
@@ -258,6 +266,7 @@ fn inherits_loop() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [profile.release-lto]
@@ -291,6 +300,7 @@ fn overrides_with_custom() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -361,6 +371,7 @@ fn conflicting_usage() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
             "#,
         )
@@ -475,6 +486,7 @@ fn clean_custom_dirname() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [profile.other]
@@ -560,6 +572,7 @@ fn unknown_profile() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             "#,
         )
         .file("src/lib.rs", "")
@@ -585,6 +598,7 @@ fn reserved_profile_names() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [profile.doc]
                 opt-level = 1
@@ -619,6 +633,7 @@ See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configur
                     [package]
                     name = "foo"
                     version = "0.1.0"
+                    edition = "2015"
 
                     [profile.{}]
                     opt-level = 1
@@ -635,9 +650,9 @@ See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configur
 [ERROR] profile name `{name}` is reserved
 Please choose a different name.
 See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
- --> Cargo.toml:6:30
+ --> Cargo.toml:7:30
   |
-6 |                     [profile.{name}]
+7 |                     [profile.{name}]
   |                              {highlight}
   |
 "
@@ -651,6 +666,7 @@ See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configur
                [package]
                name = "foo"
                version = "0.1.0"
+               edition = "2015"
                authors = []
 
                [profile.debug]
@@ -666,9 +682,9 @@ See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configur
 [ERROR] profile name `debug` is reserved
 To configure the default development profile, use the name `dev` as in [profile.dev]
 See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
- --> Cargo.toml:7:25
+ --> Cargo.toml:8:25
   |
-7 |                [profile.debug]
+8 |                [profile.debug]
   |                         ^^^^^
   |
 ",
@@ -686,6 +702,7 @@ fn legacy_commands_support_custom() {
                [package]
                name = "foo"
                version = "0.1.0"
+               edition = "2015"
 
                [profile.super-dev]
                codegen-units = 3
@@ -719,6 +736,7 @@ fn legacy_rustc() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [profile.dev]
                 codegen-units = 3

@@ -12,6 +12,7 @@ fn dependency_warning_ignored() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -29,6 +30,7 @@ fn dependency_warning_ignored() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lints.rust]
@@ -59,6 +61,7 @@ fn malformed_on_stable() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
             "#,
@@ -90,6 +93,7 @@ fn fail_on_invalid_tool() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [workspace.lints.super-awesome-linter]
@@ -121,6 +125,7 @@ fn invalid_type_in_lint_value() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [workspace.lints.rust]
                 rust-2018-idioms = -1
@@ -134,9 +139,9 @@ fn invalid_type_in_lint_value() {
         .with_stderr(
             "\
 [ERROR] invalid type: integer `-1`, expected a string or map
- --> Cargo.toml:7:36
+ --> Cargo.toml:8:36
   |
-7 |                 rust-2018-idioms = -1
+8 |                 rust-2018-idioms = -1
   |                                    ^^
   |
 ",
@@ -153,6 +158,7 @@ fn warn_on_unused_key() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [workspace.lints.rust]
                 rust-2018-idioms = { level = "allow", unused = true }
@@ -184,6 +190,7 @@ fn fail_on_tool_injection() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [workspace.lints.rust]
@@ -215,6 +222,7 @@ fn fail_on_redundant_tool() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [workspace.lints.rust]
@@ -246,6 +254,7 @@ fn fail_on_conflicting_tool() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [workspace.lints.rust]
@@ -277,6 +286,7 @@ fn package_lint_deny() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lints.rust]
@@ -312,6 +322,7 @@ fn workspace_cant_be_false() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lints]
@@ -336,9 +347,9 @@ pub fn foo(num: i32) -> u32 {
         .with_stderr_contains(
             "\
 error: `workspace` cannot be false
- --> Cargo.toml:8:29
+ --> Cargo.toml:9:29
   |
-8 |                 workspace = false
+9 |                 workspace = false
   |                             ^^^^^
   |
 ",
@@ -355,6 +366,7 @@ fn workspace_lint_deny() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lints]
@@ -393,6 +405,7 @@ fn workspace_and_package_lints() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lints]
@@ -436,6 +449,7 @@ fn attribute_has_precedence() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lints.rust]
@@ -468,6 +482,7 @@ fn rustflags_has_precedence() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lints.rust]
@@ -501,6 +516,7 @@ fn profile_rustflags_has_precedence() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [lints.rust]
                 "unsafe_code" = "deny"
@@ -534,6 +550,7 @@ fn build_rustflags_has_precedence() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [lints.rust]
                 "unsafe_code" = "deny"
@@ -651,6 +668,7 @@ fn rustdoc_lint() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lints.rustdoc]
@@ -686,6 +704,7 @@ fn doctest_respects_lints() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lints.rust]

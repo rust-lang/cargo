@@ -153,6 +153,7 @@ fn invalid_global_config() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -218,6 +219,7 @@ fn duplicate_packages_in_cargo_lock() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -272,6 +274,7 @@ fn bad_source_in_cargo_lock() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -344,6 +347,7 @@ fn bad_git_dependency() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -409,6 +413,7 @@ fn bad_crate_type() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -435,6 +440,7 @@ fn malformed_override() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [target.x86_64-apple-darwin.freetype]
@@ -452,9 +458,9 @@ fn malformed_override() {
             "\
 [ERROR] invalid inline table
 expected `}`
- --> Cargo.toml:8:27
+ --> Cargo.toml:9:27
   |
-8 |                 native = {
+9 |                 native = {
   |                           ^
   |
 ",
@@ -471,6 +477,7 @@ fn duplicate_binary_names() {
                [package]
                name = "qqq"
                version = "0.1.0"
+               edition = "2015"
                authors = ["A <a@a.a>"]
 
                [[bin]]
@@ -508,6 +515,7 @@ fn duplicate_example_names() {
                [package]
                name = "qqq"
                version = "0.1.0"
+               edition = "2015"
                authors = ["A <a@a.a>"]
 
                [[example]]
@@ -545,6 +553,7 @@ fn duplicate_bench_names() {
                [package]
                name = "qqq"
                version = "0.1.0"
+               edition = "2015"
                authors = ["A <a@a.a>"]
 
                [[bench]]
@@ -586,6 +595,7 @@ fn duplicate_deps() {
                [package]
                name = "qqq"
                version = "0.0.1"
+               edition = "2015"
                authors = []
 
                [dependencies]
@@ -625,6 +635,7 @@ fn duplicate_deps_diff_sources() {
                [package]
                name = "qqq"
                version = "0.0.1"
+               edition = "2015"
                authors = []
 
                [target.i686-unknown-linux-gnu.dependencies]
@@ -660,6 +671,7 @@ fn unused_keys() {
                [package]
                name = "foo"
                version = "0.1.0"
+               edition = "2015"
                authors = []
 
                [target.foo]
@@ -687,6 +699,7 @@ warning: unused manifest key: target.foo.bar
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
                 bulid = "foo"
             "#,
@@ -712,6 +725,7 @@ warning: unused manifest key: package.bulid
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [lib]
@@ -765,6 +779,7 @@ fn empty_dependencies() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -823,6 +838,7 @@ fn ambiguous_git_reference() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -856,6 +872,7 @@ fn fragment_in_git_url() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -899,6 +916,7 @@ fn bad_source_config2() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -945,6 +963,7 @@ fn bad_source_config3() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -990,6 +1009,7 @@ fn bad_source_config4() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1039,6 +1059,7 @@ fn bad_source_config5() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1081,6 +1102,7 @@ fn both_git_and_path_specified() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -1113,6 +1135,7 @@ fn bad_source_config6() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1152,6 +1175,7 @@ fn ignored_git_revision() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -1180,6 +1204,7 @@ Caused by:
             [package]
             name = "foo"
             version = "0.0.0"
+            edition = "2015"
 
             [target.some-target.dependencies]
             bar = { path = "bar", branch = "spam" }
@@ -1200,6 +1225,7 @@ fn bad_source_config7() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1234,6 +1260,7 @@ fn bad_source_config8() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1268,6 +1295,7 @@ fn bad_dependency() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1282,9 +1310,9 @@ fn bad_dependency() {
         .with_stderr(
             "\
 [ERROR] invalid type: integer `3`, expected a version string like [..]
- --> Cargo.toml:8:23
+ --> Cargo.toml:9:23
   |
-8 |                 bar = 3
+9 |                 bar = 3
   |                       ^
   |
 ",
@@ -1301,6 +1329,7 @@ fn bad_debuginfo() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [profile.dev]
@@ -1315,9 +1344,9 @@ fn bad_debuginfo() {
         .with_stderr(
             "\
 [ERROR] invalid value: string \"a\", expected a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"
- --> Cargo.toml:8:25
+ --> Cargo.toml:9:25
   |
-8 |                 debug = 'a'
+9 |                 debug = 'a'
   |                         ^^^
   |
 ",
@@ -1334,6 +1363,7 @@ fn bad_debuginfo2() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [profile.dev]
@@ -1348,9 +1378,9 @@ fn bad_debuginfo2() {
         .with_stderr(
             "\
 [ERROR] invalid type: floating point `3.6`, expected a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"
- --> Cargo.toml:8:25
+ --> Cargo.toml:9:25
   |
-8 |                 debug = 3.6
+9 |                 debug = 3.6
   |                         ^^^
   |
 ",
@@ -1367,6 +1397,7 @@ fn bad_opt_level() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 build = 3
             "#,
@@ -1379,9 +1410,9 @@ fn bad_opt_level() {
         .with_stderr(
             "\
 [ERROR] invalid type: integer `3`, expected a boolean or string
- --> Cargo.toml:6:25
+ --> Cargo.toml:7:25
   |
-6 |                 build = 3
+7 |                 build = 3
   |                         ^
   |
 ",
@@ -1399,6 +1430,7 @@ fn warn_semver_metadata() {
             [package]
             name = "foo"
             version = "1.0.0"
+            edition = "2015"
 
             [dependencies]
             bar = "1.0.0+1234"
@@ -1665,6 +1697,7 @@ fn bad_trim_paths() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
 
                 [profile.dev]
                 trim-paths = "split-debuginfo"
@@ -1678,9 +1711,9 @@ fn bad_trim_paths() {
         .with_status(101)
         .with_stderr("\
 [ERROR] expected a boolean, \"none\", \"diagnostics\", \"macro\", \"object\", \"all\", or an array with these options
- --> Cargo.toml:7:30
+ --> Cargo.toml:8:30
   |
-7 |                 trim-paths = \"split-debuginfo\"
+8 |                 trim-paths = \"split-debuginfo\"
   |                              ^^^^^^^^^^^^^^^^^
   |
 ",

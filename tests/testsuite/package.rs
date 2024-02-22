@@ -21,6 +21,7 @@ fn simple() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 exclude = ["*.txt"]
                 license = "MIT"
@@ -103,6 +104,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
             "#,
@@ -130,6 +132,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -275,6 +278,7 @@ fn vcs_file_collision() {
                 name = "foo"
                 description = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 documentation = "foo"
@@ -314,6 +318,7 @@ fn orig_file_collision() {
                 name = "foo"
                 description = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 documentation = "foo"
@@ -351,6 +356,7 @@ fn path_dependency_no_version() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -390,6 +396,7 @@ fn git_dependency_no_version() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -426,6 +433,7 @@ fn exclude() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 exclude = [
                     "*.txt",
@@ -549,6 +557,7 @@ fn include() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 exclude = ["*.txt"]
                 include = ["foo.txt", "**/*.rs", "Cargo.toml", ".dotfile"]
@@ -602,6 +611,7 @@ fn package_git_submodule() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                edition = "2015"
                     authors = ["foo@example.com"]
                     license = "MIT"
                     description = "foo"
@@ -705,6 +715,7 @@ fn ignore_nested() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
             license = "MIT"
             description = "foo"
@@ -850,6 +861,7 @@ fn broken_symlink() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = 'foo'
@@ -901,6 +913,7 @@ fn broken_but_excluded_symlink() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = 'foo'
@@ -1058,6 +1071,7 @@ fn do_not_package_if_repository_is_dirty() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 license = "MIT"
                 description = "foo"
                 documentation = "foo"
@@ -1075,6 +1089,7 @@ fn do_not_package_if_repository_is_dirty() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             license = "MIT"
             description = "foo"
             documentation = "foo"
@@ -1109,6 +1124,7 @@ fn dirty_ignored() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 description = "foo"
                 license = "foo"
                 documentation = "foo"
@@ -1167,6 +1183,7 @@ fn generated_manifest() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 exclude = ["*.txt"]
                 license = "MIT"
@@ -1195,6 +1212,7 @@ fn generated_manifest() {
     let rewritten_toml = format!(
         r#"{}
 [package]
+edition = "2015"
 name = "foo"
 version = "0.0.1"
 authors = []
@@ -1239,6 +1257,7 @@ fn ignore_workspace_specifier() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 authors = []
 
@@ -1255,6 +1274,7 @@ fn ignore_workspace_specifier() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 workspace = ".."
             "#,
@@ -1268,6 +1288,7 @@ fn ignore_workspace_specifier() {
     let rewritten_toml = format!(
         r#"{}
 [package]
+edition = "2015"
 name = "bar"
 version = "0.1.0"
 authors = []
@@ -1293,6 +1314,7 @@ fn package_two_kinds_of_deps() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1475,6 +1497,7 @@ fn package_with_select_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -1504,6 +1527,7 @@ fn package_with_all_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -1533,6 +1557,7 @@ fn package_no_default_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -1565,6 +1590,7 @@ fn include_cargo_toml_implicit() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
             include = ["src/lib.rs"]
             "#,
         )
@@ -1584,6 +1610,7 @@ fn include_exclude_test(include: &str, exclude: &str, files: &[&str], expected: 
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
             authors = []
             license = "MIT"
             description = "foo"
@@ -1807,6 +1834,7 @@ fn empty_readme_path() {
             [package]
             name = "foo"
             version = "1.0.0"
+            edition = "2015"
             readme = ""
             license = "MIT"
             description = "foo"
@@ -1840,6 +1868,7 @@ fn invalid_readme_path() {
             [package]
             name = "foo"
             version = "1.0.0"
+            edition = "2015"
             readme = "DOES-NOT-EXIST"
             license = "MIT"
             description = "foo"
@@ -1873,6 +1902,7 @@ fn readme_or_license_file_is_dir() {
             [package]
             name = "foo"
             version = "1.0.0"
+            edition = "2015"
             readme = "./src"
             license-file = "./src"
             description = "foo"
@@ -1909,6 +1939,7 @@ fn empty_license_file_path() {
             [package]
             name = "foo"
             version = "1.0.0"
+            edition = "2015"
             license-file = ""
             description = "foo"
             homepage = "foo"
@@ -1942,6 +1973,7 @@ fn invalid_license_file_path() {
             [package]
             name = "foo"
             version = "1.0.0"
+            edition = "2015"
             license-file = "does-not-exist"
             description = "foo"
             homepage = "foo"
@@ -1973,6 +2005,7 @@ fn license_file_implicit_include() {
             [package]
             name = "foo"
             version = "1.0.0"
+            edition = "2015"
             license-file = "subdir/LICENSE"
             description = "foo"
             homepage = "foo"
@@ -2034,6 +2067,7 @@ fn relative_license_included() {
             [package]
             name = "foo"
             version = "1.0.0"
+            edition = "2015"
             license-file = "../LICENSE"
             description = "foo"
             homepage = "foo"
@@ -2091,6 +2125,7 @@ fn relative_license_include_collision() {
             [package]
             name = "foo"
             version = "1.0.0"
+            edition = "2015"
             license-file = "../LICENSE"
             description = "foo"
             homepage = "foo"
@@ -2148,6 +2183,7 @@ fn package_restricted_windows() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
             license = "MIT"
             description = "foo"
             homepage = "foo"
@@ -2248,6 +2284,7 @@ fn reserved_windows_name() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -2299,6 +2336,7 @@ fn list_with_path_and_lock() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
             license = "MIT"
             description = "foo"
             homepage = "foo"
@@ -2382,6 +2420,7 @@ fn long_file_names() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
             license = "MIT"
             description = "foo"
             homepage = "foo"
@@ -2417,6 +2456,7 @@ fn reproducible_output() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 exclude = ["*.txt"]
                 license = "MIT"
@@ -2452,6 +2492,7 @@ fn package_with_resolver_and_metadata() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 resolver = '2'
 
@@ -2508,6 +2549,7 @@ fn in_workspace() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -2523,6 +2565,7 @@ fn in_workspace() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "bar"
@@ -2574,6 +2617,7 @@ fn workspace_noconflict_readme() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 repository = "https://github.com/bar/bar"
                 authors = []
                 license = "MIT"
@@ -2616,6 +2660,7 @@ fn workspace_conflict_readme() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 repository = "https://github.com/bar/bar"
                 authors = []
                 license = "MIT"
@@ -2748,6 +2793,7 @@ fn basic_filesizes() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 exclude = ["*.txt"]
                 license = "MIT"
@@ -2758,6 +2804,7 @@ fn basic_filesizes() {
     let cargo_toml_contents = format!(
         r#"{}
 [package]
+edition = "2015"
 name = "foo"
 version = "0.0.1"
 authors = []
@@ -2833,6 +2880,7 @@ fn larger_filesizes() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -2851,6 +2899,7 @@ fn larger_filesizes() {
     let cargo_toml_contents = format!(
         r#"{}
 [package]
+edition = "2015"
 name = "foo"
 version = "0.0.1"
 authors = []
@@ -2938,6 +2987,7 @@ fn symlink_filesizes() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -2956,6 +3006,7 @@ fn symlink_filesizes() {
     let cargo_toml_contents = format!(
         r#"{}
 [package]
+edition = "2015"
 name = "foo"
 version = "0.0.1"
 authors = []
@@ -3057,6 +3108,7 @@ fn normalize_case() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 exclude = ["*.txt"]
                 license = "MIT"
@@ -3119,6 +3171,7 @@ fn mixed_case() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 exclude = ["*.txt"]
                 license = "MIT"
@@ -3187,6 +3240,7 @@ fn versionless_package() {
                 [package]
                 name = "foo"
                 description = "foo"
+                edition = "2015"
             "#,
         )
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
@@ -3291,6 +3345,7 @@ fn init_and_add_inner_target(p: ProjectBuilder) -> ProjectBuilder {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -3314,6 +3369,7 @@ fn build_script_outside_pkg_root() {
     [package]
     name = "foo"
     version = "0.0.1"
+    edition = "2015"
     license = "MIT"
     description = "foo"
     authors = []

@@ -11,6 +11,7 @@ fn probe_cfg_before_crate_type_discovery() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [target.'cfg(not(stage300))'.dependencies.noop]
@@ -38,6 +39,7 @@ fn probe_cfg_before_crate_type_discovery() {
                 [package]
                 name = "noop"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -70,6 +72,7 @@ fn noop() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.noop]
@@ -97,6 +100,7 @@ fn noop() {
                 [package]
                 name = "noop"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -130,6 +134,7 @@ fn impl_and_derive() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.transmogrify]
@@ -165,6 +170,7 @@ fn impl_and_derive() {
                 [package]
                 name = "transmogrify"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -211,6 +217,7 @@ fn proc_macro_doctest() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 [lib]
                 proc-macro = true
@@ -258,6 +265,7 @@ fn proc_macro_crate_type() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 [dependencies]
                 pm = { path = "pm" }
             "#,
@@ -289,6 +297,7 @@ fn proc_macro_crate_type() {
                 [package]
                 name = "pm"
                 version = "0.1.0"
+                edition = "2015"
                 [lib]
                 crate-type = ["proc-macro"]
             "#,
@@ -322,6 +331,7 @@ fn proc_macro_crate_type_warning() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 [lib]
                 crate-type = ["proc-macro"]
             "#,
@@ -344,6 +354,7 @@ fn proc_macro_conflicting_warning() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 [lib]
                 proc-macro = false
                 proc_macro = true
@@ -369,6 +380,7 @@ fn proc_macro_crate_type_warning_plugin() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 [lib]
                 crate-type = ["proc-macro"]
                 plugin = true
@@ -399,6 +411,7 @@ fn proc_macro_crate_type_multiple() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 [lib]
                 crate-type = ["proc-macro", "rlib"]
             "#,
@@ -466,6 +479,7 @@ fn proc_macro_built_once() {
                 [package]
                 name = "a"
                 version = "0.1.0"
+                edition = "2015"
 
                 [build-dependencies]
                 the-macro = { path = '../the-macro' }
@@ -479,6 +493,7 @@ fn proc_macro_built_once() {
                 [package]
                 name = "b"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 the-macro = { path = '../the-macro', features = ['a'] }
@@ -491,6 +506,7 @@ fn proc_macro_built_once() {
                 [package]
                 name = "the-macro"
                 version = "0.1.0"
+                edition = "2015"
 
                 [lib]
                 proc_macro = true

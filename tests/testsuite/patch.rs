@@ -24,6 +24,7 @@ fn replace() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -77,6 +78,7 @@ fn from_config() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -118,6 +120,7 @@ fn from_config_relative() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -159,6 +162,7 @@ fn from_config_precedence() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -203,6 +207,7 @@ fn nonexistent() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -248,6 +253,7 @@ fn patch_git() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -297,6 +303,7 @@ fn patch_to_git() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -339,6 +346,7 @@ fn unused() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -406,6 +414,7 @@ fn unused_with_mismatch_source_being_patched() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -459,6 +468,7 @@ fn prefer_patch_version() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -508,6 +518,7 @@ fn unused_from_config() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -584,6 +595,7 @@ fn unused_git() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -641,6 +653,7 @@ fn add_patch() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -672,6 +685,7 @@ fn add_patch() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
 
             [dependencies]
@@ -705,6 +719,7 @@ fn add_patch_from_config() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -761,6 +776,7 @@ fn add_ignored_patch() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -792,6 +808,7 @@ fn add_ignored_patch() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
 
             [dependencies]
@@ -848,6 +865,7 @@ fn add_patch_with_features() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
 
             [dependencies]
@@ -896,6 +914,7 @@ fn add_patch_with_setting_default_features() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
 
             [dependencies]
@@ -958,6 +977,7 @@ fn no_warn_ws_patch() {
                 [package]
                 name = "b"
                 version = "0.1.0"
+                edition = "2015"
                 [dependencies]
                 c = "0.1.0"
             "#,
@@ -988,6 +1008,7 @@ fn new_minor() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1025,6 +1046,7 @@ fn transitive_new_minor() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1041,6 +1063,7 @@ fn transitive_new_minor() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1076,6 +1099,7 @@ fn new_major() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1113,6 +1137,7 @@ fn new_major() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
 
             [dependencies]
@@ -1144,6 +1169,7 @@ fn transitive_new_major() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1160,6 +1186,7 @@ fn transitive_new_major() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1201,6 +1228,7 @@ fn shared_by_transitive() {
                     [package]
                     name = "foo"
                     version = " 0.1.0"
+                    edition = "2015"
 
                     [dependencies]
                     bar = {{ path = "bar" }}
@@ -1219,6 +1247,7 @@ fn shared_by_transitive() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 baz = "0.1.1"
@@ -1253,6 +1282,7 @@ fn remove_patch() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1281,6 +1311,7 @@ fn remove_patch() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
 
             [dependencies]
@@ -1314,6 +1345,7 @@ fn non_crates_io() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [patch.some-other-source]
@@ -1352,6 +1384,7 @@ fn replace_with_crates_io() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [patch.crates-io]
@@ -1401,6 +1434,7 @@ fn patch_in_virtual() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1433,6 +1467,7 @@ fn patch_depends_on_another_patch() {
                 name = "foo"
                 authors = []
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "0.1"
@@ -1452,6 +1487,7 @@ fn patch_depends_on_another_patch() {
                 [package]
                 name = "baz"
                 version = "0.1.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1487,6 +1523,7 @@ fn replace_prerelease() {
                 [package]
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1503,6 +1540,7 @@ fn replace_prerelease() {
                 [package]
                 name = "baz"
                 version = "1.1.0-pre.1"
+                edition = "2015"
                 authors = []
                 [workspace]
             "#,
@@ -1524,6 +1562,7 @@ fn patch_older() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = 'bar' }
@@ -1540,6 +1579,7 @@ fn patch_older() {
                 [package]
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1553,6 +1593,7 @@ fn patch_older() {
                 [package]
                 name = "baz"
                 version = "1.0.1"
+                edition = "2015"
                 authors = []
             "#,
         )
@@ -1594,6 +1635,7 @@ fn cycle() {
                 [package]
                 name = "a"
                 version = "1.0.0"
+                edition = "2015"
 
                 [dependencies]
                 b = "1.0"
@@ -1606,6 +1648,7 @@ fn cycle() {
                 [package]
                 name = "b"
                 version = "1.0.0"
+                edition = "2015"
 
                 [dependencies]
                 a = "1.0"
@@ -1639,6 +1682,7 @@ fn multipatch() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 a1 = { version = "1", package = "a" }
@@ -1656,6 +1700,7 @@ fn multipatch() {
                 [package]
                 name = "a"
                 version = "1.0.0"
+                edition = "2015"
             "#,
         )
         .file("a1/src/lib.rs", "pub fn f1() {}")
@@ -1665,6 +1710,7 @@ fn multipatch() {
                 [package]
                 name = "a"
                 version = "2.0.0"
+                edition = "2015"
             "#,
         )
         .file("a2/src/lib.rs", "pub fn f2() {}")
@@ -1690,6 +1736,7 @@ fn patch_same_version() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     [dependencies]
                     bar = "0.1"
                     [patch.crates-io]
@@ -1706,6 +1753,7 @@ fn patch_same_version() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
             "#,
         )
         .file("bar/src/lib.rs", "")
@@ -1739,6 +1787,7 @@ fn two_semver_compatible() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     [dependencies]
                     bar = "0.1"
                     [patch.crates-io]
@@ -1755,6 +1804,7 @@ fn two_semver_compatible() {
                 [package]
                 name = "bar"
                 version = "0.1.2"
+                edition = "2015"
             "#,
         )
         .file("bar/src/lib.rs", "pub fn foo() {}")
@@ -1793,6 +1843,7 @@ fn multipatch_select_big() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     [dependencies]
                     bar = "*"
                     [patch.crates-io]
@@ -1809,6 +1860,7 @@ fn multipatch_select_big() {
                 [package]
                 name = "bar"
                 version = "0.2.0"
+                edition = "2015"
             "#,
         )
         .file("bar/src/lib.rs", "pub fn foo() {}")
@@ -1845,6 +1897,7 @@ fn canonicalize_a_bunch() {
                     [package]
                     name = "intermediate"
                     version = "0.1.0"
+                    edition = "2015"
 
                     [dependencies]
                     # Note the lack of trailing slash
@@ -1869,6 +1922,7 @@ fn canonicalize_a_bunch() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
 
                     [dependencies]
                     # Note the trailing slashes
@@ -1910,6 +1964,7 @@ fn update_unused_new_version() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = "0.1.5"
@@ -2004,6 +2059,7 @@ fn too_many_matches() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "0.1"
@@ -2046,6 +2102,7 @@ fn no_matches() {
                  [package]
                  name = "foo"
                  version = "0.1.0"
+                 edition = "2015"
 
                  [dependencies]
                  bar = "0.1"
@@ -2085,6 +2142,7 @@ fn mismatched_version() {
                  [package]
                  name = "foo"
                  version = "0.1.0"
+                 edition = "2015"
 
                  [dependencies]
                  bar = "0.1.1"
@@ -2129,6 +2187,7 @@ fn patch_walks_backwards() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             bar = "0.1"
@@ -2181,6 +2240,7 @@ fn patch_walks_backwards_restricted() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             bar = "0.1"
@@ -2240,6 +2300,7 @@ fn patched_dep_new_version() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             bar = "0.1"
@@ -2255,6 +2316,7 @@ fn patched_dep_new_version() {
             [package]
             name = "bar"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             baz = "0.1"
@@ -2290,6 +2352,7 @@ fn patched_dep_new_version() {
             [package]
             name = "bar"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             baz = "0.1.1"
@@ -2327,6 +2390,7 @@ fn patch_update_doesnt_update_other_sources() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             bar = "0.1"
@@ -2394,6 +2458,7 @@ fn can_update_with_alt_reg() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "0.1"
@@ -2442,6 +2507,7 @@ fn can_update_with_alt_reg() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             bar = "0.1"
@@ -2489,6 +2555,7 @@ fn perform_old_git_patch(shallow: bool) {
                     [package]
                     name = "foo"
                     version = "0.1.0"
+                    edition = "2015"
 
                     [dependencies]
                     bar = "1.0"
@@ -2573,6 +2640,7 @@ fn patch_eq_conflict_panic() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "=0.1.0"
@@ -2623,6 +2691,7 @@ fn mismatched_version2() {
                  [package]
                  name = "foo"
                  version = "0.1.0"
+                 edition = "2015"
 
                  [dependencies]
                  bar = "0.1.0"
@@ -2639,6 +2708,7 @@ fn mismatched_version2() {
                 [package]
                 name = "qux"
                 version = "0.1.0-beta.1"
+                edition = "2015"
             "#,
         )
         .file("qux/src/lib.rs", "")
@@ -2674,6 +2744,7 @@ fn mismatched_version_with_prerelease() {
                  [package]
                  name = "foo"
                  version = "0.1.0"
+                 edition = "2015"
 
                  [dependencies]
                  prerelease-deps = "0.1.0"
@@ -2716,6 +2787,7 @@ fn from_config_empty() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2758,6 +2830,7 @@ fn from_manifest_empty() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
