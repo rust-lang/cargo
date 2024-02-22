@@ -48,46 +48,38 @@ pub fn main(gctx: &mut GlobalContext) -> CliResult {
 
     let (expanded_args, global_args) = expand_aliases(gctx, args, vec![])?;
 
+    let is_verbose = expanded_args.verbose() > 0;
+
     if expanded_args
         .get_one::<String>("unstable-features")
         .map(String::as_str)
         == Some("help")
     {
         print_zhelp(gctx);
-        return Ok(());
-    }
-
-    let is_verbose = expanded_args.verbose() > 0;
-    if expanded_args.flag("version") {
+    } else if expanded_args.flag("version") {
         let version = get_version_string(is_verbose);
         drop_print!(gctx, "{}", version);
-        return Ok(());
-    }
-
-    if let Some(code) = expanded_args.get_one::<String>("explain") {
+    } else if let Some(code) = expanded_args.get_one::<String>("explain") {
         let mut procss = gctx.load_global_rustc(None)?.process();
         procss.arg("--explain").arg(code).exec()?;
-        return Ok(());
-    }
-
-    if expanded_args.flag("list") {
+    } else if expanded_args.flag("list") {
         print_list(gctx, is_verbose);
-        return Ok(());
+    } else {
+        let (cmd, subcommand_args) = match expanded_args.subcommand() {
+            Some((cmd, args)) => (cmd, args),
+            _ => {
+                // No subcommand provided.
+                cli(gctx).print_help()?;
+                return Ok(());
+            }
+        };
+        let exec = Exec::infer(cmd)?;
+        config_configure(gctx, &expanded_args, subcommand_args, global_args, &exec)?;
+        super::init_git(gctx);
+
+        exec.exec(gctx, subcommand_args)?;
     }
-
-    let (cmd, subcommand_args) = match expanded_args.subcommand() {
-        Some((cmd, args)) => (cmd, args),
-        _ => {
-            // No subcommand provided.
-            cli(gctx).print_help()?;
-            return Ok(());
-        }
-    };
-    let exec = Exec::infer(cmd)?;
-    config_configure(gctx, &expanded_args, subcommand_args, global_args, &exec)?;
-    super::init_git(gctx);
-
-    exec.exec(gctx, subcommand_args)
+    Ok(())
 }
 
 fn print_zhelp(gctx: &GlobalContext) {
