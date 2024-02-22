@@ -1018,6 +1018,49 @@ impl GlobalContext {
         unstable_flags: &[String],
         cli_config: &[String],
     ) -> CargoResult<()> {
+        // Ignore errors in the configuration files. We don't want basic
+        // commands like `cargo version` to error out due to config file
+        // problems.
+        let term = self.get::<TermConfig>("term").unwrap_or_default();
+
+        // The command line takes precedence over configuration.
+        let extra_verbose = verbose >= 2;
+        let verbose = verbose != 0;
+        let verbosity = match (verbose, quiet) {
+            (true, true) => bail!("cannot set both --verbose and --quiet"),
+            (true, false) => Verbosity::Verbose,
+            (false, true) => Verbosity::Quiet,
+            (false, false) => match (term.verbose, term.quiet) {
+                (Some(true), Some(true)) => {
+                    bail!("cannot set both `term.verbose` and `term.quiet`")
+                }
+                (Some(true), _) => Verbosity::Verbose,
+                (_, Some(true)) => Verbosity::Quiet,
+                _ => Verbosity::Normal,
+            },
+        };
+        self.shell().set_verbosity(verbosity);
+        self.extra_verbose = extra_verbose;
+
+        let color = color.or_else(|| term.color.as_deref());
+        self.shell().set_color_choice(color)?;
+        if let Some(hyperlinks) = term.hyperlinks {
+            self.shell().set_hyperlinks(hyperlinks)?;
+        }
+
+        self.progress_config = term.progress.unwrap_or_default();
+
+        self.frozen = frozen;
+        self.locked = locked;
+        self.offline = offline
+            || self
+                .net_config()
+                .ok()
+                .and_then(|n| n.offline)
+                .unwrap_or(false);
+        let cli_target_dir = target_dir.as_ref().map(|dir| Filesystem::new(dir.clone()));
+        self.target_dir = cli_target_dir;
+
         for warning in self
             .unstable_flags
             .parse(unstable_flags, self.nightly_features_allowed)?
@@ -1042,49 +1085,6 @@ impl GlobalContext {
             // before configure). This can be removed when stabilized.
             self.reload_rooted_at(self.cwd.clone())?;
         }
-        let extra_verbose = verbose >= 2;
-        let verbose = verbose != 0;
-
-        // Ignore errors in the configuration files. We don't want basic
-        // commands like `cargo version` to error out due to config file
-        // problems.
-        let term = self.get::<TermConfig>("term").unwrap_or_default();
-
-        let color = color.or_else(|| term.color.as_deref());
-
-        // The command line takes precedence over configuration.
-        let verbosity = match (verbose, quiet) {
-            (true, true) => bail!("cannot set both --verbose and --quiet"),
-            (true, false) => Verbosity::Verbose,
-            (false, true) => Verbosity::Quiet,
-            (false, false) => match (term.verbose, term.quiet) {
-                (Some(true), Some(true)) => {
-                    bail!("cannot set both `term.verbose` and `term.quiet`")
-                }
-                (Some(true), _) => Verbosity::Verbose,
-                (_, Some(true)) => Verbosity::Quiet,
-                _ => Verbosity::Normal,
-            },
-        };
-
-        let cli_target_dir = target_dir.as_ref().map(|dir| Filesystem::new(dir.clone()));
-
-        self.shell().set_verbosity(verbosity);
-        self.shell().set_color_choice(color)?;
-        if let Some(hyperlinks) = term.hyperlinks {
-            self.shell().set_hyperlinks(hyperlinks)?;
-        }
-        self.progress_config = term.progress.unwrap_or_default();
-        self.extra_verbose = extra_verbose;
-        self.frozen = frozen;
-        self.locked = locked;
-        self.offline = offline
-            || self
-                .net_config()
-                .ok()
-                .and_then(|n| n.offline)
-                .unwrap_or(false);
-        self.target_dir = cli_target_dir;
 
         self.load_unstable_flags_from_config()?;
 
