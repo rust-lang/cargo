@@ -55,14 +55,22 @@ pub fn main(gctx: &mut GlobalContext) -> CliResult {
         .map(String::as_str)
         == Some("help")
     {
+        // Don't let config errors get in the way of parsing arguments
+        let _ = config_configure(gctx, &expanded_args, None, global_args, None);
         print_zhelp(gctx);
     } else if expanded_args.flag("version") {
+        // Don't let config errors get in the way of parsing arguments
+        let _ = config_configure(gctx, &expanded_args, None, global_args, None);
         let version = get_version_string(is_verbose);
         drop_print!(gctx, "{}", version);
     } else if let Some(code) = expanded_args.get_one::<String>("explain") {
+        // Don't let config errors get in the way of parsing arguments
+        let _ = config_configure(gctx, &expanded_args, None, global_args, None);
         let mut procss = gctx.load_global_rustc(None)?.process();
         procss.arg("--explain").arg(code).exec()?;
     } else if expanded_args.flag("list") {
+        // Don't let config errors get in the way of parsing arguments
+        let _ = config_configure(gctx, &expanded_args, None, global_args, None);
         print_list(gctx, is_verbose);
     } else {
         let (cmd, subcommand_args) = match expanded_args.subcommand() {
