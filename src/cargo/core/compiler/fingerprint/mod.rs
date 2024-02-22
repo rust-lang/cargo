@@ -548,15 +548,18 @@ struct DepFingerprint {
 /// as a fingerprint (all source files must be modified *before* this mtime).
 /// This dep-info file is not generated, however, until after the crate is
 /// compiled. As a result, this structure can be thought of as a fingerprint
-/// to-be. The actual value can be calculated via `hash_u64()`, but the operation
+/// to-be. The actual value can be calculated via [`hash_u64()`], but the operation
 /// may fail as some files may not have been generated.
 ///
 /// Note that dependencies are taken into account for fingerprints because rustc
 /// requires that whenever an upstream crate is recompiled that all downstream
 /// dependents are also recompiled. This is typically tracked through
-/// `DependencyQueue`, but it also needs to be retained here because Cargo can
-/// be interrupted while executing, losing the state of the `DependencyQueue`
+/// [`DependencyQueue`], but it also needs to be retained here because Cargo can
+/// be interrupted while executing, losing the state of the [`DependencyQueue`]
 /// graph.
+///
+/// [`hash_u64()`]: crate::core::compiler::fingerprint::Fingerprint::hash_u64
+/// [`DependencyQueue`]: crate::util::DependencyQueue
 #[derive(Serialize, Deserialize)]
 pub struct Fingerprint {
     /// Hash of the version of `rustc` used.
