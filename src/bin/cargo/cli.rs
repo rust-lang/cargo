@@ -53,50 +53,7 @@ pub fn main(gctx: &mut GlobalContext) -> CliResult {
         .map(String::as_str)
         == Some("help")
     {
-        let header = style::HEADER;
-        let literal = style::LITERAL;
-        let placeholder = style::PLACEHOLDER;
-
-        let options = CliUnstable::help();
-        let max_length = options
-            .iter()
-            .filter(|(_, help)| help.is_some())
-            .map(|(option_name, _)| option_name.len())
-            .max()
-            .unwrap_or(0);
-        let z_flags = options
-            .iter()
-            .filter(|(_, help)| help.is_some())
-            .map(|(opt, help)| {
-                let opt = opt.replace("_", "-");
-                let help = help.unwrap();
-                format!("    {literal}-Z {opt:<max_length$}{literal:#}  {help}")
-            })
-            .join("\n");
-        drop_println!(
-            gctx,
-            "\
-{header}Available unstable (nightly-only) flags:{header:#}
-
-{z_flags}
-
-Run with `{literal}cargo -Z{literal:#} {placeholder}[FLAG] [COMMAND]{placeholder:#}`",
-        );
-        if !gctx.nightly_features_allowed {
-            drop_println!(
-                gctx,
-                "\nUnstable flags are only available on the nightly channel \
-                 of Cargo, but this is the `{}` channel.\n\
-                 {}",
-                features::channel(),
-                features::SEE_CHANNELS
-            );
-        }
-        drop_println!(
-            gctx,
-            "\nSee https://doc.rust-lang.org/nightly/cargo/reference/unstable.html \
-             for more information about these flags."
-        );
+        print_zhelp(gctx);
         return Ok(());
     }
 
@@ -114,59 +71,7 @@ Run with `{literal}cargo -Z{literal:#} {placeholder}[FLAG] [COMMAND]{placeholder
     }
 
     if expanded_args.flag("list") {
-        // Maps from commonly known external commands (not builtin to cargo)
-        // to their description, for the help page. Reserved for external
-        // subcommands that are core within the rust ecosystem (esp ones that
-        // might become internal in the future).
-        let known_external_command_descriptions = HashMap::from([
-            (
-                "clippy",
-                "Checks a package to catch common mistakes and improve your Rust code.",
-            ),
-            (
-                "fmt",
-                "Formats all bin and lib files of the current crate using rustfmt.",
-            ),
-        ]);
-        drop_println!(
-            gctx,
-            color_print::cstr!("<green,bold>Installed Commands:</>")
-        );
-        for (name, command) in list_commands(gctx) {
-            let known_external_desc = known_external_command_descriptions.get(name.as_str());
-            let literal = style::LITERAL;
-            match command {
-                CommandInfo::BuiltIn { about } => {
-                    assert!(
-                        known_external_desc.is_none(),
-                        "known_external_commands shouldn't contain builtin `{name}`",
-                    );
-                    let summary = about.unwrap_or_default();
-                    let summary = summary.lines().next().unwrap_or(&summary); // display only the first line
-                    drop_println!(gctx, "    {literal}{name:<20}{literal:#} {summary}");
-                }
-                CommandInfo::External { path } => {
-                    if let Some(desc) = known_external_desc {
-                        drop_println!(gctx, "    {literal}{name:<20}{literal:#} {desc}");
-                    } else if is_verbose {
-                        drop_println!(
-                            gctx,
-                            "    {literal}{name:<20}{literal:#} {}",
-                            path.display()
-                        );
-                    } else {
-                        drop_println!(gctx, "    {literal}{name}{literal:#}");
-                    }
-                }
-                CommandInfo::Alias { target } => {
-                    drop_println!(
-                        gctx,
-                        "    {literal}{name:<20}{literal:#} alias: {}",
-                        target.iter().join(" ")
-                    );
-                }
-            }
-        }
+        print_list(gctx, is_verbose);
         return Ok(());
     }
 
@@ -183,6 +88,109 @@ Run with `{literal}cargo -Z{literal:#} {placeholder}[FLAG] [COMMAND]{placeholder
     super::init_git(gctx);
 
     exec.exec(gctx, subcommand_args)
+}
+
+fn print_zhelp(gctx: &GlobalContext) {
+    let header = style::HEADER;
+    let literal = style::LITERAL;
+    let placeholder = style::PLACEHOLDER;
+
+    let options = CliUnstable::help();
+    let max_length = options
+        .iter()
+        .filter(|(_, help)| help.is_some())
+        .map(|(option_name, _)| option_name.len())
+        .max()
+        .unwrap_or(0);
+    let z_flags = options
+        .iter()
+        .filter(|(_, help)| help.is_some())
+        .map(|(opt, help)| {
+            let opt = opt.replace("_", "-");
+            let help = help.unwrap();
+            format!("    {literal}-Z {opt:<max_length$}{literal:#}  {help}")
+        })
+        .join("\n");
+    drop_println!(
+        gctx,
+        "\
+{header}Available unstable (nightly-only) flags:{header:#}
+
+{z_flags}
+
+Run with `{literal}cargo -Z{literal:#} {placeholder}[FLAG] [COMMAND]{placeholder:#}`",
+    );
+    if !gctx.nightly_features_allowed {
+        drop_println!(
+            gctx,
+            "\nUnstable flags are only available on the nightly channel \
+                 of Cargo, but this is the `{}` channel.\n\
+                 {}",
+            features::channel(),
+            features::SEE_CHANNELS
+        );
+    }
+    drop_println!(
+        gctx,
+        "\nSee https://doc.rust-lang.org/nightly/cargo/reference/unstable.html \
+             for more information about these flags."
+    );
+}
+
+fn print_list(gctx: &GlobalContext, is_verbose: bool) {
+    // Maps from commonly known external commands (not builtin to cargo)
+    // to their description, for the help page. Reserved for external
+    // subcommands that are core within the rust ecosystem (esp ones that
+    // might become internal in the future).
+    let known_external_command_descriptions = HashMap::from([
+        (
+            "clippy",
+            "Checks a package to catch common mistakes and improve your Rust code.",
+        ),
+        (
+            "fmt",
+            "Formats all bin and lib files of the current crate using rustfmt.",
+        ),
+    ]);
+    drop_println!(
+        gctx,
+        color_print::cstr!("<green,bold>Installed Commands:</>")
+    );
+    for (name, command) in list_commands(gctx) {
+        let known_external_desc = known_external_command_descriptions.get(name.as_str());
+        let literal = style::LITERAL;
+        match command {
+            CommandInfo::BuiltIn { about } => {
+                assert!(
+                    known_external_desc.is_none(),
+                    "known_external_commands shouldn't contain builtin `{name}`",
+                );
+                let summary = about.unwrap_or_default();
+                let summary = summary.lines().next().unwrap_or(&summary); // display only the first line
+                drop_println!(gctx, "    {literal}{name:<20}{literal:#} {summary}");
+            }
+            CommandInfo::External { path } => {
+                if let Some(desc) = known_external_desc {
+                    drop_println!(gctx, "    {literal}{name:<20}{literal:#} {desc}");
+                } else if is_verbose {
+                    drop_println!(
+                        gctx,
+                        "    {literal}{name:<20}{literal:#} {}",
+                        path.display()
+                    );
+                } else {
+                    drop_println!(gctx, "    {literal}{name}{literal:#}");
+                }
+            }
+            CommandInfo::Alias { target } => {
+                drop_println!(
+                    gctx,
+                    "    {literal}{name:<20}{literal:#} alias: {}",
+                    target.iter().join(" ")
+                );
+            }
+        }
+    }
 }
 
 pub fn get_version_string(is_verbose: bool) -> String {
