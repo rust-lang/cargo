@@ -74,7 +74,13 @@ pub fn main(gctx: &mut GlobalContext) -> CliResult {
             }
         };
         let exec = Exec::infer(cmd)?;
-        config_configure(gctx, &expanded_args, subcommand_args, global_args, &exec)?;
+        config_configure(
+            gctx,
+            &expanded_args,
+            Some(subcommand_args),
+            global_args,
+            Some(&exec),
+        )?;
         super::init_git(gctx);
 
         exec.exec(gctx, subcommand_args)?;
@@ -365,16 +371,18 @@ For more information, see issue #12207 <https://github.com/rust-lang/cargo/issue
 fn config_configure(
     gctx: &mut GlobalContext,
     args: &ArgMatches,
-    subcommand_args: &ArgMatches,
+    subcommand_args: Option<&ArgMatches>,
     global_args: GlobalArgs,
-    exec: &Exec,
+    exec: Option<&Exec>,
 ) -> CliResult {
-    let arg_target_dir = &subcommand_args.value_of_path("target-dir", gctx);
+    let arg_target_dir = &subcommand_args.and_then(|a| a.value_of_path("target-dir", gctx));
     let mut verbose = global_args.verbose + args.verbose();
     // quiet is unusual because it is redefined in some subcommands in order
     // to provide custom help text.
-    let mut quiet = args.flag("quiet") || subcommand_args.flag("quiet") || global_args.quiet;
-    if matches!(exec, Exec::Manifest(_)) && !quiet {
+    let mut quiet = args.flag("quiet")
+        || subcommand_args.map(|a| a.flag("quiet")).unwrap_or_default()
+        || global_args.quiet;
+    if matches!(exec, Some(Exec::Manifest(_))) && !quiet {
         // Verbosity is shifted quieter for `Exec::Manifest` as it is can be used as if you ran
         // `cargo install` and we especially shouldn't pollute programmatic output.
         //
