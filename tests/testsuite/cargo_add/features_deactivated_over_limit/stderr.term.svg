@@ -1,0 +1,93 @@
+<svg width="740px" height="650px" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .fg { fill: #AAAAAA }
+    .bg { background: #000000 }
+    .fg-green { fill: #00AA00 }
+    .container {
+      padding: 0 10px;
+      line-height: 18px;
+    }
+    .bold { font-weight: bold; }
+    tspan {
+      font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+      white-space: pre;
+      line-height: 18px;
+    }
+  </style>
+
+  <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
+
+  <text xml:space="preserve" class="container fg">
+    <tspan x="10px" y="28px"><tspan class="fg-green bold">    Updating</tspan><tspan> `dummy-registry` index</tspan>
+</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-green bold">      Adding</tspan><tspan> your-face v99999.0.0 to dependencies</tspan>
+</tspan>
+    <tspan x="10px" y="64px"><tspan>             Features:</tspan>
+</tspan>
+    <tspan x="10px" y="82px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes000</tspan>
+</tspan>
+    <tspan x="10px" y="100px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes001</tspan>
+</tspan>
+    <tspan x="10px" y="118px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes002</tspan>
+</tspan>
+    <tspan x="10px" y="136px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes003</tspan>
+</tspan>
+    <tspan x="10px" y="154px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes004</tspan>
+</tspan>
+    <tspan x="10px" y="172px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes005</tspan>
+</tspan>
+    <tspan x="10px" y="190px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes006</tspan>
+</tspan>
+    <tspan x="10px" y="208px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes007</tspan>
+</tspan>
+    <tspan x="10px" y="226px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes008</tspan>
+</tspan>
+    <tspan x="10px" y="244px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes009</tspan>
+</tspan>
+    <tspan x="10px" y="262px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes010</tspan>
+</tspan>
+    <tspan x="10px" y="280px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes011</tspan>
+</tspan>
+    <tspan x="10px" y="298px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes012</tspan>
+</tspan>
+    <tspan x="10px" y="316px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes013</tspan>
+</tspan>
+    <tspan x="10px" y="334px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes014</tspan>
+</tspan>
+    <tspan x="10px" y="352px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes015</tspan>
+</tspan>
+    <tspan x="10px" y="370px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes016</tspan>
+</tspan>
+    <tspan x="10px" y="388px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes017</tspan>
+</tspan>
+    <tspan x="10px" y="406px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes018</tspan>
+</tspan>
+    <tspan x="10px" y="424px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes019</tspan>
+</tspan>
+    <tspan x="10px" y="442px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes020</tspan>
+</tspan>
+    <tspan x="10px" y="460px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes021</tspan>
+</tspan>
+    <tspan x="10px" y="478px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes022</tspan>
+</tspan>
+    <tspan x="10px" y="496px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes023</tspan>
+</tspan>
+    <tspan x="10px" y="514px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes024</tspan>
+</tspan>
+    <tspan x="10px" y="532px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes025</tspan>
+</tspan>
+    <tspan x="10px" y="550px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes026</tspan>
+</tspan>
+    <tspan x="10px" y="568px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes027</tspan>
+</tspan>
+    <tspan x="10px" y="586px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes028</tspan>
+</tspan>
+    <tspan x="10px" y="604px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> eyes029</tspan>
+</tspan>
+    <tspan x="10px" y="622px"><tspan>             170 deactivated features</tspan>
+</tspan>
+    <tspan x="10px" y="640px">
+</tspan>
+  </text>
+
+</svg>

@@ -1326,6 +1326,7 @@ impl CargoCommand for snapbox::cmd::Command {
     fn cargo_ui() -> Self {
         Self::new(cargo_exe())
             .with_assert(compare::assert_ui())
+            .env("CARGO_TERM_COLOR", "always")
             .test_env()
     }
 }

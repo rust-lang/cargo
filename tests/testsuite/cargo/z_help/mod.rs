@@ -9,6 +9,6 @@ fn case() {
         .args(["-Z", "help"])
         .assert()
         .success()
-        .stdout_matches(file!["stdout.log"])
+        .stdout_matches(file!["stdout.term.svg"])
         .stderr_matches(str![""]);
 }

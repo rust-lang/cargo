@@ -1,0 +1,63 @@
+<svg width="740px" height="362px" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .fg { fill: #AAAAAA }
+    .bg { background: #000000 }
+    .fg-green { fill: #00AA00 }
+    .fg-red { fill: #AA0000 }
+    .fg-yellow { fill: #AA5500 }
+    .container {
+      padding: 0 10px;
+      line-height: 18px;
+    }
+    .bold { font-weight: bold; }
+    tspan {
+      font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+      white-space: pre;
+      line-height: 18px;
+    }
+  </style>
+
+  <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
+
+  <text xml:space="preserve" class="container fg">
+    <tspan x="10px" y="28px"><tspan class="fg-green bold">    Updating</tspan><tspan> `dummy-registry` index</tspan>
+</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-yellow bold">warning</tspan><tspan class="bold">:</tspan><tspan> translating `linked_hash_map` to `linked-hash-map`</tspan>
+</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-yellow bold">warning</tspan><tspan class="bold">:</tspan><tspan> translating `Inflector` to `inflector`</tspan>
+</tspan>
+    <tspan x="10px" y="82px"><tspan class="fg-green bold">      Adding</tspan><tspan> linked-hash-map v0.5.4 to dependencies</tspan>
+</tspan>
+    <tspan x="10px" y="100px"><tspan>             Features:</tspan>
+</tspan>
+    <tspan x="10px" y="118px"><tspan>             </tspan><tspan class="fg-red bold">-</tspan><tspan> clippy</tspan>
+</tspan>
+    <tspan x="10px" y="136px"><tspan>             </tspan><tspan class="fg-red bold">-</tspan><tspan> heapsize</tspan>
+</tspan>
+    <tspan x="10px" y="154px"><tspan>             </tspan><tspan class="fg-red bold">-</tspan><tspan> heapsize_impl</tspan>
+</tspan>
+    <tspan x="10px" y="172px"><tspan>             </tspan><tspan class="fg-red bold">-</tspan><tspan> nightly</tspan>
+</tspan>
+    <tspan x="10px" y="190px"><tspan>             </tspan><tspan class="fg-red bold">-</tspan><tspan> serde</tspan>
+</tspan>
+    <tspan x="10px" y="208px"><tspan>             </tspan><tspan class="fg-red bold">-</tspan><tspan> serde_impl</tspan>
+</tspan>
+    <tspan x="10px" y="226px"><tspan>             </tspan><tspan class="fg-red bold">-</tspan><tspan> serde_test</tspan>
+</tspan>
+    <tspan x="10px" y="244px"><tspan class="fg-green bold">      Adding</tspan><tspan> inflector v0.11.4 to dependencies</tspan>
+</tspan>
+    <tspan x="10px" y="262px"><tspan>             Features:</tspan>
+</tspan>
+    <tspan x="10px" y="280px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> heavyweight</tspan>
+</tspan>
+    <tspan x="10px" y="298px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> lazy_static</tspan>
+</tspan>
+    <tspan x="10px" y="316px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> regex</tspan>
+</tspan>
+    <tspan x="10px" y="334px"><tspan>             </tspan><tspan class="fg-red bold">-</tspan><tspan> unstable</tspan>
+</tspan>
+    <tspan x="10px" y="352px">
+</tspan>
+  </text>
+
+</svg>

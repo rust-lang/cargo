@@ -1,7 +1,0 @@
-error: invalid string
-expected `"`, `'`
- --> Cargo.toml:8:7
-  |
-8 | key = invalid-value
-  |       ^
-  |

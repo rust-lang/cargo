@@ -1,3 +1,0 @@
-    Creating library package
-warning: file `case.rs` seems to be a binary (application) file
-note: see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
