@@ -70,7 +70,7 @@ impl From<(PackageId, ConflictReason)> for ActivateError {
 }
 
 pub(super) fn activation_error(
-    resolver_gctx: &ResolverContext,
+    resolver_ctx: &ResolverContext,
     registry: &mut dyn Registry,
     parent: &Summary,
     dep: &Dependency,
@@ -81,7 +81,7 @@ pub(super) fn activation_error(
     let to_resolve_err = |err| {
         ResolveError::new(
             err,
-            resolver_gctx
+            resolver_ctx
                 .parents
                 .path_to_bottom(&parent.package_id())
                 .into_iter()
@@ -95,7 +95,7 @@ pub(super) fn activation_error(
         let mut msg = format!("failed to select a version for `{}`.", dep.package_name());
         msg.push_str("\n    ... required by ");
         msg.push_str(&describe_path_in_context(
-            resolver_gctx,
+            resolver_ctx,
             &parent.package_id(),
         ));
 
@@ -141,7 +141,7 @@ pub(super) fn activation_error(
                     msg.push_str("`, but it conflicts with a previous package which links to `");
                     msg.push_str(link);
                     msg.push_str("` as well:\n");
-                    msg.push_str(&describe_path_in_context(resolver_gctx, p));
+                    msg.push_str(&describe_path_in_context(resolver_ctx, p));
                     msg.push_str("\nOnly one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. ");
                     msg.push_str("Try to adjust your dependencies so that only one package uses the `links = \"");
                     msg.push_str(link);
@@ -210,7 +210,7 @@ pub(super) fn activation_error(
             for (p, r) in &conflicting_activations {
                 if let ConflictReason::Semver = r {
                     msg.push_str("\n\n  previously selected ");
-                    msg.push_str(&describe_path_in_context(resolver_gctx, p));
+                    msg.push_str(&describe_path_in_context(resolver_ctx, p));
                 }
             }
         }
@@ -279,7 +279,7 @@ pub(super) fn activation_error(
         );
         msg.push_str("required by ");
         msg.push_str(&describe_path_in_context(
-            resolver_gctx,
+            resolver_ctx,
             &parent.package_id(),
         ));
 
@@ -364,7 +364,7 @@ pub(super) fn activation_error(
         msg.push_str(&format!("location searched: {}\n", dep.source_id()));
         msg.push_str("required by ");
         msg.push_str(&describe_path_in_context(
-            resolver_gctx,
+            resolver_ctx,
             &parent.package_id(),
         ));
 

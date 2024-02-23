@@ -547,22 +547,18 @@ impl GlobalCacheTracker {
     }
 
     /// Deletes files from the global cache based on the given options.
-    pub fn clean(
-        &mut self,
-        clean_gctx: &mut CleanContext<'_>,
-        gc_opts: &GcOpts,
-    ) -> CargoResult<()> {
-        self.clean_inner(clean_gctx, gc_opts)
+    pub fn clean(&mut self, clean_ctx: &mut CleanContext<'_>, gc_opts: &GcOpts) -> CargoResult<()> {
+        self.clean_inner(clean_ctx, gc_opts)
             .with_context(|| "failed to clean entries from the global cache")
     }
 
     fn clean_inner(
         &mut self,
-        clean_gctx: &mut CleanContext<'_>,
+        clean_ctx: &mut CleanContext<'_>,
         gc_opts: &GcOpts,
     ) -> CargoResult<()> {
         let _p = crate::util::profile::start("cleaning global cache files");
-        let gctx = clean_gctx.gctx;
+        let gctx = clean_ctx.gctx;
         let base = BasePaths {
             index: gctx.registry_index_path().into_path_unlocked(),
             git_db: gctx.git_db_path().into_path_unlocked(),
@@ -657,9 +653,9 @@ impl GlobalCacheTracker {
             Self::get_registry_items_to_clean_size_both(&tx, max_size, &base, &mut delete_paths)?;
         }
 
-        clean_gctx.remove_paths(&delete_paths)?;
+        clean_ctx.remove_paths(&delete_paths)?;
 
-        if clean_gctx.dry_run {
+        if clean_ctx.dry_run {
             tx.rollback()?;
         } else {
             tx.commit()?;

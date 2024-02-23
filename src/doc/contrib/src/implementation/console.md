@@ -1,8 +1,8 @@
 # Console Output
 
 All of Cargo's output should go through the [`Shell`] struct. You can normally
-obtain the `Shell` instance from the [`Config`] struct. Do **not** use the std
-`println!` macros.
+obtain the `Shell` instance from the [`GlobalContext`] struct. Do **not** use
+the std `println!` macros.
 
 Most of Cargo's output goes to stderr. When running in JSON mode, the output
 goes to stdout.
@@ -17,7 +17,7 @@ if they are unable to be displayed. This is generally automatically handled in
 the [`JobQueue`] as it processes each message.
 
 [`Shell`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/core/shell.rs
-[`Config`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/util/config/mod.rs
+[`GlobalContext`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/util/config/mod.rs
 [`drop_print`]: https://github.com/rust-lang/cargo/blob/e4b65bdc80f2a293447f2f6a808fa7c84bf9a357/src/cargo/util/config/mod.rs#L1820-L1848
 [`JobQueue`]: https://github.com/rust-lang/cargo/blob/master/src/cargo/core/compiler/job_queue/mod.rs
 

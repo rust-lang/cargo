@@ -80,9 +80,9 @@ impl GlobalContextBuilder {
     /// Sets the test root directory.
     ///
     /// This generally should not be necessary. It is only useful if you want
-    /// to create a `Config` from within a thread. Since Cargo's testsuite
-    /// uses thread-local storage, this can be used to avoid accessing that
-    /// thread-local storage.
+    /// to create a [`GlobalContext`] from within a thread. Since Cargo's
+    /// testsuite uses thread-local storage, this can be used to avoid accessing
+    /// that thread-local storage.
     ///
     /// Default is [`paths::root`].
     pub fn root(&mut self, path: impl Into<PathBuf>) -> &mut Self {
@@ -90,12 +90,12 @@ impl GlobalContextBuilder {
         self
     }
 
-    /// Creates the `Config`.
+    /// Creates the [`GlobalContext`].
     pub fn build(&self) -> GlobalContext {
         self.build_err().unwrap()
     }
 
-    /// Creates the `Config`, returning a Result.
+    /// Creates the [`GlobalContext`], returning a Result.
     pub fn build_err(&self) -> CargoResult<GlobalContext> {
         let root = self.root.clone().unwrap_or_else(|| paths::root());
         let output = Box::new(fs::File::create(root.join("shell.out")).unwrap());

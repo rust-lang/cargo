@@ -86,8 +86,8 @@ fn auto_gc_inner(gctx: &GlobalContext) -> CargoResult<()> {
     debug_assert!(deferred.is_empty());
     let mut global_cache_tracker = gctx.global_cache_tracker()?;
     let mut gc = Gc::new(gctx, &mut global_cache_tracker)?;
-    let mut clean_gctx = CleanContext::new(gctx);
-    gc.auto(&mut clean_gctx)?;
+    let mut clean_ctx = CleanContext::new(gctx);
+    gc.auto(&mut clean_ctx)?;
     Ok(())
 }
 
@@ -256,7 +256,7 @@ impl<'a, 'gctx> Gc<'a, 'gctx> {
     ///
     /// This returns immediately without doing work if garbage collection has
     /// been performed recently (since `gc.auto.frequency`).
-    fn auto(&mut self, clean_gctx: &mut CleanContext<'gctx>) -> CargoResult<()> {
+    fn auto(&mut self, clean_ctx: &mut CleanContext<'gctx>) -> CargoResult<()> {
         if !self.gctx.cli_unstable().gc {
             return Ok(());
         }
@@ -279,20 +279,16 @@ impl<'a, 'gctx> Gc<'a, 'gctx> {
         }
         let mut gc_opts = GcOpts::default();
         gc_opts.update_for_auto_gc_config(&auto_config)?;
-        self.gc(clean_gctx, &gc_opts)?;
-        if !clean_gctx.dry_run {
+        self.gc(clean_ctx, &gc_opts)?;
+        if !clean_ctx.dry_run {
             self.global_cache_tracker.set_last_auto_gc()?;
         }
         Ok(())
     }
 
     /// Performs garbage collection based on the given options.
-    pub fn gc(
-        &mut self,
-        clean_gctx: &mut CleanContext<'gctx>,
-        gc_opts: &GcOpts,
-    ) -> CargoResult<()> {
-        self.global_cache_tracker.clean(clean_gctx, gc_opts)?;
+    pub fn gc(&mut self, clean_ctx: &mut CleanContext<'gctx>, gc_opts: &GcOpts) -> CargoResult<()> {
+        self.global_cache_tracker.clean(clean_ctx, gc_opts)?;
         // In the future, other gc operations go here, such as target cleaning.
         Ok(())
     }

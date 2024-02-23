@@ -167,7 +167,7 @@ impl HelperDef for ManLinkHelper<'_> {
         &self,
         h: &Helper<'rc>,
         _r: &'reg Handlebars<'reg>,
-        _gctx: &'rc Context,
+        _ctx: &'rc Context,
         _rc: &mut RenderContext<'reg, 'rc>,
         out: &mut dyn Output,
     ) -> HelperResult {
@@ -200,7 +200,7 @@ impl HelperDef for ManLinkHelper<'_> {
 fn set_decorator(
     d: &Decorator<'_>,
     _: &Handlebars<'_>,
-    _gctx: &Context,
+    _ctx: &Context,
     rc: &mut RenderContext<'_, '_>,
 ) -> Result<(), RenderError> {
     let data_to_set = d.hash();

@@ -1,12 +1,12 @@
 //! Cargo's config system.
 //!
-//! The `Config` object contains general information about the environment,
+//! The [`GlobalContext`] object contains general information about the environment,
 //! and provides access to Cargo's configuration files.
 //!
 //! ## Config value API
 //!
 //! The primary API for fetching user-defined config values is the
-//! `Config::get` method. It uses `serde` to translate config values to a
+//! [`GlobalContext::get`] method. It uses `serde` to translate config values to a
 //! target type.
 //!
 //! There are a variety of helper types for deserializing some common formats:
@@ -329,7 +329,7 @@ impl GlobalContext {
         }
     }
 
-    /// Creates a new Config instance, with all default settings.
+    /// Creates a new instance, with all default settings.
     ///
     /// This does only minimal initialization. In particular, it does not load
     /// any config files from disk. Those will be loaded lazily as-needed.
@@ -811,16 +811,18 @@ impl GlobalContext {
         }
     }
 
-    /// Get the value of environment variable `key` through the `Config` snapshot.
+    /// Get the value of environment variable `key` through the snapshot in
+    /// [`GlobalContext`].
     ///
-    /// This can be used similarly to `std::env::var`.
+    /// This can be used similarly to [`std::env::var`].
     pub fn get_env(&self, key: impl AsRef<OsStr>) -> CargoResult<String> {
         self.env.get_env(key)
     }
 
-    /// Get the value of environment variable `key` through the `Config` snapshot.
+    /// Get the value of environment variable `key` through the snapshot in
+    /// [`GlobalContext`].
     ///
-    /// This can be used similarly to `std::env::var_os`.
+    /// This can be used similarly to [`std::env::var_os`].
     pub fn get_env_os(&self, key: impl AsRef<OsStr>) -> Option<OsString> {
         self.env.get_env_os(key)
     }
@@ -1001,7 +1003,7 @@ impl GlobalContext {
             .map_err(|e| anyhow!("invalid configuration for key `{}`\n{}", key, e))
     }
 
-    /// Update the Config instance based on settings typically passed in on
+    /// Update the instance based on settings typically passed in on
     /// the command-line.
     ///
     /// This may also load the config from disk if it hasn't already been
@@ -1646,7 +1648,7 @@ impl GlobalContext {
     ///
     /// The credentials are loaded into a separate field to enable them
     /// to be lazy-loaded after the main configuration has been loaded,
-    /// without requiring `mut` access to the `Config`.
+    /// without requiring `mut` access to the [`GlobalContext`].
     ///
     /// If the credentials are already loaded, this function does nothing.
     pub fn load_credentials(&self) -> CargoResult<()> {

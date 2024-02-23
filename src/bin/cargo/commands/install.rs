@@ -111,7 +111,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     // In general, we try to avoid normalizing paths in Cargo,
     // but in these particular cases we need it to fix rust-lang/cargo#10283.
     // (Handle `SourceId::for_path` and `Workspace::new`,
-    // but not `Config::reload_rooted_at` which is always cwd)
+    // but not `GlobalContext::reload_rooted_at` which is always cwd)
     let path = path.map(|p| paths::normalize_path(&p));
 
     let version = args.get_one::<VersionReq>("version");

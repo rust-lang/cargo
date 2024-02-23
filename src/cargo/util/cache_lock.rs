@@ -8,7 +8,7 @@
 //!
 //! There is a global [`CacheLocker`] held inside cargo's venerable
 //! [`GlobalContext`]. The `CacheLocker` manages creating and tracking the locks
-//! being held. There are methods on `Config` for managing the locks:
+//! being held. There are methods on [`GlobalContext`] for managing the locks:
 //!
 //! - [`GlobalContext::acquire_package_cache_lock`] --- Acquires a lock. May block if
 //!   another process holds a lock.
@@ -468,7 +468,7 @@ pub struct CacheLocker {
     /// The state of the locker.
     ///
     /// [`CacheLocker`] uses interior mutability because it is stuffed inside
-    /// the global `Config`, which does not allow mutation.
+    /// [`GlobalContext`], which does not allow mutation.
     state: RefCell<CacheState>,
 }
 

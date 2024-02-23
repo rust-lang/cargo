@@ -25,7 +25,8 @@ pub fn main(gctx: &mut GlobalContext) -> CliResult {
 
     // Update the process-level notion of cwd
     if let Some(new_cwd) = args.get_one::<std::path::PathBuf>("directory") {
-        // This is a temporary hack. This cannot access `Config`, so this is a bit messy.
+        // This is a temporary hack.
+        // This cannot access `GlobalContext`, so this is a bit messy.
         // This does not properly parse `-Z` flags that appear after the subcommand.
         // The error message is not as helpful as the standard one.
         let nightly_features_allowed = matches!(&*features::channel(), "nightly" | "dev");

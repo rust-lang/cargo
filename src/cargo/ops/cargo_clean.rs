@@ -40,8 +40,8 @@ pub struct CleanContext<'gctx> {
 pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
     let mut target_dir = ws.target_dir();
     let gctx = opts.gctx;
-    let mut clean_gctx = CleanContext::new(gctx);
-    clean_gctx.dry_run = opts.dry_run;
+    let mut clean_ctx = CleanContext::new(gctx);
+    clean_ctx.dry_run = opts.dry_run;
 
     if opts.doc {
         if !opts.spec.is_empty() {
@@ -55,7 +55,7 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         }
         // If the doc option is set, we just want to delete the doc directory.
         target_dir = target_dir.join("doc");
-        clean_gctx.remove_paths(&[target_dir.into_path_unlocked()])?;
+        clean_ctx.remove_paths(&[target_dir.into_path_unlocked()])?;
     } else {
         let profiles = Profiles::new(&ws, opts.requested_profile)?;
 
@@ -73,13 +73,13 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         // Note that we don't bother grabbing a lock here as we're just going to
         // blow it all away anyway.
         if opts.spec.is_empty() {
-            clean_gctx.remove_paths(&[target_dir.into_path_unlocked()])?;
+            clean_ctx.remove_paths(&[target_dir.into_path_unlocked()])?;
         } else {
-            clean_specs(&mut clean_gctx, &ws, &profiles, &opts.targets, &opts.spec)?;
+            clean_specs(&mut clean_ctx, &ws, &profiles, &opts.targets, &opts.spec)?;
         }
     }
 
-    clean_gctx.display_summary()?;
+    clean_ctx.display_summary()?;
     Ok(())
 }
 
