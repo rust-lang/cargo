@@ -7,6 +7,7 @@ use cargo_test_support::{
 };
 use cargo_test_support::{cross_compile, paths};
 use cargo_test_support::{rustc_host, rustc_host_env, sleep_ms};
+use cargo_util::paths::dylib_path_envvar;
 use std::fs;
 
 #[cargo_test]
@@ -2765,6 +2766,53 @@ fn only_test_docs() {
         )
         .with_stdout_contains("test [..] ... ok")
         .run();
+}
+
+#[cargo_test]
+fn doctest_with_library_paths() {
+    let p = project();
+    // Only link search directories within the target output directory are
+    // propagated through to dylib_path_envvar() (see #3366).
+    let dir1 = p.target_debug_dir().join("foo\\backslash");
+    let dir2 = p.target_debug_dir().join("dir=containing=equal=signs");
+
+    let p = p
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.0"))
+        .file(
+            "build.rs",
+            &format!(
+                r##"
+                    fn main() {{
+                        println!(r#"cargo::rustc-link-search=native={}"#);
+                        println!(r#"cargo::rustc-link-search={}"#);
+                    }}
+                "##,
+                dir1.display(),
+                dir2.display()
+            ),
+        )
+        .file(
+            "src/lib.rs",
+            &format!(
+                r##"
+                    /// ```
+                    /// foo::assert_search_path();
+                    /// ```
+                    pub fn assert_search_path() {{
+                        let search_path = std::env::var_os("{}").unwrap();
+                        let paths = std::env::split_paths(&search_path).collect::<Vec<_>>();
+                        assert!(paths.contains(&r#"{}"#.into()));
+                        assert!(paths.contains(&r#"{}"#.into()));
+                    }}
+                "##,
+                dylib_path_envvar(),
+                dir1.display(),
+                dir2.display()
+            ),
+        )
+        .build();
+
+    p.cargo("test --doc").run();
 }
 
 #[cargo_test]

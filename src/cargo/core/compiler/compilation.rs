@@ -13,6 +13,25 @@ use crate::core::compiler::{CompileKind, Metadata, Unit};
 use crate::core::Package;
 use crate::util::{config, CargoResult, GlobalContext};
 
+/// Represents the kind of process we are creating.
+#[derive(Debug)]
+enum ToolKind {
+    /// See [`Compilation::rustc_process`].
+    Rustc,
+    /// See [`Compilation::rustdoc_process`].
+    Rustdoc,
+    /// See [`Compilation::host_process`].
+    HostProcess,
+    /// See [`Compilation::target_process`].
+    TargetProcess,
+}
+
+impl ToolKind {
+    fn is_rustc_tool(&self) -> bool {
+        matches!(self, ToolKind::Rustc | ToolKind::Rustdoc)
+    }
+}
+
 /// Structure with enough information to run `rustdoc --test`.
 pub struct Doctest {
     /// What's being doctested
@@ -176,7 +195,7 @@ impl<'gctx> Compilation<'gctx> {
         };
 
         let cmd = fill_rustc_tool_env(rustc, unit);
-        self.fill_env(cmd, &unit.pkg, None, unit.kind, true)
+        self.fill_env(cmd, &unit.pkg, None, unit.kind, ToolKind::Rustc)
     }
 
     /// Returns a [`ProcessBuilder`] for running `rustdoc`.
@@ -187,7 +206,7 @@ impl<'gctx> Compilation<'gctx> {
     ) -> CargoResult<ProcessBuilder> {
         let rustdoc = ProcessBuilder::new(&*self.gctx.rustdoc()?);
         let cmd = fill_rustc_tool_env(rustdoc, unit);
-        let mut cmd = self.fill_env(cmd, &unit.pkg, script_meta, unit.kind, true)?;
+        let mut cmd = self.fill_env(cmd, &unit.pkg, script_meta, unit.kind, ToolKind::Rustdoc)?;
         cmd.retry_with_argfile(true);
         unit.target.edition().cmd_edition_arg(&mut cmd);
 
@@ -214,7 +233,7 @@ impl<'gctx> Compilation<'gctx> {
             pkg,
             None,
             CompileKind::Host,
-            false,
+            ToolKind::HostProcess,
         )
     }
 
@@ -249,7 +268,8 @@ impl<'gctx> Compilation<'gctx> {
         } else {
             ProcessBuilder::new(cmd)
         };
-        let mut builder = self.fill_env(builder, pkg, script_meta, kind, false)?;
+        let tool_kind = ToolKind::TargetProcess;
+        let mut builder = self.fill_env(builder, pkg, script_meta, kind, tool_kind)?;
 
         if let Some(client) = self.gctx.jobserver_from_env() {
             builder.inherit_jobserver(client);
@@ -269,10 +289,22 @@ impl<'gctx> Compilation<'gctx> {
         pkg: &Package,
         script_meta: Option<Metadata>,
         kind: CompileKind,
-        is_rustc_tool: bool,
+        tool_kind: ToolKind,
     ) -> CargoResult<ProcessBuilder> {
         let mut search_path = Vec::new();
-        if is_rustc_tool {
+        if tool_kind.is_rustc_tool() {
+            if matches!(tool_kind, ToolKind::Rustdoc) {
+                // HACK: `rustdoc --test` not only compiles but executes doctests.
+                // Ideally only execution phase should have search paths appended,
+                // so the executions can find native libs just like other tests.
+                // However, there is no way to separate these two phase, so this
+                // hack is added for both phases.
+                // TODO: handle doctest-xcompile
+                search_path.extend(super::filter_dynamic_search_path(
+                    self.native_dirs.iter(),
+                    &self.root_output[&CompileKind::Host],
+                ));
+            }
             search_path.push(self.deps_output[&CompileKind::Host].clone());
         } else {
             search_path.extend(super::filter_dynamic_search_path(
