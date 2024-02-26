@@ -2,6 +2,7 @@
 //! See [`output_sbom`] for more.
 
 use std::{
+    collections::BTreeSet,
     io::{BufWriter, Write},
     path::PathBuf,
 };
@@ -34,6 +35,8 @@ impl<const V: u32> Serialize for SbomFormatVersion<V> {
 #[derive(Serialize, Clone, Debug)]
 struct SbomDependency {
     package_id: PackageIdSpec,
+    package: String,
+    version: String,
     features: Vec<String>,
     extern_crate_name: String,
 }
@@ -49,6 +52,8 @@ impl From<&UnitDep> for SbomDependency {
 
         Self {
             package_id: dep.unit.pkg.package_id().to_spec(),
+            package: dep.unit.pkg.package_id().name().to_string(),
+            version: dep.unit.pkg.package_id().version().to_string(),
             features,
             extern_crate_name: dep.extern_crate_name.to_string(),
         }
@@ -136,8 +141,8 @@ impl Sbom {
 ///
 pub fn output_sbom(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<()> {
     let bcx = build_runner.bcx;
-    let unit_deps = build_runner.unit_deps(unit);
-    let dependencies = unit_deps.iter().map(|dep| dep.into()).collect_vec();
+
+    let dependencies = fetch_dependencies(build_runner, unit);
 
     // TODO collect build & unit data, then transform into JSON output
     for output in build_runner
@@ -158,4 +163,33 @@ pub fn output_sbom(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> Cargo
     }
 
     Ok(())
+}
+
+/// Fetch all dependencies, including transitive ones. A dependency can also appear multiple times
+/// if it's included with different versions.
+fn fetch_dependencies(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> Vec<SbomDependency> {
+    let unit_graph = &build_runner.bcx.unit_graph;
+    let root_deps = build_runner.unit_deps(unit);
+
+    let mut result = Vec::new();
+    let mut queue: BTreeSet<&UnitDep> = root_deps.iter().collect();
+    let mut visited: BTreeSet<&UnitDep> = BTreeSet::new();
+
+    while let Some(dependency) = queue.pop_first() {
+        // ignore any custom build scripts.
+        if dependency.unit.mode.is_run_custom_build() {
+            continue;
+        }
+        if visited.contains(dependency) {
+            continue;
+        }
+
+        result.push(dependency);
+        visited.insert(dependency);
+
+        let mut dependencies: BTreeSet<&UnitDep> = unit_graph[&dependency.unit].iter().collect();
+        queue.append(&mut dependencies);
+    }
+
+    result.into_iter().map(|d| d.into()).collect_vec()
 }
