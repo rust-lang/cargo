@@ -354,13 +354,7 @@ impl GlobalCacheTracker {
         // provide user feedback) rather than blocking inside sqlite
         // (which by default has a short timeout).
         let db_path = gctx.assert_package_cache_locked(CacheLockMode::DownloadExclusive, &db_path);
-        let mut conn = if gctx.cli_unstable().gc {
-            Connection::open(db_path)?
-        } else {
-            // To simplify things (so there aren't checks everywhere for being
-            // enabled), just process everything in memory.
-            Connection::open_in_memory()?
-        };
+        let mut conn = Connection::open(db_path)?;
         conn.pragma_update(None, "foreign_keys", true)?;
         sqlite::migrate(&mut conn, &migrations())?;
         Ok(GlobalCacheTracker {
