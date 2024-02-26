@@ -291,6 +291,10 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             }
 
             super::output_depinfo(&mut self, unit)?;
+
+            if self.bcx.build_config.sbom {
+                super::output_sbom(&mut self, unit)?;
+            }
         }
 
         for (script_meta, output) in self.build_script_outputs.lock().unwrap().iter() {

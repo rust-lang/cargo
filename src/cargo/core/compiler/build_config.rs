@@ -46,6 +46,8 @@ pub struct BuildConfig {
     pub future_incompat_report: bool,
     /// Which kinds of build timings to output (empty if none).
     pub timing_outputs: Vec<TimingOutput>,
+    /// Output SBOM precursor files.
+    pub sbom: bool,
 }
 
 fn default_parallelism() -> CargoResult<u32> {
@@ -102,6 +104,11 @@ impl BuildConfig {
             anyhow::bail!("-Zbuild-std requires --target");
         }
 
+        let sbom = match gctx.get_env_os("CARGO_BUILD_SBOM") {
+            Some(sbom) => sbom == "true",
+            None => cfg.sbom == Some(true),
+        };
+
         Ok(BuildConfig {
             requested_kinds,
             jobs,
@@ -117,6 +124,7 @@ impl BuildConfig {
             export_dir: None,
             future_incompat_report: false,
             timing_outputs: Vec::new(),
+            sbom,
         })
     }
 
