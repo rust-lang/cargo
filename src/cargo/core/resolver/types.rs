@@ -69,7 +69,7 @@ impl ResolverProgress {
             // The largest test in our suite takes less then 5000 ticks
             // with all the algorithm improvements.
             // If any of them are removed then it takes more than I am willing to measure.
-            // So lets fail the test fast if we have ben running for two long.
+            // So lets fail the test fast if we have been running for too long.
             assert!(
                 self.ticks < 50_000,
                 "got to 50_000 ticks in {:?}",
@@ -78,7 +78,7 @@ impl ResolverProgress {
             // The largest test in our suite takes less then 30 sec
             // with all the improvements to how fast a tick can go.
             // If any of them are removed then it takes more than I am willing to measure.
-            // So lets fail the test fast if we have ben running for two long.
+            // So lets fail the test fast if we have been running for too long.
             if self.ticks % 1000 == 0 {
                 assert!(
                     self.start.elapsed() - self.deps_time
