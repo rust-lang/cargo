@@ -5,10 +5,11 @@ use std::io::{BufWriter, Write};
 
 use cargo_util::paths::{self};
 use cargo_util_schemas::core::PackageIdSpec;
+use itertools::Itertools;
 use serde::Serialize;
 
 use crate::{
-    core::{compiler::FileFlavor, Target, TargetKind},
+    core::{compiler::FileFlavor, profiles::Profile, Target, TargetKind},
     CargoResult,
 };
 
@@ -51,26 +52,32 @@ struct Sbom {
     package_id: PackageIdSpec,
     name: String,
     version: String,
+    source: String,
     target: SbomTarget,
+    profile: Profile,
     dependencies: Vec<String>,
     features: Vec<String>,
 }
 
 impl Sbom {
-    pub fn new(unit: &Unit) -> Self {
+    pub fn new(unit: &Unit, dependencies: Vec<String>) -> Self {
         let package_id = unit.pkg.summary().package_id().to_spec();
         let name = unit.pkg.name().to_string();
         let version = unit.pkg.version().to_string();
+        let source = unit.pkg.package_id().source_id().to_string();
+        let target = (&unit.target).into();
+        let profile = unit.profile.clone();
         let features = unit.features.iter().map(|f| f.to_string()).collect();
-        let target: SbomTarget = (&unit.target).into();
 
         Self {
             format_version: SbomFormatVersion,
             package_id,
             name,
             version,
+            source,
             target,
-            dependencies: Vec::new(),
+            profile,
+            dependencies,
             features,
         }
     }
@@ -90,7 +97,8 @@ pub fn output_sbom(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> Cargo
         if let Some(ref link_dst) = output.hardlink {
             let output_path = link_dst.with_extension("cargo-sbom.json");
 
-            let sbom = Sbom::new(unit);
+            let dependencies = find_dependencies_for_unit(build_runner, unit)?;
+            let sbom = Sbom::new(unit, dependencies);
 
             let mut outfile = BufWriter::new(paths::create(output_path)?);
             let output = serde_json::to_string_pretty(&sbom)?;
@@ -99,4 +107,11 @@ pub fn output_sbom(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> Cargo
     }
 
     Ok(())
+}
+
+fn find_dependencies_for_unit(
+    build_runner: &mut BuildRunner<'_, '_>,
+    unit: &Unit,
+) -> CargoResult<Vec<String>> {
+    Ok(Vec::new())
 }
