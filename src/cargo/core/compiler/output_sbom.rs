@@ -13,7 +13,7 @@ use itertools::Itertools;
 use serde::Serialize;
 
 use crate::{
-    core::{compiler::FileFlavor, profiles::Profile, PackageId, Target, TargetKind},
+    core::{profiles::Profile, PackageId, Target, TargetKind},
     util::Rustc,
     CargoResult,
 };
@@ -180,21 +180,12 @@ pub fn output_sbom(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> Cargo
 
     let packages = fetch_packages(build_runner, unit);
 
-    // TODO collect build & unit data, then transform into JSON output
-    for output in build_runner
-        .outputs(unit)?
-        .iter()
-        .filter(|o| matches!(o.flavor, FileFlavor::Normal | FileFlavor::Linkable))
-    {
-        if let Some(ref link_dst) = output.hardlink {
-            let output_path = link_dst.with_extension("cargo-sbom.json");
+    for sbom_output_file in build_runner.sbom_output_files(unit)? {
+        let sbom = Sbom::new(unit, packages.clone(), rustc.clone());
 
-            let sbom = Sbom::new(unit, packages.clone(), rustc.clone());
-
-            let mut outfile = BufWriter::new(paths::create(output_path.clone())?);
-            let output = serde_json::to_string_pretty(&sbom)?;
-            write!(outfile, "{}", output)?;
-        }
+        let mut outfile = BufWriter::new(paths::create(sbom_output_file)?);
+        let output = serde_json::to_string_pretty(&sbom)?;
+        write!(outfile, "{}", output)?;
     }
 
     Ok(())

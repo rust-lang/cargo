@@ -423,6 +423,21 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         self.files().metadata(unit)
     }
 
+    /// Returns the list of SBOM output file paths for a given [`Unit`].
+    ///
+    /// Only call this function when `sbom` is active.
+    pub fn sbom_output_files(&self, unit: &Unit) -> CargoResult<Vec<PathBuf>> {
+        assert!(self.bcx.build_config.sbom);
+        let files = self
+            .outputs(unit)?
+            .iter()
+            .filter(|o| matches!(o.flavor, FileFlavor::Normal | FileFlavor::Linkable))
+            .filter_map(|output_file| output_file.hardlink.as_ref())
+            .map(|link_dst| link_dst.with_extension("cargo-sbom.json"))
+            .collect::<Vec<_>>();
+        Ok(files)
+    }
+
     pub fn is_primary_package(&self, unit: &Unit) -> bool {
         self.primary_packages.contains(&unit.pkg.package_id())
     }

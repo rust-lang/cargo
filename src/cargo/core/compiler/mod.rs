@@ -676,6 +676,7 @@ where
 fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilder> {
     let is_primary = build_runner.is_primary_package(unit);
     let is_workspace = build_runner.bcx.ws.is_member(&unit.pkg);
+    let sbom = build_runner.bcx.build_config.sbom;
 
     let mut base = build_runner
         .compilation
@@ -692,6 +693,11 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
 
     if is_primary {
         base.env("CARGO_PRIMARY_PACKAGE", "1");
+
+        if sbom {
+            let file_list = std::env::join_paths(build_runner.sbom_output_files(unit)?)?;
+            base.env("CARGO_SBOM_PATH", file_list);
+        }
     }
 
     if unit.target.is_test() || unit.target.is_bench() {
