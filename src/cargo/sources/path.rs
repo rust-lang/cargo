@@ -217,9 +217,13 @@ impl<'gctx> PathSource<'gctx> {
                 return Ok(None);
             }
         };
-        let index = repo
-            .index()
-            .with_context(|| format!("failed to open git index at {}", repo.path().display()))?;
+        let index = match repo.index() {
+            Ok(index) => index,
+            Err(e) => {
+                tracing::warn!("failed to open git index at {}: {e}", repo.path().display());
+                return Ok(None);
+            }
+        };
         let repo_root = repo.workdir().ok_or_else(|| {
             anyhow::format_err!(
                 "did not expect repo at {} to be bare",
