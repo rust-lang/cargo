@@ -33,7 +33,7 @@ fn enable_build_std(e: &mut Execs, arg: Option<&str>) {
         Some(s) => format!("-Zbuild-std={}", s),
         None => "-Zbuild-std".to_string(),
     };
-    e.arg(arg);
+    e.arg(arg).arg("-Zpublic-dependency");
     e.masquerade_as_nightly_cargo(&["build-std"]);
 }
 

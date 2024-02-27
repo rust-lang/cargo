@@ -911,6 +911,7 @@ fn run_verify(
         .unstable_features()
         .require(Feature::public_dependency())
         .is_ok()
+        || ws.gctx().cli_unstable().public_dependency
     {
         // FIXME: Turn this on at some point in the future
         //Some(vec!["-D exported_private_dependencies".to_string()])
