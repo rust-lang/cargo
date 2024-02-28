@@ -202,16 +202,16 @@ fn cdylib_link_arg_transitive() {
         .with_stderr_contains(
             "\
 [COMPILING] bar v1.0.0 [..]
-[RUNNING] `rustc --crate-name build_script_build bar/build.rs [..]
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 bar/build.rs [..]
 [RUNNING] `[..]build-script-build[..]
 warning: bar@1.0.0: cargo::rustc-link-arg-cdylib was specified in the build script of bar v1.0.0 \
 ([ROOT]/foo/bar), but that package does not contain a cdylib target
 
 Allowing this was an unintended change in the 1.50 release, and may become an error in \
 the future. For more information, see <https://github.com/rust-lang/cargo/issues/9562>.
-[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]
+[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]
 [COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]-C link-arg=--bogus[..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]-C link-arg=--bogus[..]`
 ",
         )
         .run();
@@ -265,7 +265,7 @@ fn link_arg_transitive_not_allowed() {
 [RUNNING] `[..]/build-script-build[..]
 [RUNNING] `rustc --crate-name bar [..]
 [COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]
 [FINISHED] `dev` profile [..]
 ",
         )

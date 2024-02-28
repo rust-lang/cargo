@@ -87,16 +87,16 @@ fn profile_selection_build() {
     p.cargo("build -vv")
         .with_stderr_unordered("\
 [COMPILING] bar [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
 [COMPILING] bdep [..]
-[RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
+[RUNNING] `[..] rustc --crate-name bdep --edition=2015 bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
 [COMPILING] foo [..]
-[RUNNING] `[..] rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=5 [..]
+[RUNNING] `[..] rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=5 [..]
 [RUNNING] `[..]/target/debug/build/foo-[..]/build-script-build`
 [foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] [..]
 "
         )
@@ -121,16 +121,16 @@ fn profile_selection_build_release() {
     // `build --release`
     p.cargo("build --release -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
 [COMPILING] bdep [..]
-[RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
+[RUNNING] `[..] rustc --crate-name bdep --edition=2015 bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
 [COMPILING] foo [..]
-[RUNNING] `[..] rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=6 [..]
+[RUNNING] `[..] rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=6 [..]
 [RUNNING] `[..]/target/release/build/foo-[..]/build-script-build`
 [foo 0.0.1] foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
 [FINISHED] `release` profile [optimized] [..]
 ").run();
     p.cargo("build --release -vv")
@@ -181,23 +181,23 @@ fn profile_selection_build_all_targets() {
     p.cargo("build --all-targets -vv")
         .with_stderr_unordered("\
 [COMPILING] bar [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=1 -C debuginfo=2 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
 [COMPILING] bdep [..]
-[RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
+[RUNNING] `[..] rustc --crate-name bdep --edition=2015 bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
 [COMPILING] foo [..]
-[RUNNING] `[..] rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=5 [..]
+[RUNNING] `[..] rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=5 [..]
 [RUNNING] `[..]/target/debug/build/foo-[..]/build-script-build`
 [foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]`
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=[..]link[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]`
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=1 -C debuginfo=2 [..]`
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]link[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]`
-[RUNNING] `[..] rustc --crate-name test1 tests/test1.rs [..]--emit=[..]link[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]`
-[RUNNING] `[..] rustc --crate-name bench1 benches/bench1.rs [..]--emit=[..]link[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]`
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]`
-[RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]`
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]`
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--emit=[..]link[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]`
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=1 -C debuginfo=2 [..]`
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--emit=[..]link[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]`
+[RUNNING] `[..] rustc --crate-name test1 --edition=2015 tests/test1.rs [..]--emit=[..]link[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]`
+[RUNNING] `[..] rustc --crate-name bench1 --edition=2015 benches/bench1.rs [..]--emit=[..]link[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]`
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]`
+[RUNNING] `[..] rustc --crate-name ex1 --edition=2015 examples/ex1.rs [..]--crate-type bin --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] [..]
 "
         )
@@ -250,23 +250,23 @@ fn profile_selection_build_all_targets_release() {
     //   example  release        build
     p.cargo("build --all-targets --release -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3[..]-C codegen-units=2 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3[..]-C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
 [COMPILING] bdep [..]
-[RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
+[RUNNING] `[..] rustc --crate-name bdep --edition=2015 bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
 [COMPILING] foo [..]
-[RUNNING] `[..] rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=6 [..]
+[RUNNING] `[..] rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=6 [..]
 [RUNNING] `[..]/target/release/build/foo-[..]/build-script-build`
 [foo 0.0.1] foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]`
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=2 --test [..]`
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3[..]-C codegen-units=2 [..]`
-[RUNNING] `[..] rustc --crate-name test1 tests/test1.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=2 --test [..]`
-[RUNNING] `[..] rustc --crate-name bench1 benches/bench1.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=2 --test [..]`
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=2 --test [..]`
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]`
-[RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]`
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]`
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=2 --test [..]`
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3[..]-C codegen-units=2 [..]`
+[RUNNING] `[..] rustc --crate-name test1 --edition=2015 tests/test1.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=2 --test [..]`
+[RUNNING] `[..] rustc --crate-name bench1 --edition=2015 benches/bench1.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=2 --test [..]`
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=2 --test [..]`
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]`
+[RUNNING] `[..] rustc --crate-name ex1 --edition=2015 examples/ex1.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]`
 [FINISHED] `release` profile [optimized] [..]
 ").run();
     p.cargo("build --all-targets --release -vv")
@@ -307,22 +307,22 @@ fn profile_selection_test() {
     //
     p.cargo("test -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=3 -C debuginfo=2 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C codegen-units=3 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=3 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C codegen-units=3 -C debuginfo=2 [..]
 [COMPILING] bdep [..]
-[RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
+[RUNNING] `[..] rustc --crate-name bdep --edition=2015 bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
 [COMPILING] foo [..]
-[RUNNING] `[..] rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=5 [..]
+[RUNNING] `[..] rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=5 [..]
 [RUNNING] `[..]/target/debug/build/foo-[..]/build-script-build`
 [foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C codegen-units=3 -C debuginfo=2 [..]
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=3 -C debuginfo=2 [..]
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=[..]link[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
-[RUNNING] `[..] rustc --crate-name test1 tests/test1.rs [..]--emit=[..]link[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
-[RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=3 -C debuginfo=2 [..]
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]link[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C panic=abort[..]-C codegen-units=3 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C codegen-units=3 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=3 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--emit=[..]link[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
+[RUNNING] `[..] rustc --crate-name test1 --edition=2015 tests/test1.rs [..]--emit=[..]link[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
+[RUNNING] `[..] rustc --crate-name ex1 --edition=2015 examples/ex1.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=3 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--emit=[..]link[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link -C panic=abort[..]-C codegen-units=3 -C debuginfo=2 [..]
 [FINISHED] `test` profile [unoptimized + debuginfo] [..]
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/foo-[..]`
@@ -374,22 +374,22 @@ fn profile_selection_test_release() {
     //
     p.cargo("test --release -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C opt-level=3[..]-C codegen-units=2[..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C opt-level=3[..]-C codegen-units=2[..]
 [COMPILING] bdep [..]
-[RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
+[RUNNING] `[..] rustc --crate-name bdep --edition=2015 bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
 [COMPILING] foo [..]
-[RUNNING] `[..] rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=6 [..]
+[RUNNING] `[..] rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=6 [..]
 [RUNNING] `[..]/target/release/build/foo-[..]/build-script-build`
 [foo 0.0.1] foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3[..]-C codegen-units=2 [..]
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=2 --test [..]
-[RUNNING] `[..] rustc --crate-name test1 tests/test1.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=2 --test [..]
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=2 --test [..]
-[RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=[..]link -C opt-level=3[..]-C codegen-units=2 [..]
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3[..]-C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=2 --test [..]
+[RUNNING] `[..] rustc --crate-name test1 --edition=2015 tests/test1.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=2 --test [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=2 --test [..]
+[RUNNING] `[..] rustc --crate-name ex1 --edition=2015 examples/ex1.rs [..]--crate-type bin --emit=[..]link -C opt-level=3[..]-C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
 [FINISHED] `release` profile [optimized] [..]
 [RUNNING] `[..]/deps/foo-[..]`
 [RUNNING] `[..]/deps/foo-[..]`
@@ -440,21 +440,21 @@ fn profile_selection_bench() {
     //
     p.cargo("bench -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3[..]-C codegen-units=4 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=4 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3[..]-C codegen-units=4 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=4 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
 [COMPILING] bdep [..]
-[RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
+[RUNNING] `[..] rustc --crate-name bdep --edition=2015 bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
 [COMPILING] foo [..]
-[RUNNING] `[..] rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=6 [..]
+[RUNNING] `[..] rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=6 [..]
 [RUNNING] `[..]target/release/build/foo-[..]/build-script-build`
 [foo 0.0.1] foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=4 [..]
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3[..]-C codegen-units=4 [..]
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=4 --test [..]
-[RUNNING] `[..] rustc --crate-name bench1 benches/bench1.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=4 --test [..]
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=4 --test [..]
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=4 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=4 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3[..]-C codegen-units=4 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=4 --test [..]
+[RUNNING] `[..] rustc --crate-name bench1 --edition=2015 benches/bench1.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=4 --test [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--emit=[..]link -C opt-level=3[..]-C codegen-units=4 --test [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=4 [..]
 [FINISHED] `bench` profile [optimized] [..]
 [RUNNING] `[..]/deps/foo-[..] --bench`
 [RUNNING] `[..]/deps/foo-[..] --bench`
@@ -505,23 +505,23 @@ fn profile_selection_check_all_targets() {
     //
     p.cargo("check --all-targets -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata[..]-C codegen-units=1 -C debuginfo=2 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata[..]-C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
 [COMPILING] bdep[..]
-[RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
+[RUNNING] `[..] rustc --crate-name bdep --edition=2015 bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
 [COMPILING] foo [..]
-[RUNNING] `[..] rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=5 [..]
+[RUNNING] `[..] rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=5 [..]
 [RUNNING] `[..]target/debug/build/foo-[..]/build-script-build`
 [foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]metadata -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]metadata[..]-C codegen-units=1 -C debuginfo=2 [..]
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=[..]metadata[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]
-[RUNNING] `[..] rustc --crate-name test1 tests/test1.rs [..]--emit=[..]metadata[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]metadata[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]
-[RUNNING] `[..] rustc --crate-name bench1 benches/bench1.rs [..]--emit=[..]metadata[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]
-[RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=[..]metadata -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]metadata -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]metadata -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]metadata[..]-C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--emit=[..]metadata[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]
+[RUNNING] `[..] rustc --crate-name test1 --edition=2015 tests/test1.rs [..]--emit=[..]metadata[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--emit=[..]metadata[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]
+[RUNNING] `[..] rustc --crate-name bench1 --edition=2015 benches/bench1.rs [..]--emit=[..]metadata[..]-C codegen-units=1 -C debuginfo=2 [..]--test [..]
+[RUNNING] `[..] rustc --crate-name ex1 --edition=2015 examples/ex1.rs [..]--crate-type bin --emit=[..]metadata -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]metadata -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] [..]
 ").run();
     // Starting with Rust 1.27, rustc emits `rmeta` files for bins, so
@@ -550,23 +550,23 @@ fn profile_selection_check_all_targets_release() {
     // `dev` for all targets.
     p.cargo("check --all-targets --release -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata -C opt-level=3[..]-C codegen-units=2 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata -C opt-level=3[..]-C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
 [COMPILING] bdep[..]
-[RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]--crate-type lib --emit=[..]link [..]-C codegen-units=6 [..]
+[RUNNING] `[..] rustc --crate-name bdep --edition=2015 bdep/src/lib.rs [..]--crate-type lib --emit=[..]link [..]-C codegen-units=6 [..]
 [COMPILING] foo [..]
-[RUNNING] `[..] rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=6 [..]
+[RUNNING] `[..] rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=6 [..]
 [RUNNING] `[..]target/release/build/foo-[..]/build-script-build`
 [foo 0.0.1] foo custom build PROFILE=release DEBUG=false OPT_LEVEL=3
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]metadata -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]metadata -C opt-level=3[..]-C codegen-units=2 [..]
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=[..]metadata -C opt-level=3[..]-C codegen-units=2 --test [..]
-[RUNNING] `[..] rustc --crate-name test1 tests/test1.rs [..]--emit=[..]metadata -C opt-level=3[..]-C codegen-units=2 --test [..]
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]metadata -C opt-level=3[..]-C codegen-units=2 --test [..]
-[RUNNING] `[..] rustc --crate-name bench1 benches/bench1.rs [..]--emit=[..]metadata -C opt-level=3[..]-C codegen-units=2 --test [..]
-[RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--crate-type bin --emit=[..]metadata -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--crate-type bin --emit=[..]metadata -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]metadata -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]metadata -C opt-level=3[..]-C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--emit=[..]metadata -C opt-level=3[..]-C codegen-units=2 --test [..]
+[RUNNING] `[..] rustc --crate-name test1 --edition=2015 tests/test1.rs [..]--emit=[..]metadata -C opt-level=3[..]-C codegen-units=2 --test [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--emit=[..]metadata -C opt-level=3[..]-C codegen-units=2 --test [..]
+[RUNNING] `[..] rustc --crate-name bench1 --edition=2015 benches/bench1.rs [..]--emit=[..]metadata -C opt-level=3[..]-C codegen-units=2 --test [..]
+[RUNNING] `[..] rustc --crate-name ex1 --edition=2015 examples/ex1.rs [..]--crate-type bin --emit=[..]metadata -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]metadata -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
 [FINISHED] `release` profile [optimized] [..]
 ").run();
 
@@ -609,20 +609,20 @@ fn profile_selection_check_all_targets_test() {
     //
     p.cargo("check --all-targets --profile=test -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]
 [COMPILING] bdep[..]
-[RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
+[RUNNING] `[..] rustc --crate-name bdep --edition=2015 bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
 [COMPILING] foo [..]
-[RUNNING] `[..] rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=5 [..]
+[RUNNING] `[..] rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=5 [..]
 [RUNNING] `[..]target/debug/build/foo-[..]/build-script-build`
 [foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]
-[RUNNING] `[..] rustc --crate-name foo src/lib.rs [..]--emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
-[RUNNING] `[..] rustc --crate-name test1 tests/test1.rs [..]--emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
-[RUNNING] `[..] rustc --crate-name foo src/main.rs [..]--emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
-[RUNNING] `[..] rustc --crate-name bench1 benches/bench1.rs [..]--emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
-[RUNNING] `[..] rustc --crate-name ex1 examples/ex1.rs [..]--emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/lib.rs [..]--emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
+[RUNNING] `[..] rustc --crate-name test1 --edition=2015 tests/test1.rs [..]--emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
+[RUNNING] `[..] rustc --crate-name foo --edition=2015 src/main.rs [..]--emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
+[RUNNING] `[..] rustc --crate-name bench1 --edition=2015 benches/bench1.rs [..]--emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
+[RUNNING] `[..] rustc --crate-name ex1 --edition=2015 examples/ex1.rs [..]--emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]--test [..]
 [FINISHED] `test` profile [unoptimized + debuginfo] [..]
 ").run();
 
@@ -655,13 +655,13 @@ fn profile_selection_doc() {
     p.cargo("doc -vv").with_stderr_unordered("\
 [COMPILING] bar [..]
 [DOCUMENTING] bar [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
 [RUNNING] `rustdoc [..]--crate-name bar bar/src/lib.rs [..]
-[RUNNING] `[..] rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
+[RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
 [COMPILING] bdep [..]
-[RUNNING] `[..] rustc --crate-name bdep bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
+[RUNNING] `[..] rustc --crate-name bdep --edition=2015 bdep/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
 [COMPILING] foo [..]
-[RUNNING] `[..] rustc --crate-name build_script_build build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=5 [..]
+[RUNNING] `[..] rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin --emit=[..]link[..]-C codegen-units=5 [..]
 [RUNNING] `[..]target/debug/build/foo-[..]/build-script-build`
 [foo 0.0.1] foo custom build PROFILE=debug DEBUG=true OPT_LEVEL=0
 [DOCUMENTING] foo [..]

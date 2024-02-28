@@ -215,17 +215,17 @@ fn profile_override_hierarchy() {
     p.cargo("build -v").with_stderr_unordered("\
 [COMPILING] m3 [..]
 [COMPILING] dep [..]
-[RUNNING] `rustc --crate-name m3 m3/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=4 [..]
-[RUNNING] `rustc --crate-name dep [..]dep/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=3 [..]
-[RUNNING] `rustc --crate-name m3 m3/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=1 [..]
-[RUNNING] `rustc --crate-name build_script_build m1/build.rs [..] --crate-type bin --emit=[..]link[..]-C codegen-units=4 [..]
+[RUNNING] `rustc --crate-name m3 --edition=2015 m3/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=4 [..]
+[RUNNING] `rustc --crate-name dep[..]dep/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=3 [..]
+[RUNNING] `rustc --crate-name m3 --edition=2015 m3/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=1 [..]
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 m1/build.rs [..] --crate-type bin --emit=[..]link[..]-C codegen-units=4 [..]
 [COMPILING] m2 [..]
-[RUNNING] `rustc --crate-name build_script_build m2/build.rs [..] --crate-type bin --emit=[..]link[..]-C codegen-units=2 [..]
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 m2/build.rs [..] --crate-type bin --emit=[..]link[..]-C codegen-units=2 [..]
 [RUNNING] `[..]/m1-[..]/build-script-build`
 [RUNNING] `[..]/m2-[..]/build-script-build`
-[RUNNING] `rustc --crate-name m2 m2/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=2 [..]
+[RUNNING] `rustc --crate-name m2 --edition=2015 m2/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=2 [..]
 [COMPILING] m1 [..]
-[RUNNING] `rustc --crate-name m1 m1/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=1 [..]
+[RUNNING] `rustc --crate-name m1 --edition=2015 m1/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=1 [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] [..]
 ",
         )
@@ -437,7 +437,7 @@ fn override_proc_macro() {
         .with_stderr_contains("[RUNNING] `rustc [..]--crate-name shared [..]-C codegen-units=4[..]")
         // Shared built for the library.
         .with_stderr_line_without(
-            &["[RUNNING] `rustc --crate-name shared"],
+            &["[RUNNING] `rustc --crate-name shared --edition=2015"],
             &["-C codegen-units"],
         )
         .with_stderr_contains("[RUNNING] `rustc [..]--crate-name pm [..]-C codegen-units=4[..]")

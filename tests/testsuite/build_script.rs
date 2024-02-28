@@ -37,7 +37,7 @@ fn custom_build_script_failed() {
         .with_stderr(
             "\
 [COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]`
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]`
 [RUNNING] `[..]/build-script-build`
 [ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
 
@@ -74,7 +74,7 @@ fn custom_build_script_failed_backtraces_message() {
         .with_stderr(
             "\
 [COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]`
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]`
 [RUNNING] `[..]/build-script-build`
 [ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
 note: To improve backtraces for build dependencies, set the \
@@ -129,7 +129,7 @@ fn custom_build_script_failed_backtraces_message_with_debuginfo() {
         .with_stderr(
             "\
 [COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]`
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]`
 [RUNNING] `[..]/build-script-build`
 [ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
 
@@ -514,7 +514,7 @@ fn custom_build_env_var_rustc_linker_bad_host_target() {
         .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/linker [..]`
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/linker [..]`
 [ERROR] linker `[..]/path/to/linker` not found
 "
         )
@@ -652,7 +652,7 @@ fn custom_build_linker_host_target_with_bad_host_config() {
             .with_stderr_contains(
                 "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/linker [..]`
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/linker [..]`
 [ERROR] linker `[..]/path/to/host/linker` not found
 "
             )
@@ -687,7 +687,7 @@ fn custom_build_linker_bad_host() {
             .with_stderr_contains(
                 "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/linker [..]`
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/linker [..]`
 [ERROR] linker `[..]/path/to/host/linker` not found
 "
             )
@@ -724,7 +724,7 @@ fn custom_build_linker_bad_host_with_arch() {
             .with_stderr_contains(
                 "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/arch/linker [..]`
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/arch/linker [..]`
 [ERROR] linker `[..]/path/to/host/arch/linker` not found
 "
             )
@@ -800,7 +800,7 @@ fn custom_build_linker_bad_cross_arch_host() {
             .with_stderr_contains(
                 "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/linker [..]`
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/linker [..]`
 [ERROR] linker `[..]/path/to/host/linker` not found
 "
             )
@@ -880,13 +880,13 @@ fn custom_build_script_rustc_flags() {
         .with_stderr(
             "\
 [COMPILING] foo [..]
-[RUNNING] `rustc --crate-name build_script_build foo/build.rs [..]
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 foo/build.rs [..]
 [RUNNING] `[..]build-script-build`
-[RUNNING] `rustc --crate-name foo foo/src/lib.rs [..]\
+[RUNNING] `rustc --crate-name foo --edition=2015 foo/src/lib.rs [..]\
     -L dependency=[CWD]/target/debug/deps \
     -L /dummy/path1 -L /dummy/path2 -l nonexistinglib`
 [COMPILING] bar [..]
-[RUNNING] `rustc --crate-name bar src/main.rs [..]\
+[RUNNING] `rustc --crate-name bar --edition=2015 src/main.rs [..]\
     -L dependency=[CWD]/target/debug/deps \
     --extern foo=[..]libfoo-[..] \
     -L /dummy/path1 -L /dummy/path2`
@@ -939,13 +939,13 @@ fn custom_build_script_rustc_flags_no_space() {
         .with_stderr(
             "\
 [COMPILING] foo [..]
-[RUNNING] `rustc --crate-name build_script_build foo/build.rs [..]
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 foo/build.rs [..]
 [RUNNING] `[..]build-script-build`
-[RUNNING] `rustc --crate-name foo foo/src/lib.rs [..]\
+[RUNNING] `rustc --crate-name foo --edition=2015 foo/src/lib.rs [..]\
     -L dependency=[CWD]/target/debug/deps \
     -L /dummy/path1 -L /dummy/path2 -l nonexistinglib`
 [COMPILING] bar [..]
-[RUNNING] `rustc --crate-name bar src/main.rs [..]\
+[RUNNING] `rustc --crate-name bar --edition=2015 src/main.rs [..]\
     -L dependency=[CWD]/target/debug/deps \
     --extern foo=[..]libfoo-[..] \
     -L /dummy/path1 -L /dummy/path2`
@@ -1786,7 +1786,7 @@ fn build_cmd_with_a_build_cmd() {
     --out-dir [..]target/debug/deps \
     -L [..]target/debug/deps`
 [COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc --crate-name build_script_build build.rs [..]--crate-type bin \
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin \
     --emit=[..]link[..]\
     -C metadata=[..] --out-dir [..] \
     -L [..]target/debug/deps \

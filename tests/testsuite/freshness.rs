@@ -1424,7 +1424,7 @@ fn reuse_panic_build_dep_test() {
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name build_script_build [..]
 [RUNNING] [..]build-script-build`
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]--test[..]
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--test[..]
 [FINISHED] [..]
 [EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
 ",
@@ -1478,12 +1478,12 @@ fn reuse_panic_pm() {
         .with_stderr_unordered(
             "\
 [COMPILING] bar [..]
-[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]
-[RUNNING] `rustc --crate-name bar bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C debuginfo=2 [..]
+[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]
+[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C debuginfo=2 [..]
 [COMPILING] somepm [..]
 [RUNNING] `rustc --crate-name somepm [..]
 [COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]-C panic=abort[..]
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]-C panic=abort[..]
 [FINISHED] [..]
 ",
         )
@@ -2779,7 +2779,9 @@ fn verify_source_before_recompile() {
     );
     // Sanity check: vendoring works correctly.
     p.cargo("check --verbose")
-        .with_stderr_contains("[RUNNING] `rustc --crate-name bar [CWD]/vendor/bar/src/lib.rs[..]")
+        .with_stderr_contains(
+            "[RUNNING] `rustc --crate-name bar --edition=2015 [CWD]/vendor/bar/src/lib.rs[..]",
+        )
         .run();
     // Now modify vendored crate.
     p.change_file(
@@ -2830,7 +2832,7 @@ fn skip_mtime_check_in_selected_cargo_home_subdirs() {
         .with_stderr(
             "\
 [CHECKING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]
 [FINISHED] `dev` profile [..]",
         )
         .run();
@@ -2859,7 +2861,7 @@ fn use_mtime_cache_in_cargo_home() {
         .with_stderr(
             "\
 [CHECKING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]
 [FINISHED] `dev` profile [..]",
         )
         .run();
@@ -2870,7 +2872,7 @@ fn use_mtime_cache_in_cargo_home() {
             "\
 [DIRTY] foo v0.5.0 ([CWD]): [..]
 [CHECKING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]",
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]",
         )
         .run_expect_error();
 }

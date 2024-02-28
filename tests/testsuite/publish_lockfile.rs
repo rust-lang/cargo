@@ -144,7 +144,7 @@ src/main.rs
 [ARCHIVING] src/main.rs
 [VERIFYING] foo v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc --crate-name foo src/main.rs [..]
+[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] 5 files, [..] ([..] compressed)
 ",
@@ -468,7 +468,7 @@ src/main.rs
 [ARCHIVING] src/main.rs
 [VERIFYING] foo v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc --crate-name foo src/main.rs [..]
+[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] 5 files, [..] ([..] compressed)
 ",
