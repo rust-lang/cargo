@@ -916,10 +916,8 @@ impl BuildOutput {
                     if extra_check_cfg {
                         check_cfgs.push(value.to_string());
                     } else {
-                        warnings.push(format!(
-                            "{}{} requires -Zcheck-cfg flag",
-                            syntax_prefix, key
-                        ));
+                        // silently ignoring the instruction to try to
+                        // minimise MSRV annoyance when stabilizing -Zcheck-cfg
                     }
                 }
                 "rustc-env" => {
