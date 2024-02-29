@@ -122,3 +122,29 @@ fn edition_unstable() {
         )
         .run();
 }
+
+#[cargo_test]
+fn unset_edition_works_on_old_msrv() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = 'foo'
+                version = '0.1.0'
+                rust-version = "1.50"  # contains 2018 edition
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr(
+            "\
+[CHECKING] foo [..]
+[RUNNING] `rustc [..] --edition=2015 [..]`
+[FINISHED] [..]
+",
+        )
+        .run();
+}
