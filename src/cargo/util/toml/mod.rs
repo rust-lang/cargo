@@ -28,7 +28,7 @@ use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, Worksp
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
-use crate::util::{self, config::ConfigRelativePath, GlobalContext, IntoUrl, OptVersionReq};
+use crate::util::{self, context::ConfigRelativePath, GlobalContext, IntoUrl, OptVersionReq};
 
 mod embedded;
 mod targets;

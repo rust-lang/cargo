@@ -14,7 +14,7 @@ use crate::core::{Feature, Shell, Verbosity, Workspace};
 use crate::core::{Package, PackageId, PackageSet, Resolve, SourceId};
 use crate::sources::PathSource;
 use crate::util::cache_lock::CacheLockMode;
-use crate::util::config::JobsConfig;
+use crate::util::context::JobsConfig;
 use crate::util::errors::CargoResult;
 use crate::util::toml::{prepare_for_publish, to_real_manifest};
 use crate::util::{self, human_readable_bytes, restricted_names, FileLock, GlobalContext};

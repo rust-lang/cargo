@@ -112,7 +112,7 @@
 //!    and summarize it similar to the other entries. Update the rest of the
 //!    documentation to add the new feature.
 //!
-//! [`GlobalContext::cli_unstable`]: crate::util::config::GlobalContext::cli_unstable
+//! [`GlobalContext::cli_unstable`]: crate::util::context::GlobalContext::cli_unstable
 //! [`fail_if_stable_opt`]: CliUnstable::fail_if_stable_opt
 //! [`features!`]: macro.features.html
 //! [`unstable_cli_options!`]: macro.unstable_cli_options.html

@@ -9,7 +9,7 @@ use cargo_credential::Operation;
 use cargo_credential::Secret;
 
 use crate::core::Workspace;
-use crate::util::config::GlobalContext;
+use crate::util::context::GlobalContext;
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_root_manifest_for_wd;
 

@@ -6,7 +6,7 @@ use crate::sources::source::Source;
 use crate::sources::{DirectorySource, CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::sources::{GitSource, PathSource, RegistrySource};
 use crate::util::interning::InternedString;
-use crate::util::{config, CanonicalUrl, CargoResult, GlobalContext, IntoUrl};
+use crate::util::{context, CanonicalUrl, CargoResult, GlobalContext, IntoUrl};
 use anyhow::Context as _;
 use serde::de;
 use serde::ser;
@@ -268,7 +268,7 @@ impl SourceId {
 
     /// Returns whether to access crates.io over the sparse protocol.
     pub fn crates_io_is_sparse(gctx: &GlobalContext) -> CargoResult<bool> {
-        let proto: Option<config::Value<String>> = gctx.get("registries.crates-io.protocol")?;
+        let proto: Option<context::Value<String>> = gctx.get("registries.crates-io.protocol")?;
         let is_sparse = match proto.as_ref().map(|v| v.val.as_str()) {
             Some("sparse") => true,
             Some("git") => false,

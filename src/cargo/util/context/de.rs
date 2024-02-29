@@ -1,8 +1,8 @@
 //! Support for deserializing configuration via `serde`
 
-use crate::util::config::value;
-use crate::util::config::{ConfigError, ConfigKey, GlobalContext};
-use crate::util::config::{ConfigValue as CV, Definition, Value};
+use crate::util::context::value;
+use crate::util::context::{ConfigError, ConfigKey, GlobalContext};
+use crate::util::context::{ConfigValue as CV, Definition, Value};
 use serde::{de, de::IntoDeserializer};
 use std::collections::HashSet;
 use std::vec;

@@ -1,7 +1,7 @@
 use crate::core::compiler::{Compilation, CompileKind};
 use crate::core::{Shell, Workspace};
 use crate::ops;
-use crate::util::config::{GlobalContext, PathAndArgs};
+use crate::util::context::{GlobalContext, PathAndArgs};
 use crate::util::CargoResult;
 use anyhow::{bail, Error};
 use std::path::Path;

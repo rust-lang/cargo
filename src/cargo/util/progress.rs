@@ -4,7 +4,7 @@ use std::cmp;
 use std::time::{Duration, Instant};
 
 use crate::core::shell::Verbosity;
-use crate::util::config::ProgressWhen;
+use crate::util::context::ProgressWhen;
 use crate::util::{CargoResult, GlobalContext};
 use cargo_util::is_ci;
 use unicode_width::UnicodeWidthChar;

@@ -52,7 +52,7 @@ use crate::core::{PackageId, PackageSet, SourceId, TargetKind, Workspace};
 use crate::drop_println;
 use crate::ops;
 use crate::ops::resolve::WorkspaceResolve;
-use crate::util::config::GlobalContext;
+use crate::util::context::GlobalContext;
 use crate::util::interning::InternedString;
 use crate::util::{profile, CargoResult, StableHasher};
 

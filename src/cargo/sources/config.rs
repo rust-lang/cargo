@@ -7,7 +7,7 @@
 use crate::core::{GitReference, PackageId, SourceId};
 use crate::sources::source::Source;
 use crate::sources::{ReplacedSource, CRATES_IO_REGISTRY};
-use crate::util::config::{self, ConfigRelativePath, OptValue};
+use crate::util::context::{self, ConfigRelativePath, OptValue};
 use crate::util::errors::CargoResult;
 use crate::util::{GlobalContext, IntoUrl};
 use anyhow::{bail, Context as _};
@@ -311,7 +311,7 @@ restore the source replacement configuration to continue the build
 
         return Ok(());
 
-        fn url(val: &config::Value<String>, key: &str) -> CargoResult<Url> {
+        fn url(val: &context::Value<String>, key: &str) -> CargoResult<Url> {
             let url = val.val.into_url().with_context(|| {
                 format!(
                     "configuration key `{}` specified an invalid \

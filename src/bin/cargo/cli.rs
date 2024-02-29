@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Context as _};
 use cargo::core::{features, CliUnstable};
-use cargo::util::config::TermConfig;
+use cargo::util::context::TermConfig;
 use cargo::{drop_print, drop_println, CargoResult};
 use clap::builder::UnknownArgumentValueParser;
 use itertools::Itertools;

@@ -25,7 +25,7 @@ use crate::util::edit_distance;
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
 use crate::util::toml::{read_manifest, InheritableFields};
-use crate::util::{config::ConfigRelativePath, Filesystem, GlobalContext, IntoUrl};
+use crate::util::{context::ConfigRelativePath, Filesystem, GlobalContext, IntoUrl};
 use cargo_util::paths;
 use cargo_util::paths::normalize_path;
 use cargo_util_schemas::manifest::RustVersion;
