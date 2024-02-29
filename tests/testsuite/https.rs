@@ -20,6 +20,7 @@ fn self_signed_should_fail() {
                     [package]
                     name = "foo"
                     version = "0.1.0"
+                    edition = "2015"
 
                     [dependencies]
                     bar = {{ git = "{url}" }}
@@ -106,6 +107,7 @@ fn self_signed_with_cacert() {
                     [package]
                     name = "foo"
                     version = "0.1.0"
+                    edition = "2015"
 
                     [dependencies]
                     bar = {{ git = "{url}" }}
@@ -139,6 +141,7 @@ fn github_works() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bitflags = { git = "https://github.com/rust-lang/bitflags.git", tag="1.3.2" }

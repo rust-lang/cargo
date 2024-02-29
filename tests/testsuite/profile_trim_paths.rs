@@ -15,6 +15,7 @@ fn gated_manifest() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [profile.dev]
                 trim-paths = "macro"
@@ -71,6 +72,7 @@ fn release_profile_default_to_object() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
            "#,
         )
         .file("src/lib.rs", "")
@@ -101,6 +103,7 @@ fn one_option() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
 
                     [profile.dev]
                     trim-paths = "{option}"
@@ -143,6 +146,7 @@ fn multiple_options() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [profile.dev]
                 trim-paths = ["diagnostics", "macro", "object"]
@@ -174,6 +178,7 @@ fn profile_merge_works() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [profile.dev]
                 trim-paths = ["macro"]
@@ -213,6 +218,7 @@ fn registry_dependency() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = "0.0.1"
@@ -268,6 +274,7 @@ fn git_dependency() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = {{ git = "{url}" }}
@@ -314,6 +321,7 @@ fn path_dependency() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = "cocktail-bar" }
@@ -368,6 +376,7 @@ fn path_dependency_outside_workspace() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = "../bar" }
@@ -413,6 +422,7 @@ fn diagnostics_works() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = "0.0.1"
@@ -532,6 +542,7 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = "0.0.1"
@@ -635,6 +646,7 @@ fn custom_build_env_var_trim_paths() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
            "#,
         )
         .file("src/lib.rs", "")
@@ -664,6 +676,7 @@ fn custom_build_env_var_trim_paths() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [profile.dev]
                 trim-paths = {opts}
@@ -722,6 +735,7 @@ fn lldb_works_after_trimmed() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [profile.dev]
                 trim-paths = "object"
