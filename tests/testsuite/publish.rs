@@ -132,17 +132,8 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
 
 #[cargo_test]
 fn duplicate_version() {
-    let registry_dupl = RegistryBuilder::new()
-        .http_api()
-        .http_index()
-        // test registry doesn't error on duplicate versions, we need to
-        .add_responder("/api/v1/crates/new", move |_req, _server| Response {
-            code: 200,
-            headers: vec![],
-            body: br#"{"errors": [{"detail": "crate version `0.0.1` is already uploaded"}]}"#
-                .to_vec(),
-        })
-        .build();
+    let registry_dupl = RegistryBuilder::new().http_api().http_index().build();
+    Package::new("foo", "0.0.1").publish();
 
     let p = project()
         .file(
@@ -164,19 +155,7 @@ fn duplicate_version() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
-[WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[WARNING] no edition set: defaulting to the 2015 edition while the latest is 2021
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to publish to registry at http://127.0.0.1:41463/
-
-Caused by:
-  the remote server responded with an [ERROR] crate version `0.0.1` is already uploaded
+[ERROR] crate foo@0.0.1 already exists on crates.io index
 
 "#]])
         .run();
@@ -3900,22 +3879,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
-[PACKAGING] a v0.0.1 ([ROOT]/foo/a)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[PACKAGING] b v0.0.1 ([ROOT]/foo/b)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[VERIFYING] a v0.0.1 ([ROOT]/foo/a)
-[COMPILING] a v0.0.1 ([ROOT]/foo/target/package/a-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[VERIFYING] b v0.0.1 ([ROOT]/foo/b)
-[UPDATING] crates.io index
-[ERROR] failed to verify package tarball
-
-Caused by:
-  failed to get `a` as a dependency of package `b v0.0.1 ([ROOT]/foo/target/package/b-0.0.1)`
-
-Caused by:
-  found a package in the remote registry and the local overlay: a@0.0.1
+[ERROR] crate a@0.0.1 already exists on crates.io index
 
 "#]])
         .run();
