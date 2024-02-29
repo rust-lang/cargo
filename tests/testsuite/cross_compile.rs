@@ -397,7 +397,7 @@ fn linker() {
         .with_stderr_contains(&format!(
             "\
 [COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc --crate-name foo src/foo.rs [..]--crate-type bin \
+[RUNNING] `rustc --crate-name foo --edition=2015 src/foo.rs [..]--crate-type bin \
     --emit=[..]link[..]-C debuginfo=2 [..]\
     -C metadata=[..] \
     --out-dir [CWD]/target/{target}/debug/deps \
@@ -1255,7 +1255,7 @@ fn doctest_xcompile_linker() {
         .masquerade_as_nightly_cargo(&["doctest-xcompile"])
         .with_stderr_contains(&format!(
             "\
-[RUNNING] `rustdoc --crate-type lib --crate-name foo --test [..]\
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo --test [..]\
     --target {target} [..] -C linker=my-linker-tool[..]
 ",
             target = target,

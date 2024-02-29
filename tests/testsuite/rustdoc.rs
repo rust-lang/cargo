@@ -288,7 +288,7 @@ fn proc_macro_crate_type() {
     p.cargo("rustdoc --verbose")
         .with_stderr_contains(
             "\
-[RUNNING] `rustdoc --crate-type proc-macro [..]`
+[RUNNING] `rustdoc --edition=2015 --crate-type proc-macro [..]`
 ",
         )
         .run();

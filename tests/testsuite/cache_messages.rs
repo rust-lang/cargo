@@ -437,7 +437,9 @@ fn rustc_workspace_wrapper() {
 
     p.cargo("check -v")
         .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
-        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name foo src/lib.rs [..]")
+        .with_stderr_contains(
+            "WRAPPER CALLED: rustc --crate-name foo --edition=2015 src/lib.rs [..]",
+        )
         .run();
 
     // Check without a wrapper should rebuild
@@ -449,21 +451,27 @@ fn rustc_workspace_wrapper() {
 [WARNING] [..]unused_func[..]
 ",
         )
-        .with_stdout_does_not_contain("WRAPPER CALLED: rustc --crate-name foo src/lib.rs [..]")
+        .with_stdout_does_not_contain(
+            "WRAPPER CALLED: rustc --crate-name foo --edition=2015 src/lib.rs [..]",
+        )
         .run();
 
     // Again, reading from the cache.
     p.cargo("check -v")
         .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
         .with_stderr_contains("[FRESH] foo [..]")
-        .with_stdout_does_not_contain("WRAPPER CALLED: rustc --crate-name foo src/lib.rs [..]")
+        .with_stdout_does_not_contain(
+            "WRAPPER CALLED: rustc --crate-name foo --edition=2015 src/lib.rs [..]",
+        )
         .run();
 
     // And `check` should also be fresh, reading from cache.
     p.cargo("check -v")
         .with_stderr_contains("[FRESH] foo [..]")
         .with_stderr_contains("[WARNING] [..]unused_func[..]")
-        .with_stdout_does_not_contain("WRAPPER CALLED: rustc --crate-name foo src/lib.rs [..]")
+        .with_stdout_does_not_contain(
+            "WRAPPER CALLED: rustc --crate-name foo --edition=2015 src/lib.rs [..]",
+        )
         .run();
 }
 

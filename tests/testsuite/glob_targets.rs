@@ -135,7 +135,7 @@ fn doc_bin() {
         .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[RUNNING] `rustdoc --crate-type bin --crate-name bin1 [..]`
+[RUNNING] `rustdoc --edition=2015 --crate-type bin --crate-name bin1 [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/bin1/index.html
 ",
@@ -406,7 +406,7 @@ fn rustdoc_example() {
         .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[RUNNING] `rustdoc --crate-type bin --crate-name example1 [..]`
+[RUNNING] `rustdoc --edition=2015 --crate-type bin --crate-name example1 [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/example1/index.html
 ",
@@ -421,7 +421,7 @@ fn rustdoc_bin() {
         .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[RUNNING] `rustdoc --crate-type bin --crate-name bin1 [..]`
+[RUNNING] `rustdoc --edition=2015 --crate-type bin --crate-name bin1 [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/bin1/index.html
 ",
@@ -436,7 +436,7 @@ fn rustdoc_bench() {
         .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[RUNNING] `rustdoc --crate-type bin --crate-name bench1 [..]`
+[RUNNING] `rustdoc --edition=2015 --crate-type bin --crate-name bench1 [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/bench1/index.html
 ",
@@ -451,7 +451,7 @@ fn rustdoc_test() {
         .with_stderr(
             "\
 [DOCUMENTING] foo v0.0.1 ([CWD])
-[RUNNING] `rustdoc --crate-type bin --crate-name test1 [..]`
+[RUNNING] `rustdoc --edition=2015 --crate-type bin --crate-name test1 [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/test1/index.html
 ",

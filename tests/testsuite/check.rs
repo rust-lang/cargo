@@ -410,10 +410,10 @@ fn check_all() {
         .build();
 
     p.cargo("check --workspace -v")
-        .with_stderr_contains("[..] --crate-name foo src/lib.rs [..]")
-        .with_stderr_contains("[..] --crate-name foo src/main.rs [..]")
-        .with_stderr_contains("[..] --crate-name b b/src/lib.rs [..]")
-        .with_stderr_contains("[..] --crate-name b b/src/main.rs [..]")
+        .with_stderr_contains("[..] --crate-name foo [..] src/lib.rs [..]")
+        .with_stderr_contains("[..] --crate-name foo [..] src/main.rs [..]")
+        .with_stderr_contains("[..] --crate-name b [..] b/src/lib.rs [..]")
+        .with_stderr_contains("[..] --crate-name b [..] b/src/main.rs [..]")
         .run();
 }
 
@@ -488,8 +488,8 @@ fn check_virtual_all_implied() {
         .build();
 
     p.cargo("check -v")
-        .with_stderr_contains("[..] --crate-name bar bar/src/lib.rs [..]")
-        .with_stderr_contains("[..] --crate-name baz baz/src/lib.rs [..]")
+        .with_stderr_contains("[..] --crate-name bar [..] bar/src/lib.rs [..]")
+        .with_stderr_contains("[..] --crate-name baz [..] baz/src/lib.rs [..]")
         .run();
 }
 
@@ -573,11 +573,11 @@ fn targets_selected_default() {
         .build();
 
     foo.cargo("check -v")
-        .with_stderr_contains("[..] --crate-name foo src/lib.rs [..]")
-        .with_stderr_contains("[..] --crate-name foo src/main.rs [..]")
-        .with_stderr_does_not_contain("[..] --crate-name example1 examples/example1.rs [..]")
-        .with_stderr_does_not_contain("[..] --crate-name test2 tests/test2.rs [..]")
-        .with_stderr_does_not_contain("[..] --crate-name bench3 benches/bench3.rs [..]")
+        .with_stderr_contains("[..] --crate-name foo [..] src/lib.rs [..]")
+        .with_stderr_contains("[..] --crate-name foo [..] src/main.rs [..]")
+        .with_stderr_does_not_contain("[..] --crate-name example1 [..] examples/example1.rs [..]")
+        .with_stderr_does_not_contain("[..] --crate-name test2 [..] tests/test2.rs [..]")
+        .with_stderr_does_not_contain("[..] --crate-name bench3 [..] benches/bench3.rs [..]")
         .run();
 }
 
@@ -592,11 +592,11 @@ fn targets_selected_all() {
         .build();
 
     foo.cargo("check --all-targets -v")
-        .with_stderr_contains("[..] --crate-name foo src/lib.rs [..]")
-        .with_stderr_contains("[..] --crate-name foo src/main.rs [..]")
-        .with_stderr_contains("[..] --crate-name example1 examples/example1.rs [..]")
-        .with_stderr_contains("[..] --crate-name test2 tests/test2.rs [..]")
-        .with_stderr_contains("[..] --crate-name bench3 benches/bench3.rs [..]")
+        .with_stderr_contains("[..] --crate-name foo [..] src/lib.rs [..]")
+        .with_stderr_contains("[..] --crate-name foo [..] src/main.rs [..]")
+        .with_stderr_contains("[..] --crate-name example1 [..] examples/example1.rs [..]")
+        .with_stderr_contains("[..] --crate-name test2 [..] tests/test2.rs [..]")
+        .with_stderr_contains("[..] --crate-name bench3 [..] benches/bench3.rs [..]")
         .run();
 }
 
@@ -692,9 +692,9 @@ fn check_filters() {
         .run();
     p.root().join("target").rm_rf();
     p.cargo("check --tests -v")
-        .with_stderr_contains("[..] --crate-name foo src/lib.rs [..] --test [..]")
-        .with_stderr_contains("[..] --crate-name foo src/lib.rs [..] --crate-type lib [..]")
-        .with_stderr_contains("[..] --crate-name foo src/main.rs [..] --test [..]")
+        .with_stderr_contains("[..] --crate-name foo [..] src/lib.rs [..] --test [..]")
+        .with_stderr_contains("[..] --crate-name foo [..] src/lib.rs [..] --crate-type lib [..]")
+        .with_stderr_contains("[..] --crate-name foo [..] src/main.rs [..] --test [..]")
         .with_stderr_contains("[..]unused_unit_lib[..]")
         .with_stderr_contains("[..]unused_unit_bin[..]")
         .with_stderr_contains("[..]unused_normal_lib[..]")

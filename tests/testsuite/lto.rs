@@ -258,8 +258,8 @@ fn off_in_manifest_works() {
 [COMPILING] bar v0.0.1
 [RUNNING] `rustc --crate-name bar [..]--crate-type lib [..]-C lto=off -C embed-bitcode=no[..]
 [COMPILING] test [..]
-[RUNNING] `rustc --crate-name test [..]--crate-type lib [..]-C lto=off -C embed-bitcode=no[..]
-[RUNNING] `rustc --crate-name test src/main.rs [..]--crate-type bin [..]-C lto=off[..]
+[RUNNING] `rustc --crate-name test[..]--crate-type lib [..]-C lto=off -C embed-bitcode=no[..]
+[RUNNING] `rustc --crate-name test --edition=2015 src/main.rs [..]--crate-type bin [..]-C lto=off[..]
 [FINISHED] [..]
 ",
         )
@@ -540,7 +540,7 @@ fn cdylib_and_rlib() {
 [RUNNING] [..]target/release/deps/bar-[..]
 [RUNNING] [..]target/release/deps/b-[..]
 [DOCTEST] bar
-[RUNNING] `rustdoc --crate-type cdylib --crate-type rlib --crate-name bar --test [..]-C lto[..]
+[RUNNING] `rustdoc --edition=2015 --crate-type cdylib --crate-type rlib --crate-name bar --test [..]-C lto[..]
 ",
         )
         .run();
@@ -807,7 +807,7 @@ fn fresh_swapping_commands() {
 [COMPILING] bar v1.0.0
 [RUNNING] `rustc --crate-name bar [..]-C linker-plugin-lto[..]
 [COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]-C linker-plugin-lto[..]
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]-C linker-plugin-lto[..]
 [FINISHED] [..]
 ",
         )
@@ -817,7 +817,7 @@ fn fresh_swapping_commands() {
             "\
 [FRESH] bar v1.0.0
 [COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]-C lto[..]--test[..]
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]-C lto[..]--test[..]
 [FINISHED] [..]
 [RUNNING] `[..]/foo[..]`
 [DOCTEST] foo

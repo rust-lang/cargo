@@ -1365,7 +1365,7 @@ fn doc_extern_map_local() {
         .with_stderr(
             "\
 [DOCUMENTING] foo v0.1.0 [..]
-[RUNNING] `rustdoc --crate-type lib --crate-name foo src/lib.rs [..]--crate-version 0.1.0`
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo src/lib.rs [..]--crate-version 0.1.0`
 [FINISHED] [..]
      Opening [CWD]/target/doc/foo/index.html
 ",
@@ -2036,7 +2036,7 @@ fn crate_versions() {
         .with_stderr(
             "\
 [DOCUMENTING] foo v1.2.4 [..]
-[RUNNING] `rustdoc --crate-type lib --crate-name foo src/lib.rs [..]--crate-version 1.2.4`
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo src/lib.rs [..]--crate-version 1.2.4`
 [FINISHED] [..]
 [GENERATED] [CWD]/target/doc/foo/index.html
 ",
@@ -2508,8 +2508,8 @@ fn lib_before_bin() {
         .with_stderr(
             "\
 [DOCUMENTING] foo [..]
-[RUNNING] `rustdoc --crate-type lib --crate-name foo src/lib.rs [..]
-[RUNNING] `rustdoc --crate-type bin --crate-name somebin src/bin/somebin.rs [..]
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo src/lib.rs [..]
+[RUNNING] `rustdoc --edition=2015 --crate-type bin --crate-name somebin src/bin/somebin.rs [..]
 [FINISHED] [..]
 [GENERATED] [CWD]/target/doc/foo/index.html
 [GENERATED] [CWD]/target/doc/somebin/index.html

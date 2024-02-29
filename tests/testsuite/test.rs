@@ -1778,10 +1778,10 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
         .with_stderr_unordered(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs [..] --crate-type lib [..]`
-[RUNNING] `rustc --crate-name foo src/lib.rs [..] --test [..]`
-[RUNNING] `rustc --crate-name mybin src/bin/mybin.rs [..] --crate-type bin [..]`
-[RUNNING] `rustc --crate-name mytest tests/mytest.rs [..] --test [..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..] --crate-type lib [..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..] --test [..]`
+[RUNNING] `rustc --crate-name mybin --edition=2015 src/bin/mybin.rs [..] --crate-type bin [..]`
+[RUNNING] `rustc --crate-name mytest --edition=2015 tests/mytest.rs [..] --test [..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[CWD]/target/debug/deps/foo-[..] test_in_`
 [RUNNING] `[CWD]/target/debug/deps/mytest-[..] test_in_`
@@ -3458,8 +3458,8 @@ fn test_many_targets() {
         .with_stdout_contains("test bin_b ... ok")
         .with_stdout_contains("test test_a ... ok")
         .with_stdout_contains("test test_b ... ok")
-        .with_stderr_contains("[RUNNING] `rustc --crate-name a examples/a.rs [..]`")
-        .with_stderr_contains("[RUNNING] `rustc --crate-name b examples/b.rs [..]`")
+        .with_stderr_contains("[RUNNING] `rustc --crate-name a --edition=2015 examples/a.rs [..]`")
+        .with_stderr_contains("[RUNNING] `rustc --crate-name b --edition=2015 examples/b.rs [..]`")
         .run();
 }
 
@@ -4973,7 +4973,7 @@ fn cargo_test_print_env_verbose() {
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] [CWD]/target/debug/deps/foo-[..][EXE]`
 [DOCTEST] foo
-[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] rustdoc --crate-type lib --crate-name foo[..]",
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] rustdoc --edition=2015 --crate-type lib --crate-name foo[..]",
         )
         .run();
 }

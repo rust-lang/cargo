@@ -1116,7 +1116,10 @@ fn proc_macro_ws() {
     // Selecting just foo will build without unification.
     p.cargo("check -p foo -v")
         // Make sure `foo` is built without feat1
-        .with_stderr_line_without(&["[RUNNING] `rustc --crate-name foo"], &["--cfg[..]feat1"])
+        .with_stderr_line_without(
+            &["[RUNNING] `rustc --crate-name foo --edition=2015"],
+            &["--cfg[..]feat1"],
+        )
         .run();
 }
 

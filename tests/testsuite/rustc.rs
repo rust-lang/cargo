@@ -17,7 +17,7 @@ fn build_lib_for_foo() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib \
         --emit=[..]link[..]-C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [..] \
@@ -39,7 +39,7 @@ fn lib() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib \
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib \
         --emit=[..]link[..]-C debuginfo=2 [..]\
         -C debug-assertions=off \
         -C metadata=[..] \
@@ -62,12 +62,12 @@ fn build_main_and_allow_unstable_options() {
         .with_stderr(format!(
             "\
 [COMPILING] {name} v{version} ([CWD])
-[RUNNING] `rustc --crate-name {name} src/lib.rs [..]--crate-type lib \
+[RUNNING] `rustc --crate-name {name} --edition=2015 src/lib.rs [..]--crate-type lib \
         --emit=[..]link[..]-C debuginfo=2 [..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
-[RUNNING] `rustc --crate-name {name} src/main.rs [..]--crate-type bin \
+[RUNNING] `rustc --crate-name {name} --edition=2015 src/main.rs [..]--crate-type bin \
         --emit=[..]link[..]-C debuginfo=2 [..]\
         -C debug-assertions \
         -C metadata=[..] \
@@ -108,10 +108,10 @@ fn build_with_args_to_one_of_multiple_binaries() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link[..]\
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]\
         -C debuginfo=2 [..]-C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc --crate-name bar src/bin/bar.rs [..]--crate-type bin --emit=[..]link[..]\
+[RUNNING] `rustc --crate-name bar --edition=2015 src/bin/bar.rs [..]--crate-type bin --emit=[..]link[..]\
         -C debuginfo=2 [..]-C debug-assertions [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -206,7 +206,7 @@ fn build_with_crate_type_for_foo() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type cdylib [..]
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type cdylib [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -243,9 +243,9 @@ fn build_with_crate_type_for_foo_with_deps() {
         .with_stderr(
             "\
 [COMPILING] a v0.1.0 ([CWD]/a)
-[RUNNING] `rustc --crate-name a a/src/lib.rs [..]--crate-type lib [..]
+[RUNNING] `rustc --crate-name a --edition=2015 a/src/lib.rs [..]--crate-type lib [..]
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type cdylib [..]
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type cdylib [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -260,7 +260,7 @@ fn build_with_crate_types_for_foo() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib,cdylib [..]
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib,cdylib [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -291,8 +291,8 @@ fn build_with_crate_type_to_example() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib [..]
-[RUNNING] `rustc --crate-name ex examples/ex.rs [..]--crate-type cdylib [..]
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib [..]
+[RUNNING] `rustc --crate-name ex --edition=2015 examples/ex.rs [..]--crate-type cdylib [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -323,8 +323,8 @@ fn build_with_crate_types_to_example() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib [..]
-[RUNNING] `rustc --crate-name ex examples/ex.rs [..]--crate-type lib,cdylib [..]
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib [..]
+[RUNNING] `rustc --crate-name ex --edition=2015 examples/ex.rs [..]--crate-type lib,cdylib [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -359,8 +359,8 @@ fn build_with_crate_types_to_one_of_multi_examples() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib [..]
-[RUNNING] `rustc --crate-name ex1 examples/ex1.rs [..]--crate-type lib,cdylib [..]
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib [..]
+[RUNNING] `rustc --crate-name ex1 --edition=2015 examples/ex1.rs [..]--crate-type lib,cdylib [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -380,10 +380,10 @@ fn build_with_args_to_one_of_multiple_tests() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]--crate-type lib --emit=[..]link[..]\
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]\
         -C debuginfo=2 [..]-C metadata=[..] \
         --out-dir [..]`
-[RUNNING] `rustc --crate-name bar tests/bar.rs [..]--emit=[..]link[..]-C debuginfo=2 [..]\
+[RUNNING] `rustc --crate-name bar --edition=2015 tests/bar.rs [..]--emit=[..]link[..]-C debuginfo=2 [..]\
         -C debug-assertions [..]--test[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -467,17 +467,17 @@ fn targets_selected_default() {
     p.cargo("rustc -v")
         // bin
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--crate-type bin \
+            "[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin \
              --emit=[..]link[..]",
         )
         // bench
         .with_stderr_does_not_contain(
-            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--emit=[..]link \
              -C opt-level=3 --test [..]",
         )
         // unit test
         .with_stderr_does_not_contain(
-            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link \
+            "[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--emit=[..]link \
              -C debuginfo=2 [..]--test [..]",
         )
         .run();
@@ -489,12 +489,12 @@ fn targets_selected_all() {
     p.cargo("rustc -v --all-targets")
         // bin
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--crate-type bin \
+            "[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin \
              --emit=[..]link[..]",
         )
         // unit test
         .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo src/main.rs [..]--emit=[..]link[..]\
+            "[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--emit=[..]link[..]\
              -C debuginfo=2 [..]--test [..]",
         )
         .run();
@@ -681,12 +681,12 @@ fn rustc_test_with_implicit_bin() {
     p.cargo("rustc --test test1 -v -- --cfg foo")
         .with_stderr_contains(
             "\
-[RUNNING] `rustc --crate-name test1 tests/test1.rs [..] --cfg foo [..]
+[RUNNING] `rustc --crate-name test1 --edition=2015 tests/test1.rs [..] --cfg foo [..]
 ",
         )
         .with_stderr_contains(
             "\
-[RUNNING] `rustc --crate-name foo src/main.rs [..]
+[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]
 ",
         )
         .run();

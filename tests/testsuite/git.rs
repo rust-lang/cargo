@@ -2491,7 +2491,7 @@ fn include_overrides_gitignore() {
 [DIRTY] foo v0.5.0 ([..]): the precalculated components changed
 [COMPILING] foo v0.5.0 ([..])
 [RUNNING] `[..]build-script-build[..]`
-[RUNNING] `rustc --crate-name foo src/lib.rs [..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
