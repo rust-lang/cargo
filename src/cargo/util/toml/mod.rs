@@ -563,11 +563,36 @@ pub fn to_real_manifest(
         source_id,
     );
 
+    let rust_version = if let Some(rust_version) = &package.rust_version {
+        let rust_version = field_inherit_with(rust_version.clone(), "rust_version", || {
+            inherit()?.rust_version()
+        })?;
+        Some(rust_version)
+    } else {
+        None
+    };
+
     let edition = if let Some(edition) = package.edition.clone() {
         let edition: Edition = field_inherit_with(edition, "edition", || inherit()?.edition())?
             .parse()
             .with_context(|| "failed to parse the `edition` key")?;
         package.edition = Some(manifest::InheritableField::Value(edition.to_string()));
+        if let Some(rust_version) = &rust_version {
+            let req = rust_version.to_caret_req();
+            if let Some(first_version) = edition.first_version() {
+                let unsupported =
+                    semver::Version::new(first_version.major, first_version.minor - 1, 9999);
+                if req.matches(&unsupported) {
+                    bail!(
+                        "rust-version {} is older than first version ({}) required by \
+                            the specified edition ({})",
+                        rust_version,
+                        first_version,
+                        edition,
+                    )
+                }
+            }
+        }
         edition
     } else {
         warnings.push(format!(
@@ -591,32 +616,6 @@ pub fn to_real_manifest(
             "edition {} should be gated",
             edition
         )));
-    }
-
-    let rust_version = if let Some(rust_version) = &package.rust_version {
-        let rust_version = field_inherit_with(rust_version.clone(), "rust_version", || {
-            inherit()?.rust_version()
-        })?;
-        Some(rust_version)
-    } else {
-        None
-    };
-
-    if let Some(rust_version) = &rust_version {
-        let req = rust_version.to_caret_req();
-        if let Some(first_version) = edition.first_version() {
-            let unsupported =
-                semver::Version::new(first_version.major, first_version.minor - 1, 9999);
-            if req.matches(&unsupported) {
-                bail!(
-                    "rust-version {} is older than first version ({}) required by \
-                            the specified edition ({})",
-                    rust_version,
-                    first_version,
-                    edition,
-                )
-            }
-        }
     }
 
     if package.metabuild.is_some() {
