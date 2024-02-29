@@ -130,6 +130,57 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
     validate_upload_foo();
 }
 
+#[cargo_test]
+fn duplicate_version() {
+    let registry_dupl = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .add_responder("/api/v1/crates/new", move |_req, _server| Response {
+            code: 200,
+            headers: vec![],
+            body: br#"{"errors": [{"detail": "crate version `0.0.1` is already uploaded"}]}"#
+                .to_vec(),
+        })
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish")
+        .replace_crates_io(registry_dupl.index_url())
+        .with_stderr(
+            "\
+[UPDATING] crates.io index
+[WARNING] [..]
+See [..]
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[..]
+[..]
+[..]
+[UPLOADING] foo v0.0.1 ([CWD])
+error: failed to publish [..]
+
+Caused by:
+[..] is already uploaded
+",
+        )
+        .with_status(101)
+        .run();
+}
+
 // Check that the `token` key works at the root instead of under a
 // `[registry]` table.
 #[cargo_test]
