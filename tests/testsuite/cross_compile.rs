@@ -18,6 +18,7 @@ fn simple_cross() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
             "#,
@@ -79,6 +80,7 @@ fn simple_cross_config() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
             "#,
@@ -130,6 +132,7 @@ fn simple_deps() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -174,6 +177,7 @@ fn per_crate_target_test(
                     [package]
                     name = "foo"
                     version = "0.0.0"
+                    edition = "2015"
                     authors = []
                     build = "build.rs"
                     {}
@@ -276,6 +280,7 @@ fn workspace_with_multiple_targets() {
                 [package]
                 name = "native"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
             "#,
@@ -312,6 +317,7 @@ fn workspace_with_multiple_targets() {
                     [package]
                     name = "cross"
                     version = "0.0.0"
+                    edition = "2015"
                     authors = []
                     build = "build.rs"
                     default-target = "{}"
@@ -425,6 +431,7 @@ fn cross_tests() {
                 name = "foo"
                 authors = []
                 version = "0.0.0"
+                edition = "2015"
 
                 [[bin]]
                 name = "bar"
@@ -616,6 +623,7 @@ fn cross_with_a_build_script() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 build = 'build.rs'
             "#,
@@ -679,6 +687,7 @@ fn build_script_needed_for_host_and_target() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 build = 'build.rs'
 
@@ -710,6 +719,7 @@ fn build_script_needed_for_host_and_target() {
                 [package]
                 name = "d1"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 build = 'build.rs'
             "#,
@@ -731,6 +741,7 @@ fn build_script_needed_for_host_and_target() {
                 [package]
                 name = "d2"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies.d1]
@@ -787,6 +798,7 @@ fn build_deps_for_the_right_arch() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies.d2]
@@ -802,6 +814,7 @@ fn build_deps_for_the_right_arch() {
                 [package]
                 name = "d2"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
 
@@ -830,6 +843,7 @@ fn build_script_only_host() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
 
@@ -845,6 +859,7 @@ fn build_script_only_host() {
                 [package]
                 name = "d1"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
             "#,
@@ -880,6 +895,7 @@ fn plugin_build_script_right_arch() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
 
@@ -923,6 +939,7 @@ fn build_script_with_platform_specific_dependencies() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
 
@@ -946,6 +963,7 @@ fn build_script_with_platform_specific_dependencies() {
                     [package]
                     name = "d1"
                     version = "0.0.0"
+                    edition = "2015"
                     authors = []
 
                     [target.{}.dependencies]
@@ -996,6 +1014,7 @@ fn platform_specific_dependencies_do_not_leak() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
 
@@ -1015,6 +1034,7 @@ fn platform_specific_dependencies_do_not_leak() {
                     [package]
                     name = "d1"
                     version = "0.0.0"
+                    edition = "2015"
                     authors = []
 
                     [target.{}.dependencies]
@@ -1051,6 +1071,7 @@ fn platform_specific_variables_reflected_in_build_scripts() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
                     build = "build.rs"
 
@@ -1095,6 +1116,7 @@ fn platform_specific_variables_reflected_in_build_scripts() {
                 [package]
                 name = "d1"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 links = "d1"
                 build = "build.rs"
@@ -1111,6 +1133,7 @@ fn platform_specific_variables_reflected_in_build_scripts() {
                 [package]
                 name = "d2"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 links = "d2"
                 build = "build.rs"
@@ -1146,6 +1169,7 @@ fn cross_test_dylib() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -1182,6 +1206,7 @@ fn cross_test_dylib() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lib]

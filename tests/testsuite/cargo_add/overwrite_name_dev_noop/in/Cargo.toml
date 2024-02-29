@@ -4,6 +4,7 @@ exclude = ["dependency"]
 [package]
 name = "cargo-list-test-fixture"
 version = "0.0.0"
+edition = "2015"
 
 [dev-dependencies]
 your-face = { version = "0.0.0", path = "dependency", default-features = false, features = ["nose", "mouth"], registry = "alternative" }

@@ -4,6 +4,7 @@ members = [ "my-member" ]
 [package]
 name = "my-package"
 version = "0.1.0"
+edition = "2015"
 
 [[bin]]
 name = "main"

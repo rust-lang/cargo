@@ -14,6 +14,7 @@ fn timings_works() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             dep = "0.1"

@@ -78,6 +78,7 @@ fn incremental_profile() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [profile.dev]
@@ -394,6 +395,7 @@ fn cargo_compile_duplicate_build_targets() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -493,6 +495,7 @@ fn cargo_compile_with_invalid_bin_target_name() {
                 name = "foo"
                 authors = []
                 version = "0.0.0"
+                edition = "2015"
 
                 [[bin]]
                 name = ""
@@ -523,6 +526,7 @@ fn cargo_compile_with_forbidden_bin_target_name() {
                 name = "foo"
                 authors = []
                 version = "0.0.0"
+                edition = "2015"
 
                 [[bin]]
                 name = "build"
@@ -553,6 +557,7 @@ fn cargo_compile_with_bin_and_crate_type() {
                 name = "foo"
                 authors = []
                 version = "0.0.0"
+                edition = "2015"
 
                 [[bin]]
                 name = "the_foo_bin"
@@ -586,6 +591,7 @@ fn cargo_compile_api_exposes_artifact_paths() {
                 name = "foo"
                 authors = []
                 version = "0.0.0"
+                edition = "2015"
 
                 [[bin]]
                 name = "the_foo_bin"
@@ -636,6 +642,7 @@ fn cargo_compile_with_bin_and_proc() {
                 name = "foo"
                 authors = []
                 version = "0.0.0"
+                edition = "2015"
 
                 [[bin]]
                 name = "the_foo_bin"
@@ -668,6 +675,7 @@ fn cargo_compile_with_invalid_lib_target_name() {
                 name = "foo"
                 authors = []
                 version = "0.0.0"
+                edition = "2015"
 
                 [lib]
                 name = ""
@@ -697,6 +705,7 @@ fn cargo_compile_with_invalid_non_numeric_dep_version() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 crossbeam = "y"
@@ -773,6 +782,7 @@ fn cargo_compile_with_invalid_code_in_deps() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -822,6 +832,7 @@ fn cargo_compile_with_warnings_in_a_dep_package() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.bar]
@@ -865,6 +876,7 @@ fn cargo_compile_with_nested_deps_inferred() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.bar]
@@ -882,6 +894,7 @@ fn cargo_compile_with_nested_deps_inferred() {
 
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.baz]
@@ -928,6 +941,7 @@ fn cargo_compile_with_nested_deps_correct_bin() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.bar]
@@ -945,6 +959,7 @@ fn cargo_compile_with_nested_deps_correct_bin() {
 
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.baz]
@@ -991,6 +1006,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.bar]
@@ -1005,6 +1021,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
 
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.baz]
@@ -1055,11 +1072,13 @@ fn cargo_compile_with_nested_deps_longhand() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.bar]
                 path = "bar"
                 version = "0.5.0"
+                edition = "2015"
 
                 [[bin]]
 
@@ -1074,11 +1093,13 @@ fn cargo_compile_with_nested_deps_longhand() {
 
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.baz]
                 path = "../baz"
                 version = "0.5.0"
+                edition = "2015"
 
                 [lib]
 
@@ -1127,6 +1148,7 @@ fn cargo_compile_with_dep_name_mismatch() {
 
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [[bin]]
@@ -1165,6 +1187,7 @@ fn cargo_compile_with_invalid_dep_rename() {
                 [package]
                 name = "buggin"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 "haha this isn't a valid name 🐛" = { package = "libc", version = "0.1" }
@@ -1178,9 +1201,9 @@ fn cargo_compile_with_invalid_dep_rename() {
         .with_stderr(
             "\
 [ERROR] invalid character ` ` in package name: `haha this isn't a valid name 🐛`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
- --> Cargo.toml:7:17
+ --> Cargo.toml:8:17
   |
-7 |                 \"haha this isn't a valid name 🐛\" = { package = \"libc\", version = \"0.1\" }
+8 |                 \"haha this isn't a valid name 🐛\" = { package = \"libc\", version = \"0.1\" }
   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
 ",
@@ -1267,6 +1290,7 @@ fn incompatible_dependencies() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = "0.1.0"
@@ -1313,6 +1337,7 @@ fn incompatible_dependencies_with_multi_semver() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = "0.1.0"
@@ -1355,6 +1380,7 @@ fn compile_path_dep_then_change_version() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -1398,6 +1424,7 @@ fn cargo_default_env_metadata_env_var() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -1411,6 +1438,7 @@ fn cargo_default_env_metadata_env_var() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -1485,6 +1513,7 @@ fn crate_env_vars() {
             [package]
             name = "foo"
             version = "0.5.1-alpha.1"
+            edition = "2015"
             description = "This is foo"
             homepage = "https://example.com"
             repository = "https://example.com/repo.git"
@@ -1712,6 +1741,7 @@ fn cargo_rustc_current_dir_foreign_workspace_dep() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
 
             [dependencies]
@@ -1732,6 +1762,7 @@ fn cargo_rustc_current_dir_foreign_workspace_dep() {
             [package]
             name = "baz"
             version = "0.1.0"
+            edition = "2015"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1759,6 +1790,7 @@ fn cargo_rustc_current_dir_foreign_workspace_dep() {
             [package]
             name = "baz_member"
             version = "0.1.0"
+            edition = "2015"
             authors = []
             "#,
         )
@@ -1820,6 +1852,7 @@ fn cargo_rustc_current_dir_non_local_dep() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = "0.1.0"
@@ -1864,6 +1897,7 @@ fn crate_authors_env_vars() {
                 [package]
                 name = "foo"
                 version = "0.5.1-alpha.1"
+                edition = "2015"
                 authors = ["wycats@example.com", "neikos@example.com"]
             "#,
         )
@@ -1913,6 +1947,7 @@ fn vv_prints_rustc_env_vars() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = ["escape='\"@example.com"]
             "#,
         )
@@ -1994,6 +2029,7 @@ fn many_crate_types_old_style_lib_location() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [lib]
@@ -2027,6 +2063,7 @@ fn many_crate_types_correct() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [lib]
@@ -2054,6 +2091,7 @@ fn set_both_dylib_and_cdylib_crate_types() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [lib]
@@ -2101,6 +2139,7 @@ fn dev_dependencies_conflicting_warning() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -2137,6 +2176,7 @@ fn build_dependencies_conflicting_warning() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -2158,6 +2198,7 @@ fn lib_crate_types_conflicting_warning() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [lib]
@@ -2185,6 +2226,7 @@ fn examples_crate_types_conflicting_warning() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [[example]]
@@ -2234,6 +2276,7 @@ fn self_dependency() {
 
                 name = "test"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies.test]
@@ -2314,6 +2357,7 @@ fn lto_build() {
 
                 name = "test"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [profile.release]
@@ -2403,6 +2447,7 @@ fn verbose_release_build_deps() {
 
                 name = "test"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies.foo]
@@ -2417,6 +2462,7 @@ fn verbose_release_build_deps() {
 
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -2464,6 +2510,7 @@ fn explicit_examples() {
                 [package]
                 name = "foo"
                 version = "1.0.0"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -2521,6 +2568,7 @@ fn non_existing_test() {
                 [package]
                 name = "foo"
                 version = "1.0.0"
+                edition = "2015"
 
                 [lib]
                 name = "foo"
@@ -2555,6 +2603,7 @@ fn non_existing_example() {
                 [package]
                 name = "foo"
                 version = "1.0.0"
+                edition = "2015"
 
                 [lib]
                 name = "foo"
@@ -2589,6 +2638,7 @@ fn non_existing_benchmark() {
                 [package]
                 name = "foo"
                 version = "1.0.0"
+                edition = "2015"
 
                 [lib]
                 name = "foo"
@@ -2644,6 +2694,7 @@ fn commonly_wrong_path_of_test() {
                 [package]
                 name = "foo"
                 version = "1.0.0"
+                edition = "2015"
 
                 [lib]
                 name = "foo"
@@ -2680,6 +2731,7 @@ fn commonly_wrong_path_of_example() {
                 [package]
                 name = "foo"
                 version = "1.0.0"
+                edition = "2015"
 
                 [lib]
                 name = "foo"
@@ -2716,6 +2768,7 @@ fn commonly_wrong_path_of_benchmark() {
                 [package]
                 name = "foo"
                 version = "1.0.0"
+                edition = "2015"
 
                 [lib]
                 name = "foo"
@@ -2820,6 +2873,7 @@ fn legacy_binary_paths_warnings() {
                 [package]
                 name = "foo"
                 version = "1.0.0"
+                edition = "2015"
                 authors = []
 
                 [[bin]]
@@ -2845,6 +2899,7 @@ please set bin.path in Cargo.toml",
                 [package]
                 name = "foo"
                 version = "1.0.0"
+                edition = "2015"
                 authors = []
 
                 [[bin]]
@@ -2870,6 +2925,7 @@ please set bin.path in Cargo.toml",
                 [package]
                 name = "foo"
                 version = "1.0.0"
+                edition = "2015"
                 authors = []
 
                 [[bin]]
@@ -2989,6 +3045,7 @@ fn deletion_causes_failure() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -3050,6 +3107,7 @@ fn simple_staticlib() {
                   name = "foo"
                   authors = []
                   version = "0.0.1"
+                  edition = "2015"
 
                   [lib]
                   name = "foo"
@@ -3073,6 +3131,7 @@ fn staticlib_rlib_and_bin() {
                   name = "foo"
                   authors = []
                   version = "0.0.1"
+                  edition = "2015"
 
                   [lib]
                   name = "foo"
@@ -3098,6 +3157,7 @@ fn opt_out_of_bin() {
                   name = "foo"
                   authors = []
                   version = "0.0.1"
+                  edition = "2015"
             "#,
         )
         .file("src/lib.rs", "")
@@ -3116,6 +3176,7 @@ fn single_lib() {
                   name = "foo"
                   authors = []
                   version = "0.0.1"
+                  edition = "2015"
 
                   [lib]
                   name = "foo"
@@ -3136,6 +3197,7 @@ fn freshness_ignores_excluded() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
                 exclude = ["src/b*.rs"]
@@ -3174,6 +3236,7 @@ fn rebuild_preserves_out_dir() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 build = 'build.rs'
             "#,
@@ -3229,6 +3292,7 @@ fn dep_no_libs() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -3251,6 +3315,7 @@ fn recompile_space_in_name() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -3349,6 +3414,7 @@ fn cargo_platform_specific_dependency() {
                     [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
                     build = "build.rs"
 
@@ -3396,6 +3462,7 @@ fn cargo_platform_specific_dependency_build_dependencies_conflicting_warning() {
                     [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
                     build = "build.rs"
 
@@ -3437,6 +3504,7 @@ fn cargo_platform_specific_dependency_dev_dependencies_conflicting_warning() {
                     [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [target.{host}.dev-dependencies]
@@ -3477,6 +3545,7 @@ fn bad_platform_specific_dependency() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [target.wrong-target.dependencies.bar]
@@ -3507,6 +3576,7 @@ fn cargo_platform_specific_dependency_wrong_platform() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [target.non-existing-triplet.dependencies.bar]
@@ -3539,6 +3609,7 @@ fn example_as_lib() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [[example]]
@@ -3563,6 +3634,7 @@ fn example_as_rlib() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [[example]]
@@ -3587,6 +3659,7 @@ fn example_as_dylib() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [[example]]
@@ -3611,6 +3684,7 @@ fn example_as_proc_macro() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [[example]]
@@ -3680,6 +3754,7 @@ fn transitive_dependencies_not_available() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.aaaaa]
@@ -3696,6 +3771,7 @@ fn transitive_dependencies_not_available() {
                 [package]
                 name = "aaaaa"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bbbbb]
@@ -3722,6 +3798,7 @@ fn cyclic_deps_rejected() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.a]
@@ -3735,6 +3812,7 @@ fn cyclic_deps_rejected() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.foo]
@@ -3763,6 +3841,7 @@ fn predictable_filenames() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -3800,6 +3879,7 @@ fn dashes_in_crate_name_bad() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -4005,6 +4085,7 @@ fn build_multiple_packages() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.d1]
@@ -4026,6 +4107,7 @@ fn build_multiple_packages() {
                 [package]
                 name = "d2"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [[bin]]
@@ -4066,6 +4148,7 @@ fn invalid_spec() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.d1]
@@ -4101,6 +4184,7 @@ fn manifest_with_bom_is_ok() {
             [package]
             name = \"foo\"
             version = \"0.0.1\"
+            edition = \"2015\"
             authors = []
         ",
         )
@@ -4118,6 +4202,7 @@ fn panic_abort_compiles_with_panic_abort() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [profile.dev]
@@ -4141,6 +4226,7 @@ fn compiler_json_error_format() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.bar]
@@ -4389,6 +4475,7 @@ fn no_warn_about_package_metadata() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [package.metadata]
@@ -4434,6 +4521,7 @@ fn no_warn_about_workspace_metadata() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             "#,
         )
         .file("foo/src/lib.rs", "")
@@ -4494,6 +4582,7 @@ fn build_all_workspace() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = "bar" }
@@ -4526,6 +4615,7 @@ fn build_all_exclude() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [workspace]
                 members = ["bar", "baz"]
@@ -4559,6 +4649,7 @@ fn cargo_build_with_unsupported_short_exclude_flag() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [workspace]
                 members = ["bar", "baz"]
@@ -4596,6 +4687,7 @@ fn build_all_exclude_not_found() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [workspace]
                 members = ["bar"]
@@ -4628,6 +4720,7 @@ fn build_all_exclude_glob() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [workspace]
                 members = ["bar", "baz"]
@@ -4661,6 +4754,7 @@ fn build_all_exclude_glob_not_found() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [workspace]
                 members = ["bar"]
@@ -4703,6 +4797,7 @@ fn build_all_workspace_implicit_examples() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = "bar" }
@@ -4950,6 +5045,7 @@ fn build_all_member_dependency_same_name() {
                 [package]
                 name = "a"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 a = "0.1.0"
@@ -4982,6 +5078,7 @@ fn run_proper_binary() {
                 name = "foo"
                 authors = []
                 version = "0.0.0"
+                edition = "2015"
                 [[bin]]
                 name = "main"
                 [[bin]]
@@ -5020,6 +5117,7 @@ fn run_proper_alias_binary_from_src() {
                 name = "foo"
                 authors = []
                 version = "0.0.0"
+                edition = "2015"
                 [[bin]]
                 name = "foo"
                 [[bin]]
@@ -5045,6 +5143,7 @@ fn run_proper_alias_binary_main_rs() {
                 name = "foo"
                 authors = []
                 version = "0.0.0"
+                edition = "2015"
                 [[bin]]
                 name = "foo"
                 [[bin]]
@@ -5102,6 +5201,7 @@ fn rustc_wrapper_relative() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"
@@ -5162,6 +5262,7 @@ fn cdylib_not_lifted() {
                 name = "foo"
                 authors = []
                 version = "0.1.0"
+                edition = "2015"
 
                 [lib]
                 crate-type = ["cdylib"]
@@ -5200,6 +5301,7 @@ fn cdylib_final_outputs() {
                 name = "foo-bar"
                 authors = []
                 version = "0.1.0"
+                edition = "2015"
 
                 [lib]
                 crate-type = ["cdylib"]
@@ -5240,6 +5342,7 @@ fn no_dep_info_collision_when_cdylib_and_bin_coexist() {
             [package]
             name = "foo"
             version = "1.0.0"
+            edition = "2015"
 
             [lib]
             crate-type = ["cdylib"]
@@ -5287,6 +5390,7 @@ fn deterministic_cfg_flags() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
 
@@ -5337,6 +5441,7 @@ fn explicit_bins_without_paths() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [[bin]]
@@ -5412,6 +5517,7 @@ fn inferred_bin_path() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
             authors = []
 
             [[bin]]
@@ -5482,6 +5588,7 @@ fn target_edition() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [lib]
                 edition = "2018"
@@ -5566,6 +5673,7 @@ fn building_a_dependent_crate_without_bin_should_fail() {
                 [package]
                 name = "testless"
                 version = "0.1.0"
+                edition = "2015"
 
                 [[bin]]
                 name = "a_bin"
@@ -5581,6 +5689,7 @@ fn building_a_dependent_crate_without_bin_should_fail() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 testless = "0.1.0"
@@ -5814,6 +5923,7 @@ fn no_linkable_target() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 [dependencies]
                 the_lib = { path = "the_lib" }
@@ -5826,6 +5936,7 @@ fn no_linkable_target() {
                 [package]
                 name = "the_lib"
                 version = "0.1.0"
+                edition = "2015"
                 [lib]
                 name = "the_lib"
                 crate-type = ["staticlib"]
@@ -5851,6 +5962,7 @@ fn avoid_dev_deps() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dev-dependencies]
@@ -6039,6 +6151,7 @@ fn signal_display() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 [dependencies]
                 pm = { path = "pm" }
             "#,
@@ -6059,6 +6172,7 @@ fn signal_display() {
                 [package]
                 name = "pm"
                 version = "0.1.0"
+                edition = "2015"
                 [lib]
                 proc-macro = true
             "#,
@@ -6101,6 +6215,7 @@ fn tricky_pipelining() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 [dependencies]
                 bar = { path = "bar" }
             "#,
@@ -6123,6 +6238,7 @@ fn pipelining_works() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 [dependencies]
                 bar = { path = "bar" }
             "#,
@@ -6155,6 +6271,7 @@ fn pipelining_big_graph() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 [dependencies]
                 a1 = { path = "a1" }
                 b1 = { path = "b1" }
@@ -6172,6 +6289,7 @@ fn pipelining_big_graph() {
                             [package]
                             name = "{x}{n}"
                             version = "0.1.0"
+                            edition = "2015"
                             [dependencies]
                             a{np1} = {{ path = "../a{np1}" }}
                             b{np1} = {{ path = "../b{np1}" }}
@@ -6221,6 +6339,7 @@ fn forward_rustc_output() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 [lib]
                 proc-macro = true
             "#,
@@ -6304,6 +6423,7 @@ fn build_with_relative_cargo_home_path() {
 
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies]
@@ -6517,6 +6637,7 @@ fn close_output_during_drain() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 dep = "1.0"
@@ -6571,6 +6692,7 @@ fn reduced_reproduction_8249() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 b = { version = "*", features = ["a-src"] }
@@ -6652,6 +6774,7 @@ fn build_script_o0_default_even_with_release() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [profile.release]
                 opt-level = 1
@@ -6694,6 +6817,7 @@ fn primary_package_env_var() {
                     [package]
                     name = "foo"
                     version = "0.1.0"
+                    edition = "2015"
 
                     [dependencies]
                     bar = {{ path = "bar" }}
@@ -6741,6 +6865,7 @@ fn renamed_uplifted_artifact_remains_unmodified_after_rebuild() {
                 name = "foo"
                 authors = []
                 version = "0.0.0"
+                edition = "2015"
             "#,
         )
         .file("src/main.rs", "fn main() {}")

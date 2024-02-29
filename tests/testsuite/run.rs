@@ -363,6 +363,7 @@ fn specify_default_run() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 default-run = "a"
             "#,
@@ -386,6 +387,7 @@ fn bogus_default_run() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 default-run = "b"
             "#,
@@ -437,6 +439,7 @@ fn run_library_example() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 [[example]]
                 name = "bar"
@@ -462,6 +465,7 @@ fn run_bin_example() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 [[example]]
                 name = "bar"
                 crate_type = ["bin"]
@@ -604,6 +608,7 @@ fn autobins_disables() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             autobins = false
             "#,
         )
@@ -744,6 +749,7 @@ fn example_with_release_flag() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -851,6 +857,7 @@ fn run_dylib_dep() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -889,6 +896,7 @@ fn run_with_bin_dep() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies.bar]
                 path = "bar"
@@ -901,6 +909,7 @@ fn run_with_bin_dep() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [[bin]]
@@ -931,6 +940,7 @@ fn run_with_bin_deps() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies.bar1]
                 path = "bar1"
@@ -945,6 +955,7 @@ fn run_with_bin_deps() {
                 [package]
                 name = "bar1"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [[bin]]
@@ -958,6 +969,7 @@ fn run_with_bin_deps() {
                 [package]
                 name = "bar2"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [[bin]]
@@ -996,6 +1008,7 @@ fn run_with_bin_dep_in_workspace() {
                 [package]
                 name = "foo1"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies.bar1]
                 path = "bar1"
@@ -1008,6 +1021,7 @@ fn run_with_bin_dep_in_workspace() {
                 [package]
                 name = "bar1"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [[bin]]
@@ -1024,6 +1038,7 @@ fn run_with_bin_dep_in_workspace() {
                 [package]
                 name = "foo2"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies.bar2]
                 path = "bar2"
@@ -1036,6 +1051,7 @@ fn run_with_bin_dep_in_workspace() {
                 [package]
                 name = "bar2"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [[bin]]
@@ -1125,6 +1141,7 @@ fn run_bin_different_name() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [[bin]]
@@ -1195,6 +1212,7 @@ fn run_with_library_paths() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
             "#,
@@ -1254,6 +1272,7 @@ fn library_paths_sorted_alphabetically() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
             "#,
@@ -1317,6 +1336,7 @@ fn run_multiple_packages() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -1446,6 +1466,7 @@ fn default_run_workspace() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 default-run = "a"
             "#,
         )
@@ -1490,6 +1511,7 @@ fn run_link_system_path_macos() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             [lib]
             crate-type = ["cdylib"]
             "#,
@@ -1576,6 +1598,7 @@ fn run_binary_with_same_name_as_dependency() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1594,6 +1617,7 @@ fn run_binary_with_same_name_as_dependency() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [lib]

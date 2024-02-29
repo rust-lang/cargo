@@ -114,6 +114,7 @@ fn http_auth_offered() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies.bar]
@@ -186,6 +187,7 @@ fn https_something_happens() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies.bar]
@@ -248,6 +250,7 @@ fn ssh_something_happens() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies.bar]
@@ -306,6 +309,7 @@ fn net_err_suggests_fetch_with_cli() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -383,6 +387,7 @@ fn instead_of_url_printed() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]

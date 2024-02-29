@@ -15,6 +15,7 @@ fn make_lib(lib_src: &str) {
                 name = "bar"
                 authors = []
                 version = "0.0.1"
+                edition = "2015"
                 build = "build.rs"
             "#,
         )
@@ -45,6 +46,7 @@ fn make_upstream(main_src: &str) -> Project {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]

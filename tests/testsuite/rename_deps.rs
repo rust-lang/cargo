@@ -17,6 +17,7 @@ fn rename_dependency() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -39,6 +40,7 @@ fn rename_with_different_names() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -52,6 +54,7 @@ fn rename_with_different_names() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -91,6 +94,7 @@ fn lots_of_names() {
                     [package]
                     name = "test"
                     version = "0.1.0"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -139,6 +143,7 @@ fn rename_and_patch() {
                 [package]
                 name = "test"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -170,6 +175,7 @@ fn rename_twice() {
                 [package]
                 name = "test"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -205,6 +211,7 @@ fn rename_affects_fingerprint() {
                 [package]
                 name = "test"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -222,6 +229,7 @@ fn rename_affects_fingerprint() {
                 [package]
                 name = "test"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -247,6 +255,7 @@ fn can_run_doc_tests() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = { version = "0.1.0" }
@@ -288,6 +297,7 @@ fn features_still_work() {
                 [package]
                 name = "test"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -302,6 +312,7 @@ fn features_still_work() {
                 [package]
                 name = "p1"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -315,6 +326,7 @@ fn features_still_work() {
                 [package]
                 name = "p2"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -342,6 +354,7 @@ fn features_not_working() {
                 [package]
                 name = "test"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -377,6 +390,7 @@ fn rename_with_dash() {
                 [package]
                 name = "qwerty"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 foo-bar = { path = 'a', package = 'a' }

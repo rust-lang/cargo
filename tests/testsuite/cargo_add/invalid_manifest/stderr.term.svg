@@ -23,11 +23,11 @@
 </tspan>
     <tspan x="10px" y="46px"><tspan class="[..]">expected `"`, `'`</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan> </tspan><tspan class="fg-bright-[..] bold">--&gt;</tspan><tspan> Cargo.toml:8:7</tspan>
+    <tspan x="10px" y="64px"><tspan> </tspan><tspan class="fg-bright-[..] bold">--&gt;</tspan><tspan> Cargo.toml:9:7</tspan>
 </tspan>
     <tspan x="10px" y="82px"><tspan class="fg-bright-[..] bold">  |</tspan>
 </tspan>
-    <tspan x="10px" y="100px"><tspan class="fg-bright-[..] bold">8 |</tspan><tspan> key = invalid-value</tspan>
+    <tspan x="10px" y="100px"><tspan class="fg-bright-[..] bold">9 |</tspan><tspan> key = invalid-value</tspan>
 </tspan>
     <tspan x="10px" y="118px"><tspan class="fg-bright-[..] bold">  |</tspan><tspan class="fg-bright-red bold">       ^</tspan>
 </tspan>

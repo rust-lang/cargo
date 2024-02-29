@@ -14,6 +14,7 @@ fn all_target_project() -> Project {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = "bar" }
@@ -65,6 +66,7 @@ fn all_target_project() -> Project {
                 [package]
                 name = "bdep"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = "../bar" }

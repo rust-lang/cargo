@@ -16,6 +16,7 @@ fn metabuild_gated() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 metabuild = ["mb"]
             "#,
         )
@@ -52,6 +53,7 @@ fn basic_project() -> Project {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 metabuild = ["mb", "mb-other"]
 
                 [build-dependencies]
@@ -71,6 +73,7 @@ fn basic_project() -> Project {
                 [package]
                 name = "mb-other"
                 version = "0.0.1"
+                edition = "2015"
             "#,
         )
         .file(
@@ -100,6 +103,7 @@ fn metabuild_error_both() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 metabuild = "mb"
 
                 [build-dependencies]
@@ -139,6 +143,7 @@ fn metabuild_missing_dep() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 metabuild = "mb"
             "#,
         )
@@ -168,6 +173,7 @@ fn metabuild_optional_dep() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 metabuild = "mb"
 
                 [build-dependencies]
@@ -204,6 +210,7 @@ fn metabuild_lib_name() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 metabuild = "mb"
 
                 [build-dependencies]
@@ -217,6 +224,7 @@ fn metabuild_lib_name() {
                 [package]
                 name = "mb"
                 version = "0.0.1"
+                edition = "2015"
                 [lib]
                 name = "other"
             "#,
@@ -252,6 +260,7 @@ fn metabuild_fresh() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 metabuild = "mb"
 
                 [build-dependencies]
@@ -294,6 +303,7 @@ fn metabuild_links() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 links = "cat"
                 metabuild = "mb"
 
@@ -331,6 +341,7 @@ fn metabuild_override() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 links = "cat"
                 metabuild = "mb"
 
@@ -378,6 +389,7 @@ fn metabuild_workspace() {
                 [package]
                 name = "member1"
                 version = "0.0.1"
+                edition = "2015"
                 metabuild = ["mb1", "mb2"]
 
                 [build-dependencies]
@@ -393,6 +405,7 @@ fn metabuild_workspace() {
                 [package]
                 name = "member2"
                 version = "0.0.1"
+                edition = "2015"
                 metabuild = ["mb1"]
 
                 [build-dependencies]
@@ -574,6 +587,7 @@ fn metabuild_two_versions() {
                 [package]
                 name = "member1"
                 version = "0.0.1"
+                edition = "2015"
                 metabuild = ["mb"]
 
                 [build-dependencies]
@@ -588,6 +602,7 @@ fn metabuild_two_versions() {
                 [package]
                 name = "member2"
                 version = "0.0.1"
+                edition = "2015"
                 metabuild = ["mb"]
 
                 [build-dependencies]
@@ -602,6 +617,7 @@ fn metabuild_two_versions() {
             [package]
             name = "mb"
             version = "0.0.1"
+            edition = "2015"
         "#)
         .file(
             "src/lib.rs",
@@ -614,6 +630,7 @@ fn metabuild_two_versions() {
             [package]
             name = "mb"
             version = "0.0.2"
+            edition = "2015"
         "#)
         .file(
             "src/lib.rs",
@@ -650,6 +667,7 @@ fn metabuild_external_dependency() {
                 [package]
                 name = "dep"
                 version = "1.0.0"
+                edition = "2015"
                 metabuild = ["mb"]
 
                 [build-dependencies]
@@ -667,6 +685,7 @@ fn metabuild_external_dependency() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             [dependencies]
             dep = "1.0"
             "#,

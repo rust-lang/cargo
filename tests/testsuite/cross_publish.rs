@@ -16,6 +16,7 @@ fn simple_cross_package() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -77,6 +78,7 @@ fn publish_with_target() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"

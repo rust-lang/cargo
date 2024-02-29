@@ -2,3 +2,4 @@ cargo-features = ["public-dependency"]
 [package]
 name = "bar"
 version = "0.0.0"
+edition = "2015"

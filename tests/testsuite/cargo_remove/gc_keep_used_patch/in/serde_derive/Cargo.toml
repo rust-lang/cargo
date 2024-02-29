@@ -3,6 +3,7 @@
 [package]
 name = "serde_derive"
 version = "1.0.0"
+edition = "2015"
 
 [dev-dependencies]
 serde_json = "1.0.0"

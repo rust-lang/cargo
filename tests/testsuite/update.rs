@@ -13,6 +13,7 @@ fn minor_update_two_places() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -27,6 +28,7 @@ fn minor_update_two_places() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -45,6 +47,7 @@ fn minor_update_two_places() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
 
             [dependencies]
@@ -67,6 +70,7 @@ fn transitive_minor_update() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -82,6 +86,7 @@ fn transitive_minor_update() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -127,6 +132,7 @@ fn conservative() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -142,6 +148,7 @@ fn conservative() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -177,6 +184,7 @@ fn update_via_new_dep() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -191,6 +199,7 @@ fn update_via_new_dep() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -217,6 +226,7 @@ fn update_via_new_member() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -233,6 +243,7 @@ fn update_via_new_member() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -259,6 +270,7 @@ fn add_dep_deep_new_requirement() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -289,6 +301,7 @@ fn everything_real_deep() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -317,6 +330,7 @@ fn change_package_version() {
                 [package]
                 name = "a-foo"
                 version = "0.2.0-alpha"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -356,6 +370,7 @@ fn update_precise() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -370,6 +385,7 @@ fn update_precise() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -407,6 +423,7 @@ fn update_precise_mismatched() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -460,6 +477,7 @@ fn update_precise_build_metadata() {
                 [package]
                 name = "foo"
                 version = "0.0.0"
+                edition = "2015"
 
                 [dependencies]
                 serde = "0.0.1"
@@ -504,6 +522,7 @@ fn update_precise_do_not_force_update_deps() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -541,6 +560,7 @@ fn update_recursive() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -578,6 +598,7 @@ fn update_aggressive_alias_for_recursive() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -615,6 +636,7 @@ fn update_recursive_conflicts_with_precise() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -659,6 +681,7 @@ fn update_precise_first_run() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 serde = "0.2"
@@ -867,6 +890,7 @@ fn dry_run_update() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -882,6 +906,7 @@ fn dry_run_update() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -924,6 +949,7 @@ fn workspace_only() {
             name = "foo"
             authors = []
             version = "0.0.2"
+            edition = "2015"
         "#,
     );
     p.cargo("update --workspace").run();
@@ -947,6 +973,7 @@ fn precise_with_build_metadata() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "0.1"
@@ -1302,6 +1329,7 @@ fn update_precise_git_revisions() {
                     [package]
                     name = "foo"
                     version = "0.1.0"
+                    edition = "2015"
 
                     [dependencies]
                     git = {{ git = '{url}' }}
@@ -1571,6 +1599,7 @@ fn update_with_missing_feature() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             bar = {version="0.1", features=["feat1"]}

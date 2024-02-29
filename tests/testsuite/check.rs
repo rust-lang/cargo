@@ -19,6 +19,7 @@ fn check_success() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -48,6 +49,7 @@ fn check_fail() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -80,6 +82,7 @@ fn custom_derive() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -114,6 +117,7 @@ fn custom_derive() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 [lib]
                 proc-macro = true
@@ -146,6 +150,7 @@ fn check_build() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -177,6 +182,7 @@ fn build_check() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -224,6 +230,7 @@ fn issue_3419() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -287,6 +294,7 @@ fn dylib_check_preserves_build_cache() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -324,6 +332,7 @@ fn rustc_check() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -359,6 +368,7 @@ fn rustc_check_err() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -393,6 +403,7 @@ fn check_all() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -820,6 +831,7 @@ fn proc_macro() {
                 [package]
                 name = "demo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [lib]
                 proc-macro = true
@@ -945,6 +957,7 @@ fn rustc_workspace_wrapper_includes_path_deps() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -1001,6 +1014,7 @@ fn rustc_workspace_wrapper_excludes_published_deps() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -1035,10 +1049,12 @@ fn warn_manifest_package_and_project() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [project]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1065,10 +1081,12 @@ fn git_manifest_package_and_project() {
             [package]
             name = "bar"
             version = "0.0.1"
+            edition = "2015"
 
             [project]
             name = "bar"
             version = "0.0.1"
+            edition = "2015"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1082,6 +1100,7 @@ fn git_manifest_package_and_project() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies.bar]
                 version = "0.0.1"
@@ -1115,6 +1134,7 @@ fn warn_manifest_with_project() {
                 [project]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -1141,6 +1161,7 @@ fn git_manifest_with_project() {
             [project]
             name = "bar"
             version = "0.0.1"
+            edition = "2015"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1154,6 +1175,7 @@ fn git_manifest_with_project() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies.bar]
                 version = "0.0.1"
@@ -1187,6 +1209,7 @@ fn check_fixable_warning() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
             "#,
         )
         .file("src/lib.rs", "use std::io;")
@@ -1206,6 +1229,7 @@ fn check_fixable_test_warning() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
             "#,
         )
         .file(
@@ -1237,6 +1261,7 @@ fn check_fixable_error_no_fix() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
             "#,
         )
         .file(
@@ -1277,6 +1302,7 @@ fn check_fixable_warning_workspace() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
             "#,
         )
         .file("foo/src/lib.rs", "use std::io;")
@@ -1286,6 +1312,7 @@ fn check_fixable_warning_workspace() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 foo = { path = "../foo" }
@@ -1423,6 +1450,7 @@ fn check_fixable_warning_for_clippy() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
             "#,
         )
         // We don't want to show a warning that is `clippy`
@@ -1450,6 +1478,7 @@ fn check_unused_manifest_keys() {
             [package]
             name = "bar"
             version = "0.2.0"
+            edition = "2015"
             authors = []
 
             [dependencies]
@@ -1507,6 +1536,7 @@ fn versionless_package() {
                 [package]
                 name = "foo"
                 description = "foo"
+                edition = "2015"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1534,6 +1564,7 @@ fn pkgid_querystring_works() {
                 r#"
                 [package]
                 name = "foo"
+                edition = "2015"
 
                 [dependencies]
                 gitdep = {{ git = "{}", branch = "master" }}

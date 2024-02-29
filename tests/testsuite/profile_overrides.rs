@@ -12,6 +12,7 @@ fn profile_override_basic() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -49,6 +50,7 @@ fn profile_override_warnings() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = {path = "bar"}
@@ -110,6 +112,7 @@ fn profile_override_bad_settings() {
                         [package]
                         name = "foo"
                         version = "0.0.1"
+                        edition = "2015"
 
                         [dependencies]
                         bar = {{path = "bar"}}
@@ -162,6 +165,7 @@ fn profile_override_hierarchy() {
             [package]
             name = "m1"
             version = "0.0.1"
+            edition = "2015"
 
             [dependencies]
             m2 = { path = "../m2" }
@@ -177,6 +181,7 @@ fn profile_override_hierarchy() {
             [package]
             name = "m2"
             version = "0.0.1"
+            edition = "2015"
 
             [dependencies]
             m3 = { path = "../m3" }
@@ -241,6 +246,7 @@ fn profile_override_spec_multiple() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
 
             [dependencies]
             bar = { path = "bar" }
@@ -276,6 +282,7 @@ fn profile_override_spec_with_version() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
 
             [dependencies]
             bar = { path = "bar" }
@@ -303,6 +310,7 @@ fn profile_override_spec_with_partial_version() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
 
             [dependencies]
             bar = { path = "bar" }
@@ -344,6 +352,7 @@ fn profile_override_spec() {
             [package]
             name = "m1"
             version = "0.0.1"
+            edition = "2015"
 
             [dependencies]
             dep = { path = "../../dep1" }
@@ -357,6 +366,7 @@ fn profile_override_spec() {
             [package]
             name = "m2"
             version = "0.0.1"
+            edition = "2015"
 
             [dependencies]
             dep = {path = "../../dep2" }
@@ -410,6 +420,7 @@ fn override_proc_macro() {
             [package]
             name = "pm"
             version = "0.1.0"
+            edition = "2015"
 
             [lib]
             proc-macro = true

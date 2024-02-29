@@ -1,3 +1,4 @@
 [package]
 name = "foo-alt"
 version = "0.0.0"
+edition = "2015"

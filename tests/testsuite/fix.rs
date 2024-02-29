@@ -62,6 +62,7 @@ fn fix_path_deps() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = 'bar' }
@@ -117,6 +118,7 @@ fn do_not_fix_non_relevant_deps() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = '../bar' }
@@ -546,6 +548,7 @@ fn fix_features() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [features]
                 bar = []
@@ -1074,6 +1077,7 @@ fn doesnt_rebuild_dependencies() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = 'bar' }
@@ -1119,6 +1123,7 @@ fn does_not_crash_with_rustc_wrapper() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1142,6 +1147,7 @@ fn uses_workspace_wrapper_and_primary_wrapper_override() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
             "#,
         )
         .file("src/lib.rs", "")
@@ -1162,6 +1168,7 @@ fn only_warn_for_relevant_crates() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 a = { path = 'a' }
@@ -1174,6 +1181,7 @@ fn only_warn_for_relevant_crates() {
                 [package]
                 name = "a"
                 version = "0.1.0"
+                edition = "2015"
             "#,
         )
         .file(
@@ -1209,6 +1217,7 @@ fn fix_to_broken_code() {
                 [package]
                 name = 'foo'
                 version = '0.1.0'
+                edition = "2015"
                 [workspace]
             "#,
         )
@@ -1256,6 +1265,7 @@ fn fix_to_broken_code() {
                 [package]
                 name = 'bar'
                 version = '0.1.0'
+                edition = "2015"
                 [workspace]
             "#,
         )
@@ -1534,6 +1544,7 @@ fn abnormal_exit() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 pm = {path="pm"}
@@ -1722,6 +1733,7 @@ fn fix_in_dependency() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"

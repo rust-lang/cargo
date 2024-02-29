@@ -33,6 +33,7 @@ fn simple() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { version = "1.0", optional = true }
@@ -91,6 +92,7 @@ fn deferred() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 dep = { version = "1.0", features = ["feat"] }
@@ -130,6 +132,7 @@ fn not_optional_dep() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 dep = "1.0"
@@ -168,6 +171,7 @@ fn optional_cli_syntax() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { version = "1.0", optional = true }
@@ -237,6 +241,7 @@ fn required_features() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { version = "1.0", optional = true }
@@ -317,6 +322,7 @@ fn weak_with_host_decouple() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 resolver = "2"
 
                 [dependencies]
@@ -377,6 +383,7 @@ fn weak_namespaced() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { version = "1.0", optional = true }
@@ -448,6 +455,7 @@ fn tree() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { version = "1.0", optional = true }
@@ -534,6 +542,7 @@ fn publish() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 description = "foo"
                 license = "MIT"
                 homepage = "https://example.com/"
@@ -612,6 +621,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
             &format!(
                 r#"{}
 [package]
+edition = "2015"
 name = "foo"
 version = "0.1.0"
 description = "foo"

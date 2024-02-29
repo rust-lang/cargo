@@ -39,6 +39,7 @@ fn crates_io_token_not_sent_to_replacement() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -189,6 +190,7 @@ fn publish_with_replacement() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -272,6 +274,7 @@ fn source_replacement_with_registry_url() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 [dependencies.bar]
                 version = "0.0.1"
             "#,

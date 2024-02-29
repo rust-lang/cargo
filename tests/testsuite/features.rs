@@ -13,6 +13,7 @@ fn invalid1() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -44,6 +45,7 @@ fn empty_feature_name() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -58,9 +60,9 @@ fn empty_feature_name() {
         .with_stderr(
             "\
 [ERROR] feature name cannot be empty
- --> Cargo.toml:8:17
+ --> Cargo.toml:9:17
   |
-8 |                 \"\" = []
+9 |                 \"\" = []
   |                 ^^
   |
 ",
@@ -78,6 +80,7 @@ fn same_name() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -125,6 +128,7 @@ fn invalid3() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -160,6 +164,7 @@ fn invalid4() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -204,6 +209,7 @@ fn invalid5() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dev-dependencies.bar]
@@ -236,6 +242,7 @@ fn invalid6() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -267,6 +274,7 @@ fn invalid7() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -299,6 +307,7 @@ fn invalid8() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -334,6 +343,7 @@ fn invalid9() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -362,6 +372,7 @@ fn invalid10() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -376,6 +387,7 @@ fn invalid10() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.baz]
@@ -410,6 +422,7 @@ fn no_transitive_dep_feature_requirement() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.derived]
@@ -432,6 +445,7 @@ fn no_transitive_dep_feature_requirement() {
                 [package]
                 name = "derived"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -445,6 +459,7 @@ fn no_transitive_dep_feature_requirement() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -481,6 +496,7 @@ fn no_feature_doesnt_build() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -537,6 +553,7 @@ fn default_feature_pulled_in() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -595,6 +612,7 @@ fn cyclic_feature() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -619,6 +637,7 @@ fn cyclic_feature2() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -648,6 +667,7 @@ fn groups_on_groups_on_groups() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -706,6 +726,7 @@ fn many_cli_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -755,6 +776,7 @@ fn union_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.d1]
@@ -783,6 +805,7 @@ fn union_features() {
                 [package]
                 name = "d1"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -801,6 +824,7 @@ fn union_features() {
                 [package]
                 name = "d2"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -838,6 +862,7 @@ fn many_features_no_rebuilds() {
                 [package]
                 name    = "b"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies.a]
@@ -852,6 +877,7 @@ fn many_features_no_rebuilds() {
                 [package]
                 name    = "a"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -903,6 +929,7 @@ fn transitive_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -919,6 +946,7 @@ fn transitive_features() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -943,6 +971,7 @@ fn everything_in_the_lockfile() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -966,6 +995,7 @@ fn everything_in_the_lockfile() {
                 [package]
                 name = "d1"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -981,6 +1011,7 @@ fn everything_in_the_lockfile() {
                 [package]
                 name = "d3"
                 version = "0.0.3"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -1018,6 +1049,7 @@ fn no_rebuild_when_frobbing_default_feature() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1032,6 +1064,7 @@ fn no_rebuild_when_frobbing_default_feature() {
                 [package]
                 name = "b"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1045,6 +1078,7 @@ fn no_rebuild_when_frobbing_default_feature() {
                 [package]
                 name = "a"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -1069,6 +1103,7 @@ fn unions_work_with_no_default_features() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1083,6 +1118,7 @@ fn unions_work_with_no_default_features() {
                 [package]
                 name = "b"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1096,6 +1132,7 @@ fn unions_work_with_no_default_features() {
                 [package]
                 name = "a"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -1120,6 +1157,7 @@ fn optional_and_dev_dep() {
                 [package]
                 name    = "test"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1152,6 +1190,7 @@ fn activating_feature_activates_dep() {
                 [package]
                 name    = "test"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1171,6 +1210,7 @@ fn activating_feature_activates_dep() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -1247,6 +1287,7 @@ fn dep_feature_in_cmd_line() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.derived]
@@ -1266,6 +1307,7 @@ fn dep_feature_in_cmd_line() {
                 [package]
                 name = "derived"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -1283,6 +1325,7 @@ fn dep_feature_in_cmd_line() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -1331,6 +1374,7 @@ fn all_features_flag_enables_all_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -1376,6 +1420,7 @@ fn many_cli_features_comma_delimited() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -1424,6 +1469,7 @@ fn many_cli_features_comma_and_space_delimited() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.bar]
@@ -1493,6 +1539,7 @@ fn only_dep_is_optional() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -1522,6 +1569,7 @@ fn all_features_all_crates() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -1535,6 +1583,7 @@ fn all_features_all_crates() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -1559,6 +1608,7 @@ fn feature_off_dylib() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [lib]
                 crate-type = ["dylib"]
@@ -1585,6 +1635,7 @@ fn feature_off_dylib() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 foo = { path = ".." }
@@ -1617,6 +1668,7 @@ fn warn_if_default_features() {
                [package]
                name = "foo"
                version = "0.0.1"
+               edition = "2015"
                authors = []
 
                [dependencies.bar]
@@ -1651,6 +1703,7 @@ fn no_feature_for_non_optional_dep() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1671,6 +1724,7 @@ fn no_feature_for_non_optional_dep() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -1692,6 +1746,7 @@ fn features_option_given_twice() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -1720,6 +1775,7 @@ fn multi_multi_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -1749,6 +1805,7 @@ fn cli_parse_ok() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -1820,6 +1877,7 @@ fn all_features_virtual_ws() {
                 [package]
                 name = "b"
                 version = "0.1.0"
+                edition = "2015"
 
                 [features]
                 default = ["f3"]
@@ -1863,6 +1921,7 @@ fn slash_optional_enables() {
             [package]
             name = "foo"
             version = "0.1.0"
+                edition = "2015"
 
             [dependencies]
             dep = {path="dep", optional=true}
@@ -1881,6 +1940,7 @@ fn slash_optional_enables() {
             [package]
             name = "dep"
             version = "0.1.0"
+            edition = "2015"
 
             [features]
             feat = []
@@ -1995,6 +2055,7 @@ fn nonexistent_required_features() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
             [features]
             existing = []
             fancy = ["optional_dependency"]
@@ -2041,6 +2102,7 @@ fn invalid_feature_names_error() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [features]
                 # Invalid start character.
@@ -2055,9 +2117,9 @@ fn invalid_feature_names_error() {
         .with_stderr(
             "\
 [ERROR] invalid character `+` in feature name: `+foo`, the first character must be a Unicode XID start character or digit (most letters or `_` or `0` to `9`)
- --> Cargo.toml:8:17
+ --> Cargo.toml:9:17
   |
-8 |                 \"+foo\" = []
+9 |                 \"+foo\" = []
   |                 ^^^^^^
   |
 ",
@@ -2070,6 +2132,7 @@ fn invalid_feature_names_error() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [features]
             # Invalid continue character.
@@ -2082,9 +2145,9 @@ fn invalid_feature_names_error() {
         .with_stderr(
             "\
 [ERROR] invalid character `&` in feature name: `a&b`, characters must be Unicode XID characters, '-', `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
- --> Cargo.toml:8:13
+ --> Cargo.toml:9:13
   |
-8 |             \"a&b\" = []
+9 |             \"a&b\" = []
   |             ^^^^^
   |
 ",
@@ -2102,6 +2165,7 @@ fn invalid_feature_name_slash_error() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [features]
                 "foo/bar" = []
@@ -2115,9 +2179,9 @@ fn invalid_feature_name_slash_error() {
         .with_stderr(
             "\
 [ERROR] invalid character `/` in feature name: `foo/bar`, feature name is not allowed to contain slashes
- --> Cargo.toml:7:17
+ --> Cargo.toml:8:17
   |
-7 |                 \"foo/bar\" = []
+8 |                 \"foo/bar\" = []
   |                 ^^^^^^^^^
   |
 ",
@@ -2134,6 +2198,7 @@ fn default_features_conflicting_warning() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2147,6 +2212,7 @@ fn default_features_conflicting_warning() {
                 [package]
                 name = "a"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [features]

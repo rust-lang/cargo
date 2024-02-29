@@ -11,6 +11,7 @@ fn warn_unmatched_target_filters() {
         [package]
         name = "foo"
         version = "0.1.0"
+        edition = "2015"
 
         [lib]
         test = false
@@ -40,6 +41,7 @@ fn reserved_windows_target_name() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [[bin]]
             name = "con"

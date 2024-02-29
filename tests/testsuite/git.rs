@@ -40,6 +40,7 @@ fn cargo_compile_simple_git_dep() {
 
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dependencies.dep1]
@@ -108,6 +109,7 @@ fn cargo_compile_git_dep_branch() {
 
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dependencies.dep1]
@@ -184,6 +186,7 @@ fn cargo_compile_git_dep_tag() {
 
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dependencies.dep1]
@@ -256,6 +259,7 @@ fn cargo_compile_git_dep_pull_request() {
                     [package]
                     name = "foo"
                     version = "0.0.0"
+                    edition = "2015"
 
                     [dependencies]
                     dep1 = {{ git = "{}", rev = "refs/pull/330/head" }}
@@ -297,6 +301,7 @@ fn cargo_compile_with_nested_paths() {
 
                     name = "dep1"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["carlhuda@example.com"]
 
                     [dependencies.dep2]
@@ -339,6 +344,7 @@ fn cargo_compile_with_nested_paths() {
 
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dependencies.dep1]
@@ -386,6 +392,7 @@ fn cargo_compile_with_malformed_nested_paths() {
                 [package]
                 name = "dep3"
                 version = "0.5.0"
+                edition = "2015"
                 [dependencies]
                 subdep1 = { path = "../require-extra-build-step" }
                 "#,
@@ -402,6 +409,7 @@ fn cargo_compile_with_malformed_nested_paths() {
 
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dependencies.dep1]
@@ -462,6 +470,7 @@ fn cargo_compile_with_meta_package() {
 
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dependencies.dep1]
@@ -513,6 +522,7 @@ fn cargo_compile_with_short_ssh_git() {
 
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dependencies.dep]
@@ -564,6 +574,7 @@ fn recompilation() {
 
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dependencies.bar]
@@ -663,6 +674,7 @@ fn update_with_shared_deps() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.dep1]
@@ -688,6 +700,7 @@ fn update_with_shared_deps() {
                     [package]
                     name = "dep1"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dependencies.bar]
@@ -705,6 +718,7 @@ fn update_with_shared_deps() {
                     [package]
                     name = "dep2"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dependencies.bar]
@@ -830,6 +844,7 @@ fn dep_with_submodule() {
 
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dependencies.dep1]
@@ -869,6 +884,7 @@ fn dep_with_relative_submodule() {
             [package]
             name = "base"
             version = "0.5.0"
+            edition = "2015"
 
             [dependencies]
             deployment.path = "deployment"
@@ -901,6 +917,7 @@ fn dep_with_relative_submodule() {
                     [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
 
                     [dependencies.base]
                     git = '{}'
@@ -963,6 +980,7 @@ fn dep_with_bad_submodule() {
 
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dependencies.dep1]
@@ -1036,6 +1054,7 @@ fn dep_with_skipped_submodule() {
                     [package]
                     name = "foo"
                     version = "0.0.0"
+                    edition = "2015"
                     authors = []
 
                     [dependencies.bar]
@@ -1071,6 +1090,7 @@ fn ambiguous_published_deps() {
                     [package]
                     name = "bar"
                     version = "0.5.0"
+                    edition = "2015"
                     publish = true
                 "#
                 ),
@@ -1083,6 +1103,7 @@ fn ambiguous_published_deps() {
                     [package]
                     name = "bar"
                     version = "0.5.0"
+                    edition = "2015"
                     publish = true
                 "#
                 ),
@@ -1099,6 +1120,7 @@ fn ambiguous_published_deps() {
 
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dependencies.bar]
@@ -1145,6 +1167,7 @@ fn two_deps_only_update_one() {
 
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dependencies.dep1]
@@ -1216,6 +1239,7 @@ fn stale_cached_version() {
                     [package]
                     name = "foo"
                     version = "0.0.0"
+                    edition = "2015"
                     authors = []
 
                     [dependencies.bar]
@@ -1311,6 +1335,7 @@ fn dep_with_changed_submodule() {
                     [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
                     [dependencies.dep1]
                     git = '{}'
@@ -1418,6 +1443,7 @@ fn dev_deps_with_testing() {
 
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dev-dependencies.bar]
@@ -1478,6 +1504,7 @@ fn git_build_cmd_freshness() {
                     [package]
                     name = "foo"
                     version = "0.0.0"
+                    edition = "2015"
                     authors = []
                     build = "build.rs"
                 "#,
@@ -1535,6 +1562,7 @@ fn git_name_not_always_needed() {
                     [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = []
 
                     [dev-dependencies.bar]
@@ -1578,6 +1606,7 @@ fn git_repo_changing_no_rebuild() {
                     [package]
                     name = "p1"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = []
                     build = 'build.rs'
                     [dependencies.bar]
@@ -1618,6 +1647,7 @@ fn git_repo_changing_no_rebuild() {
                     [package]
                     name = "p2"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = []
                     [dependencies.bar]
                     git = '{}'
@@ -1655,6 +1685,7 @@ fn git_dep_build_cmd() {
 
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dependencies.bar]
@@ -1675,6 +1706,7 @@ fn git_dep_build_cmd() {
 
                     name = "bar"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
                     build = "build.rs"
 
@@ -1730,6 +1762,7 @@ fn fetch_downloads() {
                     [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = []
                     [dependencies.bar]
                     git = '{}'
@@ -1772,6 +1805,7 @@ fn fetch_downloads_with_git2_first_then_with_gitoxide_and_vice_versa() {
                     [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = []
                     [dependencies.bar]
                     git = '{url}'
@@ -1810,6 +1844,7 @@ fn warnings_in_git_dep() {
                     [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = []
                     [dependencies.bar]
                     git = '{}'
@@ -1853,6 +1888,7 @@ fn update_ambiguous() {
                         [package]
                         name = "baz"
                         version = "0.5.0"
+                        edition = "2015"
                         authors = ["wycats@example.com"]
 
                         [dependencies.bar]
@@ -1872,6 +1908,7 @@ fn update_ambiguous() {
                     [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = []
                     [dependencies.bar]
                     git = '{}'
@@ -1919,6 +1956,7 @@ fn update_one_dep_in_repo_with_many_deps() {
                     [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = []
                     [dependencies.bar]
                     git = '{}'
@@ -1954,6 +1992,7 @@ fn switch_deps_does_not_update_transitive() {
                         [package]
                         name = "dep"
                         version = "0.5.0"
+                        edition = "2015"
                         authors = ["wycats@example.com"]
 
                         [dependencies.transitive]
@@ -1973,6 +2012,7 @@ fn switch_deps_does_not_update_transitive() {
                         [package]
                         name = "dep"
                         version = "0.5.0"
+                        edition = "2015"
                         authors = ["wycats@example.com"]
 
                         [dependencies.transitive]
@@ -1992,6 +2032,7 @@ fn switch_deps_does_not_update_transitive() {
                     [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = []
                     [dependencies.dep]
                     git = '{}'
@@ -2026,6 +2067,7 @@ fn switch_deps_does_not_update_transitive() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
                 [dependencies.dep]
                 git = '{}'
@@ -2057,6 +2099,7 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
                     [package]
                     name = "dep"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = []
 
                     [dependencies.a]
@@ -2076,6 +2119,7 @@ fn update_one_source_updates_all_packages_in_that_git_source() {
                     [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = []
                     [dependencies.dep]
                     git = '{}'
@@ -2126,6 +2170,7 @@ fn switch_sources() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
                 [dependencies.b]
                 path = "b"
@@ -2139,6 +2184,7 @@ fn switch_sources() {
                     [package]
                     name = "b"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = []
                     [dependencies.a]
                     git = '{}'
@@ -2168,6 +2214,7 @@ fn switch_sources() {
                 [package]
                 name = "b"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
                 [dependencies.a]
                 git = '{}'
@@ -2199,6 +2246,7 @@ fn dont_require_submodules_are_checked_out() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
             "#,
@@ -2237,6 +2285,7 @@ fn doctest_same_name() {
                     [package]
                     name = "a"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = []
                     [dependencies]
                     a = {{ git = '{}' }}
@@ -2255,6 +2304,7 @@ fn doctest_same_name() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -2294,6 +2344,7 @@ fn lints_are_suppressed() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -2337,6 +2388,7 @@ fn denied_lints_are_allowed() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -2375,6 +2427,7 @@ fn add_a_git_dep() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -2400,6 +2453,7 @@ fn add_a_git_dep() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2441,6 +2495,7 @@ fn two_at_rev_instead_of_tag() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -2467,6 +2522,7 @@ fn include_overrides_gitignore() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 include = ["src/lib.rs", "ignored.txt", "Cargo.toml"]
             "#,
         )
@@ -2520,6 +2576,7 @@ fn invalid_git_dependency_manifest() {
 
                     name = "dep1"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["carlhuda@example.com"]
                     categories = ["algorithms"]
                     categories = ["algorithms"]
@@ -2548,6 +2605,7 @@ fn invalid_git_dependency_manifest() {
 
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dependencies.dep1]
@@ -2572,9 +2630,9 @@ fn invalid_git_dependency_manifest() {
             "\
 [UPDATING] git repository `{}`
 [ERROR] duplicate key `categories` in table `package`
- --> [..]/Cargo.toml:8:21
+ --> [..]/Cargo.toml:9:21
   |
-8 |                     categories = [\"algorithms\"]
+9 |                     categories = [\"algorithms\"]
   |                     ^
   |
 [ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([..])`
@@ -2641,6 +2699,7 @@ fn failed_submodule_checkout() {
                     [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -2687,6 +2746,7 @@ fn use_the_cli() {
                     [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -2741,6 +2801,7 @@ fn templatedir_doesnt_cause_problems() {
                     [package]
                     name = "fo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -2849,6 +2910,7 @@ fn git_fetch_cli_env_clean() {
                     [package]
                     name = "foo"
                     version = "0.1.0"
+                    edition = "2015"
                     [dependencies]
                     dep1 = {{ git = '{}' }}
                     "#,
@@ -3018,6 +3080,7 @@ fn default_not_master() {
                     [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     [dependencies]
                     dep1 = {{ git = '{}' }}
                 "#,
@@ -3058,6 +3121,7 @@ fn historical_lockfile_works() {
                     [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
 
                     [dependencies]
                     dep1 = {{ git = '{}', branch = 'master' }}
@@ -3115,6 +3179,7 @@ fn historical_lockfile_works_with_vendor() {
                     [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
 
                     [dependencies]
                     dep1 = {{ git = '{}', branch = 'master' }}
@@ -3172,6 +3237,7 @@ fn two_dep_forms() {
                     [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     [dependencies]
                     dep1 = {{ git = '{}', branch = 'master' }}
                     a = {{ path = 'a' }}
@@ -3187,6 +3253,7 @@ fn two_dep_forms() {
                     [package]
                     name = "a"
                     version = "0.5.0"
+                    edition = "2015"
                     [dependencies]
                     dep1 = {{ git = '{}' }}
                 "#,
@@ -3235,6 +3302,7 @@ fn metadata_master_consistency() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = {{ git = "{}", branch = "master" }}
@@ -3393,6 +3461,7 @@ fn metadata_master_consistency() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = {{ git = "{}" }}
@@ -3556,6 +3625,7 @@ fn _corrupted_checkout(with_cli: bool) {
                     [package]
                     name = "foo"
                     version = "0.1.0"
+                    edition = "2015"
 
                     [dependencies]
                     dep1 = {{ git = "{}" }}
@@ -3601,6 +3671,7 @@ fn cleans_temp_pack_files() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"
@@ -3658,6 +3729,7 @@ fn different_user_relative_submodules() {
                     [package]
                     name = "foo" 
                     version = "0.5.0"
+                    edition = "2015"
 
                     [dependencies.dep1]
                     git = '{}'

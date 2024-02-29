@@ -14,6 +14,7 @@ fn simple_explicit() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -27,6 +28,7 @@ fn simple_explicit() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 workspace = ".."
             "#,
@@ -55,6 +57,7 @@ fn simple_explicit_default_members() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -69,6 +72,7 @@ fn simple_explicit_default_members() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 workspace = ".."
             "#,
@@ -90,6 +94,7 @@ fn non_virtual_default_members_build_other_member() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -128,6 +133,7 @@ fn non_virtual_default_members_build_root_project() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -157,6 +163,7 @@ fn inferred_root() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -189,6 +196,7 @@ fn inferred_path_dep() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -224,6 +232,7 @@ fn transitive_path_dep() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -239,6 +248,7 @@ fn transitive_path_dep() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -281,6 +291,7 @@ fn parent_pointer_works() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -296,6 +307,7 @@ fn parent_pointer_works() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 workspace = "../foo"
             "#,
@@ -319,6 +331,7 @@ fn same_names_in_workspace() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -332,6 +345,7 @@ fn same_names_in_workspace() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 workspace = ".."
             "#,
@@ -360,6 +374,7 @@ fn parent_doesnt_point_to_child() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -395,6 +410,7 @@ fn invalid_parent_pointer() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 workspace = "foo"
             "#,
@@ -424,6 +440,7 @@ fn invalid_members() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -459,6 +476,7 @@ fn bare_workspace_ok() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -479,6 +497,7 @@ fn two_roots() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -492,6 +511,7 @@ fn two_roots() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -522,6 +542,7 @@ fn workspace_isnt_root() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 workspace = "bar"
             "#,
@@ -546,6 +567,7 @@ fn dangling_member() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -559,6 +581,7 @@ fn dangling_member() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 workspace = "../baz"
             "#,
@@ -570,6 +593,7 @@ fn dangling_member() {
                 [package]
                 name = "baz"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 workspace = "../baz"
             "#,
@@ -598,6 +622,7 @@ fn cycle() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 workspace = "bar"
             "#,
@@ -609,6 +634,7 @@ fn cycle() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 workspace = ".."
             "#,
@@ -633,6 +659,7 @@ fn share_dependencies() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -649,6 +676,7 @@ fn share_dependencies() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -684,6 +712,7 @@ fn fetch_fetches_all() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -697,6 +726,7 @@ fn fetch_fetches_all() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -728,6 +758,7 @@ fn lock_works_for_everyone() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -744,6 +775,7 @@ fn lock_works_for_everyone() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -972,6 +1004,7 @@ fn include_virtual() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 [workspace]
                 members = ["bar"]
@@ -1006,6 +1039,7 @@ fn members_include_path_deps() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -1022,6 +1056,7 @@ fn members_include_path_deps() {
                 [package]
                 name = "p1"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1055,6 +1090,7 @@ fn new_creates_members_list() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -1102,6 +1138,7 @@ fn lock_doesnt_change_depending_on_crate() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -1118,6 +1155,7 @@ fn lock_doesnt_change_depending_on_crate() {
                 [package]
                 name = "baz"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1164,6 +1202,7 @@ fn rebuild_please() {
                 [package]
                 name = "bin"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 lib = { path = "../lib" }
@@ -1218,6 +1257,7 @@ fn workspace_in_git() {
                     [package]
                     name = "lib"
                     version = "0.1.0"
+                    edition = "2015"
 
                     [dependencies.foo]
                     git = '{}'
@@ -1294,6 +1334,7 @@ fn workspace_with_transitive_dev_deps() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["mbrubeck@example.com"]
 
                 [dependencies.bar]
@@ -1309,6 +1350,7 @@ fn workspace_with_transitive_dev_deps() {
                 [package]
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["mbrubeck@example.com"]
 
                 [dev-dependencies.baz]
@@ -1369,6 +1411,7 @@ fn relative_path_for_member_works() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -1382,6 +1425,7 @@ fn relative_path_for_member_works() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 workspace = "../foo"
             "#,
@@ -1402,6 +1446,7 @@ fn relative_path_for_root_works() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -1432,6 +1477,7 @@ fn path_dep_outside_workspace_is_not_member() {
                 [package]
                 name = "ws"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1458,6 +1504,7 @@ fn test_in_and_out_of_workspace() {
                 [package]
                 name = "ws"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1474,6 +1521,7 @@ fn test_in_and_out_of_workspace() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1491,6 +1539,7 @@ fn test_in_and_out_of_workspace() {
                 workspace = "../ws"
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
             "#,
         )
@@ -1522,6 +1571,7 @@ fn test_path_dependency_under_member() {
                 [package]
                 name = "ws"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1538,6 +1588,7 @@ fn test_path_dependency_under_member() {
                 workspace = "../ws"
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1572,6 +1623,7 @@ fn excluded_simple() {
                 [package]
                 name = "ws"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -1598,6 +1650,7 @@ fn exclude_members_preferred() {
                 [package]
                 name = "ws"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -1629,6 +1682,7 @@ fn exclude_but_also_depend() {
                 [package]
                 name = "ws"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1752,6 +1806,7 @@ fn glob_syntax() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -1766,6 +1821,7 @@ fn glob_syntax() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 workspace = "../.."
             "#,
@@ -1777,6 +1833,7 @@ fn glob_syntax() {
                 [package]
                 name = "baz"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 workspace = "../.."
             "#,
@@ -1788,6 +1845,7 @@ fn glob_syntax() {
                 [package]
                 name = "qux"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
             "#,
         )
@@ -1824,6 +1882,7 @@ fn glob_syntax_2() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
             authors = []
 
             [workspace]
@@ -1835,6 +1894,7 @@ fn glob_syntax_2() {
             [package]
             name = "bar"
             version = "0.1.0"
+            edition = "2015"
             authors = []
             workspace = "../.."
         "#)
@@ -1843,6 +1903,7 @@ fn glob_syntax_2() {
             [package]
             name = "baz"
             version = "0.1.0"
+            edition = "2015"
             authors = []
             workspace = "../.."
         "#)
@@ -1851,6 +1912,7 @@ fn glob_syntax_2() {
             [package]
             name = "qux"
             version = "0.1.0"
+            edition = "2015"
             authors = []
         "#)
         .file("crates/qux/src/main.rs", "fn main() {}");
@@ -1888,6 +1950,7 @@ fn glob_syntax_invalid_members() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -1939,6 +2002,7 @@ fn dep_used_with_separate_features() {
                 [package]
                 name = "feat_lib"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -1952,6 +2016,7 @@ fn dep_used_with_separate_features() {
                 [package]
                 name = "caller1"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1966,6 +2031,7 @@ fn dep_used_with_separate_features() {
                 [package]
                 name = "caller2"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2059,6 +2125,7 @@ fn dont_recurse_out_of_cargo_home() {
                     [package]
                     name = "foo"
                     version = "0.1.0"
+                    edition = "2015"
 
                     [dependencies.dep]
                     git = "{}"
@@ -2109,6 +2176,7 @@ fn cargo_home_at_root_works() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [workspace]
                 members = ["a"]
@@ -2159,6 +2227,7 @@ fn relative_rustc() {
                 [package]
                 name = "lib"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 a = "0.1"
@@ -2266,6 +2335,7 @@ fn ws_warn_unused() {
                     [package]
                     name = "a"
                     version = "0.1.0"
+                    edition = "2015"
 
                     {}
                     "#,
@@ -2305,6 +2375,7 @@ fn ws_warn_path() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -2325,6 +2396,7 @@ fn invalid_missing() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 x = { path = 'x' }
@@ -2365,6 +2437,7 @@ fn member_dep_missing() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [workspace]
                 members = ["bar"]
@@ -2377,6 +2450,7 @@ fn member_dep_missing() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 baz = { path = "baz" }
@@ -2421,6 +2495,7 @@ fn simple_primary_package_env_var() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -2434,6 +2509,7 @@ fn simple_primary_package_env_var() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 workspace = ".."
             "#,
@@ -2493,6 +2569,7 @@ fn ensure_correct_workspace_when_nested() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
             "#,
         )
@@ -2510,6 +2587,7 @@ fn ensure_correct_workspace_when_nested() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]

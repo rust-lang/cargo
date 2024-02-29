@@ -15,6 +15,7 @@ fn rustflags_works_with_zflag() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -203,6 +204,7 @@ fn profile_config_override_spec_multiple() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
 
             [dependencies]
             bar = { path = "bar" }
@@ -288,6 +290,7 @@ fn profile_config_override_precedence() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = {path = "bar"}
@@ -470,6 +473,7 @@ fn named_env_profile() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
             "#,
         )
         .file("src/lib.rs", "")
@@ -494,6 +498,7 @@ fn test_with_dev_profile() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             somedep = "1.0"

@@ -11,6 +11,7 @@ fn rust_version_satisfied() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
             rust-version = "1.1.1"
             [[bin]]
@@ -33,6 +34,7 @@ fn rust_version_bad_caret() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
             rust-version = "^1.43"
             [[bin]]
@@ -46,9 +48,9 @@ fn rust_version_bad_caret() {
         .with_stderr(
             "\
 [ERROR] unexpected version requirement, expected a version like \"1.32\"
- --> Cargo.toml:6:28
+ --> Cargo.toml:7:28
   |
-6 |             rust-version = \"^1.43\"
+7 |             rust-version = \"^1.43\"
   |                            ^^^^^^^
   |
 ",
@@ -65,6 +67,7 @@ fn rust_version_good_pre_release() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
             rust-version = "1.43.0-beta.1"
             [[bin]]
@@ -78,9 +81,9 @@ fn rust_version_good_pre_release() {
         .with_stderr(
             "\
 [ERROR] unexpected prerelease field, expected a version like \"1.32\"
- --> Cargo.toml:6:28
+ --> Cargo.toml:7:28
   |
-6 |             rust-version = \"1.43.0-beta.1\"
+7 |             rust-version = \"1.43.0-beta.1\"
   |                            ^^^^^^^^^^^^^^^
   |
 ",
@@ -97,6 +100,7 @@ fn rust_version_bad_pre_release() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
             rust-version = "1.43-beta.1"
             [[bin]]
@@ -110,9 +114,9 @@ fn rust_version_bad_pre_release() {
         .with_stderr(
             "\
 [ERROR] unexpected prerelease field, expected a version like \"1.32\"
- --> Cargo.toml:6:28
+ --> Cargo.toml:7:28
   |
-6 |             rust-version = \"1.43-beta.1\"
+7 |             rust-version = \"1.43-beta.1\"
   |                            ^^^^^^^^^^^^^
   |
 ",
@@ -129,6 +133,7 @@ fn rust_version_bad_nonsense() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
             rust-version = "foodaddle"
             [[bin]]
@@ -142,9 +147,9 @@ fn rust_version_bad_nonsense() {
         .with_stderr(
             "\
 [ERROR] expected a version like \"1.32\"
- --> Cargo.toml:6:28
+ --> Cargo.toml:7:28
   |
-6 |             rust-version = \"foodaddle\"
+7 |             rust-version = \"foodaddle\"
   |                            ^^^^^^^^^^^
   |
 ",
@@ -161,6 +166,7 @@ fn rust_version_too_high() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
             rust-version = "1.9876.0"
             [[bin]]
@@ -194,6 +200,7 @@ fn dependency_rust_version_newer_than_rustc() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
             [dependencies]
             bar = "0.0.1"
@@ -232,6 +239,7 @@ fn dependency_rust_version_newer_than_package() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
             rust-version = "1.60.0"
             [dependencies]
@@ -269,6 +277,7 @@ fn dependency_rust_version_older_and_newer_than_package() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
             rust-version = "1.60.0"
             [dependencies]
@@ -325,6 +334,7 @@ fn dependency_rust_version_backtracking() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
             rust-version = "1.60.0"
             [dependencies]
@@ -386,6 +396,7 @@ fn workspace_with_mixed_rust_version() {
             [package]
             name = "higher"
             version = "0.0.1"
+            edition = "2015"
             authors = []
             rust-version = "1.60.0"
             [dependencies]
@@ -399,6 +410,7 @@ fn workspace_with_mixed_rust_version() {
             [package]
             name = "lower"
             version = "0.0.1"
+            edition = "2015"
             authors = []
             rust-version = "1.50.0"
             [dependencies]

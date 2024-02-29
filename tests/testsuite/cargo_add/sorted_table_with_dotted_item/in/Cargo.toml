@@ -3,6 +3,7 @@
 [package]
 name = "cargo-list-test-fixture"
 version = "0.0.0"
+edition = "2015"
 
 [dependencies]
 toml = "0.1.1"
@@ -10,4 +11,5 @@ versioned-package = "0.1.1"
 
 [dependencies.my-build-package1]
 version = "0.1.1"
+edition = "2015"
 

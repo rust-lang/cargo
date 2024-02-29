@@ -43,6 +43,7 @@ fn permit_additional_workspace_fields() {
               [package]
               name = "bar"
               version = "0.1.0"
+              edition = "2015"
               authors = []
               workspace = ".."
               "#,
@@ -85,6 +86,7 @@ fn deny_optional_dependencies() {
               [package]
               name = "bar"
               version = "0.1.0"
+              edition = "2015"
               authors = []
               workspace = ".."
               "#,
@@ -259,6 +261,7 @@ fn inherit_own_dependencies() {
             [package]
             name = "bar"
             version = "0.2.0"
+            edition = "2015"
             authors = []
 
             [dependencies]
@@ -388,6 +391,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
             &format!(
                 r#"{}
 [package]
+edition = "2015"
 name = "bar"
 version = "0.2.0"
 authors = []
@@ -417,6 +421,7 @@ fn inherit_own_detailed_dependencies() {
             [package]
             name = "bar"
             version = "0.2.0"
+            edition = "2015"
             authors = []
 
             [dependencies]
@@ -516,6 +521,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
             &format!(
                 r#"{}
 [package]
+edition = "2015"
 name = "bar"
 version = "0.2.0"
 authors = []
@@ -543,6 +549,7 @@ fn inherit_from_own_undefined_field() {
             [package]
             name = "foo"
             version = "1.2.5"
+            edition = "2015"
             authors = ["rustaceans"]
             description.workspace = true
 
@@ -589,6 +596,7 @@ fn inherited_dependencies_union_features() {
             [package]
             name = "bar"
             version = "0.2.0"
+            edition = "2015"
             authors = []
             [dependencies]
             dep = { workspace = true, features = ["dancy"] }
@@ -813,6 +821,7 @@ fn inherit_dependencies() {
             workspace = ".."
             name = "bar"
             version = "0.2.0"
+            edition = "2015"
             authors = []
             [dependencies]
             dep.workspace = true
@@ -932,6 +941,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
             &format!(
                 r#"{}
 [package]
+edition = "2015"
 name = "bar"
 version = "0.2.0"
 authors = []
@@ -970,6 +980,7 @@ fn inherit_target_dependencies() {
             workspace = ".."
             name = "bar"
             version = "0.2.0"
+            edition = "2015"
             authors = []
             [target.'cfg(unix)'.dependencies]
             dep.workspace = true
@@ -1020,6 +1031,7 @@ fn inherit_dependency_override_optional() {
             workspace = ".."
             name = "bar"
             version = "0.2.0"
+            edition = "2015"
             authors = []
             [dependencies]
             dep = { workspace = true, optional = true }
@@ -1057,6 +1069,7 @@ fn inherit_dependency_features() {
             [package]
             name = "bar"
             version = "0.2.0"
+            edition = "2015"
             authors = []
             [dependencies]
             dep = { workspace = true, features = ["fancy"] }
@@ -1131,6 +1144,7 @@ fn inherit_detailed_dependencies() {
             workspace = ".."
             name = "bar"
             version = "0.2.0"
+            edition = "2015"
             authors = []
             [dependencies]
             detailed.workspace = true
@@ -1173,6 +1187,7 @@ fn inherit_path_dependencies() {
             workspace = ".."
             name = "bar"
             version = "0.2.0"
+            edition = "2015"
             authors = []
             [dependencies]
             dep.workspace = true
@@ -1219,6 +1234,7 @@ fn error_workspace_false() {
             name = "bar"
             workspace = ".."
             version = "1.2.3"
+            edition = "2015"
             authors = ["rustaceans"]
             description = { workspace = false }
         "#,
@@ -1232,9 +1248,9 @@ fn error_workspace_false() {
         .with_stderr(
             "\
 [ERROR] `workspace` cannot be false
- --> Cargo.toml:7:41
+ --> Cargo.toml:8:41
   |
-7 |             description = { workspace = false }
+8 |             description = { workspace = false }
   |                                         ^^^^^
   |
 ",
@@ -1255,6 +1271,7 @@ fn error_workspace_dependency_looked_for_workspace_itself() {
             [package]
             name = "bar"
             version = "1.2.3"
+            edition = "2015"
 
             [dependencies]
             dep.workspace = true
@@ -1309,6 +1326,7 @@ fn error_malformed_workspace_root() {
             name = "bar"
             workspace = ".."
             version = "1.2.3"
+            edition = "2015"
             authors = ["rustaceans"]
         "#,
         )
@@ -1346,6 +1364,7 @@ fn error_no_root_workspace() {
             name = "bar"
             workspace = ".."
             version = "1.2.3"
+            edition = "2015"
             authors = ["rustaceans"]
             description.workspace = true
         "#,
@@ -1391,6 +1410,7 @@ fn error_inherit_unspecified_dependency() {
             name = "bar"
             workspace = ".."
             version = "1.2.3"
+            edition = "2015"
             authors = ["rustaceans"]
             [dependencies]
             foo.workspace = true
@@ -1433,6 +1453,7 @@ fn warn_inherit_def_feat_true_member_def_feat_false() {
             [package]
             name = "bar"
             version = "0.2.0"
+            edition = "2015"
             authors = []
             [dependencies]
             dep = { workspace = true, default-features = false }
@@ -1481,6 +1502,7 @@ fn warn_inherit_simple_member_def_feat_false() {
             [package]
             name = "bar"
             version = "0.2.0"
+            edition = "2015"
             authors = []
             [dependencies]
             dep = { workspace = true, default-features = false }
@@ -1529,6 +1551,7 @@ fn inherit_def_feat_false_member_def_feat_true() {
             [package]
             name = "bar"
             version = "0.2.0"
+            edition = "2015"
             authors = []
             [dependencies]
             dep = { workspace = true, default-features = true }
@@ -1575,6 +1598,7 @@ fn cannot_inherit_in_patch() {
             [package]
             name = "foo"
             version = "0.2.0"
+            edition = "2015"
 
             [patch.crates-io]
             bar.workspace = true
@@ -1621,6 +1645,7 @@ fn warn_inherit_unused_manifest_key_dep() {
             [package]
             name = "bar"
             version = "0.2.0"
+            edition = "2015"
             authors = []
 
             [dependencies]
@@ -1661,6 +1686,7 @@ fn warn_unused_workspace_package_field() {
 
             [package]
             name = "foo"
+            edition = "2015"
         "#,
         )
         .file("src/main.rs", "fn main() {}")

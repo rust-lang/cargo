@@ -109,6 +109,7 @@ fn rebuild_sub_package_then_while_package() {
                 name = "foo"
                 authors = []
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies.a]
                 path = "a"
@@ -124,6 +125,7 @@ fn rebuild_sub_package_then_while_package() {
                 name = "a"
                 authors = []
                 version = "0.0.1"
+                edition = "2015"
                 [dependencies.b]
                 path = "../b"
             "#,
@@ -191,6 +193,7 @@ fn changing_lib_features_caches_targets() {
                 name = "foo"
                 authors = []
                 version = "0.0.1"
+                edition = "2015"
 
                 [features]
                 foo = []
@@ -240,6 +243,7 @@ fn changing_profiles_caches_targets() {
                 name = "foo"
                 authors = []
                 version = "0.0.1"
+                edition = "2015"
 
                 [profile.dev]
                 panic = "abort"
@@ -302,6 +306,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
                 [package]
                 name    = "dep_crate"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [features]
@@ -327,6 +332,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
                 [package]
                 name    = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -350,6 +356,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
                 [package]
                 name    = "b"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -462,6 +469,7 @@ fn changing_bin_features_caches_targets() {
                 name = "foo"
                 authors = []
                 version = "0.0.1"
+                edition = "2015"
 
                 [features]
                 foo = []
@@ -573,6 +581,7 @@ fn no_rebuild_transitive_target_deps() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -589,6 +598,7 @@ fn no_rebuild_transitive_target_deps() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [target.foo.dependencies]
@@ -602,6 +612,7 @@ fn no_rebuild_transitive_target_deps() {
                 [package]
                 name = "b"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -637,6 +648,7 @@ fn rerun_if_changed_in_dep() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -650,6 +662,7 @@ fn rerun_if_changed_in_dep() {
                 [package]
                 name = "a"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
             "#,
@@ -679,6 +692,7 @@ fn same_build_dir_cached_packages() {
                 [package]
                 name = "a1"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 [dependencies]
                 b = { path = "../b" }
@@ -691,6 +705,7 @@ fn same_build_dir_cached_packages() {
                 [package]
                 name = "a2"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 [dependencies]
                 b = { path = "../b" }
@@ -703,6 +718,7 @@ fn same_build_dir_cached_packages() {
                 [package]
                 name = "b"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 [dependencies]
                 c = { path = "../c" }
@@ -715,6 +731,7 @@ fn same_build_dir_cached_packages() {
                 [package]
                 name = "c"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 [dependencies]
                 d = { path = "../d" }
@@ -765,6 +782,7 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -795,6 +813,7 @@ fn rebuild_if_build_artifacts_move_forward_in_time() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -833,6 +852,7 @@ fn rebuild_if_environment_changes() {
                 name = "foo"
                 description = "old desc"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
             "#,
         )
@@ -864,6 +884,7 @@ fn rebuild_if_environment_changes() {
             name = "foo"
             description = "new desc"
             version = "0.0.1"
+            edition = "2015"
             authors = []
         "#,
     );
@@ -891,6 +912,7 @@ fn no_rebuild_when_rename_dir() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -938,6 +960,7 @@ fn unused_optional_dep() {
                 name = "p"
                 authors = []
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = "bar" }
@@ -952,6 +975,7 @@ fn unused_optional_dep() {
                 [package]
                 name = "bar"
                 version = "0.1.1"
+                edition = "2015"
                 authors = []
 
                 [dev-dependencies]
@@ -965,6 +989,7 @@ fn unused_optional_dep() {
                 [package]
                 name = "baz"
                 version = "0.1.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -991,6 +1016,7 @@ fn path_dev_dep_registry_updates() {
                 name = "p"
                 authors = []
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = "bar" }
@@ -1003,6 +1029,7 @@ fn path_dev_dep_registry_updates() {
                 [package]
                 name = "bar"
                 version = "0.1.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1019,6 +1046,7 @@ fn path_dev_dep_registry_updates() {
                 [package]
                 name = "baz"
                 version = "0.1.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1053,6 +1081,7 @@ fn change_panic_mode() {
                 [package]
                 name = "baz"
                 version = "0.1.1"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -1078,6 +1107,7 @@ fn dont_rebuild_based_on_plugins() {
                 [package]
                 name = "bar"
                 version = "0.1.1"
+                edition = "2015"
 
                 [workspace]
                 members = ['baz']
@@ -1093,6 +1123,7 @@ fn dont_rebuild_based_on_plugins() {
                 [package]
                 name = "proc-macro-thing"
                 version = "0.1.1"
+                edition = "2015"
 
                 [lib]
                 proc-macro = true
@@ -1108,6 +1139,7 @@ fn dont_rebuild_based_on_plugins() {
                 [package]
                 name = "baz"
                 version = "0.1.1"
+                edition = "2015"
 
                 [dependencies]
                 qux = { path = '../qux' }
@@ -1135,6 +1167,7 @@ fn reuse_workspace_lib() {
                 [package]
                 name = "bar"
                 version = "0.1.1"
+                edition = "2015"
 
                 [workspace]
 
@@ -1169,6 +1202,7 @@ fn reuse_shared_build_dep() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 shared = {path = "shared"}
@@ -1186,6 +1220,7 @@ fn reuse_shared_build_dep() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
 
                 [build-dependencies]
                 shared = { path = "../shared" }
@@ -1261,6 +1296,7 @@ fn update_dependency_mtime_does_not_rebuild() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = "bar" }
@@ -1336,6 +1372,7 @@ fn fingerprint_cleaner_does_not_rebuild() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = "bar" }
@@ -1398,6 +1435,7 @@ fn reuse_panic_build_dep_test() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [build-dependencies]
                 bar = { path = "bar" }
@@ -1443,6 +1481,7 @@ fn reuse_panic_pm() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = "bar" }
@@ -1461,6 +1500,7 @@ fn reuse_panic_pm() {
                 [package]
                 name = "somepm"
                 version = "0.0.1"
+                edition = "2015"
 
                 [lib]
                 proc-macro = true
@@ -1504,6 +1544,7 @@ fn bust_patched_dep() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 registry2 = "0.1.0"
@@ -1575,6 +1616,7 @@ fn rebuild_on_mid_build_file_modification() {
                 [package]
                 name = "root"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -1597,6 +1639,7 @@ fn rebuild_on_mid_build_file_modification() {
                 [package]
                 name = "proc_macro_dep"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -1835,6 +1878,7 @@ fn simulated_docker_deps_stay_cached() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             pathdep = { path = "pathdep" }
@@ -1953,6 +1997,7 @@ fn metadata_change_invalidates() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
             "#,
         )
         .file("src/lib.rs", "")
@@ -2026,6 +2071,7 @@ fn rename_with_path_deps() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2039,6 +2085,7 @@ fn rename_with_path_deps() {
                 [package]
                 name = "a"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2052,6 +2099,7 @@ fn rename_with_path_deps() {
                 [package]
                 name = "b"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
             "#,
         )
@@ -2083,6 +2131,7 @@ fn move_target_directory_with_path_deps() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -2095,6 +2144,7 @@ fn move_target_directory_with_path_deps() {
                 [package]
                 name = "a"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
             "#,
         )
@@ -2535,6 +2585,7 @@ fn lld_is_fresh() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [lib]
                 crate-type = ["dylib"]
@@ -2558,6 +2609,7 @@ fn env_in_code_causes_rebuild() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
             "#,
         )
         .file(
@@ -2642,6 +2694,7 @@ fn env_build_script_no_rebuild() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
             "#,
         )
         .file(
@@ -2758,6 +2811,7 @@ fn verify_source_before_recompile() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "0.1.0"

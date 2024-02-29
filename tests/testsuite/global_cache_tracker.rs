@@ -35,6 +35,7 @@ fn basic_foo_bar_project() -> Project {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"
@@ -253,6 +254,7 @@ fn auto_gc_defaults() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 old = "1.0"
@@ -280,6 +282,7 @@ fn auto_gc_defaults() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             new = "1.0"
@@ -327,6 +330,7 @@ fn auto_gc_config() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 old = "1.0"
@@ -354,6 +358,7 @@ fn auto_gc_config() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             new = "1.0"
@@ -434,6 +439,7 @@ fn auto_gc_index() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
         "#,
     );
     p.cargo("check -Zgc")
@@ -474,6 +480,7 @@ fn auto_gc_git() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = {{ git = '{}' }}
@@ -547,6 +554,7 @@ fn auto_gc_various_commands() {
                     [package]
                     name = "foo"
                     version = "0.1.0"
+                    edition = "2015"
 
                     [dependencies]
                     bar = "1.0"
@@ -632,6 +640,7 @@ fn updates_last_use_various_commands() {
                     [package]
                     name = "foo"
                     version = "0.1.0"
+                    edition = "2015"
 
                     [dependencies]
                     bar = "1.0"
@@ -680,6 +689,7 @@ fn both_git_and_http_index_cleans() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 from_git = "1.0"
@@ -805,6 +815,7 @@ fn tracks_sizes() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 dep1 = "1.0"
@@ -1143,6 +1154,7 @@ fn package_cache_lock_during_build() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"
@@ -1174,6 +1186,7 @@ fn package_cache_lock_during_build() {
                 [package]
                 name = "foo2"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"
@@ -1323,6 +1336,7 @@ fn clean_syncs_missing_files() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"
@@ -1441,6 +1455,7 @@ fn clean_max_git_age() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 git_a = {{ git = '{}' }}
@@ -1635,6 +1650,7 @@ fn clean_max_git_size() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = {{ git = '{}' }}
@@ -1819,6 +1835,7 @@ fn handles_missing_git_db() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = {{ git = '{}' }}
@@ -1885,6 +1902,7 @@ fn compatible_with_older_cargo() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 old = "1.0"
@@ -1915,6 +1933,7 @@ fn compatible_with_older_cargo() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             new = "1.0"
@@ -1941,6 +1960,7 @@ fn compatible_with_older_cargo() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             new = "1.0"

@@ -50,6 +50,7 @@ fn clean_multiple_packages() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.d1]
@@ -216,6 +217,7 @@ fn clean_release() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -261,6 +263,7 @@ fn clean_doc() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -293,6 +296,7 @@ fn build_script() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
             "#,
@@ -348,6 +352,7 @@ fn clean_git() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -373,6 +378,7 @@ fn registry() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -398,6 +404,7 @@ fn clean_verbose() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
 
                 [dependencies]
                 bar = "0.1"
@@ -439,6 +446,7 @@ fn clean_remove_rlib_rmeta() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
             "#,
         )
         .file("src/lib.rs", "")
@@ -468,6 +476,7 @@ fn package_cleans_all_the_things() {
                     [package]
                     name = "foo-bar"
                     version = "0.1.0"
+                    edition = "2015"
 
                     [lib]
                     crate-type = ["{}"]
@@ -588,6 +597,7 @@ fn clean_spec_version() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             bar1 = {version="0.1", package="bar"}
@@ -643,6 +653,7 @@ fn clean_spec_partial_version() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             bar1 = {version="0.1", package="bar"}
@@ -698,6 +709,7 @@ fn clean_spec_partial_version_ambiguous() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             bar1 = {version="0.1", package="bar"}
@@ -757,6 +769,7 @@ fn clean_spec_reserved() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"
@@ -803,6 +816,7 @@ fn clean_dry_run() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "1.0"

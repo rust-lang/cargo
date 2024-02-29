@@ -55,6 +55,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -101,6 +102,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -128,6 +130,7 @@ fn totally_wild_checksums_works() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -194,6 +197,7 @@ fn wrong_checksum_is_an_error() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -257,6 +261,7 @@ fn unlisted_checksum_is_bad_if_we_calculate() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -323,6 +328,7 @@ fn listed_checksum_bad_if_we_cannot_compute() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -389,6 +395,7 @@ fn current_lockfile_format() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -449,6 +456,7 @@ dependencies = [
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -496,6 +504,7 @@ fn locked_correct_error() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -548,6 +557,7 @@ dependencies = [
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -607,6 +617,7 @@ dependencies = [
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -622,6 +633,7 @@ dependencies = [
                 [package]
                 name = "a"
                 version = "0.2.0"
+                edition = "2015"
             "#,
         )
         .file("a/src/lib.rs", "")
@@ -673,6 +685,7 @@ dependencies = [
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                     authors = []
 
                     [dependencies]
@@ -700,6 +713,7 @@ fn lock_from_the_future() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
             "#,
         )
@@ -752,6 +766,7 @@ dependencies = [
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -776,6 +791,7 @@ fn same_name_version_different_sources() {
                     [package]
                     name = "foo"
                     version = "0.1.0"
+                    edition = "2015"
                 "#,
             )
             .file("src/lib.rs", "")
@@ -820,6 +836,7 @@ source = "git+{url}#{sha}"
                     [package]
                     name = "foo"
                     version = "0.1.0"
+                    edition = "2015"
 
                     [dependencies]
                     foo = "0.1.0"
@@ -848,6 +865,7 @@ fn bad_data_in_lockfile_error_meg() {
                 [package]
                 name = "test"
                 version = "0.0.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = "*"
@@ -899,6 +917,7 @@ fn next_version_is_always_unstable() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                 "#,
             ),
         )
@@ -944,6 +963,7 @@ fn v4_cannot_be_created_from_scratch() {
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
                 "#,
             ),
         )
@@ -1020,6 +1040,7 @@ dependencies = [
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
 
                     [dependencies]
                     dep1 = {{ git = '{url}', {ref_kind} = '{git_ref}' }}
@@ -1112,6 +1133,7 @@ dependencies = [
                     [package]
                     name = "foo"
                     version = "0.0.1"
+                    edition = "2015"
 
                     [dependencies]
                     dep1 = {{ git = '{url}', {ref_kind} = '{git_ref}' }}
@@ -1206,6 +1228,7 @@ dependencies = [
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
 
             [dependencies]
             bar = "0.1.0"
@@ -1256,6 +1279,7 @@ dependencies = [
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 rust-version = "{msrv}"
 
                 [dependencies]

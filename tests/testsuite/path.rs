@@ -19,6 +19,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.bar]
@@ -35,6 +36,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
 
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.baz]
@@ -118,6 +120,7 @@ fn cargo_compile_with_root_dev_deps() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dev-dependencies.bar]
@@ -160,6 +163,7 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dev-dependencies.bar]
@@ -208,6 +212,7 @@ fn cargo_compile_with_transitive_dev_deps() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.bar]
@@ -224,6 +229,7 @@ fn cargo_compile_with_transitive_dev_deps() {
 
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dev-dependencies.baz]
@@ -269,6 +275,7 @@ fn no_rebuild_dependency() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.bar]
@@ -317,6 +324,7 @@ fn deep_dependencies_trigger_rebuild() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.bar]
@@ -331,6 +339,7 @@ fn deep_dependencies_trigger_rebuild() {
 
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [lib]
@@ -404,6 +413,7 @@ fn no_rebuild_two_deps() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.bar]
@@ -420,6 +430,7 @@ fn no_rebuild_two_deps() {
 
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [lib]
@@ -456,6 +467,7 @@ fn nested_deps_recompile() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.bar]
@@ -501,6 +513,7 @@ fn error_message_for_missing_manifest() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.bar]
@@ -558,6 +571,7 @@ fn override_relative() {
 
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dependencies.bar]
@@ -594,6 +608,7 @@ fn override_self() {
 
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dependencies.bar]
@@ -620,6 +635,7 @@ fn override_path_dep() {
                  [package]
                  name = "p1"
                  version = "0.5.0"
+                 edition = "2015"
                  authors = []
 
                  [dependencies.p2]
@@ -648,6 +664,7 @@ fn override_path_dep() {
 
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = ["wycats@example.com"]
 
                     [dependencies.p2]
@@ -673,6 +690,7 @@ fn path_dep_build_cmd() {
 
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
 
                 [dependencies.bar]
@@ -689,6 +707,7 @@ fn path_dep_build_cmd() {
 
                 name = "bar"
                 version = "0.5.0"
+                edition = "2015"
                 authors = ["wycats@example.com"]
                 build = "build.rs"
 
@@ -747,6 +766,7 @@ fn dev_deps_no_rebuild_lib() {
                 [package]
                     name = "foo"
                     version = "0.5.0"
+                    edition = "2015"
                     authors = []
 
                 [dev-dependencies.bar]
@@ -797,6 +817,7 @@ fn custom_target_no_rebuild() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
                 [dependencies]
                 a = { path = "a" }
@@ -813,6 +834,7 @@ fn custom_target_no_rebuild() {
                 [package]
                 name = "b"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
                 [dependencies]
                 a = { path = "../a" }
@@ -855,6 +877,7 @@ fn override_and_depend() {
                 [package]
                 name = "a1"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
                 [dependencies]
                 a2 = { path = "../a2" }
@@ -869,6 +892,7 @@ fn override_and_depend() {
                 [package]
                 name = "b"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
                 [dependencies]
                 a1 = { path = "../a/a1" }
@@ -930,6 +954,7 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
                 [package]
                 name = "top"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -945,6 +970,7 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [dependencies]
@@ -964,6 +990,7 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
             [package]
             name = "foo"
             version = "0.5.0"
+            edition = "2015"
             authors = []
 
             [dependencies]
@@ -996,6 +1023,7 @@ fn workspace_produces_rlib() {
                 [package]
                 name = "top"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
 
                 [workspace]
@@ -1025,6 +1053,7 @@ fn deep_path_error() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
             [dependencies]
             a = {path="a"}
             "#,
@@ -1036,6 +1065,7 @@ fn deep_path_error() {
              [package]
              name = "a"
              version = "0.1.0"
+             edition = "2015"
              [dependencies]
              b = {path="../b"}
             "#,
@@ -1047,6 +1077,7 @@ fn deep_path_error() {
              [package]
              name = "b"
              version = "0.1.0"
+             edition = "2015"
              [dependencies]
              c = {path="../c"}
             "#,
@@ -1087,6 +1118,7 @@ fn catch_tricky_cycle() {
                 [package]
                 name = "message"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dev-dependencies]
                 test = { path = "test" }
@@ -1099,6 +1131,7 @@ fn catch_tricky_cycle() {
                 [package]
                 name = "tangle"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 message = { path = ".." }
@@ -1112,6 +1145,7 @@ fn catch_tricky_cycle() {
                 [package]
                 name = "snapshot"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 ledger = { path = "../ledger" }
@@ -1124,6 +1158,7 @@ fn catch_tricky_cycle() {
                 [package]
                 name = "ledger"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 tangle = { path = "../tangle" }
@@ -1136,6 +1171,7 @@ fn catch_tricky_cycle() {
                 [package]
                 name = "test"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 snapshot = { path = "../snapshot" }

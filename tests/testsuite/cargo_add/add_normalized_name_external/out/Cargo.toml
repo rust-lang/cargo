@@ -3,6 +3,7 @@
 [package]
 name = "cargo-list-test-fixture"
 version = "0.0.0"
+edition = "2015"
 
 [dependencies]
 inflector = "0.11.4"

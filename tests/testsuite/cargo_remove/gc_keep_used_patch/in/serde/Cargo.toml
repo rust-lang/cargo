@@ -3,6 +3,7 @@
 [package]
 name = "serde"
 version = "1.0.0"
+edition = "2015"
 
 [dependencies]
 serde_derive = { path = "../serde_derive" }

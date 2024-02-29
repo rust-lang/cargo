@@ -99,6 +99,7 @@ fn simple() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -144,6 +145,7 @@ fn simple_publish_with_http() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -186,6 +188,7 @@ fn simple_publish_with_asymmetric() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -225,6 +228,7 @@ fn old_token_location() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -282,6 +286,7 @@ fn simple_with_index() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -327,6 +332,7 @@ fn git_deps() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -365,6 +371,7 @@ fn path_dependency_no_version() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -405,6 +412,7 @@ fn unpublishable_crate() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -440,6 +448,7 @@ fn dont_publish_dirty() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -482,6 +491,7 @@ fn publish_clean() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -530,6 +540,7 @@ fn publish_in_sub_repo() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -579,6 +590,7 @@ fn publish_when_ignored() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -629,6 +641,7 @@ fn ignore_when_crate_ignored() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -676,6 +689,7 @@ fn new_crate_rejected() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -707,6 +721,7 @@ fn dry_run() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -747,6 +762,7 @@ fn registry_not_in_publish_list() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -780,6 +796,7 @@ fn publish_empty_list() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -817,6 +834,7 @@ fn publish_allowed_registry() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -877,6 +895,7 @@ fn publish_implicitly_to_only_allowed_registry() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -938,6 +957,7 @@ fn publish_failed_with_index_and_only_allowed_registry() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -974,6 +994,7 @@ fn publish_fail_with_no_registry_specified() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -1006,6 +1027,7 @@ fn block_publish_no_registry() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -1039,6 +1061,7 @@ fn publish_with_crates_io_explicit() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -1092,6 +1115,7 @@ fn publish_with_select_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -1143,6 +1167,7 @@ fn publish_with_all_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -1194,6 +1219,7 @@ fn publish_with_no_default_features() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -1230,6 +1256,7 @@ fn publish_with_patch() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -1337,6 +1364,7 @@ fn publish_checks_for_token_before_verify() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -1577,6 +1605,7 @@ fn publish_dev_dep_no_version() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
             authors = []
             license = "MIT"
             description = "foo"
@@ -1639,6 +1668,7 @@ You may press ctrl-c [..]
             &format!(
                 r#"{}
 [package]
+edition = "2015"
 name = "foo"
 version = "0.1.0"
 authors = []
@@ -1672,6 +1702,7 @@ fn credentials_ambiguous_filename() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -1727,6 +1758,7 @@ fn index_requires_token() {
             [package]
             name = "foo"
             version = "0.0.1"
+            edition = "2015"
             authors = []
             license = "MIT"
             description = "foo"
@@ -1757,6 +1789,7 @@ fn cratesio_source_replacement() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -1788,6 +1821,7 @@ fn publish_with_missing_readme() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -1843,6 +1877,7 @@ fn api_error_json() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -1891,6 +1926,7 @@ fn api_error_200() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -1939,6 +1975,7 @@ fn api_error_code() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -1991,6 +2028,7 @@ fn api_curl_error() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -2044,6 +2082,7 @@ fn api_other_error() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -2098,6 +2137,7 @@ fn in_package_workspace() {
                 [package]
                 name = "li"
                 version = "0.0.1"
+                edition = "2015"
                 rust-version = "1.69"
                 description = "li"
                 license = "MIT"
@@ -2139,6 +2179,7 @@ fn with_duplicate_spec_in_members() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 [workspace]
                 resolver = "2"
                 members = ["li","bar"]
@@ -2152,6 +2193,7 @@ fn with_duplicate_spec_in_members() {
                 [package]
                 name = "li"
                 version = "0.0.1"
+                edition = "2015"
                 description = "li"
                 license = "MIT"
             "#,
@@ -2163,6 +2205,7 @@ fn with_duplicate_spec_in_members() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 description = "bar"
                 license = "MIT"
             "#,
@@ -2190,6 +2233,7 @@ fn in_package_workspace_with_members_with_features_old() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 [workspace]
                 members = ["li"]
             "#,
@@ -2201,6 +2245,7 @@ fn in_package_workspace_with_members_with_features_old() {
                 [package]
                 name = "li"
                 version = "0.0.1"
+                edition = "2015"
                 rust-version = "1.69"
                 description = "li"
                 license = "MIT"
@@ -2249,6 +2294,7 @@ fn in_virtual_workspace() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -2285,6 +2331,7 @@ fn in_virtual_workspace_with_p() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -2297,6 +2344,7 @@ fn in_virtual_workspace_with_p() {
                 [package]
                 name = "li"
                 version = "0.0.1"
+                edition = "2015"
                 rust-version = "1.69"
                 description = "li"
                 license = "MIT"
@@ -2484,6 +2532,7 @@ fn http_api_not_noop() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -2520,6 +2569,7 @@ You may press ctrl-c [..]
                 [project]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -2562,6 +2612,7 @@ fn wait_for_first_publish() {
                 [package]
                 name = "delay"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -2602,6 +2653,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 [dependencies]
                 delay = "0.0.1"
@@ -2654,6 +2706,7 @@ fn wait_for_first_publish_underscore() {
                 [package]
                 name = "delay_with_underscore"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -2701,6 +2754,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 [dependencies]
                 delay_with_underscore = "0.0.1"
@@ -2753,6 +2807,7 @@ fn wait_for_subsequent_publish() {
                 [package]
                 name = "delay"
                 version = "0.0.2"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -2793,6 +2848,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 [dependencies]
                 delay = "0.0.2"
@@ -2816,6 +2872,7 @@ fn skip_wait_for_publish() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -2862,6 +2919,7 @@ fn timeout_waiting_for_publish() {
                 [package]
                 name = "delay"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -2919,6 +2977,7 @@ fn wait_for_git_publish() {
                 [package]
                 name = "delay"
                 version = "0.0.2"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
@@ -2953,6 +3012,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 [dependencies]
                 delay = "0.0.2"
@@ -2976,6 +3036,7 @@ fn invalid_token() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 license = "MIT"
                 description = "foo"
