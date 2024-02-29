@@ -456,9 +456,7 @@ fn build_script_override_feature_gate() {
         .build();
 
     p.cargo("check")
-        .with_stderr_contains(
-            "warning: target config[..]rustc-check-cfg[..] requires -Zcheck-cfg flag",
-        )
+        .with_stderr_does_not_contain("warning: [..]rustc-check-cfg[..]")
         .run();
 }
 
@@ -540,7 +538,7 @@ fn build_script_feature_gate() {
         .build();
 
     p.cargo("check")
-        .with_stderr_contains("warning[..]cargo::rustc-check-cfg requires -Zcheck-cfg flag")
+        .with_stderr_does_not_contain("warning: [..]rustc-check-cfg[..]")
         .with_status(0)
         .run();
 }

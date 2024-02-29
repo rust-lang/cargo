@@ -207,10 +207,8 @@ fn parse_links_overrides(
                         let list = value.list(key)?;
                         output.check_cfgs.extend(list.iter().map(|v| v.0.clone()));
                     } else {
-                        config.shell().warn(format!(
-                            "target config `{}.{}` requires -Zcheck-cfg flag",
-                            target_key, key
-                        ))?;
+                        // silently ignoring the instruction to try to
+                        // minimise MSRV annoyance when stabilizing -Zcheck-cfg
                     }
                 }
                 "rustc-env" => {

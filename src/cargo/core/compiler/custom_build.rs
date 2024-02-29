@@ -915,10 +915,8 @@ impl BuildOutput {
                     if extra_check_cfg {
                         check_cfgs.push(value.to_string());
                     } else {
-                        warnings.push(format!(
-                            "{}{} requires -Zcheck-cfg flag",
-                            syntax_prefix, key
-                        ));
+                        // silently ignoring the instruction to try to
+                        // minimise MSRV annoyance when stabilizing -Zcheck-cfg
                     }
                 }
                 "rustc-env" => {
@@ -1076,9 +1074,6 @@ fn prepare_metabuild(cx: &Context<'_, '_>, unit: &Unit, deps: &[String]) -> Carg
                 .map(|d| d.unit.target.crate_name())
         })
         .collect();
-    for dep in &meta_deps {
-        output.push(format!("use {};\n", dep));
-    }
     output.push("fn main() {\n".to_string());
     for dep in &meta_deps {
         output.push(format!("    {}::metabuild();\n", dep));
