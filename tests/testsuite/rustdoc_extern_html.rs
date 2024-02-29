@@ -258,13 +258,9 @@ fn alt_registry() {
         .run();
     let queen = p.read_file("target/doc/foo/fn.queen.html");
     assert!(queen.contains(r#"href="https://example.com/bar/1.0.0/bar/struct.Queen.html""#));
-    // The king example fails to link. Rustdoc seems to want the origin crate
-    // name (baz) for re-exports. There are many issues in the issue tracker
-    // for rustdoc re-exports, so I'm not sure, but I think this is maybe a
-    // rustdoc issue. Alternatively, Cargo could provide mappings for all
-    // transitive dependencies to fix this.
+
     let king = p.read_file("target/doc/foo/fn.king.html");
-    assert!(king.contains(r#"-&gt; King"#));
+    assert!(king.contains(r#"href="https://example.com/baz/1.0.0/baz/struct.King.html""#));
 
     let gold = p.read_file("target/doc/foo/fn.gold.html");
     assert!(gold.contains(r#"href="https://docs.rs/grimm/1.0.0/grimm/struct.Gold.html""#));
@@ -413,13 +409,9 @@ fn alt_sparse_registry() {
         .run();
     let queen = p.read_file("target/doc/foo/fn.queen.html");
     assert!(queen.contains(r#"href="https://example.com/bar/1.0.0/bar/struct.Queen.html""#));
-    // The king example fails to link. Rustdoc seems to want the origin crate
-    // name (baz) for re-exports. There are many issues in the issue tracker
-    // for rustdoc re-exports, so I'm not sure, but I think this is maybe a
-    // rustdoc issue. Alternatively, Cargo could provide mappings for all
-    // transitive dependencies to fix this.
+
     let king = p.read_file("target/doc/foo/fn.king.html");
-    assert!(king.contains(r#"-&gt; King"#));
+    assert!(king.contains(r#"href="https://example.com/baz/1.0.0/baz/struct.King.html""#));
 
     let gold = p.read_file("target/doc/foo/fn.gold.html");
     assert!(gold.contains(r#"href="https://docs.rs/grimm/1.0.0/grimm/struct.Gold.html""#));

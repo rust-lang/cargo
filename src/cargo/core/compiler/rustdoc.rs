@@ -102,6 +102,63 @@ impl hash::Hash for RustdocExternMap {
     }
 }
 
+/// Recursively generate html root url for all units and their children.
+///
+/// This is needed because in case there is a reexport of foreign reexport, you
+/// need to have information about grand-children deps level (deps of your deps).
+fn build_all_urls(
+    build_runner: &BuildRunner<'_, '_>,
+    rustdoc: &mut ProcessBuilder,
+    unit: &Unit,
+    name2url: &HashMap<&String, Url>,
+    map: &RustdocExternMap,
+    unstable_opts: &mut bool,
+) {
+    for dep in build_runner.unit_deps(unit) {
+        if !dep.unit.target.is_linkable() || dep.unit.mode.is_doc() {
+            continue;
+        }
+        for (registry, location) in &map.registries {
+            let sid = dep.unit.pkg.package_id().source_id();
+            let matches_registry = || -> bool {
+                if !sid.is_registry() {
+                    return false;
+                }
+                if sid.is_crates_io() {
+                    return registry == CRATES_IO_REGISTRY;
+                }
+                if let Some(index_url) = name2url.get(registry) {
+                    return index_url == sid.url();
+                }
+                false
+            };
+            if matches_registry() {
+                let mut url = location.clone();
+                if !url.contains("{pkg_name}") && !url.contains("{version}") {
+                    if !url.ends_with('/') {
+                        url.push('/');
+                    }
+                    url.push_str("{pkg_name}/{version}/");
+                }
+                let url = url
+                    .replace("{pkg_name}", &dep.unit.pkg.name())
+                    .replace("{version}", &dep.unit.pkg.version().to_string());
+                rustdoc.arg("--extern-html-root-url");
+                rustdoc.arg(format!("{}={}", dep.unit.target.crate_name(), url));
+                *unstable_opts = true;
+            }
+        }
+        build_all_urls(
+            build_runner,
+            rustdoc,
+            &dep.unit,
+            name2url,
+            map,
+            unstable_opts,
+        );
+    }
+}
+
 /// Adds unstable flag [`--extern-html-root-url`][1] to the given `rustdoc`
 /// invocation. This is for unstable feature [`-Zrustdoc-map`][2].
 ///
@@ -135,40 +192,14 @@ pub fn add_root_urls(
             }
         })
         .collect();
-    for dep in build_runner.unit_deps(unit) {
-        if dep.unit.target.is_linkable() && !dep.unit.mode.is_doc() {
-            for (registry, location) in &map.registries {
-                let sid = dep.unit.pkg.package_id().source_id();
-                let matches_registry = || -> bool {
-                    if !sid.is_registry() {
-                        return false;
-                    }
-                    if sid.is_crates_io() {
-                        return registry == CRATES_IO_REGISTRY;
-                    }
-                    if let Some(index_url) = name2url.get(registry) {
-                        return index_url == sid.url();
-                    }
-                    false
-                };
-                if matches_registry() {
-                    let mut url = location.clone();
-                    if !url.contains("{pkg_name}") && !url.contains("{version}") {
-                        if !url.ends_with('/') {
-                            url.push('/');
-                        }
-                        url.push_str("{pkg_name}/{version}/");
-                    }
-                    let url = url
-                        .replace("{pkg_name}", &dep.unit.pkg.name())
-                        .replace("{version}", &dep.unit.pkg.version().to_string());
-                    rustdoc.arg("--extern-html-root-url");
-                    rustdoc.arg(format!("{}={}", dep.unit.target.crate_name(), url));
-                    unstable_opts = true;
-                }
-            }
-        }
-    }
+    build_all_urls(
+        build_runner,
+        rustdoc,
+        unit,
+        &name2url,
+        map,
+        &mut unstable_opts,
+    );
     let std_url = match &map.std {
         None | Some(RustdocExternMode::Remote) => None,
         Some(RustdocExternMode::Local) => {
