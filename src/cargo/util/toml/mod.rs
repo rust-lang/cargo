@@ -9,6 +9,7 @@ use crate::AlreadyPrintedError;
 use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
 use cargo_util::paths;
+use cargo_util_schemas::core::PartialVersion;
 use cargo_util_schemas::manifest;
 use cargo_util_schemas::manifest::RustVersion;
 use itertools::Itertools;
@@ -595,12 +596,37 @@ pub fn to_real_manifest(
         }
         edition
     } else {
+        let msrv_edition = if let Some(rust_version) = &rust_version {
+            Edition::ALL
+                .iter()
+                .filter(|e| {
+                    e.first_version()
+                        .map(|e| {
+                            let e = PartialVersion::from(e);
+                            e <= **rust_version
+                        })
+                        .unwrap_or_default()
+                })
+                .max()
+                .copied()
+        } else {
+            None
+        }
+        .unwrap_or_default();
+        let default_edition = Edition::default();
+        let latest_edition = Edition::LATEST_STABLE;
+
+        let tip = if msrv_edition == default_edition {
+            String::new()
+        } else if msrv_edition == latest_edition {
+            format!(" while the latest is {latest_edition}")
+        } else {
+            format!(" while {msrv_edition} is compatible with `rust-version`")
+        };
         warnings.push(format!(
-            "no edition set: defaulting to the {} edition while the latest is {}",
-            Edition::Edition2015,
-            Edition::LATEST_STABLE
+            "no edition set: defaulting to the {default_edition} edition{tip}",
         ));
-        Edition::Edition2015
+        default_edition
     };
     // Add these lines if start a new unstable edition.
     // ```

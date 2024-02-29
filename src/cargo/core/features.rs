@@ -180,9 +180,12 @@ pub type AllowFeatures = BTreeSet<String>;
 /// [`is_stable`]: Edition::is_stable
 /// [`toml::to_real_manifest`]: crate::util::toml::to_real_manifest
 /// [`features!`]: macro.features.html
-#[derive(Clone, Copy, Debug, Hash, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(
+    Default, Clone, Copy, Debug, Hash, PartialOrd, Ord, Eq, PartialEq, Serialize, Deserialize,
+)]
 pub enum Edition {
     /// The 2015 edition
+    #[default]
     Edition2015,
     /// The 2018 edition
     Edition2018,
@@ -199,6 +202,12 @@ impl Edition {
     pub const LATEST_UNSTABLE: Option<Edition> = Some(Edition::Edition2024);
     /// The latest stable edition.
     pub const LATEST_STABLE: Edition = Edition::Edition2021;
+    pub const ALL: &'static [Edition] = &[
+        Self::Edition2015,
+        Self::Edition2018,
+        Self::Edition2021,
+        Self::Edition2024,
+    ];
     /// Possible values allowed for the `--edition` CLI flag.
     ///
     /// This requires a static value due to the way clap works, otherwise I
