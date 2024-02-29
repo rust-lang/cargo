@@ -139,6 +139,35 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     )?;
     verify_dependencies(pkg, &registry, source_ids.original)?;
 
+    // Bail before packaging and uploading if same version already exists in the registry
+
+    let mut source = SourceConfigMap::empty(opts.gctx)?.load(reg_ids.original, &HashSet::new())?;
+
+    let query = Dependency::parse(pkg.name(), Some(&ver), reg_ids.original)?;
+
+    let _lock = opts
+        .gctx
+        .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
+
+    let duplicate_query = loop {
+        match source.query_vec(&query, QueryKind::Exact) {
+            std::task::Poll::Ready(res) => {
+                break res?;
+            }
+            std::task::Poll::Pending => source.block_until_ready()?,
+        }
+    };
+
+    drop(_lock);
+
+    if !duplicate_query.is_empty() {
+        bail!(
+            "crate {} already has version {}. Aborting publish.",
+            pkg.name(),
+            pkg.version()
+        );
+    }
+
     // Prepare a tarball, with a non-suppressible warning if metadata
     // is missing since this is being put online.
     let tarball = ops::package_one(
