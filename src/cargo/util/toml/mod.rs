@@ -597,6 +597,12 @@ pub fn to_real_manifest(
         let rust_version = field_inherit_with(rust_version.clone(), "rust_version", || {
             inherit()?.rust_version()
         })?;
+        Some(rust_version)
+    } else {
+        None
+    };
+
+    if let Some(rust_version) = &rust_version {
         let req = rust_version.to_caret_req();
         if let Some(first_version) = edition.first_version() {
             let unsupported =
@@ -611,10 +617,7 @@ pub fn to_real_manifest(
                 )
             }
         }
-        Some(rust_version)
-    } else {
-        None
-    };
+    }
 
     if package.metabuild.is_some() {
         features.require(Feature::metabuild())?;
