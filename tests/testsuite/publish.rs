@@ -130,6 +130,58 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
     validate_upload_foo();
 }
 
+#[cargo_test]
+fn duplicate_version() {
+    let registry_dupl = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        // test registry doesn't error on duplicate versions, we need to
+        .add_responder("/api/v1/crates/new", move |_req, _server| Response {
+            code: 200,
+            headers: vec![],
+            body: br#"{"errors": [{"detail": "crate version `0.0.1` is already uploaded"}]}"#
+                .to_vec(),
+        })
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish")
+        .replace_crates_io(registry_dupl.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[WARNING] no edition set: defaulting to the 2015 edition while the latest is 2021
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] failed to publish to registry at http://127.0.0.1:41463/
+
+Caused by:
+  the remote server responded with an [ERROR] crate version `0.0.1` is already uploaded
+
+"#]])
+        .run();
+}
+
 // Check that the `token` key works at the root instead of under a
 // `[registry]` table.
 #[cargo_test]
