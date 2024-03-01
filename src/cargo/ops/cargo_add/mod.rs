@@ -639,9 +639,8 @@ fn get_latest_dependency(
 
                     if latest_msrv.version() < latest.version() {
                         gctx.shell().warn(format_args!(
-                            "ignoring `{dependency}@{latest_version}` (which has a rust-version of \
-                             {latest_rust_version}) to satisfy this package's rust-version of \
-                             {rust_version} (use `--ignore-rust-version` to override)",
+                            "\
+ignoring `{dependency}@{latest_version}` (which has a rust-version of {latest_rust_version}) to satisfy this package's rust-version of {rust_version} (use `--ignore-rust-version` to override)",
                             latest_version = latest.version(),
                             latest_rust_version = latest.rust_version().unwrap(),
                             rust_version = spec.rust_version().unwrap(),
