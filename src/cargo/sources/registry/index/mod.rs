@@ -415,15 +415,9 @@ impl<'gctx> RegistryIndex<'gctx> {
         load.prepare()?;
 
         let root = load.assert_index_locked(&self.path);
-        let cache_root = root.join(".cache");
-
-        // See module comment in `registry/mod.rs` for why this is structured
-        // the way it is.
-        let path = make_dep_path(&name.to_lowercase(), false);
         let summaries = ready!(Summaries::parse(
             root,
-            &cache_root,
-            path.as_ref(),
+            &name,
             self.source_id,
             load,
             self.gctx,
@@ -534,26 +528,27 @@ impl Summaries {
     ///    remote HTTP index) and then parse everything in there.
     ///
     /// * `root` --- this is the root argument passed to `load`
-    /// * `cache_root` --- this is the root on the filesystem itself of where
-    ///   to store cache files.
-    /// * `relative` --- this is the file we're loading from cache or the index
-    ///   data
+    /// * `name` --- the name of the package.
     /// * `source_id` --- the registry's SourceId used when parsing JSON blobs
     ///   to create summaries.
     /// * `load` --- the actual index implementation which may be very slow to
     ///   call. We avoid this if we can.
     pub fn parse(
         root: &Path,
-        cache_root: &Path,
-        relative: &Path,
+        name: &str,
         source_id: SourceId,
         load: &mut dyn RegistryData,
         gctx: &GlobalContext,
     ) -> Poll<CargoResult<Option<Summaries>>> {
+        // This is the file we're loading from cache or the index data.
+        // See module comment in `registry/mod.rs` for why this is structured
+        // the way it is.
+        let relative = make_dep_path(&name.to_lowercase(), false);
         // First up, attempt to load the cache. This could fail for all manner
         // of reasons, but consider all of them non-fatal and just log their
         // occurrence in case anyone is debugging anything.
-        let cache_path = cache_root.join(relative);
+        let cache_path = root.join(".cache").join(&relative);
+
         let mut cached_summaries = None;
         let mut index_version = None;
         match fs::read(&cache_path) {
@@ -569,7 +564,7 @@ impl Summaries {
             Err(e) => tracing::debug!("cache missing for {:?} error: {}", relative, e),
         }
 
-        let response = ready!(load.load(root, relative, index_version.as_deref())?);
+        let response = ready!(load.load(root, relative.as_ref(), index_version.as_deref())?);
 
         let bindeps = gctx.cli_unstable().bindeps;
 
