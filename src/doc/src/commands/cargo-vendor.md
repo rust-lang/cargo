@@ -21,6 +21,12 @@ stdout after `cargo vendor` completes the vendoring process.
 You will need to add or redirect it to your Cargo configuration file,
 which is usually `.cargo/config.toml` locally for the current package.
 
+Cargo treats vendored sources as read-only as it does to registry and git sources.
+If you intend to modify a crate from a remote source,
+use `[patch]` or a `path` dependency pointing to a local copy of that crate.
+Cargo will then correctly handle the crate on incremental rebuilds,
+as it knowns that it is no longer a read-only dependency.
+
 ## OPTIONS
 
 ### Vendor Options
