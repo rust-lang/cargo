@@ -626,11 +626,16 @@ fn get_latest_dependency(
                     // compare the lowest possible versions they could represent, and treat
                     // candidates without a rust-version as compatible by default.
                     let latest_msrv = latest_compatible(&msrvs, req_msrv).ok_or_else(|| {
-                        rust_version_incompat_error(
-                            &spec.name(),
-                            &dependency.name,
-                            spec.rust_version().unwrap(),
-                            latest,
+                        let name = spec.name();
+                        let dep_name = &dependency.name;
+                        let latest_version = latest.version();
+                        let latest_msrv = latest
+                            .rust_version()
+                            .expect("as `None` are compatible, we can't be here");
+                        anyhow::format_err!(
+                            "\
+no version of crate `{dep_name}` satisfies {name}'s rust-version of {req_msrv}
+help: pass `--ignore-rust-version` to select {dep_name}@{latest_version} which requires rustc {latest_msrv}"
                         )
                     })?;
 
@@ -671,23 +676,6 @@ fn latest_compatible<'s>(
         .map(|(s, _)| s)
         .last()
         .copied()
-}
-
-fn rust_version_incompat_error(
-    name: &str,
-    dep: &str,
-    rust_version: &RustVersion,
-    latest_summary: &Summary,
-) -> anyhow::Error {
-    let latest_version = latest_summary.version();
-    let latest_msrv = latest_summary
-        .rust_version()
-        .expect("as `None` are compatible, we can't be here");
-    anyhow::format_err!(
-        "\
-no version of crate `{dep}` satisfies {name}'s rust-version of {rust_version}
-help: pass `--ignore-rust-version` to select {dep}@{latest_version} which requires rustc {latest_msrv}"
-    )
 }
 
 fn select_package(
