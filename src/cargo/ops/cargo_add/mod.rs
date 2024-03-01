@@ -634,7 +634,7 @@ fn get_latest_dependency(
                             .expect("as `None` are compatible, we can't be here");
                         anyhow::format_err!(
                             "\
-no version of crate `{dep_name}` satisfies {name}'s rust-version of {req_msrv}
+no version of crate `{dep_name}` can maintain {name}'s rust-version of {req_msrv}
 help: pass `--ignore-rust-version` to select {dep_name}@{latest_version} which requires rustc {latest_msrv}"
                         )
                     })?;
