@@ -661,7 +661,7 @@ help: pass `--ignore-rust-version` to select {dep_name}@{latest_version} which r
                         } else {
                             anyhow::format_err!(
                                 "\
-no version of crate `{dep_name}` can maintain {name}'s rust-version of {req_msrv}
+no version of crate `{dep_name}` is compatible with rustc {req_msrv}
 help: pass `--ignore-rust-version` to select {dep_name}@{latest_version} which requires rustc {latest_msrv}"
                             )
                         }
@@ -679,7 +679,7 @@ ignoring {dependency}@{latest_version} (which requires rustc {latest_rust_versio
                     } else {
                         gctx.shell().warn(format_args!(
                             "\
-ignoring {dependency}@{latest_version} (which requires rustc {latest_rust_version}) to maintain {name}'s rust-version of {req_msrv}",
+ignoring {dependency}@{latest_version} (which requires rustc {latest_rust_version}) as it is incompatible with rustc {req_msrv}",
                         ))?;
                     }
 
