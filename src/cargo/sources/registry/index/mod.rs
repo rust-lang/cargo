@@ -18,98 +18,30 @@
 //!        specific index file.
 //! 3. A [`Summary`] is now ready in callback `f` in [`RegistryIndex::query_inner`].
 //!
-//! This is just an overview. To know the rationale behind, continue reading.
-//!
-//! ## A layer of on-disk index cache for performance
-//!
-//! One important aspect of the index is that we want to optimize the "happy
-//! path" as much as possible. Whenever you type `cargo build` Cargo will
-//! *always* reparse the registry and learn about dependency information. This
-//! is done because Cargo needs to learn about the upstream crates.io crates
-//! that you're using and ensure that the preexisting `Cargo.lock` still matches
-//! the current state of the world.
-//!
-//! Consequently, Cargo "null builds" (the index that Cargo adds to each build
-//! itself) need to be fast when accessing the index. The primary performance
-//! optimization here is to avoid parsing JSON blobs from the registry if we
-//! don't need them. Most secondary optimizations are centered around removing
-//! allocations and such, but avoiding parsing JSON is the #1 optimization.
-//!
-//! When we get queries from the resolver we're given a [`Dependency`]. This
-//! dependency in turn has a version requirement, and with lock files that
-//! already exist these version requirements are exact version requirements
-//! `=a.b.c`. This means that we in theory only need to parse one line of JSON
-//! per query in the registry, the one that matches version `a.b.c`.
-//!
-//! The crates.io index, however, is not amenable to this form of query. Instead
-//! the crates.io index simply is a file where each line is a JSON blob, aka
-//! [`IndexPackage`]. To learn about the versions in each JSON blob we would
-//! need to parse the JSON via [`IndexSummary::parse`], defeating the purpose
-//! of trying to parse as little as possible.
-//!
-//! > Note that as a small aside even *loading* the JSON from the registry is
-//! > actually pretty slow. For crates.io and [`RemoteRegistry`] we don't
-//! > actually check out the git index on disk because that takes quite some
-//! > time and is quite large. Instead we use `libgit2` to read the JSON from
-//! > the raw git objects. This in turn can be slow (aka show up high in
-//! > profiles) because libgit2 has to do deflate decompression and such.
-//!
-//! To solve all these issues a strategy is employed here where Cargo basically
-//! creates an index into the index. The first time a package is queried about
-//! (first time being for an entire computer) Cargo will load the contents
-//! (slowly via libgit2) from the registry. It will then (slowly) parse every
-//! single line to learn about its versions. Afterwards, however, Cargo will
-//! emit a new file (a cache, representing as [`SummariesCache`]) which is
-//! amenable for speedily parsing in future invocations.
-//!
-//! This cache file is currently organized by basically having the semver
-//! version extracted from each JSON blob. That way Cargo can quickly and
-//! easily parse all versions contained and which JSON blob they're associated
-//! with. The JSON blob then doesn't actually need to get parsed unless the
-//! version is parsed.
-//!
-//! Altogether the initial measurements of this shows a massive improvement for
-//! Cargo null build performance. It's expected that the improvements earned
-//! here will continue to grow over time in the sense that the previous
-//! implementation (parse all lines each time) actually continues to slow down
-//! over time as new versions of a crate are published. In any case when first
-//! implemented a null build of Cargo itself would parse 3700 JSON blobs from
-//! the registry and load 150 blobs from git. Afterwards it parses 150 JSON
-//! blobs and loads 0 files git. Removing 200ms or more from Cargo's startup
-//! time is certainly nothing to sneeze at!
-//!
-//! Note that this is just a high-level overview, there's of course lots of
-//! details like invalidating caches and whatnot which are handled below, but
-//! hopefully those are more obvious inline in the code itself.
-//!
-//! [`RemoteRegistry`]: super::remote::RemoteRegistry
-//! [`Dependency`]: crate::core::Dependency
-
+//! To learn the rationale behind this multi-layer index metadata loading,
+//! see [the documentation of the on-disk index cache](cache).
 use crate::core::dependency::{Artifact, DepKind};
 use crate::core::Dependency;
 use crate::core::{PackageId, SourceId, Summary};
 use crate::sources::registry::{LoadResponse, RegistryData};
-use crate::util::cache_lock::CacheLockMode;
 use crate::util::interning::InternedString;
 use crate::util::IntoUrl;
 use crate::util::{internal, CargoResult, Filesystem, GlobalContext, OptVersionReq};
-use anyhow::bail;
-use cargo_util::{paths, registry::make_dep_path};
+use cargo_util::registry::make_dep_path;
 use cargo_util_schemas::manifest::RustVersion;
 use semver::Version;
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
-use std::fs;
-use std::io::ErrorKind;
 use std::path::Path;
 use std::str;
 use std::task::{ready, Poll};
 use tracing::{debug, info};
 
-/// The current version of [`SummariesCache`].
-const CURRENT_CACHE_VERSION: u8 = 3;
+mod cache;
+use self::cache::CacheManager;
+use self::cache::SummariesCache;
 
 /// The maximum schema version of the `v` field in the index this version of
 /// cargo understands. See [`IndexPackage::v`] for the detail.
@@ -145,6 +77,8 @@ pub struct RegistryIndex<'gctx> {
     summaries_cache: HashMap<InternedString, Summaries>,
     /// [`GlobalContext`] reference for convenience.
     gctx: &'gctx GlobalContext,
+    /// Manager of on-disk caches.
+    cache_manager: CacheManager<'gctx>,
 }
 
 /// An internal cache of summaries for a particular package.
@@ -260,77 +194,6 @@ impl IndexSummary {
     }
 }
 
-/// A representation of the cache on disk that Cargo maintains of summaries.
-///
-/// Cargo will initially parse all summaries in the registry and will then
-/// serialize that into this form and place it in a new location on disk,
-/// ensuring that access in the future is much speedier.
-///
-/// For serialization and deserialization of this on-disk index cache of
-/// summaries, see [`SummariesCache::serialize`]  and [`SummariesCache::parse`].
-///
-/// # The format of the index cache
-///
-/// The idea of this format is that it's a very easy file for Cargo to parse in
-/// future invocations. The read from disk should be fast and then afterwards
-/// all we need to know is what versions correspond to which JSON blob.
-///
-/// Currently the format looks like:
-///
-/// ```text
-/// +---------------+----------------------+--------------------+---+
-/// | cache version | index schema version | index file version | 0 |
-/// +---------------+----------------------+--------------------+---+
-/// ```
-///
-/// followed by one or more (version + JSON blob) pairs...
-///
-/// ```text
-/// +----------------+---+-----------+---+
-/// | semver version | 0 | JSON blob | 0 | ...
-/// +----------------+---+-----------+---+
-/// ```
-///
-/// Each field represents:
-///
-/// * _cache version_ --- Intended to ensure that there's some level of
-///   future compatibility against changes to this cache format so if different
-///   versions of Cargo share the same cache they don't get too confused.
-/// * _index schema version_ --- The schema version of the raw index file.
-///   See [`IndexPackage::v`] for the detail.
-/// * _index file version_ --- Tracks when a cache needs to be regenerated.
-///   A cache regeneration is required whenever the index file itself updates.
-/// * _semver version_ --- The version for each JSON blob. Extracted from the
-///   blob for fast queries without parsing the entire blob.
-/// * _JSON blob_ --- The actual metadata for each version of the package. It
-///   has the same representation as [`IndexPackage`].
-///
-/// # Changes between each cache version
-///
-/// * `1`: The original version.
-/// * `2`: Added the "index schema version" field so that if the index schema
-///   changes, different versions of cargo won't get confused reading each
-///   other's caches.
-/// * `3`: Bumped the version to work around an issue where multiple versions of
-///   a package were published that differ only by semver metadata. For
-///   example, openssl-src 110.0.0 and 110.0.0+1.1.0f. Previously, the cache
-///   would be incorrectly populated with two entries, both 110.0.0. After
-///   this, the metadata will be correctly included. This isn't really a format
-///   change, just a version bump to clear the incorrect cache entries. Note:
-///   the index shouldn't allow these, but unfortunately crates.io doesn't
-///   check it.
-///
-/// See [`CURRENT_CACHE_VERSION`] for the current cache version.
-#[derive(Default)]
-struct SummariesCache<'a> {
-    /// JSON blobs of the summaries. Each JSON blob has a [`Version`] beside,
-    /// so that Cargo can query a version without full JSON parsing.
-    versions: Vec<(Version, &'a [u8])>,
-    /// For cache invalidation, we tracks the index file version to determine
-    /// when to regenerate the cache itself.
-    index_version: &'a str,
-}
-
 /// A single line in the index representing a single version of a package.
 #[derive(Deserialize)]
 pub struct IndexPackage<'a> {
@@ -441,6 +304,7 @@ impl<'gctx> RegistryIndex<'gctx> {
             path: path.clone(),
             summaries_cache: HashMap::new(),
             gctx,
+            cache_manager: CacheManager::new(path.join(".cache"), gctx),
         }
     }
 
@@ -552,18 +416,13 @@ impl<'gctx> RegistryIndex<'gctx> {
         load.prepare()?;
 
         let root = load.assert_index_locked(&self.path);
-        let cache_root = root.join(".cache");
-
-        // See module comment in `registry/mod.rs` for why this is structured
-        // the way it is.
-        let path = make_dep_path(&name.to_lowercase(), false);
         let summaries = ready!(Summaries::parse(
             root,
-            &cache_root,
-            path.as_ref(),
+            &name,
             self.source_id,
             load,
-            self.gctx,
+            self.gctx.cli_unstable().bindeps,
+            &self.cache_manager,
         ))?
         .unwrap_or_default();
         self.summaries_cache.insert(name, summaries);
@@ -671,44 +530,40 @@ impl Summaries {
     ///    remote HTTP index) and then parse everything in there.
     ///
     /// * `root` --- this is the root argument passed to `load`
-    /// * `cache_root` --- this is the root on the filesystem itself of where
-    ///   to store cache files.
-    /// * `relative` --- this is the file we're loading from cache or the index
-    ///   data
+    /// * `name` --- the name of the package.
     /// * `source_id` --- the registry's SourceId used when parsing JSON blobs
     ///   to create summaries.
     /// * `load` --- the actual index implementation which may be very slow to
     ///   call. We avoid this if we can.
+    /// * `bindeps` --- whether the `-Zbindeps` unstable flag is enabled
     pub fn parse(
         root: &Path,
-        cache_root: &Path,
-        relative: &Path,
+        name: &str,
         source_id: SourceId,
         load: &mut dyn RegistryData,
-        gctx: &GlobalContext,
+        bindeps: bool,
+        cache_manager: &CacheManager<'_>,
     ) -> Poll<CargoResult<Option<Summaries>>> {
-        // First up, attempt to load the cache. This could fail for all manner
-        // of reasons, but consider all of them non-fatal and just log their
-        // occurrence in case anyone is debugging anything.
-        let cache_path = cache_root.join(relative);
+        // This is the file we're loading from cache or the index data.
+        // See module comment in `registry/mod.rs` for why this is structured the way it is.
+        let name = &name.to_lowercase();
+        let relative = make_dep_path(&name, false);
+
         let mut cached_summaries = None;
         let mut index_version = None;
-        match fs::read(&cache_path) {
-            Ok(contents) => match Summaries::parse_cache(contents) {
+        if let Some(contents) = cache_manager.get(name) {
+            match Summaries::parse_cache(contents) {
                 Ok((s, v)) => {
                     cached_summaries = Some(s);
                     index_version = Some(v);
                 }
                 Err(e) => {
-                    tracing::debug!("failed to parse {:?} cache: {}", relative, e);
+                    tracing::debug!("failed to parse {name:?} cache: {e}");
                 }
-            },
-            Err(e) => tracing::debug!("cache missing for {:?} error: {}", relative, e),
+            }
         }
 
-        let response = ready!(load.load(root, relative, index_version.as_deref())?);
-
-        let bindeps = gctx.cli_unstable().bindeps;
+        let response = ready!(load.load(root, relative.as_ref(), index_version.as_deref())?);
 
         match response {
             LoadResponse::CacheValid => {
@@ -716,11 +571,7 @@ impl Summaries {
                 return Poll::Ready(Ok(cached_summaries));
             }
             LoadResponse::NotFound => {
-                if let Err(e) = fs::remove_file(cache_path) {
-                    if e.kind() != ErrorKind::NotFound {
-                        tracing::debug!("failed to remove from cache: {}", e);
-                    }
-                }
+                cache_manager.invalidate(name);
                 return Poll::Ready(Ok(None));
             }
             LoadResponse::Data {
@@ -769,16 +620,7 @@ impl Summaries {
                     // Once we have our `cache_bytes` which represents the `Summaries` we're
                     // about to return, write that back out to disk so future Cargo
                     // invocations can use it.
-                    //
-                    // This is opportunistic so we ignore failure here but are sure to log
-                    // something in case of error.
-                    if paths::create_dir_all(cache_path.parent().unwrap()).is_ok() {
-                        let path = Filesystem::new(cache_path.clone());
-                        gctx.assert_package_cache_locked(CacheLockMode::DownloadExclusive, &path);
-                        if let Err(e) = fs::write(cache_path, &cache_bytes) {
-                            tracing::info!("failed to write cache: {}", e);
-                        }
-                    }
+                    cache_manager.put(name, &cache_bytes);
 
                     // If we've got debug assertions enabled read back in the cached values
                     // and assert they match the expected result.
@@ -823,67 +665,6 @@ impl Summaries {
             assert!(inner_end <= outer_end);
             (inner_start - outer_start, inner_end - outer_start)
         }
-    }
-}
-
-impl<'a> SummariesCache<'a> {
-    /// Deserializes an on-disk cache.
-    fn parse(data: &'a [u8]) -> CargoResult<SummariesCache<'a>> {
-        // NB: keep this method in sync with `serialize` below
-        let (first_byte, rest) = data
-            .split_first()
-            .ok_or_else(|| anyhow::format_err!("malformed cache"))?;
-        if *first_byte != CURRENT_CACHE_VERSION {
-            bail!("looks like a different Cargo's cache, bailing out");
-        }
-        let index_v_bytes = rest
-            .get(..4)
-            .ok_or_else(|| anyhow::anyhow!("cache expected 4 bytes for index schema version"))?;
-        let index_v = u32::from_le_bytes(index_v_bytes.try_into().unwrap());
-        if index_v != INDEX_V_MAX {
-            bail!(
-                "index schema version {index_v} doesn't match the version I know ({INDEX_V_MAX})",
-            );
-        }
-        let rest = &rest[4..];
-
-        let mut iter = split(rest, 0);
-        let last_index_update = if let Some(update) = iter.next() {
-            str::from_utf8(update)?
-        } else {
-            bail!("malformed file");
-        };
-        let mut ret = SummariesCache::default();
-        ret.index_version = last_index_update;
-        while let Some(version) = iter.next() {
-            let version = str::from_utf8(version)?;
-            let version = Version::parse(version)?;
-            let summary = iter.next().unwrap();
-            ret.versions.push((version, summary));
-        }
-        Ok(ret)
-    }
-
-    /// Serializes itself with a given `index_version`.
-    fn serialize(&self, index_version: &str) -> Vec<u8> {
-        // NB: keep this method in sync with `parse` above
-        let size = self
-            .versions
-            .iter()
-            .map(|(_version, data)| (10 + data.len()))
-            .sum();
-        let mut contents = Vec::with_capacity(size);
-        contents.push(CURRENT_CACHE_VERSION);
-        contents.extend(&u32::to_le_bytes(INDEX_V_MAX));
-        contents.extend_from_slice(index_version.as_bytes());
-        contents.push(0);
-        for (version, data) in self.versions.iter() {
-            contents.extend_from_slice(version.to_string().as_bytes());
-            contents.push(0);
-            contents.extend_from_slice(data);
-            contents.push(0);
-        }
-        contents
     }
 }
 
