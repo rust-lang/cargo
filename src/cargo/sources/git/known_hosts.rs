@@ -22,7 +22,7 @@
 //! added (it just adds a little complexity). For example, hostname patterns,
 //! and revoked markers. See "FIXME" comments littered in this file.
 
-use crate::util::config::{Definition, GlobalContext, Value};
+use crate::util::context::{Definition, GlobalContext, Value};
 use base64::engine::general_purpose::STANDARD;
 use base64::engine::general_purpose::STANDARD_NO_PAD;
 use base64::Engine as _;

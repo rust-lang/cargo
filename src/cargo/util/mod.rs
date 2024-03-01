@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 pub use self::canonical_url::CanonicalUrl;
-pub use self::config::{homedir, ConfigValue, GlobalContext};
+pub use self::context::{homedir, ConfigValue, GlobalContext};
 pub(crate) use self::counter::MetricsCounter;
 pub use self::dependency_queue::DependencyQueue;
 pub use self::diagnostic_server::RustfixDiagnosticServer;
@@ -32,7 +32,7 @@ pub mod auth;
 pub mod cache_lock;
 mod canonical_url;
 pub mod command_prelude;
-pub mod config;
+pub mod context;
 mod counter;
 pub mod cpu;
 pub mod credential;

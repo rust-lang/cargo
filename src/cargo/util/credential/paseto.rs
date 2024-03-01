@@ -15,7 +15,7 @@ use url::Url;
 use crate::{
     core::SourceId,
     ops::RegistryCredentialConfig,
-    util::{auth::registry_credential_config_raw, command_prelude::opt, config},
+    util::{auth::registry_credential_config_raw, command_prelude::opt, context},
     GlobalContext,
 };
 
@@ -196,12 +196,12 @@ impl<'a> Credential for PasetoCredential<'a> {
                         None => old_key_subject,
                     },
                 ));
-                config::save_credentials(self.gctx, Some(new_token), &sid)?;
+                context::save_credentials(self.gctx, Some(new_token), &sid)?;
                 Ok(CredentialResponse::Login)
             }
             Action::Logout => {
                 if reg_cfg.and_then(|c| c.secret_key).is_some() {
-                    config::save_credentials(self.gctx, None, &sid)?;
+                    context::save_credentials(self.gctx, None, &sid)?;
                     let reg_name = sid.display_registry_name();
                     let _ = self.gctx.shell().status(
                         "Logout",

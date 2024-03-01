@@ -11,8 +11,8 @@ use curl::easy::SslVersion;
 use tracing::debug;
 use tracing::trace;
 
-use crate::util::config::SslVersionConfig;
-use crate::util::config::SslVersionConfigRange;
+use crate::util::context::SslVersionConfig;
+use crate::util::context::SslVersionConfigRange;
 use crate::version;
 use crate::CargoResult;
 use crate::GlobalContext;

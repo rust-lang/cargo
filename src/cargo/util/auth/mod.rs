@@ -2,7 +2,7 @@
 
 use crate::{
     core::features::cargo_docs_link,
-    util::{config::ConfigKey, CanonicalUrl, CargoResult, GlobalContext, IntoUrl},
+    util::{context::ConfigKey, CanonicalUrl, CargoResult, GlobalContext, IntoUrl},
 };
 use anyhow::{bail, Context as _};
 use cargo_credential::{
@@ -17,12 +17,12 @@ use time::{Duration, OffsetDateTime};
 use url::Url;
 
 use crate::core::SourceId;
-use crate::util::config::Value;
+use crate::util::context::Value;
 use crate::util::credential::adaptor::BasicProcessCredential;
 use crate::util::credential::paseto::PasetoCredential;
 
 use super::{
-    config::{CredentialCacheValue, OptValue, PathAndArgs},
+    context::{CredentialCacheValue, OptValue, PathAndArgs},
     credential::process::CredentialProcessCredential,
     credential::token::TokenCredential,
 };

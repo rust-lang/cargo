@@ -7,7 +7,7 @@ use url::Url;
 use crate::{
     core::SourceId,
     ops::RegistryCredentialConfig,
-    util::{auth::registry_credential_config_raw, config},
+    util::{auth::registry_credential_config_raw, context},
     GlobalContext,
 };
 
@@ -52,7 +52,7 @@ impl<'a> Credential for TokenCredential<'a> {
                     .map(|line| line.replace("cargo login", "").trim().to_string());
 
                 crates_io::check_token(new_token.as_ref().expose()).map_err(Box::new)?;
-                config::save_credentials(
+                context::save_credentials(
                     self.gctx,
                     Some(RegistryCredentialConfig::Token(new_token)),
                     &sid,
@@ -68,7 +68,7 @@ impl<'a> Credential for TokenCredential<'a> {
                     return Err(Error::NotFound);
                 }
                 let reg_name = sid.display_registry_name();
-                config::save_credentials(self.gctx, None, &sid)?;
+                context::save_credentials(self.gctx, None, &sid)?;
                 let _ = self.gctx.shell().status(
                     "Logout",
                     format!("token for `{reg_name}` has been removed from local storage"),

@@ -2,7 +2,7 @@ use crate::core::compiler::standard_lib;
 use crate::core::compiler::{BuildConfig, CompileMode, RustcTargetData};
 use crate::core::{PackageSet, Resolve, Workspace};
 use crate::ops;
-use crate::util::config::JobsConfig;
+use crate::util::context::JobsConfig;
 use crate::util::CargoResult;
 use crate::util::GlobalContext;
 use std::collections::HashSet;

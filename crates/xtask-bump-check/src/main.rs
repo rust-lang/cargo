@@ -6,7 +6,7 @@ fn main() {
     let cli = xtask::cli();
     let matches = cli.get_matches();
 
-    let mut gctx = cargo::util::config::GlobalContext::default().unwrap_or_else(|e| {
+    let mut gctx = cargo::util::context::GlobalContext::default().unwrap_or_else(|e| {
         let mut eval = cargo::core::shell::Shell::new();
         cargo::exit_with_error(e.into(), &mut eval)
     });

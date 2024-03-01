@@ -7,7 +7,7 @@ use crate::core::{Resolve, SourceId, Workspace};
 use crate::ops;
 use crate::sources::source::QueryKind;
 use crate::util::cache_lock::CacheLockMode;
-use crate::util::config::GlobalContext;
+use crate::util::context::GlobalContext;
 use crate::util::style;
 use crate::util::CargoResult;
 use anstyle::Style;

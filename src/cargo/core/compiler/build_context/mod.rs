@@ -5,7 +5,7 @@ use crate::core::compiler::{BuildConfig, CompileKind, Unit};
 use crate::core::profiles::Profiles;
 use crate::core::PackageSet;
 use crate::core::Workspace;
-use crate::util::config::GlobalContext;
+use crate::util::context::GlobalContext;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::Rustc;

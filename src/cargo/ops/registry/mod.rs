@@ -23,7 +23,7 @@ use crate::sources::source::Source;
 use crate::sources::{RegistrySource, SourceConfigMap};
 use crate::util::auth;
 use crate::util::cache_lock::CacheLockMode;
-use crate::util::config::{GlobalContext, PathAndArgs};
+use crate::util::context::{GlobalContext, PathAndArgs};
 use crate::util::errors::CargoResult;
 use crate::util::network::http::http_handle;
 

@@ -12,7 +12,7 @@ use crate::core::compiler::{
     BuildOutput, BuildRunner, CompileKind, CompileMode, CompileTarget, CrateType,
 };
 use crate::core::{Dependency, Package, Target, TargetKind, Workspace};
-use crate::util::config::{GlobalContext, StringList, TargetConfig};
+use crate::util::context::{GlobalContext, StringList, TargetConfig};
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Rustc};
 use anyhow::Context as _;

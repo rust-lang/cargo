@@ -32,7 +32,7 @@ use crate::sources::SourceConfigMap;
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::auth;
 use crate::util::cache_lock::CacheLockMode;
-use crate::util::config::JobsConfig;
+use crate::util::context::JobsConfig;
 use crate::util::Progress;
 use crate::util::ProgressStyle;
 use crate::CargoResult;

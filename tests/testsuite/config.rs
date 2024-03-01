@@ -1,7 +1,7 @@
 //! Tests for config settings.
 
 use cargo::core::{PackageIdSpec, Shell};
-use cargo::util::config::{
+use cargo::util::context::{
     self, Definition, GlobalContext, JobsConfig, SslVersionConfig, StringList,
 };
 use cargo::CargoResult;
@@ -928,31 +928,31 @@ abs = '{}'
         .build();
 
     assert_eq!(
-        gctx.get::<config::ConfigRelativePath>("p1")
+        gctx.get::<context::ConfigRelativePath>("p1")
             .unwrap()
             .resolve_path(&gctx),
         paths::root().join("foo/bar")
     );
     assert_eq!(
-        gctx.get::<config::ConfigRelativePath>("p2")
+        gctx.get::<context::ConfigRelativePath>("p2")
             .unwrap()
             .resolve_path(&gctx),
         paths::root().join("../abc")
     );
     assert_eq!(
-        gctx.get::<config::ConfigRelativePath>("p3")
+        gctx.get::<context::ConfigRelativePath>("p3")
             .unwrap()
             .resolve_path(&gctx),
         paths::root().join("d/e")
     );
     assert_eq!(
-        gctx.get::<config::ConfigRelativePath>("abs")
+        gctx.get::<context::ConfigRelativePath>("abs")
             .unwrap()
             .resolve_path(&gctx),
         paths::home()
     );
     assert_eq!(
-        gctx.get::<config::ConfigRelativePath>("epath")
+        gctx.get::<context::ConfigRelativePath>("epath")
             .unwrap()
             .resolve_path(&gctx),
         paths::root().join("a/b")

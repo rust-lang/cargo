@@ -11,7 +11,7 @@ use crate::core::compiler::apply_env_config;
 use crate::core::compiler::BuildContext;
 use crate::core::compiler::{CompileKind, Metadata, Unit};
 use crate::core::Package;
-use crate::util::{config, CargoResult, GlobalContext};
+use crate::util::{context, CargoResult, GlobalContext};
 
 /// Represents the kind of process we are creating.
 #[derive(Debug)]
@@ -453,7 +453,7 @@ fn target_runner(
     // try target.{}.runner
     let key = format!("target.{}.runner", target);
 
-    if let Some(v) = bcx.gctx.get::<Option<config::PathAndArgs>>(&key)? {
+    if let Some(v) = bcx.gctx.get::<Option<context::PathAndArgs>>(&key)? {
         let path = v.path.resolve_program(bcx.gctx);
         return Ok(Some((path, v.args)));
     }

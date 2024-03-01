@@ -8,7 +8,7 @@
 //! from configuration, but also record where it was deserialized from when it
 //! was read.
 
-use crate::util::config::GlobalContext;
+use crate::util::context::GlobalContext;
 use serde::de;
 use std::cmp::Ordering;
 use std::fmt;

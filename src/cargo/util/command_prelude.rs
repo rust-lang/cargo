@@ -28,7 +28,7 @@ pub use clap::{value_parser, Arg, ArgAction, ArgMatches};
 
 pub use clap::Command;
 
-use super::config::JobsConfig;
+use super::context::JobsConfig;
 use super::IntoUrl;
 
 pub mod heading {

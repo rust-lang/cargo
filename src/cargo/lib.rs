@@ -44,10 +44,11 @@
 //!   directory.
 //! - [`util`]:
 //!   This directory contains generally-useful utility modules.
-//! - [`util::config`]:
-//!   This directory contains the config parser. It makes heavy use of
-//!   [serde](https://serde.rs/) to merge and translate config values. The
-//!   [`util::GlobalContext`] is usually accessed from the
+//! - [`util::context`]:
+//!   This directory contains the global applicaton context.
+//!   This includes the config parser which makes heavy use of
+//!   [serde](https://serde.rs/) to merge and translate config values.
+//!   The [`util::GlobalContext`] is usually accessed from the
 //!   [`core::Workspace`]
 //!   though references to it are scattered around for more convenient access.
 //! - [`util::toml`]:
@@ -117,7 +118,7 @@
 //!     - `src/*/*`: Extracted from `*.crate` by [`sources::registry::RegistrySource`]
 //!   - `git/`: Git source cache.  See [`sources::git`].
 //! - `**/.cargo/config.toml`: Environment dependent (env variables, files) configuration.  See
-//!   [`util::config`]
+//!   [`util::context`]
 //!
 //! ## Contribute to Cargo documentations
 //!

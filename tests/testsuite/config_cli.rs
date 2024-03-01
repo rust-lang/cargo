@@ -4,7 +4,7 @@ use super::config::{
     assert_error, assert_match, read_output, write_config_at, write_config_toml,
     GlobalContextBuilder,
 };
-use cargo::util::config::Definition;
+use cargo::util::context::Definition;
 use cargo_test_support::paths;
 use std::{collections::HashMap, fs};
 
@@ -184,7 +184,7 @@ fn string_list_array() {
         .config_arg("build.rustflags = ['--cli']")
         .build();
     assert_eq!(
-        gctx.get::<cargo::util::config::StringList>("build.rustflags")
+        gctx.get::<cargo::util::context::StringList>("build.rustflags")
             .unwrap()
             .as_slice(),
         ["--file", "--cli"]
@@ -196,7 +196,7 @@ fn string_list_array() {
         .config_arg("build.rustflags = ['--cli']")
         .build();
     assert_eq!(
-        gctx.get::<cargo::util::config::StringList>("build.rustflags")
+        gctx.get::<cargo::util::context::StringList>("build.rustflags")
             .unwrap()
             .as_slice(),
         ["--file", "--env1", "--env2", "--cli"]
@@ -209,7 +209,7 @@ fn string_list_array() {
         .config_arg("build.rustflags = ['--cli']")
         .build();
     assert_eq!(
-        gctx.get::<cargo::util::config::StringList>("build.rustflags")
+        gctx.get::<cargo::util::context::StringList>("build.rustflags")
             .unwrap()
             .as_slice(),
         ["--file", "--env", "--cli"]
