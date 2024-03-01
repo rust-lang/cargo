@@ -67,10 +67,11 @@
 
 use std::fs;
 use std::io;
-use std::path::Path;
+use std::path::PathBuf;
 use std::str;
 
 use anyhow::bail;
+use cargo_util::registry::make_dep_path;
 use semver::Version;
 
 use crate::util::cache_lock::CacheLockMode;
@@ -221,45 +222,60 @@ impl<'a> SummariesCache<'a> {
 
 /// Manages the on-disk index caches.
 pub struct CacheManager<'gctx> {
+    /// The root path where caches are located.
+    cache_root: Filesystem,
     /// [`GlobalContext`] reference for convenience.
     gctx: &'gctx GlobalContext,
 }
 
 impl<'gctx> CacheManager<'gctx> {
     /// Creates a new instance of the on-disk index cache manager.
-    pub fn new(gctx: &'gctx GlobalContext) -> CacheManager<'gctx> {
-        CacheManager { gctx }
+    ///
+    /// `root` --- The root path where caches are located.
+    pub fn new(cache_root: Filesystem, gctx: &'gctx GlobalContext) -> CacheManager<'gctx> {
+        CacheManager { cache_root, gctx }
     }
 
     /// Gets the cache associated with the key.
-    pub fn get(&self, key: &Path) -> Option<Vec<u8>> {
-        match fs::read(key) {
+    pub fn get(&self, key: &str) -> Option<Vec<u8>> {
+        let cache_path = &self.cache_path(key);
+        match fs::read(cache_path) {
             Ok(contents) => Some(contents),
             Err(e) => {
-                tracing::debug!(?key, "cache missing: {e}");
+                tracing::debug!(?cache_path, "cache missing: {e}");
                 None
             }
         }
     }
 
     /// Associates the value with the key.
-    pub fn put(&self, key: &Path, value: &[u8]) {
-        if fs::create_dir_all(key.parent().unwrap()).is_ok() {
-            let path = Filesystem::new(key.into());
+    pub fn put(&self, key: &str, value: &[u8]) {
+        let cache_path = &self.cache_path(key);
+        if fs::create_dir_all(cache_path.parent().unwrap()).is_ok() {
+            let path = Filesystem::new(cache_path.clone());
             self.gctx
                 .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &path);
-            if let Err(e) = fs::write(key, value) {
-                tracing::info!(?key, "failed to write cache: {e}");
+            if let Err(e) = fs::write(cache_path, value) {
+                tracing::info!(?cache_path, "failed to write cache: {e}");
             }
         }
     }
 
     /// Invalidates the cache associated with the key.
-    pub fn invalidate(&self, key: &Path) {
-        if let Err(e) = fs::remove_file(key) {
+    pub fn invalidate(&self, key: &str) {
+        let cache_path = &self.cache_path(key);
+        if let Err(e) = fs::remove_file(cache_path) {
             if e.kind() != io::ErrorKind::NotFound {
-                tracing::debug!(?key, "failed to remove from cache: {e}");
+                tracing::debug!(?cache_path, "failed to remove from cache: {e}");
             }
         }
+    }
+
+    fn cache_path(&self, key: &str) -> PathBuf {
+        let relative = make_dep_path(key, false);
+        // This is the file we're loading from cache or the index data.
+        // See module comment in `registry/mod.rs` for why this is structured
+        // the way it is.
+        self.cache_root.join(relative).into_path_unlocked()
     }
 }

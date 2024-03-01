@@ -304,7 +304,7 @@ impl<'gctx> RegistryIndex<'gctx> {
             path: path.clone(),
             summaries_cache: HashMap::new(),
             gctx,
-            cache_manager: CacheManager::new(gctx),
+            cache_manager: CacheManager::new(path.join(".cache"), gctx),
         }
     }
 
@@ -545,24 +545,20 @@ impl Summaries {
         cache_manager: &CacheManager<'_>,
     ) -> Poll<CargoResult<Option<Summaries>>> {
         // This is the file we're loading from cache or the index data.
-        // See module comment in `registry/mod.rs` for why this is structured
-        // the way it is.
-        let relative = make_dep_path(&name.to_lowercase(), false);
-        // First up, attempt to load the cache. This could fail for all manner
-        // of reasons, but consider all of them non-fatal and just log their
-        // occurrence in case anyone is debugging anything.
-        let cache_path = root.join(".cache").join(&relative);
+        // See module comment in `registry/mod.rs` for why this is structured the way it is.
+        let name = &name.to_lowercase();
+        let relative = make_dep_path(&name, false);
 
         let mut cached_summaries = None;
         let mut index_version = None;
-        if let Some(contents) = cache_manager.get(&cache_path) {
+        if let Some(contents) = cache_manager.get(name) {
             match Summaries::parse_cache(contents) {
                 Ok((s, v)) => {
                     cached_summaries = Some(s);
                     index_version = Some(v);
                 }
                 Err(e) => {
-                    tracing::debug!("failed to parse {:?} cache: {}", relative, e);
+                    tracing::debug!("failed to parse {name:?} cache: {e}");
                 }
             }
         }
@@ -575,7 +571,7 @@ impl Summaries {
                 return Poll::Ready(Ok(cached_summaries));
             }
             LoadResponse::NotFound => {
-                cache_manager.invalidate(&cache_path);
+                cache_manager.invalidate(name);
                 return Poll::Ready(Ok(None));
             }
             LoadResponse::Data {
@@ -624,7 +620,7 @@ impl Summaries {
                     // Once we have our `cache_bytes` which represents the `Summaries` we're
                     // about to return, write that back out to disk so future Cargo
                     // invocations can use it.
-                    cache_manager.put(&cache_path, &cache_bytes);
+                    cache_manager.put(name, &cache_bytes);
 
                     // If we've got debug assertions enabled read back in the cached values
                     // and assert they match the expected result.
