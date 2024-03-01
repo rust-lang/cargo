@@ -18,6 +18,12 @@ The configuration necessary to use the vendored sources would be printed to
 stdout after \fBcargo vendor\fR completes the vendoring process.
 You will need to add or redirect it to your Cargo configuration file,
 which is usually \fB\&.cargo/config.toml\fR locally for the current package.
+.sp
+Cargo treats vendored sources as read\-only as it does to registry and git sources.
+If you intend to modify a crate from a remote source,
+use \fB[patch]\fR or a \fBpath\fR dependency pointing to a local copy of that crate.
+Cargo will then correctly handle the crate on incremental rebuilds,
+as it knowns that it is no longer a read\-only dependency.
 .SH "OPTIONS"
 .SS "Vendor Options"
 .sp
