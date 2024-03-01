@@ -180,7 +180,8 @@ fn rust_version_too_high() {
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] package `foo v0.0.1 ([..])` cannot be built because it requires rustc 1.9876.0 or newer, while the currently active rustc version is [..]
+[ERROR] rustc [..] is not supported by the following package:
+  foo@0.0.1 requires rustc 1.9876.0
 
 ",
         )
@@ -218,10 +219,62 @@ fn dependency_rust_version_newer_than_rustc() {
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `[..]`)
-[ERROR] package `bar v0.0.1` cannot be built because it requires rustc 1.2345.0 or newer, while the currently active rustc version is [..]
-Either upgrade to rustc 1.2345.0 or newer, or use
-cargo update bar@0.0.1 --precise ver
-where `ver` is the latest version of `bar` supporting rustc [..]",
+[ERROR] rustc [..] is not supported by the following package:
+  bar@0.0.1 requires rustc 1.2345.0
+Either upgrade rustc or select compatible dependency versions with
+`cargo update <name>@<current-ver> --precise <compatible-ver>`
+where `<compatible-ver>` is the latest version supporting rustc [..]
+
+",
+        )
+        .run();
+    p.cargo("check --ignore-rust-version").run();
+}
+
+#[cargo_test]
+fn dependency_tree_rust_version_newer_than_rustc() {
+    Package::new("baz", "0.0.1")
+        .dep("bar", "0.0.1")
+        .rust_version("1.2345.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+    Package::new("bar", "0.0.1")
+        .rust_version("1.2345.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            [dependencies]
+            baz = "0.0.1"
+        "#,
+        )
+        .file("src/main.rs", "fn main(){}")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] baz v0.0.1 (registry `[..]`)
+[DOWNLOADED] bar v0.0.1 (registry `[..]`)
+[ERROR] rustc [..] is not supported by the following packages:
+  bar@0.0.1 requires rustc 1.2345.0
+  baz@0.0.1 requires rustc 1.2345.0
+Either upgrade rustc or select compatible dependency versions with
+`cargo update <name>@<current-ver> --precise <compatible-ver>`
+where `<compatible-ver>` is the latest version supporting rustc [..]
+
+",
         )
         .run();
     p.cargo("check --ignore-rust-version").run();
