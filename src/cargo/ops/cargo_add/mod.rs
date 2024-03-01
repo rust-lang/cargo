@@ -626,14 +626,11 @@ fn get_latest_dependency(
                     // compare the lowest possible versions they could represent, and treat
                     // candidates without a rust-version as compatible by default.
                     let latest_msrv = latest_compatible(&msrvs, req_msrv).ok_or_else(|| {
-                        // Failing that, try to find the highest version with the lowest
-                        // rust-version to report to the user.
-                        let lowest_candidate = lowest_msrv(&msrvs)
-                            .expect("already checked that at least one is present");
                         rust_version_incompat_error(
+                            &spec.name(),
                             &dependency.name,
                             spec.rust_version().unwrap(),
-                            lowest_candidate,
+                            latest,
                         )
                     })?;
 
@@ -676,37 +673,21 @@ fn latest_compatible<'s>(
         .copied()
 }
 
-/// Find the lowest MSRV summaries and pick the highest version
-///
-/// Assumptions:
-/// - `msrvs` is sorted by version
-fn lowest_msrv<'s>(msrvs: &[(&'s Summary, Option<&RustVersion>)]) -> Option<&'s Summary> {
-    msrvs
-        .iter()
-        .min_set_by_key(|(_, v)| v)
-        .iter()
-        .map(|(s, _)| s)
-        .last()
-        .copied()
-}
-
 fn rust_version_incompat_error(
+    name: &str,
     dep: &str,
     rust_version: &RustVersion,
-    suggested_summary: &Summary,
+    latest_summary: &Summary,
 ) -> anyhow::Error {
-    let suggested_version = suggested_summary.version();
-    let suggested_rust_version = suggested_summary
+    let latest_version = latest_summary.version();
+    let latest_msrv = latest_summary
         .rust_version()
-        .expect("`latest_compatible should pick `None` cases, so we shouldn't get in here");
-    let error_msg = format!(
+        .expect("as `None` are compatible, we can't be here");
+    anyhow::format_err!(
         "\
-could not find version of crate `{dep}` that satisfies this package's rust-version of {rust_version}
-help: use `--ignore-rust-version` to override this behavior
-note: the lowest rust-version available for `{dep}` is {suggested_rust_version}, used in version {suggested_version}"
-    );
-
-    anyhow::Error::msg(error_msg)
+no version of crate `{dep}` satisfies {name}'s rust-version of {rust_version}
+help: pass `--ignore-rust-version` to select {dep}@{latest_version} which requires rustc {latest_msrv}"
+    )
 }
 
 fn select_package(
