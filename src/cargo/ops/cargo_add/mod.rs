@@ -697,13 +697,14 @@ fn rust_version_incompat_error(
     suggested_summary: &Summary,
 ) -> anyhow::Error {
     let suggested_version = suggested_summary.version();
-    let suggested_rust_version = suggested_summary.rust_version().unwrap();
+    let suggested_rust_version = suggested_summary
+        .rust_version()
+        .expect("`latest_compatible should pick `None` cases, so we shouldn't get in here");
     let error_msg = format!(
         "\
 could not find version of crate `{dep}` that satisfies this package's rust-version of {rust_version}
 help: use `--ignore-rust-version` to override this behavior
-note: the lowest rust-version available for `{dep}` is {suggested_rust_version}, used in version {suggested_version}
-"
+note: the lowest rust-version available for `{dep}` is {suggested_rust_version}, used in version {suggested_version}"
     );
 
     anyhow::Error::msg(error_msg)
