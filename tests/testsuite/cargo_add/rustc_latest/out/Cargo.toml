@@ -6,4 +6,4 @@ version = "0.0.0"
 edition = "2015"
 
 [dependencies]
-rust-version-user = "0.2.1"
+rust-version-user = "0.1.1"

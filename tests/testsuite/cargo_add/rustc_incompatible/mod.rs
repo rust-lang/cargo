@@ -23,7 +23,7 @@ fn case() {
         .current_dir(cwd)
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .assert()
-        .success()
+        .failure()
         .stdout_matches(str![""])
         .stderr_matches(file!["stderr.term.svg"]);
 

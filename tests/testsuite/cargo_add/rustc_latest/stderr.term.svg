@@ -1,8 +1,9 @@
-<svg width="740px" height="74px" xmlns="http://www.w3.org/2000/svg">
+<svg width="1129px" height="92px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
     .fg-green { fill: #00AA00 }
+    .fg-yellow { fill: #AA5500 }
     .container {
       padding: 0 10px;
       line-height: 18px;
@@ -20,9 +21,11 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-green bold">    Updating</tspan><tspan> `dummy-registry` index</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-green bold">      Adding</tspan><tspan> rust-version-user v0.2.1 to dependencies</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-yellow bold">warning</tspan><tspan class="bold">:</tspan><tspan> ignoring rust-version-user@0.2.1 (which requires rustc 1.2345) to maintain cargo-list-test-fixture's rust-version of [..]</tspan>
 </tspan>
-    <tspan x="10px" y="64px">
+    <tspan x="10px" y="64px"><tspan class="fg-green bold">      Adding</tspan><tspan> rust-version-user v0.1.1 to dependencies</tspan>
+</tspan>
+    <tspan x="10px" y="82px">
 </tspan>
   </text>
 
