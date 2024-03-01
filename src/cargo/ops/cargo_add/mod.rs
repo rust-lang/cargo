@@ -616,10 +616,10 @@ fn get_latest_dependency(
             })?;
 
             if gctx.cli_unstable().msrv_policy && honor_rust_version {
-                let req_msrv = spec
+                let (req_msrv, is_msrv) = spec
                     .rust_version()
                     .cloned()
-                    .map(CargoResult::Ok)
+                    .map(|msrv| CargoResult::Ok((msrv.clone(), true)))
                     .unwrap_or_else(|| {
                         let rustc = gctx.load_global_rustc(None)?;
 
@@ -633,7 +633,7 @@ fn get_latest_dependency(
                             build: None,
                         })
                         .unwrap();
-                        Ok(untagged_version)
+                        Ok((untagged_version, false))
                     })?;
 
                 let msrvs = possibilities
@@ -652,21 +652,36 @@ fn get_latest_dependency(
                         let latest_msrv = latest
                             .rust_version()
                             .expect("as `None` are compatible, we can't be here");
-                        anyhow::format_err!(
-                            "\
+                        if is_msrv {
+                            anyhow::format_err!(
+                                "\
 no version of crate `{dep_name}` can maintain {name}'s rust-version of {req_msrv}
 help: pass `--ignore-rust-version` to select {dep_name}@{latest_version} which requires rustc {latest_msrv}"
-                        )
+                            )
+                        } else {
+                            anyhow::format_err!(
+                                "\
+no version of crate `{dep_name}` can maintain {name}'s rust-version of {req_msrv}
+help: pass `--ignore-rust-version` to select {dep_name}@{latest_version} which requires rustc {latest_msrv}"
+                            )
+                        }
                     })?;
 
                 if latest_msrv.version() < latest.version() {
                     let latest_version = latest.version();
                     let latest_rust_version = latest.rust_version().unwrap();
                     let name = spec.name();
-                    gctx.shell().warn(format_args!(
+                    if is_msrv {
+                        gctx.shell().warn(format_args!(
                             "\
 ignoring {dependency}@{latest_version} (which requires rustc {latest_rust_version}) to maintain {name}'s rust-version of {req_msrv}",
                         ))?;
+                    } else {
+                        gctx.shell().warn(format_args!(
+                            "\
+ignoring {dependency}@{latest_version} (which requires rustc {latest_rust_version}) to maintain {name}'s rust-version of {req_msrv}",
+                        ))?;
+                    }
 
                     latest = latest_msrv;
                 }
