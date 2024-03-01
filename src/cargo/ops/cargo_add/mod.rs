@@ -628,7 +628,8 @@ fn get_latest_dependency(
                     let latest_msrv = latest_compatible(&msrvs, req_msrv).ok_or_else(|| {
                         // Failing that, try to find the highest version with the lowest
                         // rust-version to report to the user.
-                        let lowest_candidate = lowest_msrv(&msrvs);
+                        let lowest_candidate = lowest_msrv(&msrvs)
+                            .expect("already checked that at least one is present");
                         rust_version_incompat_error(
                             &dependency.name,
                             spec.rust_version().unwrap(),
@@ -693,26 +694,19 @@ fn lowest_msrv<'s>(msrvs: &[(&'s Summary, Option<&RustVersion>)]) -> Option<&'s 
 fn rust_version_incompat_error(
     dep: &str,
     rust_version: &RustVersion,
-    lowest_rust_version: Option<&Summary>,
+    suggested_summary: &Summary,
 ) -> anyhow::Error {
-    let mut error_msg = format!(
-        "could not find version of crate `{dep}` that satisfies this package's rust-version of \
-         {rust_version}\n\
-         help: use `--ignore-rust-version` to override this behavior"
+    let suggested_version = suggested_summary.version();
+    let suggested_rust_version = suggested_summary.rust_version().unwrap();
+    let error_msg = format!(
+        "\
+could not find version of crate `{dep}` that satisfies this package's rust-version of {rust_version}
+help: use `--ignore-rust-version` to override this behavior
+note: the lowest rust-version available for `{dep}` is {suggested_rust_version}, used in version {suggested_version}
+"
     );
 
-    if let Some(lowest) = lowest_rust_version {
-        // rust-version must be present for this candidate since it would have been selected as
-        // compatible previously if it weren't.
-        let version = lowest.version();
-        let rust_version = lowest.rust_version().unwrap();
-        error_msg.push_str(&format!(
-            "\nnote: the lowest rust-version available for `{dep}` is {rust_version}, used in \
-             version {version}"
-        ));
-    }
-
-    anyhow::format_err!(error_msg)
+    anyhow::Error::msg(error_msg)
 }
 
 fn select_package(
