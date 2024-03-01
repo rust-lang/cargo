@@ -615,39 +615,26 @@ fn get_latest_dependency(
             })?;
 
             if gctx.cli_unstable().msrv_policy && honor_rust_version {
-                fn parse_msrv(comp: &RustVersion) -> (u64, u64, u64) {
-                    (comp.major, comp.minor.unwrap_or(0), comp.patch.unwrap_or(0))
-                }
-
-                if let Some(req_msrv) = spec.rust_version().map(parse_msrv) {
+                if let Some(req_msrv) = spec.rust_version() {
                     let msrvs = possibilities
                         .iter()
-                        .map(|s| (s, s.rust_version().map(parse_msrv)))
+                        .map(|s| (s, s.rust_version()))
                         .collect::<Vec<_>>();
 
                     // Find the latest version of the dep which has a compatible rust-version. To
                     // determine whether or not one rust-version is compatible with another, we
                     // compare the lowest possible versions they could represent, and treat
                     // candidates without a rust-version as compatible by default.
-                    let (latest_msrv, _) = msrvs
-                        .iter()
-                        .filter(|(_, v)| v.map(|msrv| req_msrv >= msrv).unwrap_or(true))
-                        .last()
-                        .ok_or_else(|| {
-                            // Failing that, try to find the highest version with the lowest
-                            // rust-version to report to the user.
-                            let lowest_candidate = msrvs
-                                .iter()
-                                .min_set_by_key(|(_, v)| v)
-                                .iter()
-                                .map(|(s, _)| s)
-                                .max_by_key(|s| s.version());
-                            rust_version_incompat_error(
-                                &dependency.name,
-                                spec.rust_version().unwrap(),
-                                lowest_candidate.copied(),
-                            )
-                        })?;
+                    let latest_msrv = latest_compatible(&msrvs, req_msrv).ok_or_else(|| {
+                        // Failing that, try to find the highest version with the lowest
+                        // rust-version to report to the user.
+                        let lowest_candidate = lowest_msrv(&msrvs);
+                        rust_version_incompat_error(
+                            &dependency.name,
+                            spec.rust_version().unwrap(),
+                            lowest_candidate,
+                        )
+                    })?;
 
                     if latest_msrv.version() < latest.version() {
                         gctx.shell().warn(format_args!(
@@ -671,6 +658,36 @@ fn get_latest_dependency(
             Ok(dep)
         }
     }
+}
+
+/// Of MSRV-compatible summaries, find the highest version
+///
+/// Assumptions:
+/// - `msrvs` is sorted by version
+fn latest_compatible<'s>(
+    msrvs: &[(&'s Summary, Option<&RustVersion>)],
+    req_msrv: &RustVersion,
+) -> Option<&'s Summary> {
+    msrvs
+        .iter()
+        .filter(|(_, v)| v.as_ref().map(|msrv| req_msrv >= *msrv).unwrap_or(true))
+        .map(|(s, _)| s)
+        .last()
+        .copied()
+}
+
+/// Find the lowest MSRV summaries and pick the highest version
+///
+/// Assumptions:
+/// - `msrvs` is sorted by version
+fn lowest_msrv<'s>(msrvs: &[(&'s Summary, Option<&RustVersion>)]) -> Option<&'s Summary> {
+    msrvs
+        .iter()
+        .min_set_by_key(|(_, v)| v)
+        .iter()
+        .map(|(s, _)| s)
+        .last()
+        .copied()
 }
 
 fn rust_version_incompat_error(
