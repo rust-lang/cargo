@@ -9,6 +9,7 @@ use crate::AlreadyPrintedError;
 use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
 use cargo_util::paths;
+use cargo_util_schemas::core::PartialVersion;
 use cargo_util_schemas::manifest;
 use cargo_util_schemas::manifest::RustVersion;
 use itertools::Itertools;
@@ -563,14 +564,69 @@ pub fn to_real_manifest(
         source_id,
     );
 
+    let rust_version = if let Some(rust_version) = &package.rust_version {
+        let rust_version = field_inherit_with(rust_version.clone(), "rust_version", || {
+            inherit()?.rust_version()
+        })?;
+        Some(rust_version)
+    } else {
+        None
+    };
+
     let edition = if let Some(edition) = package.edition.clone() {
         let edition: Edition = field_inherit_with(edition, "edition", || inherit()?.edition())?
             .parse()
             .with_context(|| "failed to parse the `edition` key")?;
         package.edition = Some(manifest::InheritableField::Value(edition.to_string()));
+        if let Some(rust_version) = &rust_version {
+            let req = rust_version.to_caret_req();
+            if let Some(first_version) = edition.first_version() {
+                let unsupported =
+                    semver::Version::new(first_version.major, first_version.minor - 1, 9999);
+                if req.matches(&unsupported) {
+                    bail!(
+                        "rust-version {} is older than first version ({}) required by \
+                            the specified edition ({})",
+                        rust_version,
+                        first_version,
+                        edition,
+                    )
+                }
+            }
+        }
         edition
     } else {
-        Edition::Edition2015
+        let msrv_edition = if let Some(rust_version) = &rust_version {
+            Edition::ALL
+                .iter()
+                .filter(|e| {
+                    e.first_version()
+                        .map(|e| {
+                            let e = PartialVersion::from(e);
+                            e <= **rust_version
+                        })
+                        .unwrap_or_default()
+                })
+                .max()
+                .copied()
+        } else {
+            None
+        }
+        .unwrap_or_default();
+        let default_edition = Edition::default();
+        let latest_edition = Edition::LATEST_STABLE;
+
+        let tip = if msrv_edition == default_edition {
+            String::new()
+        } else if msrv_edition == latest_edition {
+            format!(" while the latest is {latest_edition}")
+        } else {
+            format!(" while {msrv_edition} is compatible with `rust-version`")
+        };
+        warnings.push(format!(
+            "no edition set: defaulting to the {default_edition} edition{tip}",
+        ));
+        default_edition
     };
     // Add these lines if start a new unstable edition.
     // ```
@@ -587,29 +643,6 @@ pub fn to_real_manifest(
             edition
         )));
     }
-
-    let rust_version = if let Some(rust_version) = &package.rust_version {
-        let rust_version = field_inherit_with(rust_version.clone(), "rust_version", || {
-            inherit()?.rust_version()
-        })?;
-        let req = rust_version.to_caret_req();
-        if let Some(first_version) = edition.first_version() {
-            let unsupported =
-                semver::Version::new(first_version.major, first_version.minor - 1, 9999);
-            if req.matches(&unsupported) {
-                bail!(
-                    "rust-version {} is older than first version ({}) required by \
-                            the specified edition ({})",
-                    rust_version,
-                    first_version,
-                    edition,
-                )
-            }
-        }
-        Some(rust_version)
-    } else {
-        None
-    };
 
     if package.metabuild.is_some() {
         features.require(Feature::metabuild())?;

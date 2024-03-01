@@ -38,6 +38,7 @@ fn features() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [features]
                 f_a = []
@@ -63,6 +64,7 @@ fn features_with_deps() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = "bar/" }
@@ -93,6 +95,7 @@ fn features_with_opt_deps() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = "bar/", optional = true }
@@ -124,6 +127,7 @@ fn features_with_namespaced_features() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = "bar/", optional = true }
@@ -154,6 +158,7 @@ fn features_fingerprint() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [features]
                 f_a = []
@@ -181,6 +186,7 @@ fn features_fingerprint() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [features]
             f_b = []
@@ -199,6 +205,7 @@ fn features_fingerprint() {
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [features]
             f_a = []
@@ -239,6 +246,7 @@ fn features_test() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [features]
                 f_a = []
@@ -264,6 +272,7 @@ fn features_doctest() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [features]
                 default = ["f_a"]
@@ -322,6 +331,7 @@ fn features_doc() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [features]
                 default = ["f_a"]
@@ -348,6 +358,7 @@ fn build_script_feedback() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
             "#,
@@ -375,6 +386,7 @@ fn build_script_doc() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
             "#,
@@ -415,6 +427,7 @@ fn build_script_override() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
+                edition = "2015"
                 authors = []
                 links = "a"
                 build = "build.rs"
@@ -453,6 +466,7 @@ fn build_script_override_feature_gate() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
                 links = "a"
             "#,
         )
@@ -484,6 +498,7 @@ fn build_script_test() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
             "#,
@@ -539,6 +554,7 @@ fn build_script_feature_gate() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 build = "build.rs"
             "#,
         )
@@ -567,6 +583,7 @@ fn config_valid() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [features]
                 f_a = []
@@ -599,6 +616,7 @@ fn config_invalid() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -627,6 +645,7 @@ fn config_feature_gate() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [features]
                 f_a = []

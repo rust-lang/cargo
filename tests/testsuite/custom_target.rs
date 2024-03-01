@@ -72,6 +72,7 @@ fn custom_target_dependency() {
 
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = ["author@example.com"]
 
                 [dependencies]
@@ -189,6 +190,7 @@ fn changing_spec_relearns_crate_types() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [lib]
                 crate-type = ["cdylib"]

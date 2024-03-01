@@ -331,6 +331,7 @@ fn bench_with_lib_dep() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [[bin]]
@@ -396,6 +397,7 @@ fn bench_with_deep_lib_dep() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [dependencies.foo]
@@ -454,6 +456,7 @@ fn external_bench_explicit() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [[bench]]
@@ -697,6 +700,7 @@ fn lib_bin_same_name() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -796,6 +800,7 @@ fn lib_with_standard_name2() {
                 [package]
                 name = "syntax"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -842,6 +847,7 @@ fn bench_dylib() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -883,6 +889,7 @@ fn bench_dylib() {
                 [package]
                 name = "bar"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
 
                 [lib]
@@ -932,6 +939,7 @@ fn bench_twice_with_build_cmd() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2015"
                 authors = []
                 build = "build.rs"
             "#,
@@ -977,6 +985,7 @@ fn bench_with_examples() {
                 [package]
                 name = "foo"
                 version = "6.6.6"
+                edition = "2015"
                 authors = []
 
                 [[example]]
@@ -1061,6 +1070,7 @@ fn test_a_bench() {
                 name = "foo"
                 authors = []
                 version = "0.1.0"
+                edition = "2015"
 
                 [lib]
                 name = "foo"
@@ -1219,6 +1229,7 @@ fn test_bench_multiple_packages() {
                 name = "foo"
                 authors = []
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies.bar]
                 path = "../bar"
@@ -1239,6 +1250,7 @@ fn test_bench_multiple_packages() {
                 name = "bar"
                 authors = []
                 version = "0.1.0"
+                edition = "2015"
 
                 [[bench]]
                 name = "bbar"
@@ -1269,6 +1281,7 @@ fn test_bench_multiple_packages() {
                 name = "baz"
                 authors = []
                 version = "0.1.0"
+                edition = "2015"
 
                 [[bench]]
                 name = "bbaz"
@@ -1307,6 +1320,7 @@ fn bench_all_workspace() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = { path = "bar" }
@@ -1360,6 +1374,7 @@ fn bench_all_exclude() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [workspace]
                 members = ["bar", "baz"]
@@ -1405,6 +1420,7 @@ fn bench_all_exclude_glob() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [workspace]
                 members = ["bar", "baz"]
@@ -1549,6 +1565,7 @@ fn legacy_bench_name() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [[bench]]
                 name = "bench"

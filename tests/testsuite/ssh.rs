@@ -110,6 +110,7 @@ fn foo_bar_project(url: &str) -> Project {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bar = {{ git = "{url}" }}
@@ -406,6 +407,7 @@ fn invalid_github_key() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bitflags = { git = "ssh://git@github.com/rust-lang/bitflags.git", tag = "1.3.2" }
@@ -444,6 +446,7 @@ fn bundled_github_works() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2015"
 
                 [dependencies]
                 bitflags = { git = "ssh://git@github.com/rust-lang/bitflags.git", tag = "1.3.2" }
@@ -552,6 +555,7 @@ Caused by:
             [package]
             name = "foo"
             version = "0.1.0"
+            edition = "2015"
 
             [dependencies]
             bitflags = { git = "ssh://git@github.com:22/rust-lang/bitflags.git", tag = "1.3.2" }
