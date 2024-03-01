@@ -4,7 +4,7 @@ use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{
-    basic_manifest, cargo_process, git, path2url, paths, project, symlink_supported, t,
+    basic_manifest, cargo_process, git, path2url, paths, project, rustc_host, symlink_supported, t,
     ProjectBuilder,
 };
 use flate2::read::GzDecoder;
@@ -1326,6 +1326,83 @@ fn package_two_kinds_of_deps() {
         .build();
 
     p.cargo("package --no-verify").run();
+}
+
+#[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
+fn package_public_dep() {
+    Package::new("bar", "1.0.0").publish();
+    Package::new("baz", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format! {
+                r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                bar = {{ version = "1.0.0", public = true }}
+
+                [target.{host}.dependencies]
+                baz = {{ version = "1.0.0", public = true }}
+            "#,
+                host = rustc_host()
+            },
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    let rewritten_toml = format!(
+        r#"{}
+[package]
+edition = "2015"
+name = "foo"
+version = "0.0.1"
+
+[dependencies.bar]
+version = "1.0.0"
+
+[target.{host}.dependencies.baz]
+version = "1.0.0"
+"#,
+        cargo::core::package::MANIFEST_PREAMBLE,
+        host = rustc_host()
+    );
+    verify(&p, "package", rewritten_toml);
+
+    let rewritten_toml = format!(
+        r#"{}
+[package]
+edition = "2015"
+name = "foo"
+version = "0.0.1"
+
+[dependencies.bar]
+version = "1.0.0"
+public = true
+
+[target.{host}.dependencies.baz]
+version = "1.0.0"
+public = true
+"#,
+        cargo::core::package::MANIFEST_PREAMBLE,
+        host = rustc_host()
+    );
+    verify(&p, "package -Zpublic-dependency", rewritten_toml);
+
+    fn verify(p: &cargo_test_support::Project, cmd: &str, rewritten_toml: String) {
+        p.cargo(cmd)
+            .masquerade_as_nightly_cargo(&["public-dependency"])
+            .run();
+        let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+        validate_crate_contents(
+            f,
+            "foo-0.0.1.crate",
+            &["Cargo.toml", "Cargo.toml.orig", "Cargo.lock", "src/main.rs"],
+            &[("Cargo.toml", &rewritten_toml)],
+        );
+    }
 }
 
 #[cargo_test]
