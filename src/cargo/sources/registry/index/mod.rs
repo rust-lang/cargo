@@ -24,25 +24,23 @@ use crate::core::dependency::{Artifact, DepKind};
 use crate::core::Dependency;
 use crate::core::{PackageId, SourceId, Summary};
 use crate::sources::registry::{LoadResponse, RegistryData};
-use crate::util::cache_lock::CacheLockMode;
 use crate::util::interning::InternedString;
 use crate::util::IntoUrl;
 use crate::util::{internal, CargoResult, Filesystem, GlobalContext, OptVersionReq};
-use cargo_util::{paths, registry::make_dep_path};
+use cargo_util::registry::make_dep_path;
 use cargo_util_schemas::manifest::RustVersion;
 use semver::Version;
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
-use std::fs;
-use std::io::ErrorKind;
 use std::path::Path;
 use std::str;
 use std::task::{ready, Poll};
 use tracing::{debug, info};
 
 mod cache;
+use self::cache::CacheManager;
 use self::cache::SummariesCache;
 
 /// The maximum schema version of the `v` field in the index this version of
@@ -79,6 +77,8 @@ pub struct RegistryIndex<'gctx> {
     summaries_cache: HashMap<InternedString, Summaries>,
     /// [`GlobalContext`] reference for convenience.
     gctx: &'gctx GlobalContext,
+    /// Manager of on-disk caches.
+    cache_manager: CacheManager<'gctx>,
 }
 
 /// An internal cache of summaries for a particular package.
@@ -304,6 +304,7 @@ impl<'gctx> RegistryIndex<'gctx> {
             path: path.clone(),
             summaries_cache: HashMap::new(),
             gctx,
+            cache_manager: CacheManager::new(gctx),
         }
     }
 
@@ -420,7 +421,8 @@ impl<'gctx> RegistryIndex<'gctx> {
             &name,
             self.source_id,
             load,
-            self.gctx,
+            self.gctx.cli_unstable().bindeps,
+            &self.cache_manager,
         ))?
         .unwrap_or_default();
         self.summaries_cache.insert(name, summaries);
@@ -533,12 +535,14 @@ impl Summaries {
     ///   to create summaries.
     /// * `load` --- the actual index implementation which may be very slow to
     ///   call. We avoid this if we can.
+    /// * `bindeps` --- whether the `-Zbindeps` unstable flag is enabled
     pub fn parse(
         root: &Path,
         name: &str,
         source_id: SourceId,
         load: &mut dyn RegistryData,
-        gctx: &GlobalContext,
+        bindeps: bool,
+        cache_manager: &CacheManager<'_>,
     ) -> Poll<CargoResult<Option<Summaries>>> {
         // This is the file we're loading from cache or the index data.
         // See module comment in `registry/mod.rs` for why this is structured
@@ -551,8 +555,8 @@ impl Summaries {
 
         let mut cached_summaries = None;
         let mut index_version = None;
-        match fs::read(&cache_path) {
-            Ok(contents) => match Summaries::parse_cache(contents) {
+        if let Some(contents) = cache_manager.get(&cache_path) {
+            match Summaries::parse_cache(contents) {
                 Ok((s, v)) => {
                     cached_summaries = Some(s);
                     index_version = Some(v);
@@ -560,13 +564,10 @@ impl Summaries {
                 Err(e) => {
                     tracing::debug!("failed to parse {:?} cache: {}", relative, e);
                 }
-            },
-            Err(e) => tracing::debug!("cache missing for {:?} error: {}", relative, e),
+            }
         }
 
         let response = ready!(load.load(root, relative.as_ref(), index_version.as_deref())?);
-
-        let bindeps = gctx.cli_unstable().bindeps;
 
         match response {
             LoadResponse::CacheValid => {
@@ -574,11 +575,7 @@ impl Summaries {
                 return Poll::Ready(Ok(cached_summaries));
             }
             LoadResponse::NotFound => {
-                if let Err(e) = fs::remove_file(cache_path) {
-                    if e.kind() != ErrorKind::NotFound {
-                        tracing::debug!("failed to remove from cache: {}", e);
-                    }
-                }
+                cache_manager.invalidate(&cache_path);
                 return Poll::Ready(Ok(None));
             }
             LoadResponse::Data {
@@ -627,16 +624,7 @@ impl Summaries {
                     // Once we have our `cache_bytes` which represents the `Summaries` we're
                     // about to return, write that back out to disk so future Cargo
                     // invocations can use it.
-                    //
-                    // This is opportunistic so we ignore failure here but are sure to log
-                    // something in case of error.
-                    if paths::create_dir_all(cache_path.parent().unwrap()).is_ok() {
-                        let path = Filesystem::new(cache_path.clone());
-                        gctx.assert_package_cache_locked(CacheLockMode::DownloadExclusive, &path);
-                        if let Err(e) = fs::write(cache_path, &cache_bytes) {
-                            tracing::info!("failed to write cache: {}", e);
-                        }
-                    }
+                    cache_manager.put(&cache_path, &cache_bytes);
 
                     // If we've got debug assertions enabled read back in the cached values
                     // and assert they match the expected result.

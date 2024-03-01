@@ -65,12 +65,18 @@
 //! [`IndexSummary::parse`]: super::IndexSummary::parse
 //! [`RemoteRegistry`]: crate::sources::registry::remote::RemoteRegistry
 
+use std::fs;
+use std::io;
+use std::path::Path;
 use std::str;
 
 use anyhow::bail;
 use semver::Version;
 
+use crate::util::cache_lock::CacheLockMode;
+use crate::util::Filesystem;
 use crate::CargoResult;
+use crate::GlobalContext;
 
 use super::split;
 use super::INDEX_V_MAX;
@@ -210,5 +216,50 @@ impl<'a> SummariesCache<'a> {
             contents.push(0);
         }
         contents
+    }
+}
+
+/// Manages the on-disk index caches.
+pub struct CacheManager<'gctx> {
+    /// [`GlobalContext`] reference for convenience.
+    gctx: &'gctx GlobalContext,
+}
+
+impl<'gctx> CacheManager<'gctx> {
+    /// Creates a new instance of the on-disk index cache manager.
+    pub fn new(gctx: &'gctx GlobalContext) -> CacheManager<'gctx> {
+        CacheManager { gctx }
+    }
+
+    /// Gets the cache associated with the key.
+    pub fn get(&self, key: &Path) -> Option<Vec<u8>> {
+        match fs::read(key) {
+            Ok(contents) => Some(contents),
+            Err(e) => {
+                tracing::debug!(?key, "cache missing: {e}");
+                None
+            }
+        }
+    }
+
+    /// Associates the value with the key.
+    pub fn put(&self, key: &Path, value: &[u8]) {
+        if fs::create_dir_all(key.parent().unwrap()).is_ok() {
+            let path = Filesystem::new(key.into());
+            self.gctx
+                .assert_package_cache_locked(CacheLockMode::DownloadExclusive, &path);
+            if let Err(e) = fs::write(key, value) {
+                tracing::info!(?key, "failed to write cache: {e}");
+            }
+        }
+    }
+
+    /// Invalidates the cache associated with the key.
+    pub fn invalidate(&self, key: &Path) {
+        if let Err(e) = fs::remove_file(key) {
+            if e.kind() != io::ErrorKind::NotFound {
+                tracing::debug!(?key, "failed to remove from cache: {e}");
+            }
+        }
     }
 }
