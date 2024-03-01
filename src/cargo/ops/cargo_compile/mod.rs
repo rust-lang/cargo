@@ -487,6 +487,8 @@ pub fn create_bcx<'a, 'gctx>(
             current_version.patch,
         );
 
+        let mut incompatible = Vec::new();
+        let mut local_incompatible = false;
         for unit in unit_graph.keys() {
             let Some(version) = unit.pkg.rust_version() else {
                 continue;
@@ -497,35 +499,40 @@ pub fn create_bcx<'a, 'gctx>(
                 continue;
             }
 
-            let guidance = if ws.is_ephemeral() {
-                if ws.ignore_lock() {
-                    "Try re-running cargo install with `--locked`".to_string()
-                } else {
-                    String::new()
-                }
-            } else if !unit.is_local() {
-                format!(
-                    "Either upgrade to rustc {} or newer, or use\n\
-                     cargo update {}@{} --precise ver\n\
-                     where `ver` is the latest version of `{}` supporting rustc {}",
-                    version,
-                    unit.pkg.name(),
-                    unit.pkg.version(),
-                    unit.pkg.name(),
-                    current_version,
-                )
-            } else {
-                String::new()
-            };
+            local_incompatible |= unit.is_local();
+            incompatible.push((unit, version));
+        }
+        if !incompatible.is_empty() {
+            use std::fmt::Write as _;
 
-            anyhow::bail!(
-                "package `{}` cannot be built because it requires rustc {} or newer, \
-                 while the currently active rustc version is {}\n{}",
-                unit.pkg,
-                version,
-                current_version,
-                guidance,
+            let plural = if incompatible.len() == 1 { "" } else { "s" };
+            let mut message = format!(
+                "rustc {current_version} is not supported by the following package{plural}:\n"
             );
+            incompatible.sort_by_key(|(unit, _)| (unit.pkg.name(), unit.pkg.version()));
+            for (unit, msrv) in incompatible {
+                let name = &unit.pkg.name();
+                let version = &unit.pkg.version();
+                writeln!(&mut message, "  {name}@{version} requires rustc {msrv}").unwrap();
+            }
+            if ws.is_ephemeral() {
+                if ws.ignore_lock() {
+                    writeln!(
+                        &mut message,
+                        "Try re-running `cargo install` with `--locked`"
+                    )
+                    .unwrap();
+                }
+            } else if !local_incompatible {
+                writeln!(
+                    &mut message,
+                    "Either upgrade rustc or select compatible dependency versions with
+`cargo update <name>@<current-ver> --precise <compatible-ver>`
+where `<compatible-ver>` is the latest version supporting rustc {current_version}",
+                )
+                .unwrap();
+            }
+            return Err(anyhow::Error::msg(message));
         }
     }
 
