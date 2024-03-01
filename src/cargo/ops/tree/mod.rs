@@ -40,7 +40,7 @@ pub struct TreeOptions {
     /// `invert`.
     pub duplicates: bool,
     /// The style of characters to use.
-    pub charset: Charset,
+    pub charset: Option<Charset>,
     /// A format string indicating how each package should be displayed.
     pub format: String,
     /// Includes features in the tree as separate nodes.
@@ -68,6 +68,7 @@ impl Target {
     }
 }
 
+#[derive(Copy, Clone)]
 pub enum Charset {
     Utf8,
     Ascii,
@@ -236,7 +237,14 @@ fn print(
     let format = Pattern::new(&opts.format)
         .with_context(|| format!("tree format `{}` not valid", opts.format))?;
 
-    let symbols = match opts.charset {
+    let charset = opts.charset.unwrap_or_else(|| {
+        if gctx.shell().out_unicode() {
+            Charset::Utf8
+        } else {
+            Charset::Ascii
+        }
+    });
+    let symbols = match charset {
         Charset::Utf8 => &UTF8_SYMBOLS,
         Charset::Ascii => &ASCII_SYMBOLS,
     };

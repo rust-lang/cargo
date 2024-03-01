@@ -53,6 +53,8 @@ impl Shell {
                 color_choice: auto_clr,
                 hyperlinks: supports_hyperlinks(),
                 stderr_tty: std::io::stderr().is_terminal(),
+                stdout_unicode: supports_unicode(&std::io::stdout()),
+                stderr_unicode: supports_unicode(&std::io::stderr()),
             },
             verbosity: Verbosity::Verbose,
             needs_clear: false,
@@ -259,6 +261,20 @@ impl Shell {
         Ok(())
     }
 
+    pub fn out_unicode(&self) -> bool {
+        match &self.output {
+            ShellOut::Write(_) => true,
+            ShellOut::Stream { stdout_unicode, .. } => *stdout_unicode,
+        }
+    }
+
+    pub fn err_unicode(&self) -> bool {
+        match &self.output {
+            ShellOut::Write(_) => true,
+            ShellOut::Stream { stderr_unicode, .. } => *stderr_unicode,
+        }
+    }
+
     /// Gets the current color choice.
     ///
     /// If we are not using a color stream, this will always return `Never`, even if the color
@@ -384,6 +400,8 @@ enum ShellOut {
         stderr_tty: bool,
         color_choice: ColorChoice,
         hyperlinks: bool,
+        stdout_unicode: bool,
+        stderr_unicode: bool,
     },
 }
 
@@ -517,6 +535,10 @@ fn supports_color(choice: anstream::ColorChoice) -> bool {
         | anstream::ColorChoice::Auto => true,
         anstream::ColorChoice::Never => false,
     }
+}
+
+fn supports_unicode(stream: &dyn IsTerminal) -> bool {
+    !stream.is_terminal() || supports_unicode::supports_unicode()
 }
 
 fn supports_hyperlinks() -> bool {

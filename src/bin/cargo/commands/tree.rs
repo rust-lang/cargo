@@ -7,7 +7,6 @@ use cargo::ops::Packages;
 use cargo::util::print_available_packages;
 use cargo::util::CargoResult;
 use std::collections::HashSet;
-use std::io::IsTerminal as _;
 use std::str::FromStr;
 
 pub fn cli() -> Command {
@@ -186,13 +185,6 @@ subtree of the package given to -p.\n\
         .map(|c| tree::Charset::from_str(c))
         .transpose()
         .map_err(|e| anyhow::anyhow!("{}", e))?;
-    let charset = charset.unwrap_or_else(|| {
-        if supports_unicode::supports_unicode() || !std::io::stdout().is_terminal() {
-            tree::Charset::Utf8
-        } else {
-            tree::Charset::Ascii
-        }
-    });
     let opts = tree::TreeOptions {
         cli_features: args.cli_features()?,
         packages,
