@@ -108,13 +108,13 @@ which is defined by the <code>registry.default</code> config key which defaults 
 
 
 <dt class="option-term" id="option-cargo-add---public"><a class="option-anchor" href="#option-cargo-add---public"></a><code>--public</code></dt>
-<dd class="option-desc">Mark the dependency as public. </p>
+<dd class="option-desc">Mark the dependency as public.</p>
 <p>The dependency can be referenced in your library’s public API.</p>
 <p><a href="../reference/unstable.html#public-dependency">Unstable (nightly-only)</a></dd>
 
 
 <dt class="option-term" id="option-cargo-add---no-public"><a class="option-anchor" href="#option-cargo-add---no-public"></a><code>--no-public</code></dt>
-<dd class="option-desc">Mark the dependency as private. </p>
+<dd class="option-desc">Mark the dependency as private.</p>
 <p>While you can use the crate in your implementation, it cannot be referenced in your public API.</p>
 <p><a href="../reference/unstable.html#public-dependency">Unstable (nightly-only)</a></dd>
 

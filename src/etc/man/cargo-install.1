@@ -104,8 +104,8 @@ available.
 .SS "Configuration Discovery"
 This command operates on system or user level, not project level.
 This means that the local \fIconfiguration discovery\fR <https://doc.rust\-lang.org/cargo/reference/config.html#hierarchical\-structure> is ignored.
-Instead, the configuration discovery begins at \fB$CARGO_HOME/config.toml\fR\&. 
-If the package is installed with \fB\-\-path $PATH\fR, the local configuration 
+Instead, the configuration discovery begins at \fB$CARGO_HOME/config.toml\fR\&.
+If the package is installed with \fB\-\-path $PATH\fR, the local configuration
 will be used, beginning discovery at \fB$PATH/.cargo/config.toml\fR\&.
 .SH "OPTIONS"
 .SS "Install Options"
@@ -254,7 +254,7 @@ Directory for all generated artifacts and intermediate files. May also be
 specified with the \fBCARGO_TARGET_DIR\fR environment variable, or the
 \fBbuild.target\-dir\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
 Defaults to a new temporary folder located in the
-temporary directory of the platform. 
+temporary directory of the platform.
 .sp
 When using \fB\-\-path\fR, by default it will use \fBtarget\fR directory in the workspace
 of the local crate unless \fB\-\-target\-dir\fR

@@ -5,7 +5,7 @@
 Testing tables.
 
 | Single col |
---------------
+|------------|
 | Hi! :) |
 
 
@@ -27,7 +27,7 @@ Extra long text 123456789012 with mixed widths. | Extra long text 123456789012 w
 
 
 | Link check |
---------------
+|------------|
 | [foo] |
 | <https://example.com/> |
 

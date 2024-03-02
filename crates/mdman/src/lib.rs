@@ -1,7 +1,7 @@
 //! mdman markdown to man converter.
 
 use anyhow::{bail, Context, Error};
-use pulldown_cmark::{CowStr, Event, LinkType, Options, Parser, Tag};
+use pulldown_cmark::{CowStr, Event, LinkType, Options, Parser, Tag, TagEnd};
 use std::collections::HashMap;
 use std::fs;
 use std::io::{self, BufRead};
@@ -74,14 +74,21 @@ pub(crate) fn md_parser(input: &str, url: Option<Url>) -> EventIter<'_> {
     let parser = parser.into_offset_iter();
     // Translate all links to include the base url.
     let parser = parser.map(move |(event, range)| match event {
-        Event::Start(Tag::Link(lt, dest_url, title)) if !matches!(lt, LinkType::Email) => (
-            Event::Start(Tag::Link(lt, join_url(url.as_ref(), dest_url), title)),
+        Event::Start(Tag::Link {
+            link_type,
+            dest_url,
+            title,
+            id,
+        }) if !matches!(link_type, LinkType::Email) => (
+            Event::Start(Tag::Link {
+                link_type,
+                dest_url: join_url(url.as_ref(), dest_url),
+                title,
+                id,
+            }),
             range,
         ),
-        Event::End(Tag::Link(lt, dest_url, title)) if !matches!(lt, LinkType::Email) => (
-            Event::End(Tag::Link(lt, join_url(url.as_ref(), dest_url), title)),
-            range,
-        ),
+        Event::End(TagEnd::Link) => (Event::End(TagEnd::Link), range),
         _ => (event, range),
     });
     Box::new(parser)
