@@ -209,14 +209,24 @@ pub fn resolve_ws_with_opts<'gctx>(
                     .warn(format!("package replacement is not used: {}", replace_spec))?
             }
 
-            if dep.features().len() != 0 || !dep.uses_default_features() {
-                ws.gctx()
-                .shell()
-                .warn(format!(
-                    "replacement for `{}` uses the features mechanism. \
-                    default-features and features will not take effect because the replacement dependency does not support this mechanism",
-                    dep.package_name()
-                ))?
+            let mut unused_fields = Vec::new();
+            if dep.features().len() != 0 {
+                unused_fields.push("`features`");
+            }
+            if !dep.uses_default_features() {
+                unused_fields.push("`default-features`")
+            }
+            if !unused_fields.is_empty() {
+                let mut shell = ws.gctx().shell();
+                shell.warn(format!(
+                    "unused field in replacement for `{}`: {}",
+                    dep.package_name(),
+                    unused_fields.join(", ")
+                ))?;
+                shell.note(format!(
+                    "configure {} in the `dependencies` entry",
+                    unused_fields.join(", ")
+                ))?;
             }
         }
 

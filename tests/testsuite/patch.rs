@@ -928,20 +928,26 @@ fn add_patch_with_features() {
         .file("bar/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] patch for `bar` uses the features mechanism. default-features and features will not take effect because the patch dependency does not support this mechanism
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[WARNING] unused field in patch for `bar`: `features`
+[NOTE] configure `features` in the `dependencies` entry
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]]).run();
-    p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] patch for `bar` uses the features mechanism. default-features and features will not take effect because the patch dependency does not support this mechanism
+"#]])
+        .run();
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[WARNING] unused field in patch for `bar`: `features`
+[NOTE] configure `features` in the `dependencies` entry
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]]).run();
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -970,20 +976,26 @@ fn add_patch_with_setting_default_features() {
         .file("bar/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] patch for `bar` uses the features mechanism. default-features and features will not take effect because the patch dependency does not support this mechanism
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[WARNING] unused field in patch for `bar`: `features`, `default-features`
+[NOTE] configure `features`, `default-features` in the `dependencies` entry
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]]).run();
-    p.cargo("check").with_stderr_data(str![[r#"
-[WARNING] patch for `bar` uses the features mechanism. default-features and features will not take effect because the patch dependency does not support this mechanism
+"#]])
+        .run();
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[WARNING] unused field in patch for `bar`: `features`, `default-features`
+[NOTE] configure `features`, `default-features` in the `dependencies` entry
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]]).run();
+"#]])
+        .run();
 }
 
 #[cargo_test]
