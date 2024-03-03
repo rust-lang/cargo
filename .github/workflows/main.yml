@@ -267,4 +267,4 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: taiki-e/install-action@cargo-hack
-    - run: cargo hack check --all-targets --rust-version --workspace --ignore-private
+    - run: cargo hack check --all-targets --rust-version --workspace --ignore-private --locked
