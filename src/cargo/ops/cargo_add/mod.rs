@@ -11,6 +11,7 @@ use std::str::FromStr;
 
 use anyhow::Context as _;
 use cargo_util::paths;
+use cargo_util_schemas::core::PartialVersion;
 use cargo_util_schemas::manifest::RustVersion;
 use indexmap::IndexSet;
 use itertools::Itertools;
@@ -615,52 +616,74 @@ fn get_latest_dependency(
             })?;
 
             if gctx.cli_unstable().msrv_policy && honor_rust_version {
-                fn parse_msrv(comp: &RustVersion) -> (u64, u64, u64) {
-                    (comp.major, comp.minor.unwrap_or(0), comp.patch.unwrap_or(0))
-                }
+                let (req_msrv, is_msrv) = spec
+                    .rust_version()
+                    .cloned()
+                    .map(|msrv| CargoResult::Ok((msrv.clone(), true)))
+                    .unwrap_or_else(|| {
+                        let rustc = gctx.load_global_rustc(None)?;
 
-                if let Some(req_msrv) = spec.rust_version().map(parse_msrv) {
-                    let msrvs = possibilities
-                        .iter()
-                        .map(|s| (s, s.rust_version().map(parse_msrv)))
-                        .collect::<Vec<_>>();
+                        // Remove any pre-release identifiers for easier comparison
+                        let current_version = &rustc.version;
+                        let untagged_version = RustVersion::try_from(PartialVersion {
+                            major: current_version.major,
+                            minor: Some(current_version.minor),
+                            patch: Some(current_version.patch),
+                            pre: None,
+                            build: None,
+                        })
+                        .unwrap();
+                        Ok((untagged_version, false))
+                    })?;
 
-                    // Find the latest version of the dep which has a compatible rust-version. To
-                    // determine whether or not one rust-version is compatible with another, we
-                    // compare the lowest possible versions they could represent, and treat
-                    // candidates without a rust-version as compatible by default.
-                    let (latest_msrv, _) = msrvs
-                        .iter()
-                        .filter(|(_, v)| v.map(|msrv| req_msrv >= msrv).unwrap_or(true))
-                        .last()
-                        .ok_or_else(|| {
-                            // Failing that, try to find the highest version with the lowest
-                            // rust-version to report to the user.
-                            let lowest_candidate = msrvs
-                                .iter()
-                                .min_set_by_key(|(_, v)| v)
-                                .iter()
-                                .map(|(s, _)| s)
-                                .max_by_key(|s| s.version());
-                            rust_version_incompat_error(
-                                &dependency.name,
-                                spec.rust_version().unwrap(),
-                                lowest_candidate.copied(),
+                let msrvs = possibilities
+                    .iter()
+                    .map(|s| (s, s.rust_version()))
+                    .collect::<Vec<_>>();
+
+                // Find the latest version of the dep which has a compatible rust-version. To
+                // determine whether or not one rust-version is compatible with another, we
+                // compare the lowest possible versions they could represent, and treat
+                // candidates without a rust-version as compatible by default.
+                let latest_msrv = latest_compatible(&msrvs, &req_msrv).ok_or_else(|| {
+                        let name = spec.name();
+                        let dep_name = &dependency.name;
+                        let latest_version = latest.version();
+                        let latest_msrv = latest
+                            .rust_version()
+                            .expect("as `None` are compatible, we can't be here");
+                        if is_msrv {
+                            anyhow::format_err!(
+                                "\
+no version of crate `{dep_name}` can maintain {name}'s rust-version of {req_msrv}
+help: pass `--ignore-rust-version` to select {dep_name}@{latest_version} which requires rustc {latest_msrv}"
                             )
-                        })?;
+                        } else {
+                            anyhow::format_err!(
+                                "\
+no version of crate `{dep_name}` is compatible with rustc {req_msrv}
+help: pass `--ignore-rust-version` to select {dep_name}@{latest_version} which requires rustc {latest_msrv}"
+                            )
+                        }
+                    })?;
 
-                    if latest_msrv.version() < latest.version() {
+                if latest_msrv.version() < latest.version() {
+                    let latest_version = latest.version();
+                    let latest_rust_version = latest.rust_version().unwrap();
+                    let name = spec.name();
+                    if is_msrv {
                         gctx.shell().warn(format_args!(
-                            "ignoring `{dependency}@{latest_version}` (which has a rust-version of \
-                             {latest_rust_version}) to satisfy this package's rust-version of \
-                             {rust_version} (use `--ignore-rust-version` to override)",
-                            latest_version = latest.version(),
-                            latest_rust_version = latest.rust_version().unwrap(),
-                            rust_version = spec.rust_version().unwrap(),
+                            "\
+ignoring {dependency}@{latest_version} (which requires rustc {latest_rust_version}) to maintain {name}'s rust-version of {req_msrv}",
                         ))?;
-
-                        latest = latest_msrv;
+                    } else {
+                        gctx.shell().warn(format_args!(
+                            "\
+ignoring {dependency}@{latest_version} (which requires rustc {latest_rust_version}) as it is incompatible with rustc {req_msrv}",
+                        ))?;
                     }
+
+                    latest = latest_msrv;
                 }
             }
 
@@ -673,29 +696,20 @@ fn get_latest_dependency(
     }
 }
 
-fn rust_version_incompat_error(
-    dep: &str,
-    rust_version: &RustVersion,
-    lowest_rust_version: Option<&Summary>,
-) -> anyhow::Error {
-    let mut error_msg = format!(
-        "could not find version of crate `{dep}` that satisfies this package's rust-version of \
-         {rust_version}\n\
-         help: use `--ignore-rust-version` to override this behavior"
-    );
-
-    if let Some(lowest) = lowest_rust_version {
-        // rust-version must be present for this candidate since it would have been selected as
-        // compatible previously if it weren't.
-        let version = lowest.version();
-        let rust_version = lowest.rust_version().unwrap();
-        error_msg.push_str(&format!(
-            "\nnote: the lowest rust-version available for `{dep}` is {rust_version}, used in \
-             version {version}"
-        ));
-    }
-
-    anyhow::format_err!(error_msg)
+/// Of MSRV-compatible summaries, find the highest version
+///
+/// Assumptions:
+/// - `msrvs` is sorted by version
+fn latest_compatible<'s>(
+    msrvs: &[(&'s Summary, Option<&RustVersion>)],
+    req_msrv: &RustVersion,
+) -> Option<&'s Summary> {
+    msrvs
+        .iter()
+        .filter(|(_, v)| v.as_ref().map(|msrv| req_msrv >= *msrv).unwrap_or(true))
+        .map(|(s, _)| s)
+        .last()
+        .copied()
 }
 
 fn select_package(
