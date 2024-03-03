@@ -93,8 +93,8 @@ fn override_with_features() {
             "\
 [UPDATING] [..] index
 [UPDATING] git repository `[..]`
-[WARNING] replacement for `bar` uses the features mechanism. default-features and features \
-will not take effect because the replacement dependency does not support this mechanism
+[WARNING] replacement for `bar` attempts to declare features. \
+The `features` and `default-features` keys need to appear in a `dependencies` entry, not the `replace` entry.
 [CHECKING] bar v0.1.0 (file://[..])
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -143,8 +143,8 @@ fn override_with_setting_default_features() {
             "\
 [UPDATING] [..] index
 [UPDATING] git repository `[..]`
-[WARNING] replacement for `bar` uses the features mechanism. default-features and features \
-will not take effect because the replacement dependency does not support this mechanism
+[WARNING] replacement for `bar` attempts to declare features. \
+The `features` and `default-features` keys need to appear in a `dependencies` entry, not the `replace` entry.
 [CHECKING] bar v0.1.0 (file://[..])
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]

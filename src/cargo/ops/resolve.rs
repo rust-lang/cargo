@@ -165,8 +165,8 @@ pub fn resolve_ws_with_opts<'gctx>(
                 ws.gctx()
                 .shell()
                 .warn(format!(
-                    "replacement for `{}` uses the features mechanism. \
-                    default-features and features will not take effect because the replacement dependency does not support this mechanism",
+                    "replacement for `{}` attempts to declare features. \
+                    The `features` and `default-features` keys need to appear in a `dependencies` entry, not the `replace` entry.",
                     dep.package_name()
                 ))?
             }

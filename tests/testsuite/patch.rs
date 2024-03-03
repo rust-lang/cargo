@@ -883,8 +883,8 @@ fn add_patch_with_features() {
     p.cargo("check")
         .with_stderr(
             "\
-[WARNING] patch for `bar` uses the features mechanism. \
-default-features and features will not take effect because the patch dependency does not support this mechanism
+[WARNING] patch for `bar` attempts to declare features. \
+The `features` and `default-features` keys need to appear in a `dependencies` entry, not the `patch` entry.
 [UPDATING] `dummy-registry` index
 [CHECKING] bar v0.1.0 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
@@ -895,8 +895,8 @@ default-features and features will not take effect because the patch dependency 
     p.cargo("check")
         .with_stderr(
             "\
-[WARNING] patch for `bar` uses the features mechanism. \
-default-features and features will not take effect because the patch dependency does not support this mechanism
+[WARNING] patch for `bar` attempts to declare features. \
+The `features` and `default-features` keys need to appear in a `dependencies` entry, not the `patch` entry.
 [FINISHED] [..]
 ",
         )
@@ -932,8 +932,8 @@ fn add_patch_with_setting_default_features() {
     p.cargo("check")
         .with_stderr(
             "\
-[WARNING] patch for `bar` uses the features mechanism. \
-default-features and features will not take effect because the patch dependency does not support this mechanism
+[WARNING] patch for `bar` attempts to declare features. \
+The `features` and `default-features` keys need to appear in a `dependencies` entry, not the `patch` entry.
 [UPDATING] `dummy-registry` index
 [CHECKING] bar v0.1.0 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
@@ -944,8 +944,8 @@ default-features and features will not take effect because the patch dependency 
     p.cargo("check")
         .with_stderr(
             "\
-[WARNING] patch for `bar` uses the features mechanism. \
-default-features and features will not take effect because the patch dependency does not support this mechanism
+[WARNING] patch for `bar` attempts to declare features. \
+The `features` and `default-features` keys need to appear in a `dependencies` entry, not the `patch` entry.
 [FINISHED] [..]
 ",
         )
