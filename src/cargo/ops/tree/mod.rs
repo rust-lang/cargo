@@ -39,8 +39,6 @@ pub struct TreeOptions {
     /// appear with different versions, and report if any where found. Implies
     /// `invert`.
     pub duplicates: bool,
-    /// The style of characters to use.
-    pub charset: Option<Charset>,
     /// A format string indicating how each package should be displayed.
     pub format: String,
     /// Includes features in the tree as separate nodes.
@@ -64,24 +62,6 @@ impl Target {
             0 => Target::Host,
             1 if targets[0] == "all" => Target::All,
             _ => Target::Specific(targets),
-        }
-    }
-}
-
-#[derive(Copy, Clone)]
-pub enum Charset {
-    Utf8,
-    Ascii,
-}
-
-impl FromStr for Charset {
-    type Err = &'static str;
-
-    fn from_str(s: &str) -> Result<Charset, &'static str> {
-        match s {
-            "utf8" => Ok(Charset::Utf8),
-            "ascii" => Ok(Charset::Ascii),
-            _ => Err("invalid charset"),
         }
     }
 }
@@ -237,16 +217,10 @@ fn print(
     let format = Pattern::new(&opts.format)
         .with_context(|| format!("tree format `{}` not valid", opts.format))?;
 
-    let charset = opts.charset.unwrap_or_else(|| {
-        if gctx.shell().out_unicode() {
-            Charset::Utf8
-        } else {
-            Charset::Ascii
-        }
-    });
-    let symbols = match charset {
-        Charset::Utf8 => &UTF8_SYMBOLS,
-        Charset::Ascii => &ASCII_SYMBOLS,
+    let symbols = if gctx.shell().out_unicode() {
+        &UTF8_SYMBOLS
+    } else {
+        &ASCII_SYMBOLS
     };
 
     // The visited deps is used to display a (*) whenever a dep has

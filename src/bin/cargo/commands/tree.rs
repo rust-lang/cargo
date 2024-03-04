@@ -100,6 +100,24 @@ pub fn cli() -> Command {
         ))
 }
 
+#[derive(Copy, Clone)]
+pub enum Charset {
+    Utf8,
+    Ascii,
+}
+
+impl FromStr for Charset {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Charset, &'static str> {
+        match s {
+            "utf8" => Ok(Charset::Utf8),
+            "ascii" => Ok(Charset::Ascii),
+            _ => Err("invalid charset"),
+        }
+    }
+}
+
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     if args.flag("version") {
         let verbose = args.verbose() > 0;
@@ -181,10 +199,16 @@ subtree of the package given to -p.\n\
     }
 
     let charset = args.get_one::<String>("charset");
-    let charset = charset
-        .map(|c| tree::Charset::from_str(c))
+    if let Some(charset) = charset
+        .map(|c| Charset::from_str(c))
         .transpose()
-        .map_err(|e| anyhow::anyhow!("{}", e))?;
+        .map_err(|e| anyhow::anyhow!("{}", e))?
+    {
+        match charset {
+            Charset::Utf8 => gctx.shell().set_unicode(true)?,
+            Charset::Ascii => gctx.shell().set_unicode(false)?,
+        }
+    }
     let opts = tree::TreeOptions {
         cli_features: args.cli_features()?,
         packages,
@@ -195,7 +219,6 @@ subtree of the package given to -p.\n\
         prefix,
         no_dedupe,
         duplicates: args.flag("duplicates"),
-        charset,
         format: args.get_one::<String>("format").cloned().unwrap(),
         graph_features,
         max_display_depth: args.value_of_u32("depth")?.unwrap_or(u32::MAX),
