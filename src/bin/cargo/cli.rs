@@ -16,6 +16,7 @@ use crate::util::is_rustup;
 use cargo::core::shell::ColorChoice;
 use cargo::util::style;
 
+#[tracing::instrument(skip_all)]
 pub fn main(gctx: &mut GlobalContext) -> CliResult {
     // CAUTION: Be careful with using `config` until it is configured below.
     // In general, try to avoid loading config values unless necessary (like
@@ -272,6 +273,7 @@ fn add_ssl(version_string: &mut String) {
 /// [`GlobalArgs`] need to be extracted before expanding aliases because the
 /// clap code for extracting a subcommand discards global options
 /// (appearing before the subcommand).
+#[tracing::instrument(skip_all)]
 fn expand_aliases(
     gctx: &mut GlobalContext,
     args: ArgMatches,
@@ -377,6 +379,7 @@ For more information, see issue #12207 <https://github.com/rust-lang/cargo/issue
     Ok((args, GlobalArgs::default()))
 }
 
+#[tracing::instrument(skip_all)]
 fn configure_gctx(
     gctx: &mut GlobalContext,
     args: &ArgMatches,
@@ -459,6 +462,7 @@ impl Exec {
         }
     }
 
+    #[tracing::instrument(skip_all)]
     fn exec(self, gctx: &mut GlobalContext, subcommand_args: &ArgMatches) -> CliResult {
         match self {
             Self::Builtin(exec) => exec(gctx, subcommand_args),
@@ -530,6 +534,7 @@ impl GlobalArgs {
     }
 }
 
+#[tracing::instrument(skip_all)]
 pub fn cli(gctx: &GlobalContext) -> Command {
     // Don't let config errors get in the way of parsing arguments
     let term = gctx.get::<TermConfig>("term").unwrap_or_default();

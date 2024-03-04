@@ -444,6 +444,7 @@ pub struct FeatureResolver<'a, 'gctx> {
 impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
     /// Runs the resolution algorithm and returns a new [`ResolvedFeatures`]
     /// with the result.
+    #[tracing::instrument(skip_all)]
     pub fn resolve(
         ws: &Workspace<'gctx>,
         target_data: &'a mut RustcTargetData<'gctx>,

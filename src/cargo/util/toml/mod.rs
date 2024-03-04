@@ -44,6 +44,7 @@ use self::targets::targets;
 /// within the manifest. For virtual manifests, these paths can only
 /// come from patched or replaced dependencies. These paths are not
 /// canonicalized.
+#[tracing::instrument(skip(gctx))]
 pub fn read_manifest(
     path: &Path,
     source_id: SourceId,

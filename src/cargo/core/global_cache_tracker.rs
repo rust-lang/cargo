@@ -546,6 +546,7 @@ impl GlobalCacheTracker {
             .with_context(|| "failed to clean entries from the global cache")
     }
 
+    #[tracing::instrument(skip_all)]
     fn clean_inner(
         &mut self,
         clean_ctx: &mut CleanContext<'_>,
@@ -696,6 +697,7 @@ impl GlobalCacheTracker {
     ///
     ///    These orphaned files will be added to `delete_paths` so that the
     ///    caller can delete them.
+    #[tracing::instrument(skip_all)]
     fn sync_db_with_files(
         conn: &Connection,
         now: Timestamp,
@@ -795,6 +797,7 @@ impl GlobalCacheTracker {
     }
 
     /// For parent tables, add any entries that are on disk but aren't tracked in the db.
+    #[tracing::instrument(skip_all)]
     fn update_parent_for_missing_from_db(
         conn: &Connection,
         now: Timestamp,
@@ -822,6 +825,7 @@ impl GlobalCacheTracker {
     ///
     /// This could happen for example if the user manually deleted the file or
     /// any such scenario where the filesystem and db are out of sync.
+    #[tracing::instrument(skip_all)]
     fn update_db_for_removed(
         conn: &Connection,
         parent_table_name: &str,
@@ -851,6 +855,7 @@ impl GlobalCacheTracker {
     }
 
     /// Removes database entries for any files that are not on disk for the parent tables.
+    #[tracing::instrument(skip_all)]
     fn update_db_parent_for_removed_from_disk(
         conn: &Connection,
         parent_table_name: &str,
@@ -888,6 +893,7 @@ impl GlobalCacheTracker {
     /// Updates the database to add any `.crate` files that are currently
     /// not tracked (such as when they are downloaded by an older version of
     /// cargo).
+    #[tracing::instrument(skip_all)]
     fn populate_untracked_crate(
         conn: &Connection,
         now: Timestamp,
@@ -922,6 +928,7 @@ impl GlobalCacheTracker {
 
     /// Updates the database to add any files that are currently not tracked
     /// (such as when they are downloaded by an older version of cargo).
+    #[tracing::instrument(skip_all)]
     fn populate_untracked(
         conn: &Connection,
         now: Timestamp,
@@ -987,6 +994,7 @@ impl GlobalCacheTracker {
     /// size.
     ///
     /// `update_db_for_removed` should be called before this is called.
+    #[tracing::instrument(skip_all)]
     fn update_null_sizes(
         conn: &Connection,
         gctx: &GlobalContext,
@@ -1560,6 +1568,7 @@ impl DeferredGlobalLastUse {
     /// Saves all of the deferred information to the database.
     ///
     /// This will also clear the state of `self`.
+    #[tracing::instrument(skip_all)]
     pub fn save(&mut self, tracker: &mut GlobalCacheTracker) -> CargoResult<()> {
         let _p = crate::util::profile::start("saving last-use data");
         trace!(target: "gc", "saving last-use data");

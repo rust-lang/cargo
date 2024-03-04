@@ -500,6 +500,7 @@ pub trait ArgMatchesExt {
         root_manifest(self._value_of("manifest-path").map(Path::new), gctx)
     }
 
+    #[tracing::instrument(skip_all)]
     fn workspace<'a>(&self, gctx: &'a GlobalContext) -> CargoResult<Workspace<'a>> {
         let root = self.root_manifest(gctx)?;
         let mut ws = Workspace::new(&root, gctx)?;

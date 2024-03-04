@@ -133,6 +133,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
     /// See [`ops::cargo_compile`] for a higher-level view of the compile process.
     ///
     /// [`ops::cargo_compile`]: ../../../ops/cargo_compile/index.html
+    #[tracing::instrument(skip_all)]
     pub fn compile(mut self, exec: &Arc<dyn Executor>) -> CargoResult<Compilation<'gctx>> {
         // A shared lock is held during the duration of the build since rustc
         // needs to read from the `src` cache, and we don't want other
@@ -324,6 +325,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             .map(|output| output.bin_dst().clone()))
     }
 
+    #[tracing::instrument(skip_all)]
     pub fn prepare_units(&mut self) -> CargoResult<()> {
         let dest = self.bcx.profiles.get_dir_name();
         let host_layout = Layout::new(self.bcx.ws, None, &dest)?;
@@ -349,6 +351,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
 
     /// Prepare this context, ensuring that all filesystem directories are in
     /// place.
+    #[tracing::instrument(skip_all)]
     pub fn prepare(&mut self) -> CargoResult<()> {
         let _p = profile::start("preparing layout");
 
@@ -451,6 +454,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
 
     /// Check if any output file name collision happens.
     /// See <https://github.com/rust-lang/cargo/issues/6313> for more.
+    #[tracing::instrument(skip_all)]
     fn check_collisions(&self) -> CargoResult<()> {
         let mut output_collisions = HashMap::new();
         let describe_collision = |unit: &Unit, other_unit: &Unit, path: &PathBuf| -> String {
@@ -633,6 +637,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
     /// If the current crate has reverse-dependencies, such a Check unit should exist, and so
     /// we use that crate's metadata. If not, we use the crate's Doc unit so at least examples
     /// scraped from the current crate can be used when documenting the current crate.
+    #[tracing::instrument(skip_all)]
     pub fn compute_metadata_for_doc_units(&mut self) {
         for unit in self.bcx.unit_graph.keys() {
             if !unit.mode.is_doc() && !unit.mode.is_doc_scrape() {

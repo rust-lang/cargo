@@ -497,6 +497,7 @@ impl<'gctx> PackageSet<'gctx> {
     }
 
     /// Downloads any packages accessible from the give root ids.
+    #[tracing::instrument(skip_all)]
     pub fn download_accessible(
         &self,
         resolve: &Resolve,
