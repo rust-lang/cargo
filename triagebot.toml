@@ -171,7 +171,7 @@ trigger_files = ["src/cargo/core/compiler/lto.rs"]
 
 [autolabel."A-manifest"]
 trigger_files = [
-    "crates/cargo-util-schemas/src/manifest.rs",
+    "crates/cargo-util-schemas/src/manifest/",
     "src/cargo/core/manifest.rs",
     "src/cargo/util/toml/mod.rs",
     "src/cargo/util/toml_mut/",
