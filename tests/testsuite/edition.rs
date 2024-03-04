@@ -141,7 +141,6 @@ fn unset_edition_works_with_no_newer_compatible_edition() {
     p.cargo("check -v")
         .with_stderr(
             "\
-[WARNING] no edition set: defaulting to the 2015 edition
 [CHECKING] foo [..]
 [RUNNING] `rustc [..] --edition=2015 [..]`
 [FINISHED] [..]
