@@ -617,16 +617,20 @@ pub fn to_real_manifest(
         let default_edition = Edition::default();
         let latest_edition = Edition::LATEST_STABLE;
 
-        let tip = if msrv_edition == default_edition {
-            String::new()
-        } else if msrv_edition == latest_edition {
-            format!(" while the latest is {latest_edition}")
-        } else {
-            format!(" while {msrv_edition} is compatible with `rust-version`")
-        };
-        warnings.push(format!(
-            "no edition set: defaulting to the {default_edition} edition{tip}",
-        ));
+        // We're trying to help the user who might assume they are using a new edition,
+        // so if they can't use a new edition, don't bother to tell them to set it.
+        // This also avoids having to worry about whether `package.edition` is compatible with
+        // their MSRV.
+        if msrv_edition != default_edition {
+            let tip = if msrv_edition == latest_edition {
+                format!(" while the latest is {latest_edition}")
+            } else {
+                format!(" while {msrv_edition} is compatible with `rust-version`")
+            };
+            warnings.push(format!(
+                "no edition set: defaulting to the {default_edition} edition{tip}",
+            ));
+        }
         default_edition
     };
     // Add these lines if start a new unstable edition.
