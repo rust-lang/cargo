@@ -352,7 +352,7 @@ possible value.</dd>
 
 <dt class="option-term" id="option-cargo-metadata---filter-platform"><a class="option-anchor" href="#option-cargo-metadata---filter-platform"></a><code>--filter-platform</code> <em>triple</em></dt>
 <dd class="option-desc">This filters the <code>resolve</code> output to only include dependencies for the
-given <a href="../appendix/glossary.html#target">target triple</a>. 
+given <a href="../appendix/glossary.html#target">target triple</a>.
 Without this flag, the resolve includes all targets.</p>
 <p>Note that the dependencies listed in the “packages” array still includes all
 dependencies. Each package definition is intended to be an unaltered

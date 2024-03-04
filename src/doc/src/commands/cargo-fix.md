@@ -117,7 +117,7 @@ virtual workspace will include all workspace members (equivalent to passing
 <dt class="option-term" id="option-cargo-fix---package"><a class="option-anchor" href="#option-cargo-fix---package"></a><code>--package</code> <em>spec</em>…</dt>
 <dd class="option-desc">Fix only the specified packages. See <a href="cargo-pkgid.html">cargo-pkgid(1)</a> for the
 SPEC format. This flag may be specified multiple times and supports common Unix
-glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell accidentally 
+glob patterns like <code>*</code>, <code>?</code> and <code>[]</code>. However, to avoid your shell accidentally
 expanding glob patterns before Cargo handles them, you must use single quotes or
 double quotes around each pattern.</dd>
 

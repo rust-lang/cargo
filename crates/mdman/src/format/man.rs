@@ -3,7 +3,7 @@
 use crate::util::{header_text, parse_name_and_section};
 use crate::EventIter;
 use anyhow::{bail, Error};
-use pulldown_cmark::{Alignment, Event, HeadingLevel, LinkType, Tag};
+use pulldown_cmark::{Alignment, Event, HeadingLevel, LinkType, Tag, TagEnd};
 use std::fmt::Write;
 use url::Url;
 
@@ -110,6 +110,7 @@ impl<'e> ManRenderer<'e> {
         let mut suppress_paragraph = false;
         let mut table_cell_index = 0;
 
+        let mut last_seen_link_data = None;
         while let Some((event, range)) = self.parser.next() {
             let this_suppress_paragraph = suppress_paragraph;
             suppress_paragraph = false;
@@ -122,7 +123,7 @@ impl<'e> ManRenderer<'e> {
                                 self.output.push_str(".sp\n");
                             }
                         }
-                        Tag::Heading(level, ..) => {
+                        Tag::Heading { level, .. } => {
                             if level == HeadingLevel::H1 {
                                 self.push_top_header()?;
                             } else if level == HeadingLevel::H2 {
@@ -212,7 +213,12 @@ impl<'e> ManRenderer<'e> {
                         Tag::Strong => self.push_font(Font::Bold),
                         // Strikethrough isn't usually supported for TTY.
                         Tag::Strikethrough => self.output.push_str("~~"),
-                        Tag::Link(link_type, dest_url, _title) => {
+                        Tag::Link {
+                            link_type,
+                            dest_url,
+                            ..
+                        } => {
+                            last_seen_link_data = Some((link_type.clone(), dest_url.to_owned()));
                             if dest_url.starts_with('#') {
                                 // In a man page, page-relative anchors don't
                                 // have much meaning.
@@ -247,68 +253,71 @@ impl<'e> ManRenderer<'e> {
                                 }
                             }
                         }
-                        Tag::Image(_link_type, _dest_url, _title) => {
+                        Tag::Image { .. } => {
                             bail!("images are not currently supported")
                         }
+                        Tag::HtmlBlock { .. } | Tag::MetadataBlock { .. } => {}
                     }
                 }
-                Event::End(tag) => {
-                    match &tag {
-                        Tag::Paragraph => self.flush(),
-                        Tag::Heading(..) => {}
-                        Tag::BlockQuote => {
+                Event::End(tag_end) => {
+                    match &tag_end {
+                        TagEnd::Paragraph => self.flush(),
+                        TagEnd::Heading(..) => {}
+                        TagEnd::BlockQuote => {
                             self.flush();
                             // restore left margin, restore line length
                             self.output.push_str(".br\n.RE\n.ll\n");
                         }
-                        Tag::CodeBlock(_kind) => {
+                        TagEnd::CodeBlock => {
                             self.flush();
                             // Restore fill mode, move margin back one level.
                             self.output.push_str(".fi\n.RE\n");
                         }
-                        Tag::List(_) => {
+                        TagEnd::List(_) => {
                             list.pop();
                         }
-                        Tag::Item => {
+                        TagEnd::Item => {
                             self.flush();
                             // Move margin back one level.
                             self.output.push_str(".RE\n");
                         }
-                        Tag::FootnoteDefinition(_label) => {}
-                        Tag::Table(_) => {
+                        TagEnd::FootnoteDefinition => {}
+                        TagEnd::Table => {
                             // Table end
                             // I don't know why, but the .sp is needed to provide
                             // space with the following content.
                             self.output.push_str("\n.TE\n.sp\n");
                         }
-                        Tag::TableHead => {}
-                        Tag::TableRow => {}
-                        Tag::TableCell => {
+                        TagEnd::TableHead => {}
+                        TagEnd::TableRow => {}
+                        TagEnd::TableCell => {
                             // End text block.
                             self.output.push_str("\nT}");
                         }
-                        Tag::Emphasis | Tag::Strong => self.pop_font(),
-                        Tag::Strikethrough => self.output.push_str("~~"),
-                        Tag::Link(link_type, dest_url, _title) => {
-                            if dest_url.starts_with('#') {
-                                continue;
-                            }
-                            match link_type {
-                                LinkType::Autolink | LinkType::Email => {}
-                                LinkType::Inline
-                                | LinkType::Reference
-                                | LinkType::Collapsed
-                                | LinkType::Shortcut => {
-                                    self.pop_font();
-                                    self.output.push(' ');
+                        TagEnd::Emphasis | TagEnd::Strong => self.pop_font(),
+                        TagEnd::Strikethrough => self.output.push_str("~~"),
+                        TagEnd::Link => {
+                            if let Some((link_type, ref dest_url)) = last_seen_link_data {
+                                if dest_url.starts_with('#') {
+                                    continue;
                                 }
-                                _ => {
-                                    panic!("unexpected tag {:?}", tag);
+                                match link_type {
+                                    LinkType::Autolink | LinkType::Email => {}
+                                    LinkType::Inline
+                                    | LinkType::Reference
+                                    | LinkType::Collapsed
+                                    | LinkType::Shortcut => {
+                                        self.pop_font();
+                                        self.output.push(' ');
+                                    }
+                                    _ => {
+                                        panic!("unexpected tag {:?}", tag_end);
+                                    }
                                 }
+                                write!(self.output, "<{}>", escape(&dest_url)?)?;
                             }
-                            write!(self.output, "<{}>", escape(&dest_url)?)?;
                         }
-                        Tag::Image(_link_type, _dest_url, _title) => {}
+                        TagEnd::Image | TagEnd::HtmlBlock | TagEnd::MetadataBlock(..) => {}
                     }
                 }
                 Event::Text(t) => {
@@ -346,6 +355,7 @@ impl<'e> ManRenderer<'e> {
                     self.output.push_str("\\l'\\n(.lu'\n");
                 }
                 Event::TaskListMarker(_b) => unimplemented!(),
+                Event::InlineHtml(..) => unimplemented!(),
             }
         }
         Ok(())

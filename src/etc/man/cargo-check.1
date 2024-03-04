@@ -32,7 +32,7 @@ virtual workspace will include all workspace members (equivalent to passing
 .RS 4
 Check only the specified packages. See \fBcargo\-pkgid\fR(1) for the
 SPEC format. This flag may be specified multiple times and supports common Unix
-glob patterns like \fB*\fR, \fB?\fR and \fB[]\fR\&. However, to avoid your shell accidentally 
+glob patterns like \fB*\fR, \fB?\fR and \fB[]\fR\&. However, to avoid your shell accidentally
 expanding glob patterns before Cargo handles them, you must use single quotes or
 double quotes around each pattern.
 .RE
@@ -61,11 +61,11 @@ binary and library targets of the selected packages. Binaries are skipped if
 they have \fBrequired\-features\fR that are missing.
 .sp
 Passing target selection flags will check only the specified
-targets. 
+targets.
 .sp
-Note that \fB\-\-bin\fR, \fB\-\-example\fR, \fB\-\-test\fR and \fB\-\-bench\fR flags also 
-support common Unix glob patterns like \fB*\fR, \fB?\fR and \fB[]\fR\&. However, to avoid your 
-shell accidentally expanding glob patterns before Cargo handles them, you must 
+Note that \fB\-\-bin\fR, \fB\-\-example\fR, \fB\-\-test\fR and \fB\-\-bench\fR flags also
+support common Unix glob patterns like \fB*\fR, \fB?\fR and \fB[]\fR\&. However, to avoid your
+shell accidentally expanding glob patterns before Cargo handles them, you must
 use single quotes or double quotes around each glob pattern.
 .sp
 \fB\-\-lib\fR
