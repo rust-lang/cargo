@@ -182,6 +182,7 @@ quiet = false          # whether cargo output is quiet
 verbose = false        # whether cargo provides verbose output
 color = 'auto'         # whether cargo colorizes output
 hyperlinks = true      # whether cargo inserts links into output
+unicode = true         # whether cargo can render output using non-ASCII unicode characters
 progress.when = 'auto' # whether cargo shows progress bar
 progress.width = 80    # width of progress bar
 ```
@@ -1297,6 +1298,13 @@ Can be overridden with the `--color` command-line option.
 * Environment: `CARGO_TERM_HYPERLINKS`
 
 Controls whether or not hyperlinks are used in the terminal.
+
+#### `term.unicode`
+* Type: bool
+* Default: auto-detect
+* Environment: `CARGO_TERM_UNICODE`
+
+Control whether output can be rendered using non-ASCII unicode characters.
 
 #### `term.progress.when`
 * Type: string

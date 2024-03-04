@@ -1049,6 +1049,9 @@ impl GlobalContext {
         if let Some(hyperlinks) = term.hyperlinks {
             self.shell().set_hyperlinks(hyperlinks)?;
         }
+        if let Some(unicode) = term.unicode {
+            self.shell().set_unicode(unicode)?;
+        }
 
         self.progress_config = term.progress.unwrap_or_default();
 
@@ -2646,6 +2649,7 @@ pub struct TermConfig {
     pub quiet: Option<bool>,
     pub color: Option<String>,
     pub hyperlinks: Option<bool>,
+    pub unicode: Option<bool>,
     #[serde(default)]
     #[serde(deserialize_with = "progress_or_string")]
     pub progress: Option<ProgressConfig>,

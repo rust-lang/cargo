@@ -251,6 +251,19 @@ impl Shell {
         Ok(())
     }
 
+    pub fn set_unicode(&mut self, yes: bool) -> CargoResult<()> {
+        if let ShellOut::Stream {
+            ref mut stdout_unicode,
+            ref mut stderr_unicode,
+            ..
+        } = self.output
+        {
+            *stdout_unicode = yes;
+            *stderr_unicode = yes;
+        }
+        Ok(())
+    }
+
     pub fn set_hyperlinks(&mut self, yes: bool) -> CargoResult<()> {
         if let ShellOut::Stream {
             ref mut hyperlinks, ..
