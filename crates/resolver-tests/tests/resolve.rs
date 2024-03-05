@@ -8,7 +8,8 @@ use cargo_util::is_ci;
 use resolver_tests::{
     assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names, names, pkg, pkg_id,
     pkg_loc, registry, registry_strategy, remove_dep, resolve, resolve_and_validated,
-    resolve_with_global_context, PrettyPrintRegistry, SatResolve, ToDep, ToPkgId,
+    resolve_with_global_context, resolve_with_global_context_raw, PrettyPrintRegistry, SatResolve,
+    ToDep, ToPkgId,
 };
 
 use proptest::prelude::*;
@@ -426,6 +427,190 @@ fn test_resolving_maximum_version_with_transitive_deps() {
 }
 
 #[test]
+fn test_wildcard_minor() {
+    let reg = registry(vec![
+        pkg!(("util", "0.1.0")),
+        pkg!(("util", "0.1.1")),
+        pkg!("foo" => [dep_req("util", "0.1.*")]),
+    ]);
+
+    let res = resolve_and_validated(
+        vec![dep_req("util", "=0.1.0"), dep_req("foo", "1.0.0")],
+        &reg,
+        None,
+    )
+    .unwrap();
+
+    assert_same(
+        &res,
+        &names(&[("root", "1.0.0"), ("foo", "1.0.0"), ("util", "0.1.0")]),
+    );
+}
+
+#[test]
+fn test_wildcard_major() {
+    let reg = registry(vec![
+        pkg!("foo" => [dep_req("util", "0.*")]),
+        pkg!(("util", "0.1.0")),
+        pkg!(("util", "0.2.0")),
+    ]);
+
+    let res = resolve_and_validated(
+        vec![dep_req("foo", "1.0.0"), dep_req("util", "=0.1.0")],
+        &reg,
+        None,
+    )
+    .unwrap();
+
+    assert_same(
+        &res,
+        &names(&[
+            ("root", "1.0.0"),
+            ("foo", "1.0.0"),
+            ("util", "0.1.0"),
+            ("util", "0.2.0"),
+        ]),
+    );
+}
+
+#[test]
+fn test_range_major() {
+    let reg = registry(vec![
+        pkg!("foo" => [dep_req("util", ">=0.1,<0.3")]),
+        pkg!(("util", "0.1.0")),
+        pkg!(("util", "0.2.0")),
+    ]);
+
+    let res = resolve_and_validated(
+        vec![dep_req("foo", "1.0.0"), dep_req("util", "0.1.0")],
+        &reg,
+        None,
+    )
+    .unwrap();
+
+    assert_same(
+        &res,
+        &names(&[
+            ("root", "1.0.0"),
+            ("foo", "1.0.0"),
+            ("util", "0.1.0"),
+            ("util", "0.2.0"),
+        ]),
+    );
+}
+
+#[test]
+fn test_wildcard_major_duplicate_selection() {
+    let reg = registry(vec![
+        pkg!("foo" => [dep_req("util", "0.*")]),
+        pkg!("bar" => [dep_req("util", "0.2")]),
+        pkg!("car" => [dep_req("util", "0.1")]),
+        pkg!(("util", "0.1.0")),
+        pkg!(("util", "0.2.0")),
+    ]);
+
+    let res = resolve_with_global_context_raw(
+        vec![
+            dep_req("foo", "1.0.0"),
+            dep_req("bar", "1.0.0"),
+            dep_req("car", "1.0.0"),
+        ],
+        &reg,
+        &GlobalContext::default().unwrap(),
+    )
+    .unwrap();
+
+    // In this case, both 0.1.0 and 0.2.0 satisfy foo. It should pick the highest
+    // version.
+    assert_eq!(
+        res.deps(pkg_id("foo")).next().unwrap().0,
+        ("util", "0.2.0").to_pkgid()
+    );
+
+    let res = res.sort();
+
+    assert_same(
+        &res,
+        &names(&[
+            ("root", "1.0.0"),
+            ("foo", "1.0.0"),
+            ("bar", "1.0.0"),
+            ("car", "1.0.0"),
+            ("util", "0.1.0"),
+            ("util", "0.2.0"),
+        ]),
+    );
+}
+
+#[test]
+fn test_wildcard_major_coerced_by_subdependency() {
+    let reg = registry(vec![
+        pkg!("foo" => [dep_req("util", "0.1")]),
+        pkg!(("util", "0.1.0")),
+        pkg!(("util", "0.2.0")),
+    ]);
+
+    let res = resolve(vec![dep_req("foo", "1.0.0"), dep_req("util", "0.*")], &reg).unwrap();
+
+    // In this case, both 0.1.0 and 0.2.0 satisfy root, but it's being coerced
+    // by the subdependency of foo.
+    assert_same(
+        &res,
+        &names(&[
+            ("root", "1.0.0"),
+            ("foo", "1.0.0"),
+            ("util", "0.1.0"),
+            ("util", "0.2.0"),
+        ]),
+    );
+}
+
+#[test]
+fn test_wildcard_major_coerced_by_indirect_subdependency() {
+    let reg = registry(vec![
+        pkg!("foo" => [dep_req("util", "0.1")]),
+        pkg!("bar" => [dep_req("car", "1.0.0")]),
+        pkg!("car" => [dep_req("util", "0.2")]),
+        pkg!(("util", "0.1.0")),
+        pkg!(("util", "0.2.0")),
+        pkg!(("util", "0.3.0")),
+    ]);
+
+    let res = resolve_with_global_context_raw(
+        vec![
+            dep_req("foo", "1.0.0"),
+            dep_req("bar", "1.0.0"),
+            dep_req("util", "0.*"),
+        ],
+        &reg,
+        &GlobalContext::default().unwrap(),
+    )
+    .unwrap();
+
+    // In this case, 0.1.0, 0.2.0 and 0.3.0 satisfy root. It should pick the highest
+    // version that exists in the dependency tree.
+    assert_eq!(
+        res.deps(pkg_id("root")).skip(2).next().unwrap().0,
+        ("util", "0.3.0").to_pkgid()
+    );
+
+    let res = res.sort();
+
+    assert_same(
+        &res,
+        &names(&[
+            ("root", "1.0.0"),
+            ("foo", "1.0.0"),
+            ("bar", "1.0.0"),
+            ("car", "1.0.0"),
+            ("util", "0.1.0"),
+            ("util", "0.2.0"),
+            ("util", "0.3.0"),
+        ]),
+    );
+}
+
+#[test]
 fn test_resolving_minimum_version_with_transitive_deps() {
     let reg = registry(vec![
         pkg!(("util", "1.2.2")),
@@ -601,6 +786,35 @@ fn resolving_with_deep_backtracking() {
             ("foo", "1.0.0"),
             ("bar", "2.0.0"),
             ("baz", "1.0.1"),
+        ]),
+    );
+}
+
+#[test]
+fn resolving_with_sys_crates_duplicates() {
+    // This is based on issues/4902
+    // With `l` a normal library we get 2copies so everyone gets the newest compatible.
+    // But `l-sys` a library with a links attribute we make sure there is only one.
+    let reg = registry(vec![
+        pkg!(("l-sys", "0.9.1")),
+        pkg!(("l-sys", "0.10.0")),
+        pkg!(("l", "0.9.1") => [dep_req("l-sys", ">=0.8.0, <=0.10.0")]),
+        pkg!(("l", "0.10.0") => [dep_req("l-sys", "0.9")]),
+        pkg!(("d", "1.0.0") => [dep_req("l", "0.10")]),
+        pkg!(("r", "1.0.0") => [dep_req("l", "0.9")]),
+    ]);
+
+    let res = resolve(vec![dep_req("d", "1"), dep_req("r", "1")], &reg).unwrap();
+
+    assert_same(
+        &res,
+        &names(&[
+            ("root", "1.0.0"),
+            ("d", "1.0.0"),
+            ("r", "1.0.0"),
+            ("l-sys", "0.9.1"),
+            ("l", "0.9.1"),
+            ("l", "0.10.0"),
         ]),
     );
 }
