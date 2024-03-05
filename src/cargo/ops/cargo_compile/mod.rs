@@ -54,7 +54,7 @@ use crate::ops;
 use crate::ops::resolve::WorkspaceResolve;
 use crate::util::context::GlobalContext;
 use crate::util::interning::InternedString;
-use crate::util::{profile, CargoResult, StableHasher};
+use crate::util::{CargoResult, StableHasher};
 
 mod compile_filter;
 pub use compile_filter::{CompileFilter, FilterRule, LibRule};
@@ -155,7 +155,6 @@ pub fn compile_ws<'a>(
         return Compilation::new(&bcx);
     }
     crate::core::gc::auto_gc(bcx.gctx);
-    let _p = profile::start("compiling");
     let build_runner = BuildRunner::new(&bcx)?;
     build_runner.compile(exec)
 }

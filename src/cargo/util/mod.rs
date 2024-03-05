@@ -54,7 +54,6 @@ pub mod job;
 mod lockserver;
 pub mod machine_message;
 pub mod network;
-pub mod profile;
 mod progress;
 mod queue;
 pub mod restricted_names;

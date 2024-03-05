@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};
 
 use crate::util::interning::InternedString;
-use crate::util::{profile, CargoResult, GlobalContext, StableHasher};
+use crate::util::{CargoResult, GlobalContext, StableHasher};
 
 /// Information on the `rustc` executable
 #[derive(Debug)]
@@ -48,8 +48,6 @@ impl Rustc {
         cache_location: Option<PathBuf>,
         gctx: &GlobalContext,
     ) -> CargoResult<Rustc> {
-        let _p = profile::start("Rustc::new");
-
         let mut cache = Cache::load(
             wrapper.as_deref(),
             workspace_wrapper.as_deref(),

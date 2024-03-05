@@ -38,8 +38,8 @@ use crate::core::compiler::fingerprint::DirtyReason;
 use crate::core::compiler::job_queue::JobState;
 use crate::core::{profiles::ProfileRoot, PackageId, Target};
 use crate::util::errors::CargoResult;
+use crate::util::internal;
 use crate::util::machine_message::{self, Message};
-use crate::util::{internal, profile};
 use anyhow::{bail, Context as _};
 use cargo_platform::Cfg;
 use cargo_util::paths;
@@ -196,12 +196,6 @@ impl LinkArgTarget {
 /// Prepares a `Work` that executes the target as a custom build script.
 #[tracing::instrument(skip_all)]
 pub fn prepare(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<Job> {
-    let _p = profile::start(format!(
-        "build script prepare: {}/{}",
-        unit.pkg,
-        unit.target.name()
-    ));
-
     let metadata = build_runner.get_run_build_script_metadata(unit);
     if build_runner
         .build_script_outputs

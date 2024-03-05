@@ -9,7 +9,6 @@ use crate::core::compiler::{self, artifact, Unit};
 use crate::core::PackageId;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
-use crate::util::profile;
 use anyhow::{bail, Context as _};
 use filetime::FileTime;
 use itertools::Itertools;
@@ -353,8 +352,6 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
     /// place.
     #[tracing::instrument(skip_all)]
     pub fn prepare(&mut self) -> CargoResult<()> {
-        let _p = profile::start("preparing layout");
-
         self.files
             .as_mut()
             .unwrap()
