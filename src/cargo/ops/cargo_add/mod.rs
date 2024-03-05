@@ -702,11 +702,16 @@ ignoring {dependency}@{latest_version} (which requires rustc {latest_rust_versio
 /// - `msrvs` is sorted by version
 fn latest_compatible<'s>(
     msrvs: &[(&'s Summary, Option<&RustVersion>)],
-    req_msrv: &RustVersion,
+    pkg_msrv: &RustVersion,
 ) -> Option<&'s Summary> {
     msrvs
         .iter()
-        .filter(|(_, v)| v.as_ref().map(|msrv| req_msrv >= *msrv).unwrap_or(true))
+        .filter(|(_, dep_msrv)| {
+            dep_msrv
+                .as_ref()
+                .map(|dep_msrv| pkg_msrv >= *dep_msrv)
+                .unwrap_or(true)
+        })
         .map(|(s, _)| s)
         .last()
         .copied()

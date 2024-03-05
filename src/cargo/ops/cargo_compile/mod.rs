@@ -481,34 +481,34 @@ pub fn create_bcx<'a, 'gctx>(
 
     if honor_rust_version {
         // Remove any pre-release identifiers for easier comparison
-        let current_version = &target_data.rustc.version;
-        let untagged_version = semver::Version::new(
-            current_version.major,
-            current_version.minor,
-            current_version.patch,
+        let rustc_version = &target_data.rustc.version;
+        let rustc_version_untagged = semver::Version::new(
+            rustc_version.major,
+            rustc_version.minor,
+            rustc_version.patch,
         );
 
         let mut incompatible = Vec::new();
         let mut local_incompatible = false;
         for unit in unit_graph.keys() {
-            let Some(version) = unit.pkg.rust_version() else {
+            let Some(pkg_msrv) = unit.pkg.rust_version() else {
                 continue;
             };
 
-            let req = version.to_caret_req();
-            if req.matches(&untagged_version) {
+            let pkg_msrv_req = pkg_msrv.to_caret_req();
+            if pkg_msrv_req.matches(&rustc_version_untagged) {
                 continue;
             }
 
             local_incompatible |= unit.is_local();
-            incompatible.push((unit, version));
+            incompatible.push((unit, pkg_msrv));
         }
         if !incompatible.is_empty() {
             use std::fmt::Write as _;
 
             let plural = if incompatible.len() == 1 { "" } else { "s" };
             let mut message = format!(
-                "rustc {current_version} is not supported by the following package{plural}:\n"
+                "rustc {rustc_version} is not supported by the following package{plural}:\n"
             );
             incompatible.sort_by_key(|(unit, _)| (unit.pkg.name(), unit.pkg.version()));
             for (unit, msrv) in incompatible {
@@ -529,7 +529,7 @@ pub fn create_bcx<'a, 'gctx>(
                     &mut message,
                     "Either upgrade rustc or select compatible dependency versions with
 `cargo update <name>@<current-ver> --precise <compatible-ver>`
-where `<compatible-ver>` is the latest version supporting rustc {current_version}",
+where `<compatible-ver>` is the latest version supporting rustc {rustc_version}",
                 )
                 .unwrap();
             }
