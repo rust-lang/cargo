@@ -464,12 +464,7 @@ fn test_wildcard_major() {
 
     assert_same(
         &res,
-        &names(&[
-            ("root", "1.0.0"),
-            ("foo", "1.0.0"),
-            ("util", "0.1.0"),
-            ("util", "0.2.0"),
-        ]),
+        &names(&[("root", "1.0.0"), ("foo", "1.0.0"), ("util", "0.1.0")]),
     );
 }
 
@@ -490,12 +485,7 @@ fn test_range_major() {
 
     assert_same(
         &res,
-        &names(&[
-            ("root", "1.0.0"),
-            ("foo", "1.0.0"),
-            ("util", "0.1.0"),
-            ("util", "0.2.0"),
-        ]),
+        &names(&[("root", "1.0.0"), ("foo", "1.0.0"), ("util", "0.1.0")]),
     );
 }
 
@@ -556,12 +546,7 @@ fn test_wildcard_major_coerced_by_subdependency() {
     // by the subdependency of foo.
     assert_same(
         &res,
-        &names(&[
-            ("root", "1.0.0"),
-            ("foo", "1.0.0"),
-            ("util", "0.1.0"),
-            ("util", "0.2.0"),
-        ]),
+        &names(&[("root", "1.0.0"), ("foo", "1.0.0"), ("util", "0.1.0")]),
     );
 }
 
@@ -591,7 +576,7 @@ fn test_wildcard_major_coerced_by_indirect_subdependency() {
     // version that exists in the dependency tree.
     assert_eq!(
         res.deps(pkg_id("root")).skip(2).next().unwrap().0,
-        ("util", "0.3.0").to_pkgid()
+        ("util", "0.2.0").to_pkgid()
     );
 
     let res = res.sort();
@@ -605,7 +590,6 @@ fn test_wildcard_major_coerced_by_indirect_subdependency() {
             ("car", "1.0.0"),
             ("util", "0.1.0"),
             ("util", "0.2.0"),
-            ("util", "0.3.0"),
         ]),
     );
 }
@@ -843,7 +827,6 @@ fn resolving_with_sys_crates() {
             ("r", "1.0.0"),
             ("l-sys", "0.9.1"),
             ("l", "0.9.1"),
-            ("l", "0.10.0"),
         ]),
     );
 }

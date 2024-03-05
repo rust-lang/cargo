@@ -260,16 +260,8 @@ fn activate_deps_loop(
                 .conflicting(&resolver_ctx, &dep)
                 .is_some();
 
-        let mut remaining_candidates = RemainingCandidates::new(&candidates);
-
-        // `conflicting_activations` stores all the reasons we were unable to
-        // activate candidates. One of these reasons will have to go away for
-        // backtracking to find a place to restart. It is also the list of
-        // things to explain in the error message if we fail to resolve.
-        //
-        // This is a map of package ID to a reason why that packaged caused a
-        // conflict for us.
-        let mut conflicting_activations = ConflictMap::new();
+        let (mut remaining_candidates, mut conflicting_activations) =
+            RemainingCandidates::new(&candidates, &resolver_ctx);
 
         // When backtracking we don't fully update `conflicting_activations`
         // especially for the cases that we didn't make a backtrack frame in the
@@ -279,7 +271,7 @@ fn activate_deps_loop(
         let mut backtracked = false;
 
         loop {
-            let next = remaining_candidates.next(&mut conflicting_activations, &resolver_ctx);
+            let next = remaining_candidates.next();
 
             let (candidate, has_another) = next.ok_or(()).or_else(|_| {
                 // If we get here then our `remaining_candidates` was just
@@ -712,47 +704,38 @@ struct BacktrackFrame {
 /// more inputs) but in general acts like one. Each `RemainingCandidates` is
 /// created with a list of candidates to choose from. When attempting to iterate
 /// over the list of candidates only *valid* candidates are returned. Validity
-/// is defined within a `Context`.
+/// is defined within a `Context`. In addition, the iterator will return
+/// candidates that already have been activated first.
 ///
 /// Candidates passed to `new` may not be returned from `next` as they could be
-/// filtered out, and as they are filtered the causes will be added to `conflicting_prev_active`.
+/// filtered out. The filtered candidates and the causes will be returned by `new`.
 #[derive(Clone)]
 struct RemainingCandidates {
-    remaining: RcVecIter<Summary>,
+    prioritized_candidates: RcVecIter<Summary>,
     // This is an inlined peekable generator
     has_another: Option<Summary>,
 }
 
 impl RemainingCandidates {
-    fn new(candidates: &Rc<Vec<Summary>>) -> RemainingCandidates {
-        RemainingCandidates {
-            remaining: RcVecIter::new(Rc::clone(candidates)),
-            has_another: None,
-        }
-    }
-
-    /// Attempts to find another candidate to check from this list.
-    ///
-    /// This method will attempt to move this iterator forward, returning a
-    /// candidate that's possible to activate. The `cx` argument is the current
-    /// context which determines validity for candidates returned, and the `dep`
-    /// is the dependency listing that we're activating for.
-    ///
-    /// If successful a `(Candidate, bool)` pair will be returned. The
-    /// `Candidate` is the candidate to attempt to activate, and the `bool` is
-    /// an indicator of whether there are remaining candidates to try of if
-    /// we've reached the end of iteration.
-    ///
-    /// If we've reached the end of the iterator here then `Err` will be
-    /// returned. The error will contain a map of package ID to conflict reason,
-    /// where each package ID caused a candidate to be filtered out from the
-    /// original list for the reason listed.
-    fn next(
-        &mut self,
-        conflicting_prev_active: &mut ConflictMap,
+    /// Prefilters and sorts the list of candidates to determine which ones are
+    /// valid to activate, and which ones should be prioritized.
+    fn new(
+        candidates: &Rc<Vec<Summary>>,
         cx: &ResolverContext,
-    ) -> Option<(Summary, bool)> {
-        for b in self.remaining.by_ref() {
+    ) -> (RemainingCandidates, ConflictMap) {
+        // `conflicting_activations` stores all the reasons we were unable to
+        // activate candidates. One of these reasons will have to go away for
+        // backtracking to find a place to restart. It is also the list of
+        // things to explain in the error message if we fail to resolve.
+        //
+        // This is a map of package ID to a reason why that packaged caused a
+        // conflict for us.
+        let mut conflicting_activations = ConflictMap::new();
+
+        let mut activated_candidates: Vec<Summary> = Vec::with_capacity(candidates.len());
+        let mut non_activated_candidates: Vec<Summary> = Vec::with_capacity(candidates.len());
+
+        for b in candidates.as_ref() {
             let b_id = b.package_id();
             // The `links` key in the manifest dictates that there's only one
             // package in a dependency graph, globally, with that particular
@@ -761,7 +744,7 @@ impl RemainingCandidates {
             if let Some(link) = b.links() {
                 if let Some(&a) = cx.links.get(&link) {
                     if a != b_id {
-                        conflicting_prev_active
+                        conflicting_activations
                             .entry(a)
                             .or_insert_with(|| ConflictReason::Links(link));
                         continue;
@@ -774,18 +757,50 @@ impl RemainingCandidates {
             // semver-compatible versions of a crate. For example we can't
             // simultaneously activate `foo 1.0.2` and `foo 1.2.0`. We can,
             // however, activate `1.0.2` and `2.0.0`.
-            //
-            // Here we throw out our candidate if it's *compatible*, yet not
-            // equal, to all previously activated versions.
             if let Some((a, _)) = cx.activations.get(&b_id.as_activations_key()) {
-                if *a != b {
-                    conflicting_prev_active
+                // If this candidate is already activated, then we want to put
+                // it in our prioritized list to try first.
+                if a == b {
+                    activated_candidates.push(b.clone());
+                    continue;
+                }
+                // Here we throw out our candidate if it's *compatible*, yet not
+                // equal, to all previously activated versions.
+                else {
+                    conflicting_activations
                         .entry(a.package_id())
                         .or_insert(ConflictReason::Semver);
                     continue;
                 }
+            } else {
+                non_activated_candidates.push(b.clone());
             }
+        }
 
+        // Combine the prioritized and non-prioritized candidates into one list
+        // such that the prioritized candidates are tried first.
+        activated_candidates.append(&mut non_activated_candidates);
+
+        (
+            RemainingCandidates {
+                prioritized_candidates: RcVecIter::new(Rc::new(activated_candidates)),
+                has_another: None,
+            },
+            conflicting_activations,
+        )
+    }
+
+    /// Attempts to find another candidate to check from this list.
+    ///
+    /// This method will attempt to move this iterator forward, returning a
+    /// candidate that's possible to activate.
+    ///
+    /// If successful a `(Candidate, bool)` pair will be returned. The
+    /// `Candidate` is the candidate to attempt to activate, and the `bool` is
+    /// an indicator of whether there are remaining candidates to try of if
+    /// we've reached the end of iteration.
+    fn next(&mut self) -> Option<(Summary, bool)> {
+        for b in self.prioritized_candidates.by_ref() {
             // Well if we made it this far then we've got a valid dependency. We
             // want this iterator to be inherently "peekable" so we don't
             // necessarily return the item just yet. Instead we stash it away to
@@ -961,9 +976,7 @@ fn find_candidate(
     };
 
     while let Some(mut frame) = backtrack_stack.pop() {
-        let next = frame
-            .remaining_candidates
-            .next(&mut frame.conflicting_activations, &frame.context);
+        let next = frame.remaining_candidates.next();
         let Some((candidate, has_another)) = next else {
             continue;
         };
