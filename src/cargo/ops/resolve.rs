@@ -250,8 +250,18 @@ fn resolve_with_registry<'gctx>(
         true,
     )?;
 
-    if !ws.is_ephemeral() && ws.require_optional_deps() {
-        ops::write_pkg_lockfile(ws, &mut resolve)?;
+    let print = if !ws.is_ephemeral() && ws.require_optional_deps() {
+        ops::write_pkg_lockfile(ws, &mut resolve)?
+    } else {
+        false
+    };
+    if print {
+        // We only want one Cargo at a time resolving a crate graph since this can
+        // involve a lot of frobbing of the global caches.
+        let _lock = ws
+            .gctx()
+            .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
+        ops::print_lockfile_changes(ws.gctx(), prev.as_ref(), &resolve, registry)?;
     }
     Ok(resolve)
 }

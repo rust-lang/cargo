@@ -54,6 +54,7 @@ fn replace() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 3 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.1.0 ([..])
 [CHECKING] bar v0.1.0 ([CWD]/bar)
@@ -101,6 +102,7 @@ fn from_config() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
 [CHECKING] bar v0.1.1 ([..])
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -143,6 +145,7 @@ fn from_config_relative() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
 [CHECKING] bar v0.1.1 ([..])
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -188,6 +191,7 @@ fn from_config_precedence() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
 [CHECKING] bar v0.1.1 ([..])
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -229,6 +233,7 @@ fn nonexistent() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
 [CHECKING] bar v0.1.0 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -277,6 +282,7 @@ fn patch_git() {
         .with_stderr(
             "\
 [UPDATING] git repository `file://[..]`
+[LOCKING] 2 packages
 [CHECKING] bar v0.1.0 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -326,6 +332,7 @@ fn patch_to_git() {
             "\
 [UPDATING] git repository `file://[..]`
 [UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
 [CHECKING] bar v0.1.0 (file://[..])
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -370,6 +377,8 @@ Check that [..]
 with the [..]
 what is [..]
 version. [..]
+[LOCKING] 2 packages
+[ADDING] bar v0.1.0 (latest: v0.2.0)
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
 [CHECKING] bar v0.1.0
@@ -447,6 +456,8 @@ Check that [..]
 with the [..]
 what is [..]
 version. [..]
+[LOCKING] 2 packages
+[ADDING] bar v0.1.0 (latest: v0.3.0)
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
 [CHECKING] bar v0.1.0
@@ -487,6 +498,7 @@ fn prefer_patch_version() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
 [CHECKING] bar v0.1.1 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -546,6 +558,8 @@ Check that [..]
 with the [..]
 what is [..]
 version. [..]
+[LOCKING] 2 packages
+[ADDING] bar v0.1.0 (latest: v0.2.0)
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
 [CHECKING] bar v0.1.0
@@ -620,6 +634,8 @@ Check that [..]
 with the [..]
 what is [..]
 version. [..]
+[LOCKING] 2 packages
+[ADDING] bar v0.1.0 (latest: v0.2.0)
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
 [CHECKING] bar v0.1.0
@@ -669,6 +685,7 @@ fn add_patch() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
 [CHECKING] bar v0.1.0
@@ -699,6 +716,8 @@ fn add_patch() {
     p.cargo("check")
         .with_stderr(
             "\
+[LOCKING] 1 package
+[ADDING] bar v0.1.0 ([CWD]/bar)
 [CHECKING] bar v0.1.0 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -735,6 +754,7 @@ fn add_patch_from_config() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
 [CHECKING] bar v0.1.0
@@ -756,6 +776,8 @@ fn add_patch_from_config() {
     p.cargo("check")
         .with_stderr(
             "\
+[LOCKING] 1 package
+[ADDING] bar v0.1.0 ([CWD]/bar)
 [CHECKING] bar v0.1.0 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -792,6 +814,7 @@ fn add_ignored_patch() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 [..]
 [CHECKING] bar v0.1.0
@@ -886,6 +909,7 @@ fn add_patch_with_features() {
 [WARNING] patch for `bar` uses the features mechanism. \
 default-features and features will not take effect because the patch dependency does not support this mechanism
 [UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
 [CHECKING] bar v0.1.0 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -935,6 +959,7 @@ fn add_patch_with_setting_default_features() {
 [WARNING] patch for `bar` uses the features mechanism. \
 default-features and features will not take effect because the patch dependency does not support this mechanism
 [UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
 [CHECKING] bar v0.1.0 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -991,6 +1016,7 @@ fn no_warn_ws_patch() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 3 packages
 [CHECKING] a [..]
 [FINISHED] [..]",
         )
@@ -1027,6 +1053,7 @@ fn new_minor() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
 [CHECKING] bar v0.1.1 [..]
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -1079,6 +1106,7 @@ fn transitive_new_minor() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 3 packages
 [CHECKING] baz v0.1.1 [..]
 [CHECKING] bar v0.1.0 [..]
 [CHECKING] foo v0.0.1 ([CWD])
@@ -1118,6 +1146,7 @@ fn new_major() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
 [CHECKING] bar v0.2.0 [..]
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -1148,6 +1177,8 @@ fn new_major() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 1 package
+[ADDING] bar v0.2.0
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.2.0 [..]
 [CHECKING] bar v0.2.0
@@ -1202,6 +1233,7 @@ fn transitive_new_major() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 3 packages
 [CHECKING] baz v0.2.0 [..]
 [CHECKING] bar v0.1.0 [..]
 [CHECKING] foo v0.0.1 ([CWD])
@@ -1261,6 +1293,7 @@ fn shared_by_transitive() {
             "\
 [UPDATING] git repository `file://[..]`
 [UPDATING] `dummy-registry` index
+[LOCKING] 3 packages
 [CHECKING] baz v0.1.2 [..]
 [CHECKING] bar v0.1.0 [..]
 [CHECKING] foo v0.1.0 ([CWD])
@@ -1604,6 +1637,7 @@ fn patch_older() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 3 packages
 [CHECKING] baz v1.0.1 [..]
 [CHECKING] bar v0.5.0 [..]
 [CHECKING] foo v0.1.0 [..]
@@ -2007,6 +2041,8 @@ fn update_unused_new_version() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 1 package
+[ADDING] bar v0.1.6 ([ROOT]/bar)
 [CHECKING] bar v0.1.6 ([..]/bar)
 [CHECKING] foo v0.0.1 ([..]/foo)
 [FINISHED] [..]
@@ -2205,6 +2241,7 @@ fn patch_walks_backwards() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
 [CHECKING] bar v0.1.1 ([..]/foo/bar)
 [CHECKING] foo v0.1.0 ([..]/foo)
 [FINISHED] [..]
@@ -2219,6 +2256,8 @@ fn patch_walks_backwards() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 1 package
+[DOWNGRADING] bar v0.1.1 ([CWD]/bar) -> v0.1.0
 [CHECKING] bar v0.1.0 ([..]/foo/bar)
 [CHECKING] foo v0.1.0 ([..]/foo)
 [FINISHED] [..]
@@ -2258,6 +2297,7 @@ fn patch_walks_backwards_restricted() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
 [CHECKING] bar v0.1.1 ([..]/foo/bar)
 [CHECKING] foo v0.1.0 ([..]/foo)
 [FINISHED] [..]
@@ -2330,6 +2370,7 @@ fn patched_dep_new_version() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 3 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.1.0 [..]
 [CHECKING] baz v0.1.0
@@ -2364,6 +2405,8 @@ fn patched_dep_new_version() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 1 package
+[UPDATING] baz v0.1.0 -> v0.1.1
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.1.1 (registry `dummy-registry`)
 [CHECKING] baz v0.1.1
@@ -2410,6 +2453,7 @@ fn patch_update_doesnt_update_other_sources() {
             "\
 [UPDATING] `dummy-registry` index
 [UPDATING] `alternative` index
+[LOCKING] 3 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `alternative`)
 [CHECKING] bar v0.1.0 (registry `alternative`)
@@ -2435,6 +2479,8 @@ fn patch_update_doesnt_update_other_sources() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 1 package
+[UPDATING] bar v0.1.0 ([CWD]/bar) -> v0.1.1
 [CHECKING] bar v0.1.1 ([..]/foo/bar)
 [CHECKING] foo v0.1.0 ([..]/foo)
 [FINISHED] [..]
@@ -2475,6 +2521,7 @@ fn can_update_with_alt_reg() {
             "\
 [UPDATING] `alternative` index
 [UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.1 (registry `alternative`)
 [CHECKING] bar v0.1.1 (registry `alternative`)
@@ -2522,6 +2569,8 @@ fn can_update_with_alt_reg() {
             "\
 [UPDATING] `alternative` index
 [UPDATING] `dummy-registry` index
+[LOCKING] 1 package
+[UPDATING] bar v0.1.1 (registry `alternative`) -> v0.1.2
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.2 (registry `alternative`)
 [CHECKING] bar v0.1.2 (registry `alternative`)
@@ -2610,6 +2659,8 @@ dependencies = [
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 1 package
+[ADDING] bar v1.0.0 (file://[..])
 ",
         )
         // .with_status(1)

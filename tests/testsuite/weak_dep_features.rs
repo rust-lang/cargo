@@ -51,6 +51,7 @@ fn simple() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 [..]
 [CHECKING] foo v0.1.0 [..]
@@ -106,6 +107,7 @@ fn deferred() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 4 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v1.0.0 [..]
 [DOWNLOADED] bar_activator v1.0.0 [..]
@@ -185,6 +187,7 @@ fn optional_cli_syntax() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 [..]
 [CHECKING] foo v0.1.0 [..]
@@ -259,6 +262,7 @@ fn required_features() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 2 packages
 [ERROR] invalid feature `bar?/feat` in required-features of target `foo`: \
 optional dependency with `?` is not allowed in required-features
 ",
@@ -354,6 +358,7 @@ fn weak_with_host_decouple() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 4 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..]
 [DOWNLOADED] [..]
@@ -400,6 +405,7 @@ fn weak_namespaced() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 [..]
 [CHECKING] foo v0.1.0 [..]

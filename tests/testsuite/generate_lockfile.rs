@@ -87,13 +87,22 @@ fn no_index_update() {
         .build();
 
     p.cargo("generate-lockfile")
-        .with_stderr("[UPDATING] `[..]` index")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[LOCKING] 2 packages
+",
+        )
         .run();
 
     p.cargo("generate-lockfile -Zno-index-update")
         .masquerade_as_nightly_cargo(&["no-index-update"])
         .with_stdout("")
-        .with_stderr("")
+        .with_stderr(
+            "\
+[LOCKING] 2 packages
+",
+        )
         .run();
 }
 

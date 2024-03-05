@@ -72,11 +72,13 @@ fn cargo_compile_with_nested_deps_shorthand() {
 
     p.cargo("build")
         .with_stderr(
-            "[COMPILING] baz v0.5.0 ([CWD]/bar/baz)\n\
-             [COMPILING] bar v0.5.0 ([CWD]/bar)\n\
-             [COMPILING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) \
-             in [..]\n",
+            "\
+[LOCKING] 3 packages
+[COMPILING] baz v0.5.0 ([CWD]/bar/baz)
+[COMPILING] bar v0.5.0 ([CWD]/bar)
+[COMPILING] foo v0.5.0 ([CWD])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+",
         )
         .run();
 
@@ -193,6 +195,7 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
     p.cargo("test")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [COMPILING] [..] v0.5.0 ([..])
 [COMPILING] [..] v0.5.0 ([..])
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
@@ -253,10 +256,12 @@ fn cargo_compile_with_transitive_dev_deps() {
 
     p.cargo("build")
         .with_stderr(
-            "[COMPILING] bar v0.5.0 ([CWD]/bar)\n\
-             [COMPILING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in \
-             [..]\n",
+            "\
+[LOCKING] 2 packages
+[COMPILING] bar v0.5.0 ([CWD]/bar)
+[COMPILING] foo v0.5.0 ([CWD])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+",
         )
         .run();
 
@@ -289,10 +294,12 @@ fn no_rebuild_dependency() {
     // First time around we should compile both foo and bar
     p.cargo("check")
         .with_stderr(
-            "[CHECKING] bar v0.5.0 ([CWD]/bar)\n\
-             [CHECKING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) \
-             in [..]\n",
+            "\
+[LOCKING] 2 packages
+[CHECKING] bar v0.5.0 ([CWD]/bar)
+[CHECKING] foo v0.5.0 ([CWD])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+",
         )
         .run();
 
@@ -357,11 +364,13 @@ fn deep_dependencies_trigger_rebuild() {
         .build();
     p.cargo("check")
         .with_stderr(
-            "[CHECKING] baz v0.5.0 ([CWD]/baz)\n\
-             [CHECKING] bar v0.5.0 ([CWD]/bar)\n\
-             [CHECKING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) \
-             in [..]\n",
+            "\
+[LOCKING] 3 packages
+[CHECKING] baz v0.5.0 ([CWD]/baz)
+[CHECKING] bar v0.5.0 ([CWD]/bar)
+[CHECKING] foo v0.5.0 ([CWD])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+",
         )
         .run();
     p.cargo("check").with_stderr("[FINISHED] [..]").run();
@@ -445,11 +454,13 @@ fn no_rebuild_two_deps() {
         .build();
     p.cargo("build")
         .with_stderr(
-            "[COMPILING] baz v0.5.0 ([CWD]/baz)\n\
-             [COMPILING] bar v0.5.0 ([CWD]/bar)\n\
-             [COMPILING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) \
-             in [..]\n",
+            "\
+[LOCKING] 3 packages
+[COMPILING] baz v0.5.0 ([CWD]/baz)
+[COMPILING] bar v0.5.0 ([CWD]/bar)
+[COMPILING] foo v0.5.0 ([CWD])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+",
         )
         .run();
     assert!(p.bin("foo").is_file());
@@ -483,10 +494,12 @@ fn nested_deps_recompile() {
 
     p.cargo("check")
         .with_stderr(
-            "[CHECKING] bar v0.5.0 ([CWD]/src/bar)\n\
-             [CHECKING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) \
-             in [..]\n",
+            "\
+[LOCKING] 2 packages
+[CHECKING] bar v0.5.0 ([CWD]/src/bar)
+[CHECKING] foo v0.5.0 ([CWD])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+",
         )
         .run();
     sleep_ms(1000);
@@ -731,10 +744,12 @@ fn path_dep_build_cmd() {
 
     p.cargo("build")
         .with_stderr(
-            "[COMPILING] bar v0.5.0 ([CWD]/bar)\n\
-             [COMPILING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in \
-             [..]\n",
+            "\
+[LOCKING] 2 packages
+[COMPILING] bar v0.5.0 ([CWD]/bar)
+[COMPILING] foo v0.5.0 ([CWD])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+",
         )
         .run();
 
@@ -790,9 +805,11 @@ fn dev_deps_no_rebuild_lib() {
     p.cargo("build")
         .env("FOO", "bar")
         .with_stderr(
-            "[COMPILING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) \
-             in [..]\n",
+            "\
+[LOCKING] 2 packages
+[COMPILING] foo v0.5.0 ([CWD])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+",
         )
         .run();
 
@@ -845,6 +862,7 @@ fn custom_target_no_rebuild() {
     p.cargo("check")
         .with_stderr(
             "\
+[LOCKING] 3 packages
 [CHECKING] a v0.5.0 ([..])
 [CHECKING] foo v0.5.0 ([..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -906,6 +924,7 @@ fn override_and_depend() {
         .cwd("b")
         .with_stderr(
             "\
+[LOCKING] 3 packages
 [WARNING] skipping duplicate package `a2` found at `[..]`
 [CHECKING] a2 v0.5.0 ([..])
 [CHECKING] a1 v0.5.0 ([..])

@@ -56,6 +56,7 @@ fn dont_include() {
     p.cargo("check")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [CHECKING] a v0.0.1 ([..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -95,6 +96,7 @@ fn works_through_the_registry() {
         .with_stderr(
             "\
 [UPDATING] [..] index
+[LOCKING] 3 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..]
 [DOWNLOADED] [..]
@@ -144,6 +146,8 @@ fn ignore_version_from_other_platform() {
         .with_stderr(
             "\
 [UPDATING] [..] index
+[LOCKING] 3 packages
+[ADDING] bar v0.1.0 (latest: v0.2.0)
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..]
 [CHECKING] bar v0.1.0

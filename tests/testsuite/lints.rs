@@ -43,6 +43,7 @@ fn dependency_warning_ignored() {
     foo.cargo("check")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [CHECKING] [..]
 [CHECKING] [..]
 [FINISHED] [..]

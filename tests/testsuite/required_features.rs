@@ -1049,7 +1049,11 @@ fn dep_feature_in_cmd_line() {
 
     // This is a no-op
     p.cargo("build")
-        .with_stderr("[FINISHED] `dev` profile [..]")
+        .with_stderr(
+            "\
+[LOCKING] 2 packages
+[FINISHED] `dev` profile [..]",
+        )
         .run();
     assert!(!p.bin("foo").is_file());
 
@@ -1372,6 +1376,7 @@ fn renamed_required_features() {
         .with_status(101)
         .with_stderr(
             "\
+[LOCKING] 3 packages
 [ERROR] target `x` in package `foo` requires the features: `a1/f1`
 Consider enabling them by passing, e.g., `--features=\"a1/f1\"`
 ",

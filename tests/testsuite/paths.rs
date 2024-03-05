@@ -58,6 +58,8 @@ fn broken_path_override_warns() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 3 packages
+[ADDING] bar v0.1.0 (latest: v0.2.0)
 warning: path override for crate `a` has altered the original list of
 dependencies; the dependency on `bar` was either added or
 modified to not match the previously resolved version
@@ -177,6 +179,7 @@ fn paths_ok_with_optional() {
     p.cargo("check")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [CHECKING] bar v0.1.0 ([..]bar2)
 [CHECKING] foo v0.0.1 ([..])
 [FINISHED] [..]

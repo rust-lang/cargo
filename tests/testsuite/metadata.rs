@@ -1915,6 +1915,7 @@ fn cargo_metadata_with_invalid_artifact_deps() {
         .with_stderr(
             "\
 [WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[LOCKING] 2 packages
 [ERROR] dependency `artifact` in package `foo` requires a `bin:notfound` artifact to be present.",
         )
         .run();
@@ -1945,6 +1946,7 @@ fn cargo_metadata_with_invalid_duplicate_renamed_deps() {
         .with_stderr(
             "\
 [WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[LOCKING] 2 packages
 [ERROR] the crate `foo v0.5.0 ([..])` depends on crate `bar v0.5.0 ([..])` multiple times with different names",
         )
         .run();
@@ -3396,6 +3398,7 @@ fn filter_platform() {
             "\
 [UPDATING] [..]
 [WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[LOCKING] 5 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] normal-dep v0.0.1 [..]
 [DOWNLOADED] host-dep v0.0.1 [..]

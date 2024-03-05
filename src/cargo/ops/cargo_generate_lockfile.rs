@@ -25,17 +25,19 @@ pub struct UpdateOptions<'a> {
 
 pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
     let mut registry = PackageRegistry::new(ws.gctx())?;
+    let previous_resolve = None;
     let mut resolve = ops::resolve_with_previous(
         &mut registry,
         ws,
         &CliFeatures::new_all(true),
         HasDevUnits::Yes,
-        None,
+        previous_resolve,
         None,
         &[],
         true,
     )?;
     ops::write_pkg_lockfile(ws, &mut resolve)?;
+    print_lockfile_changes(ws.gctx(), previous_resolve, &resolve, &mut registry)?;
     Ok(())
 }
 
@@ -164,7 +166,164 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     Ok(())
 }
 
-fn print_lockfile_updates(
+pub fn print_lockfile_changes(
+    gctx: &GlobalContext,
+    previous_resolve: Option<&Resolve>,
+    resolve: &Resolve,
+    registry: &mut PackageRegistry<'_>,
+) -> CargoResult<()> {
+    if let Some(previous_resolve) = previous_resolve {
+        print_lockfile_sync(gctx, previous_resolve, resolve, registry)
+    } else {
+        print_lockfile_generation(gctx, resolve, registry)
+    }
+}
+
+fn print_lockfile_generation(
+    gctx: &GlobalContext,
+    resolve: &Resolve,
+    registry: &mut PackageRegistry<'_>,
+) -> CargoResult<()> {
+    let mut shell = gctx.shell();
+
+    let diff = PackageDiff::new(&resolve);
+    let num_pkgs: usize = diff.iter().map(|d| d.added.len()).sum();
+    if num_pkgs <= 1 {
+        // just ourself, nothing worth reporting
+        return Ok(());
+    }
+    shell.status("Locking", format!("{num_pkgs} packages"))?;
+
+    for diff in diff {
+        fn format_latest(version: semver::Version) -> String {
+            let warn = style::WARN;
+            format!(" {warn}(latest: v{version}){warn:#}")
+        }
+        let possibilities = if let Some(query) = diff.alternatives_query() {
+            loop {
+                match registry.query_vec(&query, QueryKind::Exact) {
+                    std::task::Poll::Ready(res) => {
+                        break res?;
+                    }
+                    std::task::Poll::Pending => registry.block_until_ready()?,
+                }
+            }
+        } else {
+            vec![]
+        };
+
+        for package in diff.added.iter() {
+            let latest = if !possibilities.is_empty() {
+                possibilities
+                    .iter()
+                    .map(|s| s.as_summary())
+                    .filter(|s| is_latest(s.version(), package.version()))
+                    .map(|s| s.version().clone())
+                    .max()
+                    .map(format_latest)
+            } else {
+                None
+            };
+
+            if let Some(latest) = latest {
+                shell.status_with_color("Adding", format!("{package}{latest}"), &style::NOTE)?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn print_lockfile_sync(
+    gctx: &GlobalContext,
+    previous_resolve: &Resolve,
+    resolve: &Resolve,
+    registry: &mut PackageRegistry<'_>,
+) -> CargoResult<()> {
+    let mut shell = gctx.shell();
+
+    let diff = PackageDiff::diff(&previous_resolve, &resolve);
+    let num_pkgs: usize = diff.iter().map(|d| d.added.len()).sum();
+    if num_pkgs == 0 {
+        return Ok(());
+    }
+    let plural = if num_pkgs == 1 { "" } else { "s" };
+    shell.status("Locking", format!("{num_pkgs} package{plural}"))?;
+
+    for diff in diff {
+        fn format_latest(version: semver::Version) -> String {
+            let warn = style::WARN;
+            format!(" {warn}(latest: v{version}){warn:#}")
+        }
+        let possibilities = if let Some(query) = diff.alternatives_query() {
+            loop {
+                match registry.query_vec(&query, QueryKind::Exact) {
+                    std::task::Poll::Ready(res) => {
+                        break res?;
+                    }
+                    std::task::Poll::Pending => registry.block_until_ready()?,
+                }
+            }
+        } else {
+            vec![]
+        };
+
+        if let Some((removed, added)) = diff.change() {
+            let latest = if !possibilities.is_empty() {
+                possibilities
+                    .iter()
+                    .map(|s| s.as_summary())
+                    .filter(|s| is_latest(s.version(), added.version()))
+                    .map(|s| s.version().clone())
+                    .max()
+                    .map(format_latest)
+            } else {
+                None
+            }
+            .unwrap_or_default();
+
+            let msg = if removed.source_id().is_git() {
+                format!(
+                    "{removed} -> #{}",
+                    &added.source_id().precise_git_fragment().unwrap()[..8],
+                )
+            } else {
+                format!("{removed} -> v{}{latest}", added.version())
+            };
+
+            // If versions differ only in build metadata, we call it an "update"
+            // regardless of whether the build metadata has gone up or down.
+            // This metadata is often stuff like git commit hashes, which are
+            // not meaningfully ordered.
+            if removed.version().cmp_precedence(added.version()) == Ordering::Greater {
+                shell.status_with_color("Downgrading", msg, &style::WARN)?;
+            } else {
+                shell.status_with_color("Updating", msg, &style::GOOD)?;
+            }
+        } else {
+            for package in diff.added.iter() {
+                let latest = if !possibilities.is_empty() {
+                    possibilities
+                        .iter()
+                        .map(|s| s.as_summary())
+                        .filter(|s| is_latest(s.version(), package.version()))
+                        .map(|s| s.version().clone())
+                        .max()
+                        .map(format_latest)
+                } else {
+                    None
+                }
+                .unwrap_or_default();
+
+                shell.status_with_color("Adding", format!("{package}{latest}"), &style::NOTE)?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+pub fn print_lockfile_updates(
     gctx: &GlobalContext,
     previous_resolve: &Resolve,
     resolve: &Resolve,
@@ -317,11 +476,21 @@ pub struct PackageDiff {
 }
 
 impl PackageDiff {
-    pub fn diff(previous_resolve: &Resolve, resolve: &Resolve) -> Vec<Self> {
-        fn key(dep: PackageId) -> (&'static str, SourceId) {
-            (dep.name().as_str(), dep.source_id())
+    pub fn new(resolve: &Resolve) -> Vec<Self> {
+        let mut changes = BTreeMap::new();
+        let empty = Self::default();
+        for dep in resolve.iter() {
+            changes
+                .entry(Self::key(dep))
+                .or_insert_with(|| empty.clone())
+                .added
+                .push(dep);
         }
 
+        changes.into_iter().map(|(_, v)| v).collect()
+    }
+
+    pub fn diff(previous_resolve: &Resolve, resolve: &Resolve) -> Vec<Self> {
         fn vec_subset(a: &[PackageId], b: &[PackageId]) -> Vec<PackageId> {
             a.iter().filter(|a| !contains_id(b, a)).cloned().collect()
         }
@@ -362,14 +531,14 @@ impl PackageDiff {
         let empty = Self::default();
         for dep in previous_resolve.iter() {
             changes
-                .entry(key(dep))
+                .entry(Self::key(dep))
                 .or_insert_with(|| empty.clone())
                 .removed
                 .push(dep);
         }
         for dep in resolve.iter() {
             changes
-                .entry(key(dep))
+                .entry(Self::key(dep))
                 .or_insert_with(|| empty.clone())
                 .added
                 .push(dep);
@@ -393,6 +562,10 @@ impl PackageDiff {
         debug!("{:#?}", changes);
 
         changes.into_iter().map(|(_, v)| v).collect()
+    }
+
+    fn key(dep: PackageId) -> (&'static str, SourceId) {
+        (dep.name().as_str(), dep.source_id())
     }
 
     /// Guess if a package upgraded/downgraded

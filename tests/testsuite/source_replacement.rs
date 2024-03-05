@@ -287,6 +287,7 @@ fn source_replacement_with_registry_url() {
         .with_stderr(
             "\
 [UPDATING] `using-registry-url` index
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `using-registry-url`)
 [CHECKING] bar v0.0.1

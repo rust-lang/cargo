@@ -268,6 +268,8 @@ fn outdated_lock_version_change_does_not_warn() {
     p.cargo("package --no-verify")
         .with_stderr(
             "\
+[LOCKING] 1 package
+[UPDATING] foo v0.1.0 ([CWD]) -> v0.2.0
 [PACKAGING] foo v0.2.0 ([..])
 [PACKAGED] [..] files, [..] ([..] compressed)
 ",

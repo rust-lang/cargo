@@ -258,6 +258,7 @@ fn off_in_manifest_works() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 2 packages
 [DOWNLOADING] [..]
 [DOWNLOADED] [..]
 [COMPILING] bar v0.0.1
@@ -676,6 +677,7 @@ fn test_profile() {
         // unordered because the two `foo` builds start in parallel
         .with_stderr_unordered("\
 [UPDATING] [..]
+[LOCKING] 2 packages
 [DOWNLOADING] [..]
 [DOWNLOADED] [..]
 [COMPILING] bar v0.0.1
@@ -814,6 +816,7 @@ fn fresh_swapping_commands() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 [..]
 [COMPILING] bar v1.0.0

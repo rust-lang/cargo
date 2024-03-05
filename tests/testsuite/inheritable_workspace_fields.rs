@@ -294,6 +294,7 @@ fn inherit_own_dependencies() {
         .with_stderr_unordered(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 4 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v0.1.2 ([..])
 [DOWNLOADED] dep-build v0.8.2 ([..])
@@ -445,6 +446,7 @@ fn inherit_own_detailed_dependencies() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v0.1.2 ([..])
 [CHECKING] dep v0.1.2
@@ -614,6 +616,7 @@ fn inherited_dependencies_union_features() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 4 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] fancy_dep v0.2.4 ([..])
 [DOWNLOADED] dep v0.1.0 ([..])
@@ -843,6 +846,7 @@ fn inherit_dependencies() {
         .with_stderr_unordered(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 4 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v0.1.2 ([..])
 [DOWNLOADED] dep-build v0.8.2 ([..])
@@ -997,6 +1001,7 @@ fn inherit_target_dependencies() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v0.1.2 ([..])
 [CHECKING] dep v0.1.2
@@ -1044,6 +1049,7 @@ fn inherit_dependency_override_optional() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 2 packages
 [CHECKING] bar v0.2.0 ([CWD]/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -1087,6 +1093,7 @@ fn inherit_dependency_features() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 3 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] fancy_dep v0.2.4 ([..])
 [DOWNLOADED] dep v0.1.0 ([..])
@@ -1159,6 +1166,7 @@ fn inherit_detailed_dependencies() {
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{}`\n\
+[LOCKING] 2 packages
 [CHECKING] detailed v0.5.0 ({}?branch=branchy#[..])\n\
 [CHECKING] bar v0.2.0 ([CWD]/bar)\n\
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
@@ -1201,6 +1209,7 @@ fn inherit_path_dependencies() {
     p.cargo("check")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [CHECKING] dep v0.9.0 ([CWD]/dep)
 [CHECKING] bar v0.2.0 ([CWD]/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -1473,6 +1482,7 @@ fn warn_inherit_def_feat_true_member_def_feat_false() {
 [WARNING] [CWD]/Cargo.toml: `default-features` is ignored for dep, since `default-features` was \
 true for `workspace.dependencies.dep`, this could become a hard error in the future
 [UPDATING] `dummy-registry` index
+[LOCKING] 3 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] fancy_dep v0.2.4 ([..])
 [DOWNLOADED] dep v0.1.0 ([..])
@@ -1522,6 +1532,7 @@ fn warn_inherit_simple_member_def_feat_false() {
 [WARNING] [CWD]/Cargo.toml: `default-features` is ignored for dep, since `default-features` was \
 not specified for `workspace.dependencies.dep`, this could become a hard error in the future
 [UPDATING] `dummy-registry` index
+[LOCKING] 3 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] fancy_dep v0.2.4 ([..])
 [DOWNLOADED] dep v0.1.0 ([..])
@@ -1569,6 +1580,7 @@ fn inherit_def_feat_false_member_def_feat_true() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 3 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] fancy_dep v0.2.4 ([..])
 [DOWNLOADED] dep v0.1.0 ([..])
@@ -1661,6 +1673,7 @@ fn warn_inherit_unused_manifest_key_dep() {
 [WARNING] [CWD]/Cargo.toml: unused manifest key: workspace.dependencies.dep.wxz
 [WARNING] [CWD]/Cargo.toml: unused manifest key: dependencies.dep.wxz
 [UPDATING] `[..]` index
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v0.1.0 ([..])
 [CHECKING] [..]

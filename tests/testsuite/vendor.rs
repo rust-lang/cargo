@@ -773,6 +773,7 @@ fn git_duplicate() {
             "\
 [UPDATING] [..]
 [UPDATING] [..]
+[LOCKING] 4 packages
 [DOWNLOADING] [..]
 [DOWNLOADED] [..]
 error: failed to sync
@@ -1084,7 +1085,11 @@ fn no_remote_dependency_no_vendor() {
         .build();
 
     p.cargo("vendor")
-        .with_stderr("There is no dependency to vendor in this project.")
+        .with_stderr(
+            "\
+[LOCKING] 2 packages
+There is no dependency to vendor in this project.",
+        )
         .run();
     assert!(!p.root().join("vendor").exists());
 }

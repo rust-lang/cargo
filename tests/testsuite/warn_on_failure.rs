@@ -66,6 +66,7 @@ fn no_warning_on_success() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 ([..])
 [COMPILING] bar v0.0.1

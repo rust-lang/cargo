@@ -98,7 +98,11 @@ fn same_name() {
 
     p.cargo("tree -f")
         .arg("{p} [{f}]")
-        .with_stderr("")
+        .with_stderr(
+            "\
+[LOCKING] 2 packages
+",
+        )
         .with_stdout(
             "\
 foo v0.0.1 ([..]) []
@@ -358,6 +362,7 @@ fn invalid9() {
     p.cargo("check --features bar")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 error: Package `foo v0.0.1 ([..])` does not have feature `bar`. It has a required dependency with that name, but only optional dependencies can be used as features.
 ",
         ).with_status(101).run();
@@ -522,6 +527,7 @@ fn no_feature_doesnt_build() {
     p.cargo("build")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -582,6 +588,7 @@ fn default_feature_pulled_in() {
     p.cargo("build")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -708,6 +715,7 @@ fn groups_on_groups_on_groups() {
     p.cargo("check")
         .with_stderr(
             "\
+[LOCKING] 3 packages
 [CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
 [CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
 [CHECKING] foo v0.0.1 ([CWD])
@@ -758,6 +766,7 @@ fn many_cli_features() {
         .arg("bar baz")
         .with_stderr(
             "\
+[LOCKING] 3 packages
 [CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
 [CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
 [CHECKING] foo v0.0.1 ([CWD])
@@ -844,6 +853,7 @@ fn union_features() {
     p.cargo("check")
         .with_stderr(
             "\
+[LOCKING] 3 packages
 [CHECKING] d2 v0.0.1 ([CWD]/d2)
 [CHECKING] d1 v0.0.1 ([CWD]/d1)
 [CHECKING] foo v0.0.1 ([CWD])
@@ -892,6 +902,7 @@ fn many_features_no_rebuilds() {
     p.cargo("check")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [CHECKING] a v0.1.0 ([CWD]/a)
 [CHECKING] b v0.1.0 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -1174,6 +1185,7 @@ fn optional_and_dev_dep() {
     p.cargo("check")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [CHECKING] test v0.1.0 ([..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -1451,6 +1463,7 @@ fn many_cli_features_comma_delimited() {
     p.cargo("check --features bar,baz")
         .with_stderr(
             "\
+[LOCKING] 3 packages
 [CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
 [CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
 [CHECKING] foo v0.0.1 ([CWD])
@@ -1517,6 +1530,7 @@ fn many_cli_features_comma_and_space_delimited() {
         .arg("bar,baz bam bap")
         .with_stderr(
             "\
+[LOCKING] 5 packages
 [CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
 [CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
 [CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
@@ -1688,6 +1702,7 @@ fn warn_if_default_features() {
         .with_stderr(
             r#"
 [WARNING] `default-features = [".."]` was found in [features]. Did you mean to use `default = [".."]`?
+[LOCKING] 2 packages
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
             "#.trim(),
@@ -2026,6 +2041,7 @@ fn registry_summary_order_doesnt_matter() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 3 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..]
 [DOWNLOADED] [..]

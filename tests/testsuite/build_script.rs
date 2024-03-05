@@ -889,6 +889,7 @@ fn custom_build_script_rustc_flags() {
     p.cargo("build --verbose")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 foo/build.rs [..]
 [RUNNING] `[..]build-script-build`
@@ -950,6 +951,7 @@ fn custom_build_script_rustc_flags_no_space() {
     p.cargo("build --verbose")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [COMPILING] foo [..]
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 foo/build.rs [..]
 [RUNNING] `[..]build-script-build`
@@ -1090,6 +1092,7 @@ fn links_duplicates_old_registry() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 ([..])
 [ERROR] multiple packages link to native library `a`, \
@@ -1237,6 +1240,7 @@ fn overrides_and_links() {
     p.cargo("build -v")
         .with_stderr(
             "\
+[..]
 [..]
 [..]
 [..]
@@ -1702,6 +1706,7 @@ fn build_deps_simple() {
     p.cargo("build -v")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [COMPILING] a v0.5.0 ([CWD]/a)
 [RUNNING] `rustc --crate-name a [..]`
 [COMPILING] foo v0.5.0 ([CWD])
@@ -1814,6 +1819,7 @@ fn build_cmd_with_a_build_cmd() {
     p.cargo("build -v")
         .with_stderr(
             "\
+[LOCKING] 3 packages
 [COMPILING] b v0.5.0 ([CWD]/b)
 [RUNNING] `rustc --crate-name b [..]`
 [COMPILING] a v0.5.0 ([CWD]/a)
@@ -2989,6 +2995,7 @@ fn flags_go_into_tests() {
     p.cargo("test -v --test=foo")
         .with_stderr(
             "\
+[LOCKING] 3 packages
 [COMPILING] a v0.5.0 ([..]
 [RUNNING] `rustc [..] a/build.rs [..]`
 [RUNNING] `[..]/build-script-build`
@@ -3088,6 +3095,7 @@ fn diamond_passes_args_only_once() {
     p.cargo("build -v")
         .with_stderr(
             "\
+[LOCKING] 4 packages
 [COMPILING] c v0.5.0 ([..]
 [RUNNING] `rustc [..]`
 [RUNNING] `[..]`
@@ -3967,6 +3975,7 @@ fn warnings_hidden_for_upstream() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 ([..])
 [COMPILING] bar v0.1.0
@@ -4028,6 +4037,7 @@ fn warnings_printed_on_vv() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 ([..])
 [COMPILING] bar v0.1.0
@@ -4766,6 +4776,7 @@ fn optional_build_dep_and_required_normal_dep() {
         .with_stdout("0")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [COMPILING] bar v0.5.0 ([..])
 [COMPILING] foo v0.1.0 ([..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]

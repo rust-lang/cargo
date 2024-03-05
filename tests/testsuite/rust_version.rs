@@ -217,6 +217,7 @@ fn dependency_rust_version_newer_than_rustc() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `[..]`)
 [ERROR] rustc [..] is not supported by the following package:
@@ -264,6 +265,7 @@ fn dependency_tree_rust_version_newer_than_rustc() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 3 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.0.1 (registry `[..]`)
 [DOWNLOADED] bar v0.0.1 (registry `[..]`)
@@ -349,6 +351,8 @@ fn dependency_rust_version_older_and_newer_than_package() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
+[ADDING] bar v1.5.0 (latest: v1.6.0)
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.5.0 (registry `dummy-registry`)
 [CHECKING] bar v1.5.0
@@ -405,6 +409,7 @@ fn dependency_rust_version_backtracking() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 3 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] no-rust-version v2.2.0 (registry `dummy-registry`)
 [DOWNLOADED] has-rust-version v1.6.0 (registry `dummy-registry`)
@@ -482,6 +487,8 @@ fn workspace_with_mixed_rust_version() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 3 packages
+[ADDING] bar v1.4.0 (latest: v1.6.0)
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.4.0 (registry `dummy-registry`)
 [CHECKING] bar v1.4.0

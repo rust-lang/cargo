@@ -261,6 +261,7 @@ fn link_arg_transitive_not_allowed() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 2 packages
 [DOWNLOADING] [..]
 [DOWNLOADED] [..]
 [COMPILING] bar v1.0.0

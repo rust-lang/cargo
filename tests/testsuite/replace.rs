@@ -45,6 +45,7 @@ fn override_simple() {
             "\
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[..]`
+[LOCKING] 3 packages
 [CHECKING] bar v0.1.0 (file://[..])
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -93,6 +94,7 @@ fn override_with_features() {
             "\
 [UPDATING] [..] index
 [UPDATING] git repository `[..]`
+[LOCKING] 3 packages
 [WARNING] replacement for `bar` uses the features mechanism. default-features and features \
 will not take effect because the replacement dependency does not support this mechanism
 [CHECKING] bar v0.1.0 (file://[..])
@@ -143,6 +145,7 @@ fn override_with_setting_default_features() {
             "\
 [UPDATING] [..] index
 [UPDATING] git repository `[..]`
+[LOCKING] 3 packages
 [WARNING] replacement for `bar` uses the features mechanism. default-features and features \
 will not take effect because the replacement dependency does not support this mechanism
 [CHECKING] bar v0.1.0 (file://[..])
@@ -302,6 +305,7 @@ fn transitive() {
             "\
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[..]`
+[LOCKING] 4 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.2.0 (registry [..])
 [CHECKING] bar v0.1.0 (file://[..])
@@ -355,6 +359,7 @@ fn persists_across_rebuilds() {
             "\
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `file://[..]`
+[LOCKING] 3 packages
 [CHECKING] bar v0.1.0 (file://[..])
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -402,6 +407,7 @@ fn replace_registry_with_path() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 3 packages
 [CHECKING] bar v0.1.0 ([ROOT][..]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -469,6 +475,8 @@ fn use_a_spec_to_select() {
             "\
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[..]`
+[LOCKING] 5 packages
+[ADDING] baz v0.1.1 (latest: v0.2.0)
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..]
 [DOWNLOADED] [..]
@@ -532,6 +540,7 @@ fn override_adds_some_deps() {
             "\
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[..]`
+[LOCKING] 4 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.1.1 (registry [..])
 [CHECKING] baz v0.1.1
@@ -1162,6 +1171,7 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 4 packages
 [CHECKING] bar v0.1.0 ([..])
 [CHECKING] first_crate v0.1.0 ([..])
 [FINISHED] [..]",
@@ -1425,6 +1435,7 @@ fn override_respects_spec_metadata() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
 [WARNING] package replacement is not used: https://github.com/rust-lang/crates.io-index#bar@0.1.0+notTheBuild
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0+a (registry `dummy-registry`)
@@ -1484,6 +1495,7 @@ fn override_spec_metadata_is_optional() {
             "\
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[..]`
+[LOCKING] 3 packages
 [CHECKING] bar v0.1.0+a (file://[..])
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]

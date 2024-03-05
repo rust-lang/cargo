@@ -1,8 +1,10 @@
-<svg width="740px" height="74px" xmlns="http://www.w3.org/2000/svg">
+<svg width="740px" height="146px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
+    .fg-cyan { fill: #00AAAA }
     .fg-green { fill: #00AA00 }
+    .fg-yellow { fill: #AA5500 }
     .container {
       padding: 0 10px;
       line-height: 18px;
@@ -22,7 +24,15 @@
 </tspan>
     <tspan x="10px" y="46px"><tspan class="fg-green bold">      Adding</tspan><tspan> unrelateed-crate v99999.0.0 to dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="64px">
+    <tspan x="10px" y="64px"><tspan class="fg-green bold">     Locking</tspan><tspan> 5 packages</tspan>
+</tspan>
+    <tspan x="10px" y="82px"><tspan class="fg-cyan bold">      Adding</tspan><tspan> my-build-package1 v0.1.1+my-package </tspan><tspan class="fg-yellow bold">(latest: v99999.0.0+my-package)</tspan>
+</tspan>
+    <tspan x="10px" y="100px"><tspan class="fg-cyan bold">      Adding</tspan><tspan> toml v0.1.1+my-package </tspan><tspan class="fg-yellow bold">(latest: v99999.0.0+my-package)</tspan>
+</tspan>
+    <tspan x="10px" y="118px"><tspan class="fg-cyan bold">      Adding</tspan><tspan> versioned-package v0.1.1+my-package </tspan><tspan class="fg-yellow bold">(latest: v99999.0.0+my-package)</tspan>
+</tspan>
+    <tspan x="10px" y="136px">
 </tspan>
   </text>
 
