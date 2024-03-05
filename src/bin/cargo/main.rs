@@ -54,9 +54,9 @@ fn setup_logger() -> Option<tracing_chrome::FlushGuard> {
         .with_filter(env);
 
     let (profile_layer, profile_guard) =
-        if env_to_bool(std::env::var_os("__CARGO_LOG_PROFILE").as_deref()) {
+        if env_to_bool(std::env::var_os("CARGO_LOG_PROFILE").as_deref()) {
             let capture_args =
-                env_to_bool(std::env::var_os("__CARGO_LOG_PROFILE_CAPTURE_ARGS").as_deref());
+                env_to_bool(std::env::var_os("CARGO_LOG_PROFILE_CAPTURE_ARGS").as_deref());
             let (layer, guard) = tracing_chrome::ChromeLayerBuilder::new()
                 .include_args(capture_args)
                 .build();

@@ -6,8 +6,8 @@ Cargo leverages [tracing](https://crates.io/crates/tracing)
 as a basic, hierarchical built-in profiler.
 
 Environment variables:
-- `__CARGO_LOG_PROFILE=<true|1>`: log tracing events to a file in the current working directory
-- `__CARGO_LOG_PROFILE_CAPTURE_ARGS=<true|1>`: include arguments in the events
+- `CARGO_LOG_PROFILE=<true|1>`: log tracing events to a file in the current working directory
+- `CARGO_LOG_PROFILE_CAPTURE_ARGS=<true|1>`: include arguments in the events
 
 At process exit, your trace will be in a file like `trace-1668480819035032.json`.
 Open that file with [ui.perfetto.dev](https://ui.perfetto.dev) (or chrome://tracing) to browse your trace.
@@ -15,8 +15,10 @@ Open that file with [ui.perfetto.dev](https://ui.perfetto.dev) (or chrome://trac
 Example:
 ```console
 $ # Output first three levels of profiling info
-$ __CARGO_LOG_PROFILE=true cargo generate-lockfile
+$ CARGO_LOG_PROFILE=true cargo generate-lockfile
 ```
+
+**Note:** This is intended for the development of cargo and there are no compatibility guarantees on this functionality.
 
 ## Benchmarking
 
