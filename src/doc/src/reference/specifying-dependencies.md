@@ -51,7 +51,9 @@ versions before 1.0.0. While SemVer says there is no compatibility before
 and `x > 0`.
 
 It is possible to further tweak the logic for selecting compatible versions
-using special operators as described in the following section.
+using special operators as described in the [Version requirement syntax](#version-requirement-syntax) section.
+
+Use the default version requirement strategy, e.g. `log = "1.2.3"` where possible to maximize compatibility.
 
 ## Version requirement syntax
 
@@ -184,19 +186,20 @@ you need to specify is the location of the repository with the `git` key:
 regex = { git = "https://github.com/rust-lang/regex.git" }
 ```
 
-Cargo fetches the `git` repository at that location, then looks for
-`Cargo.toml` file for the requested crate anywhere inside the `git` repository.  
-For example, `cpp` and `cpp_common` are members of `rust-cpp` repo
-and can be referred to by the repo's root URL (`https://github.com/mystor/rust-cpp`).
+Cargo fetches the `git` repository at that location and traverses the file tree to find
+`Cargo.toml` file for the requested crate anywhere inside the `git` repository. 
+For example, `regex-lite` and `regex-syntax` are members of `rust-lang/regex` repo
+and can be referred to by the repo's root URL (`https://github.com/rust-lang/regex.git`)
+regardless of where in the file tree they reside.
 
 ```toml
-cpp        = { git = "https://github.com/mystor/rust-cpp" }
-cpp_common = { git = "https://github.com/mystor/rust-cpp" }
+regex-lite   = { git = "https://github.com/rust-lang/regex.git" }
+regex-syntax = { git = "https://github.com/rust-lang/regex.git" }
 ```
 
-The above rule does not apply to local paths specified via `path` attribute.
+The above rule does not apply to [`path` dependencies](#specifying-path-dependencies).
 
-#### Choice of commit
+### Choice of commit
 
 Cargo assumes that we intend to use the latest commit on the default branch to build
 our package if we only specify the repo URL, as in the examples above.
@@ -221,17 +224,17 @@ Other git hosts may provide something equivalent under a different naming scheme
 
 ```toml
 # .git suffix can be omitted if the host accepts such URLs - both examples work the same
-regex = { git = "https://github.com/rust-lang/regex"}
-regex = { git = "https://github.com/rust-lang/regex.git"}
+regex = { git = "https://github.com/rust-lang/regex" }
+regex = { git = "https://github.com/rust-lang/regex.git" }
 
 # a commit with a particular tag
-regex = { git = "https://github.com/rust-lang/regex", tag = "1.10.3" }
+regex = { git = "https://github.com/rust-lang/regex.git", tag = "1.10.3" }
 
 # a commit by its SHA1 hash
-regex = { git = "https://github.com/rust-lang/regex", rev = "0c0990399270277832fbb5b91a1fa118e6f63dba" }
+regex = { git = "https://github.com/rust-lang/regex.git", rev = "0c0990399270277832fbb5b91a1fa118e6f63dba" }
 
 # HEAD commit of PR 493
-regex = { git = "https://github.com/rust-lang/regex", rev = "refs/pull/493/head" }
+regex = { git = "https://github.com/rust-lang/regex.git", rev = "refs/pull/493/head" }
 
 # INVALID EXAMPLES
 
@@ -245,7 +248,7 @@ regex = { git = "https://github.com/rust-lang/regex.git#4c59b70", path = "../reg
 Cargo locks the commits of `git` dependencies in `Cargo.lock` file at the time of their addition
 and checks for updates only when you run `cargo update` command.
 
-#### The role of _version_ key
+### The role of the `version` key
 
 The `version` key always implies that the package is available in a registry,
 regardless of the presence of `git` or `path` keys.
@@ -259,7 +262,7 @@ is compatible with `version = "1.10.3"`:
 
 ```toml
 [dependencies]
-regex = { version = "1.10.3", git = "https://github.com/rust-lang/regex", branch = "next" }
+regex = { version = "1.10.3", git = "https://github.com/rust-lang/regex.git", branch = "next" }
 ```
 
 `version`, `git`, and `path` keys are considered separate locations for resolving the dependency. 
@@ -271,7 +274,7 @@ See [Multiple locations](#multiple-locations) section below for detailed explana
 > locations](#multiple-locations) section for a fallback alternative for `git`
 > and `path` dependencies.
 
-#### Accessing private Git repositories
+### Accessing private Git repositories
 
 See [Git Authentication](../appendix/git-authentication.md) for help with Git authentication for private repos.
 
@@ -303,40 +306,40 @@ in the `hello_utils` folder, relative to the `Cargo.toml` file it’s written in
 The next `cargo build` will automatically build `hello_utils` and
 all of its dependencies.
 
-#### No local path traversal
+### No local path traversal
 
 The local paths must point to the exact folder with the dependency's `Cargo.toml`.
 Unlike with `git` dependencies, Cargo does not traverse local paths.
-For example, if `cpp` and `cpp_common` are members of a locally cloned `rust-cpp` repo,
-they have to be referred to by the full path:
+For example, if `regex-lite` and `regex-syntax` are members of a
+locally cloned `rust-lang/regex` repo, they have to be referred to by the full path:
 
 ```toml
 # git key accepts the repo root URL and Cargo traverses the tree to find the crate
 [dependencies]
-cpp        = { git = "https://github.com/mystor/rust-cpp" }
-cpp_common = { git = "https://github.com/mystor/rust-cpp" }
+regex-lite   = { git = "https://github.com/rust-lang/regex.git" }
+regex-syntax = { git = "https://github.com/rust-lang/regex.git" }
 
 # path key requires the member name to be included in the local path
 [dependencies]
-cpp        = { path = "../rust-cpp/cpp" }
-cpp_common = { path = "../rust-cpp/cpp_common" }
+regex-lite   = { path = "../regex/regex-lite" }
+regex-syntax = { path = "../regex/regex-syntax" }
 ```
 
-#### Local paths in published crates
+### Local paths in published crates
 
 Crates that use dependencies specified with only a path are not
 permitted on [crates.io].
 
-If we wanted to publish our `hello_world` crate, we
-would need to publish a version of `hello_utils` to [crates.io]
-as a separate crate and specify its version in the dependencies line of `hello_world`:
+If we wanted to publish our `hello_world` crate,
+we would need to publish a version of `hello_utils` to [crates.io] as a separate crate
+and specify its version in the dependencies line of `hello_world`:
 
 ```toml
 [dependencies]
 hello_utils = { path = "hello_utils", version = "0.1.0" }
 ```
 
-The use of `path` and `version` keys together is explained in the next section.
+The use of `path` and `version` keys together is explained in the [Multiple locations](#multiple-locations) section.
 
 > **Note**: [crates.io] does not allow packages to be published with
 > dependencies on code outside of [crates.io], except for [dev-dependencies].
