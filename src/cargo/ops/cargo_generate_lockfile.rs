@@ -154,9 +154,26 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         true,
     )?;
 
+    print_lockfile_update(opts.gctx, &previous_resolve, &resolve, &mut registry)?;
+    if opts.dry_run {
+        opts.gctx
+            .shell()
+            .warn("not updating lockfile due to dry run")?;
+    } else {
+        ops::write_pkg_lockfile(ws, &mut resolve)?;
+    }
+    Ok(())
+}
+
+fn print_lockfile_update(
+    gctx: &GlobalContext,
+    previous_resolve: &Resolve,
+    resolve: &Resolve,
+    registry: &mut PackageRegistry<'_>,
+) -> CargoResult<()> {
     // Summarize what is changing for the user.
     let print_change = |status: &str, msg: String, color: &Style| {
-        opts.gctx.shell().status_with_color(status, msg, color)
+        gctx.shell().status_with_color(status, msg, color)
     };
     let mut unchanged_behind = 0;
     for ResolvedPackageVersions {
@@ -268,8 +285,8 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
 
             if let Some(latest) = latest {
                 unchanged_behind += 1;
-                if opts.gctx.shell().verbosity() == Verbosity::Verbose {
-                    opts.gctx.shell().status_with_color(
+                if gctx.shell().verbosity() == Verbosity::Verbose {
+                    gctx.shell().status_with_color(
                         "Unchanged",
                         format!("{package}{latest}"),
                         &anstyle::Style::new().bold(),
@@ -278,125 +295,119 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             }
         }
     }
-    if opts.gctx.shell().verbosity() == Verbosity::Verbose {
-        opts.gctx.shell().note(
+    if gctx.shell().verbosity() == Verbosity::Verbose {
+        gctx.shell().note(
             "to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`",
         )?;
     } else {
         if 0 < unchanged_behind {
-            opts.gctx.shell().note(format!(
+            gctx.shell().note(format!(
                 "pass `--verbose` to see {unchanged_behind} unchanged dependencies behind latest"
             ))?;
         }
     }
-    if opts.dry_run {
-        opts.gctx
-            .shell()
-            .warn("not updating lockfile due to dry run")?;
-    } else {
-        ops::write_pkg_lockfile(ws, &mut resolve)?;
+
+    Ok(())
+}
+
+fn fill_with_deps<'a>(
+    resolve: &'a Resolve,
+    dep: PackageId,
+    set: &mut HashSet<PackageId>,
+    visited: &mut HashSet<PackageId>,
+) {
+    if !visited.insert(dep) {
+        return;
     }
-    return Ok(());
+    set.insert(dep);
+    for (dep, _) in resolve.deps_not_replaced(dep) {
+        fill_with_deps(resolve, dep, set, visited);
+    }
+}
 
-    fn fill_with_deps<'a>(
-        resolve: &'a Resolve,
-        dep: PackageId,
-        set: &mut HashSet<PackageId>,
-        visited: &mut HashSet<PackageId>,
-    ) {
-        if !visited.insert(dep) {
-            return;
-        }
-        set.insert(dep);
-        for (dep, _) in resolve.deps_not_replaced(dep) {
-            fill_with_deps(resolve, dep, set, visited);
-        }
+#[derive(Default, Clone, Debug)]
+struct ResolvedPackageVersions {
+    removed: Vec<PackageId>,
+    added: Vec<PackageId>,
+    unchanged: Vec<PackageId>,
+}
+fn compare_dependency_graphs(
+    previous_resolve: &Resolve,
+    resolve: &Resolve,
+) -> Vec<ResolvedPackageVersions> {
+    fn key(dep: PackageId) -> (&'static str, SourceId) {
+        (dep.name().as_str(), dep.source_id())
     }
 
-    #[derive(Default, Clone, Debug)]
-    struct ResolvedPackageVersions {
-        removed: Vec<PackageId>,
-        added: Vec<PackageId>,
-        unchanged: Vec<PackageId>,
+    fn vec_subset(a: &[PackageId], b: &[PackageId]) -> Vec<PackageId> {
+        a.iter().filter(|a| !contains_id(b, a)).cloned().collect()
     }
-    fn compare_dependency_graphs(
-        previous_resolve: &Resolve,
-        resolve: &Resolve,
-    ) -> Vec<ResolvedPackageVersions> {
-        fn key(dep: PackageId) -> (&'static str, SourceId) {
-            (dep.name().as_str(), dep.source_id())
-        }
 
-        fn vec_subset(a: &[PackageId], b: &[PackageId]) -> Vec<PackageId> {
-            a.iter().filter(|a| !contains_id(b, a)).cloned().collect()
-        }
+    fn vec_intersection(a: &[PackageId], b: &[PackageId]) -> Vec<PackageId> {
+        a.iter().filter(|a| contains_id(b, a)).cloned().collect()
+    }
 
-        fn vec_intersection(a: &[PackageId], b: &[PackageId]) -> Vec<PackageId> {
-            a.iter().filter(|a| contains_id(b, a)).cloned().collect()
-        }
+    // Check if a PackageId is present `b` from `a`.
+    //
+    // Note that this is somewhat more complicated because the equality for source IDs does not
+    // take precise versions into account (e.g., git shas), but we want to take that into
+    // account here.
+    fn contains_id(haystack: &[PackageId], needle: &PackageId) -> bool {
+        let Ok(i) = haystack.binary_search(needle) else {
+            return false;
+        };
 
-        // Check if a PackageId is present `b` from `a`.
+        // If we've found `a` in `b`, then we iterate over all instances
+        // (we know `b` is sorted) and see if they all have different
+        // precise versions. If so, then `a` isn't actually in `b` so
+        // we'll let it through.
         //
-        // Note that this is somewhat more complicated because the equality for source IDs does not
-        // take precise versions into account (e.g., git shas), but we want to take that into
-        // account here.
-        fn contains_id(haystack: &[PackageId], needle: &PackageId) -> bool {
-            let Ok(i) = haystack.binary_search(needle) else {
-                return false;
-            };
-
-            // If we've found `a` in `b`, then we iterate over all instances
-            // (we know `b` is sorted) and see if they all have different
-            // precise versions. If so, then `a` isn't actually in `b` so
-            // we'll let it through.
-            //
-            // Note that we only check this for non-registry sources,
-            // however, as registries contain enough version information in
-            // the package ID to disambiguate.
-            if needle.source_id().is_registry() {
-                return true;
-            }
-            haystack[i..]
-                .iter()
-                .take_while(|b| &needle == b)
-                .any(|b| needle.source_id().has_same_precise_as(b.source_id()))
+        // Note that we only check this for non-registry sources,
+        // however, as registries contain enough version information in
+        // the package ID to disambiguate.
+        if needle.source_id().is_registry() {
+            return true;
         }
-
-        // Map `(package name, package source)` to `(removed versions, added versions)`.
-        let mut changes = BTreeMap::new();
-        let empty = ResolvedPackageVersions::default();
-        for dep in previous_resolve.iter() {
-            changes
-                .entry(key(dep))
-                .or_insert_with(|| empty.clone())
-                .removed
-                .push(dep);
-        }
-        for dep in resolve.iter() {
-            changes
-                .entry(key(dep))
-                .or_insert_with(|| empty.clone())
-                .added
-                .push(dep);
-        }
-
-        for v in changes.values_mut() {
-            let ResolvedPackageVersions {
-                removed: ref mut old,
-                added: ref mut new,
-                unchanged: ref mut other,
-            } = *v;
-            old.sort();
-            new.sort();
-            let removed = vec_subset(old, new);
-            let added = vec_subset(new, old);
-            let unchanged = vec_intersection(new, old);
-            *old = removed;
-            *new = added;
-            *other = unchanged;
-        }
-        debug!("{:#?}", changes);
-
-        changes.into_iter().map(|(_, v)| v).collect()
+        haystack[i..]
+            .iter()
+            .take_while(|b| &needle == b)
+            .any(|b| needle.source_id().has_same_precise_as(b.source_id()))
     }
+
+    // Map `(package name, package source)` to `(removed versions, added versions)`.
+    let mut changes = BTreeMap::new();
+    let empty = ResolvedPackageVersions::default();
+    for dep in previous_resolve.iter() {
+        changes
+            .entry(key(dep))
+            .or_insert_with(|| empty.clone())
+            .removed
+            .push(dep);
+    }
+    for dep in resolve.iter() {
+        changes
+            .entry(key(dep))
+            .or_insert_with(|| empty.clone())
+            .added
+            .push(dep);
+    }
+
+    for v in changes.values_mut() {
+        let ResolvedPackageVersions {
+            removed: ref mut old,
+            added: ref mut new,
+            unchanged: ref mut other,
+        } = *v;
+        old.sort();
+        new.sort();
+        let removed = vec_subset(old, new);
+        let added = vec_subset(new, old);
+        let unchanged = vec_intersection(new, old);
+        *old = removed;
+        *new = added;
+        *other = unchanged;
+    }
+    debug!("{:#?}", changes);
+
+    changes.into_iter().map(|(_, v)| v).collect()
 }
