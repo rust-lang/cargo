@@ -377,7 +377,7 @@ use crate::core::Package;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{self, try_canonicalize};
-use crate::util::{internal, path_args, profile, StableHasher};
+use crate::util::{internal, path_args, StableHasher};
 use crate::{GlobalContext, CARGO_ENV};
 
 use super::custom_build::BuildDeps;
@@ -408,11 +408,6 @@ pub fn prepare_target(
     unit: &Unit,
     force: bool,
 ) -> CargoResult<Job> {
-    let _p = profile::start(format!(
-        "fingerprint: {} / {}",
-        unit.pkg.package_id(),
-        unit.target.name()
-    ));
     let bcx = build_runner.bcx;
     let loc = build_runner.files().fingerprint_file_path(unit, "");
 

@@ -144,7 +144,7 @@ use crate::util::diagnostic_server::{self, DiagnosticPrinter};
 use crate::util::errors::AlreadyPrintedError;
 use crate::util::machine_message::{self, Message as _};
 use crate::util::CargoResult;
-use crate::util::{self, internal, profile};
+use crate::util::{self, internal};
 use crate::util::{DependencyQueue, GlobalContext, Progress, ProgressStyle, Queue};
 
 /// This structure is backed by the `DependencyQueue` type and manages the
@@ -473,7 +473,6 @@ impl<'gctx> JobQueue<'gctx> {
         build_runner: &mut BuildRunner<'_, '_>,
         plan: &mut BuildPlan,
     ) -> CargoResult<()> {
-        let _p = profile::start("executing the job graph");
         self.queue.queue_finished();
 
         let progress =

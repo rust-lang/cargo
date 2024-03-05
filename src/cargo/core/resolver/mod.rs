@@ -70,7 +70,6 @@ use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::util::context::GlobalContext;
 use crate::util::errors::CargoResult;
 use crate::util::network::PollExt;
-use crate::util::profile;
 
 use self::context::ResolverContext;
 use self::dep_cache::RegistryQueryer;
@@ -131,7 +130,6 @@ pub fn resolve(
     resolve_version: ResolveVersion,
     gctx: Option<&GlobalContext>,
 ) -> CargoResult<Resolve> {
-    let _p = profile::start("resolving");
     let first_version = match gctx {
         Some(config) if config.cli_unstable().direct_minimal_versions => {
             Some(VersionOrdering::MinimumVersionsFirst)

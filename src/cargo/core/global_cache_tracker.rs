@@ -552,7 +552,6 @@ impl GlobalCacheTracker {
         clean_ctx: &mut CleanContext<'_>,
         gc_opts: &GcOpts,
     ) -> CargoResult<()> {
-        let _p = crate::util::profile::start("cleaning global cache files");
         let gctx = clean_ctx.gctx;
         let base = BasePaths {
             index: gctx.registry_index_path().into_path_unlocked(),
@@ -706,7 +705,6 @@ impl GlobalCacheTracker {
         sync_size: bool,
         delete_paths: &mut Vec<PathBuf>,
     ) -> CargoResult<()> {
-        let _p = crate::util::profile::start("global cache db sync");
         debug!(target: "gc", "starting db sync");
         // For registry_index and git_db, add anything that is missing in the db.
         Self::update_parent_for_missing_from_db(conn, now, REGISTRY_INDEX_TABLE, &base.index)?;
@@ -804,9 +802,6 @@ impl GlobalCacheTracker {
         parent_table_name: &str,
         base_path: &Path,
     ) -> CargoResult<()> {
-        let _p = crate::util::profile::start(format!(
-            "update parent db for missing from db {parent_table_name}"
-        ));
         trace!(target: "gc", "checking for untracked parent to add to {parent_table_name}");
         let names = Self::names_from(base_path)?;
 
@@ -833,7 +828,6 @@ impl GlobalCacheTracker {
         table_name: &str,
         base_path: &Path,
     ) -> CargoResult<()> {
-        let _p = crate::util::profile::start(format!("update db for removed {table_name}"));
         trace!(target: "gc", "checking for db entries to remove from {table_name}");
         let mut select_stmt = conn.prepare_cached(&format!(
             "SELECT {table_name}.rowid, {parent_table_name}.name, {table_name}.name
@@ -863,9 +857,6 @@ impl GlobalCacheTracker {
         child_base_paths: &[&Path],
         delete_paths: &mut Vec<PathBuf>,
     ) -> CargoResult<()> {
-        let _p = crate::util::profile::start(format!(
-            "update db parent for removed from disk {parent_table_name}"
-        ));
         trace!(target: "gc", "checking for db entries to remove from {parent_table_name}");
         let mut select_stmt =
             conn.prepare_cached(&format!("SELECT rowid, name FROM {parent_table_name}"))?;
@@ -899,7 +890,6 @@ impl GlobalCacheTracker {
         now: Timestamp,
         base_path: &Path,
     ) -> CargoResult<()> {
-        let _p = crate::util::profile::start("populate untracked crate");
         trace!(target: "gc", "populating untracked crate files");
         let mut insert_stmt = conn.prepare_cached(
             "INSERT INTO registry_crate (registry_id, name, size, timestamp)
@@ -939,7 +929,6 @@ impl GlobalCacheTracker {
         base_path: &Path,
         populate_size: bool,
     ) -> CargoResult<()> {
-        let _p = crate::util::profile::start(format!("populate untracked {table_name}"));
         trace!(target: "gc", "populating untracked files for {table_name}");
         // Gather names (and make sure they are in the database).
         let id_names = Self::names_from(&base_path)?;
@@ -1003,7 +992,6 @@ impl GlobalCacheTracker {
         table_name: &str,
         base_path: &Path,
     ) -> CargoResult<()> {
-        let _p = crate::util::profile::start(format!("update NULL sizes {table_name}"));
         trace!(target: "gc", "updating NULL size information in {table_name}");
         let mut null_stmt = conn.prepare_cached(&format!(
             "SELECT {table_name}.rowid, {table_name}.name, {parent_table_name}.name
@@ -1570,7 +1558,6 @@ impl DeferredGlobalLastUse {
     /// This will also clear the state of `self`.
     #[tracing::instrument(skip_all)]
     pub fn save(&mut self, tracker: &mut GlobalCacheTracker) -> CargoResult<()> {
-        let _p = crate::util::profile::start("saving last-use data");
         trace!(target: "gc", "saving last-use data");
         if self.is_empty() {
             return Ok(());

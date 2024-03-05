@@ -71,7 +71,7 @@ use crate::ops;
 use crate::sources::PathSource;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
-use crate::util::{profile, CanonicalUrl};
+use crate::util::CanonicalUrl;
 use anyhow::Context as _;
 use std::collections::{HashMap, HashSet};
 use tracing::{debug, trace};
@@ -147,8 +147,6 @@ pub fn resolve_ws_with_opts<'gctx>(
         // Second, resolve with precisely what we're doing. Filter out
         // transitive dependencies if necessary, specify features, handle
         // overrides, etc.
-        let _p = profile::start("resolving with overrides...");
-
         add_overrides(&mut registry, ws)?;
 
         for (replace_spec, dep) in ws.root_replace() {

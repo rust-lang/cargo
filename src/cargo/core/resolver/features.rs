@@ -455,8 +455,6 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
         requested_targets: &[CompileKind],
         opts: FeatureOpts,
     ) -> CargoResult<ResolvedFeatures> {
-        use crate::util::profile;
-        let _p = profile::start("resolve features");
         let track_for_host = opts.decouple_host_deps || opts.ignore_inactive_targets;
         let mut r = FeatureResolver {
             ws,

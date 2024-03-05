@@ -93,7 +93,7 @@ use crate::core::{Feature, PackageId, Target, Verbosity};
 use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
-use crate::util::{add_path_args, internal, profile};
+use crate::util::{add_path_args, internal};
 use cargo_util::{paths, ProcessBuilder, ProcessError};
 use cargo_util_schemas::manifest::TomlDebugInfo;
 use cargo_util_schemas::manifest::TomlTrimPaths;
@@ -175,7 +175,6 @@ fn compile<'gctx>(
 
     // Build up the work to be done to compile this unit, enqueuing it once
     // we've got everything constructed.
-    let p = profile::start(format!("preparing: {}/{}", unit.pkg, unit.target.name()));
     fingerprint::prepare_init(build_runner, unit)?;
 
     let job = if unit.mode.is_run_custom_build() {
@@ -216,7 +215,6 @@ fn compile<'gctx>(
         job
     };
     jobs.enqueue(build_runner, unit, job)?;
-    drop(p);
 
     // Be sure to compile all dependencies of this target as well.
     let deps = Vec::from(build_runner.unit_deps(unit)); // Create vec due to mutable borrow.
