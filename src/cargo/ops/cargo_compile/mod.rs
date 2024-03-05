@@ -480,13 +480,7 @@ pub fn create_bcx<'a, 'gctx>(
     }
 
     if honor_rust_version {
-        // Remove any pre-release identifiers for easier comparison
-        let rustc_version = &target_data.rustc.version;
-        let rustc_version_untagged = semver::Version::new(
-            rustc_version.major,
-            rustc_version.minor,
-            rustc_version.patch,
-        );
+        let rustc_version = target_data.rustc.version.clone().into();
 
         let mut incompatible = Vec::new();
         let mut local_incompatible = false;
@@ -495,8 +489,7 @@ pub fn create_bcx<'a, 'gctx>(
                 continue;
             };
 
-            let pkg_msrv_req = pkg_msrv.to_caret_req();
-            if pkg_msrv_req.matches(&rustc_version_untagged) {
+            if pkg_msrv.is_compatible_with(&rustc_version) {
                 continue;
             }
 

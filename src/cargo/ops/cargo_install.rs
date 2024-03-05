@@ -15,6 +15,7 @@ use crate::{drop_println, ops};
 
 use anyhow::{bail, Context as _};
 use cargo_util::paths;
+use cargo_util_schemas::core::PartialVersion;
 use itertools::Itertools;
 use semver::VersionReq;
 use tempfile::Builder as TempFileBuilder;
@@ -66,7 +67,7 @@ impl<'gctx> InstallablePackage<'gctx> {
         force: bool,
         no_track: bool,
         needs_update_if_source_is_index: bool,
-        current_rust_version: Option<&semver::Version>,
+        current_rust_version: Option<&PartialVersion>,
     ) -> CargoResult<Option<Self>> {
         if let Some(name) = krate {
             if name == "." {
@@ -625,15 +626,7 @@ pub fn install(
 
     let current_rust_version = if opts.honor_rust_version {
         let rustc = gctx.load_global_rustc(None)?;
-
-        // Remove any pre-release identifiers for easier comparison
-        let current_version = &rustc.version;
-        let untagged_version = semver::Version::new(
-            current_version.major,
-            current_version.minor,
-            current_version.patch,
-        );
-        Some(untagged_version)
+        Some(rustc.version.clone().into())
     } else {
         None
     };

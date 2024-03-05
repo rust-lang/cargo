@@ -9,7 +9,6 @@ use crate::AlreadyPrintedError;
 use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
 use cargo_util::paths;
-use cargo_util_schemas::core::PartialVersion;
 use cargo_util_schemas::manifest;
 use cargo_util_schemas::manifest::RustVersion;
 use itertools::Itertools;
@@ -581,11 +580,9 @@ pub fn to_real_manifest(
             .with_context(|| "failed to parse the `edition` key")?;
         package.edition = Some(manifest::InheritableField::Value(edition.to_string()));
         if let Some(pkg_msrv) = &rust_version {
-            let pkg_msrv_req = pkg_msrv.to_caret_req();
             if let Some(edition_msrv) = edition.first_version() {
-                let unsupported =
-                    semver::Version::new(edition_msrv.major, edition_msrv.minor - 1, 9999);
-                if pkg_msrv_req.matches(&unsupported) {
+                let edition_msrv = RustVersion::try_from(edition_msrv).unwrap();
+                if !edition_msrv.is_compatible_with(pkg_msrv.as_partial()) {
                     bail!(
                         "rust-version {} is older than first version ({}) required by \
                             the specified edition ({})",
@@ -603,9 +600,9 @@ pub fn to_real_manifest(
                 .iter()
                 .filter(|e| {
                     e.first_version()
-                        .map(|edition_msrv| {
-                            let edition_msrv = PartialVersion::from(edition_msrv);
-                            edition_msrv <= **pkg_msrv
+                        .map(|e| {
+                            let e = RustVersion::try_from(e).unwrap();
+                            e.is_compatible_with(pkg_msrv.as_partial())
                         })
                         .unwrap_or_default()
                 })

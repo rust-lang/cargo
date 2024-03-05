@@ -10,10 +10,25 @@ use crate::core::PartialVersionError;
 #[serde(transparent)]
 pub struct RustVersion(PartialVersion);
 
-impl std::ops::Deref for RustVersion {
-    type Target = PartialVersion;
+impl RustVersion {
+    pub fn is_compatible_with(&self, rustc: &PartialVersion) -> bool {
+        let msrv = self.0.to_caret_req();
+        // Remove any pre-release identifiers for easier comparison
+        let rustc = semver::Version {
+            major: rustc.major,
+            minor: rustc.minor.unwrap_or_default(),
+            patch: rustc.patch.unwrap_or_default(),
+            pre: Default::default(),
+            build: Default::default(),
+        };
+        msrv.matches(&rustc)
+    }
 
-    fn deref(&self) -> &Self::Target {
+    pub fn into_partial(self) -> PartialVersion {
+        self.0
+    }
+
+    pub fn as_partial(&self) -> &PartialVersion {
         &self.0
     }
 }
@@ -25,6 +40,15 @@ impl std::str::FromStr for RustVersion {
         let partial = value.parse::<PartialVersion>();
         let partial = partial.map_err(RustVersionErrorKind::PartialVersion)?;
         partial.try_into()
+    }
+}
+
+impl TryFrom<semver::Version> for RustVersion {
+    type Error = RustVersionError;
+
+    fn try_from(version: semver::Version) -> Result<Self, Self::Error> {
+        let version = PartialVersion::from(version);
+        Self::try_from(version)
     }
 }
 
@@ -77,4 +101,73 @@ enum RustVersionErrorKind {
 
     #[error(transparent)]
     PartialVersion(#[from] PartialVersionError),
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn is_compatible_with_rustc() {
+        let cases = &[
+            ("1", "1.70.0", true),
+            ("1.30", "1.70.0", true),
+            ("1.30.10", "1.70.0", true),
+            ("1.70", "1.70.0", true),
+            ("1.70.0", "1.70.0", true),
+            ("1.70.1", "1.70.0", false),
+            ("1.70", "1.70.0-nightly", true),
+            ("1.70.0", "1.70.0-nightly", true),
+            ("1.71", "1.70.0", false),
+            ("2", "1.70.0", false),
+        ];
+        let mut passed = true;
+        for (msrv, rustc, expected) in cases {
+            let msrv: RustVersion = msrv.parse().unwrap();
+            let rustc = PartialVersion::from(semver::Version::parse(rustc).unwrap());
+            if msrv.is_compatible_with(&rustc) != *expected {
+                println!("failed: {msrv} is_compatible_with {rustc} == {expected}");
+                passed = false;
+            }
+        }
+        assert!(passed);
+    }
+
+    #[test]
+    fn is_compatible_with_workspace_msrv() {
+        let cases = &[
+            ("1", "1", true),
+            ("1", "1.70", true),
+            ("1", "1.70.0", true),
+            ("1.30", "1", false),
+            ("1.30", "1.70", true),
+            ("1.30", "1.70.0", true),
+            ("1.30.10", "1", false),
+            ("1.30.10", "1.70", true),
+            ("1.30.10", "1.70.0", true),
+            ("1.70", "1", false),
+            ("1.70", "1.70", true),
+            ("1.70", "1.70.0", true),
+            ("1.70.0", "1", false),
+            ("1.70.0", "1.70", true),
+            ("1.70.0", "1.70.0", true),
+            ("1.70.1", "1", false),
+            ("1.70.1", "1.70", false),
+            ("1.70.1", "1.70.0", false),
+            ("1.71", "1", false),
+            ("1.71", "1.70", false),
+            ("1.71", "1.70.0", false),
+            ("2", "1.70.0", false),
+        ];
+        let mut passed = true;
+        for (dep_msrv, ws_msrv, expected) in cases {
+            let dep_msrv: RustVersion = dep_msrv.parse().unwrap();
+            let ws_msrv = ws_msrv.parse::<RustVersion>().unwrap().into_partial();
+            if dep_msrv.is_compatible_with(&ws_msrv) != *expected {
+                println!("failed: {dep_msrv} is_compatible_with {ws_msrv} == {expected}");
+                passed = false;
+            }
+        }
+        assert!(passed);
+    }
 }
