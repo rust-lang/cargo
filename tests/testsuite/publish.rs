@@ -1687,6 +1687,116 @@ repository = "foo"
 }
 
 #[cargo_test]
+fn publish_with_feature_point_diff_kinds_dep() {
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+    Package::new("normal-only", "1.0.0")
+        .feature("cat", &[])
+        .publish();
+    Package::new("build-only", "1.0.0")
+        .feature("cat", &[])
+        .publish();
+    Package::new("normal-and-dev", "1.0.0")
+        .feature("cat", &[])
+        .publish();
+    Package::new("target-normal-only", "1.0.0")
+        .feature("cat", &[])
+        .publish();
+    Package::new("target-build-only", "1.0.0")
+        .feature("cat", &[])
+        .publish();
+    Package::new("target-normal-and-dev", "1.0.0")
+        .feature("cat", &[])
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+
+
+            [features]
+            foo_feature = [
+                "normal-only/cat",
+                "build-only/cat",
+                "dev-only/cat",
+                "normal-and-dev/cat",
+                "target-normal-only/cat",
+                "target-build-only/cat",
+                "target-dev-only/cat",
+                "target-normal-and-dev/cat",
+            ]
+
+            [dependencies]
+            normal-only = { version = "1.0", features = ["cat"] }
+            normal-and-dev = { version = "1.0", features = ["cat"] }
+
+            [build-dependencies]
+            build-only = { version = "1.0", features = ["cat"] }
+
+            [dev-dependencies]
+            dev-only = { path = "../dev-only", features = ["cat"] }
+            normal-and-dev = { version = "1.0", features = ["cat"] }
+
+            [target.'cfg(unix)'.dependencies]
+            target-normal-only = { version = "1.0", features = ["cat"] }
+            target-normal-and-dev = { version = "1.0", features = ["cat"] }
+
+            [target.'cfg(unix)'.build-dependencies]
+            target-build-only = { version = "1.0", features = ["cat"] }
+
+            [target.'cfg(unix)'.dev-dependencies]
+            target-dev-only = { path = "../dev-only", features = ["cat"] }
+            target-normal-and-dev = { version = "1.0", features = ["cat"] }
+            "#,
+        )
+        .file("src/main.rs", "")
+        .file(
+            "dev-only/Cargo.toml",
+            r#"
+            [package]
+            name = "dev-only"
+            version = "0.1.0"
+            edition = "2015"
+            authors = []
+
+            [features]
+            cat = []
+            "#,
+        )
+        .file(
+            "dev-only/src/lib.rs",
+            r#"
+                #[cfg(feature = "cat")]
+                pub fn cat() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("publish --no-verify")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[PACKAGING] foo v0.1.0 [..]
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  feature `foo_feature` includes `dev-only/cat`, but `dev-only` is not a dependency
+",
+        )
+        .run();
+}
+#[cargo_test]
 fn credentials_ambiguous_filename() {
     // `publish` generally requires a remote registry
     let registry = registry::RegistryBuilder::new().http_api().build();
