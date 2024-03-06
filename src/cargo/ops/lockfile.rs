@@ -112,6 +112,7 @@ fn resolve_to_string_orig(
     (orig.ok(), out, lock_root)
 }
 
+#[tracing::instrument(skip_all)]
 fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
     let toml = toml::Table::try_from(resolve).unwrap();
 
@@ -194,6 +195,7 @@ fn serialize_resolve(resolve: &Resolve, orig: Option<&str>) -> String {
     out
 }
 
+#[tracing::instrument(skip_all)]
 fn are_equal_lockfiles(orig: &str, current: &str, ws: &Workspace<'_>) -> bool {
     // If we want to try and avoid updating the lock file, parse both and
     // compare them; since this is somewhat expensive, don't do it in the
