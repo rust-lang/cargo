@@ -80,14 +80,7 @@ impl From<&str> for Error {
 
 impl From<anyhow::Error> for Error {
     fn from(value: anyhow::Error) -> Self {
-        let mut prev = None;
-        for e in value.chain().rev() {
-            prev = Some(Box::new(StringTypedError {
-                message: e.to_string(),
-                source: prev,
-            }));
-        }
-        Error::Other(prev.unwrap())
+        Error::from(Box::new(StringTypedError::from(value)))
     }
 }
 
@@ -113,6 +106,19 @@ impl StdError for StringTypedError {
 impl std::fmt::Display for StringTypedError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.message.fmt(f)
+    }
+}
+
+impl From<anyhow::Error> for StringTypedError {
+    fn from(value: anyhow::Error) -> Self {
+        let mut prev = None;
+        for e in value.chain().rev() {
+            prev = Some(StringTypedError {
+                message: e.to_string(),
+                source: prev.map(Box::new),
+            });
+        }
+        prev.unwrap()
     }
 }
 
