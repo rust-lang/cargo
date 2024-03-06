@@ -7,6 +7,7 @@ use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::errors::{internal, CargoResult};
 use cargo_util::ProcessBuilder;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt;
 use std::hash;
 use url::Url;
@@ -113,8 +114,12 @@ fn build_all_urls(
     name2url: &HashMap<&String, Url>,
     map: &RustdocExternMap,
     unstable_opts: &mut bool,
+    seen: &mut HashSet<Unit>,
 ) {
     for dep in build_runner.unit_deps(unit) {
+        if !seen.insert(dep.unit.clone()) {
+            continue;
+        }
         if !dep.unit.target.is_linkable() || dep.unit.mode.is_doc() {
             continue;
         }
@@ -155,6 +160,7 @@ fn build_all_urls(
             name2url,
             map,
             unstable_opts,
+            seen,
         );
     }
 }
@@ -199,6 +205,7 @@ pub fn add_root_urls(
         &name2url,
         map,
         &mut unstable_opts,
+        &mut HashSet::new(),
     );
     let std_url = match &map.std {
         None | Some(RustdocExternMode::Remote) => None,

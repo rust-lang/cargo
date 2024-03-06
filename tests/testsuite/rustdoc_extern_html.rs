@@ -416,3 +416,50 @@ fn alt_sparse_registry() {
     let gold = p.read_file("target/doc/foo/fn.gold.html");
     assert!(gold.contains(r#"href="https://docs.rs/grimm/1.0.0/grimm/struct.Gold.html""#));
 }
+
+#[cargo_test(nightly, reason = "--extern-html-root-url is unstable")]
+fn same_deps_multi_occurrence_in_dep_tree() {
+    // rust-lang/cargo#13543
+    Package::new("baz", "1.0.0")
+        .file("src/lib.rs", "")
+        .publish();
+    Package::new("bar", "1.0.0")
+        .file("src/lib.rs", "")
+        .dep("baz", "1.0")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2018"
+
+                [dependencies]
+                bar = "1.0"
+                baz = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [doc.extern-map.registries]
+                crates-io = "https://docs.rs/"
+            "#,
+        )
+        .build();
+    p.cargo("doc -v --no-deps -Zrustdoc-map")
+        .masquerade_as_nightly_cargo(&["rustdoc-map"])
+        .with_stderr_does_not_contain(
+            "[..]--extern-html-root-url[..]bar=https://docs.rs\
+             [..]--extern-html-root-url[..]baz=https://docs.rs\
+             [..]--extern-html-root-url[..]baz=https://docs.rs[..]",
+        )
+        .with_stderr_contains(
+            "[..]--extern-html-root-url[..]bar=https://docs.rs\
+             [..]--extern-html-root-url[..]baz=https://docs.rs[..]",
+        )
+        .run();
+}
