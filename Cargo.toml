@@ -71,7 +71,6 @@ os_info = "3.7.0"
 pasetors = { version = "0.6.8", features = ["v3", "paserk", "std", "serde"] }
 pathdiff = "0.2"
 percent-encoding = "2.3"
-pkg-config = "0.3.30"
 proptest = "1.4.0"
 pulldown-cmark = { version = "0.10.0", default-features = false, features = ["html"] }
 rand = "0.8.5"

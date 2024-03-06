@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 use std::error::Error as StdError;
-use thiserror::Error as ThisError;
+
+use serde::{Deserialize, Serialize};
 
 /// Credential provider error type.
 ///
@@ -9,36 +9,55 @@ use thiserror::Error as ThisError;
 /// variants are fatal.
 ///
 /// Note: Do not add a tuple variant, as it cannot be serialized.
-#[derive(Serialize, Deserialize, ThisError, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "kebab-case", tag = "kind")]
 #[non_exhaustive]
 pub enum Error {
     /// Registry URL is not supported. This should be used if
     /// the provider only works for some registries. Cargo will
     /// try another provider, if available
-    #[error("registry not supported")]
     UrlNotSupported,
 
     /// Credentials could not be found. Cargo will try another
     /// provider, if available
-    #[error("credential not found")]
     NotFound,
 
     /// The provider doesn't support this operation, such as
     /// a provider that can't support 'login' / 'logout'
-    #[error("requested operation not supported")]
     OperationNotSupported,
 
     /// The provider failed to perform the operation. Other
     /// providers will not be attempted
-    #[error(transparent)]
     #[serde(with = "error_serialize")]
     Other(Box<dyn StdError + Sync + Send>),
 
     /// A new variant was added to this enum since Cargo was built
-    #[error("unknown error kind; try updating Cargo?")]
     #[serde(other)]
     Unknown,
+}
+
+impl StdError for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::Other(transparent) => transparent.source(),
+            Error::UrlNotSupported
+            | Error::NotFound
+            | Error::OperationNotSupported
+            | Error::Unknown => None,
+        }
+    }
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::UrlNotSupported => f.write_str("registry not supported"),
+            Error::NotFound => f.write_str("credential not found"),
+            Error::OperationNotSupported => f.write_str("requested operation not supported"),
+            Error::Other(transparent) => transparent.fmt(f),
+            Error::Unknown => f.write_str("unknown error kind; try updating Cargo?"),
+        }
+    }
 }
 
 impl From<String> for Error {
