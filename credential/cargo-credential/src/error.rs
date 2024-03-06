@@ -2,6 +2,8 @@ use std::error::Error as StdError;
 
 use serde::{Deserialize, Serialize};
 
+type BoxError = Box<dyn StdError + Sync + Send>;
+
 /// Credential provider error type.
 ///
 /// `UrlNotSupported` and `NotFound` errors both cause Cargo
@@ -29,7 +31,7 @@ pub enum Error {
     /// The provider failed to perform the operation. Other
     /// providers will not be attempted
     #[serde(with = "error_serialize")]
-    Other(Box<dyn StdError + Sync + Send>),
+    Other(BoxError),
 
     /// A new variant was added to this enum since Cargo was built
     #[serde(other)]
@@ -123,12 +125,10 @@ mod error_serialize {
 
     use serde::{ser::SerializeStruct, Deserialize, Deserializer, Serializer};
 
-    use crate::error::StringTypedError;
+    use super::BoxError;
+    use super::StringTypedError;
 
-    pub fn serialize<S>(
-        e: &Box<dyn StdError + Send + Sync>,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(e: &BoxError, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -146,7 +146,7 @@ mod error_serialize {
         state.end()
     }
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<Box<dyn StdError + Sync + Send>, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<BoxError, D::Error>
     where
         D: Deserializer<'de>,
     {
