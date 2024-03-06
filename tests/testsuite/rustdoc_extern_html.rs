@@ -452,9 +452,13 @@ fn same_deps_multi_occurrence_in_dep_tree() {
         .build();
     p.cargo("doc -v --no-deps -Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
-        .with_stderr_contains(
+        .with_stderr_does_not_contain(
             "[..]--extern-html-root-url[..]bar=https://docs.rs\
              [..]--extern-html-root-url[..]baz=https://docs.rs\
+             [..]--extern-html-root-url[..]baz=https://docs.rs[..]",
+        )
+        .with_stderr_contains(
+            "[..]--extern-html-root-url[..]bar=https://docs.rs\
              [..]--extern-html-root-url[..]baz=https://docs.rs[..]",
         )
         .run();
