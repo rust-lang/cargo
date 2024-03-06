@@ -31,6 +31,7 @@ struct Inner {
 }
 
 impl Summary {
+    #[tracing::instrument(skip_all)]
     pub fn new(
         pkg_id: PackageId,
         dependencies: Vec<Dependency>,

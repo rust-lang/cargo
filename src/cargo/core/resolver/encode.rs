@@ -637,6 +637,7 @@ impl<'de> de::Deserialize<'de> for EncodablePackageId {
 }
 
 impl ser::Serialize for Resolve {
+    #[tracing::instrument(skip_all)]
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
     where
         S: ser::Serializer,

@@ -424,6 +424,7 @@ pub fn prepare_for_publish(
     }
 }
 
+#[tracing::instrument(skip_all)]
 pub fn to_real_manifest(
     me: manifest::TomlManifest,
     embedded: bool,
@@ -723,6 +724,7 @@ pub fn to_real_manifest(
         root: package_root,
     };
 
+    #[tracing::instrument(skip(manifest_ctx, new_deps, workspace_config, inherit_cell))]
     fn process_dependencies(
         manifest_ctx: &mut ManifestContext<'_, '_>,
         new_deps: Option<&BTreeMap<manifest::PackageName, manifest::InheritableDependency>>,
@@ -1531,6 +1533,7 @@ fn default_readme_from_package_root(package_root: &Path) -> Option<String> {
 
 /// Checks a list of build targets, and ensures the target names are unique within a vector.
 /// If not, the name of the offending build target is returned.
+#[tracing::instrument(skip_all)]
 fn unique_build_targets(
     targets: &[Target],
     package_root: &Path,

@@ -32,6 +32,7 @@ const DEFAULT_BENCH_DIR_NAME: &'static str = "benches";
 const DEFAULT_EXAMPLE_DIR_NAME: &'static str = "examples";
 const DEFAULT_BIN_DIR_NAME: &'static str = "bin";
 
+#[tracing::instrument(skip_all)]
 pub(super) fn targets(
     features: &Features,
     manifest: &TomlManifest,
