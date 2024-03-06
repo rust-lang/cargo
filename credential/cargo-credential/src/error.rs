@@ -186,7 +186,19 @@ mod tests {
     use super::Error;
 
     #[test]
-    pub fn unknown_kind() {
+    fn not_supported_roundtrip() {
+        let input = Error::UrlNotSupported;
+
+        let expected_json = r#"{"kind":"url-not-supported"}"#;
+        let actual_json = serde_json::to_string(&input).unwrap();
+        assert_eq!(actual_json, expected_json);
+
+        let actual = serde_json::from_str(&actual_json).unwrap();
+        assert!(matches!(actual, Error::UrlNotSupported));
+    }
+
+    #[test]
+    fn deserialize_to_unknown_kind() {
         let json = r#"{
             "kind": "unexpected-kind",
             "unexpected-content": "test"
@@ -196,7 +208,7 @@ mod tests {
     }
 
     #[test]
-    pub fn roundtrip() {
+    fn other_roundtrip() {
         // Construct an error with context
         let e = anyhow::anyhow!("E1").context("E2").context("E3");
         // Convert to a string with contexts.
