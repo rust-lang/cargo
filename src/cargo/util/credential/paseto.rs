@@ -2,7 +2,8 @@
 
 use anyhow::Context as _;
 use cargo_credential::{
-    Action, CacheControl, Credential, CredentialResponse, Error, Operation, RegistryInfo, Secret,
+    Action, CacheControl, Credential, CredentialResponse, Error, ErrorKind, Operation,
+    RegistryInfo, Secret,
 };
 use clap::Command;
 use pasetors::{
@@ -82,10 +83,10 @@ impl<'a> Credential for PasetoCredential<'a> {
         match action {
             Action::Get(operation) => {
                 let Some(reg_cfg) = reg_cfg else {
-                    return Err(Error::NotFound);
+                    return Err(ErrorKind::NotFound.into());
                 };
                 let Some(secret_key) = reg_cfg.secret_key.as_ref() else {
-                    return Err(Error::NotFound);
+                    return Err(ErrorKind::NotFound.into());
                 };
 
                 let secret_key_subject = reg_cfg.secret_key_subject;
@@ -209,10 +210,10 @@ impl<'a> Credential for PasetoCredential<'a> {
                     );
                     Ok(CredentialResponse::Logout)
                 } else {
-                    Err(Error::NotFound)
+                    Err(ErrorKind::NotFound.into())
                 }
             }
-            _ => Err(Error::OperationNotSupported),
+            _ => Err(ErrorKind::OperationNotSupported.into()),
         }
     }
 }

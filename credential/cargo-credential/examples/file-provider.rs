@@ -21,11 +21,11 @@ impl Credential for FileCredential {
             // another provider for any other registry.
             //
             // If a provider supports any registry, then this check should be omitted.
-            return Err(cargo_credential::Error::UrlNotSupported);
+            return Err(cargo_credential::ErrorKind::UrlNotSupported.into());
         }
 
         // `Error::Other` takes a boxed `std::error::Error` type that causes Cargo to show the error.
-        let mut creds = FileCredential::read().map_err(cargo_credential::Error::Other)?;
+        let mut creds = FileCredential::read().map_err(cargo_credential::Error::other)?;
 
         match action {
             Action::Get(_) => {
@@ -39,7 +39,7 @@ impl Credential for FileCredential {
                 } else {
                     // Credential providers should respond with `NotFound` when a credential can not be
                     // found, allowing Cargo to attempt another provider.
-                    Err(cargo_credential::Error::NotFound)
+                    Err(cargo_credential::ErrorKind::NotFound.into())
                 }
             }
             Action::Login(login_options) => {
@@ -50,7 +50,7 @@ impl Credential for FileCredential {
                 let token = cargo_credential::read_token(login_options, registry)?;
                 creds.insert(registry.index_url.to_string(), token);
 
-                FileCredential::write(&creds).map_err(cargo_credential::Error::Other)?;
+                FileCredential::write(&creds).map_err(cargo_credential::Error::other)?;
 
                 // Credentials were successfully stored.
                 Ok(CredentialResponse::Login)
@@ -59,14 +59,14 @@ impl Credential for FileCredential {
                 if creds.remove(registry.index_url).is_none() {
                     // If the user attempts to log out from a registry that has no credentials
                     // stored, then NotFound is the appropriate error.
-                    Err(cargo_credential::Error::NotFound)
+                    Err(cargo_credential::ErrorKind::NotFound.into())
                 } else {
                     // Credentials were successfully erased.
                     Ok(CredentialResponse::Logout)
                 }
             }
             // If a credential provider doesn't support a given operation, it should respond with `OperationNotSupported`.
-            _ => Err(cargo_credential::Error::OperationNotSupported),
+            _ => Err(cargo_credential::ErrorKind::OperationNotSupported.into()),
         }
     }
 }

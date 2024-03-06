@@ -13,22 +13,22 @@
 //! active console. This allows credential providers to be interactive if necessary.
 //!
 //! ## Error handling
-//! ### [`Error::UrlNotSupported`]
+//! ### [`ErrorKind::UrlNotSupported`]
 //! A credential provider may only support some registry URLs. If this is the case
 //! and an unsupported index URL is passed to the provider, it should respond with
-//! [`Error::UrlNotSupported`]. Other credential providers may be attempted by Cargo.
+//! [`ErrorKind::UrlNotSupported`]. Other credential providers may be attempted by Cargo.
 //!
-//! ### [`Error::NotFound`]
+//! ### [`ErrorKind::NotFound`]
 //! When attempting an [`Action::Get`] or [`Action::Logout`], if a credential can not
-//! be found, the provider should respond with [`Error::NotFound`]. Other credential
+//! be found, the provider should respond with [`ErrorKind::NotFound`]. Other credential
 //! providers may be attempted by Cargo.
 //!
-//! ### [`Error::OperationNotSupported`]
+//! ### [`ErrorKind::OperationNotSupported`]
 //! A credential provider might not support all operations. For example if the provider
-//! only supports [`Action::Get`], [`Error::OperationNotSupported`] should be returned
+//! only supports [`Action::Get`], [`ErrorKind::OperationNotSupported`] should be returned
 //! for all other requests.
 //!
-//! ### [`Error::Other`]
+//! ### [`ErrorKind::Other`]
 //! All other errors go here. The error will be shown to the user in Cargo, including
 //! the full error chain using [`std::error::Error::source`].
 //!
@@ -49,6 +49,7 @@ mod secret;
 mod stdio;
 
 pub use error::Error;
+pub use error::ErrorKind;
 pub use secret::Secret;
 use stdio::stdin_stdout_to_console;
 
@@ -68,7 +69,7 @@ impl Credential for UnsupportedCredential {
         _action: &Action<'_>,
         _args: &[&str],
     ) -> Result<CredentialResponse, Error> {
-        Err(Error::UrlNotSupported)
+        Err(ErrorKind::UrlNotSupported.into())
     }
 }
 

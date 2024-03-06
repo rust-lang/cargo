@@ -4,7 +4,7 @@
 #![allow(clippy::print_stderr)]
 
 use cargo_credential::{
-    Action, CacheControl, Credential, CredentialResponse, Error, RegistryInfo, Secret,
+    Action, CacheControl, Credential, CredentialResponse, Error, ErrorKind, RegistryInfo, Secret,
 };
 use serde::Deserialize;
 use std::io::Read;
@@ -278,7 +278,7 @@ impl Credential for OnePasswordCredential {
                             operation_independent: true,
                         })
                 } else {
-                    Err(Error::NotFound)
+                    Err(ErrorKind::NotFound.into())
                 }
             }
             Action::Login(options) => {
@@ -301,10 +301,10 @@ impl Credential for OnePasswordCredential {
                     op.delete(&session, &id)?;
                     Ok(CredentialResponse::Logout)
                 } else {
-                    Err(Error::NotFound)
+                    Err(ErrorKind::NotFound.into())
                 }
             }
-            _ => Err(Error::OperationNotSupported),
+            _ => Err(ErrorKind::OperationNotSupported.into()),
         }
     }
 }

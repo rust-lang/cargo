@@ -3,7 +3,7 @@
 #[cfg(windows)]
 mod win {
     use cargo_credential::{read_token, Action, CacheControl, CredentialResponse, RegistryInfo};
-    use cargo_credential::{Credential, Error};
+    use cargo_credential::{Credential, Error, ErrorKind};
     use std::ffi::OsStr;
 
     use std::os::windows::ffi::OsStrExt;
@@ -56,7 +56,7 @@ mod win {
                         {
                             let err = std::io::Error::last_os_error();
                             if err.raw_os_error() == Some(ERROR_NOT_FOUND as i32) {
-                                return Err(Error::NotFound);
+                                return Err(ErrorKind::NotFound.into());
                             }
                             return Err(Box::new(err).into());
                         }
@@ -107,13 +107,13 @@ mod win {
                     if result != TRUE {
                         let err = std::io::Error::last_os_error();
                         if err.raw_os_error() == Some(ERROR_NOT_FOUND as i32) {
-                            return Err(Error::NotFound);
+                            return Err(ErrorKind::NotFound.into());
                         }
                         return Err(Box::new(err).into());
                     }
                     Ok(CredentialResponse::Logout)
                 }
-                _ => Err(Error::OperationNotSupported),
+                _ => Err(ErrorKind::OperationNotSupported.into()),
             }
         }
     }

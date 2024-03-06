@@ -344,7 +344,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "libc",
@@ -357,7 +357,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-1password"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "cargo-credential",
  "serde",
@@ -366,7 +366,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-libsecret"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "cargo-credential",
@@ -375,7 +375,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-macos-keychain"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "cargo-credential",
  "security-framework",
@@ -383,7 +383,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-wincred"
-version = "0.4.4"
+version = "0.5.0"
 dependencies = [
  "cargo-credential",
  "windows-sys 0.52.0",

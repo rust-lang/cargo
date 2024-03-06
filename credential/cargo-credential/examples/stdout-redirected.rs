@@ -3,7 +3,7 @@
 #![allow(clippy::print_stderr)]
 #![allow(clippy::print_stdout)]
 
-use cargo_credential::{Action, Credential, CredentialResponse, Error, RegistryInfo};
+use cargo_credential::{Action, Credential, CredentialResponse, Error, ErrorKind, RegistryInfo};
 
 struct MyCredential;
 
@@ -19,7 +19,7 @@ impl Credential for MyCredential {
 
         // Reading from stdin and writing to stdout will go to the attached console (tty).
         println!("message from test credential provider");
-        Err(Error::OperationNotSupported)
+        Err(ErrorKind::OperationNotSupported.into())
     }
 }
 

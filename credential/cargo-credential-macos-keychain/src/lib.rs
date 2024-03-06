@@ -5,7 +5,8 @@
 #[cfg(target_os = "macos")]
 mod macos {
     use cargo_credential::{
-        read_token, Action, CacheControl, Credential, CredentialResponse, Error, RegistryInfo,
+        read_token, Action, CacheControl, Credential, CredentialResponse, Error, ErrorKind,
+        RegistryInfo,
     };
     use security_framework::os::macos::keychain::SecKeychain;
 
@@ -31,7 +32,7 @@ mod macos {
             let not_found = security_framework::base::Error::from(NOT_FOUND).code();
             match action {
                 Action::Get(_) => match keychain.find_generic_password(&service_name, ACCOUNT) {
-                    Err(e) if e.code() == not_found => Err(Error::NotFound),
+                    Err(e) if e.code() == not_found => Err(ErrorKind::NotFound.into()),
                     Err(e) => Err(Box::new(e).into()),
                     Ok((pass, _)) => {
                         let token = String::from_utf8(pass.as_ref().to_vec()).map_err(Box::new)?;
@@ -64,14 +65,14 @@ mod macos {
                     Ok(CredentialResponse::Login)
                 }
                 Action::Logout => match keychain.find_generic_password(&service_name, ACCOUNT) {
-                    Err(e) if e.code() == not_found => Err(Error::NotFound),
+                    Err(e) if e.code() == not_found => Err(ErrorKind::NotFound.into()),
                     Err(e) => Err(Box::new(e).into()),
                     Ok((_, item)) => {
                         item.delete();
                         Ok(CredentialResponse::Logout)
                     }
                 },
-                _ => Err(Error::OperationNotSupported),
+                _ => Err(ErrorKind::OperationNotSupported.into()),
             }
         }
     }

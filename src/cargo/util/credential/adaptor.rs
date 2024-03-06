@@ -62,7 +62,7 @@ impl Credential for BasicProcessCredential {
                     operation_independent: true,
                 })
             }
-            _ => Err(cargo_credential::Error::OperationNotSupported),
+            _ => Err(cargo_credential::ErrorKind::OperationNotSupported.into()),
         }
     }
 }

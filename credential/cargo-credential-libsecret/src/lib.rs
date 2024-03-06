@@ -4,8 +4,8 @@ mod linux {
 
     use anyhow::Context;
     use cargo_credential::{
-        read_token, Action, CacheControl, Credential, CredentialResponse, Error, RegistryInfo,
-        Secret,
+        read_token, Action, CacheControl, Credential, CredentialResponse, Error, ErrorKind,
+        RegistryInfo, Secret,
     };
     use libloading::{Library, Symbol};
     use std::ffi::{CStr, CString};
@@ -153,7 +153,7 @@ mod linux {
                             .into());
                         }
                         if token_c.is_null() {
-                            return Err(Error::NotFound);
+                            return Err(ErrorKind::NotFound.into());
                         }
                         let token = Secret::from(
                             CStr::from_ptr(token_c)
@@ -223,7 +223,7 @@ mod linux {
                     }
                     Ok(CredentialResponse::Logout)
                 }
-                _ => Err(Error::OperationNotSupported),
+                _ => Err(ErrorKind::OperationNotSupported.into()),
             }
         }
     }

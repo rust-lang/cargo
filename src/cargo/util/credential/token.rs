@@ -1,7 +1,9 @@
 //! Credential provider that uses plaintext tokens in Cargo's config.
 
 use anyhow::Context as _;
-use cargo_credential::{Action, CacheControl, Credential, CredentialResponse, Error, RegistryInfo};
+use cargo_credential::{
+    Action, CacheControl, Credential, CredentialResponse, Error, ErrorKind, RegistryInfo,
+};
 use url::Url;
 
 use crate::{
@@ -38,7 +40,7 @@ impl<'a> Credential for TokenCredential<'a> {
 
         match action {
             Action::Get(_) => {
-                let token = previous_token.ok_or_else(|| Error::NotFound)?.val;
+                let token = previous_token.ok_or_else(|| ErrorKind::NotFound)?.val;
                 Ok(CredentialResponse::Get {
                     token,
                     cache: CacheControl::Session,
@@ -65,7 +67,7 @@ impl<'a> Credential for TokenCredential<'a> {
             }
             Action::Logout => {
                 if previous_token.is_none() {
-                    return Err(Error::NotFound);
+                    return Err(ErrorKind::NotFound.into());
                 }
                 let reg_name = sid.display_registry_name();
                 context::save_credentials(self.gctx, None, &sid)?;
@@ -89,7 +91,7 @@ impl<'a> Credential for TokenCredential<'a> {
                 );
                 Ok(CredentialResponse::Logout)
             }
-            _ => Err(Error::OperationNotSupported),
+            _ => Err(ErrorKind::OperationNotSupported.into()),
         }
     }
 }
