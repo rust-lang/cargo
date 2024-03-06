@@ -869,16 +869,12 @@ impl<'de> de::Deserialize<'de> for TomlOptLevel {
         UntaggedEnumVisitor::new()
             .expecting("an optimization level")
             .i64(|value| Ok(TomlOptLevel(value.to_string())))
-            .string(|value| {
-                if value == "s" || value == "z" {
-                    Ok(TomlOptLevel(value.to_string()))
-                } else {
-                    Err(serde_untagged::de::Error::custom(format!(
-                        "must be `0`, `1`, `2`, `3`, `s` or `z`, \
-                         but found the string: \"{}\"",
-                        value
-                    )))
-                }
+            .string(|value| match value {
+                "0" | "1" | "2" | "3" | "s" | "z" => Ok(TomlOptLevel(value.to_string())),
+                _ => Err(serde_untagged::de::Error::custom(format!(
+                    "must be `0`, `1`, `2`, `3`, `s` or `z`, but found the string: \"{}\"",
+                    value
+                ))),
             })
             .deserialize(d)
     }
