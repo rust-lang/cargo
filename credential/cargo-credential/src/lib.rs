@@ -226,7 +226,7 @@ pub trait Credential {
 
 /// Runs the credential interaction
 pub fn main(credential: impl Credential) {
-    let result = doit(credential).map_err(|e| Error::Other(e));
+    let result = doit(credential).map_err(|e| Error::other(e));
     if result.is_err() {
         serde_json::to_writer(std::io::stdout(), &result)
             .expect("failed to serialize credential provider error");

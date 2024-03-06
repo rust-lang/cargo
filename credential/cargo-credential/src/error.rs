@@ -38,6 +38,12 @@ pub enum Error {
     Unknown,
 }
 
+impl Error {
+    pub(crate) fn other(inner: BoxError) -> Self {
+        Self::Other(inner)
+    }
+}
+
 impl StdError for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
@@ -86,7 +92,7 @@ impl From<anyhow::Error> for Error {
 
 impl<T: StdError + Send + Sync + 'static> From<Box<T>> for Error {
     fn from(value: Box<T>) -> Self {
-        Error::Other(value)
+        Error::other(value)
     }
 }
 
