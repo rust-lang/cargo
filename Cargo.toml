@@ -199,12 +199,14 @@ time.workspace = true
 toml.workspace = true
 toml_edit.workspace = true
 tracing.workspace = true
-tracing-chrome.workspace = true
 tracing-subscriber.workspace = true
 unicase.workspace = true
 unicode-width.workspace = true
 url.workspace = true
 walkdir.workspace = true
+
+[target.'cfg(target_has_atomic = "64")'.dependencies]
+tracing-chrome.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 cargo-credential-libsecret.workspace = true
