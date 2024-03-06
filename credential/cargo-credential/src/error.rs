@@ -131,27 +131,34 @@ mod error_serialize {
     where
         D: Deserializer<'de>,
     {
-        #[derive(Deserialize)]
-        #[serde(rename_all = "kebab-case")]
-        struct ErrorData {
-            message: String,
-            caused_by: Option<Vec<String>>,
-        }
         let data = ErrorData::deserialize(deserializer)?;
-        let mut prev = None;
-        if let Some(source) = data.caused_by {
-            for e in source.into_iter().rev() {
-                prev = Some(Box::new(StringTypedError {
-                    message: e,
-                    source: prev,
-                }));
+        let e = Box::new(StringTypedError::from(data));
+        Ok(e)
+    }
+
+    #[derive(Deserialize)]
+    #[serde(rename_all = "kebab-case")]
+    struct ErrorData {
+        message: String,
+        caused_by: Option<Vec<String>>,
+    }
+
+    impl From<ErrorData> for StringTypedError {
+        fn from(data: ErrorData) -> Self {
+            let mut prev = None;
+            if let Some(source) = data.caused_by {
+                for e in source.into_iter().rev() {
+                    prev = Some(Box::new(StringTypedError {
+                        message: e,
+                        source: prev,
+                    }));
+                }
+            }
+            StringTypedError {
+                message: data.message,
+                source: prev,
             }
         }
-        let e = Box::new(StringTypedError {
-            message: data.message,
-            source: prev,
-        });
-        Ok(e)
     }
 }
 
