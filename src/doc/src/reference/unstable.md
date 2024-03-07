@@ -296,7 +296,21 @@ The 'public-dependency' feature allows marking dependencies as 'public'
 or 'private'. When this feature is enabled, additional information is passed to rustc to allow
 the 'exported_private_dependencies' lint to function properly.
 
-This requires the appropriate key to be set in `cargo-features`:
+To enable this feature, you can either use `-Zpublic-dependency`
+
+```sh
+cargo +nightly run -Zpublic-dependency
+```
+
+or `[unstable]` table, for example,
+
+```toml
+# .cargo/config.toml
+[unstable]
+public-dependency = true
+```
+
+`public-dependency` could also be enabled in `cargo-features`, **though this is deprecated and will be removed soon**.
 
 ```toml
 cargo-features = ["public-dependency"]
