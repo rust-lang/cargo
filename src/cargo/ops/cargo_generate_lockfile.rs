@@ -176,11 +176,11 @@ fn print_lockfile_update(
         gctx.shell().status_with_color(status, msg, color)
     };
     let mut unchanged_behind = 0;
-    for ResolvedPackageVersions {
+    for PackageDiff {
         removed,
         added,
         unchanged,
-    } in compare_dependency_graphs(&previous_resolve, &resolve)
+    } in PackageDiff::diff(&previous_resolve, &resolve)
     {
         fn format_latest(version: semver::Version) -> String {
             let warn = style::WARN;
@@ -326,88 +326,88 @@ fn fill_with_deps<'a>(
 }
 
 #[derive(Default, Clone, Debug)]
-struct ResolvedPackageVersions {
+pub struct PackageDiff {
     removed: Vec<PackageId>,
     added: Vec<PackageId>,
     unchanged: Vec<PackageId>,
 }
-fn compare_dependency_graphs(
-    previous_resolve: &Resolve,
-    resolve: &Resolve,
-) -> Vec<ResolvedPackageVersions> {
-    fn key(dep: PackageId) -> (&'static str, SourceId) {
-        (dep.name().as_str(), dep.source_id())
-    }
 
-    fn vec_subset(a: &[PackageId], b: &[PackageId]) -> Vec<PackageId> {
-        a.iter().filter(|a| !contains_id(b, a)).cloned().collect()
-    }
-
-    fn vec_intersection(a: &[PackageId], b: &[PackageId]) -> Vec<PackageId> {
-        a.iter().filter(|a| contains_id(b, a)).cloned().collect()
-    }
-
-    // Check if a PackageId is present `b` from `a`.
-    //
-    // Note that this is somewhat more complicated because the equality for source IDs does not
-    // take precise versions into account (e.g., git shas), but we want to take that into
-    // account here.
-    fn contains_id(haystack: &[PackageId], needle: &PackageId) -> bool {
-        let Ok(i) = haystack.binary_search(needle) else {
-            return false;
-        };
-
-        // If we've found `a` in `b`, then we iterate over all instances
-        // (we know `b` is sorted) and see if they all have different
-        // precise versions. If so, then `a` isn't actually in `b` so
-        // we'll let it through.
-        //
-        // Note that we only check this for non-registry sources,
-        // however, as registries contain enough version information in
-        // the package ID to disambiguate.
-        if needle.source_id().is_registry() {
-            return true;
+impl PackageDiff {
+    pub fn diff(previous_resolve: &Resolve, resolve: &Resolve) -> Vec<Self> {
+        fn key(dep: PackageId) -> (&'static str, SourceId) {
+            (dep.name().as_str(), dep.source_id())
         }
-        haystack[i..]
-            .iter()
-            .take_while(|b| &needle == b)
-            .any(|b| needle.source_id().has_same_precise_as(b.source_id()))
-    }
 
-    // Map `(package name, package source)` to `(removed versions, added versions)`.
-    let mut changes = BTreeMap::new();
-    let empty = ResolvedPackageVersions::default();
-    for dep in previous_resolve.iter() {
-        changes
-            .entry(key(dep))
-            .or_insert_with(|| empty.clone())
-            .removed
-            .push(dep);
-    }
-    for dep in resolve.iter() {
-        changes
-            .entry(key(dep))
-            .or_insert_with(|| empty.clone())
-            .added
-            .push(dep);
-    }
+        fn vec_subset(a: &[PackageId], b: &[PackageId]) -> Vec<PackageId> {
+            a.iter().filter(|a| !contains_id(b, a)).cloned().collect()
+        }
 
-    for v in changes.values_mut() {
-        let ResolvedPackageVersions {
-            removed: ref mut old,
-            added: ref mut new,
-            unchanged: ref mut other,
-        } = *v;
-        old.sort();
-        new.sort();
-        let removed = vec_subset(old, new);
-        let added = vec_subset(new, old);
-        let unchanged = vec_intersection(new, old);
-        *old = removed;
-        *new = added;
-        *other = unchanged;
-    }
-    debug!("{:#?}", changes);
+        fn vec_intersection(a: &[PackageId], b: &[PackageId]) -> Vec<PackageId> {
+            a.iter().filter(|a| contains_id(b, a)).cloned().collect()
+        }
 
-    changes.into_iter().map(|(_, v)| v).collect()
+        // Check if a PackageId is present `b` from `a`.
+        //
+        // Note that this is somewhat more complicated because the equality for source IDs does not
+        // take precise versions into account (e.g., git shas), but we want to take that into
+        // account here.
+        fn contains_id(haystack: &[PackageId], needle: &PackageId) -> bool {
+            let Ok(i) = haystack.binary_search(needle) else {
+                return false;
+            };
+
+            // If we've found `a` in `b`, then we iterate over all instances
+            // (we know `b` is sorted) and see if they all have different
+            // precise versions. If so, then `a` isn't actually in `b` so
+            // we'll let it through.
+            //
+            // Note that we only check this for non-registry sources,
+            // however, as registries contain enough version information in
+            // the package ID to disambiguate.
+            if needle.source_id().is_registry() {
+                return true;
+            }
+            haystack[i..]
+                .iter()
+                .take_while(|b| &needle == b)
+                .any(|b| needle.source_id().has_same_precise_as(b.source_id()))
+        }
+
+        // Map `(package name, package source)` to `(removed versions, added versions)`.
+        let mut changes = BTreeMap::new();
+        let empty = Self::default();
+        for dep in previous_resolve.iter() {
+            changes
+                .entry(key(dep))
+                .or_insert_with(|| empty.clone())
+                .removed
+                .push(dep);
+        }
+        for dep in resolve.iter() {
+            changes
+                .entry(key(dep))
+                .or_insert_with(|| empty.clone())
+                .added
+                .push(dep);
+        }
+
+        for v in changes.values_mut() {
+            let Self {
+                removed: ref mut old,
+                added: ref mut new,
+                unchanged: ref mut other,
+            } = *v;
+            old.sort();
+            new.sort();
+            let removed = vec_subset(old, new);
+            let added = vec_subset(new, old);
+            let unchanged = vec_intersection(new, old);
+            *old = removed;
+            *new = added;
+            *other = unchanged;
+        }
+        debug!("{:#?}", changes);
+
+        changes.into_iter().map(|(_, v)| v).collect()
+    }
 }
