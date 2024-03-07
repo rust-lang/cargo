@@ -202,10 +202,7 @@ fn print_lockfile_update(
             vec![]
         };
 
-        if diff.removed.len() == 1 && diff.added.len() == 1 {
-            let added = diff.added.into_iter().next().unwrap();
-            let removed = diff.removed.into_iter().next().unwrap();
-
+        if let Some((removed, added)) = diff.change() {
             let latest = if !possibilities.is_empty() {
                 possibilities
                     .iter()
@@ -398,6 +395,19 @@ impl PackageDiff {
         debug!("{:#?}", changes);
 
         changes.into_iter().map(|(_, v)| v).collect()
+    }
+
+    /// Guess if a package upgraded/downgraded
+    ///
+    /// All `PackageDiff` knows is that entries were added/removed within [`Resolve`].
+    /// A package could be added or removed because of dependencies from other packages
+    /// which makes it hard to definitively say "X was upgrade to N".
+    pub fn change(&self) -> Option<(&PackageId, &PackageId)> {
+        if self.removed.len() == 1 && self.added.len() == 1 {
+            Some((&self.removed[0], &self.added[0]))
+        } else {
+            None
+        }
     }
 
     /// For querying [`PackageRegistry`] for alternative versions to report to the user
