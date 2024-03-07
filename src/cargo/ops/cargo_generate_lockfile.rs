@@ -189,14 +189,7 @@ fn print_lockfile_update(
                         && candidate.minor == current.minor
                         && candidate.patch == current.patch))
         }
-        let possibilities = if let Some(query) = [diff.added.iter(), diff.unchanged.iter()]
-            .into_iter()
-            .flatten()
-            .next()
-            .filter(|s| s.source_id().is_registry())
-        {
-            let query =
-                crate::core::dependency::Dependency::parse(query.name(), None, query.source_id())?;
+        let possibilities = if let Some(query) = diff.alternatives_query() {
             loop {
                 match registry.query_vec(&query, QueryKind::Exact) {
                     std::task::Poll::Ready(res) => {
@@ -320,6 +313,7 @@ fn fill_with_deps<'a>(
     }
 }
 
+/// All resolved versions of a package name within a [`SourceId`]
 #[derive(Default, Clone, Debug)]
 pub struct PackageDiff {
     removed: Vec<PackageId>,
@@ -404,5 +398,26 @@ impl PackageDiff {
         debug!("{:#?}", changes);
 
         changes.into_iter().map(|(_, v)| v).collect()
+    }
+
+    /// For querying [`PackageRegistry`] for alternative versions to report to the user
+    pub fn alternatives_query(&self) -> Option<crate::core::dependency::Dependency> {
+        let package_id = [
+            self.added.iter(),
+            self.unchanged.iter(),
+            self.removed.iter(),
+        ]
+        .into_iter()
+        .flatten()
+        .next()
+        // Limit to registry as that is the only source with meaningful alternative versions
+        .filter(|s| s.source_id().is_registry())?;
+        let query = crate::core::dependency::Dependency::parse(
+            package_id.name(),
+            None,
+            package_id.source_id(),
+        )
+        .expect("already a valid dependency");
+        Some(query)
     }
 }
