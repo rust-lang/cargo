@@ -37,6 +37,11 @@ impl Error {
     pub fn kind(&self) -> ErrorKind {
         self.kind
     }
+
+    pub fn as_inner(&self) -> Option<&(dyn StdError + Sync + Send)> {
+        use std::ops::Deref as _;
+        self.inner.as_ref().map(|e| e.0.deref())
+    }
 }
 
 impl StdError for Error {

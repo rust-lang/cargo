@@ -513,6 +513,7 @@ fn credential_action(
     };
     let providers = credential_provider(gctx, sid, require_cred_provider_config, true)?;
     let mut any_not_found = false;
+    let mut custom_not_supported = None;
     for provider in providers {
         let args: Vec<&str> = provider
             .iter()
@@ -553,7 +554,20 @@ fn credential_action(
         match provider.perform(&registry, &action, &args[1..]) {
             Ok(response) => return Ok(response),
             Err(e) => match e.kind() {
-                cargo_credential::ErrorKind::UrlNotSupported => {}
+                cargo_credential::ErrorKind::UrlNotSupported => {
+                    if e.as_inner().is_some() {
+                        custom_not_supported.get_or_insert_with(|| {
+                            Err::<(), _>(e)
+                                .with_context(|| {
+                                    format!(
+                                        "credential provider `{}` could not handle the request",
+                                        args.join(" ")
+                                    )
+                                })
+                                .unwrap_err()
+                        });
+                    }
+                }
                 cargo_credential::ErrorKind::NotFound => any_not_found = true,
                 _ => {
                     return Err(e).with_context(|| {
@@ -568,6 +582,8 @@ fn credential_action(
     }
     if any_not_found {
         Err(cargo_credential::ErrorKind::NotFound.into())
+    } else if let Some(custom_not_supported) = custom_not_supported {
+        Err(custom_not_supported)
     } else {
         anyhow::bail!("no credential providers could handle the request")
     }
