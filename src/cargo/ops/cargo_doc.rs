@@ -1,5 +1,5 @@
 use crate::core::compiler::{Compilation, CompileKind};
-use crate::core::{Shell, Workspace};
+use crate::core::{shell::Verbosity, Shell, Workspace};
 use crate::ops;
 use crate::util::context::{GlobalContext, PathAndArgs};
 use crate::util::CargoResult;
@@ -77,7 +77,7 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
             )?;
             open_docs(&path, &mut shell, config_browser, ws.gctx())?;
         }
-    } else {
+    } else if ws.gctx().shell().verbosity() == Verbosity::Verbose {
         for name in &compilation.root_crate_names {
             for kind in &options.compile_opts.build_config.requested_kinds {
                 let path =
@@ -91,6 +91,36 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
                     )?;
                 }
             }
+        }
+    } else {
+        let mut output = compilation.root_crate_names.iter().flat_map(|name| {
+            options
+                .compile_opts
+                .build_config
+                .requested_kinds
+                .iter()
+                .map(|kind| path_by_output_format(&compilation, kind, name, &options.output_format))
+                .filter(|path| path.exists())
+        });
+        if let Some(first_path) = output.next() {
+            let remaining = output.count();
+            let remaining = match remaining {
+                0 => "".to_owned(),
+                1 => " and 1 other file".to_owned(),
+                n => format!(" and {n} other files"),
+            };
+
+            let mut shell = ws.gctx().shell();
+            let link = shell.err_file_hyperlink(&first_path);
+            shell.status(
+                "Generated",
+                format!(
+                    "{}{}{}{remaining}",
+                    link.open(),
+                    first_path.display(),
+                    link.close()
+                ),
+            )?;
         }
     }
 
