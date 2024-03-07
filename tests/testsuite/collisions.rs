@@ -561,8 +561,7 @@ the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [DOCUMENTING] foo-macro v1.0.0 [..]
 [DOCUMENTING] abc v1.0.0 [..]
 [FINISHED] [..]
-[GENERATED] [CWD]/target/doc/abc/index.html
-[GENERATED] [CWD]/target/doc/foo_macro/index.html
+[GENERATED] [CWD]/target/doc/abc/index.html and 1 other file
 ")
         .run();
 }

@@ -309,8 +309,7 @@ the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo/foo)
 [FINISHED] [..]
-[GENERATED] [CWD]/target/doc/foo_lib/index.html
-[GENERATED] [CWD]/target/doc/foo_lib/index.html
+[GENERATED] [CWD]/target/doc/foo_lib/index.html and 1 other file
 ",
         )
         .run();
@@ -658,8 +657,7 @@ fn doc_lib_bin_example_same_name_documents_examples_when_requested() {
 [CHECKING] foo v0.0.1 ([CWD])
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[GENERATED] [CWD]/target/doc/ex1/index.html
-[GENERATED] [CWD]/target/doc/ex2/index.html
+[GENERATED] [CWD]/target/doc/ex1/index.html and 1 other file
 ",
         )
         .run();
@@ -1189,8 +1187,7 @@ fn doc_all_workspace() {
         .with_stderr_contains("[DOCUMENTING] bar v0.1.0 ([..])")
         .with_stderr_contains("[CHECKING] bar v0.1.0 ([..])")
         .with_stderr_contains("[DOCUMENTING] foo v0.1.0 ([..])")
-        .with_stderr_contains("[GENERATED] [CWD]/target/doc/bar/index.html")
-        .with_stderr_contains("[GENERATED] [CWD]/target/doc/foo/index.html")
+        .with_stderr_contains("[GENERATED] [CWD]/target/doc/bar/index.html and 1 other file")
         .run();
 }
 
