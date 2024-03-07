@@ -176,12 +176,7 @@ fn print_lockfile_update(
         gctx.shell().status_with_color(status, msg, color)
     };
     let mut unchanged_behind = 0;
-    for PackageDiff {
-        removed,
-        added,
-        unchanged,
-    } in PackageDiff::diff(&previous_resolve, &resolve)
-    {
+    for diff in PackageDiff::diff(&previous_resolve, &resolve) {
         fn format_latest(version: semver::Version) -> String {
             let warn = style::WARN;
             format!(" {warn}(latest: v{version}){warn:#}")
@@ -194,7 +189,7 @@ fn print_lockfile_update(
                         && candidate.minor == current.minor
                         && candidate.patch == current.patch))
         }
-        let possibilities = if let Some(query) = [added.iter(), unchanged.iter()]
+        let possibilities = if let Some(query) = [diff.added.iter(), diff.unchanged.iter()]
             .into_iter()
             .flatten()
             .next()
@@ -214,9 +209,9 @@ fn print_lockfile_update(
             vec![]
         };
 
-        if removed.len() == 1 && added.len() == 1 {
-            let added = added.into_iter().next().unwrap();
-            let removed = removed.into_iter().next().unwrap();
+        if diff.removed.len() == 1 && diff.added.len() == 1 {
+            let added = diff.added.into_iter().next().unwrap();
+            let removed = diff.removed.into_iter().next().unwrap();
 
             let latest = if !possibilities.is_empty() {
                 possibilities
@@ -250,10 +245,10 @@ fn print_lockfile_update(
                 print_change("Updating", msg, &style::GOOD)?;
             }
         } else {
-            for package in removed.iter() {
+            for package in diff.removed.iter() {
                 print_change("Removing", format!("{package}"), &style::ERROR)?;
             }
-            for package in added.iter() {
+            for package in diff.added.iter() {
                 let latest = if !possibilities.is_empty() {
                     possibilities
                         .iter()
@@ -270,7 +265,7 @@ fn print_lockfile_update(
                 print_change("Adding", format!("{package}{latest}"), &style::NOTE)?;
             }
         }
-        for package in &unchanged {
+        for package in &diff.unchanged {
             let latest = if !possibilities.is_empty() {
                 possibilities
                     .iter()
