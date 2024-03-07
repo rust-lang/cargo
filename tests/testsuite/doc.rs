@@ -1186,9 +1186,11 @@ fn doc_all_workspace() {
 
     // The order in which bar is compiled or documented is not deterministic
     p.cargo("doc --workspace")
-        .with_stderr_contains("[..] Documenting bar v0.1.0 ([..])")
-        .with_stderr_contains("[..] Checking bar v0.1.0 ([..])")
-        .with_stderr_contains("[..] Documenting foo v0.1.0 ([..])")
+        .with_stderr_contains("[DOCUMENTING] bar v0.1.0 ([..])")
+        .with_stderr_contains("[CHECKING] bar v0.1.0 ([..])")
+        .with_stderr_contains("[DOCUMENTING] foo v0.1.0 ([..])")
+        .with_stderr_contains("[GENERATED] [CWD]/target/doc/bar/index.html")
+        .with_stderr_contains("[GENERATED] [CWD]/target/doc/foo/index.html")
         .run();
 }
 
