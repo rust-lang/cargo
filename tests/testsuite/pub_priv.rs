@@ -141,7 +141,7 @@ fn requires_feature() {
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr(
             "\
-[WARNING] Ignoring `public` on dependency pub_dep.  Pass `-Zpublic-dependency` to enable support for it
+[WARNING] ignoring `public` on dependency pub_dep, pass `-Zpublic-dependency` to enable support for it
 [UPDATING] `[..]` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] pub_dep v0.1.0 ([..])
@@ -191,7 +191,7 @@ fn pub_dev_dependency() {
 error: failed to parse manifest at `[..]`
 
 Caused by:
-  'public' specifier can only be used on regular dependencies, not Development dependencies
+  'public' specifier can only be used on regular dependencies, not dev-dependencies
 ",
         )
         .run()
@@ -229,7 +229,7 @@ fn pub_dev_dependency_without_feature() {
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr(
             "\
-[WARNING] 'public' specifier can only be used on regular dependencies, not Development dependencies
+[WARNING] 'public' specifier can only be used on regular dependencies, not dev-dependencies
 [UPDATING] `[..]` index
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",

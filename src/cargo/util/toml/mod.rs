@@ -779,7 +779,7 @@ pub fn to_real_manifest(
                         {
                             d.public = None;
                             manifest_ctx.warnings.push(format!(
-                            "Ignoring `public` on dependency {name}.  Pass `-Zpublic-dependency` to enable support for it", name = &dep.name_in_toml()
+                            "ignoring `public` on dependency {name}, pass `-Zpublic-dependency` to enable support for it", name = &dep.name_in_toml()
                         ))
                         }
                     } else {
@@ -2062,11 +2062,14 @@ fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
         }
 
         if dep.kind() != DepKind::Normal {
+            let hint = format!(
+                "'public' specifier can only be used on regular dependencies, not {}",
+                dep.kind().kind_table(),
+            );
             match (with_public_feature, with_z_public) {
-                (true, _) => bail!("'public' specifier can only be used on regular dependencies, not {:?} dependencies", dep.kind()),
-                (_, true) => bail!("'public' specifier can only be used on regular dependencies, not {:?} dependencies", dep.kind()),
+                (true, _) | (_, true) => bail!(hint),
                 // If public feature isn't enabled in nightly, we instead warn that.
-                (false, false) =>  manifest_ctx.warnings.push(format!("'public' specifier can only be used on regular dependencies, not {:?} dependencies", dep.kind())),
+                (false, false) => manifest_ctx.warnings.push(hint),
             }
         } else {
             dep.set_public(p);
