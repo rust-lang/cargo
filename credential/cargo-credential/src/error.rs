@@ -29,6 +29,11 @@ impl Error {
         }
     }
 
+    pub fn with_kind(mut self, kind: ErrorKind) -> Self {
+        self.kind = kind;
+        self
+    }
+
     pub fn kind(&self) -> ErrorKind {
         self.kind
     }

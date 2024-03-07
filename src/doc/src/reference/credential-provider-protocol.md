@@ -163,6 +163,10 @@ the provider wants to generate tokens that are scoped to specific operations.
 ```javascript
 {"Err":{
     "kind":"url-not-supported"
+    // (Optional) Error message string to be displayed
+    "message": "free form string error message",
+    // (Optional) Detailed cause chain for the error (optional)
+    "caused-by": ["cause 1", "cause 2"]
 }}
 ```
 Sent if the credential provider is designed
@@ -177,6 +181,10 @@ available.
 {"Err":{
     // Error: The credential could not be found in the provider.
     "kind":"not-found"
+    // (Optional) Error message string to be displayed
+    "message": "free form string error message",
+    // (Optional) Detailed cause chain for the error (optional)
+    "caused-by": ["cause 1", "cause 2"]
 }}
 ```
 Sent if the credential could not be found. This is expected for
@@ -190,6 +198,10 @@ requests where there is nothing found to erase.
 {"Err":{
     // Error: The credential could not be found in the provider.
     "kind":"operation-not-supported"
+    // (Optional) Error message string to be displayed
+    "message": "free form string error message",
+    // (Optional) Detailed cause chain for the error (optional)
+    "caused-by": ["cause 1", "cause 2"]
 }}
 ```
 Sent if the credential provider does not support the requested operation.
