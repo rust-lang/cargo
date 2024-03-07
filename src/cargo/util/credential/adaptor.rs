@@ -7,7 +7,7 @@ use std::{
 
 use anyhow::Context;
 use cargo_credential::{
-    Action, CacheControl, Credential, CredentialResponse, RegistryInfo, Secret,
+    Action, CacheControl, Credential, CredentialResponse, Error, ErrorKind, RegistryInfo, Secret,
 };
 
 pub struct BasicProcessCredential {}
@@ -33,7 +33,10 @@ impl Credential for BasicProcessCredential {
                     cmd.env("CARGO_REGISTRY_NAME_OPT", name);
                 }
                 cmd.stdout(Stdio::piped());
-                let mut child = cmd.spawn().context("failed to spawn credential process")?;
+                let mut child = cmd
+                    .spawn()
+                    .context("failed to spawn credential process")
+                    .map_err(|err| Error::from(err).with_kind(ErrorKind::UrlNotSupported))?;
                 let mut buffer = String::new();
                 child
                     .stdout
