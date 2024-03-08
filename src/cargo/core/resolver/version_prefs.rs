@@ -4,7 +4,7 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 
-use cargo_util_schemas::manifest::RustVersion;
+use cargo_util_schemas::core::PartialVersion;
 
 use crate::core::{Dependency, PackageId, Summary};
 use crate::util::interning::InternedString;
@@ -21,7 +21,7 @@ pub struct VersionPreferences {
     try_to_use: HashSet<PackageId>,
     prefer_patch_deps: HashMap<InternedString, HashSet<Dependency>>,
     version_ordering: VersionOrdering,
-    max_rust_version: Option<RustVersion>,
+    max_rust_version: Option<PartialVersion>,
 }
 
 #[derive(Copy, Clone, Default, PartialEq, Eq, Hash, Debug)]
@@ -49,7 +49,7 @@ impl VersionPreferences {
         self.version_ordering = ordering;
     }
 
-    pub fn max_rust_version(&mut self, ver: Option<RustVersion>) {
+    pub fn max_rust_version(&mut self, ver: Option<PartialVersion>) {
         self.max_rust_version = ver;
     }
 
@@ -92,8 +92,8 @@ impl VersionPreferences {
                     (Some(a), Some(b)) if a == b => {}
                     // Primary comparison
                     (Some(a), Some(b)) => {
-                        let a_is_compat = a <= max_rust_version;
-                        let b_is_compat = b <= max_rust_version;
+                        let a_is_compat = a.is_compatible_with(max_rust_version);
+                        let b_is_compat = b.is_compatible_with(max_rust_version);
                         match (a_is_compat, b_is_compat) {
                             (true, true) => {}   // fallback
                             (false, false) => {} // fallback
@@ -103,14 +103,14 @@ impl VersionPreferences {
                     }
                     // Prioritize `None` over incompatible
                     (None, Some(b)) => {
-                        if b <= max_rust_version {
+                        if b.is_compatible_with(max_rust_version) {
                             return Ordering::Greater;
                         } else {
                             return Ordering::Less;
                         }
                     }
                     (Some(a), None) => {
-                        if a <= max_rust_version {
+                        if a.is_compatible_with(max_rust_version) {
                             return Ordering::Less;
                         } else {
                             return Ordering::Greater;

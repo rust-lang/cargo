@@ -9,7 +9,6 @@ use crate::AlreadyPrintedError;
 use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
 use cargo_util::paths;
-use cargo_util_schemas::core::PartialVersion;
 use cargo_util_schemas::manifest;
 use cargo_util_schemas::manifest::RustVersion;
 use itertools::Itertools;
@@ -580,17 +579,15 @@ pub fn to_real_manifest(
             .parse()
             .with_context(|| "failed to parse the `edition` key")?;
         package.edition = Some(manifest::InheritableField::Value(edition.to_string()));
-        if let Some(rust_version) = &rust_version {
-            let req = rust_version.to_caret_req();
-            if let Some(first_version) = edition.first_version() {
-                let unsupported =
-                    semver::Version::new(first_version.major, first_version.minor - 1, 9999);
-                if req.matches(&unsupported) {
+        if let Some(pkg_msrv) = &rust_version {
+            if let Some(edition_msrv) = edition.first_version() {
+                let edition_msrv = RustVersion::try_from(edition_msrv).unwrap();
+                if !edition_msrv.is_compatible_with(pkg_msrv.as_partial()) {
                     bail!(
                         "rust-version {} is older than first version ({}) required by \
                             the specified edition ({})",
-                        rust_version,
-                        first_version,
+                        pkg_msrv,
+                        edition_msrv,
                         edition,
                     )
                 }
@@ -598,14 +595,14 @@ pub fn to_real_manifest(
         }
         edition
     } else {
-        let msrv_edition = if let Some(rust_version) = &rust_version {
+        let msrv_edition = if let Some(pkg_msrv) = &rust_version {
             Edition::ALL
                 .iter()
                 .filter(|e| {
                     e.first_version()
                         .map(|e| {
-                            let e = PartialVersion::from(e);
-                            e <= **rust_version
+                            let e = RustVersion::try_from(e).unwrap();
+                            e.is_compatible_with(pkg_msrv.as_partial())
                         })
                         .unwrap_or_default()
                 })

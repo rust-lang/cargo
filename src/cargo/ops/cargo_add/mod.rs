@@ -619,21 +619,13 @@ fn get_latest_dependency(
                 let (req_msrv, is_msrv) = spec
                     .rust_version()
                     .cloned()
-                    .map(|msrv| CargoResult::Ok((msrv.clone(), true)))
+                    .map(|msrv| CargoResult::Ok((msrv.clone().into_partial(), true)))
                     .unwrap_or_else(|| {
                         let rustc = gctx.load_global_rustc(None)?;
 
                         // Remove any pre-release identifiers for easier comparison
-                        let current_version = &rustc.version;
-                        let untagged_version = RustVersion::try_from(PartialVersion {
-                            major: current_version.major,
-                            minor: Some(current_version.minor),
-                            patch: Some(current_version.patch),
-                            pre: None,
-                            build: None,
-                        })
-                        .unwrap();
-                        Ok((untagged_version, false))
+                        let rustc_version = rustc.version.clone().into();
+                        Ok((rustc_version, false))
                     })?;
 
                 let msrvs = possibilities
@@ -702,11 +694,16 @@ ignoring {dependency}@{latest_version} (which requires rustc {latest_rust_versio
 /// - `msrvs` is sorted by version
 fn latest_compatible<'s>(
     msrvs: &[(&'s Summary, Option<&RustVersion>)],
-    req_msrv: &RustVersion,
+    pkg_msrv: &PartialVersion,
 ) -> Option<&'s Summary> {
     msrvs
         .iter()
-        .filter(|(_, v)| v.as_ref().map(|msrv| req_msrv >= *msrv).unwrap_or(true))
+        .filter(|(_, dep_msrv)| {
+            dep_msrv
+                .as_ref()
+                .map(|dep_msrv| dep_msrv.is_compatible_with(pkg_msrv))
+                .unwrap_or(true)
+        })
         .map(|(s, _)| s)
         .last()
         .copied()

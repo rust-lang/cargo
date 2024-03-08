@@ -73,6 +73,7 @@ use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::CanonicalUrl;
 use anyhow::Context as _;
+use cargo_util_schemas::manifest::RustVersion;
 use std::collections::{HashMap, HashSet};
 use tracing::{debug, trace};
 
@@ -318,7 +319,7 @@ pub fn resolve_with_previous<'gctx>(
         version_prefs.version_ordering(VersionOrdering::MinimumVersionsFirst)
     }
     if ws.gctx().cli_unstable().msrv_policy {
-        version_prefs.max_rust_version(ws.rust_version().cloned());
+        version_prefs.max_rust_version(ws.rust_version().cloned().map(RustVersion::into_partial));
     }
 
     // This is a set of PackageIds of `[patch]` entries, and some related locked PackageIds, for

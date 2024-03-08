@@ -8,6 +8,7 @@ use std::task::Poll;
 
 use anyhow::{bail, format_err, Context as _};
 use cargo_util::paths;
+use cargo_util_schemas::core::PartialVersion;
 use ops::FilterRule;
 use serde::{Deserialize, Serialize};
 
@@ -569,7 +570,7 @@ pub fn select_dep_pkg<T>(
     dep: Dependency,
     gctx: &GlobalContext,
     needs_update: bool,
-    current_rust_version: Option<&semver::Version>,
+    current_rust_version: Option<&PartialVersion>,
 ) -> CargoResult<Package>
 where
     T: Source,
@@ -596,8 +597,7 @@ where
     {
         Some(summary) => {
             if let (Some(current), Some(msrv)) = (current_rust_version, summary.rust_version()) {
-                let msrv_req = msrv.to_caret_req();
-                if !msrv_req.matches(current) {
+                if !msrv.is_compatible_with(current) {
                     let name = summary.name();
                     let ver = summary.version();
                     let extra = if dep.source_id().is_registry() {
@@ -616,7 +616,7 @@ where
                             .filter(|summary| {
                                 summary
                                     .rust_version()
-                                    .map(|msrv| msrv.to_caret_req().matches(current))
+                                    .map(|msrv| msrv.is_compatible_with(current))
                                     .unwrap_or(true)
                             })
                             .max_by_key(|s| s.package_id())
@@ -689,7 +689,7 @@ pub fn select_pkg<T, F>(
     dep: Option<Dependency>,
     mut list_all: F,
     gctx: &GlobalContext,
-    current_rust_version: Option<&semver::Version>,
+    current_rust_version: Option<&PartialVersion>,
 ) -> CargoResult<Package>
 where
     T: Source,
