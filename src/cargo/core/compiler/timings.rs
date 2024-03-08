@@ -350,12 +350,7 @@ impl<'gctx> Timings<'gctx> {
         let mut shell = self.gctx.shell();
         let timing_path = std::env::current_dir().unwrap_or_default().join(&filename);
         let link = shell.err_file_hyperlink(&timing_path);
-        let msg = format!(
-            "report saved to {}{}{}",
-            link.open(),
-            timing_path.display(),
-            link.close()
-        );
+        let msg = format!("report saved to {link}{}{link:#}", timing_path.display(),);
         shell.status_with_color("Timing", msg, &style::NOTE)?;
 
         Ok(())

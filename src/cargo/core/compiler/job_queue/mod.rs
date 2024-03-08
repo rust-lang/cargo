@@ -830,9 +830,7 @@ impl<'gctx> DrainState<'gctx> {
                 "https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles",
             );
             let message = format!(
-                "{}`{profile_name}` profile [{opt_type}]{} target(s) in {time_elapsed}",
-                profile_link.open(),
-                profile_link.close()
+                "{profile_link}`{profile_name}` profile [{opt_type}]{profile_link:#} target(s) in {time_elapsed}",
             );
             if !build_runner.bcx.build_config.build_plan {
                 // It doesn't really matter if this fails.
