@@ -4,6 +4,7 @@
 //! or CARGO_PUBLIC_NETWORK_TESTS.
 
 use cargo_test_support::containers::Container;
+use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::project;
 
 #[cargo_test(container_test)]
@@ -134,22 +135,65 @@ fn self_signed_with_cacert() {
 #[cargo_test(public_network_test)]
 fn github_works() {
     // Check that an https connection to github.com works.
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-                edition = "2015"
+    // This tries all the different types of git references, and verifies the fast-path behavior.
+    for (manifest_ref, oid, refspecs, up_to_date) in [
+        (
+            r#", tag = "1.3.2""#,
+            "ed185cfb1c447c1b4bd6ac021c9ec3bb02c9e2f2",
+            r#""+refs/tags/1.3.2:refs/remotes/origin/tags/1.3.2""#,
+            "github fast path up-to-date",
+        ),
+        (
+            r#", rev = "6c67922300d5abae779ca147bac00f6ff9c87f8a""#,
+            "6c67922300d5abae779ca147bac00f6ff9c87f8a",
+            r#""+6c67922300d5abae779ca147bac00f6ff9c87f8a:refs/commit/6c67922300d5abae779ca147bac00f6ff9c87f8a""#,
+            "github fast path already has 6c67922300d5abae779ca147bac00f6ff9c87f8a",
+        ),
+        (
+            r#", branch = "main""#,
+            "[..]",
+            r#""+refs/heads/main:refs/remotes/origin/main""#,
+            "github fast path up-to-date",
+        ),
+        (
+            "",
+            "[..]",
+            r#""+HEAD:refs/remotes/origin/HEAD""#,
+            "github fast path up-to-date",
+        ),
+    ] {
+        eprintln!("test {manifest_ref}");
+        let p = project()
+            .file(
+                "Cargo.toml",
+                &format!(
+                    r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+                    edition = "2015"
 
-                [dependencies]
-                bitflags = { git = "https://github.com/rust-lang/bitflags.git", tag="1.3.2" }
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-    p.cargo("fetch")
-        .with_stderr("[UPDATING] git repository `https://github.com/rust-lang/bitflags.git`")
-        .run();
+                    [dependencies]
+                    bitflags = {{ git = "https://github.com/rust-lang/bitflags.git"{manifest_ref}}}
+                "#
+                ),
+            )
+            .file("src/lib.rs", "")
+            .build();
+        p.cargo("fetch")
+            .env("CARGO_LOG", "cargo::sources::git::utils=debug")
+            .with_stderr_contains("[UPDATING] git repository `https://github.com/rust-lang/bitflags.git`")
+            .with_stderr_contains("[..]attempting GitHub fast path[..]")
+            .with_stderr_contains(&format!("[..]github fast path fetch {oid}"))
+            .with_stderr_contains(&format!("[..]initiating fetch of [{refspecs}] from https://github.com/rust-lang/bitflags.git"))
+            .run();
+        // Remove the lock file, and test the up-to-date code path.
+        p.root().join("Cargo.lock").rm_rf();
+        p.cargo("fetch")
+            .env("CARGO_LOG", "cargo::sources::git::utils=debug")
+            .with_stderr_contains(&format!("[..]{up_to_date}"))
+            .run();
+
+        paths::home().join(".cargo/git").rm_rf();
+    }
 }
