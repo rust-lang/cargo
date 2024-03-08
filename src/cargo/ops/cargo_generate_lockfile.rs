@@ -181,14 +181,6 @@ fn print_lockfile_update(
             let warn = style::WARN;
             format!(" {warn}(latest: v{version}){warn:#}")
         }
-        fn is_latest(candidate: &semver::Version, current: &semver::Version) -> bool {
-            current < candidate
-                // Only match pre-release if major.minor.patch are the same
-                && (candidate.pre.is_empty()
-                    || (candidate.major == current.major
-                        && candidate.minor == current.minor
-                        && candidate.patch == current.patch))
-        }
         let possibilities = if let Some(query) = diff.alternatives_query() {
             loop {
                 match registry.query_vec(&query, QueryKind::Exact) {
@@ -293,6 +285,15 @@ fn print_lockfile_update(
     }
 
     Ok(())
+}
+
+fn is_latest(candidate: &semver::Version, current: &semver::Version) -> bool {
+    current < candidate
+                // Only match pre-release if major.minor.patch are the same
+                && (candidate.pre.is_empty()
+                    || (candidate.major == current.major
+                        && candidate.minor == current.minor
+                        && candidate.patch == current.patch))
 }
 
 fn fill_with_deps<'a>(
