@@ -539,20 +539,15 @@ impl<D: fmt::Display> Default for Hyperlink<D> {
     }
 }
 
-impl<D: fmt::Display> Hyperlink<D> {
-    pub fn open(&self) -> impl fmt::Display {
-        if let Some(url) = self.url.as_ref() {
-            format!("\x1B]8;;{url}\x1B\\")
+impl<D: fmt::Display> fmt::Display for Hyperlink<D> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Some(url) = self.url.as_ref() else {
+            return Ok(());
+        };
+        if f.alternate() {
+            write!(f, "\x1B]8;;\x1B\\")
         } else {
-            String::new()
-        }
-    }
-
-    pub fn close(&self) -> impl fmt::Display {
-        if self.url.is_some() {
-            "\x1B]8;;\x1B\\"
-        } else {
-            ""
+            write!(f, "\x1B]8;;{url}\x1B\\")
         }
     }
 }

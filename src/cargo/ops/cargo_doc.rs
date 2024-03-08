@@ -71,10 +71,7 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
             };
             let mut shell = ws.gctx().shell();
             let link = shell.err_file_hyperlink(&path);
-            shell.status(
-                "Opening",
-                format!("{}{}{}", link.open(), path.display(), link.close()),
-            )?;
+            shell.status("Opening", format!("{link}{}{link:#}", path.display()))?;
             open_docs(&path, &mut shell, config_browser, ws.gctx())?;
         }
     } else if ws.gctx().shell().verbosity() == Verbosity::Verbose {
@@ -85,10 +82,7 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
                 if path.exists() {
                     let mut shell = ws.gctx().shell();
                     let link = shell.err_file_hyperlink(&path);
-                    shell.status(
-                        "Generated",
-                        format!("{}{}{}", link.open(), path.display(), link.close()),
-                    )?;
+                    shell.status("Generated", format!("{link}{}{link:#}", path.display()))?;
                 }
             }
         }
@@ -114,12 +108,7 @@ pub fn doc(ws: &Workspace<'_>, options: &DocOptions) -> CargoResult<()> {
             let link = shell.err_file_hyperlink(&first_path);
             shell.status(
                 "Generated",
-                format!(
-                    "{}{}{}{remaining}",
-                    link.open(),
-                    first_path.display(),
-                    link.close()
-                ),
+                format!("{link}{}{link:#}{remaining}", first_path.display(),),
             )?;
         }
     }
