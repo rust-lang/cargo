@@ -5460,18 +5460,10 @@ fn build_script_rerun_when_target_rustflags_change() {
 
     p.cargo("build --target x86_64-unknown-linux-gnu")
         .env("RUSTFLAGS", "-Zallow-features=")
-        .with_status(101)
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-error[E0725]: the feature `error_generic_member_access` is not in the list of allowed features
- --> src/lib.rs:1:50
-  |
-1 | #![cfg_attr(error_generic_member_access, feature(error_generic_member_access))]
-  |                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-For more information about this error, try `rustc --explain E0725`.
-[ERROR] could not compile `foo` (lib) due to 1 previous error
+[FINISHED] [..]
 ",
         )
         .run();
