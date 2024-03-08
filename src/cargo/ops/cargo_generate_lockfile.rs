@@ -10,7 +10,6 @@ use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::GlobalContext;
 use crate::util::style;
 use crate::util::CargoResult;
-use anstyle::Style;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashSet};
 use tracing::debug;
@@ -154,7 +153,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         true,
     )?;
 
-    print_lockfile_update(opts.gctx, &previous_resolve, &resolve, &mut registry)?;
+    print_lockfile_updates(opts.gctx, &previous_resolve, &resolve, &mut registry)?;
     if opts.dry_run {
         opts.gctx
             .shell()
@@ -165,16 +164,14 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     Ok(())
 }
 
-fn print_lockfile_update(
+fn print_lockfile_updates(
     gctx: &GlobalContext,
     previous_resolve: &Resolve,
     resolve: &Resolve,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<()> {
-    // Summarize what is changing for the user.
-    let print_change = |status: &str, msg: String, color: &Style| {
-        gctx.shell().status_with_color(status, msg, color)
-    };
+    let mut shell = gctx.shell();
+
     let mut unchanged_behind = 0;
     for diff in PackageDiff::diff(&previous_resolve, &resolve) {
         fn format_latest(version: semver::Version) -> String {
@@ -222,13 +219,13 @@ fn print_lockfile_update(
             // This metadata is often stuff like git commit hashes, which are
             // not meaningfully ordered.
             if removed.version().cmp_precedence(added.version()) == Ordering::Greater {
-                print_change("Downgrading", msg, &style::WARN)?;
+                shell.status_with_color("Downgrading", msg, &style::WARN)?;
             } else {
-                print_change("Updating", msg, &style::GOOD)?;
+                shell.status_with_color("Updating", msg, &style::GOOD)?;
             }
         } else {
             for package in diff.removed.iter() {
-                print_change("Removing", format!("{package}"), &style::ERROR)?;
+                shell.status_with_color("Removing", format!("{package}"), &style::ERROR)?;
             }
             for package in diff.added.iter() {
                 let latest = if !possibilities.is_empty() {
@@ -244,7 +241,7 @@ fn print_lockfile_update(
                 }
                 .unwrap_or_default();
 
-                print_change("Adding", format!("{package}{latest}"), &style::NOTE)?;
+                shell.status_with_color("Adding", format!("{package}{latest}"), &style::NOTE)?;
             }
         }
         for package in &diff.unchanged {
@@ -262,8 +259,8 @@ fn print_lockfile_update(
 
             if let Some(latest) = latest {
                 unchanged_behind += 1;
-                if gctx.shell().verbosity() == Verbosity::Verbose {
-                    gctx.shell().status_with_color(
+                if shell.verbosity() == Verbosity::Verbose {
+                    shell.status_with_color(
                         "Unchanged",
                         format!("{package}{latest}"),
                         &anstyle::Style::new().bold(),
@@ -272,13 +269,13 @@ fn print_lockfile_update(
             }
         }
     }
-    if gctx.shell().verbosity() == Verbosity::Verbose {
-        gctx.shell().note(
+    if shell.verbosity() == Verbosity::Verbose {
+        shell.note(
             "to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`",
         )?;
     } else {
         if 0 < unchanged_behind {
-            gctx.shell().note(format!(
+            shell.note(format!(
                 "pass `--verbose` to see {unchanged_behind} unchanged dependencies behind latest"
             ))?;
         }
