@@ -3760,3 +3760,135 @@ fn different_user_relative_submodules() {
 
     assert!(project.bin("foo").is_file());
 }
+
+#[cargo_test]
+fn git_worktree_with_original_repo_renamed() {
+    let project = project().build();
+    let git_project = git::new("foo", |project| {
+        project
+            .file(
+                "Cargo.toml",
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.5.0"
+                    edition = "2015"
+                    authors = []
+                    license = "MIR OR Apache-2.0"
+                    description = "A test!"
+                    homepage = "https://example.org"
+                    documentation = ""
+                    repository = "https://example.org"
+                    readme = "./README.md"
+                "#,
+            )
+            .file("src/lib.rs", "")
+            .file("README.md", "")
+    });
+
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    let repo_root = repo.workdir().unwrap().parent().unwrap();
+    let opts = git2::WorktreeAddOptions::new();
+    let _ = repo
+        .worktree("bar", &repo_root.join("bar"), Some(&opts))
+        .unwrap();
+
+    // Rename the original repository
+    let new = repo_root.join("foo2");
+    fs::rename(&git_project.root(), &new).unwrap();
+
+    project
+        .cargo("package --list")
+        .cwd(&new)
+        .with_stdout(
+            "\
+.cargo_vcs_info.json
+Cargo.toml
+Cargo.toml.orig
+README.md
+src/lib.rs
+",
+        )
+        .run();
+
+    project
+        .cargo("check")
+        .cwd(&new)
+        .with_stderr(
+            "\
+[CHECKING] foo v0.5.0 ([CWD])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn git_worktree_with_bare_original_repo() {
+    let project = project().build();
+    let git_project = git::new("foo", |project| {
+        project
+            .file(
+                "Cargo.toml",
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.5.0"
+                    edition = "2015"
+                    authors = []
+                    license = "MIR OR Apache-2.0"
+                    description = "A test!"
+                    homepage = "https://example.org"
+                    documentation = ""
+                    repository = "https://example.org"
+                    readme = "./README.md"
+                "#,
+            )
+            .file("src/lib.rs", "")
+            .file("README.md", "")
+    });
+
+    // Create a "bare" Git repository.
+    // Keep the `.git` folder and delete the others.
+    let repo = {
+        let mut repo_builder = git2::build::RepoBuilder::new();
+        repo_builder
+            .bare(true)
+            .clone_local(git2::build::CloneLocal::Local)
+            .clone(
+                path2url(git_project.root()).as_str(),
+                &paths::root().join("foo-bare"),
+            )
+            .unwrap()
+    };
+    assert!(repo.is_bare());
+    let opts = git2::WorktreeAddOptions::new();
+    let wt = repo
+        .worktree("bar", &paths::root().join("bar"), Some(&opts))
+        .unwrap();
+
+    project
+        .cargo("package --list")
+        .cwd(wt.path())
+        .with_stdout(
+            "\
+.cargo_vcs_info.json
+Cargo.toml
+Cargo.toml.orig
+README.md
+src/lib.rs
+",
+        )
+        .run();
+
+    project
+        .cargo("check")
+        .cwd(wt.path())
+        .with_stderr(
+            "\
+[CHECKING] foo v0.5.0 ([CWD])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
