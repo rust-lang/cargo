@@ -74,7 +74,7 @@ pub fn configure_http_handle(gctx: &GlobalContext, handle: &mut Easy) -> CargoRe
     if let Some(user_agent) = &http.user_agent {
         handle.useragent(user_agent)?;
     } else {
-        handle.useragent(&format!("cargo {}", version()))?;
+        handle.useragent(&format!("cargo/{}", version()))?;
     }
 
     fn to_ssl_version(s: &str) -> CargoResult<SslVersion> {
