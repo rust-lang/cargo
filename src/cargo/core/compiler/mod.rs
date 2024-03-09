@@ -1310,11 +1310,13 @@ fn trim_paths_args(
 }
 
 /// Generates the `--check-cfg` arguments for the `unit`.
-/// See unstable feature [`check-cfg`].
-///
-/// [`check-cfg`]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#check-cfg
 fn check_cfg_args(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Vec<OsString> {
-    if build_runner.bcx.gctx.cli_unstable().check_cfg {
+    if build_runner
+        .bcx
+        .target_data
+        .info(unit.kind)
+        .support_check_cfg
+    {
         // The routine below generates the --check-cfg arguments. Our goals here are to
         // enable the checking of conditionals and pass the list of declared features.
         //
@@ -1352,7 +1354,6 @@ fn check_cfg_args(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Vec<OsStri
         // Cargo, but not all users of rustc (like Rust-for-Linux) use docs.rs.
 
         vec![
-            OsString::from("-Zunstable-options"),
             OsString::from("--check-cfg"),
             OsString::from("cfg(docsrs)"),
             OsString::from("--check-cfg"),
@@ -1476,11 +1477,8 @@ fn add_custom_flags(
             for cfg in output.cfgs.iter() {
                 cmd.arg("--cfg").arg(cfg);
             }
-            if !output.check_cfgs.is_empty() {
-                cmd.arg("-Zunstable-options");
-                for check_cfg in &output.check_cfgs {
-                    cmd.arg("--check-cfg").arg(check_cfg);
-                }
+            for check_cfg in &output.check_cfgs {
+                cmd.arg("--check-cfg").arg(check_cfg);
             }
             for (name, value) in output.env.iter() {
                 cmd.env(name, value);
