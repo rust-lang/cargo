@@ -456,6 +456,9 @@ values](https://github.com/sfackler/rust-openssl/blob/dc72a8e2c429e46c275e528b61
 ```rust,ignore
 // (portion of build.rs)
 
+println!("cargo::rustc-check-cfg=cfg(ossl101,ossl102)");
+println!("cargo::rustc-check-cfg=cfg(ossl110,ossl110g,ossl111)");
+
 if let Ok(version) = env::var("DEP_OPENSSL_VERSION_NUMBER") {
     let version = u64::from_str_radix(&version, 16).unwrap();
 

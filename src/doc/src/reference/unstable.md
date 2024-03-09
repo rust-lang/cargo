@@ -83,7 +83,6 @@ For the latest nightly, see the [nightly version] of this page.
     * [build-std-features](#build-std-features) --- Sets features to use with the standard library.
     * [binary-dep-depinfo](#binary-dep-depinfo) --- Causes the dep-info file to track binary dependencies.
     * [panic-abort-tests](#panic-abort-tests) --- Allows running tests with the "abort" panic strategy.
-    * [check-cfg](#check-cfg) --- Compile-time validation of `cfg` expressions.
     * [host-config](#host-config) --- Allows setting `[target]`-like configuration settings for host build targets.
     * [target-applies-to-host](#target-applies-to-host) --- Alters whether certain flags will be passed to host build targets.
     * [gc](#gc) --- Global cache garbage collection.
@@ -1154,44 +1153,6 @@ You can use the flag like this:
 cargo rustdoc -Z unstable-options --output-format json
 ```
 
-## check-cfg
-
-* RFC: [#3013](https://github.com/rust-lang/rfcs/pull/3013)
-* Tracking Issue: [#10554](https://github.com/rust-lang/cargo/issues/10554)
-
-`-Z check-cfg` command line enables compile time checking of Cargo features as well as `rustc`
-well known names and values in `#[cfg]`, `cfg!`, `#[link]` and `#[cfg_attr]` with the `rustc`
-and `rustdoc` unstable `--check-cfg` command line.
-
-You can use the flag like this:
-
-```
-cargo check -Z unstable-options -Z check-cfg
-```
-
-### `cargo::rustc-check-cfg=CHECK_CFG`
-
-The `rustc-check-cfg` instruction tells Cargo to pass the given value to the
-`--check-cfg` flag to the compiler. This may be used for compile-time
-detection of unexpected conditional compilation name and/or values.
-
-This can only be used in combination with `-Zcheck-cfg` otherwise it is ignored
-with a warning.
-
-If you want to integrate with Cargo features, only use `-Zcheck-cfg` instead of
-trying to do it manually with this option.
-
-You can use the instruction like this:
-
-```rust,no_run
-// build.rs
-println!("cargo::rustc-check-cfg=cfg(foo, bar)");
-```
-
-```
-cargo check -Z unstable-options -Z check-cfg
-```
-
 ## codegen-backend
 
 The `codegen-backend` feature makes it possible to select the codegen backend used by rustc using a profile.
@@ -1798,3 +1759,11 @@ The `-Z registry-auth` feature has been stabilized in the 1.74 release with the 
 requirement that a credential-provider is configured.
 
 See [Registry Authentication](registry-authentication.md) documentation for details.
+
+## check-cfg
+
+The `-Z check-cfg` feature has been stabilized in the 1.80 release by making it the
+default behavior.
+
+See the [build script documentation](build-scripts.md#rustc-check-cfg) for informations
+about specifying custom cfgs.
