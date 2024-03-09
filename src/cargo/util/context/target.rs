@@ -135,7 +135,7 @@ fn load_config_table(gctx: &GlobalContext, prefix: &str) -> CargoResult<TargetCo
 fn parse_links_overrides(
     target_key: &ConfigKey,
     links: HashMap<String, CV>,
-    gctx: &GlobalContext,
+    _gctx: &GlobalContext,
 ) -> CargoResult<BTreeMap<String, BuildOutput>> {
     let mut links_overrides = BTreeMap::new();
 
@@ -204,13 +204,8 @@ fn parse_links_overrides(
                     output.cfgs.extend(list.iter().map(|v| v.0.clone()));
                 }
                 "rustc-check-cfg" => {
-                    if gctx.cli_unstable().check_cfg {
-                        let list = value.list(key)?;
-                        output.check_cfgs.extend(list.iter().map(|v| v.0.clone()));
-                    } else {
-                        // silently ignoring the instruction to try to
-                        // minimise MSRV annoyance when stabilizing -Zcheck-cfg
-                    }
+                    let list = value.list(key)?;
+                    output.check_cfgs.extend(list.iter().map(|v| v.0.clone()));
                 }
                 "rustc-env" => {
                     for (name, val) in value.table(key)?.0 {

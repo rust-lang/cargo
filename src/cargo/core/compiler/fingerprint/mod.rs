@@ -1454,14 +1454,7 @@ fn calculate_normal(
         // actually affect the output artifact so there's no need to hash it.
         path: util::hash_u64(path_args(build_runner.bcx.ws, unit).0),
         features: format!("{:?}", unit.features),
-        // Note we curently only populate `declared_features` when `-Zcheck-cfg`
-        // is passed since it's the only user-facing toggle that will make this
-        // fingerprint relevant.
-        declared_features: if build_runner.bcx.gctx.cli_unstable().check_cfg {
-            format!("{declared_features:?}")
-        } else {
-            "".to_string()
-        },
+        declared_features: format!("{declared_features:?}"),
         deps,
         local: Mutex::new(local),
         memoized_hash: Mutex::new(None),

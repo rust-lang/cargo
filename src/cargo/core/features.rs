@@ -752,7 +752,6 @@ unstable_cli_options!(
     #[serde(deserialize_with = "deserialize_build_std")]
     build_std: Option<Vec<String>>  = ("Enable Cargo to compile the standard library itself as part of a crate graph compilation"),
     build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
-    check_cfg: bool = ("Enable compile-time checking of `cfg` names/values/features"),
     codegen_backend: bool = ("Enable the `codegen-backend` option in profiles in .cargo/config.toml file"),
     config_include: bool = ("Enable the `include` key in config files"),
     direct_minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum (direct dependencies only)"),
@@ -853,6 +852,9 @@ const STABILIZED_CREDENTIAL_PROCESS: &str =
 
 const STABILIZED_REGISTRY_AUTH: &str =
     "Authenticated registries are available if a credential provider is configured.";
+
+const STABILIZED_CHECK_CFG: &str =
+    "Compile-time checking of conditional (a.k.a. `-Zcheck-cfg`) is now always enabled.";
 
 fn deserialize_build_std<'de, D>(deserializer: D) -> Result<Option<Vec<String>>, D::Error>
 where
@@ -1107,6 +1109,7 @@ impl CliUnstable {
             "doctest-in-workspace" => stabilized_warn(k, "1.72", STABILIZED_DOCTEST_IN_WORKSPACE),
             "credential-process" => stabilized_warn(k, "1.74", STABILIZED_CREDENTIAL_PROCESS),
             "registry-auth" => stabilized_warn(k, "1.74", STABILIZED_REGISTRY_AUTH),
+            "check-cfg" => stabilized_warn(k, "CURRENT_CARGO_VERSION", STABILIZED_CHECK_CFG),
 
             // Unstable features
             // Sorted alphabetically:
@@ -1119,9 +1122,6 @@ impl CliUnstable {
                 self.build_std = Some(crate::core::compiler::standard_lib::parse_unstable_flag(v))
             }
             "build-std-features" => self.build_std_features = Some(parse_features(v)),
-            "check-cfg" => {
-                self.check_cfg = parse_empty(k, v)?;
-            }
             "codegen-backend" => self.codegen_backend = parse_empty(k, v)?,
             "config-include" => self.config_include = parse_empty(k, v)?,
             "direct-minimal-versions" => self.direct_minimal_versions = parse_empty(k, v)?,
