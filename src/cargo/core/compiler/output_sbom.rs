@@ -20,6 +20,15 @@ use crate::{
 
 use super::{unit_graph::UnitDep, BuildRunner, CrateType, Unit};
 
+#[derive(Serialize, Clone, Debug, Copy)]
+#[serde(rename_all = "kebab-case")]
+enum SbomBuildType {
+    /// A package dependency
+    Normal,
+    /// A build script dependency
+    Build,
+}
+
 /// Typed version of a SBOM format version number.
 pub struct SbomFormatVersion<const V: u32>;
 
@@ -68,12 +77,17 @@ struct SbomPackage {
     package: String,
     version: String,
     features: Vec<String>,
+    build_type: SbomBuildType,
     extern_crate_name: String,
     dependencies: Vec<SbomDependency>,
 }
 
 impl SbomPackage {
-    pub fn new(dep: &UnitDep, dependencies: Vec<SbomDependency>) -> Self {
+    pub fn new(
+        dep: &UnitDep,
+        dependencies: Vec<SbomDependency>,
+        build_type: SbomBuildType,
+    ) -> Self {
         let package_id = dep.unit.pkg.package_id();
         let package = package_id.name().to_string();
         let version = package_id.version().to_string();
@@ -89,6 +103,7 @@ impl SbomPackage {
             package,
             version,
             features,
+            build_type,
             extern_crate_name: dep.extern_crate_name.to_string(),
             dependencies,
         }
@@ -202,18 +217,20 @@ fn fetch_packages(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> Vec<Sb
     let mut visited = BTreeSet::new();
 
     while let Some(package) = queue.pop_first() {
-        // ignore any custom build scripts.
-        if package.unit.mode.is_run_custom_build() {
-            continue;
-        }
         if visited.contains(package) {
             continue;
         }
 
+        let build_type = if package.unit.mode.is_run_custom_build() {
+            SbomBuildType::Build
+        } else {
+            SbomBuildType::Normal
+        };
+
         let mut dependencies: BTreeSet<&UnitDep> = unit_graph[&package.unit].iter().collect();
         let sbom_dependencies = dependencies.iter().map(|dep| (*dep).into()).collect_vec();
 
-        result.push(SbomPackage::new(package, sbom_dependencies));
+        result.push(SbomPackage::new(package, sbom_dependencies, build_type));
 
         visited.insert(package);
 
