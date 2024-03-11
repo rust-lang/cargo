@@ -34,7 +34,9 @@ fn build_sbom_using_cargo_config() {
         .file("src/main.rs", r#"fn main() {}"#)
         .build();
 
-    p.cargo("build").run();
+    p.cargo("build -Zsbom")
+        .masquerade_as_nightly_cargo(&["sbom"])
+        .run();
 
     let file = p.bin("foo").with_extension("cargo-sbom.json");
     assert!(file.is_file());
@@ -47,7 +49,10 @@ fn build_sbom_using_env_var() {
         .file("src/foo.rs", r#"fn main() {}"#)
         .build();
 
-    p.cargo("build").env("CARGO_BUILD_SBOM", "true").run();
+    p.cargo("build -Zsbom")
+        .env("CARGO_BUILD_SBOM", "true")
+        .masquerade_as_nightly_cargo(&["sbom"])
+        .run();
 
     let file = p.bin("foo").with_extension("cargo-sbom.json");
     assert!(file.is_file());
@@ -72,7 +77,9 @@ fn build_sbom_project_bin_and_lib() {
         .file("src/lib.rs", r#"pub fn give_five() -> i32 { 5 }"#)
         .build();
 
-    p.cargo("build").stream().run();
+    p.cargo("build -Zsbom")
+        .masquerade_as_nightly_cargo(&["sbom"])
+        .run();
 
     assert!(p.bin("foo").with_extension("cargo-sbom.json").is_file());
     assert_eq!(
@@ -102,7 +109,9 @@ fn build_sbom_with_simple_build_script() {
         )
         .build();
 
-    p.cargo("build").stream().run();
+    p.cargo("build -Zsbom")
+        .masquerade_as_nightly_cargo(&["sbom"])
+        .run();
 
     let path = p.bin("foo").with_extension("cargo-sbom.json");
     assert!(path.is_file());

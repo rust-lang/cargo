@@ -104,10 +104,15 @@ impl BuildConfig {
             anyhow::bail!("-Zbuild-std requires --target");
         }
 
+        // If sbom flag is set, it requires the unstable feature
         let sbom = match gctx.get_env_os("CARGO_BUILD_SBOM") {
             Some(sbom) => sbom == "true",
             None => cfg.sbom == Some(true),
         };
+
+        if sbom && !gctx.cli_unstable().sbom {
+            anyhow::bail!("Cargo build config 'sbom' is unstable; pass `-Zsbom` to enable it");
+        }
 
         Ok(BuildConfig {
             requested_kinds,

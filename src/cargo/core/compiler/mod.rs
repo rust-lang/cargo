@@ -674,9 +674,9 @@ where
 /// completion of other units will be added later in runtime, such as flags
 /// from build scripts.
 fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<ProcessBuilder> {
+    let gctx = build_runner.bcx.gctx;
     let is_primary = build_runner.is_primary_package(unit);
     let is_workspace = build_runner.bcx.ws.is_member(&unit.pkg);
-    let sbom = build_runner.bcx.build_config.sbom;
 
     let mut base = build_runner
         .compilation
@@ -687,14 +687,14 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
     build_deps_args(&mut base, build_runner, unit)?;
     add_cap_lints(build_runner.bcx, unit, &mut base);
     base.args(build_runner.bcx.rustflags_args(unit));
-    if build_runner.bcx.gctx.cli_unstable().binary_dep_depinfo {
+    if gctx.cli_unstable().binary_dep_depinfo {
         base.arg("-Z").arg("binary-dep-depinfo");
     }
 
     if is_primary {
         base.env("CARGO_PRIMARY_PACKAGE", "1");
 
-        if sbom {
+        if gctx.cli_unstable().sbom && build_runner.bcx.build_config.sbom {
             let file_list = std::env::join_paths(build_runner.sbom_output_files(unit)?)?;
             base.env("CARGO_SBOM_PATH", file_list);
         }

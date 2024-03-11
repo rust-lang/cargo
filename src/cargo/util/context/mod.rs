@@ -2612,6 +2612,7 @@ pub struct CargoBuildConfig {
     // deprecated alias for artifact-dir
     pub out_dir: Option<ConfigRelativePath>,
     pub artifact_dir: Option<ConfigRelativePath>,
+    /// Unstable feature `-Zsbom`.
     pub sbom: Option<bool>,
 }
 
