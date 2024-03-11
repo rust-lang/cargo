@@ -2993,12 +2993,12 @@ foo v0.0.0 ([ROOT]/foo)
             "\
 foo v0.0.0 ([ROOT]/foo)
 ├── bar v1.0.999 ([ROOT]/foo/bar-1-as-3)
-│   └── bar v3.0.1
+│   └── bar v3.0.0
 └── bar v2.0.999 ([ROOT]/foo/bar-2-as-3)
-    └── bar v3.0.1
+    └── bar v3.0.0
 ",
         )
         .run();
 
-    assert_ne!(p.read_file("Cargo.lock"), p.read_file("Cargo.lock.orig"));
+    assert_eq!(p.read_file("Cargo.lock"), p.read_file("Cargo.lock.orig"));
 }

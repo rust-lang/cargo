@@ -154,7 +154,7 @@ impl EncodableResolve {
     /// primary uses is to be used with `resolve_with_previous` to guide the
     /// resolver to create a complete Resolve.
     pub fn into_resolve(self, original: &str, ws: &Workspace<'_>) -> CargoResult<Resolve> {
-        let path_deps = build_path_deps(ws)?;
+        let path_deps: HashMap<String, HashMap<semver::Version, SourceId>> = build_path_deps(ws)?;
         let mut checksums = HashMap::new();
 
         let mut version = match self.version {
@@ -202,7 +202,11 @@ impl EncodableResolve {
                 if !all_pkgs.insert(enc_id.clone()) {
                     anyhow::bail!("package `{}` is specified twice in the lockfile", pkg.name);
                 }
-                let id = match pkg.source.as_deref().or_else(|| path_deps.get(&pkg.name)) {
+                let id = match pkg
+                    .source
+                    .as_deref()
+                    .or_else(|| get_source_id(&path_deps, pkg))
+                {
                     // We failed to find a local package in the workspace.
                     // It must have been removed and should be ignored.
                     None => {
@@ -364,7 +368,11 @@ impl EncodableResolve {
 
         let mut unused_patches = Vec::new();
         for pkg in self.patch.unused {
-            let id = match pkg.source.as_deref().or_else(|| path_deps.get(&pkg.name)) {
+            let id = match pkg
+                .source
+                .as_deref()
+                .or_else(|| get_source_id(&path_deps, &pkg))
+            {
                 Some(&src) => PackageId::try_new(&pkg.name, &pkg.version, src)?,
                 None => continue,
             };
@@ -395,7 +403,7 @@ impl EncodableResolve {
             version = ResolveVersion::V2;
         }
 
-        Ok(Resolve::new(
+        return Ok(Resolve::new(
             g,
             replacements,
             HashMap::new(),
@@ -404,11 +412,35 @@ impl EncodableResolve {
             unused_patches,
             version,
             HashMap::new(),
-        ))
+        ));
+
+        fn get_source_id<'a>(
+            path_deps: &'a HashMap<String, HashMap<semver::Version, SourceId>>,
+            pkg: &'a EncodableDependency,
+        ) -> Option<&'a SourceId> {
+            path_deps.iter().find_map(|(name, version_source)| {
+                if name != &pkg.name || version_source.len() == 0 {
+                    return None;
+                }
+                if version_source.len() == 1 {
+                    return Some(version_source.values().next().unwrap());
+                }
+                // If there are multiple candidates for the same name, it needs to be determined by combining versions (See #13405).
+                if let Ok(pkg_version) = pkg.version.parse::<semver::Version>() {
+                    if let Some(source_id) = version_source.get(&pkg_version) {
+                        return Some(source_id);
+                    }
+                }
+
+                None
+            })
+        }
     }
 }
 
-fn build_path_deps(ws: &Workspace<'_>) -> CargoResult<HashMap<String, SourceId>> {
+fn build_path_deps(
+    ws: &Workspace<'_>,
+) -> CargoResult<HashMap<String, HashMap<semver::Version, SourceId>>> {
     // If a crate is **not** a path source, then we're probably in a situation
     // such as `cargo install` with a lock file from a remote dependency. In
     // that case we don't need to fixup any path dependencies (as they're not
@@ -418,13 +450,15 @@ fn build_path_deps(ws: &Workspace<'_>) -> CargoResult<HashMap<String, SourceId>>
         .filter(|p| p.package_id().source_id().is_path())
         .collect::<Vec<_>>();
 
-    let mut ret = HashMap::new();
+    let mut ret: HashMap<String, HashMap<semver::Version, SourceId>> = HashMap::new();
     let mut visited = HashSet::new();
     for member in members.iter() {
-        ret.insert(
-            member.package_id().name().to_string(),
-            member.package_id().source_id(),
-        );
+        ret.entry(member.package_id().name().to_string())
+            .or_insert_with(HashMap::new)
+            .insert(
+                member.package_id().version().clone(),
+                member.package_id().source_id(),
+            );
         visited.insert(member.package_id().source_id());
     }
     for member in members.iter() {
@@ -444,7 +478,7 @@ fn build_path_deps(ws: &Workspace<'_>) -> CargoResult<HashMap<String, SourceId>>
     fn build_pkg(
         pkg: &Package,
         ws: &Workspace<'_>,
-        ret: &mut HashMap<String, SourceId>,
+        ret: &mut HashMap<String, HashMap<semver::Version, SourceId>>,
         visited: &mut HashSet<SourceId>,
     ) {
         for dep in pkg.dependencies() {
@@ -455,7 +489,7 @@ fn build_path_deps(ws: &Workspace<'_>) -> CargoResult<HashMap<String, SourceId>>
     fn build_dep(
         dep: &Dependency,
         ws: &Workspace<'_>,
-        ret: &mut HashMap<String, SourceId>,
+        ret: &mut HashMap<String, HashMap<semver::Version, SourceId>>,
         visited: &mut HashSet<SourceId>,
     ) {
         let id = dep.source_id();
@@ -467,7 +501,12 @@ fn build_path_deps(ws: &Workspace<'_>) -> CargoResult<HashMap<String, SourceId>>
             Err(_) => return,
         };
         let Ok(pkg) = ws.load(&path) else { return };
-        ret.insert(pkg.name().to_string(), pkg.package_id().source_id());
+        ret.entry(pkg.package_id().name().to_string())
+            .or_insert_with(HashMap::new)
+            .insert(
+                pkg.package_id().version().clone(),
+                pkg.package_id().source_id(),
+            );
         visited.insert(pkg.package_id().source_id());
         build_pkg(&pkg, ws, ret, visited);
     }
