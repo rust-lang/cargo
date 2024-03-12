@@ -28,7 +28,7 @@ pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
 }
 
 /// Generate a toml String of Cargo.lock from a Resolve.
-pub fn resolve_to_string(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoResult<String> {
+pub fn resolve_to_string(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<String> {
     let (_orig, out, _lock_root) = resolve_to_string_orig(ws, resolve);
     Ok(out)
 }
@@ -98,7 +98,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
 
 fn resolve_to_string_orig(
     ws: &Workspace<'_>,
-    resolve: &mut Resolve,
+    resolve: &Resolve,
 ) -> (Option<String>, String, Filesystem) {
     // Load the original lock file if it exists.
     let lock_root = lock_root(ws);
