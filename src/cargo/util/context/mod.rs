@@ -215,7 +215,7 @@ pub struct GlobalContext {
     /// Cache of credentials from configuration or credential providers.
     /// Maps from url to credential value.
     credential_cache: LazyCell<RefCell<HashMap<CanonicalUrl, CredentialCacheValue>>>,
-    /// Cache of registry config from from the `[registries]` table.
+    /// Cache of registry config from the `[registries]` table.
     registry_config: LazyCell<RefCell<HashMap<SourceId, Option<RegistryConfig>>>>,
     /// Locks on the package and index caches.
     package_cache_lock: CacheLocker,
