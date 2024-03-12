@@ -154,17 +154,29 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         true,
     )?;
 
+    print_lockfile_update(opts.gctx, &previous_resolve, &resolve, &mut registry)?;
+    if opts.dry_run {
+        opts.gctx
+            .shell()
+            .warn("not updating lockfile due to dry run")?;
+    } else {
+        ops::write_pkg_lockfile(ws, &mut resolve)?;
+    }
+    Ok(())
+}
+
+fn print_lockfile_update(
+    gctx: &GlobalContext,
+    previous_resolve: &Resolve,
+    resolve: &Resolve,
+    registry: &mut PackageRegistry<'_>,
+) -> CargoResult<()> {
     // Summarize what is changing for the user.
     let print_change = |status: &str, msg: String, color: &Style| {
-        opts.gctx.shell().status_with_color(status, msg, color)
+        gctx.shell().status_with_color(status, msg, color)
     };
     let mut unchanged_behind = 0;
-    for ResolvedPackageVersions {
-        removed,
-        added,
-        unchanged,
-    } in compare_dependency_graphs(&previous_resolve, &resolve)
-    {
+    for diff in PackageDiff::diff(&previous_resolve, &resolve) {
         fn format_latest(version: semver::Version) -> String {
             let warn = style::WARN;
             format!(" {warn}(latest: v{version}){warn:#}")
@@ -177,14 +189,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                         && candidate.minor == current.minor
                         && candidate.patch == current.patch))
         }
-        let possibilities = if let Some(query) = [added.iter(), unchanged.iter()]
-            .into_iter()
-            .flatten()
-            .next()
-            .filter(|s| s.source_id().is_registry())
-        {
-            let query =
-                crate::core::dependency::Dependency::parse(query.name(), None, query.source_id())?;
+        let possibilities = if let Some(query) = diff.alternatives_query() {
             loop {
                 match registry.query_vec(&query, QueryKind::Exact) {
                     std::task::Poll::Ready(res) => {
@@ -197,10 +202,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             vec![]
         };
 
-        if removed.len() == 1 && added.len() == 1 {
-            let added = added.into_iter().next().unwrap();
-            let removed = removed.into_iter().next().unwrap();
-
+        if let Some((removed, added)) = diff.change() {
             let latest = if !possibilities.is_empty() {
                 possibilities
                     .iter()
@@ -233,10 +235,10 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 print_change("Updating", msg, &style::GOOD)?;
             }
         } else {
-            for package in removed.iter() {
+            for package in diff.removed.iter() {
                 print_change("Removing", format!("{package}"), &style::ERROR)?;
             }
-            for package in added.iter() {
+            for package in diff.added.iter() {
                 let latest = if !possibilities.is_empty() {
                     possibilities
                         .iter()
@@ -253,7 +255,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 print_change("Adding", format!("{package}{latest}"), &style::NOTE)?;
             }
         }
-        for package in &unchanged {
+        for package in &diff.unchanged {
             let latest = if !possibilities.is_empty() {
                 possibilities
                     .iter()
@@ -268,8 +270,8 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
 
             if let Some(latest) = latest {
                 unchanged_behind += 1;
-                if opts.gctx.shell().verbosity() == Verbosity::Verbose {
-                    opts.gctx.shell().status_with_color(
+                if gctx.shell().verbosity() == Verbosity::Verbose {
+                    gctx.shell().status_with_color(
                         "Unchanged",
                         format!("{package}{latest}"),
                         &anstyle::Style::new().bold(),
@@ -278,51 +280,46 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             }
         }
     }
-    if opts.gctx.shell().verbosity() == Verbosity::Verbose {
-        opts.gctx.shell().note(
+    if gctx.shell().verbosity() == Verbosity::Verbose {
+        gctx.shell().note(
             "to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`",
         )?;
     } else {
         if 0 < unchanged_behind {
-            opts.gctx.shell().note(format!(
+            gctx.shell().note(format!(
                 "pass `--verbose` to see {unchanged_behind} unchanged dependencies behind latest"
             ))?;
         }
     }
-    if opts.dry_run {
-        opts.gctx
-            .shell()
-            .warn("not updating lockfile due to dry run")?;
-    } else {
-        ops::write_pkg_lockfile(ws, &mut resolve)?;
-    }
-    return Ok(());
 
-    fn fill_with_deps<'a>(
-        resolve: &'a Resolve,
-        dep: PackageId,
-        set: &mut HashSet<PackageId>,
-        visited: &mut HashSet<PackageId>,
-    ) {
-        if !visited.insert(dep) {
-            return;
-        }
-        set.insert(dep);
-        for (dep, _) in resolve.deps_not_replaced(dep) {
-            fill_with_deps(resolve, dep, set, visited);
-        }
-    }
+    Ok(())
+}
 
-    #[derive(Default, Clone, Debug)]
-    struct ResolvedPackageVersions {
-        removed: Vec<PackageId>,
-        added: Vec<PackageId>,
-        unchanged: Vec<PackageId>,
+fn fill_with_deps<'a>(
+    resolve: &'a Resolve,
+    dep: PackageId,
+    set: &mut HashSet<PackageId>,
+    visited: &mut HashSet<PackageId>,
+) {
+    if !visited.insert(dep) {
+        return;
     }
-    fn compare_dependency_graphs(
-        previous_resolve: &Resolve,
-        resolve: &Resolve,
-    ) -> Vec<ResolvedPackageVersions> {
+    set.insert(dep);
+    for (dep, _) in resolve.deps_not_replaced(dep) {
+        fill_with_deps(resolve, dep, set, visited);
+    }
+}
+
+/// All resolved versions of a package name within a [`SourceId`]
+#[derive(Default, Clone, Debug)]
+pub struct PackageDiff {
+    removed: Vec<PackageId>,
+    added: Vec<PackageId>,
+    unchanged: Vec<PackageId>,
+}
+
+impl PackageDiff {
+    pub fn diff(previous_resolve: &Resolve, resolve: &Resolve) -> Vec<Self> {
         fn key(dep: PackageId) -> (&'static str, SourceId) {
             (dep.name().as_str(), dep.source_id())
         }
@@ -364,7 +361,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
 
         // Map `(package name, package source)` to `(removed versions, added versions)`.
         let mut changes = BTreeMap::new();
-        let empty = ResolvedPackageVersions::default();
+        let empty = Self::default();
         for dep in previous_resolve.iter() {
             changes
                 .entry(key(dep))
@@ -381,7 +378,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         }
 
         for v in changes.values_mut() {
-            let ResolvedPackageVersions {
+            let Self {
                 removed: ref mut old,
                 added: ref mut new,
                 unchanged: ref mut other,
@@ -398,5 +395,39 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         debug!("{:#?}", changes);
 
         changes.into_iter().map(|(_, v)| v).collect()
+    }
+
+    /// Guess if a package upgraded/downgraded
+    ///
+    /// All `PackageDiff` knows is that entries were added/removed within [`Resolve`].
+    /// A package could be added or removed because of dependencies from other packages
+    /// which makes it hard to definitively say "X was upgrade to N".
+    pub fn change(&self) -> Option<(&PackageId, &PackageId)> {
+        if self.removed.len() == 1 && self.added.len() == 1 {
+            Some((&self.removed[0], &self.added[0]))
+        } else {
+            None
+        }
+    }
+
+    /// For querying [`PackageRegistry`] for alternative versions to report to the user
+    pub fn alternatives_query(&self) -> Option<crate::core::dependency::Dependency> {
+        let package_id = [
+            self.added.iter(),
+            self.unchanged.iter(),
+            self.removed.iter(),
+        ]
+        .into_iter()
+        .flatten()
+        .next()
+        // Limit to registry as that is the only source with meaningful alternative versions
+        .filter(|s| s.source_id().is_registry())?;
+        let query = crate::core::dependency::Dependency::parse(
+            package_id.name(),
+            None,
+            package_id.source_id(),
+        )
+        .expect("already a valid dependency");
+        Some(query)
     }
 }
