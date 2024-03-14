@@ -54,20 +54,9 @@ pub fn read_manifest(
         path.display(),
         source_id
     );
-    let mut contents = paths::read(path).map_err(|err| ManifestError::new(err, path.into()))?;
-    let embedded = is_embedded(path);
-    if embedded {
-        if !gctx.cli_unstable().script {
-            return Err(ManifestError::new(
-                anyhow::anyhow!("parsing `{}` requires `-Zscript`", path.display()),
-                path.into(),
-            ))?;
-        }
-        contents = embedded::expand_manifest(&contents, path, gctx)
-            .map_err(|err| ManifestError::new(err, path.into()))?;
-    }
+    let contents = read_toml_string(path, gctx)?;
 
-    read_manifest_from_str(&contents, path, embedded, source_id, gctx).map_err(|err| {
+    read_manifest_from_str(&contents, path, source_id, gctx).map_err(|err| {
         if err.is::<AlreadyPrintedError>() {
             err
         } else {
@@ -78,6 +67,22 @@ pub fn read_manifest(
             .into()
         }
     })
+}
+
+#[tracing::instrument(skip_all)]
+fn read_toml_string(path: &Path, gctx: &GlobalContext) -> CargoResult<String> {
+    let mut contents = paths::read(path).map_err(|err| ManifestError::new(err, path.into()))?;
+    if is_embedded(path) {
+        if !gctx.cli_unstable().script {
+            return Err(ManifestError::new(
+                anyhow::anyhow!("parsing `{}` requires `-Zscript`", path.display()),
+                path.into(),
+            ))?;
+        }
+        contents = embedded::expand_manifest(&contents, path, gctx)
+            .map_err(|err| ManifestError::new(err, path.into()))?;
+    }
+    Ok(contents)
 }
 
 /// See also `bin/cargo/commands/run.rs`s `is_manifest_command`
@@ -99,7 +104,6 @@ pub fn is_embedded(path: &Path) -> bool {
 fn read_manifest_from_str(
     contents: &str,
     manifest_file: &Path,
-    embedded: bool,
     source_id: SourceId,
     gctx: &GlobalContext,
 ) -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
@@ -186,6 +190,7 @@ fn read_manifest_from_str(
         }
     }
     return if manifest.project.is_some() || manifest.package.is_some() {
+        let embedded = is_embedded(manifest_file);
         let (mut manifest, paths) =
             to_real_manifest(manifest, embedded, source_id, package_root, gctx)?;
         add_unused(manifest.warnings_mut());
