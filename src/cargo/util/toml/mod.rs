@@ -93,6 +93,62 @@ pub fn is_embedded(path: &Path) -> bool {
         (ext.is_none() && path.is_file())
 }
 
+fn emit_diagnostic(
+    e: toml::de::Error,
+    contents: &str,
+    manifest_file: &Path,
+    gctx: &GlobalContext,
+) -> anyhow::Error {
+    let Some(span) = e.span() else {
+        return e.into();
+    };
+
+    let (line_num, column) = translate_position(&contents, span.start);
+    let source_start = contents[0..span.start]
+        .rfind('\n')
+        .map(|s| s + 1)
+        .unwrap_or(0);
+    let source_end = contents[span.end.saturating_sub(1)..]
+        .find('\n')
+        .map(|s| s + span.end)
+        .unwrap_or(contents.len());
+    let source = &contents[source_start..source_end];
+    // Make sure we don't try to highlight past the end of the line,
+    // but also make sure we are highlighting at least one character
+    let highlight_end = (column + contents[span].chars().count())
+        .min(source.len())
+        .max(column + 1);
+    // Get the path to the manifest, relative to the cwd
+    let manifest_path = diff_paths(manifest_file, gctx.cwd())
+        .unwrap_or_else(|| manifest_file.to_path_buf())
+        .display()
+        .to_string();
+    let snippet = Snippet {
+        title: Some(Annotation {
+            id: None,
+            label: Some(e.message()),
+            annotation_type: AnnotationType::Error,
+        }),
+        footer: vec![],
+        slices: vec![Slice {
+            source: &source,
+            line_start: line_num + 1,
+            origin: Some(manifest_path.as_str()),
+            annotations: vec![SourceAnnotation {
+                range: (column, highlight_end),
+                label: "",
+                annotation_type: AnnotationType::Error,
+            }],
+            fold: false,
+        }],
+    };
+    let renderer = Renderer::styled();
+    if let Err(err) = writeln!(gctx.shell().err(), "{}", renderer.render(snippet)) {
+        return err.into();
+    }
+    return AlreadyPrintedError::new(e.into()).into();
+}
+
 /// Parse an already-loaded `Cargo.toml` as a Cargo manifest.
 ///
 /// This could result in a real or virtual manifest being returned.
@@ -111,61 +167,12 @@ fn read_manifest_from_str(
 
     let mut unused = BTreeSet::new();
     let deserializer = toml::de::Deserializer::new(contents);
-    let manifest: manifest::TomlManifest = match serde_ignored::deserialize(deserializer, |path| {
+    let manifest: manifest::TomlManifest = serde_ignored::deserialize(deserializer, |path| {
         let mut key = String::new();
         stringify(&mut key, &path);
         unused.insert(key);
-    }) {
-        Ok(manifest) => manifest,
-        Err(e) => {
-            let Some(span) = e.span() else {
-                return Err(e.into());
-            };
-
-            let (line_num, column) = translate_position(&contents, span.start);
-            let source_start = contents[0..span.start]
-                .rfind('\n')
-                .map(|s| s + 1)
-                .unwrap_or(0);
-            let source_end = contents[span.end.saturating_sub(1)..]
-                .find('\n')
-                .map(|s| s + span.end)
-                .unwrap_or(contents.len());
-            let source = &contents[source_start..source_end];
-            // Make sure we don't try to highlight past the end of the line,
-            // but also make sure we are highlighting at least one character
-            let highlight_end = (column + contents[span].chars().count())
-                .min(source.len())
-                .max(column + 1);
-            // Get the path to the manifest, relative to the cwd
-            let manifest_path = diff_paths(manifest_file, gctx.cwd())
-                .unwrap_or_else(|| manifest_file.to_path_buf())
-                .display()
-                .to_string();
-            let snippet = Snippet {
-                title: Some(Annotation {
-                    id: None,
-                    label: Some(e.message()),
-                    annotation_type: AnnotationType::Error,
-                }),
-                footer: vec![],
-                slices: vec![Slice {
-                    source: &source,
-                    line_start: line_num + 1,
-                    origin: Some(manifest_path.as_str()),
-                    annotations: vec![SourceAnnotation {
-                        range: (column, highlight_end),
-                        label: "",
-                        annotation_type: AnnotationType::Error,
-                    }],
-                    fold: false,
-                }],
-            };
-            let renderer = Renderer::styled();
-            writeln!(gctx.shell().err(), "{}", renderer.render(snippet))?;
-            return Err(AlreadyPrintedError::new(e.into()).into());
-        }
-    };
+    })
+    .map_err(|e| emit_diagnostic(e, contents, manifest_file, gctx))?;
     let add_unused = |warnings: &mut Warnings| {
         for key in unused {
             warnings.add_warning(format!("unused manifest key: {}", key));
