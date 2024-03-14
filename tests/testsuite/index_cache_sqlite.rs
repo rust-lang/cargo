@@ -46,6 +46,7 @@ fn crates_io() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 3 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep1 v0.0.0 (registry `dummy-registry`)
 [DOWNLOADED] dep2 v0.0.0 (registry `dummy-registry`)
@@ -74,6 +75,8 @@ fn crates_io() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 1 package
+[ADDING] dep3 v0.0.0
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep3 v0.0.0 (registry `dummy-registry`)
 ",
