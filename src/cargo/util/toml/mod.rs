@@ -186,15 +186,6 @@ fn convert_toml(
 ) -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
     let package_root = manifest_file.parent().unwrap();
 
-    let add_unused = |warnings: &mut Warnings| {
-        for key in unused {
-            warnings.add_warning(format!("unused manifest key: {}", key));
-            if key == "profiles.debug" {
-                warnings.add_warning("use `[profile.dev]` to configure debug builds".to_string());
-            }
-        }
-    };
-
     if let Some(deps) = manifest
         .workspace
         .as_ref()
@@ -213,7 +204,7 @@ fn convert_toml(
         let embedded = is_embedded(manifest_file);
         let (mut manifest, paths) =
             to_real_manifest(manifest, embedded, source_id, package_root, gctx)?;
-        add_unused(manifest.warnings_mut());
+        warn_on_unused(&unused, manifest.warnings_mut());
         if manifest.targets().iter().all(|t| t.is_custom_build()) {
             bail!(
                 "no targets specified in the manifest\n\
@@ -224,7 +215,7 @@ fn convert_toml(
         Ok((EitherManifest::Real(manifest), paths))
     } else {
         let (mut m, paths) = to_virtual_manifest(manifest, source_id, package_root, gctx)?;
-        add_unused(m.warnings_mut());
+        warn_on_unused(&unused, m.warnings_mut());
         Ok((EitherManifest::Virtual(m), paths))
     };
 }
@@ -261,6 +252,15 @@ fn warn_on_deprecated(new_path: &str, name: &str, kind: &str, warnings: &mut Vec
         "conflicting between `{new_path}` and `{old_path}` in the `{name}` {kind}.\n
         `{old_path}` is ignored and not recommended for use in the future"
     ))
+}
+
+fn warn_on_unused(unused: &BTreeSet<String>, warnings: &mut Warnings) {
+    for key in unused {
+        warnings.add_warning(format!("unused manifest key: {}", key));
+        if key == "profiles.debug" {
+            warnings.add_warning("use `[profile.dev]` to configure debug builds".to_string());
+        }
+    }
 }
 
 /// Prepares the manifest for publishing.
