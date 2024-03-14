@@ -1214,6 +1214,7 @@ pub fn to_real_manifest(
         }),
     };
     let mut manifest = Manifest::new(
+        Rc::new(resolved_toml),
         summary,
         default_kind,
         forced_kind,
@@ -1233,7 +1234,6 @@ pub fn to_real_manifest(
         rust_version,
         package.im_a_teapot,
         package.default_run.clone(),
-        Rc::new(resolved_toml),
         package.metabuild.clone().map(|sov| sov.0),
         resolve_behavior,
         rustflags,
