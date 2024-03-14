@@ -85,6 +85,22 @@ fn read_toml_string(path: &Path, gctx: &GlobalContext) -> CargoResult<String> {
     Ok(contents)
 }
 
+#[tracing::instrument(skip_all)]
+fn deserialize_toml(
+    contents: &str,
+    manifest_file: &Path,
+    unused: &mut BTreeSet<String>,
+    gctx: &GlobalContext,
+) -> CargoResult<manifest::TomlManifest> {
+    let deserializer = toml::de::Deserializer::new(contents);
+    serde_ignored::deserialize(deserializer, |path| {
+        let mut key = String::new();
+        stringify(&mut key, &path);
+        unused.insert(key);
+    })
+    .map_err(|e| emit_diagnostic(e, contents, manifest_file, gctx))
+}
+
 /// See also `bin/cargo/commands/run.rs`s `is_manifest_command`
 pub fn is_embedded(path: &Path) -> bool {
     let ext = path.extension();
@@ -166,13 +182,7 @@ fn read_manifest_from_str(
     let package_root = manifest_file.parent().unwrap();
 
     let mut unused = BTreeSet::new();
-    let deserializer = toml::de::Deserializer::new(contents);
-    let manifest: manifest::TomlManifest = serde_ignored::deserialize(deserializer, |path| {
-        let mut key = String::new();
-        stringify(&mut key, &path);
-        unused.insert(key);
-    })
-    .map_err(|e| emit_diagnostic(e, contents, manifest_file, gctx))?;
+    let manifest = deserialize_toml(contents, manifest_file, &mut unused, gctx)?;
     let add_unused = |warnings: &mut Warnings| {
         for key in unused {
             warnings.add_warning(format!("unused manifest key: {}", key));
@@ -214,30 +224,30 @@ fn read_manifest_from_str(
         add_unused(m.warnings_mut());
         Ok((EitherManifest::Virtual(m), paths))
     };
+}
 
-    fn stringify(dst: &mut String, path: &serde_ignored::Path<'_>) {
-        use serde_ignored::Path;
+fn stringify(dst: &mut String, path: &serde_ignored::Path<'_>) {
+    use serde_ignored::Path;
 
-        match *path {
-            Path::Root => {}
-            Path::Seq { parent, index } => {
-                stringify(dst, parent);
-                if !dst.is_empty() {
-                    dst.push('.');
-                }
-                dst.push_str(&index.to_string());
+    match *path {
+        Path::Root => {}
+        Path::Seq { parent, index } => {
+            stringify(dst, parent);
+            if !dst.is_empty() {
+                dst.push('.');
             }
-            Path::Map { parent, ref key } => {
-                stringify(dst, parent);
-                if !dst.is_empty() {
-                    dst.push('.');
-                }
-                dst.push_str(key);
-            }
-            Path::Some { parent }
-            | Path::NewtypeVariant { parent }
-            | Path::NewtypeStruct { parent } => stringify(dst, parent),
+            dst.push_str(&index.to_string());
         }
+        Path::Map { parent, ref key } => {
+            stringify(dst, parent);
+            if !dst.is_empty() {
+                dst.push('.');
+            }
+            dst.push_str(key);
+        }
+        Path::Some { parent }
+        | Path::NewtypeVariant { parent }
+        | Path::NewtypeStruct { parent } => stringify(dst, parent),
     }
 }
 
