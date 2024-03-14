@@ -220,12 +220,21 @@ impl<'a> SummariesCache<'a> {
     }
 }
 
+/// An abstraction of the actual cache store.
+trait CacheStore {
+    /// Gets the cache associated with the key.
+    fn get(&self, key: &str) -> Option<Vec<u8>>;
+
+    /// Associates the value with the key.
+    fn put(&self, key: &str, value: &[u8]);
+
+    /// Invalidates the cache associated with the key.
+    fn invalidate(&self, key: &str);
+}
+
 /// Manages the on-disk index caches.
 pub struct CacheManager<'gctx> {
-    /// The root path where caches are located.
-    cache_root: Filesystem,
-    /// [`GlobalContext`] reference for convenience.
-    gctx: &'gctx GlobalContext,
+    store: Box<dyn CacheStore + 'gctx>,
 }
 
 impl<'gctx> CacheManager<'gctx> {
@@ -233,11 +242,51 @@ impl<'gctx> CacheManager<'gctx> {
     ///
     /// `root` --- The root path where caches are located.
     pub fn new(cache_root: Filesystem, gctx: &'gctx GlobalContext) -> CacheManager<'gctx> {
-        CacheManager { cache_root, gctx }
+        let store = Box::new(LocalFileSystem::new(cache_root, gctx));
+        CacheManager { store }
     }
 
     /// Gets the cache associated with the key.
     pub fn get(&self, key: &str) -> Option<Vec<u8>> {
+        self.store.get(key)
+    }
+
+    /// Associates the value with the key.
+    pub fn put(&self, key: &str, value: &[u8]) {
+        self.store.put(key, value)
+    }
+
+    /// Invalidates the cache associated with the key.
+    pub fn invalidate(&self, key: &str) {
+        self.store.invalidate(key)
+    }
+}
+
+/// Stores index caches in a file system wth a registry index like layout.
+struct LocalFileSystem<'gctx> {
+    /// The root path where caches are located.
+    cache_root: Filesystem,
+    /// [`GlobalContext`] reference for convenience.
+    gctx: &'gctx GlobalContext,
+}
+
+impl LocalFileSystem<'_> {
+    /// Creates a new instance of the file system index cache store.
+    fn new(cache_root: Filesystem, gctx: &GlobalContext) -> LocalFileSystem<'_> {
+        LocalFileSystem { cache_root, gctx }
+    }
+
+    fn cache_path(&self, key: &str) -> PathBuf {
+        let relative = make_dep_path(key, false);
+        // This is the file we're loading from cache or the index data.
+        // See module comment in `registry/mod.rs` for why this is structured
+        // the way it is.
+        self.cache_root.join(relative).into_path_unlocked()
+    }
+}
+
+impl CacheStore for LocalFileSystem<'_> {
+    fn get(&self, key: &str) -> Option<Vec<u8>> {
         let cache_path = &self.cache_path(key);
         match fs::read(cache_path) {
             Ok(contents) => Some(contents),
@@ -248,8 +297,7 @@ impl<'gctx> CacheManager<'gctx> {
         }
     }
 
-    /// Associates the value with the key.
-    pub fn put(&self, key: &str, value: &[u8]) {
+    fn put(&self, key: &str, value: &[u8]) {
         let cache_path = &self.cache_path(key);
         if fs::create_dir_all(cache_path.parent().unwrap()).is_ok() {
             let path = Filesystem::new(cache_path.clone());
@@ -261,21 +309,12 @@ impl<'gctx> CacheManager<'gctx> {
         }
     }
 
-    /// Invalidates the cache associated with the key.
-    pub fn invalidate(&self, key: &str) {
+    fn invalidate(&self, key: &str) {
         let cache_path = &self.cache_path(key);
         if let Err(e) = fs::remove_file(cache_path) {
             if e.kind() != io::ErrorKind::NotFound {
                 tracing::debug!(?cache_path, "failed to remove from cache: {e}");
             }
         }
-    }
-
-    fn cache_path(&self, key: &str) -> PathBuf {
-        let relative = make_dep_path(key, false);
-        // This is the file we're loading from cache or the index data.
-        // See module comment in `registry/mod.rs` for why this is structured
-        // the way it is.
-        self.cache_root.join(relative).into_path_unlocked()
     }
 }
