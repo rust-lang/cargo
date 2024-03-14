@@ -270,6 +270,40 @@ fn build_with_crate_types_for_foo() {
 }
 
 #[cargo_test]
+fn build_lib_with_crate_type_bin() {
+    let p = project().file("src/lib.rs", "fn main() {}").build();
+
+    p.cargo("rustc -v --crate-type bin --message-format=json --jobs=1")
+        .with_json_contains_unordered(
+            r#"
+                {
+                    "executable": "[..]/debug/foo[EXE]",
+                    "features": [],
+                    "filenames": "{...}",
+                    "fresh": false,
+                    "manifest_path": "[..]",
+                    "package_id": "[..]",
+                    "profile": "{...}",
+                    "reason": "compiler-artifact",
+                    "target": {
+                        "crate_types": ["bin"],
+                        "doc": true,
+                        "doctest": false,
+                        "edition": "2015",
+                        "kind": ["bin"],
+                        "name": "foo",
+                        "src_path": "[..]",
+                        "test": true
+                    }
+                }
+
+                {"reason": "build-finished", "success": true}
+            "#,
+        )
+        .run();
+}
+
+#[cargo_test]
 fn build_with_crate_type_to_example() {
     let p = project()
         .file(
