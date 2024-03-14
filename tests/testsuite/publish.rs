@@ -1687,6 +1687,304 @@ repository = "foo"
 }
 
 #[cargo_test]
+fn publish_with_feature_point_diff_kinds_dep() {
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+    Package::new("normal-only", "1.0.0")
+        .feature("cat", &[])
+        .publish();
+    Package::new("build-only", "1.0.0")
+        .feature("cat", &[])
+        .publish();
+    Package::new("normal-and-dev", "1.0.0")
+        .feature("cat", &[])
+        .publish();
+    Package::new("target-normal-only", "1.0.0")
+        .feature("cat", &[])
+        .publish();
+    Package::new("target-build-only", "1.0.0")
+        .feature("cat", &[])
+        .publish();
+    Package::new("target-normal-and-dev", "1.0.0")
+        .feature("cat", &[])
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "foo"
+            documentation = "foo"
+            homepage = "foo"
+            repository = "foo"
+
+
+            [features]
+            foo_feature = [
+                "normal-only/cat",
+                "build-only/cat",
+                "dev-only/cat",
+                "normal-and-dev/cat",
+                "target-normal-only/cat",
+                "target-build-only/cat",
+                "target-dev-only/cat",
+                "target-normal-and-dev/cat",
+            ]
+
+            [dependencies]
+            normal-only = { version = "1.0", features = ["cat"] }
+            normal-and-dev = { version = "1.0", features = ["cat"] }
+
+            [build-dependencies]
+            build-only = { version = "1.0", features = ["cat"] }
+
+            [dev-dependencies]
+            dev-only = { path = "../dev-only", features = ["cat"] }
+            normal-and-dev = { version = "1.0", features = ["cat"] }
+
+            [target.'cfg(unix)'.dependencies]
+            target-normal-only = { version = "1.0", features = ["cat"] }
+            target-normal-and-dev = { version = "1.0", features = ["cat"] }
+
+            [target.'cfg(unix)'.build-dependencies]
+            target-build-only = { version = "1.0", features = ["cat"] }
+
+            [target.'cfg(unix)'.dev-dependencies]
+            target-dev-only = { path = "../dev-only", features = ["cat"] }
+            target-normal-and-dev = { version = "1.0", features = ["cat"] }
+            "#,
+        )
+        .file("src/main.rs", "")
+        .file(
+            "dev-only/Cargo.toml",
+            r#"
+            [package]
+            name = "dev-only"
+            version = "0.1.0"
+            edition = "2015"
+            authors = []
+
+            [features]
+            cat = []
+            "#,
+        )
+        .file(
+            "dev-only/src/lib.rs",
+            r#"
+                #[cfg(feature = "cat")]
+                pub fn cat() {}
+            "#,
+        )
+        .build();
+
+    p.cargo("publish --no-verify")
+        .env("RUSTFLAGS", "--cfg unix")
+        .replace_crates_io(registry.index_url())
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[PACKAGING] foo v0.1.0 [..]
+[UPDATING] [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
+[UPLOADING] foo v0.1.0 [..]
+[UPLOADED] foo v0.1.0 [..]
+[NOTE] waiting [..]
+You may press ctrl-c [..]
+[PUBLISHED] foo v0.1.0 [..]
+",
+        )
+        .run();
+
+    publish::validate_upload_with_contents(
+        r#"
+        {
+          "authors": [],
+          "badges": {},
+          "categories": [],
+          "deps": [
+            {
+              "default_features": true,
+              "features": [
+                "cat"
+              ],
+              "kind": "normal",
+              "name": "normal-and-dev",
+              "optional": false,
+              "target": null,
+              "version_req": "^1.0"
+            },
+            {
+              "default_features": true,
+              "features": [
+                "cat"
+              ],
+              "kind": "normal",
+              "name": "normal-only",
+              "optional": false,
+              "target": null,
+              "version_req": "^1.0"
+            },
+            {
+              "default_features": true,
+              "features": [
+                "cat"
+              ],
+              "kind": "dev",
+              "name": "normal-and-dev",
+              "optional": false,
+              "target": null,
+              "version_req": "^1.0"
+            },
+            {
+              "default_features": true,
+              "features": [
+                "cat"
+              ],
+              "kind": "build",
+              "name": "build-only",
+              "optional": false,
+              "target": null,
+              "version_req": "^1.0"
+            },
+            {
+              "default_features": true,
+              "features": [
+                "cat"
+              ],
+              "kind": "normal",
+              "name": "target-normal-and-dev",
+              "optional": false,
+              "target": "cfg(unix)",
+              "version_req": "^1.0"
+            },
+            {
+              "default_features": true,
+              "features": [
+                "cat"
+              ],
+              "kind": "normal",
+              "name": "target-normal-only",
+              "optional": false,
+              "target": "cfg(unix)",
+              "version_req": "^1.0"
+            },
+            {
+              "default_features": true,
+              "features": [
+                "cat"
+              ],
+              "kind": "build",
+              "name": "target-build-only",
+              "optional": false,
+              "target": "cfg(unix)",
+              "version_req": "^1.0"
+            },
+            {
+              "default_features": true,
+              "features": [
+                "cat"
+              ],
+              "kind": "dev",
+              "name": "target-normal-and-dev",
+              "optional": false,
+              "target": "cfg(unix)",
+              "version_req": "^1.0"
+            }
+          ],
+          "description": "foo",
+          "documentation": "foo",
+          "features": {
+            "foo_feature": [
+              "normal-only/cat",
+              "build-only/cat",
+              "normal-and-dev/cat",
+              "target-normal-only/cat",
+              "target-build-only/cat",
+              "target-normal-and-dev/cat"
+            ]
+          },
+          "homepage": "foo",
+          "keywords": [],
+          "license": "MIT",
+          "license_file": null,
+          "links": null,
+          "name": "foo",
+          "readme": null,
+          "readme_file": null,
+          "repository": "foo",
+          "rust_version": null,
+          "vers": "0.1.0"
+        }
+        "#,
+        "foo-0.1.0.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[(
+            "Cargo.toml",
+            &format!(
+                r#"{}
+[package]
+edition = "2015"
+name = "foo"
+version = "0.1.0"
+authors = []
+description = "foo"
+homepage = "foo"
+documentation = "foo"
+license = "MIT"
+repository = "foo"
+
+[dependencies.normal-and-dev]
+version = "1.0"
+features = ["cat"]
+
+[dependencies.normal-only]
+version = "1.0"
+features = ["cat"]
+
+[dev-dependencies.normal-and-dev]
+version = "1.0"
+features = ["cat"]
+
+[build-dependencies.build-only]
+version = "1.0"
+features = ["cat"]
+
+[features]
+foo_feature = [
+    "normal-only/cat",
+    "build-only/cat",
+    "normal-and-dev/cat",
+    "target-normal-only/cat",
+    "target-build-only/cat",
+    "target-normal-and-dev/cat",
+]
+
+[target."cfg(unix)".dependencies.target-normal-and-dev]
+version = "1.0"
+features = ["cat"]
+
+[target."cfg(unix)".dependencies.target-normal-only]
+version = "1.0"
+features = ["cat"]
+
+[target."cfg(unix)".build-dependencies.target-build-only]
+version = "1.0"
+features = ["cat"]
+
+[target."cfg(unix)".dev-dependencies.target-normal-and-dev]
+version = "1.0"
+features = ["cat"]
+"#,
+                cargo::core::package::MANIFEST_PREAMBLE
+            ),
+        )],
+    );
+}
+#[cargo_test]
 fn credentials_ambiguous_filename() {
     // `publish` generally requires a remote registry
     let registry = registry::RegistryBuilder::new().http_api().build();

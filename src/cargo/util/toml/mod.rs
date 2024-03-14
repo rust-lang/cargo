@@ -9,8 +9,8 @@ use crate::AlreadyPrintedError;
 use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
 use cargo_util::paths;
-use cargo_util_schemas::manifest;
 use cargo_util_schemas::manifest::RustVersion;
+use cargo_util_schemas::manifest::{self, TomlManifest};
 use itertools::Itertools;
 use lazycell::LazyCell;
 use pathdiff::diff_paths;
@@ -21,7 +21,7 @@ use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
 use crate::core::resolver::ResolveBehavior;
-use crate::core::{find_workspace_root, resolve_relative_path, CliUnstable};
+use crate::core::{find_workspace_root, resolve_relative_path, CliUnstable, FeatureValue};
 use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
 use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
@@ -316,7 +316,7 @@ pub fn prepare_for_publish(
         }
     }
     let all = |_d: &manifest::TomlDependency| true;
-    return Ok(manifest::TomlManifest {
+    let mut manifest = manifest::TomlManifest {
         package: Some(package),
         project: None,
         profile: me.profile.clone(),
@@ -366,7 +366,52 @@ pub fn prepare_for_publish(
         badges: me.badges.clone(),
         cargo_features: me.cargo_features.clone(),
         lints: me.lints.clone(),
-    });
+    };
+    strip_features(&mut manifest);
+    return Ok(manifest);
+
+    fn strip_features(manifest: &mut TomlManifest) {
+        fn insert_dep_name(
+            dep_name_set: &mut BTreeSet<manifest::PackageName>,
+            deps: Option<&BTreeMap<manifest::PackageName, manifest::InheritableDependency>>,
+        ) {
+            let Some(deps) = deps else {
+                return;
+            };
+            deps.iter().for_each(|(k, _v)| {
+                dep_name_set.insert(k.clone());
+            });
+        }
+        let mut dep_name_set = BTreeSet::new();
+        insert_dep_name(&mut dep_name_set, manifest.dependencies.as_ref());
+        insert_dep_name(&mut dep_name_set, manifest.dev_dependencies());
+        insert_dep_name(&mut dep_name_set, manifest.build_dependencies());
+        if let Some(target_map) = manifest.target.as_ref() {
+            target_map.iter().for_each(|(_k, v)| {
+                insert_dep_name(&mut dep_name_set, v.dependencies.as_ref());
+                insert_dep_name(&mut dep_name_set, v.dev_dependencies());
+                insert_dep_name(&mut dep_name_set, v.build_dependencies());
+            });
+        }
+        let features = manifest.features.as_mut();
+
+        let Some(features) = features else {
+            return;
+        };
+
+        features.values_mut().for_each(|feature_deps| {
+            feature_deps.retain(|feature_dep| {
+                let feature_value = FeatureValue::new(InternedString::new(feature_dep));
+                match feature_value {
+                    FeatureValue::Dep { dep_name } | FeatureValue::DepFeature { dep_name, .. } => {
+                        let k = &manifest::PackageName::new(dep_name.to_string()).unwrap();
+                        dep_name_set.contains(k)
+                    }
+                    _ => true,
+                }
+            });
+        });
+    }
 
     fn map_deps(
         gctx: &GlobalContext,

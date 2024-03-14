@@ -3,6 +3,7 @@
 //! [1]: https://doc.rust-lang.org/nightly/cargo/reference/registry-web-api.html#publish
 
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::collections::HashSet;
 use std::fs::File;
 use std::time::Duration;
@@ -20,6 +21,7 @@ use crate::core::dependency::DepKind;
 use crate::core::manifest::ManifestMetadata;
 use crate::core::resolver::CliFeatures;
 use crate::core::Dependency;
+use crate::core::FeatureValue;
 use crate::core::Package;
 use crate::core::PackageIdSpecQuery;
 use crate::core::SourceId;
@@ -33,6 +35,7 @@ use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::auth;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::JobsConfig;
+use crate::util::interning::InternedString;
 use crate::util::Progress;
 use crate::util::ProgressStyle;
 use crate::CargoResult;
@@ -412,13 +415,31 @@ fn transmit(
         return Ok(());
     }
 
+    let deps_set = deps
+        .iter()
+        .map(|dep| dep.name.clone())
+        .collect::<BTreeSet<String>>();
+
     let string_features = match manifest.original().features() {
         Some(features) => features
             .iter()
             .map(|(feat, values)| {
                 (
                     feat.to_string(),
-                    values.iter().map(|fv| fv.to_string()).collect(),
+                    values
+                        .iter()
+                        .filter(|fv| {
+                            let feature_value = FeatureValue::new(InternedString::new(fv));
+                            match feature_value {
+                                FeatureValue::Dep { dep_name }
+                                | FeatureValue::DepFeature { dep_name, .. } => {
+                                    deps_set.contains(&dep_name.to_string())
+                                }
+                                _ => true,
+                            }
+                        })
+                        .map(|fv| fv.to_string())
+                        .collect(),
                 )
             })
             .collect::<BTreeMap<String, Vec<String>>>(),
