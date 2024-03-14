@@ -209,7 +209,7 @@ fn convert_toml(
             }
         }
     }
-    return if manifest.project.is_some() || manifest.package.is_some() {
+    return if manifest.package().is_some() {
         let embedded = is_embedded(manifest_file);
         let (mut manifest, paths) =
             to_real_manifest(manifest, embedded, source_id, package_root, gctx)?;
