@@ -55,17 +55,18 @@ pub fn read_manifest(
         source_id
     );
     let contents = read_toml_string(path, gctx)?;
+    let document =
+        parse_document(&contents).map_err(|e| emit_diagnostic(e.into(), &contents, path, gctx))?;
+    let mut unused = BTreeSet::new();
+    let toml = deserialize_toml(&document, &mut unused)
+        .map_err(|e| emit_diagnostic(e.into(), &contents, path, gctx))?;
 
-    read_manifest_from_str(&contents, path, source_id, gctx).map_err(|err| {
-        if err.is::<AlreadyPrintedError>() {
-            err
-        } else {
-            ManifestError::new(
-                err.context(format!("failed to parse manifest at `{}`", path.display())),
-                path.into(),
-            )
-            .into()
-        }
+    convert_toml(toml, unused, path, source_id, gctx).map_err(|err| {
+        ManifestError::new(
+            err.context(format!("failed to parse manifest at `{}`", path.display())),
+            path.into(),
+        )
+        .into()
     })
 }
 
@@ -86,30 +87,21 @@ fn read_toml_string(path: &Path, gctx: &GlobalContext) -> CargoResult<String> {
 }
 
 #[tracing::instrument(skip_all)]
-fn parse_document(
-    contents: &str,
-    manifest_file: &Path,
-    gctx: &GlobalContext,
-) -> CargoResult<toml_edit::ImDocument<String>> {
-    toml_edit::ImDocument::parse(contents.to_owned())
-        .map_err(|e| emit_diagnostic(e.into(), contents, manifest_file, gctx))
+fn parse_document(contents: &str) -> Result<toml_edit::ImDocument<String>, toml_edit::de::Error> {
+    toml_edit::ImDocument::parse(contents.to_owned()).map_err(Into::into)
 }
 
 #[tracing::instrument(skip_all)]
 fn deserialize_toml(
-    contents: &str,
-    manifest_file: &Path,
+    document: &toml_edit::ImDocument<String>,
     unused: &mut BTreeSet<String>,
-    gctx: &GlobalContext,
-) -> CargoResult<manifest::TomlManifest> {
-    let document = parse_document(contents, manifest_file, gctx)?;
-    let deserializer = toml_edit::de::Deserializer::from(document);
+) -> Result<manifest::TomlManifest, toml_edit::de::Error> {
+    let deserializer = toml_edit::de::Deserializer::from(document.clone());
     serde_ignored::deserialize(deserializer, |path| {
         let mut key = String::new();
         stringify(&mut key, &path);
         unused.insert(key);
     })
-    .map_err(|e| emit_diagnostic(e, contents, manifest_file, gctx))
 }
 
 /// See also `bin/cargo/commands/run.rs`s `is_manifest_command`
@@ -184,16 +176,16 @@ fn emit_diagnostic(
 /// within the manifest. For virtual manifests, these paths can only
 /// come from patched or replaced dependencies. These paths are not
 /// canonicalized.
-fn read_manifest_from_str(
-    contents: &str,
+#[tracing::instrument(skip_all)]
+fn convert_toml(
+    manifest: manifest::TomlManifest,
+    unused: BTreeSet<String>,
     manifest_file: &Path,
     source_id: SourceId,
     gctx: &GlobalContext,
 ) -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
     let package_root = manifest_file.parent().unwrap();
 
-    let mut unused = BTreeSet::new();
-    let manifest = deserialize_toml(contents, manifest_file, &mut unused, gctx)?;
     let add_unused = |warnings: &mut Warnings| {
         for key in unused {
             warnings.add_warning(format!("unused manifest key: {}", key));
