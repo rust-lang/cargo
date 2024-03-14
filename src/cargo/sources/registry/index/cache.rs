@@ -248,7 +248,10 @@ impl<'gctx> CacheManager<'gctx> {
     ///
     /// `root` --- The root path where caches are located.
     pub fn new(cache_root: Filesystem, gctx: &'gctx GlobalContext) -> CacheManager<'gctx> {
-        let store: Box<dyn CacheStore> = if gctx.cli_unstable().index_cache_sqlite {
+        #[allow(clippy::disallowed_methods)]
+        let use_sqlite = gctx.cli_unstable().index_cache_sqlite
+            || std::env::var("__CARGO_TEST_FORCE_SQLITE_INDEX_CACHE").is_ok();
+        let store: Box<dyn CacheStore> = if use_sqlite {
             Box::new(LocalDatabase::new(cache_root, gctx))
         } else {
             Box::new(LocalFileSystem::new(cache_root, gctx))
