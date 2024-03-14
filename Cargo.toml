@@ -97,7 +97,7 @@ tempfile = "3.10.1"
 thiserror = "1.0.57"
 time = { version = "0.3", features = ["parsing", "formatting", "serde"] }
 toml = "0.8.10"
-toml_edit = { version = "0.22.6", features = ["serde"] }
+toml_edit = { version = "0.22.7", features = ["serde"] }
 tracing = "0.1.40" # be compatible with rustc_log: https://github.com/rust-lang/rust/blob/e51e98dde6a/compiler/rustc_log/Cargo.toml#L9
 tracing-chrome = "0.7.1"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }

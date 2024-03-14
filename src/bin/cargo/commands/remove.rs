@@ -160,7 +160,7 @@ fn parse_section(args: &ArgMatches) -> DepTable {
 /// Clean up the workspace.dependencies, profile, patch, and replace sections of the root manifest
 /// by removing dependencies which no longer have a reference to them.
 fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
-    let mut manifest: toml_edit::Document =
+    let mut manifest: toml_edit::DocumentMut =
         cargo_util::paths::read(workspace.root_manifest())?.parse()?;
     let mut is_modified = true;
 
@@ -315,7 +315,7 @@ fn spec_has_match(
 
 /// Removes unused patches from the manifest
 fn gc_unused_patches(workspace: &Workspace<'_>, resolve: &Resolve) -> CargoResult<bool> {
-    let mut manifest: toml_edit::Document =
+    let mut manifest: toml_edit::DocumentMut =
         cargo_util::paths::read(workspace.root_manifest())?.parse()?;
     let mut modified = false;
 
