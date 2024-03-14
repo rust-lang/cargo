@@ -1006,7 +1006,7 @@ impl<'gctx> Workspace<'gctx> {
                     );
                     self.gctx.shell().warn(&msg)
                 };
-                if manifest.original().has_profiles() {
+                if manifest.resolved_toml().has_profiles() {
                     emit_warning("profiles")?;
                 }
                 if !manifest.replace().is_empty() {

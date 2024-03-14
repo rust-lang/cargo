@@ -420,7 +420,7 @@ fn transmit(
         .map(|dep| dep.name.clone())
         .collect::<BTreeSet<String>>();
 
-    let string_features = match manifest.original().features() {
+    let string_features = match manifest.resolved_toml().features() {
         Some(features) => features
             .iter()
             .map(|(feat, values)| {

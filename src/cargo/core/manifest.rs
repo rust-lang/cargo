@@ -42,7 +42,7 @@ impl EitherManifest {
 #[derive(Clone, Debug)]
 pub struct Manifest {
     // alternate forms of manifests:
-    original: Rc<TomlManifest>,
+    resolved_toml: Rc<TomlManifest>,
     summary: Summary,
 
     // this form of manifest:
@@ -389,7 +389,7 @@ compact_debug! {
 
 impl Manifest {
     pub fn new(
-        original: Rc<TomlManifest>,
+        resolved_toml: Rc<TomlManifest>,
         summary: Summary,
 
         default_kind: Option<CompileKind>,
@@ -416,7 +416,7 @@ impl Manifest {
         embedded: bool,
     ) -> Manifest {
         Manifest {
-            original,
+            resolved_toml,
             summary,
 
             default_kind,
@@ -500,8 +500,8 @@ impl Manifest {
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] {
         &self.replace
     }
-    pub fn original(&self) -> &TomlManifest {
-        &self.original
+    pub fn resolved_toml(&self) -> &TomlManifest {
+        &self.resolved_toml
     }
     pub fn patch(&self) -> &HashMap<Url, Vec<Dependency>> {
         &self.patch
