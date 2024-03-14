@@ -65,6 +65,7 @@
 //! [`IndexSummary::parse`]: super::IndexSummary::parse
 //! [`RemoteRegistry`]: crate::sources::registry::remote::RemoteRegistry
 
+use std::cell::OnceCell;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
@@ -72,9 +73,14 @@ use std::str;
 
 use anyhow::bail;
 use cargo_util::registry::make_dep_path;
+use rusqlite::params;
+use rusqlite::Connection;
 use semver::Version;
 
 use crate::util::cache_lock::CacheLockMode;
+use crate::util::sqlite;
+use crate::util::sqlite::basic_migration;
+use crate::util::sqlite::Migration;
 use crate::util::Filesystem;
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -242,7 +248,11 @@ impl<'gctx> CacheManager<'gctx> {
     ///
     /// `root` --- The root path where caches are located.
     pub fn new(cache_root: Filesystem, gctx: &'gctx GlobalContext) -> CacheManager<'gctx> {
-        let store = Box::new(LocalFileSystem::new(cache_root, gctx));
+        let store: Box<dyn CacheStore> = if gctx.cli_unstable().index_cache_sqlite {
+            Box::new(LocalDatabase::new(cache_root, gctx))
+        } else {
+            Box::new(LocalFileSystem::new(cache_root, gctx))
+        };
         CacheManager { store }
     }
 
@@ -317,4 +327,89 @@ impl CacheStore for LocalFileSystem<'_> {
             }
         }
     }
+}
+
+/// Stores index caches in a local SQLite database.
+struct LocalDatabase<'gctx> {
+    /// The root path where caches are located.
+    cache_root: Filesystem,
+    /// Connection to the SQLite database.
+    conn: OnceCell<Option<Connection>>,
+    /// [`GlobalContext`] reference for convenience.
+    gctx: &'gctx GlobalContext,
+}
+
+impl LocalDatabase<'_> {
+    /// Creates a new instance of the SQLite index cache store.
+    fn new(cache_root: Filesystem, gctx: &GlobalContext) -> LocalDatabase<'_> {
+        LocalDatabase {
+            cache_root,
+            conn: OnceCell::new(),
+            gctx,
+        }
+    }
+
+    fn conn(&self) -> Option<&Connection> {
+        self.conn
+            .get_or_init(|| {
+                self.conn_init()
+                    .map_err(|e| tracing::debug!("cannot open index cache db: {e}"))
+                    .ok()
+            })
+            .as_ref()
+    }
+
+    fn conn_init(&self) -> CargoResult<Connection> {
+        let _lock = self
+            .gctx
+            .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)
+            .unwrap();
+        let cache_root = self.cache_root.as_path_unlocked();
+        fs::create_dir_all(cache_root)?;
+        let mut conn = Connection::open(cache_root.join("index-cache.db"))?;
+        sqlite::migrate(&mut conn, &migrations())?;
+        Ok(conn)
+    }
+}
+
+impl CacheStore for LocalDatabase<'_> {
+    fn get(&self, key: &str) -> Option<Vec<u8>> {
+        self.conn()?
+            .prepare_cached("SELECT value FROM summaries WHERE name = ? LIMIT 1")
+            .and_then(|mut stmt| stmt.query_row([key], |row| row.get(0)))
+            .map_err(|e| tracing::debug!(key, "cache missing: {e}"))
+            .ok()
+    }
+
+    fn put(&self, key: &str, value: &[u8]) {
+        if let Some(conn) = self.conn() {
+            _ = conn
+                .prepare_cached("INSERT OR REPLACE INTO summaries (name, value) VALUES (?, ?)")
+                .and_then(|mut stmt| stmt.execute(params!(key, value)))
+                .map_err(|e| tracing::info!(key, "failed to write cache: {e}"));
+        }
+    }
+
+    fn invalidate(&self, key: &str) {
+        if let Some(conn) = self.conn() {
+            _ = conn
+                .prepare_cached("DELETE FROM summaries WHERE name = ?")
+                .and_then(|mut stmt| stmt.execute([key]))
+                .map_err(|e| tracing::debug!(key, "failed to remove from cache: {e}"));
+        }
+    }
+}
+
+/// Migrations which initialize the database, and can be used to evolve it over time.
+///
+/// See [`Migration`] for more detail.
+///
+/// **Be sure to not change the order or entries here!**
+fn migrations() -> Vec<Migration> {
+    vec![basic_migration(
+        "CREATE TABLE IF NOT EXISTS summaries (
+            name TEXT PRIMARY KEY NOT NULL,
+            value BLOB NOT NULL
+        )",
+    )]
 }
