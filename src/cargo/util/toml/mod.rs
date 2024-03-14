@@ -86,13 +86,24 @@ fn read_toml_string(path: &Path, gctx: &GlobalContext) -> CargoResult<String> {
 }
 
 #[tracing::instrument(skip_all)]
+fn parse_document(
+    contents: &str,
+    manifest_file: &Path,
+    gctx: &GlobalContext,
+) -> CargoResult<toml_edit::ImDocument<String>> {
+    toml_edit::ImDocument::parse(contents.to_owned())
+        .map_err(|e| emit_diagnostic(e.into(), contents, manifest_file, gctx))
+}
+
+#[tracing::instrument(skip_all)]
 fn deserialize_toml(
     contents: &str,
     manifest_file: &Path,
     unused: &mut BTreeSet<String>,
     gctx: &GlobalContext,
 ) -> CargoResult<manifest::TomlManifest> {
-    let deserializer = toml::de::Deserializer::new(contents);
+    let document = parse_document(contents, manifest_file, gctx)?;
+    let deserializer = toml_edit::de::Deserializer::from(document);
     serde_ignored::deserialize(deserializer, |path| {
         let mut key = String::new();
         stringify(&mut key, &path);
@@ -110,7 +121,7 @@ pub fn is_embedded(path: &Path) -> bool {
 }
 
 fn emit_diagnostic(
-    e: toml::de::Error,
+    e: toml_edit::de::Error,
     contents: &str,
     manifest_file: &Path,
     gctx: &GlobalContext,
