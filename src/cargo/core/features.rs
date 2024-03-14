@@ -762,6 +762,7 @@ unstable_cli_options!(
     git: Option<GitFeatures> = ("Enable support for shallow git fetch operations"),
     gitoxide: Option<GitoxideFeatures> = ("Use gitoxide for the given git interactions, or all of them if no argument is given"),
     host_config: bool = ("Enable the `[host]` section in the .cargo/config.toml file"),
+    index_cache_sqlite: bool,
     minimal_versions: bool = ("Resolve minimal dependency versions instead of maximum"),
     msrv_policy: bool = ("Enable rust-version aware policy within cargo"),
     mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
@@ -1149,6 +1150,7 @@ impl CliUnstable {
                 )?
             }
             "host-config" => self.host_config = parse_empty(k, v)?,
+            "index-cache-sqlite" => self.index_cache_sqlite = parse_empty(k, v)?,
             "next-lockfile-bump" => self.next_lockfile_bump = parse_empty(k, v)?,
             "minimal-versions" => self.minimal_versions = parse_empty(k, v)?,
             "msrv-policy" => self.msrv_policy = parse_empty(k, v)?,
