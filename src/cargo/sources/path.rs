@@ -110,7 +110,7 @@ impl<'gctx> PathSource<'gctx> {
             ops::read_packages(&self.path, self.source_id, self.gctx)
         } else {
             let path = self.path.join("Cargo.toml");
-            let (pkg, _) = ops::read_package(&path, self.source_id, self.gctx)?;
+            let pkg = ops::read_package(&path, self.source_id, self.gctx)?;
             Ok(vec![pkg])
         }
     }

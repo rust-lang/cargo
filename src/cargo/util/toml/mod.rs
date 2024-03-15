@@ -47,7 +47,7 @@ pub fn read_manifest(
     path: &Path,
     source_id: SourceId,
     gctx: &GlobalContext,
-) -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
+) -> CargoResult<EitherManifest> {
     let contents =
         read_toml_string(path, gctx).map_err(|err| ManifestError::new(err, path.into()))?;
     let document =
@@ -174,13 +174,13 @@ fn convert_toml(
     manifest_file: &Path,
     source_id: SourceId,
     gctx: &GlobalContext,
-) -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
+) -> CargoResult<EitherManifest> {
     return if manifest.package().is_some() {
-        let (manifest, paths) = to_real_manifest(manifest, source_id, manifest_file, gctx)?;
-        Ok((EitherManifest::Real(manifest), paths))
+        let manifest = to_real_manifest(manifest, source_id, manifest_file, gctx)?;
+        Ok(EitherManifest::Real(manifest))
     } else {
-        let (m, paths) = to_virtual_manifest(manifest, source_id, manifest_file, gctx)?;
-        Ok((EitherManifest::Virtual(m), paths))
+        let manifest = to_virtual_manifest(manifest, source_id, manifest_file, gctx)?;
+        Ok(EitherManifest::Virtual(manifest))
     };
 }
 
@@ -464,7 +464,7 @@ pub fn to_real_manifest(
     source_id: SourceId,
     manifest_file: &Path,
     gctx: &GlobalContext,
-) -> CargoResult<(Manifest, Vec<PathBuf>)> {
+) -> CargoResult<Manifest> {
     fn get_ws(
         gctx: &GlobalContext,
         resolved_path: &Path,
@@ -516,7 +516,6 @@ pub fn to_real_manifest(
         }
     }
 
-    let mut nested_paths = vec![];
     let mut warnings = vec![];
     let mut errors = vec![];
 
@@ -770,7 +769,6 @@ pub fn to_real_manifest(
     let mut manifest_ctx = ManifestContext {
         deps: &mut deps,
         source_id,
-        nested_paths: &mut nested_paths,
         gctx,
         warnings: &mut warnings,
         features: &features,
@@ -1272,7 +1270,7 @@ pub fn to_real_manifest(
 
     manifest.feature_gate()?;
 
-    Ok((manifest, nested_paths))
+    Ok(manifest)
 }
 
 fn to_virtual_manifest(
@@ -1280,7 +1278,7 @@ fn to_virtual_manifest(
     source_id: SourceId,
     manifest_file: &Path,
     gctx: &GlobalContext,
-) -> CargoResult<(VirtualManifest, Vec<PathBuf>)> {
+) -> CargoResult<VirtualManifest> {
     let root = manifest_file.parent().unwrap();
 
     if let Some(deps) = me
@@ -1302,7 +1300,6 @@ fn to_virtual_manifest(
         bail!("this virtual manifest specifies a `{field}` section, which is not allowed");
     }
 
-    let mut nested_paths = Vec::new();
     let mut warnings = Vec::new();
     let mut deps = Vec::new();
     let empty = Vec::new();
@@ -1315,7 +1312,6 @@ fn to_virtual_manifest(
         let mut manifest_ctx = ManifestContext {
             deps: &mut deps,
             source_id,
-            nested_paths: &mut nested_paths,
             gctx,
             warnings: &mut warnings,
             platform: None,
@@ -1376,7 +1372,7 @@ fn to_virtual_manifest(
         manifest.warnings_mut().add_warning(warning);
     }
 
-    Ok((manifest, nested_paths))
+    Ok(manifest)
 }
 
 fn replace(
@@ -1467,7 +1463,6 @@ fn patch(
 struct ManifestContext<'a, 'b> {
     deps: &'a mut Vec<Dependency>,
     source_id: SourceId,
-    nested_paths: &'a mut Vec<PathBuf>,
     gctx: &'b GlobalContext,
     warnings: &'a mut Vec<String>,
     platform: Option<Platform>,
@@ -1563,7 +1558,7 @@ fn inheritable_from_path(
     };
 
     let source_id = SourceId::for_path(workspace_path_root)?;
-    let (man, _) = read_manifest(&workspace_path, source_id, gctx)?;
+    let man = read_manifest(&workspace_path, source_id, gctx)?;
     match man.workspace_config() {
         WorkspaceConfig::Root(root) => {
             gctx.ws_roots
@@ -1885,7 +1880,6 @@ pub(crate) fn to_dependency<P: ResolveToPath + Clone>(
     dep: &manifest::TomlDependency<P>,
     name: &str,
     source_id: SourceId,
-    nested_paths: &mut Vec<PathBuf>,
     gctx: &GlobalContext,
     warnings: &mut Vec<String>,
     platform: Option<Platform>,
@@ -1899,7 +1893,6 @@ pub(crate) fn to_dependency<P: ResolveToPath + Clone>(
         &mut ManifestContext {
             deps: &mut Vec::new(),
             source_id,
-            nested_paths,
             gctx,
             warnings,
             platform,
@@ -2068,7 +2061,6 @@ fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
         }
         (None, Some(path), _, _) => {
             let path = path.resolve(manifest_ctx.gctx);
-            manifest_ctx.nested_paths.push(path.clone());
             // If the source ID for the package we're parsing is a path
             // source, then we normalize the path here to get rid of
             // components like `..`.
