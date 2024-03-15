@@ -445,6 +445,7 @@ impl Manifest {
         }
     }
 
+    /// The [`TomlManifest`] with all fields expanded
     pub fn resolved_toml(&self) -> &TomlManifest {
         &self.resolved_toml
     }
