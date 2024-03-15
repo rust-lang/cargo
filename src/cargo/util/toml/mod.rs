@@ -585,7 +585,7 @@ pub fn to_real_manifest(
         ),
     };
 
-    let package_name = package.name.trim();
+    let package_name = &package.name;
     if package_name.contains(':') {
         features.require(Feature::open_namespaces())?;
     }
