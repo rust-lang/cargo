@@ -369,7 +369,7 @@ The output for each profile will be placed in a directory of the same name
 as the profile in the [`target` directory]. As in the example above, the
 output would go into the `target/release-lto` directory.
 
-NOTE: Custom profiles do not inherit overrides.
+NOTE: Custom profiles inherit package overrides as well.
 
 [`target` directory]: ../guide/build-cache.md
 
@@ -458,7 +458,7 @@ match wins):
 5. Default values built-in to Cargo.
 
 Overrides cannot specify the `panic`, `lto`, or `rpath` settings.
-Overrides do not inherit to custom profiles. 
+Overrides inherit to custom profiles. 
 
 ### Overrides and generics
 
