@@ -445,6 +445,16 @@ impl Manifest {
         }
     }
 
+    pub fn resolved_toml(&self) -> &TomlManifest {
+        &self.resolved_toml
+    }
+    pub fn summary(&self) -> &Summary {
+        &self.summary
+    }
+    pub fn summary_mut(&mut self) -> &mut Summary {
+        &mut self.summary
+    }
+
     pub fn dependencies(&self) -> &[Dependency] {
         self.summary.dependencies()
     }
@@ -468,12 +478,6 @@ impl Manifest {
     }
     pub fn package_id(&self) -> PackageId {
         self.summary.package_id()
-    }
-    pub fn summary(&self) -> &Summary {
-        &self.summary
-    }
-    pub fn summary_mut(&mut self) -> &mut Summary {
-        &mut self.summary
     }
     pub fn targets(&self) -> &[Target] {
         &self.targets
@@ -499,9 +503,6 @@ impl Manifest {
     }
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] {
         &self.replace
-    }
-    pub fn resolved_toml(&self) -> &TomlManifest {
-        &self.resolved_toml
     }
     pub fn patch(&self) -> &HashMap<Url, Vec<Dependency>> {
         &self.patch
