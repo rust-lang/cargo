@@ -127,6 +127,7 @@ mod net_config;
 mod new;
 mod offline;
 mod old_cargos;
+mod open_namespaces;
 mod out_dir;
 mod owner;
 mod package;

@@ -87,6 +87,7 @@ For the latest nightly, see the [nightly version] of this page.
     * [host-config](#host-config) --- Allows setting `[target]`-like configuration settings for host build targets.
     * [target-applies-to-host](#target-applies-to-host) --- Alters whether certain flags will be passed to host build targets.
     * [gc](#gc) --- Global cache garbage collection.
+    * [open-namespaces](#open-namespaces) --- Allow multiple packages to participate in the same API namespace
 * rustdoc
     * [rustdoc-map](#rustdoc-map) --- Provides mappings for documentation to link to external sites like [docs.rs](https://docs.rs/).
     * [scrape-examples](#scrape-examples) --- Shows examples within documentation.
@@ -1516,6 +1517,20 @@ A SIZE is specified in the form "N *suffix*" where *suffix* is B, kB, MB, GB, ki
 cargo clean gc
 cargo clean gc --max-download-age=1week
 cargo clean gc --max-git-size=0 --max-download-size=100MB
+```
+
+## open-namespaces
+
+* Tracking Issue: [#13576](https://github.com/rust-lang/cargo/issues/13576)
+
+Allow multiple packages to participate in the same API namespace
+
+This can be enabled like so:
+```toml
+cargo-features = ["open-namespaces"]
+
+[package]
+# ...
 ```
 
 # Stabilized and removed features
