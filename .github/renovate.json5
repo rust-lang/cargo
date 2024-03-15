@@ -72,7 +72,6 @@
         'cargo',
       ],
       matchPackageNames: [
-        'gix-features-for-configuration-only',
         'gix',
       ],
       groupName: 'gix',
