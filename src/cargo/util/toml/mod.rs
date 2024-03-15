@@ -52,15 +52,15 @@ pub fn read_manifest(
         read_toml_string(path, gctx).map_err(|err| ManifestError::new(err, path.into()))?;
     let document =
         parse_document(&contents).map_err(|e| emit_diagnostic(e.into(), &contents, path, gctx))?;
-    let toml = deserialize_toml(&document)
+    let original_toml = deserialize_toml(&document)
         .map_err(|e| emit_diagnostic(e.into(), &contents, path, gctx))?;
 
     (|| {
-        if toml.package().is_some() {
-            to_real_manifest(contents, document, toml, source_id, path, gctx)
+        if original_toml.package().is_some() {
+            to_real_manifest(contents, document, original_toml, source_id, path, gctx)
                 .map(EitherManifest::Real)
         } else {
-            to_virtual_manifest(toml, source_id, path, gctx).map(EitherManifest::Virtual)
+            to_virtual_manifest(original_toml, source_id, path, gctx).map(EitherManifest::Virtual)
         }
     })()
     .map_err(|err| {
