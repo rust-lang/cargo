@@ -175,20 +175,6 @@ fn convert_toml(
     source_id: SourceId,
     gctx: &GlobalContext,
 ) -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
-    if let Some(deps) = manifest
-        .workspace
-        .as_ref()
-        .and_then(|ws| ws.dependencies.as_ref())
-    {
-        for (name, dep) in deps {
-            if dep.is_optional() {
-                bail!("{name} is optional, but workspace dependencies cannot be optional",);
-            }
-            if dep.is_public() {
-                bail!("{name} is public, but workspace dependencies cannot be public",);
-            }
-        }
-    }
     return if manifest.package().is_some() {
         let (manifest, paths) = to_real_manifest(manifest, source_id, manifest_file, gctx)?;
         Ok((EitherManifest::Real(manifest), paths))
@@ -514,6 +500,21 @@ pub fn to_real_manifest(
             package_root.display()
         );
     };
+
+    if let Some(deps) = me
+        .workspace
+        .as_ref()
+        .and_then(|ws| ws.dependencies.as_ref())
+    {
+        for (name, dep) in deps {
+            if dep.is_optional() {
+                bail!("{name} is optional, but workspace dependencies cannot be optional",);
+            }
+            if dep.is_public() {
+                bail!("{name} is public, but workspace dependencies cannot be public",);
+            }
+        }
+    }
 
     let mut nested_paths = vec![];
     let mut warnings = vec![];
@@ -1281,6 +1282,21 @@ fn to_virtual_manifest(
     gctx: &GlobalContext,
 ) -> CargoResult<(VirtualManifest, Vec<PathBuf>)> {
     let root = manifest_file.parent().unwrap();
+
+    if let Some(deps) = me
+        .workspace
+        .as_ref()
+        .and_then(|ws| ws.dependencies.as_ref())
+    {
+        for (name, dep) in deps {
+            if dep.is_optional() {
+                bail!("{name} is optional, but workspace dependencies cannot be optional",);
+            }
+            if dep.is_public() {
+                bail!("{name} is public, but workspace dependencies cannot be public",);
+            }
+        }
+    }
 
     for field in me.requires_package() {
         bail!("this virtual manifest specifies a `{field}` section, which is not allowed");
