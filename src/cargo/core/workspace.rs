@@ -420,7 +420,6 @@ impl<'gctx> Workspace<'gctx> {
         let source = SourceId::for_path(self.root())?;
 
         let mut warnings = Vec::new();
-        let mut nested_paths = Vec::new();
 
         let mut patch = HashMap::new();
         for (url, deps) in config_patch.into_iter().flatten() {
@@ -442,7 +441,6 @@ impl<'gctx> Workspace<'gctx> {
                             dep,
                             name,
                             source,
-                            &mut nested_paths,
                             self.gctx,
                             &mut warnings,
                             /* platform */ None,
@@ -1006,7 +1004,7 @@ impl<'gctx> Workspace<'gctx> {
                     );
                     self.gctx.shell().warn(&msg)
                 };
-                if manifest.original().has_profiles() {
+                if manifest.resolved_toml().has_profiles() {
                     emit_warning("profiles")?;
                 }
                 if !manifest.replace().is_empty() {
@@ -1063,7 +1061,7 @@ impl<'gctx> Workspace<'gctx> {
             return Ok(p);
         }
         let source_id = SourceId::for_path(manifest_path.parent().unwrap())?;
-        let (package, _nested_paths) = ops::read_package(manifest_path, source_id, self.gctx)?;
+        let package = ops::read_package(manifest_path, source_id, self.gctx)?;
         loaded.insert(manifest_path.to_path_buf(), package.clone());
         Ok(package)
     }
@@ -1596,7 +1594,7 @@ impl<'gctx> Packages<'gctx> {
             Entry::Occupied(e) => Ok(e.into_mut()),
             Entry::Vacant(v) => {
                 let source_id = SourceId::for_path(key)?;
-                let (manifest, _nested_paths) = read_manifest(manifest_path, source_id, self.gctx)?;
+                let manifest = read_manifest(manifest_path, source_id, self.gctx)?;
                 Ok(v.insert(match manifest {
                     EitherManifest::Real(manifest) => {
                         MaybePackage::Package(Package::new(manifest, manifest_path))
@@ -1746,7 +1744,7 @@ pub fn find_workspace_root(
     find_workspace_root_with_loader(manifest_path, gctx, |self_path| {
         let key = self_path.parent().unwrap();
         let source_id = SourceId::for_path(key)?;
-        let (manifest, _nested_paths) = read_manifest(self_path, source_id, gctx)?;
+        let manifest = read_manifest(self_path, source_id, gctx)?;
         Ok(manifest
             .workspace_config()
             .get_ws_root(self_path, manifest_path))

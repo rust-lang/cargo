@@ -15,7 +15,7 @@
 use std::fmt::Write as _;
 use std::path::PathBuf;
 use std::process;
-use toml_edit::Document;
+use toml_edit::DocumentMut;
 
 fn main() {
     let pkg_root = std::env!("CARGO_MANIFEST_DIR");
@@ -31,7 +31,7 @@ fn main() {
     let mut passed = 0;
 
     let toml = std::fs::read_to_string(path).expect("read from file");
-    let doc = toml.parse::<Document>().expect("a toml");
+    let doc = toml.parse::<DocumentMut>().expect("a toml");
     let autolabel = doc["autolabel"].as_table().expect("a toml table");
 
     for (label, value) in autolabel.iter() {

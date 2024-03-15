@@ -363,7 +363,7 @@ fn cp_sources(
         let cksum = if dst.file_name() == Some(OsStr::new("Cargo.toml"))
             && pkg.package_id().source_id().is_git()
         {
-            let original_toml = toml::to_string_pretty(pkg.manifest().original())?;
+            let original_toml = toml::to_string_pretty(pkg.manifest().resolved_toml())?;
             let contents = format!("{}\n{}", MANIFEST_PREAMBLE, original_toml);
             copy_and_checksum(
                 &dst,

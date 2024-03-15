@@ -3,7 +3,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::core::{EitherManifest, Package, PackageId, SourceId};
+use crate::core::{EitherManifest, Manifest, Package, PackageId, SourceId};
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_project_manifest_exact;
 use crate::util::toml::read_manifest;
@@ -15,13 +15,13 @@ pub fn read_package(
     path: &Path,
     source_id: SourceId,
     gctx: &GlobalContext,
-) -> CargoResult<(Package, Vec<PathBuf>)> {
+) -> CargoResult<Package> {
     trace!(
         "read_package; path={}; source-id={}",
         path.display(),
         source_id
     );
-    let (manifest, nested) = read_manifest(path, source_id, gctx)?;
+    let manifest = read_manifest(path, source_id, gctx)?;
     let manifest = match manifest {
         EitherManifest::Real(manifest) => manifest,
         EitherManifest::Virtual(..) => anyhow::bail!(
@@ -31,7 +31,7 @@ pub fn read_package(
         ),
     };
 
-    Ok((Package::new(manifest, path), nested))
+    Ok(Package::new(manifest, path))
 }
 
 pub fn read_packages(
@@ -107,6 +107,44 @@ pub fn read_packages(
     }
 }
 
+fn nested_paths(manifest: &Manifest) -> Vec<PathBuf> {
+    let mut nested_paths = Vec::new();
+    let resolved = manifest.resolved_toml();
+    let dependencies = resolved
+        .dependencies
+        .iter()
+        .chain(resolved.build_dependencies())
+        .chain(resolved.dev_dependencies())
+        .chain(
+            resolved
+                .target
+                .as_ref()
+                .into_iter()
+                .flat_map(|t| t.values())
+                .flat_map(|t| {
+                    t.dependencies
+                        .iter()
+                        .chain(t.build_dependencies())
+                        .chain(t.dev_dependencies())
+                }),
+        );
+    for dep_table in dependencies {
+        for dep in dep_table.values() {
+            let cargo_util_schemas::manifest::InheritableDependency::Value(dep) = dep else {
+                continue;
+            };
+            let cargo_util_schemas::manifest::TomlDependency::Detailed(dep) = dep else {
+                continue;
+            };
+            let Some(path) = dep.path.as_ref() else {
+                continue;
+            };
+            nested_paths.push(PathBuf::from(path.as_str()));
+        }
+    }
+    nested_paths
+}
+
 fn walk(path: &Path, callback: &mut dyn FnMut(&Path) -> CargoResult<bool>) -> CargoResult<()> {
     if !callback(path)? {
         trace!("not processing {}", path.display());
@@ -151,7 +189,7 @@ fn read_nested_packages(
 
     let manifest_path = find_project_manifest_exact(path, "Cargo.toml")?;
 
-    let (manifest, nested) = match read_manifest(&manifest_path, source_id, gctx) {
+    let manifest = match read_manifest(&manifest_path, source_id, gctx) {
         Err(err) => {
             // Ignore malformed manifests found on git repositories
             //
@@ -174,6 +212,7 @@ fn read_nested_packages(
         EitherManifest::Real(manifest) => manifest,
         EitherManifest::Virtual(..) => return Ok(()),
     };
+    let nested = nested_paths(&manifest);
     let pkg = Package::new(manifest, &manifest_path);
 
     let pkg_id = pkg.package_id();

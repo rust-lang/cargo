@@ -41,7 +41,11 @@ impl EitherManifest {
 /// This is deserialized using the [`TomlManifest`] type.
 #[derive(Clone, Debug)]
 pub struct Manifest {
+    // alternate forms of manifests:
+    resolved_toml: Rc<TomlManifest>,
     summary: Summary,
+
+    // this form of manifest:
     targets: Vec<Target>,
     default_kind: Option<CompileKind>,
     forced_kind: Option<CompileKind>,
@@ -56,7 +60,6 @@ pub struct Manifest {
     replace: Vec<(PackageIdSpec, Dependency)>,
     patch: HashMap<Url, Vec<Dependency>>,
     workspace: WorkspaceConfig,
-    original: Rc<TomlManifest>,
     unstable_features: Features,
     edition: Edition,
     rust_version: Option<RustVersion>,
@@ -386,7 +389,9 @@ compact_debug! {
 
 impl Manifest {
     pub fn new(
+        resolved_toml: Rc<TomlManifest>,
         summary: Summary,
+
         default_kind: Option<CompileKind>,
         forced_kind: Option<CompileKind>,
         targets: Vec<Target>,
@@ -405,14 +410,15 @@ impl Manifest {
         rust_version: Option<RustVersion>,
         im_a_teapot: Option<bool>,
         default_run: Option<String>,
-        original: Rc<TomlManifest>,
         metabuild: Option<Vec<String>>,
         resolve_behavior: Option<ResolveBehavior>,
         lint_rustflags: Vec<String>,
         embedded: bool,
     ) -> Manifest {
         Manifest {
+            resolved_toml,
             summary,
+
             default_kind,
             forced_kind,
             targets,
@@ -430,7 +436,6 @@ impl Manifest {
             unstable_features,
             edition,
             rust_version,
-            original,
             im_a_teapot,
             default_run,
             metabuild,
@@ -495,8 +500,8 @@ impl Manifest {
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] {
         &self.replace
     }
-    pub fn original(&self) -> &TomlManifest {
-        &self.original
+    pub fn resolved_toml(&self) -> &TomlManifest {
+        &self.resolved_toml
     }
     pub fn patch(&self) -> &HashMap<Url, Vec<Dependency>> {
         &self.patch

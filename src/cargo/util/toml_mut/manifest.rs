@@ -82,7 +82,7 @@ impl From<DepKind> for DepTable {
 #[derive(Debug, Clone)]
 pub struct Manifest {
     /// Manifest contents as TOML data.
-    pub data: toml_edit::Document,
+    pub data: toml_edit::DocumentMut,
 }
 
 impl Manifest {
@@ -225,7 +225,7 @@ impl str::FromStr for Manifest {
 
     /// Read manifest data from string
     fn from_str(input: &str) -> ::std::result::Result<Self, Self::Err> {
-        let d: toml_edit::Document = input.parse().context("Manifest not valid TOML")?;
+        let d: toml_edit::DocumentMut = input.parse().context("Manifest not valid TOML")?;
 
         Ok(Manifest { data: d })
     }

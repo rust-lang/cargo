@@ -1365,9 +1365,9 @@ impl GlobalContext {
                 // We only want to allow "dotted key" (see https://toml.io/en/v1.0.0#keys)
                 // expressions followed by a value that's not an "inline table"
                 // (https://toml.io/en/v1.0.0#inline-table). Easiest way to check for that is to
-                // parse the value as a toml_edit::Document, and check that the (single)
+                // parse the value as a toml_edit::DocumentMut, and check that the (single)
                 // inner-most table is set via dotted keys.
-                let doc: toml_edit::Document = arg.parse().with_context(|| {
+                let doc: toml_edit::DocumentMut = arg.parse().with_context(|| {
                     format!("failed to parse value from --config argument `{arg}` as a dotted key expression")
                 })?;
                 fn non_empty(d: Option<&toml_edit::RawString>) -> bool {

@@ -768,7 +768,7 @@ fn mk(gctx: &GlobalContext, opts: &MkOptions<'_>) -> CargoResult<()> {
     write_ignore_file(path, &ignore, vcs)?;
 
     // Create `Cargo.toml` file with necessary `[lib]` and `[[bin]]` sections, if needed.
-    let mut manifest = toml_edit::Document::new();
+    let mut manifest = toml_edit::DocumentMut::new();
     manifest["package"] = toml_edit::Item::Table(toml_edit::Table::new());
     manifest["package"]["name"] = toml_edit::value(name);
     manifest["package"]["version"] = toml_edit::value("0.1.0");
@@ -814,7 +814,7 @@ fn mk(gctx: &GlobalContext, opts: &MkOptions<'_>) -> CargoResult<()> {
         // Sometimes the root manifest is not a valid manifest, so we only try to parse it if it is.
         // This should not block the creation of the new project. It is only a best effort to
         // inherit the workspace package keys.
-        if let Ok(mut workspace_document) = root_manifest.parse::<toml_edit::Document>() {
+        if let Ok(mut workspace_document) = root_manifest.parse::<toml_edit::DocumentMut>() {
             let display_path = get_display_path(&root_manifest_path, &path)?;
             let can_be_a_member = can_be_workspace_member(&display_path, &workspace_document)?;
             // Only try to inherit the workspace stuff if the new package can be a member of the workspace.
@@ -933,14 +933,14 @@ mod tests {
 // If the option is set, keep the value from the manifest.
 fn update_manifest_with_inherited_workspace_package_keys(
     opts: &MkOptions<'_>,
-    manifest: &mut toml_edit::Document,
+    manifest: &mut toml_edit::DocumentMut,
     workspace_package_keys: &toml_edit::Table,
 ) {
     if workspace_package_keys.is_empty() {
         return;
     }
 
-    let try_remove_and_inherit_package_key = |key: &str, manifest: &mut toml_edit::Document| {
+    let try_remove_and_inherit_package_key = |key: &str, manifest: &mut toml_edit::DocumentMut| {
         let package = manifest["package"]
             .as_table_mut()
             .expect("package is a table");
@@ -974,7 +974,7 @@ fn update_manifest_with_inherited_workspace_package_keys(
 /// with the new package in it.
 fn update_manifest_with_new_member(
     root_manifest_path: &Path,
-    workspace_document: &mut toml_edit::Document,
+    workspace_document: &mut toml_edit::DocumentMut,
     display_path: &str,
 ) -> CargoResult<bool> {
     // If the members element already exist, check if one of the patterns
@@ -1048,7 +1048,7 @@ fn get_display_path(root_manifest_path: &Path, package_path: &Path) -> CargoResu
 // Check if the package can be a member of the workspace.
 fn can_be_workspace_member(
     display_path: &str,
-    workspace_document: &toml_edit::Document,
+    workspace_document: &toml_edit::DocumentMut,
 ) -> CargoResult<bool> {
     if let Some(exclude) = workspace_document
         .get("workspace")
