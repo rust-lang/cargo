@@ -594,11 +594,9 @@ pub fn to_real_manifest(
         features.require(Feature::open_namespaces())?;
     }
 
-    let resolved_path = package_root.join("Cargo.toml");
-
     let inherit_cell: LazyCell<InheritableFields> = LazyCell::new();
     let inherit =
-        || inherit_cell.try_borrow_with(|| get_ws(gctx, &resolved_path, &workspace_config));
+        || inherit_cell.try_borrow_with(|| get_ws(gctx, manifest_file, &workspace_config));
 
     let version = package
         .version
