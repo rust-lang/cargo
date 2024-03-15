@@ -18,7 +18,7 @@ use url::Url;
 
 use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
-use crate::core::manifest::{ManifestMetadata, TargetSourcePath, Warnings};
+use crate::core::manifest::{ManifestMetadata, TargetSourcePath};
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{find_workspace_root, resolve_relative_path, CliUnstable, FeatureValue};
 use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
@@ -52,11 +52,10 @@ pub fn read_manifest(
         read_toml_string(path, gctx).map_err(|err| ManifestError::new(err, path.into()))?;
     let document =
         parse_document(&contents).map_err(|e| emit_diagnostic(e.into(), &contents, path, gctx))?;
-    let mut unused = BTreeSet::new();
-    let toml = deserialize_toml(&document, &mut unused)
+    let toml = deserialize_toml(&document)
         .map_err(|e| emit_diagnostic(e.into(), &contents, path, gctx))?;
 
-    convert_toml(toml, unused, path, source_id, gctx).map_err(|err| {
+    convert_toml(toml, path, source_id, gctx).map_err(|err| {
         ManifestError::new(
             err.context(format!("failed to parse manifest at `{}`", path.display())),
             path.into(),
@@ -85,14 +84,16 @@ fn parse_document(contents: &str) -> Result<toml_edit::ImDocument<String>, toml_
 #[tracing::instrument(skip_all)]
 fn deserialize_toml(
     document: &toml_edit::ImDocument<String>,
-    unused: &mut BTreeSet<String>,
 ) -> Result<manifest::TomlManifest, toml_edit::de::Error> {
+    let mut unused = BTreeSet::new();
     let deserializer = toml_edit::de::Deserializer::from(document.clone());
-    serde_ignored::deserialize(deserializer, |path| {
+    let mut document: manifest::TomlManifest = serde_ignored::deserialize(deserializer, |path| {
         let mut key = String::new();
         stringify(&mut key, &path);
         unused.insert(key);
-    })
+    })?;
+    document._unused_keys = unused;
+    Ok(document)
 }
 
 /// See also `bin/cargo/commands/run.rs`s `is_manifest_command`
@@ -170,7 +171,6 @@ fn emit_diagnostic(
 #[tracing::instrument(skip_all)]
 fn convert_toml(
     manifest: manifest::TomlManifest,
-    unused: BTreeSet<String>,
     manifest_file: &Path,
     source_id: SourceId,
     gctx: &GlobalContext,
@@ -193,13 +193,11 @@ fn convert_toml(
     }
     return if manifest.package().is_some() {
         let embedded = is_embedded(manifest_file);
-        let (mut manifest, paths) =
+        let (manifest, paths) =
             to_real_manifest(manifest, embedded, source_id, package_root, gctx)?;
-        warn_on_unused(&unused, manifest.warnings_mut());
         Ok((EitherManifest::Real(manifest), paths))
     } else {
-        let (mut m, paths) = to_virtual_manifest(manifest, source_id, package_root, gctx)?;
-        warn_on_unused(&unused, m.warnings_mut());
+        let (m, paths) = to_virtual_manifest(manifest, source_id, package_root, gctx)?;
         Ok((EitherManifest::Virtual(m), paths))
     };
 }
@@ -238,11 +236,11 @@ fn warn_on_deprecated(new_path: &str, name: &str, kind: &str, warnings: &mut Vec
     ))
 }
 
-fn warn_on_unused(unused: &BTreeSet<String>, warnings: &mut Warnings) {
+fn warn_on_unused(unused: &BTreeSet<String>, warnings: &mut Vec<String>) {
     for key in unused {
-        warnings.add_warning(format!("unused manifest key: {}", key));
+        warnings.push(format!("unused manifest key: {}", key));
         if key == "profiles.debug" {
-            warnings.add_warning("use `[profile.dev]` to configure debug builds".to_string());
+            warnings.push("use `[profile.dev]` to configure debug builds".to_string());
         }
     }
 }
@@ -375,6 +373,7 @@ pub fn prepare_for_publish(
         badges: me.badges.clone(),
         cargo_features: me.cargo_features.clone(),
         lints: me.lints.clone(),
+        _unused_keys: Default::default(),
     };
     strip_features(&mut manifest);
     return Ok(manifest);
@@ -522,6 +521,8 @@ pub fn to_real_manifest(
     let mut nested_paths = vec![];
     let mut warnings = vec![];
     let mut errors = vec![];
+
+    warn_on_unused(&me._unused_keys, &mut warnings);
 
     // Parse features first so they will be available when parsing other parts of the TOML.
     let empty = Vec::new();
@@ -1225,6 +1226,7 @@ pub fn to_real_manifest(
             workspace: false,
             lints,
         }),
+        _unused_keys: Default::default(),
     };
     let mut manifest = Manifest::new(
         Rc::new(resolved_toml),
@@ -1291,6 +1293,8 @@ fn to_virtual_manifest(
     let empty = Vec::new();
     let cargo_features = me.cargo_features.as_ref().unwrap_or(&empty);
     let features = Features::new(cargo_features, gctx, &mut warnings, source_id.is_path())?;
+
+    warn_on_unused(&me._unused_keys, &mut warnings);
 
     let (replace, patch) = {
         let mut manifest_ctx = ManifestContext {

@@ -6,6 +6,7 @@
 //! - Keys that exist for bookkeeping but don't correspond to the schema have a `_` prefix
 
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::fmt::{self, Display, Write};
 use std::path::PathBuf;
 use std::str;
@@ -28,6 +29,7 @@ pub use rust_version::RustVersionError;
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlManifest {
+    // when adding new fields, be sure to check whether `requires_package` should disallow them
     pub cargo_features: Option<Vec<String>>,
     pub package: Option<Box<TomlPackage>>,
     pub project: Option<Box<TomlPackage>>,
@@ -51,7 +53,11 @@ pub struct TomlManifest {
     pub workspace: Option<TomlWorkspace>,
     pub badges: Option<InheritableBtreeMap>,
     pub lints: Option<InheritableLints>,
-    // when adding new fields, be sure to check whether `requires_package` should disallow them
+
+    /// Report unused keys (see also nested `_unused_keys`)
+    /// Note: this is populated by the caller, rather than automatically
+    #[serde(skip)]
+    pub _unused_keys: BTreeSet<String>,
 }
 
 impl TomlManifest {
