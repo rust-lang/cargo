@@ -33,13 +33,15 @@ enum ErrorKind {
     FeatureNameStartsWithDepColon(String),
 }
 
-/// Check the base requirements for a package name.
-///
-/// This can be used for other things than package names, to enforce some
-/// level of sanity. Note that package names have other restrictions
-/// elsewhere. `cargo new` has a few restrictions, such as checking for
-/// reserved names. crates.io has even more restrictions.
-pub(crate) fn validate_package_name(name: &str, what: &'static str) -> Result<()> {
+pub(crate) fn validate_package_name(name: &str) -> Result<()> {
+    validate_name(name, "package name")
+}
+
+pub(crate) fn validate_registry_name(name: &str) -> Result<()> {
+    validate_name(name, "registry name")
+}
+
+pub(crate) fn validate_name(name: &str, what: &'static str) -> Result<()> {
     if name.is_empty() {
         return Err(ErrorKind::Empty(what).into());
     }
