@@ -369,7 +369,8 @@ The output for each profile will be placed in a directory of the same name
 as the profile in the [`target` directory]. As in the example above, the
 output would go into the `target/release-lto` directory.
 
-NOTE: Custom profiles inherit package overrides as well.
+NOTE: Custom profiles inherit package overrides as well and those take precedence
+over the default profile. See the [overrides](#overrides) section for more.
 
 [`target` directory]: ../guide/build-cache.md
 
@@ -458,7 +459,26 @@ match wins):
 5. Default values built-in to Cargo.
 
 Overrides cannot specify the `panic`, `lto`, or `rpath` settings.
-Overrides inherit to custom profiles. 
+
+Overrides inherit to custom profiles and take precedence unless explicitly overriden.
+For example, in the below example package `foo` will still be built with `opt-level = 1`
+for profile `opt-dev`.
+
+```
+[profile.dev.package.foo]
+opt-level = 2
+
+[profile.opt-dev]
+inherits = "dev"
+opt-level = 1
+```
+
+If you wanted package `foo` to have an `opt-level` of `2`, you'd need to explicitly override
+it for `opt-dev`:
+```
+[profile.opt-dev.package.foo]
+opt-level = 2
+```
 
 ### Overrides and generics
 
