@@ -57,7 +57,8 @@ pub fn read_manifest(
 
     (|| {
         if toml.package().is_some() {
-            to_real_manifest(toml, source_id, path, gctx).map(EitherManifest::Real)
+            to_real_manifest(contents, document, toml, source_id, path, gctx)
+                .map(EitherManifest::Real)
         } else {
             to_virtual_manifest(toml, source_id, path, gctx).map(EitherManifest::Virtual)
         }
@@ -443,6 +444,8 @@ pub fn prepare_for_publish(
 
 #[tracing::instrument(skip_all)]
 pub fn to_real_manifest(
+    contents: String,
+    document: toml_edit::ImDocument<String>,
     me: manifest::TomlManifest,
     source_id: SourceId,
     manifest_file: &Path,
@@ -1208,6 +1211,8 @@ pub fn to_real_manifest(
         _unused_keys: Default::default(),
     };
     let mut manifest = Manifest::new(
+        Rc::new(contents),
+        Rc::new(document),
         Rc::new(resolved_toml),
         summary,
         default_kind,

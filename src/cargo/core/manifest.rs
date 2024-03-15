@@ -42,6 +42,8 @@ impl EitherManifest {
 #[derive(Clone, Debug)]
 pub struct Manifest {
     // alternate forms of manifests:
+    contents: Rc<String>,
+    document: Rc<toml_edit::ImDocument<String>>,
     resolved_toml: Rc<TomlManifest>,
     summary: Summary,
 
@@ -389,6 +391,8 @@ compact_debug! {
 
 impl Manifest {
     pub fn new(
+        contents: Rc<String>,
+        document: Rc<toml_edit::ImDocument<String>>,
         resolved_toml: Rc<TomlManifest>,
         summary: Summary,
 
@@ -416,6 +420,8 @@ impl Manifest {
         embedded: bool,
     ) -> Manifest {
         Manifest {
+            contents,
+            document,
             resolved_toml,
             summary,
 
@@ -445,6 +451,14 @@ impl Manifest {
         }
     }
 
+    /// The raw contents of the original TOML
+    pub fn contents(&self) -> &str {
+        self.contents.as_str()
+    }
+    /// Collection of spans for the original TOML
+    pub fn document(&self) -> &toml_edit::ImDocument<String> {
+        &self.document
+    }
     /// The [`TomlManifest`] with all fields expanded
     pub fn resolved_toml(&self) -> &TomlManifest {
         &self.resolved_toml

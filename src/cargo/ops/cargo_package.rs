@@ -453,10 +453,19 @@ fn build_lock(ws: &Workspace<'_>, orig_pkg: &Package) -> CargoResult<String> {
     let orig_resolve = ops::load_pkg_lockfile(ws)?;
 
     // Convert Package -> TomlManifest -> Manifest -> Package
+    let contents = orig_pkg.manifest().contents();
+    let document = orig_pkg.manifest().document();
     let toml_manifest =
         prepare_for_publish(orig_pkg.manifest().resolved_toml(), ws, orig_pkg.root())?;
     let source_id = orig_pkg.package_id().source_id();
-    let manifest = to_real_manifest(toml_manifest, source_id, orig_pkg.manifest_path(), gctx)?;
+    let manifest = to_real_manifest(
+        contents.to_owned(),
+        document.clone(),
+        toml_manifest,
+        source_id,
+        orig_pkg.manifest_path(),
+        gctx,
+    )?;
     let new_pkg = Package::new(manifest, orig_pkg.manifest_path());
 
     // Regenerate Cargo.lock using the old one as a guide.
