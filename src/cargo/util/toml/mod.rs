@@ -524,24 +524,20 @@ pub fn to_real_manifest(
 
     let mut package = match (&me.package, &me.project) {
         (Some(_), Some(project)) => {
-            if source_id.is_path() {
-                gctx.shell().warn(format!(
-                    "manifest at `{}` contains both `project` and `package`, \
+            warnings.push(format!(
+                "manifest at `{}` contains both `project` and `package`, \
                     this could become a hard error in the future",
-                    package_root.display()
-                ))?;
-            }
+                package_root.display()
+            ));
             project.clone()
         }
         (Some(package), None) => package.clone(),
         (None, Some(project)) => {
-            if source_id.is_path() {
-                gctx.shell().warn(format!(
-                    "manifest at `{}` contains `[project]` instead of `[package]`, \
+            warnings.push(format!(
+                "manifest at `{}` contains `[project]` instead of `[package]`, \
                                 this could become a hard error in the future",
-                    package_root.display()
-                ))?;
-            }
+                package_root.display()
+            ));
             project.clone()
         }
         (None, None) => bail!("no `package` section found"),
