@@ -370,7 +370,7 @@ as the profile in the [`target` directory]. As in the example above, the
 output would go into the `target/release-lto` directory.
 
 NOTE: Custom profiles inherit package overrides as well and those take precedence
-over the default profile. See the [overrides](#overrides) section for more.
+over the default custom profile settings. See the [overrides](#overrides) section for more.
 
 [`target` directory]: ../guide/build-cache.md
 
