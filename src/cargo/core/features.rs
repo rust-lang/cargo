@@ -504,6 +504,9 @@ features! {
 
     /// Allow setting trim-paths in a profile to control the sanitisation of file paths in build outputs.
     (unstable, trim_paths, "", "reference/unstable.html#profile-trim-paths-option"),
+
+    /// Allow multiple packages to participate in the same API namespace
+    (unstable, open_namespaces, "", "reference/unstable.html#open-namespaces"),
 }
 
 /// Status and metadata for a single unstable feature.
