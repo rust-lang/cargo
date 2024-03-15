@@ -48,7 +48,8 @@ pub fn read_manifest(
     source_id: SourceId,
     gctx: &GlobalContext,
 ) -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
-    let contents = read_toml_string(path, gctx)?;
+    let contents =
+        read_toml_string(path, gctx).map_err(|err| ManifestError::new(err, path.into()))?;
     let document =
         parse_document(&contents).map_err(|e| emit_diagnostic(e.into(), &contents, path, gctx))?;
     let mut unused = BTreeSet::new();
@@ -66,16 +67,12 @@ pub fn read_manifest(
 
 #[tracing::instrument(skip_all)]
 fn read_toml_string(path: &Path, gctx: &GlobalContext) -> CargoResult<String> {
-    let mut contents = paths::read(path).map_err(|err| ManifestError::new(err, path.into()))?;
+    let mut contents = paths::read(path)?;
     if is_embedded(path) {
         if !gctx.cli_unstable().script {
-            return Err(ManifestError::new(
-                anyhow::anyhow!("parsing `{}` requires `-Zscript`", path.display()),
-                path.into(),
-            ))?;
+            anyhow::bail!("parsing `{}` requires `-Zscript`", path.display());
         }
-        contents = embedded::expand_manifest(&contents, path, gctx)
-            .map_err(|err| ManifestError::new(err, path.into()))?;
+        contents = embedded::expand_manifest(&contents, path, gctx)?;
     }
     Ok(contents)
 }
