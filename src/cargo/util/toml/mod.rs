@@ -14,7 +14,6 @@ use cargo_util_schemas::manifest::{self, TomlManifest};
 use itertools::Itertools;
 use lazycell::LazyCell;
 use pathdiff::diff_paths;
-use tracing::trace;
 use url::Url;
 
 use crate::core::compiler::{CompileKind, CompileTarget};
@@ -49,11 +48,6 @@ pub fn read_manifest(
     source_id: SourceId,
     gctx: &GlobalContext,
 ) -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
-    trace!(
-        "read_manifest; path={}; source-id={}",
-        path.display(),
-        source_id
-    );
     let contents = read_toml_string(path, gctx)?;
     let document =
         parse_document(&contents).map_err(|e| emit_diagnostic(e.into(), &contents, path, gctx))?;
