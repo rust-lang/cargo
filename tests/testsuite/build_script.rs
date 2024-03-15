@@ -5540,30 +5540,30 @@ fn build_script_rerun_when_target_rustflags_change() {
             "build.rs",
             r#"
             use std::env;
-			use std::process::{Command, Stdio};
-			fn main() {
-				let rustc = env::var_os("RUSTC").unwrap();
-				let mut cmd = Command::new(rustc);
-				cmd.stderr(Stdio::null())
-					.arg("--crate-type=lib")
-					.arg("--out-dir")
-					.arg(env::var_os("OUT_DIR").unwrap())
-					.arg("build/probe.rs");
-				cmd.arg("--target").arg(env::var_os("TARGET").unwrap());
-				if let Ok(rustflags) = env::var("CARGO_ENCODED_RUSTFLAGS") {
-					if !rustflags.is_empty() {
-						for arg in rustflags.split('\x1f') {
-							cmd.arg(arg);
-						}
-					}
-				}
-				let _ = cmd
-					.status()
-					.ok()
-					.unwrap()
-					.success()
-					.then(|| println!("cargo:rustc-cfg=error_generic_member_access"));
-			}
+            use std::process::{Command, Stdio};
+            fn main() {
+                let rustc = env::var_os("RUSTC").unwrap();
+                let mut cmd = Command::new(rustc);
+                cmd.stderr(Stdio::null())
+                    .arg("--crate-type=lib")
+                    .arg("--out-dir")
+                    .arg(env::var_os("OUT_DIR").unwrap())
+                    .arg("build/probe.rs");
+                cmd.arg("--target").arg(env::var_os("TARGET").unwrap());
+                if let Ok(rustflags) = env::var("CARGO_ENCODED_RUSTFLAGS") {
+                    if !rustflags.is_empty() {
+                        for arg in rustflags.split('\x1f') {
+                            cmd.arg(arg);
+                        }
+                    }
+                }
+                let _ = cmd
+                    .status()
+                    .ok()
+                    .unwrap()
+                    .success()
+                    .then(|| println!("cargo:rustc-cfg=error_generic_member_access"));
+            }
             "#,
         )
         .file(
@@ -5596,18 +5596,10 @@ fn build_script_rerun_when_target_rustflags_change() {
     p.cargo("build --target")
         .arg(&target)
         .env("RUSTFLAGS", "-Zallow-features=")
-        .with_status(101)
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-error[E0725]: the feature `error_generic_member_access` is not in the list of allowed features
- --> src/lib.rs:1:50
-  |
-1 | #![cfg_attr(error_generic_member_access, feature(error_generic_member_access))]
-  |                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-For more information about this error, try `rustc --explain E0725`.
-[ERROR] could not compile `foo` (lib) due to 1 previous error
+[FINISHED] [..]
 ",
         )
         .run();

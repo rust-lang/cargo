@@ -1526,11 +1526,14 @@ See https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-change
             .collect::<CargoResult<Vec<_>>>()?
     };
 
+    let rustflags = build_runner.bcx.rustflags_args(unit).to_vec();
+
     Ok(Fingerprint {
         local: Mutex::new(local),
         rustc: util::hash_u64(&build_runner.bcx.rustc().verbose_version),
         deps,
         outputs: if overridden { Vec::new() } else { vec![output] },
+        rustflags,
 
         // Most of the other info is blank here as we don't really include it
         // in the execution of the build script, but... this may be a latent
