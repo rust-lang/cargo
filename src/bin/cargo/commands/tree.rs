@@ -69,8 +69,7 @@ pub fn cli() -> Command {
         .arg(
             opt("charset", "Character set to use in output")
                 .value_name("CHARSET")
-                .value_parser(["utf8", "ascii"])
-                .default_value("utf8"),
+                .value_parser(["utf8", "ascii"]),
         )
         .arg(
             opt("format", "Format string used for printing dependencies")
@@ -99,6 +98,24 @@ pub fn cli() -> Command {
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help tree</>` for more detailed information.\n"
         ))
+}
+
+#[derive(Copy, Clone)]
+pub enum Charset {
+    Utf8,
+    Ascii,
+}
+
+impl FromStr for Charset {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Charset, &'static str> {
+        match s {
+            "utf8" => Ok(Charset::Utf8),
+            "ascii" => Ok(Charset::Ascii),
+            _ => Err("invalid charset"),
+        }
+    }
 }
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
@@ -181,8 +198,17 @@ subtree of the package given to -p.\n\
         print_available_packages(&ws)?;
     }
 
-    let charset = tree::Charset::from_str(args.get_one::<String>("charset").unwrap())
-        .map_err(|e| anyhow::anyhow!("{}", e))?;
+    let charset = args.get_one::<String>("charset");
+    if let Some(charset) = charset
+        .map(|c| Charset::from_str(c))
+        .transpose()
+        .map_err(|e| anyhow::anyhow!("{}", e))?
+    {
+        match charset {
+            Charset::Utf8 => gctx.shell().set_unicode(true)?,
+            Charset::Ascii => gctx.shell().set_unicode(false)?,
+        }
+    }
     let opts = tree::TreeOptions {
         cli_features: args.cli_features()?,
         packages,
@@ -193,7 +219,6 @@ subtree of the package given to -p.\n\
         prefix,
         no_dedupe,
         duplicates: args.flag("duplicates"),
-        charset,
         format: args.get_one::<String>("format").cloned().unwrap(),
         graph_features,
         max_display_depth: args.value_of_u32("depth")?.unwrap_or(u32::MAX),

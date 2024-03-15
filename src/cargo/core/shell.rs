@@ -53,6 +53,8 @@ impl Shell {
                 color_choice: auto_clr,
                 hyperlinks: supports_hyperlinks(),
                 stderr_tty: std::io::stderr().is_terminal(),
+                stdout_unicode: supports_unicode(&std::io::stdout()),
+                stderr_unicode: supports_unicode(&std::io::stderr()),
             },
             verbosity: Verbosity::Verbose,
             needs_clear: false,
@@ -230,11 +232,11 @@ impl Shell {
     /// Updates the color choice (always, never, or auto) from a string..
     pub fn set_color_choice(&mut self, color: Option<&str>) -> CargoResult<()> {
         if let ShellOut::Stream {
-            ref mut stdout,
-            ref mut stderr,
-            ref mut color_choice,
+            stdout,
+            stderr,
+            color_choice,
             ..
-        } = self.output
+        } = &mut self.output
         {
             let cfg = color
                 .map(|c| c.parse())
@@ -249,14 +251,38 @@ impl Shell {
         Ok(())
     }
 
-    pub fn set_hyperlinks(&mut self, yes: bool) -> CargoResult<()> {
+    pub fn set_unicode(&mut self, yes: bool) -> CargoResult<()> {
         if let ShellOut::Stream {
-            ref mut hyperlinks, ..
-        } = self.output
+            stdout_unicode,
+            stderr_unicode,
+            ..
+        } = &mut self.output
         {
+            *stdout_unicode = yes;
+            *stderr_unicode = yes;
+        }
+        Ok(())
+    }
+
+    pub fn set_hyperlinks(&mut self, yes: bool) -> CargoResult<()> {
+        if let ShellOut::Stream { hyperlinks, .. } = &mut self.output {
             *hyperlinks = yes;
         }
         Ok(())
+    }
+
+    pub fn out_unicode(&self) -> bool {
+        match &self.output {
+            ShellOut::Write(_) => true,
+            ShellOut::Stream { stdout_unicode, .. } => *stdout_unicode,
+        }
+    }
+
+    pub fn err_unicode(&self) -> bool {
+        match &self.output {
+            ShellOut::Write(_) => true,
+            ShellOut::Stream { stderr_unicode, .. } => *stderr_unicode,
+        }
     }
 
     /// Gets the current color choice.
@@ -384,6 +410,8 @@ enum ShellOut {
         stderr_tty: bool,
         color_choice: ColorChoice,
         hyperlinks: bool,
+        stdout_unicode: bool,
+        stderr_unicode: bool,
     },
 }
 
@@ -416,17 +444,17 @@ impl ShellOut {
 
     /// Gets stdout as a `io::Write`.
     fn stdout(&mut self) -> &mut dyn Write {
-        match *self {
-            ShellOut::Stream { ref mut stdout, .. } => stdout,
-            ShellOut::Write(ref mut w) => w,
+        match self {
+            ShellOut::Stream { stdout, .. } => stdout,
+            ShellOut::Write(w) => w,
         }
     }
 
     /// Gets stderr as a `io::Write`.
     fn stderr(&mut self) -> &mut dyn Write {
-        match *self {
-            ShellOut::Stream { ref mut stderr, .. } => stderr,
-            ShellOut::Write(ref mut w) => w,
+        match self {
+            ShellOut::Stream { stderr, .. } => stderr,
+            ShellOut::Write(w) => w,
         }
     }
 }
@@ -517,6 +545,10 @@ fn supports_color(choice: anstream::ColorChoice) -> bool {
         | anstream::ColorChoice::Auto => true,
         anstream::ColorChoice::Never => false,
     }
+}
+
+fn supports_unicode(stream: &dyn IsTerminal) -> bool {
+    !stream.is_terminal() || supports_unicode::supports_unicode()
 }
 
 fn supports_hyperlinks() -> bool {

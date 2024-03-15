@@ -204,6 +204,7 @@ unicase.workspace = true
 unicode-width.workspace = true
 url.workspace = true
 walkdir.workspace = true
+supports-unicode = "2.1.0"
 
 [target.'cfg(target_has_atomic = "64")'.dependencies]
 tracing-chrome.workspace = true

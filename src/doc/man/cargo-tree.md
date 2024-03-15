@@ -150,7 +150,7 @@ The default is the host platform. Use the value `all` to include *all* targets.
 
 {{#option "`--charset` _charset_" }}
 Chooses the character set to use for the tree. Valid values are "utf8" or
-"ascii". Default is "utf8".
+"ascii". When unspecified, cargo will auto-select a value.
 {{/option}}
 
 {{#option "`-f` _format_" "`--format` _format_" }}
