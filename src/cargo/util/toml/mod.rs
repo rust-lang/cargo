@@ -247,6 +247,16 @@ pub fn prepare_for_publish(
     package_root: &Path,
 ) -> CargoResult<manifest::TomlManifest> {
     let gctx = ws.gctx();
+
+    if me
+        .cargo_features
+        .iter()
+        .flat_map(|f| f.iter())
+        .any(|f| f == "open-namespaces")
+    {
+        anyhow::bail!("cannot publish with `open-namespaces`")
+    }
+
     let mut package = me.package().unwrap().clone();
     package.workspace = None;
     let current_resolver = package
@@ -587,6 +597,9 @@ pub fn to_real_manifest(
     };
 
     let package_name = package.name.trim();
+    if package_name.contains(':') {
+        features.require(Feature::open_namespaces())?;
+    }
 
     let resolved_path = package_root.join("Cargo.toml");
 

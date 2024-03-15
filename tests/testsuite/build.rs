@@ -467,18 +467,18 @@ fn cargo_compile_with_empty_package_name() {
 #[cargo_test]
 fn cargo_compile_with_invalid_package_name() {
     let p = project()
-        .file("Cargo.toml", &basic_manifest("foo::bar", "0.0.0"))
+        .file("Cargo.toml", &basic_manifest("foo@bar", "0.0.0"))
         .build();
 
     p.cargo("build")
         .with_status(101)
         .with_stderr(
             "\
-[ERROR] invalid character `:` in package name: `foo::bar`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
+[ERROR] invalid character `@` in package name: `foo@bar`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
  --> Cargo.toml:3:16
   |
-3 |         name = \"foo::bar\"
-  |                ^^^^^^^^^^
+3 |         name = \"foo@bar\"
+  |                ^^^^^^^^^
   |
 ",
         )
