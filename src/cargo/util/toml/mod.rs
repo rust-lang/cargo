@@ -55,7 +55,14 @@ pub fn read_manifest(
     let toml = deserialize_toml(&document)
         .map_err(|e| emit_diagnostic(e.into(), &contents, path, gctx))?;
 
-    convert_toml(toml, path, source_id, gctx).map_err(|err| {
+    (|| {
+        if toml.package().is_some() {
+            to_real_manifest(toml, source_id, path, gctx).map(EitherManifest::Real)
+        } else {
+            to_virtual_manifest(toml, source_id, path, gctx).map(EitherManifest::Virtual)
+        }
+    })()
+    .map_err(|err| {
         ManifestError::new(
             err.context(format!("failed to parse manifest at `{}`", path.display())),
             path.into(),
@@ -158,30 +165,6 @@ fn emit_diagnostic(
         return err.into();
     }
     return AlreadyPrintedError::new(e.into()).into();
-}
-
-/// Parse an already-loaded `Cargo.toml` as a Cargo manifest.
-///
-/// This could result in a real or virtual manifest being returned.
-///
-/// A list of nested paths is also returned, one for each path dependency
-/// within the manifest. For virtual manifests, these paths can only
-/// come from patched or replaced dependencies. These paths are not
-/// canonicalized.
-#[tracing::instrument(skip_all)]
-fn convert_toml(
-    manifest: manifest::TomlManifest,
-    manifest_file: &Path,
-    source_id: SourceId,
-    gctx: &GlobalContext,
-) -> CargoResult<EitherManifest> {
-    return if manifest.package().is_some() {
-        let manifest = to_real_manifest(manifest, source_id, manifest_file, gctx)?;
-        Ok(EitherManifest::Real(manifest))
-    } else {
-        let manifest = to_virtual_manifest(manifest, source_id, manifest_file, gctx)?;
-        Ok(EitherManifest::Virtual(manifest))
-    };
 }
 
 fn stringify(dst: &mut String, path: &serde_ignored::Path<'_>) {
