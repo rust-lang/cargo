@@ -711,6 +711,7 @@ fn cargo_compile_with_invalid_non_numeric_dep_version() {
                 crossbeam = "y"
             "#,
         )
+        .file("src/lib.rs", "")
         .build();
 
     p.cargo("build")

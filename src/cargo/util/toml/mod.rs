@@ -14,7 +14,7 @@ use cargo_util_schemas::manifest::{self, TomlManifest};
 use itertools::Itertools;
 use lazycell::LazyCell;
 use pathdiff::diff_paths;
-use tracing::{debug, trace};
+use tracing::trace;
 use url::Url;
 
 use crate::core::compiler::{CompileKind, CompileTarget};
@@ -205,13 +205,6 @@ fn convert_toml(
         let (mut manifest, paths) =
             to_real_manifest(manifest, embedded, source_id, package_root, gctx)?;
         warn_on_unused(&unused, manifest.warnings_mut());
-        if manifest.targets().iter().all(|t| t.is_custom_build()) {
-            bail!(
-                "no targets specified in the manifest\n\
-                 either src/lib.rs, src/main.rs, a [lib] section, or \
-                 [[bin]] section must be present"
-            )
-        }
         Ok((EitherManifest::Real(manifest), paths))
     } else {
         let (mut m, paths) = to_virtual_manifest(manifest, source_id, package_root, gctx)?;
@@ -747,8 +740,12 @@ pub fn to_real_manifest(
         &mut errors,
     )?;
 
-    if targets.is_empty() {
-        debug!("manifest has no build targets");
+    if targets.iter().all(|t| t.is_custom_build()) {
+        bail!(
+            "no targets specified in the manifest\n\
+                 either src/lib.rs, src/main.rs, a [lib] section, or \
+                 [[bin]] section must be present"
+        )
     }
 
     if let Err(conflict_targets) = unique_build_targets(&targets, package_root) {
