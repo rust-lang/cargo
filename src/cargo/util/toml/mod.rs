@@ -1345,17 +1345,19 @@ fn to_virtual_manifest(
             bail!("virtual manifests must be configured with [workspace]");
         }
     };
-    Ok((
-        VirtualManifest::new(
-            replace,
-            patch,
-            workspace_config,
-            profiles,
-            features,
-            resolve_behavior,
-        ),
-        nested_paths,
-    ))
+    let mut manifest = VirtualManifest::new(
+        replace,
+        patch,
+        workspace_config,
+        profiles,
+        features,
+        resolve_behavior,
+    );
+    for warning in warnings {
+        manifest.warnings_mut().add_warning(warning);
+    }
+
+    Ok((manifest, nested_paths))
 }
 
 fn replace(
