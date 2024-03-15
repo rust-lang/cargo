@@ -175,8 +175,6 @@ fn convert_toml(
     source_id: SourceId,
     gctx: &GlobalContext,
 ) -> CargoResult<(EitherManifest, Vec<PathBuf>)> {
-    let package_root = manifest_file.parent().unwrap();
-
     if let Some(deps) = manifest
         .workspace
         .as_ref()
@@ -192,12 +190,10 @@ fn convert_toml(
         }
     }
     return if manifest.package().is_some() {
-        let embedded = is_embedded(manifest_file);
-        let (manifest, paths) =
-            to_real_manifest(manifest, embedded, source_id, package_root, gctx)?;
+        let (manifest, paths) = to_real_manifest(manifest, source_id, manifest_file, gctx)?;
         Ok((EitherManifest::Real(manifest), paths))
     } else {
-        let (m, paths) = to_virtual_manifest(manifest, source_id, package_root, gctx)?;
+        let (m, paths) = to_virtual_manifest(manifest, source_id, manifest_file, gctx)?;
         Ok((EitherManifest::Virtual(m), paths))
     };
 }
@@ -479,9 +475,8 @@ pub fn prepare_for_publish(
 #[tracing::instrument(skip_all)]
 pub fn to_real_manifest(
     me: manifest::TomlManifest,
-    embedded: bool,
     source_id: SourceId,
-    package_root: &Path,
+    manifest_file: &Path,
     gctx: &GlobalContext,
 ) -> CargoResult<(Manifest, Vec<PathBuf>)> {
     fn get_ws(
@@ -511,6 +506,8 @@ pub fn to_real_manifest(
         }
     }
 
+    let embedded = is_embedded(manifest_file);
+    let package_root = manifest_file.parent().unwrap();
     if !package_root.is_dir() {
         bail!(
             "package root '{}' is not a directory",
@@ -1280,9 +1277,11 @@ pub fn to_real_manifest(
 fn to_virtual_manifest(
     me: manifest::TomlManifest,
     source_id: SourceId,
-    root: &Path,
+    manifest_file: &Path,
     gctx: &GlobalContext,
 ) -> CargoResult<(VirtualManifest, Vec<PathBuf>)> {
+    let root = manifest_file.parent().unwrap();
+
     for field in me.requires_package() {
         bail!("this virtual manifest specifies a `{field}` section, which is not allowed");
     }
