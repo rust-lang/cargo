@@ -29,6 +29,7 @@ pub enum DirtyReason {
     MetadataChanged,
     ConfigSettingsChanged,
     CompileKindChanged,
+    EnvConfigChanged,
     LocalLengthsChanged,
     PrecalculatedComponentsChanged {
         old: String,
@@ -171,6 +172,9 @@ impl DirtyReason {
             }
             DirtyReason::CompileKindChanged => {
                 s.dirty_because(unit, "the rustc compile kind changed")
+            }
+            DirtyReason::EnvConfigChanged => {
+                s.dirty_because(unit, "the environment variable changed")
             }
             DirtyReason::LocalLengthsChanged => {
                 s.dirty_because(unit, "the local lengths changed")?;

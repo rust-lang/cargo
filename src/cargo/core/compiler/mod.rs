@@ -190,29 +190,27 @@ fn compile<'gctx>(
     } else {
         let force = exec.force_rebuild(unit) || force_rebuild;
         let mut job = fingerprint::prepare_target(build_runner, unit, force)?;
-        job.before(
-            if job.freshness().is_dirty() || env_config_modified(bcx.gctx)? {
-                let work = if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
-                    rustdoc(build_runner, unit)?
-                } else {
-                    rustc(build_runner, unit, exec)?
-                };
-                work.then(link_targets(build_runner, unit, false)?)
+        job.before(if job.freshness().is_dirty() {
+            let work = if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
+                rustdoc(build_runner, unit)?
             } else {
-                // We always replay the output cache,
-                // since it might contain future-incompat-report messages
-                let work = replay_output_cache(
-                    unit.pkg.package_id(),
-                    PathBuf::from(unit.pkg.manifest_path()),
-                    &unit.target,
-                    build_runner.files().message_cache_path(unit),
-                    build_runner.bcx.build_config.message_format,
-                    unit.show_warnings(bcx.gctx),
-                );
-                // Need to link targets on both the dirty and fresh.
-                work.then(link_targets(build_runner, unit, true)?)
-            },
-        );
+                rustc(build_runner, unit, exec)?
+            };
+            work.then(link_targets(build_runner, unit, false)?)
+        } else {
+            // We always replay the output cache,
+            // since it might contain future-incompat-report messages
+            let work = replay_output_cache(
+                unit.pkg.package_id(),
+                PathBuf::from(unit.pkg.manifest_path()),
+                &unit.target,
+                build_runner.files().message_cache_path(unit),
+                build_runner.bcx.build_config.message_format,
+                unit.show_warnings(bcx.gctx),
+            );
+            // Need to link targets on both the dirty and fresh.
+            work.then(link_targets(build_runner, unit, true)?)
+        });
 
         job
     };
@@ -1926,21 +1924,6 @@ fn apply_env_config(gctx: &crate::GlobalContext, cmd: &mut ProcessBuilder) -> Ca
 /// Checks if there are some scrape units waiting to be processed.
 fn should_include_scrape_units(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
     unit.mode.is_doc() && bcx.scrape_units.len() > 0 && bcx.ws.unit_needs_doc_scrape(unit)
-}
-
-/// Detects if environment variables from config `[env]` is newly modified.
-fn env_config_modified(gctx: &crate::GlobalContext) -> CargoResult<bool> {
-    for (key, value) in gctx.env_config()?.iter() {
-        if !gctx.env().any(|(k, _)| k == key) {
-            continue;
-        }
-
-        if !value.is_force() && gctx.env().find(|(k, _)| k == key).is_some() {
-            return Ok(true);
-        }
-    }
-
-    Ok(false)
 }
 
 /// Gets the file path of function call information output from `rustdoc`.
