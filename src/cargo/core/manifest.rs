@@ -58,7 +58,6 @@ pub struct Manifest {
     include: Vec<String>,
     metadata: ManifestMetadata,
     custom_metadata: Option<toml::Value>,
-    profiles: Option<TomlProfiles>,
     publish: Option<Vec<String>>,
     replace: Vec<(PackageIdSpec, Dependency)>,
     patch: HashMap<Url, Vec<Dependency>>,
@@ -98,7 +97,6 @@ pub struct VirtualManifest {
     replace: Vec<(PackageIdSpec, Dependency)>,
     patch: HashMap<Url, Vec<Dependency>>,
     workspace: WorkspaceConfig,
-    profiles: Option<TomlProfiles>,
     warnings: Warnings,
     features: Features,
     resolve_behavior: Option<ResolveBehavior>,
@@ -416,7 +414,6 @@ impl Manifest {
         links: Option<String>,
         metadata: ManifestMetadata,
         custom_metadata: Option<toml::Value>,
-        profiles: Option<TomlProfiles>,
         publish: Option<Vec<String>>,
         replace: Vec<(PackageIdSpec, Dependency)>,
         patch: HashMap<Url, Vec<Dependency>>,
@@ -447,7 +444,6 @@ impl Manifest {
             links,
             metadata,
             custom_metadata,
-            profiles,
             publish,
             replace,
             patch,
@@ -528,7 +524,7 @@ impl Manifest {
         &self.warnings
     }
     pub fn profiles(&self) -> Option<&TomlProfiles> {
-        self.profiles.as_ref()
+        self.resolved_toml.profile.as_ref()
     }
     pub fn publish(&self) -> &Option<Vec<String>> {
         &self.publish
@@ -643,7 +639,6 @@ impl VirtualManifest {
         replace: Vec<(PackageIdSpec, Dependency)>,
         patch: HashMap<Url, Vec<Dependency>>,
         workspace: WorkspaceConfig,
-        profiles: Option<TomlProfiles>,
         features: Features,
         resolve_behavior: Option<ResolveBehavior>,
     ) -> VirtualManifest {
@@ -655,7 +650,6 @@ impl VirtualManifest {
             replace,
             patch,
             workspace,
-            profiles,
             warnings: Warnings::new(),
             features,
             resolve_behavior,
@@ -692,7 +686,7 @@ impl VirtualManifest {
     }
 
     pub fn profiles(&self) -> Option<&TomlProfiles> {
-        self.profiles.as_ref()
+        self.resolved_toml.profile.as_ref()
     }
 
     pub fn warnings_mut(&mut self) -> &mut Warnings {

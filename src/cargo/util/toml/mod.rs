@@ -1108,8 +1108,7 @@ pub fn to_real_manifest(
         .as_ref()
         .map(|_| manifest::InheritableField::Value(include.clone()));
 
-    let profiles = original_toml.profile.clone();
-    if let Some(profiles) = &profiles {
+    if let Some(profiles) = &original_toml.profile {
         let cli_unstable = gctx.cli_unstable();
         validate_profiles(profiles, cli_unstable, &features, &mut warnings)?;
     }
@@ -1211,7 +1210,6 @@ pub fn to_real_manifest(
         package.links.clone(),
         metadata,
         custom_metadata,
-        profiles,
         publish,
         replace,
         patch,
@@ -1328,8 +1326,7 @@ fn to_virtual_manifest(
             patch(&original_toml, &mut manifest_ctx)?,
         )
     };
-    let profiles = original_toml.profile.clone();
-    if let Some(profiles) = &profiles {
+    if let Some(profiles) = &original_toml.profile {
         validate_profiles(profiles, gctx.cli_unstable(), &features, &mut warnings)?;
     }
     let resolve_behavior = original_toml
@@ -1374,7 +1371,6 @@ fn to_virtual_manifest(
         replace,
         patch,
         workspace_config,
-        profiles,
         features,
         resolve_behavior,
     );

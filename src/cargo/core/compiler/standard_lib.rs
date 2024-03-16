@@ -111,7 +111,6 @@ pub fn resolve_std<'gctx>(
         /*replace*/ Vec::new(),
         patch,
         ws_config,
-        /*profiles*/ None,
         crate::core::Features::default(),
         None,
     );
