@@ -461,33 +461,6 @@ pub fn to_real_manifest(
     manifest_file: &Path,
     gctx: &GlobalContext,
 ) -> CargoResult<Manifest> {
-    fn get_ws(
-        gctx: &GlobalContext,
-        resolved_path: &Path,
-        workspace_config: &WorkspaceConfig,
-    ) -> CargoResult<InheritableFields> {
-        match workspace_config {
-            WorkspaceConfig::Root(root) => Ok(root.inheritable().clone()),
-            WorkspaceConfig::Member {
-                root: Some(ref path_to_root),
-            } => {
-                let path = resolved_path
-                    .parent()
-                    .unwrap()
-                    .join(path_to_root)
-                    .join("Cargo.toml");
-                let root_path = paths::normalize_path(&path);
-                inheritable_from_path(gctx, root_path)
-            }
-            WorkspaceConfig::Member { root: None } => {
-                match find_workspace_root(&resolved_path, gctx)? {
-                    Some(path_to_root) => inheritable_from_path(gctx, path_to_root),
-                    None => Err(anyhow!("failed to find a workspace root")),
-                }
-            }
-        }
-    }
-
     let embedded = is_embedded(manifest_file);
     let package_root = manifest_file.parent().unwrap();
     if !package_root.is_dir() {
@@ -591,8 +564,10 @@ pub fn to_real_manifest(
     }
 
     let inherit_cell: LazyCell<InheritableFields> = LazyCell::new();
-    let inherit =
-        || inherit_cell.try_borrow_with(|| get_ws(gctx, manifest_file, &workspace_config));
+    let inherit = || {
+        inherit_cell
+            .try_borrow_with(|| load_inheritable_fields(gctx, manifest_file, &workspace_config))
+    };
 
     let version = package
         .version
@@ -783,7 +758,7 @@ pub fn to_real_manifest(
 
         let inheritable = || {
             inherit_cell.try_borrow_with(|| {
-                get_ws(
+                load_inheritable_fields(
                     manifest_ctx.gctx,
                     &manifest_ctx.root.join("Cargo.toml"),
                     &workspace_config,
@@ -1266,6 +1241,33 @@ pub fn to_real_manifest(
     manifest.feature_gate()?;
 
     Ok(manifest)
+}
+
+fn load_inheritable_fields(
+    gctx: &GlobalContext,
+    resolved_path: &Path,
+    workspace_config: &WorkspaceConfig,
+) -> CargoResult<InheritableFields> {
+    match workspace_config {
+        WorkspaceConfig::Root(root) => Ok(root.inheritable().clone()),
+        WorkspaceConfig::Member {
+            root: Some(ref path_to_root),
+        } => {
+            let path = resolved_path
+                .parent()
+                .unwrap()
+                .join(path_to_root)
+                .join("Cargo.toml");
+            let root_path = paths::normalize_path(&path);
+            inheritable_from_path(gctx, root_path)
+        }
+        WorkspaceConfig::Member { root: None } => {
+            match find_workspace_root(&resolved_path, gctx)? {
+                Some(path_to_root) => inheritable_from_path(gctx, path_to_root),
+                None => Err(anyhow!("failed to find a workspace root")),
+            }
+        }
+    }
 }
 
 fn to_virtual_manifest(
