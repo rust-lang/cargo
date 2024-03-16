@@ -519,12 +519,11 @@ pub fn to_real_manifest(
 
     let workspace_config = match (original_toml.workspace.as_ref(), package.workspace.as_ref()) {
         (Some(toml_config), None) => {
-            let lints = toml_config.lints.clone();
-            let lints = verify_lints(lints)?;
+            verify_lints(toml_config.lints.as_ref())?;
             let inheritable = InheritableFields {
                 package: toml_config.package.clone(),
                 dependencies: toml_config.dependencies.clone(),
-                lints,
+                lints: toml_config.lints.clone(),
                 _ws_root: package_root.to_path_buf(),
             };
             if let Some(ws_deps) = &inheritable.dependencies {
@@ -867,7 +866,7 @@ pub fn to_real_manifest(
         .clone()
         .map(|mw| lints_inherit_with(mw, || inherit()?.lints()))
         .transpose()?;
-    let lints = verify_lints(lints)?;
+    verify_lints(lints.as_ref())?;
     let default = manifest::TomlLints::default();
     let rustflags = lints_to_rustflags(lints.as_ref().unwrap_or(&default));
 
@@ -1337,12 +1336,11 @@ fn to_virtual_manifest(
         .transpose()?;
     let workspace_config = match original_toml.workspace {
         Some(ref toml_config) => {
-            let lints = toml_config.lints.clone();
-            let lints = verify_lints(lints)?;
+            verify_lints(toml_config.lints.as_ref())?;
             let inheritable = InheritableFields {
                 package: toml_config.package.clone(),
                 dependencies: toml_config.dependencies.clone(),
-                lints,
+                lints: toml_config.lints.clone(),
                 _ws_root: root.to_path_buf(),
             };
             let ws_root_config = WorkspaceRootConfig::new(
@@ -1476,12 +1474,12 @@ struct ManifestContext<'a, 'b> {
     features: &'a Features,
 }
 
-fn verify_lints(lints: Option<manifest::TomlLints>) -> CargoResult<Option<manifest::TomlLints>> {
+fn verify_lints(lints: Option<&manifest::TomlLints>) -> CargoResult<()> {
     let Some(lints) = lints else {
-        return Ok(None);
+        return Ok(());
     };
 
-    for (tool, lints) in &lints {
+    for (tool, lints) in lints {
         let supported = ["rust", "clippy", "rustdoc"];
         if !supported.contains(&tool.as_str()) {
             let supported = supported.join(", ");
@@ -1504,7 +1502,7 @@ fn verify_lints(lints: Option<manifest::TomlLints>) -> CargoResult<Option<manife
         }
     }
 
-    Ok(Some(lints))
+    Ok(())
 }
 
 fn lints_to_rustflags(lints: &manifest::TomlLints) -> Vec<String> {
