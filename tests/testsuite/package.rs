@@ -3394,13 +3394,36 @@ src/main.rs
         )
         .run();
 
-    // if target is committed, it should be include.
+    // if target is committed, it should be included.
     git::add(&repo);
     git::commit(&repo);
     p.cargo("package -l")
         .with_stdout(
             "\
 .cargo_vcs_info.json
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+data/not_target
+data/target
+derp/not_target/foo.txt
+derp/target/foo.txt
+src/main.rs
+target/foo.txt
+",
+        )
+        .run();
+
+    // Untracked files shouldn't be included, if they are also ignored.
+    _ = fs::write(repo.workdir().unwrap().join(".gitignore"), "target/").unwrap();
+    git::add(&repo);
+    git::commit(&repo);
+    _ = fs::write(p.build_dir().join("untracked.txt"), "").unwrap();
+    p.cargo("package -l")
+        .with_stdout(
+            "\
+.cargo_vcs_info.json
+.gitignore
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig

@@ -1086,6 +1086,7 @@ dependencies = [
  "gix-credentials",
  "gix-date",
  "gix-diff",
+ "gix-dir",
  "gix-discover",
  "gix-features",
  "gix-filter",
@@ -1273,6 +1274,26 @@ dependencies = [
  "bstr",
  "gix-hash",
  "gix-object",
+ "thiserror",
+]
+
+[[package]]
+name = "gix-dir"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3413ccd29130900c17574678aee640e4847909acae9febf6424dc77b782c6d32"
+dependencies = [
+ "bstr",
+ "gix-discover",
+ "gix-fs",
+ "gix-ignore",
+ "gix-index",
+ "gix-object",
+ "gix-path",
+ "gix-pathspec",
+ "gix-trace",
+ "gix-utils",
+ "gix-worktree",
  "thiserror",
 ]
 
@@ -1777,6 +1798,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0066432d4c277f9877f091279a597ea5331f68ca410efc874f0bdfb1cd348f92"
 dependencies = [
+ "bstr",
  "fastrand",
  "unicode-normalization",
 ]

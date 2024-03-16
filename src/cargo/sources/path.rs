@@ -13,6 +13,7 @@ use crate::util::{internal, CargoResult, GlobalContext};
 use anyhow::Context as _;
 use cargo_util::paths;
 use filetime::FileTime;
+use gix::bstr::{ByteSlice, ByteVec};
 use ignore::gitignore::GitignoreBuilder;
 use tracing::{trace, warn};
 use walkdir::WalkDir;
@@ -139,7 +140,16 @@ impl<'gctx> PathSource<'gctx> {
         let root = pkg.root();
         let no_include_option = pkg.manifest().include().is_empty();
         let git_repo = if no_include_option {
-            self.discover_git_repo(root)?
+            if self
+                .gctx
+                .cli_unstable()
+                .gitoxide
+                .map_or(false, |features| features.fetch)
+            {
+                self.discover_gix_repo(root)?.map(Git2OrGixRepository::Gix)
+            } else {
+                self.discover_git_repo(root)?.map(Git2OrGixRepository::Git2)
+            }
         } else {
             None
         };
@@ -197,7 +207,10 @@ impl<'gctx> PathSource<'gctx> {
         // Attempt Git-prepopulate only if no `include` (see rust-lang/cargo#4135).
         if no_include_option {
             if let Some(repo) = git_repo {
-                return self.list_files_git(pkg, &repo, &filter);
+                return match repo {
+                    Git2OrGixRepository::Git2(repo) => self.list_files_git(pkg, &repo, &filter),
+                    Git2OrGixRepository::Gix(repo) => self.list_files_gix(pkg, &repo, &filter),
+                };
             }
         }
         self.list_files_walk(pkg, &filter)
@@ -240,6 +253,52 @@ impl<'gctx> PathSource<'gctx> {
         };
         let manifest_path = repo_relative_path.join("Cargo.toml");
         if index.get_path(&manifest_path, 0).is_some() {
+            return Ok(Some(repo));
+        }
+        // Package Cargo.toml is not in git, don't use git to guide our selection.
+        Ok(None)
+    }
+
+    /// Returns [`Some(gix::Repository)`](gix::Repository) if there is a sibling `Cargo.toml` and `.git`
+    /// directory; otherwise, the caller should fall back on full file list.
+    fn discover_gix_repo(&self, root: &Path) -> CargoResult<Option<gix::Repository>> {
+        let repo = match gix::discover(root) {
+            Ok(repo) => repo,
+            Err(e) => {
+                tracing::debug!(
+                    "could not discover git repo at or above {}: {}",
+                    root.display(),
+                    e
+                );
+                return Ok(None);
+            }
+        };
+        let index = repo
+            .index_or_empty()
+            .with_context(|| format!("failed to open git index at {}", repo.path().display()))?;
+        let repo_root = repo.work_dir().ok_or_else(|| {
+            anyhow::format_err!(
+                "did not expect repo at {} to be bare",
+                repo.path().display()
+            )
+        })?;
+        let repo_relative_path = match paths::strip_prefix_canonical(root, repo_root) {
+            Ok(p) => p,
+            Err(e) => {
+                tracing::warn!(
+                    "cannot determine if path `{:?}` is in git repo `{:?}`: {:?}",
+                    root,
+                    repo_root,
+                    e
+                );
+                return Ok(None);
+            }
+        };
+        let manifest_path = gix::path::join_bstr_unix_pathsep(
+            gix::path::into_bstr(repo_relative_path),
+            "Cargo.toml",
+        );
+        if index.entry_index_by_path(&manifest_path).is_ok() {
             return Ok(Some(repo));
         }
         // Package Cargo.toml is not in git, don't use git to guide our selection.
@@ -412,6 +471,228 @@ impl<'gctx> PathSource<'gctx> {
     }
 
     /// Lists files relevant to building this package inside this source by
+    /// traversing the git working tree, while avoiding ignored files.
+    ///
+    /// This looks into Git submodules as well, resolving them to individual files.
+    /// Symlinks to directories will also be resolved, which may include `.git` folders
+    /// in entirety if the link points to a submodule.
+    fn list_files_gix(
+        &self,
+        pkg: &Package,
+        repo: &gix::Repository,
+        filter: &dyn Fn(&Path, bool) -> bool,
+    ) -> CargoResult<Vec<PathBuf>> {
+        use gix::dir::entry::Status;
+        warn!("list_files_gix {}", pkg.package_id());
+        let options = repo
+            .dirwalk_options()?
+            .emit_untracked(gix::dir::walk::EmissionMode::Matching)
+            .emit_ignored(None)
+            .emit_tracked(true)
+            .recurse_repositories(false)
+            .symlinks_to_directories_are_ignored_like_directories(true)
+            .emit_empty_directories(false);
+        let index = repo.index_or_empty()?;
+        let root = repo
+            .work_dir()
+            .ok_or_else(|| anyhow::format_err!("can't list files on a bare repository"))?;
+        assert!(
+            root.is_absolute(),
+            "BUG: paths used internally are absolute, and the repo inherits that"
+        );
+
+        let pkg_path = pkg.root();
+        let mut target_prefix;
+        let repo_relative_pkg_path = pkg_path.strip_prefix(root).ok().unwrap_or(Path::new(""));
+
+        let pathspec = {
+            let mut include = gix::path::to_unix_separators_on_windows(gix::path::into_bstr(
+                repo_relative_pkg_path,
+            ));
+
+            target_prefix = include.clone();
+            target_prefix.to_mut().push_str(if include.is_empty() {
+                "target/"
+            } else {
+                "/target/"
+            });
+
+            // The `target` directory is never included if it is in the package root.
+            let exclude = {
+                let mut pattern = include.clone();
+                pattern
+                    .to_mut()
+                    .insert_str(0, if include.is_empty() { ":!" } else { ":!/" });
+                pattern.to_mut().push_str(b"/target/");
+                pattern
+            };
+            include.to_mut().insert_str(0, ":/");
+
+            vec![include, exclude]
+        };
+
+        let mut delegate = Delegate::new(self, pkg, pkg_path, repo, root, filter)?;
+        repo.dirwalk(
+            &index,
+            pathspec,
+            &Default::default(),
+            options,
+            &mut delegate,
+        )?;
+
+        let mut files = delegate.into_result()?;
+        // Append all normal files that might be tracked in `target/`.
+        files.extend(
+            index
+                .prefixed_entries(target_prefix.as_ref())
+                .unwrap_or_default()
+                .iter()
+                .filter(|entry| {
+                    entry.stage() == 0
+                        && entry
+                            .mode
+                            .to_tree_entry_mode()
+                            .map(|mode| mode.kind())
+                            .map_or(false, |kind| {
+                                use gix::object::tree::EntryKind::*;
+                                matches!(kind, Blob | BlobExecutable | Link)
+                            })
+                })
+                .map(|entry| root.join(gix::path::from_bstr(entry.path(&index)))),
+        );
+        return Ok(files);
+
+        struct Delegate<'a, 'gctx> {
+            root: &'a Path,
+            pkg: &'a Package,
+            pkg_path: &'a Path,
+            parent: &'a PathSource<'gctx>,
+            paths: Vec<PathBuf>,
+            submodules_by_rela_path: Vec<(gix::bstr::BString, gix::Submodule<'a>)>,
+            subpackages_found: Vec<PathBuf>,
+            filter: &'a dyn Fn(&Path, bool) -> bool,
+            err: Option<anyhow::Error>,
+        }
+
+        impl<'a, 'gctx> gix::dir::walk::Delegate for Delegate<'a, 'gctx> {
+            fn emit(
+                &mut self,
+                entry: gix::dir::EntryRef<'_>,
+                _collapsed_directory_status: Option<Status>,
+            ) -> gix::dir::walk::Action {
+                match self.handle_entry(entry) {
+                    Ok(()) => gix::dir::walk::Action::Continue,
+                    Err(e) => {
+                        self.err = Some(e.into());
+                        gix::dir::walk::Action::Cancel
+                    }
+                }
+            }
+        }
+
+        impl<'a, 'gctx> Delegate<'a, 'gctx> {
+            fn new(
+                parent: &'a PathSource<'gctx>,
+                pkg: &'a Package,
+                pkg_path: &'a Path,
+                repo: &'a gix::Repository,
+                root: &'a Path,
+                filter: &'a dyn Fn(&Path, bool) -> bool,
+            ) -> CargoResult<Self> {
+                let submodules_by_rela_path: Vec<_> = repo
+                    .submodules()?
+                    .into_iter()
+                    .flatten()
+                    .map(|sm| {
+                        sm.path()
+                            .map(|path| path.into_owned())
+                            .map(|path| (path, sm))
+                    })
+                    .collect::<Result<_, _>>()?;
+                Ok(Self {
+                    root,
+                    pkg,
+                    pkg_path,
+                    parent,
+                    filter,
+                    submodules_by_rela_path,
+                    paths: vec![],
+                    subpackages_found: vec![],
+                    err: None,
+                })
+            }
+
+            fn into_result(self) -> CargoResult<Vec<PathBuf>> {
+                match self.err {
+                    None => {
+                        return Ok(self.paths);
+                    }
+                    Some(e) => return Err(e),
+                }
+            }
+
+            fn handle_entry(&mut self, entry: gix::dir::EntryRef<'_>) -> CargoResult<()> {
+                if entry.status == Status::Untracked && entry.rela_path.as_ref() == "Cargo.lock" {
+                    return Ok(());
+                }
+                let file_path = self
+                    .root
+                    .join(gix::path::from_bstr(entry.rela_path.as_ref()));
+                if file_path.file_name().and_then(|name| name.to_str()) == Some("Cargo.toml") {
+                    // Keep track of all sub-packages found and also strip out all
+                    // matches we've found so far. Note, though, that if we find
+                    // our own `Cargo.toml`, we keep going.
+                    let path = file_path.parent().unwrap();
+                    if path != self.pkg_path {
+                        warn!("subpackage found: {}", path.display());
+                        self.paths.retain(|p| !p.starts_with(path));
+                        self.subpackages_found.push(path.to_path_buf());
+                        return Ok(());
+                    }
+                }
+
+                // If this file is part of any other sub-package we've found so far,
+                // skip it.
+                if self
+                    .subpackages_found
+                    .iter()
+                    .any(|p| file_path.starts_with(p))
+                {
+                    return Ok(());
+                }
+
+                let is_dir = entry.disk_kind.map_or(false, |kind| kind.is_dir());
+                if entry.disk_kind == Some(gix::dir::entry::Kind::Repository) {
+                    match self
+                        .submodules_by_rela_path
+                        .binary_search_by(|(sm_path, _)| {
+                            sm_path.as_bstr().cmp(entry.rela_path.as_ref())
+                        })
+                        .map(|idx| self.submodules_by_rela_path[idx].1.open())
+                    {
+                        Ok(Ok(Some(sm_repo))) => {
+                            let files =
+                                self.parent
+                                    .list_files_gix(self.pkg, &sm_repo, self.filter)?;
+                            self.paths.extend(files);
+                        }
+                        _ => {
+                            self.parent
+                                .walk(&file_path, &mut self.paths, false, self.filter)?;
+                        }
+                    }
+                } else if (self.filter)(&file_path, is_dir) {
+                    assert!(!is_dir);
+                    // We found a file!
+                    warn!("  found {}", file_path.display());
+                    self.paths.push(file_path);
+                }
+                Ok(())
+            }
+        }
+    }
+
+    /// Lists files relevant to building this package inside this source by
     /// walking the filesystem from the package root path.
     ///
     /// This is a fallback for [`PathSource::list_files_git`] when the package
@@ -539,6 +820,11 @@ impl<'gctx> PathSource<'gctx> {
 
         Ok(())
     }
+}
+
+enum Git2OrGixRepository {
+    Git2(git2::Repository),
+    Gix(gix::Repository),
 }
 
 impl<'gctx> Debug for PathSource<'gctx> {
