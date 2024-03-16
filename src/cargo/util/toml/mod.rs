@@ -1199,6 +1199,7 @@ pub fn to_real_manifest(
     let mut manifest = Manifest::new(
         Rc::new(contents),
         Rc::new(document),
+        Rc::new(original_toml),
         Rc::new(resolved_toml),
         summary,
         default_kind,
