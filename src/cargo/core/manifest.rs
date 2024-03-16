@@ -88,6 +88,13 @@ pub struct Warnings(Vec<DelayedWarning>);
 
 #[derive(Clone, Debug)]
 pub struct VirtualManifest {
+    // alternate forms of manifests:
+    contents: Rc<String>,
+    document: Rc<toml_edit::ImDocument<String>>,
+    original_toml: Rc<TomlManifest>,
+    resolved_toml: Rc<TomlManifest>,
+
+    // this form of manifest:
     replace: Vec<(PackageIdSpec, Dependency)>,
     patch: HashMap<Url, Vec<Dependency>>,
     workspace: WorkspaceConfig,
@@ -629,6 +636,10 @@ impl Manifest {
 
 impl VirtualManifest {
     pub fn new(
+        contents: Rc<String>,
+        document: Rc<toml_edit::ImDocument<String>>,
+        original_toml: Rc<TomlManifest>,
+        resolved_toml: Rc<TomlManifest>,
         replace: Vec<(PackageIdSpec, Dependency)>,
         patch: HashMap<Url, Vec<Dependency>>,
         workspace: WorkspaceConfig,
@@ -637,6 +648,10 @@ impl VirtualManifest {
         resolve_behavior: Option<ResolveBehavior>,
     ) -> VirtualManifest {
         VirtualManifest {
+            contents,
+            document,
+            original_toml,
+            resolved_toml,
             replace,
             patch,
             workspace,
@@ -645,6 +660,23 @@ impl VirtualManifest {
             features,
             resolve_behavior,
         }
+    }
+
+    /// The raw contents of the original TOML
+    pub fn contents(&self) -> &str {
+        self.contents.as_str()
+    }
+    /// Collection of spans for the original TOML
+    pub fn document(&self) -> &toml_edit::ImDocument<String> {
+        &self.document
+    }
+    /// The [`TomlManifest`] with all fields expanded
+    pub fn original_toml(&self) -> &TomlManifest {
+        &self.original_toml
+    }
+    /// The [`TomlManifest`] with all fields expanded
+    pub fn resolved_toml(&self) -> &TomlManifest {
+        &self.resolved_toml
     }
 
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] {

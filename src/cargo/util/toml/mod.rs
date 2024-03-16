@@ -60,7 +60,8 @@ pub fn read_manifest(
             to_real_manifest(contents, document, original_toml, source_id, path, gctx)
                 .map(EitherManifest::Real)
         } else {
-            to_virtual_manifest(original_toml, source_id, path, gctx).map(EitherManifest::Virtual)
+            to_virtual_manifest(contents, document, original_toml, source_id, path, gctx)
+                .map(EitherManifest::Virtual)
         }
     })()
     .map_err(|err| {
@@ -1276,6 +1277,8 @@ fn load_inheritable_fields(
 }
 
 fn to_virtual_manifest(
+    contents: String,
+    document: toml_edit::ImDocument<String>,
     original_toml: manifest::TomlManifest,
     source_id: SourceId,
     manifest_file: &Path,
@@ -1362,7 +1365,12 @@ fn to_virtual_manifest(
             bail!("virtual manifests must be configured with [workspace]");
         }
     };
+    let resolved_toml = original_toml.clone();
     let mut manifest = VirtualManifest::new(
+        Rc::new(contents),
+        Rc::new(document),
+        Rc::new(original_toml),
+        Rc::new(resolved_toml),
         replace,
         patch,
         workspace_config,
