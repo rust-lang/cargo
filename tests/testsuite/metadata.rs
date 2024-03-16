@@ -1622,7 +1622,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
                       "kind": [
                         "lib"
                       ],
-                      "name": "non-artifact",
+                      "name": "non_artifact",
                       "src_path": "[..]/foo/non-artifact/src/lib.rs",
                       "test": true
                     }
@@ -3114,7 +3114,7 @@ fn filter_platform() {
           "crate_types": [
             "lib"
           ],
-          "name": "alt-dep",
+          "name": "alt_dep",
           "src_path": "[..]/alt-dep-0.0.1/src/lib.rs",
           "edition": "2015",
           "test": true,
@@ -3158,7 +3158,7 @@ fn filter_platform() {
           "crate_types": [
             "lib"
           ],
-          "name": "cfg-dep",
+          "name": "cfg_dep",
           "src_path": "[..]/cfg-dep-0.0.1/src/lib.rs",
           "edition": "2015",
           "test": true,
@@ -3202,7 +3202,7 @@ fn filter_platform() {
           "crate_types": [
             "lib"
           ],
-          "name": "host-dep",
+          "name": "host_dep",
           "src_path": "[..]/host-dep-0.0.1/src/lib.rs",
           "edition": "2015",
           "test": true,
@@ -3246,7 +3246,7 @@ fn filter_platform() {
           "crate_types": [
             "lib"
           ],
-          "name": "normal-dep",
+          "name": "normal_dep",
           "src_path": "[..]/normal-dep-0.0.1/src/lib.rs",
           "edition": "2015",
           "test": true,

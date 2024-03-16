@@ -156,18 +156,20 @@ fn clean_lib(
     let lib = match toml_lib {
         Some(lib) => {
             if let Some(ref name) = lib.name {
-                // XXX: other code paths dodge this validation
                 if name.contains('-') {
                     anyhow::bail!("library target names cannot contain hyphens: {}", name)
                 }
             }
             Some(TomlTarget {
-                name: lib.name.clone().or_else(|| Some(package_name.to_owned())),
+                name: lib
+                    .name
+                    .clone()
+                    .or_else(|| Some(package_name.replace("-", "_"))),
                 ..lib.clone()
             })
         }
         None => inferred.as_ref().map(|lib| TomlTarget {
-            name: Some(package_name.to_string()),
+            name: Some(package_name.replace("-", "_")),
             path: Some(PathValue(lib.clone())),
             ..TomlTarget::new()
         }),
@@ -262,6 +264,7 @@ fn clean_lib(
 
     let mut target = Target::lib_target(name_or_panic(lib), crate_types, path, edition);
     configure(lib, &mut target)?;
+    target.set_name_inferred(toml_lib.map_or(true, |v| v.name.is_none()));
     Ok(Some(target))
 }
 
