@@ -520,13 +520,7 @@ pub fn to_real_manifest(
     let workspace_config = match (original_toml.workspace.as_ref(), package.workspace.as_ref()) {
         (Some(toml_config), None) => {
             verify_lints(toml_config.lints.as_ref())?;
-            let inheritable = InheritableFields {
-                package: toml_config.package.clone(),
-                dependencies: toml_config.dependencies.clone(),
-                lints: toml_config.lints.clone(),
-                _ws_root: package_root.to_path_buf(),
-            };
-            if let Some(ws_deps) = &inheritable.dependencies {
+            if let Some(ws_deps) = &toml_config.dependencies {
                 for (name, dep) in ws_deps {
                     unused_dep_keys(
                         name,
@@ -536,14 +530,7 @@ pub fn to_real_manifest(
                     );
                 }
             }
-            let ws_root_config = WorkspaceRootConfig::new(
-                package_root,
-                &toml_config.members,
-                &toml_config.default_members,
-                &toml_config.exclude,
-                &Some(inheritable),
-                &toml_config.metadata,
-            );
+            let ws_root_config = to_workspace_config(toml_config, package_root);
             gctx.ws_roots
                 .borrow_mut()
                 .insert(package_root.to_path_buf(), ws_root_config.clone());
@@ -1246,6 +1233,27 @@ pub fn to_real_manifest(
     Ok(manifest)
 }
 
+fn to_workspace_config(
+    resolved_toml: &manifest::TomlWorkspace,
+    package_root: &Path,
+) -> WorkspaceRootConfig {
+    let inheritable = InheritableFields {
+        package: resolved_toml.package.clone(),
+        dependencies: resolved_toml.dependencies.clone(),
+        lints: resolved_toml.lints.clone(),
+        _ws_root: package_root.to_owned(),
+    };
+    let ws_root_config = WorkspaceRootConfig::new(
+        package_root,
+        &resolved_toml.members,
+        &resolved_toml.default_members,
+        &resolved_toml.exclude,
+        &Some(inheritable),
+        &resolved_toml.metadata,
+    );
+    ws_root_config
+}
+
 fn load_inheritable_fields(
     gctx: &GlobalContext,
     resolved_path: &Path,
@@ -1337,20 +1345,7 @@ fn to_virtual_manifest(
     let workspace_config = match original_toml.workspace {
         Some(ref toml_config) => {
             verify_lints(toml_config.lints.as_ref())?;
-            let inheritable = InheritableFields {
-                package: toml_config.package.clone(),
-                dependencies: toml_config.dependencies.clone(),
-                lints: toml_config.lints.clone(),
-                _ws_root: root.to_path_buf(),
-            };
-            let ws_root_config = WorkspaceRootConfig::new(
-                root,
-                &toml_config.members,
-                &toml_config.default_members,
-                &toml_config.exclude,
-                &Some(inheritable),
-                &toml_config.metadata,
-            );
+            let ws_root_config = to_workspace_config(toml_config, root);
             gctx.ws_roots
                 .borrow_mut()
                 .insert(root.to_path_buf(), ws_root_config.clone());
