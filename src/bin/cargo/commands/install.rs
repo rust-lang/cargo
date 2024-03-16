@@ -74,6 +74,13 @@ pub fn cli() -> Command {
             "list",
             "List all installed packages and their versions",
         ))
+        .arg(
+            flag(
+                "dry-run",
+                "Display what would be installed without actually performing anything (unstable)",
+            )
+            .short('n'),
+        )
         .arg_ignore_rust_version()
         .arg_message_format()
         .arg_silent_suggestion()
@@ -201,6 +208,9 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     if args.flag("list") {
         ops::install_list(root, gctx)?;
     } else {
+        if args.flag("dry-run") {
+            gctx.cli_unstable().fail_if_stable_opt("--dry-run", 11123)?;
+        }
         ops::install(
             gctx,
             root,
