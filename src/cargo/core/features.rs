@@ -546,7 +546,6 @@ impl Features {
         warnings: &mut Vec<String>,
     ) -> CargoResult<()> {
         let nightly_features_allowed = self.nightly_features_allowed;
-        let is_local = self.is_local;
         let Some((slot, feature)) = self.status(feature_name) else {
             bail!("unknown cargo feature `{}`", feature_name)
         };
@@ -567,19 +566,15 @@ impl Features {
 
         match feature.stability {
             Status::Stable => {
-                // The user can't do anything about non-local packages.
-                // Warnings are usually suppressed, but just being cautious here.
-                if is_local {
-                    let warning = format!(
-                        "the cargo feature `{}` has been stabilized in the {} \
+                let warning = format!(
+                    "the cargo feature `{}` has been stabilized in the {} \
                          release and is no longer necessary to be listed in the \
                          manifest\n  {}",
-                        feature_name,
-                        feature.version,
-                        see_docs()
-                    );
-                    warnings.push(warning);
-                }
+                    feature_name,
+                    feature.version,
+                    see_docs()
+                );
+                warnings.push(warning);
             }
             Status::Unstable if !nightly_features_allowed => bail!(
                 "the cargo feature `{}` requires a nightly version of \
