@@ -141,6 +141,23 @@ protect against multiple concurrent invocations of Cargo installing at the
 same time.</dd>
 
 
+<dt class="option-term" id="option-cargo-install--n"><a class="option-anchor" href="#option-cargo-install--n"></a><code>-n</code></dt>
+<dt class="option-term" id="option-cargo-install---dry-run"><a class="option-anchor" href="#option-cargo-install---dry-run"></a><code>--dry-run</code></dt>
+<dd class="option-desc">(unstable) Cut the install operation short and display what it <em>would</em> have
+usually done. The normal version check and crate downloads still occur exactly
+like without the option flag, but the compilation and the actual installation
+do not. Only the operation that would have been performed is displayed for each
+requested package, one of:</p>
+<ul>
+<li>fresh install if the package is not installed yet,</li>
+<li>upgrade if it is already installed but a newer version exists,</li>
+<li>downgrade if it is already installed but an older version has been
+explicitely requested,</li>
+<li>nothing if it is already installed and up-to-date,</li>
+<li>re-install if it is already installed and up-to-date but <code>--force</code> was set.</li>
+</ul></dd>
+
+
 <dt class="option-term" id="option-cargo-install---bin"><a class="option-anchor" href="#option-cargo-install---bin"></a><code>--bin</code> <em>name</em>…</dt>
 <dd class="option-desc">Install only the specified binary.</dd>
 

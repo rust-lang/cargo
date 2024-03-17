@@ -170,6 +170,37 @@ protect against multiple concurrent invocations of Cargo installing at the
 same time.
 .RE
 .sp
+\fB\-n\fR, 
+\fB\-\-dry\-run\fR
+.RS 4
+(unstable) Cut the install operation short and display what it \fIwould\fR have
+usually done. The normal version check and crate downloads still occur exactly
+like without the option flag, but the compilation and the actual installation
+do not. Only the operation that would have been performed is displayed for each
+requested package, one of:
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'fresh install if the package is not installed yet,
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'upgrade if it is already installed but a newer version exists,
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'downgrade if it is already installed but an older version has been
+explicitely requested,
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'nothing if it is already installed and up\-to\-date,
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02're\-install if it is already installed and up\-to\-date but \fB\-\-force\fR was set.
+.RE
+.RE
+.sp
 \fB\-\-bin\fR \fIname\fR\[u2026]
 .RS 4
 Install only the specified binary.
