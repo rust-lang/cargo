@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -15,7 +16,7 @@ use crate::{drop_println, ops};
 
 use anyhow::{bail, Context as _};
 use cargo_util::paths;
-use cargo_util_schemas::core::PartialVersion;
+use cargo_util_schemas::core::{PartialVersion, SourceKind};
 use itertools::Itertools;
 use semver::VersionReq;
 use tempfile::Builder as TempFileBuilder;
@@ -619,6 +620,7 @@ pub fn install(
     opts: &ops::CompileOptions,
     force: bool,
     no_track: bool,
+    dry_run: bool,
 ) -> CargoResult<()> {
     let root = resolve_root(root, gctx)?;
     let dst = root.join("bin").into_path_unlocked();
@@ -639,7 +641,7 @@ pub fn install(
             .unwrap_or((None, None));
         let installable_pkg = InstallablePackage::new(
             gctx,
-            root,
+            root.clone(),
             map,
             krate,
             source_id,
@@ -651,11 +653,59 @@ pub fn install(
             true,
             current_rust_version.as_ref(),
         )?;
-        let mut installed_anything = true;
-        if let Some(installable_pkg) = installable_pkg {
-            installed_anything = installable_pkg.install_one()?;
+        if dry_run {
+            match installable_pkg {
+                Some(installable_pkg) => dry_run_report(
+                    gctx,
+                    &root,
+                    dst.as_path(),
+                    &[(
+                        &krate
+                            .unwrap_or_else(|| installable_pkg.pkg.name().as_str())
+                            .to_owned(),
+                        installable_pkg,
+                    )],
+                    &[],
+                    &[],
+                )?,
+                None => dry_run_report(
+                    gctx,
+                    &root,
+                    dst.as_path(),
+                    &[],
+                    &[krate.map_or_else(
+                        || -> CargoResult<&str> {
+                            // `krate` is `None` usually for a Git source at
+                            // this point. Select the package again in order to
+                            // be able to retrieve its name.
+                            if let SourceKind::Git(_) = source_id.kind() {
+                                Ok(select_pkg(
+                                    &mut GitSource::new(source_id, gctx)?,
+                                    None,
+                                    |git_src| git_src.read_packages(),
+                                    gctx,
+                                    current_rust_version.as_ref(),
+                                )?
+                                .name()
+                                .as_str())
+                            } else {
+                                Ok("")
+                            }
+                        },
+                        |kr| Ok(kr),
+                    )?],
+                    &[],
+                )?,
+            }
+
+            (false, false)
+        } else {
+            let mut installed_anything = true;
+            if let Some(installable_pkg) = installable_pkg {
+                installed_anything = installable_pkg.install_one()?;
+            }
+            (installed_anything, false)
         }
-        (installed_anything, false)
     } else {
         let mut succeeded = vec![];
         let mut failed = vec![];
@@ -702,40 +752,52 @@ pub fn install(
             })
             .collect();
 
-        let install_results: Vec<_> = pkgs_to_install
-            .into_iter()
-            .map(|(krate, installable_pkg)| (krate, installable_pkg.install_one()))
-            .collect();
+        if dry_run {
+            dry_run_report(
+                gctx,
+                &root,
+                dst.as_path(),
+                &pkgs_to_install,
+                &succeeded,
+                &failed,
+            )?;
+            (false, !failed.is_empty())
+        } else {
+            let install_results: Vec<_> = pkgs_to_install
+                .into_iter()
+                .map(|(krate, installable_pkg)| (krate, installable_pkg.install_one()))
+                .collect();
 
-        for (krate, result) in install_results {
-            match result {
-                Ok(installed) => {
-                    if installed {
-                        succeeded.push(krate);
+            for (krate, result) in install_results {
+                match result {
+                    Ok(installed) => {
+                        if installed {
+                            succeeded.push(krate);
+                        }
+                    }
+                    Err(e) => {
+                        crate::display_error(&e, &mut gctx.shell());
+                        failed.push(krate);
                     }
                 }
-                Err(e) => {
-                    crate::display_error(&e, &mut gctx.shell());
-                    failed.push(krate);
-                }
             }
-        }
 
-        let mut summary = vec![];
-        if !succeeded.is_empty() {
-            summary.push(format!("Successfully installed {}!", succeeded.join(", ")));
-        }
-        if !failed.is_empty() {
-            summary.push(format!(
-                "Failed to install {} (see error(s) above).",
-                failed.join(", ")
-            ));
-        }
-        if !succeeded.is_empty() || !failed.is_empty() {
-            gctx.shell().status("Summary", summary.join(" "))?;
-        }
+            let mut summary = vec![];
+            if !succeeded.is_empty() {
+                summary.push(format!("Successfully installed {}!", succeeded.join(", ")));
+            }
+            if !failed.is_empty() {
+                summary.push(format!(
+                    "Failed to install {} (see error(s) above).",
+                    failed.join(", ")
+                ));
+            }
+            if !succeeded.is_empty() || !failed.is_empty() {
+                gctx.shell().status("Summary", summary.join(" "))?;
+            }
 
-        (!succeeded.is_empty(), !failed.is_empty())
+            (!succeeded.is_empty(), !failed.is_empty())
+        }
     };
 
     if installed_anything {
@@ -755,6 +817,90 @@ pub fn install(
 
     if scheduled_error {
         bail!("some crates failed to install");
+    }
+
+    Ok(())
+}
+
+/// Sends to `gctx`'s shell status messages reporting an early dry-run of a
+/// currently-ongoing installation.
+///
+///  * `pkgs_to_install`: The packages that need to be installed from scratch
+///    or updated to match the requested requirements.
+///  * `uptodate_pkgs`: The package names that are already up-to-date.
+///  * `failed_pkgs`: The package names that had some kind of failure.
+fn dry_run_report(
+    gctx: &GlobalContext,
+    root: &Filesystem,
+    dst: &Path,
+    pkgs_to_install: &[(&String, InstallablePackage<'_>)],
+    uptodate_pkgs: &[&str],
+    failed_pkgs: &[&str],
+) -> CargoResult<()> {
+    let mut pkgs_needing_fresh_install = Vec::new();
+    let mut pkgs_needing_update = Vec::new();
+    let instld_pkg_vers_by_semi_ids = InstallTracker::load(gctx, root)?
+        .all_installed_bins()
+        .map(|(pkg_id, _)| ((pkg_id.name(), pkg_id.source_id()), pkg_id.version()))
+        .collect::<HashMap<_, _>>();
+
+    for (krate, instlbl_pkg) in pkgs_to_install {
+        let instlbl_pkg_id = instlbl_pkg.pkg.package_id();
+
+        if instld_pkg_vers_by_semi_ids
+            .contains_key(&(instlbl_pkg_id.name(), instlbl_pkg_id.source_id()))
+        {
+            &mut pkgs_needing_update
+        } else {
+            &mut pkgs_needing_fresh_install
+        }
+        .push((krate, instlbl_pkg));
+    }
+
+    let mut shell = gctx.shell();
+    shell.status("Summary", "dry-run")?;
+    shell.status("Destination", dst.display())?;
+
+    for (krate, instlbl_pkg) in pkgs_needing_fresh_install {
+        let instlbl_pkg_id = instlbl_pkg.pkg.package_id();
+        shell.status(
+            "Install",
+            format!(
+                "{krate}: to {} using {}",
+                instlbl_pkg_id.version(),
+                instlbl_pkg_id.source_id(),
+            ),
+        )?;
+    }
+
+    for (krate, instlbl_pkg) in pkgs_needing_update {
+        let instlbl_pkg_id = instlbl_pkg.pkg.package_id();
+        let instlbl_pkg_id_ver = instlbl_pkg_id.version();
+        let instld_pkg_ver = instld_pkg_vers_by_semi_ids
+            .get(&(instlbl_pkg_id.name(), instlbl_pkg_id.source_id()))
+            .unwrap();
+
+        shell.status(
+            match instlbl_pkg_id_ver.cmp(&instld_pkg_ver) {
+                Ordering::Greater => "Upgrade",
+                Ordering::Equal => "Re-install",
+                Ordering::Less => "Downgrade",
+            },
+            format!(
+                "{krate}: from {} to {} using {}",
+                instld_pkg_ver,
+                instlbl_pkg_id_ver,
+                instlbl_pkg_id.source_id(),
+            ),
+        )?;
+    }
+
+    for krate in uptodate_pkgs {
+        shell.status("Up-to-date", krate)?;
+    }
+
+    for krate in failed_pkgs {
+        shell.status("Failed", krate)?;
     }
 
     Ok(())

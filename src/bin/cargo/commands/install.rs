@@ -220,6 +220,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
             &compile_opts,
             args.flag("force"),
             args.flag("no-track"),
+            args.flag("dry-run"),
         )?;
     }
     Ok(())
