@@ -2623,3 +2623,598 @@ fn uninstall_running_binary() {
         )
         .run();
 }
+
+#[cargo_test(nightly, reason = "--dry-run is unstable")]
+fn dry_run_freshinstall_one() {
+    pkg("foo", "0.0.1");
+
+    cargo_process("-Z unstable-options install --dry-run foo")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[SUMMARY] dry-run
+[DESTINATION] [..]/.cargo/bin
+[INSTALL] foo: to 0.0.1 using registry [..]
+",
+        )
+        .run();
+    assert_has_not_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test(nightly, reason = "--dry-run is unstable")]
+fn dry_run_freshinstall_two() {
+    pkg("foo", "0.0.1");
+    pkg("bar", "0.0.1");
+
+    cargo_process("-Z unstable-options install --dry-run foo bar")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry [..])
+[SUMMARY] dry-run
+[DESTINATION] [..]/.cargo/bin
+[INSTALL] foo: to 0.0.1 using registry [..]
+[INSTALL] bar: to 0.0.1 using registry [..]
+",
+        )
+        .run();
+    assert_has_not_installed_exe(cargo_home(), "foo");
+    assert_has_not_installed_exe(cargo_home(), "bar");
+}
+
+#[cargo_test(nightly, reason = "--dry-run is unstable")]
+fn dry_run_upgrade_one() {
+    pkg("foo", "0.0.1");
+
+    cargo_process("install foo")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+[FINISHED] `release` profile [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+
+    pkg("foo", "0.0.2");
+
+    cargo_process("-Z unstable-options install --dry-run foo")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.2 (registry [..])
+[SUMMARY] dry-run
+[DESTINATION] [..]/.cargo/bin
+[UPGRADE] foo: from 0.0.1 to 0.0.2 using registry [..]
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test(nightly, reason = "--dry-run is unstable")]
+fn dry_run_upgrade_two() {
+    for pkg_name in ["foo", "bar"] {
+        pkg(pkg_name, "0.0.1");
+
+        cargo_process(&format!("install {pkg_name}"))
+            .with_stderr(format!(
+                "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] {pkg_name} v0.0.1 (registry [..])
+[INSTALLING] {pkg_name} v0.0.1
+[COMPILING] {pkg_name} v0.0.1
+[FINISHED] `release` profile [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/{pkg_name}[EXE]
+[INSTALLED] package `{pkg_name} v0.0.1` (executable `{pkg_name}[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+"
+            ))
+            .run();
+        assert_has_installed_exe(cargo_home(), pkg_name);
+
+        pkg(pkg_name, "0.0.2");
+    }
+
+    cargo_process("-Z unstable-options install --dry-run foo bar")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.2 (registry [..])
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.2 (registry [..])
+[SUMMARY] dry-run
+[DESTINATION] [..]/.cargo/bin
+[UPGRADE] foo: from 0.0.1 to 0.0.2 using registry [..]
+[UPGRADE] bar: from 0.0.1 to 0.0.2 using registry [..]
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(cargo_home(), "bar");
+}
+
+#[cargo_test(nightly, reason = "--dry-run is unstable")]
+fn dry_run_downgrade_one() {
+    pkg("foo", "0.0.1");
+    pkg("foo", "0.0.2");
+
+    cargo_process("install foo")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.2 (registry [..])
+[INSTALLING] foo v0.0.2
+[COMPILING] foo v0.0.2
+[FINISHED] `release` profile [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.2` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+
+    cargo_process("-Z unstable-options install --dry-run foo@0.0.1")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .with_stderr(
+            "\
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[UPDATING] `[..]` index
+[SUMMARY] dry-run
+[DESTINATION] [..]/.cargo/bin
+[DOWNGRADE] foo: from 0.0.2 to 0.0.1 using registry [..]
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test(nightly, reason = "--dry-run is unstable")]
+fn dry_run_downgrade_two() {
+    for pkg_name in ["foo", "bar"] {
+        for pkg_ver in ["0.0.1", "0.0.2"] {
+            pkg(pkg_name, pkg_ver);
+        }
+
+        cargo_process(&format!("install {pkg_name}"))
+            .with_stderr(format!(
+                "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] {pkg_name} v0.0.2 (registry [..])
+[INSTALLING] {pkg_name} v0.0.2
+[COMPILING] {pkg_name} v0.0.2
+[FINISHED] `release` profile [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/{pkg_name}[EXE]
+[INSTALLED] package `{pkg_name} v0.0.2` (executable `{pkg_name}[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+"
+            ))
+            .run();
+        assert_has_installed_exe(cargo_home(), pkg_name);
+    }
+
+    cargo_process("-Z unstable-options install --dry-run foo@0.0.1 bar@0.0.1")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .with_stderr(
+            "\
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry [..])
+[SUMMARY] dry-run
+[DESTINATION] [..]/.cargo/bin
+[DOWNGRADE] foo: from 0.0.2 to 0.0.1 using registry [..]
+[DOWNGRADE] bar: from 0.0.2 to 0.0.1 using registry [..]
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(cargo_home(), "bar");
+}
+
+#[cargo_test(nightly, reason = "--dry-run is unstable")]
+fn dry_run_uptodate_one() {
+    pkg("foo", "0.0.1");
+
+    cargo_process("install foo")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+[FINISHED] `release` profile [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+
+    cargo_process("-Z unstable-options install --dry-run foo")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[IGNORED] package `foo v0.0.1` is already installed, use --force to override
+[SUMMARY] dry-run
+[DESTINATION] [..]/.cargo/bin
+[UPTODATE] foo
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test(nightly, reason = "--dry-run is unstable")]
+fn dry_run_uptodate_two() {
+    for pkg_name in ["foo", "bar"] {
+        pkg(pkg_name, "0.0.1");
+
+        cargo_process(&format!("install {pkg_name}"))
+            .with_stderr(format!(
+                "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] {pkg_name} v0.0.1 (registry [..])
+[INSTALLING] {pkg_name} v0.0.1
+[COMPILING] {pkg_name} v0.0.1
+[FINISHED] `release` profile [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/{pkg_name}[EXE]
+[INSTALLED] package `{pkg_name} v0.0.1` (executable `{pkg_name}[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+"
+            ))
+            .run();
+        assert_has_installed_exe(cargo_home(), pkg_name);
+    }
+
+    cargo_process("-Z unstable-options install --dry-run foo bar")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[IGNORED] package `foo v0.0.1` is already installed, use --force to override
+[IGNORED] package `bar v0.0.1` is already installed, use --force to override
+[SUMMARY] dry-run
+[DESTINATION] [..]/.cargo/bin
+[UPTODATE] foo
+[UPTODATE] bar
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(cargo_home(), "bar");
+}
+
+#[cargo_test(nightly, reason = "--dry-run is unstable")]
+fn dry_run_reinstall_one() {
+    pkg("foo", "0.0.1");
+
+    cargo_process("install foo")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+[FINISHED] `release` profile [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+
+    cargo_process("-Z unstable-options install --dry-run --force foo")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[SUMMARY] dry-run
+[DESTINATION] [..]/.cargo/bin
+[REINSTALL] foo: from 0.0.1 to 0.0.1 using registry [..]
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test(nightly, reason = "--dry-run is unstable")]
+fn dry_run_reinstall_two() {
+    for pkg_name in ["foo", "bar"] {
+        pkg(pkg_name, "0.0.1");
+
+        cargo_process(&format!("install {pkg_name}"))
+            .with_stderr(format!(
+                "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] {pkg_name} v0.0.1 (registry [..])
+[INSTALLING] {pkg_name} v0.0.1
+[COMPILING] {pkg_name} v0.0.1
+[FINISHED] `release` profile [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/{pkg_name}[EXE]
+[INSTALLED] package `{pkg_name} v0.0.1` (executable `{pkg_name}[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+"
+            ))
+            .run();
+        assert_has_installed_exe(cargo_home(), pkg_name);
+    }
+
+    cargo_process("-Z unstable-options install --dry-run --force foo bar")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[SUMMARY] dry-run
+[DESTINATION] [..]/.cargo/bin
+[REINSTALL] foo: from 0.0.1 to 0.0.1 using registry [..]
+[REINSTALL] bar: from 0.0.1 to 0.0.1 using registry [..]
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(cargo_home(), "bar");
+}
+
+fn setup_dry_run_mix() {
+    pkg("foo", "0.0.1");
+    pkg("bar", "0.0.1");
+    pkg("baz", "0.0.2");
+    pkg("xyz", "0.0.1");
+
+    cargo_process("-Z unstable-options install --dry-run xyz")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] xyz v0.0.1 (registry [..])
+[SUMMARY] dry-run
+[DESTINATION] [..]/.cargo/bin
+[INSTALL] xyz: to 0.0.1 using registry [..]
+",
+        )
+        .run();
+    assert_has_not_installed_exe(cargo_home(), "xyz");
+
+    for (pkg_name, pkg_ver) in [("xyz", "0.0.1"), ("bar", "0.0.1"), ("baz", "0.0.2")] {
+        cargo_process(&format!("install {pkg_name}"))
+            .with_stderr(format!(
+                "\
+[UPDATING] `[..]` index{}
+[INSTALLING] {pkg_name} v{pkg_ver}
+[COMPILING] {pkg_name} v{pkg_ver}
+[FINISHED] `release` profile [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/{pkg_name}[EXE]
+[INSTALLED] package `{pkg_name} v{pkg_ver}` (executable `{pkg_name}[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
+",
+                if pkg_name == "xyz" {
+                    String::new()
+                } else {
+                    format!(
+                        "
+[DOWNLOADING] crates ...
+[DOWNLOADED] {pkg_name} v{pkg_ver} (registry [..])"
+                    )
+                },
+            ))
+            .run();
+        assert_has_installed_exe(cargo_home(), pkg_name);
+    }
+
+    pkg("bar", "0.0.2");
+    pkg("baz", "0.0.1");
+}
+
+fn assert_dry_run_mix_end() {
+    assert_has_not_installed_exe(cargo_home(), "foo");
+
+    for pkg_name in ["bar", "baz", "xyz"] {
+        assert_has_installed_exe(cargo_home(), pkg_name);
+    }
+}
+
+#[cargo_test(nightly, reason = "--dry-run is unstable")]
+fn dry_run_mix() {
+    setup_dry_run_mix();
+
+    cargo_process("-Z unstable-options install --dry-run foo bar baz@0.0.1 xyz")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.2 (registry [..])
+[DOWNLOADING] crates ...
+[DOWNLOADED] baz v0.0.1 (registry [..])
+[IGNORED] package `xyz v0.0.1` is already installed, use --force to override
+[SUMMARY] dry-run
+[DESTINATION] [..]/.cargo/bin
+[INSTALL] foo: to 0.0.1 using registry [..]
+[UPGRADE] bar: from 0.0.1 to 0.0.2 using registry [..]
+[DOWNGRADE] baz: from 0.0.2 to 0.0.1 using registry [..]
+[UPTODATE] xyz
+",
+        )
+        .run();
+
+    assert_dry_run_mix_end();
+}
+
+#[cargo_test(nightly, reason = "--dry-run is unstable")]
+fn dry_run_mix_force() {
+    setup_dry_run_mix();
+
+    cargo_process("-Z unstable-options install --dry-run --force foo bar baz@0.0.1 xyz")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.2 (registry [..])
+[DOWNLOADING] crates ...
+[DOWNLOADED] baz v0.0.1 (registry [..])
+[SUMMARY] dry-run
+[DESTINATION] [..]/.cargo/bin
+[INSTALL] foo: to 0.0.1 using registry [..]
+[UPGRADE] bar: from 0.0.1 to 0.0.2 using registry [..]
+[DOWNGRADE] baz: from 0.0.2 to 0.0.1 using registry [..]
+[REINSTALL] xyz: from 0.0.1 to 0.0.1 using registry [..]
+",
+        )
+        .run();
+
+    assert_dry_run_mix_end();
+}
+
+#[cargo_test(nightly, reason = "--dry-run is unstable")]
+fn dry_run_path() {
+    let prj = project().file("src/main.rs", "fn main() {}").build();
+    assert_has_not_installed_exe(cargo_home(), "foo");
+
+    cargo_process("-Z unstable-options install --dry-run --path")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .arg(prj.root())
+        .with_stderr(
+            "\
+[SUMMARY] dry-run
+[DESTINATION] [..]/.cargo/bin
+[INSTALL] foo: to 0.0.1 using [..]/foo
+",
+        )
+        .run();
+    assert_has_not_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test(nightly, reason = "--dry-run is unstable")]
+fn dry_run_path_reinstall() {
+    let prj = project().file("src/main.rs", "fn main() {}").build();
+    prj.cargo("install --path .").run();
+    assert_has_installed_exe(cargo_home(), "foo");
+
+    cargo_process("-Z unstable-options install --dry-run --path")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .arg(prj.root())
+        .with_stderr(
+            "\
+[SUMMARY] dry-run
+[DESTINATION] [..]/.cargo/bin
+[REINSTALL] foo: from 0.0.1 to 0.0.1 using [..]/foo
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test(nightly, reason = "--dry-run is unstable")]
+fn dry_run_git() {
+    let prj = git::repo(&paths::root().join("foo"))
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    assert_has_not_installed_exe(cargo_home(), "foo");
+
+    cargo_process("-Z unstable-options install --dry-run --git")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .arg(prj.url().to_string())
+        .with_stderr(
+            "\
+[UPDATING] git repository `file://[..]/foo`
+[SUMMARY] dry-run
+[DESTINATION] [..]/.cargo/bin
+[INSTALL] foo: to 0.0.1 using file://[..]/foo#[..]
+",
+        )
+        .run();
+    assert_has_not_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test(nightly, reason = "--dry-run is unstable")]
+fn dry_run_git_uptodate() {
+    let prj = git::repo(&paths::root().join("foo"))
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    cargo_process("install --git")
+        .arg(prj.url().to_string())
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+
+    cargo_process("-Z unstable-options install --dry-run --git")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .arg(prj.url().to_string())
+        .with_stderr(
+            "\
+[UPDATING] git repository `file://[..]/foo`
+[IGNORED] package `foo v0.0.1 (file://[..]foo#[..])` is already installed, use --force to override
+[UPDATING] git repository `file://[..]/foo`
+[SUMMARY] dry-run
+[DESTINATION] [..]/.cargo/bin
+[UPTODATE] foo
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+}
+
+#[cargo_test(nightly, reason = "--dry-run is unstable")]
+fn dry_run_git_reinstall() {
+    let prj = git::repo(&paths::root().join("foo"))
+        .file("Cargo.toml", &basic_manifest("foo", "0.0.1"))
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    cargo_process("install --git")
+        .arg(prj.url().to_string())
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+
+    cargo_process("-Z unstable-options install --dry-run --force --git")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .arg(prj.url().to_string())
+        .with_stderr(
+            "\
+[UPDATING] git repository `file://[..]/foo`
+[SUMMARY] dry-run
+[DESTINATION] [..]/.cargo/bin
+[REINSTALL] foo: from 0.0.1 to 0.0.1 using file://[..]/foo#[..]
+",
+        )
+        .run();
+    assert_has_installed_exe(cargo_home(), "foo");
+}
