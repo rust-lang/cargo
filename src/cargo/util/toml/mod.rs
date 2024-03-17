@@ -489,8 +489,6 @@ pub fn to_real_manifest(
     let mut warnings = vec![];
     let mut errors = vec![];
 
-    warn_on_unused(&original_toml._unused_keys, &mut warnings);
-
     // Parse features first so they will be available when parsing other parts of the TOML.
     let empty = Vec::new();
     let cargo_features = original_toml.cargo_features.as_ref().unwrap_or(&empty);
@@ -1221,6 +1219,7 @@ pub fn to_real_manifest(
                 .to_owned(),
         );
     }
+    warn_on_unused(&manifest.original_toml()._unused_keys, &mut warnings);
     for warning in warnings {
         manifest.warnings_mut().add_warning(warning);
     }
@@ -1291,6 +1290,8 @@ fn to_virtual_manifest(
 ) -> CargoResult<VirtualManifest> {
     let root = manifest_file.parent().unwrap();
 
+    let mut resolved_toml = original_toml.clone();
+
     if let Some(deps) = original_toml
         .workspace
         .as_ref()
@@ -1316,7 +1317,7 @@ fn to_virtual_manifest(
     let cargo_features = original_toml.cargo_features.as_ref().unwrap_or(&empty);
     let features = Features::new(cargo_features, gctx, &mut warnings, source_id.is_path())?;
 
-    warn_on_unused(&original_toml._unused_keys, &mut warnings);
+    resolved_toml._unused_keys = Default::default();
 
     let (replace, patch) = {
         let mut manifest_ctx = ManifestContext {
@@ -1355,7 +1356,6 @@ fn to_virtual_manifest(
             bail!("virtual manifests must be configured with [workspace]");
         }
     };
-    let resolved_toml = original_toml.clone();
     let mut manifest = VirtualManifest::new(
         Rc::new(contents),
         Rc::new(document),
@@ -1367,6 +1367,8 @@ fn to_virtual_manifest(
         features,
         resolve_behavior,
     );
+
+    warn_on_unused(&manifest.original_toml()._unused_keys, &mut warnings);
     for warning in warnings {
         manifest.warnings_mut().add_warning(warning);
     }
