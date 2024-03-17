@@ -14,6 +14,7 @@ use anyhow::Context as _;
 use cargo_util::paths;
 use filetime::FileTime;
 use gix::bstr::ByteVec;
+use gix::dir::entry::Status;
 use ignore::gitignore::GitignoreBuilder;
 use tracing::{trace, warn};
 use walkdir::WalkDir;
@@ -475,7 +476,6 @@ impl<'gctx> PathSource<'gctx> {
         repo: &gix::Repository,
         filter: &dyn Fn(&Path, bool) -> bool,
     ) -> CargoResult<Vec<PathBuf>> {
-        use gix::dir::entry::Status;
         warn!("list_files_gix {}", pkg.package_id());
         let options = repo
             .dirwalk_options()?
@@ -521,129 +521,45 @@ impl<'gctx> PathSource<'gctx> {
             };
             include.to_mut().insert_str(0, ":/");
 
-            vec![include, exclude]
+            vec![include.into_owned(), exclude.into_owned()]
         };
 
-        let mut delegate = Delegate::new(self, pkg, pkg_path, root, filter)?;
-        repo.dirwalk(
-            &index,
-            pathspec,
-            &Default::default(),
-            options,
-            &mut delegate,
-        )?;
-
-        let (mut files, mut subpackages_found) = delegate.into_result()?;
-        // Append all normal files that might be tracked in `target/`.
-        for entry in index
-            .prefixed_entries(target_prefix.as_ref())
-            .unwrap_or_default()
-            .iter()
-            // probably not needed as conflicts prevent this to run, but let's be explicit.
-            .filter(|entry| entry.stage() == 0)
-        {
-            handle_path(
-                entry.path(&index),
-                // Do not trust what's recorded in the index, enforce checking the disk.
-                // This traversal is not part of a `status()`, and tracking things in `target/`
-                // is rare.
-                None,
-                root,
-                pkg,
-                pkg_path,
-                self,
-                &mut files,
-                &mut subpackages_found,
-                filter,
-            )?
-        }
-        return Ok(files);
-
-        struct Delegate<'a, 'gctx> {
-            root: &'a Path,
-            pkg: &'a Package,
-            pkg_path: &'a Path,
-            parent: &'a PathSource<'gctx>,
-            paths: Vec<PathBuf>,
-            subpackages_found: Vec<PathBuf>,
-            filter: &'a dyn Fn(&Path, bool) -> bool,
-            err: Option<anyhow::Error>,
-        }
-
-        impl<'a, 'gctx> gix::dir::walk::Delegate for Delegate<'a, 'gctx> {
-            fn emit(
-                &mut self,
-                entry: gix::dir::EntryRef<'_>,
-                _collapsed_directory_status: Option<Status>,
-            ) -> gix::dir::walk::Action {
-                match self.handle_entry(entry) {
-                    Ok(()) => gix::dir::walk::Action::Continue,
-                    Err(e) => {
-                        self.err = Some(e.into());
-                        gix::dir::walk::Action::Cancel
-                    }
-                }
-            }
-        }
-
-        impl<'a, 'gctx> Delegate<'a, 'gctx> {
-            fn new(
-                parent: &'a PathSource<'gctx>,
-                pkg: &'a Package,
-                pkg_path: &'a Path,
-                root: &'a Path,
-                filter: &'a dyn Fn(&Path, bool) -> bool,
-            ) -> CargoResult<Self> {
-                Ok(Self {
-                    root,
-                    pkg,
-                    pkg_path,
-                    parent,
-                    filter,
-                    paths: vec![],
-                    subpackages_found: vec![],
-                    err: None,
+        let mut files = Vec::<PathBuf>::new();
+        let mut subpackages_found = Vec::new();
+        for item in repo
+            .dirwalk_iter(index.clone(), pathspec, Default::default(), options)?
+            .filter(|res| {
+                // Don't include Cargo.lock if it is untracked. Packaging will
+                // generate a new one as needed.
+                res.as_ref().map_or(true, |item| {
+                    !(item.entry.status == Status::Untracked
+                        && item.entry.rela_path == "Cargo.lock")
                 })
-            }
-
-            fn into_result(self) -> CargoResult<(Vec<PathBuf>, Vec<PathBuf>)> {
-                match self.err {
-                    None => {
-                        return Ok((self.paths, self.subpackages_found));
-                    }
-                    Some(e) => return Err(e),
-                }
-            }
-
-            fn handle_entry(&mut self, entry: gix::dir::EntryRef<'_>) -> CargoResult<()> {
-                if entry.status == Status::Untracked && entry.rela_path.as_ref() == "Cargo.lock" {
-                    return Ok(());
-                }
-                handle_path(
-                    entry.rela_path.as_ref(),
-                    entry.disk_kind,
-                    self.root,
-                    self.pkg,
-                    self.pkg_path,
-                    self.parent,
-                    &mut self.paths,
-                    &mut self.subpackages_found,
-                    self.filter,
-                )
-            }
-        }
-
-        fn handle_path(
-            rela_path: &gix::bstr::BStr,
-            kind: Option<gix::dir::entry::Kind>,
-            root: &Path,
-            pkg: &Package,
-            pkg_path: &Path,
-            source: &PathSource<'_>,
-            paths: &mut Vec<PathBuf>,
-            subpackages_found: &mut Vec<PathBuf>,
-            filter: &dyn Fn(&Path, bool) -> bool,
-        ) -> CargoResult<()> {
+            })
+            .map(|res| res.map(|item| (item.entry.rela_path, item.entry.disk_kind)))
+            .chain(
+                // Append entries that might be tracked in `<pkg_root>/target/`.
+                index
+                    .prefixed_entries(target_prefix.as_ref())
+                    .unwrap_or_default()
+                    .iter()
+                    .filter(|entry| {
+                        // probably not needed as conflicts prevent this to run, but let's be explicit.
+                        entry.stage() == 0
+                    })
+                    .map(|entry| {
+                        (
+                            entry.path(&index).to_owned(),
+                            // Do not trust what's recorded in the index, enforce checking the disk.
+                            // This traversal is not part of a `status()`, and tracking things in `target/`
+                            // is rare.
+                            None,
+                        )
+                    })
+                    .map(Ok),
+            )
+        {
+            let (rela_path, kind) = item?;
             let file_path = root.join(gix::path::from_bstr(rela_path));
             if file_path.file_name().and_then(|name| name.to_str()) == Some("Cargo.toml") {
                 // Keep track of all sub-packages found and also strip out all
@@ -652,16 +568,16 @@ impl<'gctx> PathSource<'gctx> {
                 let path = file_path.parent().unwrap();
                 if path != pkg_path {
                     warn!("subpackage found: {}", path.display());
-                    paths.retain(|p| !p.starts_with(path));
+                    files.retain(|p| !p.starts_with(path));
                     subpackages_found.push(path.to_path_buf());
-                    return Ok(());
+                    continue;
                 }
             }
 
             // If this file is part of any other sub-package we've found so far,
             // skip it.
             if subpackages_found.iter().any(|p| file_path.starts_with(p)) {
-                return Ok(());
+                continue;
             }
 
             let is_dir = kind.map_or(false, |kind| {
@@ -679,21 +595,20 @@ impl<'gctx> PathSource<'gctx> {
                 // .git repositories.
                 match gix::open_opts(&file_path, gix::open::Options::isolated()) {
                     Ok(sub_repo) => {
-                        let files = source.list_files_gix(pkg, &sub_repo, filter)?;
-                        paths.extend(files);
+                        files.extend(self.list_files_gix(pkg, &sub_repo, filter)?);
                     }
-                    _ => {
-                        source.walk(&file_path, paths, false, filter)?;
+                    Err(_) => {
+                        self.walk(&file_path, &mut files, false, filter)?;
                     }
                 }
             } else if (filter)(&file_path, is_dir) {
                 assert!(!is_dir);
-                // We found a file!
                 warn!("  found {}", file_path.display());
-                paths.push(file_path);
+                files.push(file_path);
             }
-            Ok(())
         }
+
+        return Ok(files);
     }
 
     /// Lists files relevant to building this package inside this source by
