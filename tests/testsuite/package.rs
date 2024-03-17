@@ -689,6 +689,7 @@ fn package_symlink_to_submodule() {
     project
         .cargo("package --no-verify -v")
         .with_stderr_contains("[ARCHIVING] submodule/Makefile")
+        .with_stderr_does_not_contain("[ARCHIVING] submodule-link/.git/config")
         .run();
 }
 

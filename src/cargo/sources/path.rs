@@ -13,7 +13,7 @@ use crate::util::{internal, CargoResult, GlobalContext};
 use anyhow::Context as _;
 use cargo_util::paths;
 use filetime::FileTime;
-use gix::bstr::{ByteSlice, ByteVec};
+use gix::bstr::ByteVec;
 use ignore::gitignore::GitignoreBuilder;
 use tracing::{trace, warn};
 use walkdir::WalkDir;
@@ -295,7 +295,7 @@ impl<'gctx> PathSource<'gctx> {
             }
         };
         let manifest_path = gix::path::join_bstr_unix_pathsep(
-            gix::path::into_bstr(repo_relative_path),
+            gix::path::to_unix_separators_on_windows(gix::path::into_bstr(repo_relative_path)),
             "Cargo.toml",
         );
         if index.entry_index_by_path(&manifest_path).is_ok() {
@@ -424,15 +424,8 @@ impl<'gctx> PathSource<'gctx> {
             // symlink points to a directory.
             let is_dir = is_dir.unwrap_or_else(|| file_path.is_dir());
             if is_dir {
-                warn!("  found submodule {}", file_path.display());
-                let rel = file_path.strip_prefix(root)?;
-                let rel = rel.to_str().ok_or_else(|| {
-                    anyhow::format_err!("invalid utf-8 filename: {}", rel.display())
-                })?;
-                // Git submodules are currently only named through `/` path
-                // separators, explicitly not `\` which windows uses. Who knew?
-                let rel = rel.replace(r"\", "/");
-                match repo.find_submodule(&rel).and_then(|s| s.open()) {
+                warn!("  found directory {}", file_path.display());
+                match git2::Repository::open(&file_path) {
                     Ok(repo) => {
                         let files = self.list_files_git(pkg, &repo, filter)?;
                         ret.extend(files.into_iter());
@@ -473,9 +466,9 @@ impl<'gctx> PathSource<'gctx> {
     /// Lists files relevant to building this package inside this source by
     /// traversing the git working tree, while avoiding ignored files.
     ///
-    /// This looks into Git submodules as well, resolving them to individual files.
-    /// Symlinks to directories will also be resolved, which may include `.git` folders
-    /// in entirety if the link points to a submodule.
+    /// This looks into Git sub-repositories as well, resolving them to individual files.
+    /// Symlinks to directories will also be resolved, but walked as repositories if they
+    /// point to one to avoid picking up `.git` directories.
     fn list_files_gix(
         &self,
         pkg: &Package,
@@ -531,7 +524,7 @@ impl<'gctx> PathSource<'gctx> {
             vec![include, exclude]
         };
 
-        let mut delegate = Delegate::new(self, pkg, pkg_path, repo, root, filter)?;
+        let mut delegate = Delegate::new(self, pkg, pkg_path, root, filter)?;
         repo.dirwalk(
             &index,
             pathspec,
@@ -568,7 +561,6 @@ impl<'gctx> PathSource<'gctx> {
             pkg_path: &'a Path,
             parent: &'a PathSource<'gctx>,
             paths: Vec<PathBuf>,
-            submodules_by_rela_path: Vec<(gix::bstr::BString, gix::Submodule<'a>)>,
             subpackages_found: Vec<PathBuf>,
             filter: &'a dyn Fn(&Path, bool) -> bool,
             err: Option<anyhow::Error>,
@@ -595,27 +587,15 @@ impl<'gctx> PathSource<'gctx> {
                 parent: &'a PathSource<'gctx>,
                 pkg: &'a Package,
                 pkg_path: &'a Path,
-                repo: &'a gix::Repository,
                 root: &'a Path,
                 filter: &'a dyn Fn(&Path, bool) -> bool,
             ) -> CargoResult<Self> {
-                let submodules_by_rela_path: Vec<_> = repo
-                    .submodules()?
-                    .into_iter()
-                    .flatten()
-                    .map(|sm| {
-                        sm.path()
-                            .map(|path| path.into_owned())
-                            .map(|path| (path, sm))
-                    })
-                    .collect::<Result<_, _>>()?;
                 Ok(Self {
                     root,
                     pkg,
                     pkg_path,
                     parent,
                     filter,
-                    submodules_by_rela_path,
                     paths: vec![],
                     subpackages_found: vec![],
                     err: None,
@@ -661,19 +641,24 @@ impl<'gctx> PathSource<'gctx> {
                     return Ok(());
                 }
 
-                let is_dir = entry.disk_kind.map_or(false, |kind| kind.is_dir());
-                if entry.disk_kind == Some(gix::dir::entry::Kind::Repository) {
-                    match self
-                        .submodules_by_rela_path
-                        .binary_search_by(|(sm_path, _)| {
-                            sm_path.as_bstr().cmp(entry.rela_path.as_ref())
-                        })
-                        .map(|idx| self.submodules_by_rela_path[idx].1.open())
-                    {
-                        Ok(Ok(Some(sm_repo))) => {
+                let is_dir = entry.disk_kind.map_or(false, |kind| {
+                    if kind == gix::dir::entry::Kind::Symlink {
+                        // Symlinks must be checked to see if they point to a directory
+                        // we should traverse.
+                        file_path.is_dir()
+                    } else {
+                        kind.is_dir()
+                    }
+                });
+                if is_dir {
+                    // This could be a submodule, or a sub-repository. In any case, we prefer to walk
+                    // it with git-support to leverage ignored files and to avoid pulling in entire
+                    // .git repositories.
+                    match gix::open_opts(&file_path, gix::open::Options::isolated()) {
+                        Ok(sub_repo) => {
                             let files =
                                 self.parent
-                                    .list_files_gix(self.pkg, &sm_repo, self.filter)?;
+                                    .list_files_gix(self.pkg, &sub_repo, self.filter)?;
                             self.paths.extend(files);
                         }
                         _ => {
