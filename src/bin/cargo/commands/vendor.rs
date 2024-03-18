@@ -32,7 +32,7 @@ pub fn cli() -> Command {
             "versioned-dirs",
             "Always include version in subdir name",
         ))
-        .arg(unsupported("no-merge-sources"))
+        .arg(flag("no-merge-sources", "Keep sources separate"))
         .arg(unsupported("relative-path"))
         .arg(unsupported("only-git-deps"))
         .arg(unsupported("disallow-duplicates"))
@@ -79,6 +79,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
                 .unwrap_or_default()
                 .cloned()
                 .collect(),
+            no_merge_sources: args.flag("no-merge-sources"),
         },
     )?;
     Ok(())
