@@ -137,6 +137,20 @@ protect against multiple concurrent invocations of Cargo installing at the
 same time.
 {{/option}}
 
+{{#option "`-n`" "`--dry-run`" }}
+(unstable) Cut the install operation short and display what it *would* have
+usually done. The normal version check and crate downloads still occur exactly
+like without the option flag, but the compilation and the actual installation
+do not. Only the operation that would have been performed is displayed for each
+requested package, one of:
+ * fresh install if the package is not installed yet,
+ * upgrade if it is already installed but a newer version exists,
+ * downgrade if it is already installed but an older version has been
+   explicitely requested,
+ * nothing if it is already installed and up-to-date,
+ * re-install if it is already installed and up-to-date but `--force` was set.
+{{/option}}
+
 {{#option "`--bin` _name_..." }}
 Install only the specified binary.
 {{/option}}
