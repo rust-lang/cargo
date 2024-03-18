@@ -53,8 +53,8 @@ pub fn cli() -> clap::Command {
         )
         .arg(opt("base-rev", "Git revision to lookup for a baseline"))
         .arg(opt("head-rev", "Git revision with changes"))
-        .arg(flag("frozen", "Require Cargo.lock and cache are up to date").global(true))
-        .arg(flag("locked", "Require Cargo.lock is up to date").global(true))
+        .arg(flag("frozen", "Require Cargo.lock and cache to be up-to-date").global(true))
+        .arg(flag("locked", "Require Cargo.lock to be up-to-date").global(true))
         .arg(flag("offline", "Run without accessing the network").global(true))
         .arg(multi_opt("config", "KEY=VALUE", "Override a configuration value").global(true))
         .arg(
