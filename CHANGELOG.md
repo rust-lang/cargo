@@ -1,5 +1,19 @@
 # Changelog
 
+## Cargo 1.79 (2024-06-13)
+[2fe739fc...HEAD](https://github.com/rust-lang/cargo/compare/2fe739fc...HEAD)
+
+### Added
+
+### Changed
+
+### Fixed
+
+- Replace dashes with underscores also if `lib.name` is inferred from `package.name`.
+  [#12783](https://github.com/rust-lang/cargo/pull/12783)
+
+### Nightly only
+
 ## Cargo 1.78 (2024-05-02)
 [7bb7b539...rust-1.78.0](https://github.com/rust-lang/cargo/compare/7bb7b539...rust-1.78.0)
 
