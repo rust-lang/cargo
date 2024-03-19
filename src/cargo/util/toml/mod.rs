@@ -574,6 +574,12 @@ pub fn to_real_manifest(
         .map(|value| field_inherit_with(value, "homepage", || inherit()?.homepage()))
         .transpose()?
         .map(manifest::InheritableField::Value);
+    package.documentation = package
+        .documentation
+        .clone()
+        .map(|value| field_inherit_with(value, "documentation", || inherit()?.documentation()))
+        .transpose()?
+        .map(manifest::InheritableField::Value);
 
     let rust_version = package
         .resolved_rust_version()
@@ -882,10 +888,9 @@ pub fn to_real_manifest(
             .expect("previously resolved")
             .cloned(),
         documentation: package
-            .documentation
-            .clone()
-            .map(|mw| field_inherit_with(mw, "documentation", || inherit()?.documentation()))
-            .transpose()?,
+            .resolved_documentation()
+            .expect("previously resolved")
+            .cloned(),
         readme: readme_for_package(
             package_root,
             package
@@ -937,10 +942,6 @@ pub fn to_real_manifest(
         links: package.links.clone(),
         rust_version: rust_version.clone(),
     };
-    package.documentation = metadata
-        .documentation
-        .clone()
-        .map(|documentation| manifest::InheritableField::Value(documentation));
     package.readme = metadata
         .readme
         .clone()
