@@ -6,5 +6,4 @@ edition = "2021"
 [dependencies]
 
 [lib]
-name = "case"
 path = "lib.rs"

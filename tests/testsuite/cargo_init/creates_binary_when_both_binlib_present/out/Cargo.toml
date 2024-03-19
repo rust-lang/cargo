@@ -10,5 +10,4 @@ name = "case"
 path = "case.rs"
 
 [lib]
-name = "case"
 path = "lib.rs"

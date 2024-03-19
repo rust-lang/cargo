@@ -87,7 +87,6 @@ impl fmt::Display for NewProjectKind {
 
 struct SourceFileInformation {
     relative_path: String,
-    target_name: String,
     bin: bool,
 }
 
@@ -344,12 +343,10 @@ fn detect_source_paths_and_types(
         let sfi = match i.handling {
             H::Bin => SourceFileInformation {
                 relative_path: pp,
-                target_name: package_name.to_string(),
                 bin: true,
             },
             H::Lib => SourceFileInformation {
                 relative_path: pp,
-                target_name: package_name.to_string(),
                 bin: false,
             },
             H::Detect => {
@@ -357,7 +354,6 @@ fn detect_source_paths_and_types(
                 let isbin = content.contains("fn main");
                 SourceFileInformation {
                     relative_path: pp,
-                    target_name: package_name.to_string(),
                     bin: isbin,
                 }
             }
@@ -372,7 +368,7 @@ fn detect_source_paths_and_types(
 
     for i in detected_files {
         if i.bin {
-            if let Some(x) = BTreeMap::get::<str>(&duplicates_checker, i.target_name.as_ref()) {
+            if let Some(x) = BTreeMap::get::<str>(&duplicates_checker, &name) {
                 anyhow::bail!(
                     "\
 multiple possible binary sources found:
@@ -383,7 +379,7 @@ cannot automatically generate Cargo.toml as the main target would be ambiguous",
                     &i.relative_path
                 );
             }
-            duplicates_checker.insert(i.target_name.as_ref(), i);
+            duplicates_checker.insert(name, i);
         } else {
             if let Some(plp) = previous_lib_relpath {
                 anyhow::bail!(
@@ -401,17 +397,15 @@ cannot automatically generate Cargo.toml as the main target would be ambiguous",
     Ok(())
 }
 
-fn plan_new_source_file(bin: bool, package_name: String) -> SourceFileInformation {
+fn plan_new_source_file(bin: bool) -> SourceFileInformation {
     if bin {
         SourceFileInformation {
             relative_path: "src/main.rs".to_string(),
-            target_name: package_name,
             bin: true,
         }
     } else {
         SourceFileInformation {
             relative_path: "src/lib.rs".to_string(),
-            target_name: package_name,
             bin: false,
         }
     }
@@ -460,7 +454,7 @@ pub fn new(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<()> {
         version_control: opts.version_control,
         path,
         name,
-        source_files: vec![plan_new_source_file(opts.kind.is_bin(), name.to_string())],
+        source_files: vec![plan_new_source_file(opts.kind.is_bin())],
         edition: opts.edition.as_deref(),
         registry: opts.registry.as_deref(),
     };
@@ -497,7 +491,7 @@ pub fn init(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<NewProjectKi
     let has_bin = kind.is_bin();
 
     if src_paths_types.is_empty() {
-        src_paths_types.push(plan_new_source_file(has_bin, name.to_string()));
+        src_paths_types.push(plan_new_source_file(has_bin));
     } else if src_paths_types.len() == 1 && !src_paths_types.iter().any(|x| x.bin == has_bin) {
         // we've found the only file and it's not the type user wants. Change the type and warn
         let file_type = if src_paths_types[0].bin {
@@ -790,7 +784,7 @@ fn mk(gctx: &GlobalContext, opts: &MkOptions<'_>) -> CargoResult<()> {
         if i.bin {
             if i.relative_path != "src/main.rs" {
                 let mut bin = toml_edit::Table::new();
-                bin["name"] = toml_edit::value(i.target_name.clone());
+                bin["name"] = toml_edit::value(name);
                 bin["path"] = toml_edit::value(i.relative_path.clone());
                 manifest["bin"]
                     .or_insert(toml_edit::Item::ArrayOfTables(
@@ -802,7 +796,6 @@ fn mk(gctx: &GlobalContext, opts: &MkOptions<'_>) -> CargoResult<()> {
             }
         } else if i.relative_path != "src/lib.rs" {
             let mut lib = toml_edit::Table::new();
-            lib["name"] = toml_edit::value(i.target_name.clone());
             lib["path"] = toml_edit::value(i.relative_path.clone());
             manifest["lib"] = toml_edit::Item::Table(lib);
         }
