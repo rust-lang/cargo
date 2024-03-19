@@ -506,7 +506,7 @@ pub fn to_real_manifest(
     let cargo_features = original_toml.cargo_features.as_ref().unwrap_or(&empty);
     let features = Features::new(cargo_features, gctx, warnings, source_id.is_path())?;
 
-    let mut package = match (&original_toml.package, &original_toml.project) {
+    let original_package = match (&original_toml.package, &original_toml.project) {
         (Some(_), Some(project)) => {
             warnings.push(format!(
                 "manifest at `{}` contains both `project` and `package`, \
@@ -539,122 +539,145 @@ pub fn to_real_manifest(
             .try_borrow_with(|| load_inheritable_fields(gctx, manifest_file, &workspace_config))
     };
 
-    let package_name = &package.name;
+    let package_name = &original_package.name;
     if package_name.contains(':') {
         features.require(Feature::open_namespaces())?;
     }
 
-    package.edition = package
-        .edition
-        .clone()
-        .map(|value| field_inherit_with(value, "edition", || inherit()?.edition()))
-        .transpose()?
-        .map(manifest::InheritableField::Value);
-    package.rust_version = package
-        .rust_version
-        .clone()
-        .map(|value| field_inherit_with(value, "rust-version", || inherit()?.rust_version()))
-        .transpose()?
-        .map(manifest::InheritableField::Value);
-    package.version = package
-        .version
-        .clone()
-        .map(|value| field_inherit_with(value, "version", || inherit()?.version()))
-        .transpose()?
-        .map(manifest::InheritableField::Value);
-    package.authors = package
-        .authors
-        .clone()
-        .map(|value| field_inherit_with(value, "authors", || inherit()?.authors()))
-        .transpose()?
-        .map(manifest::InheritableField::Value);
-    package.exclude = package
-        .exclude
-        .clone()
-        .map(|value| field_inherit_with(value, "exclude", || inherit()?.exclude()))
-        .transpose()?
-        .map(manifest::InheritableField::Value);
-    package.include = package
-        .include
-        .clone()
-        .map(|value| field_inherit_with(value, "include", || inherit()?.include()))
-        .transpose()?
-        .map(manifest::InheritableField::Value);
-    package.publish = package
-        .publish
-        .clone()
-        .map(|value| field_inherit_with(value, "publish", || inherit()?.publish()))
-        .transpose()?
-        .map(manifest::InheritableField::Value);
-    package.description = package
-        .description
-        .clone()
-        .map(|value| field_inherit_with(value, "description", || inherit()?.description()))
-        .transpose()?
-        .map(manifest::InheritableField::Value);
-    package.homepage = package
-        .homepage
-        .clone()
-        .map(|value| field_inherit_with(value, "homepage", || inherit()?.homepage()))
-        .transpose()?
-        .map(manifest::InheritableField::Value);
-    package.documentation = package
-        .documentation
-        .clone()
-        .map(|value| field_inherit_with(value, "documentation", || inherit()?.documentation()))
-        .transpose()?
-        .map(manifest::InheritableField::Value);
-    package.readme = readme_for_package(
-        package_root,
-        package
-            .readme
+    let resolved_package = manifest::TomlPackage {
+        edition: original_package
+            .edition
             .clone()
-            .map(|value| field_inherit_with(value, "readme", || inherit()?.readme(package_root)))
+            .map(|value| field_inherit_with(value, "edition", || inherit()?.edition()))
             .transpose()?
-            .as_ref(),
-    )
-    .map(|s| manifest::InheritableField::Value(StringOrBool::String(s)));
-    package.keywords = package
-        .keywords
-        .clone()
-        .map(|value| field_inherit_with(value, "keywords", || inherit()?.keywords()))
-        .transpose()?
-        .map(manifest::InheritableField::Value);
-    package.categories = package
-        .categories
-        .clone()
-        .map(|value| field_inherit_with(value, "categories", || inherit()?.categories()))
-        .transpose()?
-        .map(manifest::InheritableField::Value);
-    package.license = package
-        .license
-        .clone()
-        .map(|value| field_inherit_with(value, "license", || inherit()?.license()))
-        .transpose()?
-        .map(manifest::InheritableField::Value);
-    package.license_file = package
-        .license_file
-        .clone()
-        .map(|value| {
-            field_inherit_with(value, "license-file", || {
-                inherit()?.license_file(package_root)
+            .map(manifest::InheritableField::Value),
+        rust_version: original_package
+            .rust_version
+            .clone()
+            .map(|value| field_inherit_with(value, "rust-version", || inherit()?.rust_version()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        name: original_package.name.clone(),
+        version: original_package
+            .version
+            .clone()
+            .map(|value| field_inherit_with(value, "version", || inherit()?.version()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        authors: original_package
+            .authors
+            .clone()
+            .map(|value| field_inherit_with(value, "authors", || inherit()?.authors()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        build: original_package.build.clone(),
+        metabuild: original_package.metabuild.clone(),
+        default_target: original_package.default_target.clone(),
+        forced_target: original_package.forced_target.clone(),
+        links: original_package.links.clone(),
+        exclude: original_package
+            .exclude
+            .clone()
+            .map(|value| field_inherit_with(value, "exclude", || inherit()?.exclude()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        include: original_package
+            .include
+            .clone()
+            .map(|value| field_inherit_with(value, "include", || inherit()?.include()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        publish: original_package
+            .publish
+            .clone()
+            .map(|value| field_inherit_with(value, "publish", || inherit()?.publish()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        workspace: original_package.workspace.clone(),
+        im_a_teapot: original_package.im_a_teapot.clone(),
+        autobins: original_package.autobins.clone(),
+        autoexamples: original_package.autoexamples.clone(),
+        autotests: original_package.autotests.clone(),
+        autobenches: original_package.autobenches.clone(),
+        default_run: original_package.default_run.clone(),
+        description: original_package
+            .description
+            .clone()
+            .map(|value| field_inherit_with(value, "description", || inherit()?.description()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        homepage: original_package
+            .homepage
+            .clone()
+            .map(|value| field_inherit_with(value, "homepage", || inherit()?.homepage()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        documentation: original_package
+            .documentation
+            .clone()
+            .map(|value| field_inherit_with(value, "documentation", || inherit()?.documentation()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        readme: readme_for_package(
+            package_root,
+            original_package
+                .readme
+                .clone()
+                .map(|value| {
+                    field_inherit_with(value, "readme", || inherit()?.readme(package_root))
+                })
+                .transpose()?
+                .as_ref(),
+        )
+        .map(|s| manifest::InheritableField::Value(StringOrBool::String(s))),
+        keywords: original_package
+            .keywords
+            .clone()
+            .map(|value| field_inherit_with(value, "keywords", || inherit()?.keywords()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        categories: original_package
+            .categories
+            .clone()
+            .map(|value| field_inherit_with(value, "categories", || inherit()?.categories()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        license: original_package
+            .license
+            .clone()
+            .map(|value| field_inherit_with(value, "license", || inherit()?.license()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        license_file: original_package
+            .license_file
+            .clone()
+            .map(|value| {
+                field_inherit_with(value, "license-file", || {
+                    inherit()?.license_file(package_root)
+                })
             })
-        })
-        .transpose()?
-        .map(manifest::InheritableField::Value);
-    package.repository = package
-        .repository
-        .clone()
-        .map(|value| field_inherit_with(value, "repository", || inherit()?.repository()))
-        .transpose()?
-        .map(manifest::InheritableField::Value);
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        repository: original_package
+            .repository
+            .clone()
+            .map(|value| field_inherit_with(value, "repository", || inherit()?.repository()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        resolver: original_package.resolver.clone(),
+        metadata: original_package.metadata.clone(),
+        _invalid_cargo_features: Default::default(),
+    };
 
-    let rust_version = package
+    let rust_version = resolved_package
         .resolved_rust_version()
         .expect("previously resolved")
         .cloned();
 
-    let edition = if let Some(edition) = package.resolved_edition().expect("previously resolved") {
+    let edition = if let Some(edition) = resolved_package
+        .resolved_edition()
+        .expect("previously resolved")
+    {
         let edition: Edition = edition
             .parse()
             .with_context(|| "failed to parse the `edition` key")?;
@@ -726,12 +749,12 @@ pub fn to_real_manifest(
         )));
     }
 
-    if package.metabuild.is_some() {
+    if resolved_package.metabuild.is_some() {
         features.require(Feature::metabuild())?;
     }
 
     let resolve_behavior = match (
-        package.resolver.as_ref(),
+        resolved_package.resolver.as_ref(),
         original_toml
             .workspace
             .as_ref()
@@ -753,8 +776,8 @@ pub fn to_real_manifest(
         package_name,
         package_root,
         edition,
-        &package.build,
-        &package.metabuild,
+        &resolved_package.build,
+        &resolved_package.metabuild,
         warnings,
         errors,
     )?;
@@ -783,7 +806,7 @@ pub fn to_real_manifest(
             })
     }
 
-    if let Some(links) = &package.links {
+    if let Some(links) = &resolved_package.links {
         if !targets.iter().any(|t| t.is_custom_build()) {
             bail!("package specifies that it links to `{links}` but does not have a custom build script")
         }
@@ -934,45 +957,45 @@ pub fn to_real_manifest(
     }
 
     let metadata = ManifestMetadata {
-        description: package
+        description: resolved_package
             .resolved_description()
             .expect("previously resolved")
             .cloned(),
-        homepage: package
+        homepage: resolved_package
             .resolved_homepage()
             .expect("previously resolved")
             .cloned(),
-        documentation: package
+        documentation: resolved_package
             .resolved_documentation()
             .expect("previously resolved")
             .cloned(),
-        readme: package
+        readme: resolved_package
             .resolved_readme()
             .expect("previously resolved")
             .cloned(),
-        authors: package
+        authors: resolved_package
             .resolved_authors()
             .expect("previously resolved")
             .cloned()
             .unwrap_or_default(),
-        license: package
+        license: resolved_package
             .resolved_license()
             .expect("previously resolved")
             .cloned(),
-        license_file: package
+        license_file: resolved_package
             .resolved_license_file()
             .expect("previously resolved")
             .cloned(),
-        repository: package
+        repository: resolved_package
             .resolved_repository()
             .expect("previously resolved")
             .cloned(),
-        keywords: package
+        keywords: resolved_package
             .resolved_keywords()
             .expect("previously resolved")
             .cloned()
             .unwrap_or_default(),
-        categories: package
+        categories: resolved_package
             .resolved_categories()
             .expect("previously resolved")
             .cloned()
@@ -983,7 +1006,7 @@ pub fn to_real_manifest(
             .map(|mw| field_inherit_with(mw, "badges", || inherit()?.badges()))
             .transpose()?
             .unwrap_or_default(),
-        links: package.links.clone(),
+        links: resolved_package.links.clone(),
         rust_version: rust_version.clone(),
     };
 
@@ -992,8 +1015,13 @@ pub fn to_real_manifest(
         validate_profiles(profiles, cli_unstable, &features, warnings)?;
     }
 
-    let version = package.resolved_version().expect("previously resolved");
-    let publish = match package.resolved_publish().expect("previously resolved") {
+    let version = resolved_package
+        .resolved_version()
+        .expect("previously resolved");
+    let publish = match resolved_package
+        .resolved_publish()
+        .expect("previously resolved")
+    {
         Some(manifest::VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
         Some(manifest::VecStringOrBool::Bool(false)) => Some(vec![]),
         Some(manifest::VecStringOrBool::Bool(true)) => None,
@@ -1005,7 +1033,7 @@ pub fn to_real_manifest(
     }
 
     let pkgid = PackageId::new(
-        package.name.as_str().into(),
+        resolved_package.name.as_str().into(),
         version
             .cloned()
             .unwrap_or_else(|| semver::Version::new(0, 0, 0)),
@@ -1026,7 +1054,7 @@ pub fn to_real_manifest(
                 )
             })
             .collect(),
-        package.links.as_deref(),
+        resolved_package.links.as_deref(),
         rust_version.clone(),
     )?;
     if summary.features().contains_key("default-features") {
@@ -1037,7 +1065,7 @@ pub fn to_real_manifest(
         )
     }
 
-    if let Some(run) = &package.default_run {
+    if let Some(run) = &resolved_package.default_run {
         if !targets
             .iter()
             .filter(|t| t.is_bin())
@@ -1049,32 +1077,36 @@ pub fn to_real_manifest(
         }
     }
 
-    let default_kind = package
+    let default_kind = resolved_package
         .default_target
         .as_ref()
         .map(|t| CompileTarget::new(&*t))
         .transpose()?
         .map(CompileKind::Target);
-    let forced_kind = package
+    let forced_kind = resolved_package
         .forced_target
         .as_ref()
         .map(|t| CompileTarget::new(&*t))
         .transpose()?
         .map(CompileKind::Target);
-    let include = package
+    let include = resolved_package
         .resolved_include()
         .expect("previously resolved")
         .cloned()
         .unwrap_or_default();
-    let exclude = package
+    let exclude = resolved_package
         .resolved_exclude()
         .expect("previously resolved")
         .cloned()
         .unwrap_or_default();
-    let custom_metadata = package.metadata.clone();
+    let links = resolved_package.links.clone();
+    let custom_metadata = resolved_package.metadata.clone();
+    let im_a_teapot = resolved_package.im_a_teapot;
+    let default_run = resolved_package.default_run.clone();
+    let metabuild = resolved_package.metabuild.clone().map(|sov| sov.0);
     let resolved_toml = manifest::TomlManifest {
         cargo_features: original_toml.cargo_features.clone(),
-        package: Some(package.clone()),
+        package: Some(Box::new(resolved_package)),
         project: None,
         profile: original_toml.profile.clone(),
         lib: original_toml.lib.clone(),
@@ -1113,7 +1145,7 @@ pub fn to_real_manifest(
         targets,
         exclude,
         include,
-        package.links.clone(),
+        links,
         metadata,
         custom_metadata,
         publish,
@@ -1123,14 +1155,26 @@ pub fn to_real_manifest(
         features,
         edition,
         rust_version,
-        package.im_a_teapot,
-        package.default_run.clone(),
-        package.metabuild.clone().map(|sov| sov.0),
+        im_a_teapot,
+        default_run,
+        metabuild,
         resolve_behavior,
         rustflags,
         embedded,
     );
-    if package.license_file.is_some() && package.license.is_some() {
+    if manifest
+        .resolved_toml()
+        .package()
+        .unwrap()
+        .license_file
+        .is_some()
+        && manifest
+            .resolved_toml()
+            .package()
+            .unwrap()
+            .license
+            .is_some()
+    {
         warnings.push(
             "only one of `license` or `license-file` is necessary\n\
                  `license` should be used if the package license can be expressed \
