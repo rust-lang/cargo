@@ -9,8 +9,8 @@ use crate::AlreadyPrintedError;
 use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
 use cargo_util::paths;
-use cargo_util_schemas::manifest::RustVersion;
 use cargo_util_schemas::manifest::{self, TomlManifest};
+use cargo_util_schemas::manifest::{RustVersion, StringOrBool};
 use itertools::Itertools;
 use lazycell::LazyCell;
 use pathdiff::diff_paths;
@@ -580,6 +580,16 @@ pub fn to_real_manifest(
         .map(|value| field_inherit_with(value, "documentation", || inherit()?.documentation()))
         .transpose()?
         .map(manifest::InheritableField::Value);
+    package.readme = readme_for_package(
+        package_root,
+        package
+            .readme
+            .clone()
+            .map(|value| field_inherit_with(value, "readme", || inherit()?.readme(package_root)))
+            .transpose()?
+            .as_ref(),
+    )
+    .map(|s| manifest::InheritableField::Value(StringOrBool::String(s)));
 
     let rust_version = package
         .resolved_rust_version()
@@ -891,15 +901,10 @@ pub fn to_real_manifest(
             .resolved_documentation()
             .expect("previously resolved")
             .cloned(),
-        readme: readme_for_package(
-            package_root,
-            package
-                .readme
-                .clone()
-                .map(|mw| field_inherit_with(mw, "readme", || inherit()?.readme(package_root)))
-                .transpose()?
-                .as_ref(),
-        ),
+        readme: package
+            .resolved_readme()
+            .expect("previously resolved")
+            .cloned(),
         authors: package
             .authors
             .clone()
@@ -942,10 +947,6 @@ pub fn to_real_manifest(
         links: package.links.clone(),
         rust_version: rust_version.clone(),
     };
-    package.readme = metadata
-        .readme
-        .clone()
-        .map(|readme| manifest::InheritableField::Value(manifest::StringOrBool::String(readme)));
     package.authors = package
         .authors
         .as_ref()

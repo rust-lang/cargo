@@ -221,6 +221,18 @@ impl TomlPackage {
             .map(|v| v.resolved())
             .transpose()
     }
+
+    pub fn resolved_readme(&self) -> Result<Option<&String>, UnresolvedError> {
+        self.readme
+            .as_ref()
+            .map(|v| {
+                v.resolved().and_then(|sb| match sb {
+                    StringOrBool::Bool(_) => Err(UnresolvedError),
+                    StringOrBool::String(value) => Ok(value),
+                })
+            })
+            .transpose()
+    }
 }
 
 /// An enum that allows for inheriting keys from a workspace in a Cargo.toml.
