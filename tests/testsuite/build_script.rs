@@ -993,8 +993,7 @@ fn links_no_build_cmd() {
 [ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
 
 Caused by:
-  package `foo v0.5.0 ([CWD])` specifies that it links to `a` but does \
-not have a custom build script
+  package specifies that it links to `a` but does not have a custom build script
 ",
         )
         .run();

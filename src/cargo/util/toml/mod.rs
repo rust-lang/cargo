@@ -687,12 +687,7 @@ pub fn to_real_manifest(
 
     if let Some(links) = &package.links {
         if !targets.iter().any(|t| t.is_custom_build()) {
-            bail!(
-                "package `{}` specifies that it links to `{}` but does not \
-                     have a custom build script",
-                pkgid,
-                links
-            )
+            bail!("package specifies that it links to `{links}` but does not have a custom build script")
         }
     }
 
