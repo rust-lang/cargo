@@ -589,6 +589,13 @@ impl InheritableDependency {
             InheritableDependency::Inherit(w) => w._unused_keys.keys().cloned().collect(),
         }
     }
+
+    pub fn resolved(&self) -> Result<&TomlDependency, UnresolvedError> {
+        match self {
+            InheritableDependency::Value(d) => Ok(d),
+            InheritableDependency::Inherit(_) => Err(UnresolvedError),
+        }
+    }
 }
 
 impl<'de> de::Deserialize<'de> for InheritableDependency {

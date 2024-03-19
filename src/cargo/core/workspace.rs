@@ -449,7 +449,6 @@ impl<'gctx> Workspace<'gctx> {
                             // NOTE: Since we use ConfigRelativePath, this root isn't used as
                             // any relative paths are resolved before they'd be joined with root.
                             Path::new("unused-relative-path"),
-                            self.unstable_features(),
                             /* kind */ None,
                         )
                     })
