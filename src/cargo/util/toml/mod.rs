@@ -544,6 +544,12 @@ pub fn to_real_manifest(
         features.require(Feature::open_namespaces())?;
     }
 
+    package.edition = package
+        .edition
+        .clone()
+        .map(|value| field_inherit_with(value, "edition", || inherit()?.edition()))
+        .transpose()?
+        .map(manifest::InheritableField::Value);
     package.rust_version = package
         .rust_version
         .clone()
@@ -562,11 +568,10 @@ pub fn to_real_manifest(
         .expect("previously resolved")
         .cloned();
 
-    let edition = if let Some(edition) = package.edition.clone() {
-        let edition: Edition = field_inherit_with(edition, "edition", || inherit()?.edition())?
+    let edition = if let Some(edition) = package.resolved_edition().expect("previously resolved") {
+        let edition: Edition = edition
             .parse()
             .with_context(|| "failed to parse the `edition` key")?;
-        package.edition = Some(manifest::InheritableField::Value(edition.to_string()));
         if let Some(pkg_msrv) = &rust_version {
             if let Some(edition_msrv) = edition.first_version() {
                 let edition_msrv = RustVersion::try_from(edition_msrv).unwrap();
