@@ -194,6 +194,12 @@ pub struct TomlPackage {
     pub _invalid_cargo_features: Option<InvalidCargoFeatures>,
 }
 
+impl TomlPackage {
+    pub fn resolved_version(&self) -> Result<Option<&semver::Version>, UnresolvedError> {
+        self.version.as_ref().map(|v| v.resolved()).transpose()
+    }
+}
+
 /// An enum that allows for inheriting keys from a workspace in a Cargo.toml.
 #[derive(Serialize, Copy, Clone, Debug)]
 #[serde(untagged)]
@@ -205,6 +211,10 @@ pub enum InheritableField<T> {
 }
 
 impl<T> InheritableField<T> {
+    pub fn resolved(&self) -> Result<&T, UnresolvedError> {
+        self.as_value().ok_or(UnresolvedError)
+    }
+
     pub fn as_value(&self) -> Option<&T> {
         match self {
             InheritableField::Inherit(_) => None,
@@ -1512,3 +1522,9 @@ impl<'de> de::Deserialize<'de> for PathValue {
         Ok(PathValue(String::deserialize(deserializer)?.into()))
     }
 }
+
+/// Error validating names in Cargo.
+#[derive(Debug, thiserror::Error)]
+#[error("manifest field was not resolved")]
+#[non_exhaustive]
+pub struct UnresolvedError;

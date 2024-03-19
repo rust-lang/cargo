@@ -544,13 +544,12 @@ pub fn to_real_manifest(
         features.require(Feature::open_namespaces())?;
     }
 
-    let version = package
+    package.version = package
         .version
         .clone()
-        .map(|version| field_inherit_with(version, "version", || inherit()?.version()))
-        .transpose()?;
-
-    package.version = version.clone().map(manifest::InheritableField::Value);
+        .map(|value| field_inherit_with(value, "version", || inherit()?.version()))
+        .transpose()?
+        .map(manifest::InheritableField::Value);
 
     let rust_version = if let Some(rust_version) = &package.rust_version {
         let rust_version = field_inherit_with(rust_version.clone(), "rust_version", || {
@@ -990,6 +989,7 @@ pub fn to_real_manifest(
         .clone()
         .map(|p| manifest::InheritableField::Value(p));
 
+    let version = package.resolved_version().expect("previously resolved");
     let publish = match publish {
         Some(manifest::VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
         Some(manifest::VecStringOrBool::Bool(false)) => Some(vec![]),
@@ -1004,7 +1004,7 @@ pub fn to_real_manifest(
     let pkgid = PackageId::new(
         package.name.as_str().into(),
         version
-            .clone()
+            .cloned()
             .unwrap_or_else(|| semver::Version::new(0, 0, 0)),
         source_id,
     );
