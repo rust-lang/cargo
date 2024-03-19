@@ -668,6 +668,11 @@ pub fn to_real_manifest(
         metadata: original_package.metadata.clone(),
         _invalid_cargo_features: Default::default(),
     };
+    let resolved_lints = original_toml
+        .lints
+        .clone()
+        .map(|value| lints_inherit_with(value, || inherit()?.lints()))
+        .transpose()?;
 
     let rust_version = resolved_package
         .resolved_rust_version()
@@ -865,14 +870,9 @@ pub fn to_real_manifest(
         &inherit_cell,
     )?;
 
-    let lints = original_toml
-        .lints
-        .clone()
-        .map(|mw| lints_inherit_with(mw, || inherit()?.lints()))
-        .transpose()?;
-    verify_lints(lints.as_ref(), gctx, manifest_ctx.warnings)?;
+    verify_lints(resolved_lints.as_ref(), gctx, manifest_ctx.warnings)?;
     let default = manifest::TomlLints::default();
-    let rustflags = lints_to_rustflags(lints.as_ref().unwrap_or(&default));
+    let rustflags = lints_to_rustflags(resolved_lints.as_ref().unwrap_or(&default));
 
     let mut target: BTreeMap<String, manifest::TomlPlatform> = BTreeMap::new();
     for (name, platform) in original_toml.target.iter().flatten() {
@@ -1128,7 +1128,7 @@ pub fn to_real_manifest(
             .badges
             .as_ref()
             .map(|_| manifest::InheritableField::Value(metadata.badges.clone())),
-        lints: lints.map(|lints| manifest::InheritableLints {
+        lints: resolved_lints.map(|lints| manifest::InheritableLints {
             workspace: false,
             lints,
         }),

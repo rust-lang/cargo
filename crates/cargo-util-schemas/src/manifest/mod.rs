@@ -105,6 +105,10 @@ impl TomlManifest {
     pub fn features(&self) -> Option<&BTreeMap<FeatureName, Vec<String>>> {
         self.features.as_ref()
     }
+
+    pub fn resolved_lints(&self) -> Result<Option<&TomlLints>, UnresolvedError> {
+        self.lints.as_ref().map(|l| l.resolved()).transpose()
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -1376,6 +1380,16 @@ pub struct InheritableLints {
     pub workspace: bool,
     #[serde(flatten)]
     pub lints: TomlLints,
+}
+
+impl InheritableLints {
+    pub fn resolved(&self) -> Result<&TomlLints, UnresolvedError> {
+        if self.workspace {
+            Err(UnresolvedError)
+        } else {
+            Ok(&self.lints)
+        }
+    }
 }
 
 fn is_false(b: &bool) -> bool {
