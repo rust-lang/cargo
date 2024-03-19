@@ -538,14 +538,6 @@ pub fn to_real_manifest(
 
     package.version = version.clone().map(manifest::InheritableField::Value);
 
-    let pkgid = PackageId::new(
-        package.name.as_str().into(),
-        version
-            .clone()
-            .unwrap_or_else(|| semver::Version::new(0, 0, 0)),
-        source_id,
-    );
-
     let rust_version = if let Some(rust_version) = &package.rust_version {
         let rust_version = field_inherit_with(rust_version.clone(), "rust_version", || {
             inherit()?.rust_version()
@@ -921,25 +913,6 @@ pub fn to_real_manifest(
         .transpose()?
         .unwrap_or_default();
 
-    let summary = Summary::new(
-        pkgid,
-        deps,
-        &original_toml
-            .features
-            .as_ref()
-            .unwrap_or(&Default::default())
-            .iter()
-            .map(|(k, v)| {
-                (
-                    InternedString::new(k),
-                    v.iter().map(InternedString::from).collect(),
-                )
-            })
-            .collect(),
-        package.links.as_deref(),
-        rust_version.clone(),
-    )?;
-
     let metadata = ManifestMetadata {
         description: package
             .description
@@ -1087,6 +1060,31 @@ pub fn to_real_manifest(
         bail!("`package.publish` requires `package.version` be specified");
     }
 
+    let pkgid = PackageId::new(
+        package.name.as_str().into(),
+        version
+            .clone()
+            .unwrap_or_else(|| semver::Version::new(0, 0, 0)),
+        source_id,
+    );
+    let summary = Summary::new(
+        pkgid,
+        deps,
+        &original_toml
+            .features
+            .as_ref()
+            .unwrap_or(&Default::default())
+            .iter()
+            .map(|(k, v)| {
+                (
+                    InternedString::new(k),
+                    v.iter().map(InternedString::from).collect(),
+                )
+            })
+            .collect(),
+        package.links.as_deref(),
+        rust_version.clone(),
+    )?;
     if summary.features().contains_key("default-features") {
         warnings.push(
             "`default-features = [\"..\"]` was found in [features]. \
