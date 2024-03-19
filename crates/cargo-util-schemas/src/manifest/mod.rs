@@ -195,6 +195,10 @@ pub struct TomlPackage {
 }
 
 impl TomlPackage {
+    pub fn resolved_rust_version(&self) -> Result<Option<&RustVersion>, UnresolvedError> {
+        self.rust_version.as_ref().map(|v| v.resolved()).transpose()
+    }
+
     pub fn resolved_version(&self) -> Result<Option<&semver::Version>, UnresolvedError> {
         self.version.as_ref().map(|v| v.resolved()).transpose()
     }

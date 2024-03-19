@@ -544,6 +544,12 @@ pub fn to_real_manifest(
         features.require(Feature::open_namespaces())?;
     }
 
+    package.rust_version = package
+        .rust_version
+        .clone()
+        .map(|value| field_inherit_with(value, "rust-version", || inherit()?.rust_version()))
+        .transpose()?
+        .map(manifest::InheritableField::Value);
     package.version = package
         .version
         .clone()
@@ -551,14 +557,10 @@ pub fn to_real_manifest(
         .transpose()?
         .map(manifest::InheritableField::Value);
 
-    let rust_version = if let Some(rust_version) = &package.rust_version {
-        let rust_version = field_inherit_with(rust_version.clone(), "rust_version", || {
-            inherit()?.rust_version()
-        })?;
-        Some(rust_version)
-    } else {
-        None
-    };
+    let rust_version = package
+        .resolved_rust_version()
+        .expect("previously resolved")
+        .cloned();
 
     let edition = if let Some(edition) = package.edition.clone() {
         let edition: Edition = field_inherit_with(edition, "edition", || inherit()?.edition())?
@@ -918,10 +920,7 @@ pub fn to_real_manifest(
             .transpose()?
             .unwrap_or_default(),
         links: package.links.clone(),
-        rust_version: package
-            .rust_version
-            .map(|mw| field_inherit_with(mw, "rust-version", || inherit()?.rust_version()))
-            .transpose()?,
+        rust_version: rust_version.clone(),
     };
     package.description = metadata
         .description
@@ -963,9 +962,6 @@ pub fn to_real_manifest(
         .categories
         .as_ref()
         .map(|_| manifest::InheritableField::Value(metadata.categories.clone()));
-    package.rust_version = rust_version
-        .clone()
-        .map(|rv| manifest::InheritableField::Value(rv));
     package.exclude = package
         .exclude
         .as_ref()
