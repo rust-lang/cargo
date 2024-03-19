@@ -590,6 +590,12 @@ pub fn to_real_manifest(
             .as_ref(),
     )
     .map(|s| manifest::InheritableField::Value(StringOrBool::String(s)));
+    package.keywords = package
+        .keywords
+        .clone()
+        .map(|value| field_inherit_with(value, "keywords", || inherit()?.keywords()))
+        .transpose()?
+        .map(manifest::InheritableField::Value);
 
     let rust_version = package
         .resolved_rust_version()
@@ -927,10 +933,9 @@ pub fn to_real_manifest(
             .map(|mw| field_inherit_with(mw, "repository", || inherit()?.repository()))
             .transpose()?,
         keywords: package
-            .keywords
-            .clone()
-            .map(|mw| field_inherit_with(mw, "keywords", || inherit()?.keywords()))
-            .transpose()?
+            .resolved_keywords()
+            .expect("previously resolved")
+            .cloned()
             .unwrap_or_default(),
         categories: package
             .categories
@@ -963,10 +968,6 @@ pub fn to_real_manifest(
         .repository
         .clone()
         .map(|repository| manifest::InheritableField::Value(repository));
-    package.keywords = package
-        .keywords
-        .as_ref()
-        .map(|_| manifest::InheritableField::Value(metadata.keywords.clone()));
     package.categories = package
         .categories
         .as_ref()
