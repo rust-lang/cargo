@@ -519,17 +519,16 @@ pub fn to_real_manifest(
                  `[workspace]`, only one can be specified"
         ),
     };
-
-    let package_name = &package.name;
-    if package_name.contains(':') {
-        features.require(Feature::open_namespaces())?;
-    }
-
     let inherit_cell: LazyCell<InheritableFields> = LazyCell::new();
     let inherit = || {
         inherit_cell
             .try_borrow_with(|| load_inheritable_fields(gctx, manifest_file, &workspace_config))
     };
+
+    let package_name = &package.name;
+    if package_name.contains(':') {
+        features.require(Feature::open_namespaces())?;
+    }
 
     let version = package
         .version
