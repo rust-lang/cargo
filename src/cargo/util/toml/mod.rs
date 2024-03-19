@@ -926,7 +926,6 @@ pub fn to_real_manifest(
         .map(|mw| field_inherit_with(mw, "include", || inherit()?.include()))
         .transpose()?
         .unwrap_or_default();
-    let empty_features = BTreeMap::new();
 
     let summary = Summary::new(
         pkgid,
@@ -934,7 +933,7 @@ pub fn to_real_manifest(
         &original_toml
             .features
             .as_ref()
-            .unwrap_or(&empty_features)
+            .unwrap_or(&Default::default())
             .iter()
             .map(|(k, v)| {
                 (
