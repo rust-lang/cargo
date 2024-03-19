@@ -468,7 +468,7 @@ impl Manifest {
     pub fn document(&self) -> &toml_edit::ImDocument<String> {
         &self.document
     }
-    /// The [`TomlManifest`] with all fields expanded
+    /// The [`TomlManifest`] as parsed from [`Manifest::document`]
     pub fn original_toml(&self) -> &TomlManifest {
         &self.original_toml
     }
@@ -664,7 +664,7 @@ impl VirtualManifest {
     pub fn document(&self) -> &toml_edit::ImDocument<String> {
         &self.document
     }
-    /// The [`TomlManifest`] with all fields expanded
+    /// The [`TomlManifest`] as parsed from [`VirtualManifest::document`]
     pub fn original_toml(&self) -> &TomlManifest {
         &self.original_toml
     }
