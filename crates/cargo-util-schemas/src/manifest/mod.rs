@@ -237,6 +237,10 @@ impl TomlPackage {
     pub fn resolved_keywords(&self) -> Result<Option<&Vec<String>>, UnresolvedError> {
         self.keywords.as_ref().map(|v| v.resolved()).transpose()
     }
+
+    pub fn resolved_categories(&self) -> Result<Option<&Vec<String>>, UnresolvedError> {
+        self.categories.as_ref().map(|v| v.resolved()).transpose()
+    }
 }
 
 /// An enum that allows for inheriting keys from a workspace in a Cargo.toml.

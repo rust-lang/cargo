@@ -596,6 +596,12 @@ pub fn to_real_manifest(
         .map(|value| field_inherit_with(value, "keywords", || inherit()?.keywords()))
         .transpose()?
         .map(manifest::InheritableField::Value);
+    package.categories = package
+        .categories
+        .clone()
+        .map(|value| field_inherit_with(value, "categories", || inherit()?.categories()))
+        .transpose()?
+        .map(manifest::InheritableField::Value);
 
     let rust_version = package
         .resolved_rust_version()
@@ -938,10 +944,9 @@ pub fn to_real_manifest(
             .cloned()
             .unwrap_or_default(),
         categories: package
-            .categories
-            .clone()
-            .map(|mw| field_inherit_with(mw, "categories", || inherit()?.categories()))
-            .transpose()?
+            .resolved_categories()
+            .expect("previously resolved")
+            .cloned()
             .unwrap_or_default(),
         badges: original_toml
             .badges
@@ -968,10 +973,6 @@ pub fn to_real_manifest(
         .repository
         .clone()
         .map(|repository| manifest::InheritableField::Value(repository));
-    package.categories = package
-        .categories
-        .as_ref()
-        .map(|_| manifest::InheritableField::Value(metadata.categories.clone()));
     package.exclude = package
         .exclude
         .as_ref()
