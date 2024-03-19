@@ -26,7 +26,7 @@ pub use rust_version::RustVersion;
 pub use rust_version::RustVersionError;
 
 /// This type is used to deserialize `Cargo.toml` files.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Default, Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlManifest {
     // when adding new fields, be sure to check whether `requires_package` should disallow them

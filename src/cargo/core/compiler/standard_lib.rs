@@ -12,6 +12,7 @@ use crate::util::errors::CargoResult;
 use crate::GlobalContext;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
+use std::rc::Rc;
 
 use super::BuildConfig;
 
@@ -103,10 +104,13 @@ pub fn resolve_std<'gctx>(
         /*custom_metadata*/ &None,
     ));
     let virtual_manifest = crate::core::VirtualManifest::new(
+        Rc::default(),
+        Rc::new(toml_edit::ImDocument::parse("".to_owned()).expect("empty is valid TOML")),
+        Rc::default(),
+        Rc::default(),
         /*replace*/ Vec::new(),
         patch,
         ws_config,
-        /*profiles*/ None,
         crate::core::Features::default(),
         None,
     );

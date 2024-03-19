@@ -52,15 +52,16 @@ pub fn read_manifest(
         read_toml_string(path, gctx).map_err(|err| ManifestError::new(err, path.into()))?;
     let document =
         parse_document(&contents).map_err(|e| emit_diagnostic(e.into(), &contents, path, gctx))?;
-    let toml = deserialize_toml(&document)
+    let original_toml = deserialize_toml(&document)
         .map_err(|e| emit_diagnostic(e.into(), &contents, path, gctx))?;
 
     (|| {
-        if toml.package().is_some() {
-            to_real_manifest(contents, document, toml, source_id, path, gctx)
+        if original_toml.package().is_some() {
+            to_real_manifest(contents, document, original_toml, source_id, path, gctx)
                 .map(EitherManifest::Real)
         } else {
-            to_virtual_manifest(toml, source_id, path, gctx).map(EitherManifest::Virtual)
+            to_virtual_manifest(contents, document, original_toml, source_id, path, gctx)
+                .map(EitherManifest::Virtual)
         }
     })()
     .map_err(|err| {
@@ -456,38 +457,11 @@ pub fn prepare_for_publish(
 pub fn to_real_manifest(
     contents: String,
     document: toml_edit::ImDocument<String>,
-    me: manifest::TomlManifest,
+    original_toml: manifest::TomlManifest,
     source_id: SourceId,
     manifest_file: &Path,
     gctx: &GlobalContext,
 ) -> CargoResult<Manifest> {
-    fn get_ws(
-        gctx: &GlobalContext,
-        resolved_path: &Path,
-        workspace_config: &WorkspaceConfig,
-    ) -> CargoResult<InheritableFields> {
-        match workspace_config {
-            WorkspaceConfig::Root(root) => Ok(root.inheritable().clone()),
-            WorkspaceConfig::Member {
-                root: Some(ref path_to_root),
-            } => {
-                let path = resolved_path
-                    .parent()
-                    .unwrap()
-                    .join(path_to_root)
-                    .join("Cargo.toml");
-                let root_path = paths::normalize_path(&path);
-                inheritable_from_path(gctx, root_path)
-            }
-            WorkspaceConfig::Member { root: None } => {
-                match find_workspace_root(&resolved_path, gctx)? {
-                    Some(path_to_root) => inheritable_from_path(gctx, path_to_root),
-                    None => Err(anyhow!("failed to find a workspace root")),
-                }
-            }
-        }
-    }
-
     let embedded = is_embedded(manifest_file);
     let package_root = manifest_file.parent().unwrap();
     if !package_root.is_dir() {
@@ -497,7 +471,7 @@ pub fn to_real_manifest(
         );
     };
 
-    if let Some(deps) = me
+    if let Some(deps) = original_toml
         .workspace
         .as_ref()
         .and_then(|ws| ws.dependencies.as_ref())
@@ -515,49 +489,36 @@ pub fn to_real_manifest(
     let mut warnings = vec![];
     let mut errors = vec![];
 
-    warn_on_unused(&me._unused_keys, &mut warnings);
-
     // Parse features first so they will be available when parsing other parts of the TOML.
     let empty = Vec::new();
-    let cargo_features = me.cargo_features.as_ref().unwrap_or(&empty);
+    let cargo_features = original_toml.cargo_features.as_ref().unwrap_or(&empty);
     let features = Features::new(cargo_features, gctx, &mut warnings, source_id.is_path())?;
 
-    let mut package = match (&me.package, &me.project) {
+    let mut package = match (&original_toml.package, &original_toml.project) {
         (Some(_), Some(project)) => {
-            if source_id.is_path() {
-                gctx.shell().warn(format!(
-                    "manifest at `{}` contains both `project` and `package`, \
+            warnings.push(format!(
+                "manifest at `{}` contains both `project` and `package`, \
                     this could become a hard error in the future",
-                    package_root.display()
-                ))?;
-            }
+                package_root.display()
+            ));
             project.clone()
         }
         (Some(package), None) => package.clone(),
         (None, Some(project)) => {
-            if source_id.is_path() {
-                gctx.shell().warn(format!(
-                    "manifest at `{}` contains `[project]` instead of `[package]`, \
+            warnings.push(format!(
+                "manifest at `{}` contains `[project]` instead of `[package]`, \
                                 this could become a hard error in the future",
-                    package_root.display()
-                ))?;
-            }
+                package_root.display()
+            ));
             project.clone()
         }
         (None, None) => bail!("no `package` section found"),
     };
 
-    let workspace_config = match (me.workspace.as_ref(), package.workspace.as_ref()) {
+    let workspace_config = match (original_toml.workspace.as_ref(), package.workspace.as_ref()) {
         (Some(toml_config), None) => {
-            let lints = toml_config.lints.clone();
-            let lints = verify_lints(lints)?;
-            let inheritable = InheritableFields {
-                package: toml_config.package.clone(),
-                dependencies: toml_config.dependencies.clone(),
-                lints,
-                _ws_root: package_root.to_path_buf(),
-            };
-            if let Some(ws_deps) = &inheritable.dependencies {
+            verify_lints(toml_config.lints.as_ref())?;
+            if let Some(ws_deps) = &toml_config.dependencies {
                 for (name, dep) in ws_deps {
                     unused_dep_keys(
                         name,
@@ -567,14 +528,7 @@ pub fn to_real_manifest(
                     );
                 }
             }
-            let ws_root_config = WorkspaceRootConfig::new(
-                package_root,
-                &toml_config.members,
-                &toml_config.default_members,
-                &toml_config.exclude,
-                &Some(inheritable),
-                &toml_config.metadata,
-            );
+            let ws_root_config = to_workspace_config(toml_config, package_root);
             gctx.ws_roots
                 .borrow_mut()
                 .insert(package_root.to_path_buf(), ws_root_config.clone());
@@ -589,16 +543,16 @@ pub fn to_real_manifest(
         ),
     };
 
-    let package_name = package.name.trim();
+    let package_name = &package.name;
     if package_name.contains(':') {
         features.require(Feature::open_namespaces())?;
     }
 
-    let resolved_path = package_root.join("Cargo.toml");
-
     let inherit_cell: LazyCell<InheritableFields> = LazyCell::new();
-    let inherit =
-        || inherit_cell.try_borrow_with(|| get_ws(gctx, &resolved_path, &workspace_config));
+    let inherit = || {
+        inherit_cell
+            .try_borrow_with(|| load_inheritable_fields(gctx, manifest_file, &workspace_config))
+    };
 
     let version = package
         .version
@@ -704,7 +658,10 @@ pub fn to_real_manifest(
 
     let resolve_behavior = match (
         package.resolver.as_ref(),
-        me.workspace.as_ref().and_then(|ws| ws.resolver.as_ref()),
+        original_toml
+            .workspace
+            .as_ref()
+            .and_then(|ws| ws.resolver.as_ref()),
     ) {
         (None, None) => None,
         (Some(s), None) | (None, Some(s)) => Some(ResolveBehavior::from_manifest(s)?),
@@ -718,7 +675,7 @@ pub fn to_real_manifest(
     // If we have a lib with no path, use the inferred lib or else the package name.
     let targets = targets(
         &features,
-        &me,
+        &original_toml,
         package_name,
         package_root,
         edition,
@@ -789,7 +746,7 @@ pub fn to_real_manifest(
 
         let inheritable = || {
             inherit_cell.try_borrow_with(|| {
-                get_ws(
+                load_inheritable_fields(
                     manifest_ctx.gctx,
                     &manifest_ctx.root.join("Cargo.toml"),
                     &workspace_config,
@@ -851,12 +808,12 @@ pub fn to_real_manifest(
     // Collect the dependencies.
     let dependencies = process_dependencies(
         &mut manifest_ctx,
-        me.dependencies.as_ref(),
+        original_toml.dependencies.as_ref(),
         None,
         &workspace_config,
         &inherit_cell,
     )?;
-    if me.dev_dependencies.is_some() && me.dev_dependencies2.is_some() {
+    if original_toml.dev_dependencies.is_some() && original_toml.dev_dependencies2.is_some() {
         warn_on_deprecated(
             "dev-dependencies",
             package_name,
@@ -864,7 +821,7 @@ pub fn to_real_manifest(
             manifest_ctx.warnings,
         );
     }
-    let dev_deps = me.dev_dependencies();
+    let dev_deps = original_toml.dev_dependencies();
     let dev_deps = process_dependencies(
         &mut manifest_ctx,
         dev_deps,
@@ -872,7 +829,7 @@ pub fn to_real_manifest(
         &workspace_config,
         &inherit_cell,
     )?;
-    if me.build_dependencies.is_some() && me.build_dependencies2.is_some() {
+    if original_toml.build_dependencies.is_some() && original_toml.build_dependencies2.is_some() {
         warn_on_deprecated(
             "build-dependencies",
             package_name,
@@ -880,7 +837,7 @@ pub fn to_real_manifest(
             manifest_ctx.warnings,
         );
     }
-    let build_deps = me.build_dependencies();
+    let build_deps = original_toml.build_dependencies();
     let build_deps = process_dependencies(
         &mut manifest_ctx,
         build_deps,
@@ -889,17 +846,17 @@ pub fn to_real_manifest(
         &inherit_cell,
     )?;
 
-    let lints = me
+    let lints = original_toml
         .lints
         .clone()
         .map(|mw| lints_inherit_with(mw, || inherit()?.lints()))
         .transpose()?;
-    let lints = verify_lints(lints)?;
+    verify_lints(lints.as_ref())?;
     let default = manifest::TomlLints::default();
     let rustflags = lints_to_rustflags(lints.as_ref().unwrap_or(&default));
 
     let mut target: BTreeMap<String, manifest::TomlPlatform> = BTreeMap::new();
-    for (name, platform) in me.target.iter().flatten() {
+    for (name, platform) in original_toml.target.iter().flatten() {
         manifest_ctx.platform = {
             let platform: Platform = name.parse()?;
             platform.check_cfg_attributes(manifest_ctx.warnings);
@@ -961,8 +918,8 @@ pub fn to_real_manifest(
     } else {
         Some(target)
     };
-    let replace = replace(&me, &mut manifest_ctx)?;
-    let patch = patch(&me, &mut manifest_ctx)?;
+    let replace = replace(&original_toml, &mut manifest_ctx)?;
+    let patch = patch(&original_toml, &mut manifest_ctx)?;
 
     {
         let mut names_sources = BTreeMap::new();
@@ -997,7 +954,8 @@ pub fn to_real_manifest(
     let summary = Summary::new(
         pkgid,
         deps,
-        &me.features
+        &original_toml
+            .features
             .as_ref()
             .unwrap_or(&empty_features)
             .iter()
@@ -1070,7 +1028,7 @@ pub fn to_real_manifest(
             .map(|mw| field_inherit_with(mw, "categories", || inherit()?.categories()))
             .transpose()?
             .unwrap_or_default(),
-        badges: me
+        badges: original_toml
             .badges
             .clone()
             .map(|mw| field_inherit_with(mw, "badges", || inherit()?.badges()))
@@ -1134,8 +1092,7 @@ pub fn to_real_manifest(
         .as_ref()
         .map(|_| manifest::InheritableField::Value(include.clone()));
 
-    let profiles = me.profile.clone();
-    if let Some(profiles) = &profiles {
+    if let Some(profiles) = &original_toml.profile {
         let cli_unstable = gctx.cli_unstable();
         validate_profiles(profiles, cli_unstable, &features, &mut warnings)?;
     }
@@ -1194,26 +1151,26 @@ pub fn to_real_manifest(
         .map(CompileKind::Target);
     let custom_metadata = package.metadata.clone();
     let resolved_toml = manifest::TomlManifest {
-        cargo_features: me.cargo_features.clone(),
+        cargo_features: original_toml.cargo_features.clone(),
         package: Some(package.clone()),
         project: None,
-        profile: me.profile.clone(),
-        lib: me.lib.clone(),
-        bin: me.bin.clone(),
-        example: me.example.clone(),
-        test: me.test.clone(),
-        bench: me.bench.clone(),
+        profile: original_toml.profile.clone(),
+        lib: original_toml.lib.clone(),
+        bin: original_toml.bin.clone(),
+        example: original_toml.example.clone(),
+        test: original_toml.test.clone(),
+        bench: original_toml.bench.clone(),
         dependencies,
         dev_dependencies: dev_deps,
         dev_dependencies2: None,
         build_dependencies: build_deps,
         build_dependencies2: None,
-        features: me.features.clone(),
+        features: original_toml.features.clone(),
         target,
-        replace: me.replace.clone(),
-        patch: me.patch.clone(),
-        workspace: me.workspace.clone(),
-        badges: me
+        replace: original_toml.replace.clone(),
+        patch: original_toml.patch.clone(),
+        workspace: original_toml.workspace.clone(),
+        badges: original_toml
             .badges
             .as_ref()
             .map(|_| manifest::InheritableField::Value(metadata.badges.clone())),
@@ -1226,6 +1183,7 @@ pub fn to_real_manifest(
     let mut manifest = Manifest::new(
         Rc::new(contents),
         Rc::new(document),
+        Rc::new(original_toml),
         Rc::new(resolved_toml),
         summary,
         default_kind,
@@ -1236,7 +1194,6 @@ pub fn to_real_manifest(
         package.links.clone(),
         metadata,
         custom_metadata,
-        profiles,
         publish,
         replace,
         patch,
@@ -1252,16 +1209,17 @@ pub fn to_real_manifest(
         embedded,
     );
     if package.license_file.is_some() && package.license.is_some() {
-        manifest.warnings_mut().add_warning(
+        warnings.push(
             "only one of `license` or `license-file` is necessary\n\
                  `license` should be used if the package license can be expressed \
                  with a standard SPDX expression.\n\
                  `license-file` should be used if the package uses a non-standard license.\n\
                  See https://doc.rust-lang.org/cargo/reference/manifest.html#the-license-and-license-file-fields \
                  for more information."
-                .to_string(),
+                .to_owned(),
         );
     }
+    warn_on_unused(&manifest.original_toml()._unused_keys, &mut warnings);
     for warning in warnings {
         manifest.warnings_mut().add_warning(warning);
     }
@@ -1274,15 +1232,67 @@ pub fn to_real_manifest(
     Ok(manifest)
 }
 
+fn to_workspace_config(
+    resolved_toml: &manifest::TomlWorkspace,
+    package_root: &Path,
+) -> WorkspaceRootConfig {
+    let inheritable = InheritableFields {
+        package: resolved_toml.package.clone(),
+        dependencies: resolved_toml.dependencies.clone(),
+        lints: resolved_toml.lints.clone(),
+        _ws_root: package_root.to_owned(),
+    };
+    let ws_root_config = WorkspaceRootConfig::new(
+        package_root,
+        &resolved_toml.members,
+        &resolved_toml.default_members,
+        &resolved_toml.exclude,
+        &Some(inheritable),
+        &resolved_toml.metadata,
+    );
+    ws_root_config
+}
+
+fn load_inheritable_fields(
+    gctx: &GlobalContext,
+    resolved_path: &Path,
+    workspace_config: &WorkspaceConfig,
+) -> CargoResult<InheritableFields> {
+    match workspace_config {
+        WorkspaceConfig::Root(root) => Ok(root.inheritable().clone()),
+        WorkspaceConfig::Member {
+            root: Some(ref path_to_root),
+        } => {
+            let path = resolved_path
+                .parent()
+                .unwrap()
+                .join(path_to_root)
+                .join("Cargo.toml");
+            let root_path = paths::normalize_path(&path);
+            inheritable_from_path(gctx, root_path)
+        }
+        WorkspaceConfig::Member { root: None } => {
+            match find_workspace_root(&resolved_path, gctx)? {
+                Some(path_to_root) => inheritable_from_path(gctx, path_to_root),
+                None => Err(anyhow!("failed to find a workspace root")),
+            }
+        }
+    }
+}
+
 fn to_virtual_manifest(
-    me: manifest::TomlManifest,
+    contents: String,
+    document: toml_edit::ImDocument<String>,
+    original_toml: manifest::TomlManifest,
     source_id: SourceId,
     manifest_file: &Path,
     gctx: &GlobalContext,
 ) -> CargoResult<VirtualManifest> {
     let root = manifest_file.parent().unwrap();
 
-    if let Some(deps) = me
+    let mut resolved_toml = original_toml.clone();
+
+    if let Some(deps) = original_toml
         .workspace
         .as_ref()
         .and_then(|ws| ws.dependencies.as_ref())
@@ -1297,17 +1307,17 @@ fn to_virtual_manifest(
         }
     }
 
-    for field in me.requires_package() {
+    for field in original_toml.requires_package() {
         bail!("this virtual manifest specifies a `{field}` section, which is not allowed");
     }
 
     let mut warnings = Vec::new();
     let mut deps = Vec::new();
     let empty = Vec::new();
-    let cargo_features = me.cargo_features.as_ref().unwrap_or(&empty);
+    let cargo_features = original_toml.cargo_features.as_ref().unwrap_or(&empty);
     let features = Features::new(cargo_features, gctx, &mut warnings, source_id.is_path())?;
 
-    warn_on_unused(&me._unused_keys, &mut warnings);
+    resolved_toml._unused_keys = Default::default();
 
     let (replace, patch) = {
         let mut manifest_ctx = ManifestContext {
@@ -1320,38 +1330,23 @@ fn to_virtual_manifest(
             root,
         };
         (
-            replace(&me, &mut manifest_ctx)?,
-            patch(&me, &mut manifest_ctx)?,
+            replace(&original_toml, &mut manifest_ctx)?,
+            patch(&original_toml, &mut manifest_ctx)?,
         )
     };
-    let profiles = me.profile.clone();
-    if let Some(profiles) = &profiles {
+    if let Some(profiles) = &original_toml.profile {
         validate_profiles(profiles, gctx.cli_unstable(), &features, &mut warnings)?;
     }
-    let resolve_behavior = me
+    let resolve_behavior = original_toml
         .workspace
         .as_ref()
         .and_then(|ws| ws.resolver.as_deref())
         .map(|r| ResolveBehavior::from_manifest(r))
         .transpose()?;
-    let workspace_config = match me.workspace {
+    let workspace_config = match original_toml.workspace {
         Some(ref toml_config) => {
-            let lints = toml_config.lints.clone();
-            let lints = verify_lints(lints)?;
-            let inheritable = InheritableFields {
-                package: toml_config.package.clone(),
-                dependencies: toml_config.dependencies.clone(),
-                lints,
-                _ws_root: root.to_path_buf(),
-            };
-            let ws_root_config = WorkspaceRootConfig::new(
-                root,
-                &toml_config.members,
-                &toml_config.default_members,
-                &toml_config.exclude,
-                &Some(inheritable),
-                &toml_config.metadata,
-            );
+            verify_lints(toml_config.lints.as_ref())?;
+            let ws_root_config = to_workspace_config(toml_config, root);
             gctx.ws_roots
                 .borrow_mut()
                 .insert(root.to_path_buf(), ws_root_config.clone());
@@ -1362,13 +1357,18 @@ fn to_virtual_manifest(
         }
     };
     let mut manifest = VirtualManifest::new(
+        Rc::new(contents),
+        Rc::new(document),
+        Rc::new(original_toml),
+        Rc::new(resolved_toml),
         replace,
         patch,
         workspace_config,
-        profiles,
         features,
         resolve_behavior,
     );
+
+    warn_on_unused(&manifest.original_toml()._unused_keys, &mut warnings);
     for warning in warnings {
         manifest.warnings_mut().add_warning(warning);
     }
@@ -1471,12 +1471,12 @@ struct ManifestContext<'a, 'b> {
     features: &'a Features,
 }
 
-fn verify_lints(lints: Option<manifest::TomlLints>) -> CargoResult<Option<manifest::TomlLints>> {
+fn verify_lints(lints: Option<&manifest::TomlLints>) -> CargoResult<()> {
     let Some(lints) = lints else {
-        return Ok(None);
+        return Ok(());
     };
 
-    for (tool, lints) in &lints {
+    for (tool, lints) in lints {
         let supported = ["rust", "clippy", "rustdoc"];
         if !supported.contains(&tool.as_str()) {
             let supported = supported.join(", ");
@@ -1499,7 +1499,7 @@ fn verify_lints(lints: Option<manifest::TomlLints>) -> CargoResult<Option<manife
         }
     }
 
-    Ok(Some(lints))
+    Ok(())
 }
 
 fn lints_to_rustflags(lints: &manifest::TomlLints) -> Vec<String> {

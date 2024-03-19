@@ -44,6 +44,7 @@ pub struct Manifest {
     // alternate forms of manifests:
     contents: Rc<String>,
     document: Rc<toml_edit::ImDocument<String>>,
+    original_toml: Rc<TomlManifest>,
     resolved_toml: Rc<TomlManifest>,
     summary: Summary,
 
@@ -57,7 +58,6 @@ pub struct Manifest {
     include: Vec<String>,
     metadata: ManifestMetadata,
     custom_metadata: Option<toml::Value>,
-    profiles: Option<TomlProfiles>,
     publish: Option<Vec<String>>,
     replace: Vec<(PackageIdSpec, Dependency)>,
     patch: HashMap<Url, Vec<Dependency>>,
@@ -87,10 +87,16 @@ pub struct Warnings(Vec<DelayedWarning>);
 
 #[derive(Clone, Debug)]
 pub struct VirtualManifest {
+    // alternate forms of manifests:
+    contents: Rc<String>,
+    document: Rc<toml_edit::ImDocument<String>>,
+    original_toml: Rc<TomlManifest>,
+    resolved_toml: Rc<TomlManifest>,
+
+    // this form of manifest:
     replace: Vec<(PackageIdSpec, Dependency)>,
     patch: HashMap<Url, Vec<Dependency>>,
     workspace: WorkspaceConfig,
-    profiles: Option<TomlProfiles>,
     warnings: Warnings,
     features: Features,
     resolve_behavior: Option<ResolveBehavior>,
@@ -396,6 +402,7 @@ impl Manifest {
     pub fn new(
         contents: Rc<String>,
         document: Rc<toml_edit::ImDocument<String>>,
+        original_toml: Rc<TomlManifest>,
         resolved_toml: Rc<TomlManifest>,
         summary: Summary,
 
@@ -407,7 +414,6 @@ impl Manifest {
         links: Option<String>,
         metadata: ManifestMetadata,
         custom_metadata: Option<toml::Value>,
-        profiles: Option<TomlProfiles>,
         publish: Option<Vec<String>>,
         replace: Vec<(PackageIdSpec, Dependency)>,
         patch: HashMap<Url, Vec<Dependency>>,
@@ -425,6 +431,7 @@ impl Manifest {
         Manifest {
             contents,
             document,
+            original_toml,
             resolved_toml,
             summary,
 
@@ -437,7 +444,6 @@ impl Manifest {
             links,
             metadata,
             custom_metadata,
-            profiles,
             publish,
             replace,
             patch,
@@ -461,6 +467,10 @@ impl Manifest {
     /// Collection of spans for the original TOML
     pub fn document(&self) -> &toml_edit::ImDocument<String> {
         &self.document
+    }
+    /// The [`TomlManifest`] as parsed from [`Manifest::document`]
+    pub fn original_toml(&self) -> &TomlManifest {
+        &self.original_toml
     }
     /// The [`TomlManifest`] with all fields expanded
     pub fn resolved_toml(&self) -> &TomlManifest {
@@ -514,7 +524,7 @@ impl Manifest {
         &self.warnings
     }
     pub fn profiles(&self) -> Option<&TomlProfiles> {
-        self.profiles.as_ref()
+        self.resolved_toml.profile.as_ref()
     }
     pub fn publish(&self) -> &Option<Vec<String>> {
         &self.publish
@@ -622,22 +632,45 @@ impl Manifest {
 
 impl VirtualManifest {
     pub fn new(
+        contents: Rc<String>,
+        document: Rc<toml_edit::ImDocument<String>>,
+        original_toml: Rc<TomlManifest>,
+        resolved_toml: Rc<TomlManifest>,
         replace: Vec<(PackageIdSpec, Dependency)>,
         patch: HashMap<Url, Vec<Dependency>>,
         workspace: WorkspaceConfig,
-        profiles: Option<TomlProfiles>,
         features: Features,
         resolve_behavior: Option<ResolveBehavior>,
     ) -> VirtualManifest {
         VirtualManifest {
+            contents,
+            document,
+            original_toml,
+            resolved_toml,
             replace,
             patch,
             workspace,
-            profiles,
             warnings: Warnings::new(),
             features,
             resolve_behavior,
         }
+    }
+
+    /// The raw contents of the original TOML
+    pub fn contents(&self) -> &str {
+        self.contents.as_str()
+    }
+    /// Collection of spans for the original TOML
+    pub fn document(&self) -> &toml_edit::ImDocument<String> {
+        &self.document
+    }
+    /// The [`TomlManifest`] as parsed from [`VirtualManifest::document`]
+    pub fn original_toml(&self) -> &TomlManifest {
+        &self.original_toml
+    }
+    /// The [`TomlManifest`] with all fields expanded
+    pub fn resolved_toml(&self) -> &TomlManifest {
+        &self.resolved_toml
     }
 
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] {
@@ -653,7 +686,7 @@ impl VirtualManifest {
     }
 
     pub fn profiles(&self) -> Option<&TomlProfiles> {
-        self.profiles.as_ref()
+        self.resolved_toml.profile.as_ref()
     }
 
     pub fn warnings_mut(&mut self) -> &mut Warnings {
