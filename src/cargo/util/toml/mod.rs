@@ -608,6 +608,16 @@ pub fn to_real_manifest(
         .map(|value| field_inherit_with(value, "license", || inherit()?.license()))
         .transpose()?
         .map(manifest::InheritableField::Value);
+    package.license_file = package
+        .license_file
+        .clone()
+        .map(|value| {
+            field_inherit_with(value, "license-file", || {
+                inherit()?.license_file(package_root)
+            })
+        })
+        .transpose()?
+        .map(manifest::InheritableField::Value);
 
     let rust_version = package
         .resolved_rust_version()
@@ -934,10 +944,9 @@ pub fn to_real_manifest(
             .expect("previously resolved")
             .cloned(),
         license_file: package
-            .license_file
-            .clone()
-            .map(|mw| field_inherit_with(mw, "license", || inherit()?.license_file(package_root)))
-            .transpose()?,
+            .resolved_license_file()
+            .expect("previously resolved")
+            .cloned(),
         repository: package
             .repository
             .clone()
@@ -966,10 +975,6 @@ pub fn to_real_manifest(
         .authors
         .as_ref()
         .map(|_| manifest::InheritableField::Value(metadata.authors.clone()));
-    package.license_file = metadata
-        .license_file
-        .clone()
-        .map(|license_file| manifest::InheritableField::Value(license_file));
     package.repository = metadata
         .repository
         .clone()
