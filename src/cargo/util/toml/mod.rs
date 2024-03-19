@@ -562,6 +562,12 @@ pub fn to_real_manifest(
         .map(|value| field_inherit_with(value, "version", || inherit()?.version()))
         .transpose()?
         .map(manifest::InheritableField::Value);
+    package.authors = package
+        .authors
+        .clone()
+        .map(|value| field_inherit_with(value, "authors", || inherit()?.authors()))
+        .transpose()?
+        .map(manifest::InheritableField::Value);
     package.description = package
         .description
         .clone()
@@ -940,10 +946,9 @@ pub fn to_real_manifest(
             .expect("previously resolved")
             .cloned(),
         authors: package
-            .authors
-            .clone()
-            .map(|mw| field_inherit_with(mw, "authors", || inherit()?.authors()))
-            .transpose()?
+            .resolved_authors()
+            .expect("previously resolved")
+            .cloned()
             .unwrap_or_default(),
         license: package
             .resolved_license()
@@ -976,10 +981,6 @@ pub fn to_real_manifest(
         links: package.links.clone(),
         rust_version: rust_version.clone(),
     };
-    package.authors = package
-        .authors
-        .as_ref()
-        .map(|_| manifest::InheritableField::Value(metadata.authors.clone()));
     package.exclude = package
         .exclude
         .as_ref()

@@ -207,6 +207,10 @@ impl TomlPackage {
         self.version.as_ref().map(|v| v.resolved()).transpose()
     }
 
+    pub fn resolved_authors(&self) -> Result<Option<&Vec<String>>, UnresolvedError> {
+        self.authors.as_ref().map(|v| v.resolved()).transpose()
+    }
+
     pub fn resolved_description(&self) -> Result<Option<&String>, UnresolvedError> {
         self.description.as_ref().map(|v| v.resolved()).transpose()
     }
