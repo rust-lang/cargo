@@ -1893,17 +1893,13 @@ fn inner_dependency_inherit_with<'a>(
     inheritable: impl FnOnce() -> CargoResult<&'a InheritableFields>,
     manifest_ctx: &mut ManifestContext<'_, '_>,
 ) -> CargoResult<manifest::TomlDependency> {
-    fn default_features_msg(
-        label: &str,
-        ws_def_feat: Option<bool>,
-        manifest_ctx: &mut ManifestContext<'_, '_>,
-    ) {
+    fn default_features_msg(label: &str, ws_def_feat: Option<bool>, warnings: &mut Vec<String>) {
         let ws_def_feat = match ws_def_feat {
             Some(true) => "true",
             Some(false) => "false",
             None => "not specified",
         };
-        manifest_ctx.warnings.push(format!(
+        warnings.push(format!(
             "`default-features` is ignored for {label}, since `default-features` was \
                 {ws_def_feat} for `workspace.dependencies.{label}`, \
                 this could become a hard error in the future"
@@ -1923,7 +1919,7 @@ fn inner_dependency_inherit_with<'a>(
             match d {
                 manifest::TomlDependency::Simple(s) => {
                     if let Some(false) = dependency.default_features() {
-                        default_features_msg(name, None, manifest_ctx);
+                        default_features_msg(name, None, &mut manifest_ctx.warnings);
                     }
                     if dependency.optional.is_some()
                         || dependency.features.is_some()
@@ -1953,12 +1949,12 @@ fn inner_dependency_inherit_with<'a>(
                         // workspace: default-features = true should ignore member
                         // default-features
                         (Some(false), Some(true)) => {
-                            default_features_msg(name, Some(true), manifest_ctx);
+                            default_features_msg(name, Some(true), &mut manifest_ctx.warnings);
                         }
                         // member: default-features = false and
                         // workspace: dep = "1.0" should ignore member default-features
                         (Some(false), None) => {
-                            default_features_msg(name, None, manifest_ctx);
+                            default_features_msg(name, None, &mut manifest_ctx.warnings);
                         }
                         _ => {}
                     }
