@@ -618,6 +618,12 @@ pub fn to_real_manifest(
         })
         .transpose()?
         .map(manifest::InheritableField::Value);
+    package.repository = package
+        .repository
+        .clone()
+        .map(|value| field_inherit_with(value, "repository", || inherit()?.repository()))
+        .transpose()?
+        .map(manifest::InheritableField::Value);
 
     let rust_version = package
         .resolved_rust_version()
@@ -948,10 +954,9 @@ pub fn to_real_manifest(
             .expect("previously resolved")
             .cloned(),
         repository: package
-            .repository
-            .clone()
-            .map(|mw| field_inherit_with(mw, "repository", || inherit()?.repository()))
-            .transpose()?,
+            .resolved_repository()
+            .expect("previously resolved")
+            .cloned(),
         keywords: package
             .resolved_keywords()
             .expect("previously resolved")
@@ -975,10 +980,6 @@ pub fn to_real_manifest(
         .authors
         .as_ref()
         .map(|_| manifest::InheritableField::Value(metadata.authors.clone()));
-    package.repository = metadata
-        .repository
-        .clone()
-        .map(|repository| manifest::InheritableField::Value(repository));
     package.exclude = package
         .exclude
         .as_ref()
