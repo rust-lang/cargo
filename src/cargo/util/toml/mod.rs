@@ -568,6 +568,18 @@ pub fn to_real_manifest(
         .map(|value| field_inherit_with(value, "authors", || inherit()?.authors()))
         .transpose()?
         .map(manifest::InheritableField::Value);
+    package.exclude = package
+        .exclude
+        .clone()
+        .map(|value| field_inherit_with(value, "exclude", || inherit()?.exclude()))
+        .transpose()?
+        .map(manifest::InheritableField::Value);
+    package.include = package
+        .include
+        .clone()
+        .map(|value| field_inherit_with(value, "include", || inherit()?.include()))
+        .transpose()?
+        .map(manifest::InheritableField::Value);
     package.description = package
         .description
         .clone()
@@ -915,19 +927,6 @@ pub fn to_real_manifest(
         }
     }
 
-    let exclude = package
-        .exclude
-        .clone()
-        .map(|mw| field_inherit_with(mw, "exclude", || inherit()?.exclude()))
-        .transpose()?
-        .unwrap_or_default();
-    let include = package
-        .include
-        .clone()
-        .map(|mw| field_inherit_with(mw, "include", || inherit()?.include()))
-        .transpose()?
-        .unwrap_or_default();
-
     let metadata = ManifestMetadata {
         description: package
             .resolved_description()
@@ -981,14 +980,6 @@ pub fn to_real_manifest(
         links: package.links.clone(),
         rust_version: rust_version.clone(),
     };
-    package.exclude = package
-        .exclude
-        .as_ref()
-        .map(|_| manifest::InheritableField::Value(exclude.clone()));
-    package.include = package
-        .include
-        .as_ref()
-        .map(|_| manifest::InheritableField::Value(include.clone()));
 
     if let Some(profiles) = &original_toml.profile {
         let cli_unstable = gctx.cli_unstable();
@@ -1073,6 +1064,16 @@ pub fn to_real_manifest(
         .map(|t| CompileTarget::new(&*t))
         .transpose()?
         .map(CompileKind::Target);
+    let include = package
+        .resolved_include()
+        .expect("previously resolved")
+        .cloned()
+        .unwrap_or_default();
+    let exclude = package
+        .resolved_exclude()
+        .expect("previously resolved")
+        .cloned()
+        .unwrap_or_default();
     let custom_metadata = package.metadata.clone();
     let resolved_toml = manifest::TomlManifest {
         cargo_features: original_toml.cargo_features.clone(),

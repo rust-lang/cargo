@@ -211,6 +211,14 @@ impl TomlPackage {
         self.authors.as_ref().map(|v| v.resolved()).transpose()
     }
 
+    pub fn resolved_exclude(&self) -> Result<Option<&Vec<String>>, UnresolvedError> {
+        self.exclude.as_ref().map(|v| v.resolved()).transpose()
+    }
+
+    pub fn resolved_include(&self) -> Result<Option<&Vec<String>>, UnresolvedError> {
+        self.include.as_ref().map(|v| v.resolved()).transpose()
+    }
+
     pub fn resolved_description(&self) -> Result<Option<&String>, UnresolvedError> {
         self.description.as_ref().map(|v| v.resolved()).transpose()
     }
