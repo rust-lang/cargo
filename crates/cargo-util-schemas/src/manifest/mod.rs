@@ -210,6 +210,10 @@ impl TomlPackage {
     pub fn resolved_description(&self) -> Result<Option<&String>, UnresolvedError> {
         self.description.as_ref().map(|v| v.resolved()).transpose()
     }
+
+    pub fn resolved_homepage(&self) -> Result<Option<&String>, UnresolvedError> {
+        self.homepage.as_ref().map(|v| v.resolved()).transpose()
+    }
 }
 
 /// An enum that allows for inheriting keys from a workspace in a Cargo.toml.
