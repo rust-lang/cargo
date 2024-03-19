@@ -60,7 +60,7 @@ terminal.</li>
 
 <dt class="option-term" id="option-cargo-generate-lockfile---frozen"><a class="option-anchor" href="#option-cargo-generate-lockfile---frozen"></a><code>--frozen</code></dt>
 <dt class="option-term" id="option-cargo-generate-lockfile---locked"><a class="option-anchor" href="#option-cargo-generate-lockfile---locked"></a><code>--locked</code></dt>
-<dd class="option-desc">Either of these flags requires that the <code>Cargo.lock</code> file is
+<dd class="option-desc">Either of these flags requires that the <code>Cargo.lock</code> file be
 up-to-date. If the lock file is missing, or it needs to be updated, Cargo will
 exit with an error. The <code>--frozen</code> flag also prevents Cargo from
 attempting to access the network to determine if it is out-of-date.</p>

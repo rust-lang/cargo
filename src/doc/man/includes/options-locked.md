@@ -1,5 +1,5 @@
 {{#option "`--frozen`" "`--locked`"}}
-Either of these flags requires that the `Cargo.lock` file is
+Either of these flags requires that the `Cargo.lock` file be
 up-to-date. If the lock file is missing, or it needs to be updated, Cargo will
 exit with an error. The `--frozen` flag also prevents Cargo from
 attempting to access the network to determine if it is out-of-date.

@@ -640,12 +640,12 @@ See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a sp
                 .value_parser(clap::builder::ValueParser::path_buf()),
         )
         .arg(
-            flag("frozen", "Require Cargo.lock and cache are up to date")
+            flag("frozen", "Require Cargo.lock and cache to be up-to-date")
                 .help_heading(heading::MANIFEST_OPTIONS)
                 .global(true),
         )
         .arg(
-            flag("locked", "Require Cargo.lock is up to date")
+            flag("locked", "Require Cargo.lock to be up-to-date")
                 .help_heading(heading::MANIFEST_OPTIONS)
                 .global(true),
         )
