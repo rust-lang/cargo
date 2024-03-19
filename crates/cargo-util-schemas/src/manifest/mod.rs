@@ -219,6 +219,10 @@ impl TomlPackage {
         self.include.as_ref().map(|v| v.resolved()).transpose()
     }
 
+    pub fn resolved_publish(&self) -> Result<Option<&VecStringOrBool>, UnresolvedError> {
+        self.publish.as_ref().map(|v| v.resolved()).transpose()
+    }
+
     pub fn resolved_description(&self) -> Result<Option<&String>, UnresolvedError> {
         self.description.as_ref().map(|v| v.resolved()).transpose()
     }

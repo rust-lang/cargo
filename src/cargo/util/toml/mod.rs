@@ -580,6 +580,12 @@ pub fn to_real_manifest(
         .map(|value| field_inherit_with(value, "include", || inherit()?.include()))
         .transpose()?
         .map(manifest::InheritableField::Value);
+    package.publish = package
+        .publish
+        .clone()
+        .map(|value| field_inherit_with(value, "publish", || inherit()?.publish()))
+        .transpose()?
+        .map(manifest::InheritableField::Value);
     package.description = package
         .description
         .clone()
@@ -986,17 +992,8 @@ pub fn to_real_manifest(
         validate_profiles(profiles, cli_unstable, &features, warnings)?;
     }
 
-    let publish = package
-        .publish
-        .clone()
-        .map(|publish| field_inherit_with(publish, "publish", || inherit()?.publish()).unwrap());
-
-    package.publish = publish
-        .clone()
-        .map(|p| manifest::InheritableField::Value(p));
-
     let version = package.resolved_version().expect("previously resolved");
-    let publish = match publish {
+    let publish = match package.resolved_publish().expect("previously resolved") {
         Some(manifest::VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
         Some(manifest::VecStringOrBool::Bool(false)) => Some(vec![]),
         Some(manifest::VecStringOrBool::Bool(true)) => None,
