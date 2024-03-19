@@ -1217,7 +1217,13 @@ fn resolve_and_validate_dependencies(
     let mut deps: BTreeMap<manifest::PackageName, manifest::InheritableDependency> =
         BTreeMap::new();
     for (name_in_toml, v) in dependencies.iter() {
-        let resolved = dependency_inherit_with(v.clone(), name_in_toml, inheritable, manifest_ctx)?;
+        let resolved = dependency_inherit_with(
+            v.clone(),
+            name_in_toml,
+            inheritable,
+            &manifest_ctx.root,
+            &mut manifest_ctx.warnings,
+        )?;
         let kind_name = match kind {
             Some(k) => k.kind_table(),
             None => "dependencies",
@@ -1873,12 +1879,13 @@ fn dependency_inherit_with<'a>(
     dependency: manifest::InheritableDependency,
     name: &str,
     inheritable: impl FnOnce() -> CargoResult<&'a InheritableFields>,
-    manifest_ctx: &mut ManifestContext<'_, '_>,
+    package_root: &Path,
+    warnings: &mut Vec<String>,
 ) -> CargoResult<manifest::TomlDependency> {
     match dependency {
         manifest::InheritableDependency::Value(value) => Ok(value),
         manifest::InheritableDependency::Inherit(w) => {
-            inner_dependency_inherit_with(w, name, inheritable, manifest_ctx).with_context(|| {
+            inner_dependency_inherit_with(w, name, inheritable, package_root, warnings).with_context(|| {
                 format!(
                     "error inheriting `{name}` from workspace root manifest's `workspace.dependencies.{name}`",
                 )
@@ -1891,7 +1898,8 @@ fn inner_dependency_inherit_with<'a>(
     dependency: manifest::TomlInheritedDependency,
     name: &str,
     inheritable: impl FnOnce() -> CargoResult<&'a InheritableFields>,
-    manifest_ctx: &mut ManifestContext<'_, '_>,
+    package_root: &Path,
+    warnings: &mut Vec<String>,
 ) -> CargoResult<manifest::TomlDependency> {
     fn default_features_msg(label: &str, ws_def_feat: Option<bool>, warnings: &mut Vec<String>) {
         let ws_def_feat = match ws_def_feat {
@@ -1906,74 +1914,67 @@ fn inner_dependency_inherit_with<'a>(
         ))
     }
     if dependency.default_features.is_some() && dependency.default_features2.is_some() {
-        warn_on_deprecated(
-            "default-features",
-            name,
-            "dependency",
-            manifest_ctx.warnings,
-        );
+        warn_on_deprecated("default-features", name, "dependency", warnings);
     }
-    inheritable()?
-        .get_dependency(name, manifest_ctx.root)
-        .map(|d| {
-            match d {
-                manifest::TomlDependency::Simple(s) => {
-                    if let Some(false) = dependency.default_features() {
-                        default_features_msg(name, None, &mut manifest_ctx.warnings);
-                    }
-                    if dependency.optional.is_some()
-                        || dependency.features.is_some()
-                        || dependency.public.is_some()
-                    {
-                        manifest::TomlDependency::Detailed(manifest::TomlDetailedDependency {
-                            version: Some(s),
-                            optional: dependency.optional,
-                            features: dependency.features.clone(),
-                            public: dependency.public,
-                            ..Default::default()
-                        })
-                    } else {
-                        manifest::TomlDependency::Simple(s)
-                    }
+    inheritable()?.get_dependency(name, package_root).map(|d| {
+        match d {
+            manifest::TomlDependency::Simple(s) => {
+                if let Some(false) = dependency.default_features() {
+                    default_features_msg(name, None, warnings);
                 }
-                manifest::TomlDependency::Detailed(d) => {
-                    let mut d = d.clone();
-                    match (dependency.default_features(), d.default_features()) {
-                        // member: default-features = true and
-                        // workspace: default-features = false should turn on
-                        // default-features
-                        (Some(true), Some(false)) => {
-                            d.default_features = Some(true);
-                        }
-                        // member: default-features = false and
-                        // workspace: default-features = true should ignore member
-                        // default-features
-                        (Some(false), Some(true)) => {
-                            default_features_msg(name, Some(true), &mut manifest_ctx.warnings);
-                        }
-                        // member: default-features = false and
-                        // workspace: dep = "1.0" should ignore member default-features
-                        (Some(false), None) => {
-                            default_features_msg(name, None, &mut manifest_ctx.warnings);
-                        }
-                        _ => {}
-                    }
-                    d.features = match (d.features.clone(), dependency.features.clone()) {
-                        (Some(dep_feat), Some(inherit_feat)) => Some(
-                            dep_feat
-                                .into_iter()
-                                .chain(inherit_feat)
-                                .collect::<Vec<String>>(),
-                        ),
-                        (Some(dep_fet), None) => Some(dep_fet),
-                        (None, Some(inherit_feat)) => Some(inherit_feat),
-                        (None, None) => None,
-                    };
-                    d.optional = dependency.optional;
-                    manifest::TomlDependency::Detailed(d)
+                if dependency.optional.is_some()
+                    || dependency.features.is_some()
+                    || dependency.public.is_some()
+                {
+                    manifest::TomlDependency::Detailed(manifest::TomlDetailedDependency {
+                        version: Some(s),
+                        optional: dependency.optional,
+                        features: dependency.features.clone(),
+                        public: dependency.public,
+                        ..Default::default()
+                    })
+                } else {
+                    manifest::TomlDependency::Simple(s)
                 }
             }
-        })
+            manifest::TomlDependency::Detailed(d) => {
+                let mut d = d.clone();
+                match (dependency.default_features(), d.default_features()) {
+                    // member: default-features = true and
+                    // workspace: default-features = false should turn on
+                    // default-features
+                    (Some(true), Some(false)) => {
+                        d.default_features = Some(true);
+                    }
+                    // member: default-features = false and
+                    // workspace: default-features = true should ignore member
+                    // default-features
+                    (Some(false), Some(true)) => {
+                        default_features_msg(name, Some(true), warnings);
+                    }
+                    // member: default-features = false and
+                    // workspace: dep = "1.0" should ignore member default-features
+                    (Some(false), None) => {
+                        default_features_msg(name, None, warnings);
+                    }
+                    _ => {}
+                }
+                d.features = match (d.features.clone(), dependency.features.clone()) {
+                    (Some(dep_feat), Some(inherit_feat)) => Some(
+                        dep_feat
+                            .into_iter()
+                            .chain(inherit_feat)
+                            .collect::<Vec<String>>(),
+                    ),
+                    (Some(dep_fet), None) => Some(dep_fet),
+                    (None, Some(inherit_feat)) => Some(inherit_feat),
+                    (None, None) => None,
+                };
+                d.optional = dependency.optional;
+                manifest::TomlDependency::Detailed(d)
+            }
+        }
+    })
 }
 
 pub(crate) fn to_dependency<P: ResolveToPath + Clone>(
