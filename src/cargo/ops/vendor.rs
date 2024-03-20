@@ -326,7 +326,7 @@ fn cp_sources(
             // the time and if we respect them (e.g.  in git) then it'll
             // probably mess with the checksums when a vendor dir is checked
             // into someone else's source control
-            Some(".gitattributes") | Some(".gitignore") | Some(".git") => continue,
+            Some(".gitattributes" | ".gitignore" | ".git") => continue,
 
             // Temporary Cargo files
             Some(".cargo-ok") => continue,
