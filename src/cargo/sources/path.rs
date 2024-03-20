@@ -145,7 +145,7 @@ impl<'gctx> PathSource<'gctx> {
                 .gctx
                 .cli_unstable()
                 .gitoxide
-                .map_or(false, |features| features.fetch)
+                .map_or(false, |features| features.list_files)
             {
                 self.discover_gix_repo(root)?.map(Git2OrGixRepository::Gix)
             } else {
