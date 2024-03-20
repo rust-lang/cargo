@@ -231,6 +231,7 @@ fn profile_config_override_spec_multiple() {
         .with_status(101)
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [ERROR] multiple package overrides in profile `dev` match package `bar v0.5.0 ([..])`
 found package specs: bar, bar@0.5.0",
         )
@@ -317,6 +318,7 @@ fn profile_config_override_precedence() {
     p.cargo("build -v")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar [..] -C opt-level=2[..]-C codegen-units=2 [..]
 [COMPILING] foo [..]
@@ -511,6 +513,7 @@ fn test_with_dev_profile() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 2 packages
 [DOWNLOADING] [..]
 [DOWNLOADED] [..]
 [COMPILING] somedep v1.0.0

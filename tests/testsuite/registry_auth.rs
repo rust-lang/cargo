@@ -39,6 +39,7 @@ fn make_project() -> Project {
 
 static SUCCESS_OUTPUT: &'static str = "\
 [UPDATING] `alternative` index
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
 [COMPILING] bar v0.0.1 (registry `alternative`)
@@ -59,6 +60,7 @@ fn requires_credential_provider() {
         .with_status(101)
         .with_stderr(
             r#"[UPDATING] `alternative` index
+[LOCKING] 2 packages
 error: failed to download `bar v0.0.1 (registry `alternative`)`
 
 Caused by:
@@ -270,6 +272,7 @@ fn missing_token_git() {
         .with_stderr(
             "\
 [UPDATING] `alternative` index
+[LOCKING] 2 packages
 [ERROR] failed to download `bar v0.0.1 (registry `alternative`)`
 
 Caused by:
@@ -328,6 +331,7 @@ fn incorrect_token_git() {
         .with_stderr(
             "\
 [UPDATING] `alternative` index
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [ERROR] failed to download from `http://[..]/dl/bar/0.0.1/download`
 
@@ -420,6 +424,7 @@ fn duplicate_index() {
         .with_stderr(
             "\
 [UPDATING] `alternative` index
+[LOCKING] 2 packages
 [ERROR] failed to download `bar v0.0.1 (registry `alternative`)`
 
 Caused by:

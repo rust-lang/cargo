@@ -52,6 +52,7 @@ fn simple() {
     p.cargo("build")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [UNPACKING] bar v0.0.1 ([..])
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])
@@ -174,6 +175,7 @@ fn multiple_versions() {
     p.cargo("check")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [UNPACKING] bar v0.1.0 ([..])
 [CHECKING] bar v0.1.0
 [CHECKING] foo v0.0.1 ([CWD])
@@ -235,6 +237,7 @@ fn multiple_names() {
     p.cargo("check")
         .with_stderr(
             "\
+[LOCKING] 3 packages
 [UNPACKING] [..]
 [UNPACKING] [..]
 [CHECKING] [..]
@@ -290,6 +293,7 @@ fn interdependent() {
     p.cargo("check")
         .with_stderr(
             "\
+[LOCKING] 3 packages
 [UNPACKING] [..]
 [UNPACKING] [..]
 [CHECKING] bar v0.0.1
@@ -360,6 +364,7 @@ fn path_dep_rewritten() {
     p.cargo("check")
         .with_stderr(
             "\
+[LOCKING] 3 packages
 [UNPACKING] [..]
 [UNPACKING] [..]
 [CHECKING] bar v0.0.1
@@ -527,6 +532,7 @@ fn crates_io_registry_url_is_optional() {
     p.cargo("build")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [UNPACKING] bar v0.0.1 ([..])
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([CWD])

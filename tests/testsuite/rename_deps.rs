@@ -192,6 +192,7 @@ fn rename_twice() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.1.0 (registry [..])
 error: the crate `test v0.1.0 ([CWD])` depends on crate `foo v0.1.0` multiple times with different names

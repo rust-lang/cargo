@@ -28,20 +28,23 @@ pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
 }
 
 /// Generate a toml String of Cargo.lock from a Resolve.
-pub fn resolve_to_string(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoResult<String> {
+pub fn resolve_to_string(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<String> {
     let (_orig, out, _lock_root) = resolve_to_string_orig(ws, resolve);
     Ok(out)
 }
 
+/// Ensure the resolve result is written to fisk
+///
+/// Returns `true` if the lockfile changed
 #[tracing::instrument(skip_all)]
-pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoResult<()> {
+pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoResult<bool> {
     let (orig, mut out, lock_root) = resolve_to_string_orig(ws, resolve);
 
     // If the lock file contents haven't changed so don't rewrite it. This is
     // helpful on read-only filesystems.
     if let Some(orig) = &orig {
         if are_equal_lockfiles(orig, &out, ws) {
-            return Ok(());
+            return Ok(false);
         }
     }
 
@@ -93,12 +96,12 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
                 lock_root.as_path_unlocked().join("Cargo.lock").display()
             )
         })?;
-    Ok(())
+    Ok(true)
 }
 
 fn resolve_to_string_orig(
     ws: &Workspace<'_>,
-    resolve: &mut Resolve,
+    resolve: &Resolve,
 ) -> (Option<String>, String, Filesystem) {
     // Load the original lock file if it exists.
     let lock_root = lock_root(ws);

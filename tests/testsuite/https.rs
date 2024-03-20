@@ -127,7 +127,12 @@ fn self_signed_with_cacert() {
         .file("server.crt", &server_crt)
         .build();
     p.cargo("fetch")
-        .with_stderr("[UPDATING] git repository `https://127.0.0.1:[..]/repos/bar.git`")
+        .with_stderr(
+            "\
+[UPDATING] git repository `https://127.0.0.1:[..]/repos/bar.git`
+[LOCKING] 2 packages
+",
+        )
         .run();
 }
 
@@ -150,6 +155,11 @@ fn github_works() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("fetch")
-        .with_stderr("[UPDATING] git repository `https://github.com/rust-lang/bitflags.git`")
+        .with_stderr(
+            "\
+[UPDATING] git repository `https://github.com/rust-lang/bitflags.git`
+[LOCKING] 2 packages
+",
+        )
         .run();
 }

@@ -203,7 +203,12 @@ fn known_host_works() {
     fs::write(agent.ssh_dir.join("known_hosts"), key).unwrap();
     p.cargo("fetch")
         .env("SSH_AUTH_SOCK", &agent.sock)
-        .with_stderr("[UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`")
+        .with_stderr(
+            "\
+[UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`
+[LOCKING] 2 packages
+",
+        )
         .run();
 }
 
@@ -275,7 +280,12 @@ fn known_host_without_port() {
     let p = foo_bar_project(&url);
     p.cargo("fetch")
         .env("SSH_AUTH_SOCK", &agent.sock)
-        .with_stderr("[UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`")
+        .with_stderr(
+            "\
+[UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`
+[LOCKING] 2 packages
+",
+        )
         .run();
 }
 
@@ -308,7 +318,10 @@ fn hostname_case_insensitive() {
     p.cargo("fetch")
         .env("SSH_AUTH_SOCK", &agent.sock)
         .with_stderr(&format!(
-            "[UPDATING] git repository `ssh://testuser@{hostname}:{port}/repos/bar.git`"
+            "\
+[UPDATING] git repository `ssh://testuser@{hostname}:{port}/repos/bar.git`
+[LOCKING] 2 packages
+"
         ))
         .run();
 }
@@ -382,7 +395,12 @@ Caused by:
     drop(f);
     p.cargo("fetch")
         .env("SSH_AUTH_SOCK", &agent.sock)
-        .with_stderr("[UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`")
+        .with_stderr(
+            "\
+[UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`
+[LOCKING] 2 packages
+",
+        )
         .run();
 }
 
@@ -590,6 +608,11 @@ fn ssh_key_in_config() {
     );
     p.cargo("fetch")
         .env("SSH_AUTH_SOCK", &agent.sock)
-        .with_stderr("[UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`")
+        .with_stderr(
+            "\
+[UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`
+[LOCKING] 2 packages
+",
+        )
         .run();
 }

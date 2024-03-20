@@ -335,6 +335,7 @@ fn overrides_with_custom() {
     p.cargo("build -v")
         .with_stderr_unordered(
             "\
+[LOCKING] 3 packages
 [COMPILING] xxx [..]
 [COMPILING] yyy [..]
 [COMPILING] foo [..]

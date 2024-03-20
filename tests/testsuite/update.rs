@@ -1107,7 +1107,10 @@ rustdns.workspace = true
     // First time around we should compile both foo and bar
     p.cargo("generate-lockfile")
         .with_stderr(&format!(
-            "[UPDATING] git repository `{}`\n",
+            "\
+[UPDATING] git repository `{}`
+[LOCKING] 3 packages
+",
             git_project.url(),
         ))
         .run();
@@ -1195,7 +1198,10 @@ rustdns.workspace = true
     // First time around we should compile both foo and bar
     p.cargo("generate-lockfile")
         .with_stderr(&format!(
-            "[UPDATING] git repository `{}`\n",
+            "\
+[UPDATING] git repository `{}`
+[LOCKING] 3 packages
+",
             git_project.url(),
         ))
         .run();
@@ -1283,7 +1289,10 @@ rustdns.workspace = true
     // First time around we should compile both foo and bar
     p.cargo("generate-lockfile")
         .with_stderr(&format!(
-            "[UPDATING] git repository `{}`\n",
+            "\
+[UPDATING] git repository `{}`
+[LOCKING] 3 packages
+",
             git_project.url(),
         ))
         .run();
@@ -1340,7 +1349,11 @@ fn update_precise_git_revisions() {
         .build();
 
     p.cargo("fetch")
-        .with_stderr(format!("[UPDATING] git repository `{url}`"))
+        .with_stderr(format!(
+            "\
+[UPDATING] git repository `{url}`
+[LOCKING] 2 packages"
+        ))
         .run();
 
     assert!(p.read_lockfile().contains(&head_id));

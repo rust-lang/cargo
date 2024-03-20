@@ -32,6 +32,7 @@ fn dependency_with_crate_syntax() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 3 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..]
 [DOWNLOADED] [..]
@@ -174,6 +175,7 @@ fn namespaced_implicit_feature() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 2 packages
 [CHECKING] foo v0.0.1 [..]
 [FINISHED] [..]
 ",
@@ -323,6 +325,7 @@ fn namespaced_same_name() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 2 packages
 [COMPILING] foo v0.0.1 [..]
 [FINISHED] [..]
 [RUNNING] [..]
@@ -384,6 +387,7 @@ fn no_implicit_feature() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 3 packages
 [COMPILING] foo v0.1.0 [..]
 [FINISHED] [..]
 [RUNNING] `target/debug/foo[EXE]`
@@ -564,6 +568,7 @@ fn crate_required_features() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 2 packages
 [ERROR] invalid feature `dep:bar` in required-features of target `foo`: \
 `dep:` prefixed feature values are not allowed in required-features
 ",
@@ -686,6 +691,7 @@ fn crate_feature_with_explicit() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 [..]
 [CHECKING] bar v1.0.0
@@ -1289,7 +1295,11 @@ fn dep_feature_when_hidden() {
             "\
 foo v0.1.0 ([ROOT]/foo) features=",
         )
-        .with_stderr("")
+        .with_stderr(
+            "\
+[LOCKING] 2 packages
+",
+        )
         .run();
 
     p.cargo("tree -F f1 -f")

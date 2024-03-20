@@ -163,6 +163,7 @@ fn rustdoc_foo_with_bar_dependency() {
     foo.cargo("rustdoc -v -- --cfg=foo")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [CHECKING] bar v0.0.1 ([..])
 [RUNNING] `rustc [..]bar/src/lib.rs [..]`
 [DOCUMENTING] foo v0.0.1 ([CWD])
@@ -207,6 +208,7 @@ fn rustdoc_only_bar_dependency() {
     foo.cargo("rustdoc -v -p bar -- --cfg=foo")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [DOCUMENTING] bar v0.0.1 ([..])
 [RUNNING] `rustdoc [..]--crate-name bar [..]bar/src/lib.rs [..]\
         -o [CWD]/target/doc \

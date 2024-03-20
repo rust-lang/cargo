@@ -790,6 +790,7 @@ fn example_with_release_flag() {
     p.cargo("run -v --release --example a")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [RUNNING] `rustc --crate-name bar --edition=2015 bar/src/bar.rs [..]--crate-type lib \
         --emit=[..]link \
@@ -922,6 +923,7 @@ fn run_with_bin_dep() {
     p.cargo("run")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [WARNING] foo v0.0.1 ([CWD]) ignoring invalid dependency `bar` which is missing a lib target
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -982,6 +984,7 @@ fn run_with_bin_deps() {
     p.cargo("run")
         .with_stderr(
             "\
+[LOCKING] 3 packages
 [WARNING] foo v0.0.1 ([CWD]) ignoring invalid dependency `bar1` which is missing a lib target
 [WARNING] foo v0.0.1 ([CWD]) ignoring invalid dependency `bar2` which is missing a lib target
 [COMPILING] foo v0.0.1 ([CWD])
@@ -1076,6 +1079,7 @@ available binaries: bar1, bar2, foo1, foo2",
     p.cargo("run --bin foo1")
         .with_stderr(
             "\
+[LOCKING] 4 packages
 [WARNING] foo1 v0.0.1 ([CWD]/foo1) ignoring invalid dependency `bar1` which is missing a lib target
 [WARNING] foo2 v0.0.1 ([CWD]/foo2) ignoring invalid dependency `bar2` which is missing a lib target
 [COMPILING] foo1 v0.0.1 ([CWD]/foo1)

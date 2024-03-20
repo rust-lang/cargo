@@ -520,6 +520,7 @@ fn proc_macro_built_once() {
     p.cargo("build --verbose")
         .with_stderr_unordered(
             "\
+[LOCKING] 3 packages
 [COMPILING] the-macro [..]
 [RUNNING] `rustc --crate-name the_macro [..]`
 [COMPILING] b [..]

@@ -106,6 +106,7 @@ fn feature_required_dependency() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 2 packages
 [DOWNLOADING] [..]
 [DOWNLOADED] bar v1.0.0 [..]
 error: failed to download replaced source registry `crates-io`
@@ -499,6 +500,7 @@ fn nightly_feature_requires_nightly_in_dep() {
         .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [CHECKING] a [..]
 [CHECKING] b [..]
 [FINISHED] [..]

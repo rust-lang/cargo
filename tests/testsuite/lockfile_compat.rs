@@ -1055,6 +1055,9 @@ dependencies = [
         .with_stderr(format!(
             "\
 [UPDATING] git repository `{url}`
+[LOCKING] 2 packages
+[ADDING] dep1 v0.5.0 ({url}?{ref_kind}={git_ref}#[..])
+[ADDING] foo v0.0.1 ([CWD])
 [CHECKING] dep1 v0.5.0 ({url}?{ref_kind}={git_ref}#[..])
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [..]
@@ -1148,6 +1151,9 @@ dependencies = [
         .with_stderr(format!(
             "\
 [UPDATING] git repository `{url}`
+[LOCKING] 2 packages
+[ADDING] dep1 v0.5.0 ({url}?{ref_kind}={git_ref}#[..])
+[ADDING] foo v0.0.1 ([CWD])
 [CHECKING] dep1 v0.5.0 ({url}?{ref_kind}={git_ref}#[..])
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [..]

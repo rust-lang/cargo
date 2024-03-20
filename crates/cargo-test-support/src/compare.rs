@@ -204,6 +204,7 @@ fn substitute_macros(input: &str) -> String {
         ("[SCRAPING]", "    Scraping"),
         ("[FRESH]", "       Fresh"),
         ("[DIRTY]", "       Dirty"),
+        ("[LOCKING]", "     Locking"),
         ("[UPDATING]", "    Updating"),
         ("[ADDING]", "      Adding"),
         ("[REMOVING]", "    Removing"),

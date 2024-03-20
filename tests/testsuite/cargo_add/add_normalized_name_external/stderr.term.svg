@@ -1,4 +1,4 @@
-<svg width="740px" height="362px" xmlns="http://www.w3.org/2000/svg">
+<svg width="740px" height="380px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
@@ -56,7 +56,9 @@
 </tspan>
     <tspan x="10px" y="334px"><tspan>             </tspan><tspan class="fg-red bold">-</tspan><tspan> unstable</tspan>
 </tspan>
-    <tspan x="10px" y="352px">
+    <tspan x="10px" y="352px"><tspan class="fg-green bold">     Locking</tspan><tspan> 3 packages</tspan>
+</tspan>
+    <tspan x="10px" y="370px">
 </tspan>
   </text>
 

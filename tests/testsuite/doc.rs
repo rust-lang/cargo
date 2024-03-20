@@ -111,6 +111,7 @@ fn doc_deps() {
     p.cargo("doc")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [..] bar v0.0.1 ([CWD]/bar)
 [..] bar v0.0.1 ([CWD]/bar)
 [DOCUMENTING] foo v0.0.1 ([CWD])
@@ -167,6 +168,7 @@ fn doc_no_deps() {
     p.cargo("doc --no-deps")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [CHECKING] bar v0.0.1 ([CWD]/bar)
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -248,6 +250,7 @@ fn doc_multiple_targets_same_name_lib() {
         .with_status(101)
         .with_stderr(
             "\
+[LOCKING] 2 packages
 error: document output filename collision
 The lib `foo_lib` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as \
 the lib `foo_lib` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
@@ -298,6 +301,7 @@ fn doc_multiple_targets_same_name() {
     p.cargo("doc --workspace")
         .with_stderr_unordered(
             "\
+[LOCKING] 2 packages
 warning: output filename collision.
 The bin target `foo_lib` in package `foo v0.1.0 ([ROOT]/foo/foo)` \
 has the same output filename as the lib target `foo_lib` in package \
@@ -351,6 +355,7 @@ fn doc_multiple_targets_same_name_bin() {
         .with_status(101)
         .with_stderr(
             "\
+[LOCKING] 2 packages
 error: document output filename collision
 The bin `foo-cli` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as \
 the bin `foo-cli` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
@@ -713,6 +718,7 @@ fn doc_dash_p() {
     p.cargo("doc -p a")
         .with_stderr(
             "\
+[LOCKING] 3 packages
 [..] b v0.0.1 ([CWD]/b)
 [..] b v0.0.1 ([CWD]/b)
 [DOCUMENTING] a v0.0.1 ([CWD]/a)
@@ -743,6 +749,7 @@ fn doc_all_exclude() {
         .with_stderr_does_not_contain("[DOCUMENTING] baz v0.1.0 [..]")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [DOCUMENTING] bar v0.1.0 ([..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/bar/index.html
@@ -771,6 +778,7 @@ fn doc_all_exclude_glob() {
         .with_stderr_does_not_contain("[DOCUMENTING] baz v0.1.0 [..]")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [DOCUMENTING] bar v0.1.0 ([..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/bar/index.html
@@ -1053,6 +1061,7 @@ fn features() {
     p.cargo("doc --features foo")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [COMPILING] bar v0.0.1 [..]
 [DOCUMENTING] bar v0.0.1 [..]
 [DOCUMENTING] foo v0.0.1 [..]
@@ -1289,6 +1298,7 @@ fn doc_virtual_manifest_one_project() {
         .with_stderr_does_not_contain("[DOCUMENTING] baz v0.1.0 [..]")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [DOCUMENTING] bar v0.1.0 ([..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/bar/index.html
@@ -1317,6 +1327,7 @@ fn doc_virtual_manifest_glob() {
         .with_stderr_does_not_contain("[DOCUMENTING] bar v0.1.0 [..]")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [DOCUMENTING] baz v0.1.0 ([..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [GENERATED] [CWD]/target/doc/baz/index.html
@@ -1356,6 +1367,7 @@ fn doc_all_member_dependency_same_name() {
         .with_stderr_unordered(
             "\
 [UPDATING] [..]
+[LOCKING] 2 packages
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 warning: output filename collision.
@@ -1735,6 +1747,7 @@ fn doc_cap_lints() {
     p.cargo("doc")
         .with_stderr_unordered(
             "\
+[LOCKING] 2 packages
 [UPDATING] git repository `[..]`
 [DOCUMENTING] a v0.5.0 ([..])
 [CHECKING] a v0.5.0 ([..])
@@ -2067,6 +2080,7 @@ fn bin_private_items_deps() {
     p.cargo("doc")
         .with_stderr_unordered(
             "\
+[LOCKING] 2 packages
 [DOCUMENTING] bar v0.0.1 ([..])
 [CHECKING] bar v0.0.1 ([..])
 [DOCUMENTING] foo v0.0.1 ([CWD])
@@ -2637,6 +2651,7 @@ fn doc_lib_false() {
     p.cargo("doc")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [CHECKING] bar v0.1.0 [..]
 [CHECKING] foo v0.1.0 [..]
 [DOCUMENTING] foo v0.1.0 [..]
@@ -2687,6 +2702,7 @@ fn doc_lib_false_dep() {
     p.cargo("doc")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [CHECKING] bar v0.1.0 [..]
 [DOCUMENTING] foo v0.1.0 [..]
 [FINISHED] [..]

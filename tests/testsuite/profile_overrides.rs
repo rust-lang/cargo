@@ -32,7 +32,9 @@ fn profile_override_basic() {
 
     p.cargo("check -v")
         .with_stderr(
-            "[CHECKING] bar [..]
+            "\
+[LOCKING] 2 packages
+[CHECKING] bar [..]
 [RUNNING] `rustc --crate-name bar [..] -C opt-level=3 [..]`
 [CHECKING] foo [..]
 [RUNNING] `rustc --crate-name foo [..] -C opt-level=1 [..]`
@@ -218,6 +220,7 @@ fn profile_override_hierarchy() {
     // m1: 1 (as [profile.dev])
 
     p.cargo("build -v").with_stderr_unordered("\
+[LOCKING] 4 packages
 [COMPILING] m3 [..]
 [COMPILING] dep [..]
 [RUNNING] `rustc --crate-name m3 --edition=2015 m3/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=4 [..]
@@ -482,6 +485,7 @@ fn no_warning_ws() {
     p.cargo("check -p b")
         .with_stderr(
             "\
+[LOCKING] 2 packages
 [CHECKING] b [..]
 [FINISHED] [..]
 ",
