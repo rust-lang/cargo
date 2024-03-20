@@ -154,7 +154,12 @@ fn emit_diagnostic(
             .line_start(line_num + 1)
             .annotation(Level::Error.span(highlight_start..highlight_end)),
     );
-    let renderer = Renderer::styled();
+    let renderer = Renderer::styled().term_width(
+        gctx.shell()
+            .err_width()
+            .diagnostic_terminal_width()
+            .unwrap_or(annotate_snippets::renderer::DEFAULT_TERM_WIDTH),
+    );
     if let Err(err) = writeln!(gctx.shell().err(), "{}", renderer.render(message)) {
         return err.into();
     }
