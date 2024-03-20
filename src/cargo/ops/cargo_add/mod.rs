@@ -608,7 +608,7 @@ fn get_latest_dependency(
                 )
             })?;
 
-            if gctx.cli_unstable().msrv_policy && honor_rust_version {
+            if honor_rust_version {
                 let (req_msrv, is_msrv) = spec
                     .rust_version()
                     .cloned()

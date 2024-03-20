@@ -326,8 +326,6 @@ Documentation updates:
 
 ## msrv-policy
 - [#9930](https://github.com/rust-lang/cargo/issues/9930) (MSRV-aware resolver)
-- [#10653](https://github.com/rust-lang/cargo/issues/10653) (MSRV-aware cargo-add)
-- [#10903](https://github.com/rust-lang/cargo/issues/10903) (MSRV-aware cargo-install)
 
 The `msrv-policy` feature enables experiments in MSRV-aware policy for cargo in
 preparation for an upcoming RFC.
