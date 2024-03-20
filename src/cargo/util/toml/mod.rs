@@ -1,4 +1,4 @@
-use annotate_snippets::{Annotation, AnnotationType, Renderer, Slice, Snippet, SourceAnnotation};
+use annotate_snippets::{Level, Renderer, Snippet};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -123,47 +123,44 @@ fn emit_diagnostic(
         return e.into();
     };
 
-    let (line_num, column) = translate_position(&contents, span.start);
+    let line_num = get_line(&contents, span.start);
     let source_start = contents[0..span.start]
-        .rfind('\n')
+        .as_bytes()
+        .iter()
+        .rposition(|b| b == &b'\n')
         .map(|s| s + 1)
         .unwrap_or(0);
     let source_end = contents[span.end.saturating_sub(1)..]
-        .find('\n')
+        .as_bytes()
+        .iter()
+        .position(|b| b == &b'\n')
         .map(|s| s + span.end)
         .unwrap_or(contents.len());
     let source = &contents[source_start..source_end];
+    let highlight_start = span.start - source_start;
     // Make sure we don't try to highlight past the end of the line,
     // but also make sure we are highlighting at least one character
-    let highlight_end = (column + contents[span].chars().count())
-        .min(source.len())
-        .max(column + 1);
+    let highlight_end = (span.end - source_start)
+        .min(source_end - source_start)
+        .max(highlight_start + 1);
     // Get the path to the manifest, relative to the cwd
     let manifest_path = diff_paths(manifest_file, gctx.cwd())
         .unwrap_or_else(|| manifest_file.to_path_buf())
         .display()
         .to_string();
-    let snippet = Snippet {
-        title: Some(Annotation {
-            id: None,
-            label: Some(e.message()),
-            annotation_type: AnnotationType::Error,
-        }),
-        footer: vec![],
-        slices: vec![Slice {
-            source: &source,
-            line_start: line_num + 1,
-            origin: Some(manifest_path.as_str()),
-            annotations: vec![SourceAnnotation {
-                range: (column, highlight_end),
-                label: "",
-                annotation_type: AnnotationType::Error,
-            }],
-            fold: false,
-        }],
-    };
-    let renderer = Renderer::styled();
-    if let Err(err) = writeln!(gctx.shell().err(), "{}", renderer.render(snippet)) {
+    let message = Level::Error.title(e.message()).snippet(
+        Snippet::source(&source)
+            .origin(&manifest_path)
+            .line_start(line_num + 1)
+            .annotation(Level::Error.span(highlight_start..highlight_end)),
+    );
+    let renderer = Renderer::styled().term_width(
+        gctx.shell()
+            .err_width()
+            .diagnostic_terminal_width()
+            .unwrap_or(annotate_snippets::renderer::DEFAULT_TERM_WIDTH),
+    );
+    if let Err(err) = writeln!(gctx.shell().err(), "{}", renderer.render(message)) {
         return err.into();
     }
     return AlreadyPrintedError::new(e.into()).into();
@@ -2367,13 +2364,12 @@ impl ResolveToPath for ConfigRelativePath {
     }
 }
 
-fn translate_position(input: &str, index: usize) -> (usize, usize) {
+fn get_line(input: &str, index: usize) -> usize {
     if input.is_empty() {
-        return (0, index);
+        return 0;
     }
 
     let safe_index = index.min(input.len() - 1);
-    let column_offset = index - safe_index;
 
     let nl = input[0..safe_index]
         .as_bytes()
@@ -2386,13 +2382,9 @@ fn translate_position(input: &str, index: usize) -> (usize, usize) {
         Some(nl) => nl + 1,
         None => 0,
     };
-    let line = input[0..line_start]
+    input[0..line_start]
         .as_bytes()
         .iter()
         .filter(|c| **c == b'\n')
-        .count();
-    let column = input[line_start..=safe_index].chars().count() - 1;
-    let column = column + column_offset;
-
-    (line, column)
+        .count()
 }
