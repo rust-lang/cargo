@@ -1151,10 +1151,8 @@ fn resolve_and_validate_dependencies(
 
     let mut deps: BTreeMap<manifest::PackageName, manifest::InheritableDependency> =
         BTreeMap::new();
-    for (n, v) in dependencies.iter() {
-        let resolved = dependency_inherit_with(v.clone(), n, inheritable, manifest_ctx)?;
-        let dep = dep_to_dependency(&resolved, n, manifest_ctx, kind)?;
-        let name_in_toml = dep.name_in_toml().as_str();
+    for (name_in_toml, v) in dependencies.iter() {
+        let resolved = dependency_inherit_with(v.clone(), name_in_toml, inheritable, manifest_ctx)?;
         let kind_name = match kind {
             Some(k) => k.kind_table(),
             None => "dependencies",
@@ -1173,7 +1171,7 @@ fn resolve_and_validate_dependencies(
         let mut resolved = resolved;
         if let manifest::TomlDependency::Detailed(ref mut d) = resolved {
             if d.public.is_some() {
-                if matches!(dep.kind(), DepKind::Normal) {
+                if matches!(kind, None) {
                     if !manifest_ctx
                         .features
                         .require(Feature::public_dependency())
@@ -1182,7 +1180,7 @@ fn resolve_and_validate_dependencies(
                     {
                         d.public = None;
                         manifest_ctx.warnings.push(format!(
-                            "ignoring `public` on dependency {name}, pass `-Zpublic-dependency` to enable support for it", name = &dep.name_in_toml()
+                            "ignoring `public` on dependency {name_in_toml}, pass `-Zpublic-dependency` to enable support for it"
                         ))
                     }
                 } else {
@@ -1191,9 +1189,10 @@ fn resolve_and_validate_dependencies(
             }
         }
 
+        let dep = dep_to_dependency(&resolved, name_in_toml, manifest_ctx, kind)?;
         manifest_ctx.deps.push(dep);
         deps.insert(
-            n.clone(),
+            name_in_toml.clone(),
             manifest::InheritableDependency::Value(resolved.clone()),
         );
     }
