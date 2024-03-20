@@ -125,7 +125,7 @@
 </tspan>
     <tspan x="10px" y="964px"><tspan>      </tspan><tspan class="fg-cyan bold">--ignore-rust-version</tspan>
 </tspan>
-    <tspan x="10px" y="982px"><tspan>          Ignore `rust-version` specification in packages (unstable)</tspan>
+    <tspan x="10px" y="982px"><tspan>          Ignore `rust-version` specification in packages</tspan>
 </tspan>
     <tspan x="10px" y="1000px">
 </tspan>
