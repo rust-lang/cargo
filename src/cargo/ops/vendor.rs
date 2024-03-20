@@ -133,7 +133,7 @@ fn sync(
                 continue;
             }
             if let Ok(pkg) = packages.get_one(pkg) {
-                drop(fs::remove_dir_all(pkg.manifest_path().parent().unwrap()));
+                drop(fs::remove_dir_all(pkg.root()));
             }
         }
     }
@@ -192,10 +192,7 @@ fn sync(
     let mut tmp_buf = [0; 64 * 1024];
     for (id, pkg) in ids.iter() {
         // Next up, copy it to the vendor directory
-        let src = pkg
-            .manifest_path()
-            .parent()
-            .expect("manifest_path should point to a file");
+        let src = pkg.root();
         let max_version = *versions[&id.name()].iter().rev().next().unwrap().0;
         let dir_has_version_suffix = opts.versioned_dirs || id.version() != max_version;
         let dst_name = if dir_has_version_suffix {
