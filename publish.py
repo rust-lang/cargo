@@ -31,11 +31,15 @@ TO_PUBLISH = [
 
 
 def already_published(name, version):
+    url = f'https://static.crates.io/crates/{name}/{version}/download'
     try:
-        urllib.request.urlopen('https://crates.io/api/v1/crates/%s/%s/download' % (name, version))
+        urllib.request.urlopen(url)
     except HTTPError as e:
-        if e.code == 404:
+        # 403 and 404 are common responses to assume it is not published
+        if 400 <= e.code < 500:
             return False
+        print(f'error: failed to check if {name} {version} is already published')
+        print(f'    HTTP response error code {e.code} checking {url}')
         raise
     return True
 
