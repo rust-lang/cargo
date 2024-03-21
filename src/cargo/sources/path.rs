@@ -263,11 +263,7 @@ impl<'gctx> PathSource<'gctx> {
     /// Returns [`Some(gix::Repository)`](gix::Repository) if there is a sibling `Cargo.toml` and `.git`
     /// directory; otherwise, the caller should fall back on full file list.
     fn discover_gix_repo(&self, root: &Path) -> CargoResult<Option<gix::Repository>> {
-        let mut mapping = gix::sec::trust::Mapping::default();
-        mapping.full = gix::open::Options::isolated();
-        mapping.reduced = gix::open::Options::isolated();
-        let repo = match gix::ThreadSafeRepository::discover_opts(root, Default::default(), mapping)
-        {
+        let repo = match gix::ThreadSafeRepository::discover(root) {
             Ok(repo) => repo.to_thread_local(),
             Err(e) => {
                 tracing::debug!(
@@ -597,7 +593,7 @@ impl<'gctx> PathSource<'gctx> {
                 // This could be a submodule, or a sub-repository. In any case, we prefer to walk
                 // it with git-support to leverage ignored files and to avoid pulling in entire
                 // .git repositories.
-                match gix::open_opts(&file_path, gix::open::Options::isolated()) {
+                match gix::open(&file_path) {
                     Ok(sub_repo) => {
                         files.extend(self.list_files_gix(pkg, &sub_repo, filter)?);
                     }
