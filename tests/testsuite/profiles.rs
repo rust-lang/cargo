@@ -1,7 +1,7 @@
 //! Tests for profiles.
 
-use cargo_test_support::project;
 use cargo_test_support::registry::Package;
+use cargo_test_support::{project, rustc_host};
 use std::env;
 
 #[cargo_test]
@@ -648,6 +648,10 @@ fn strip_debuginfo_in_release() {
         .build();
 
     p.cargo("build --release -v")
+        .with_stderr_contains("[RUNNING] `rustc [..] -C strip=debuginfo[..]`")
+        .run();
+    p.cargo("build --release -v --target")
+        .arg(rustc_host())
         .with_stderr_contains("[RUNNING] `rustc [..] -C strip=debuginfo[..]`")
         .run();
 }
