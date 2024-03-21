@@ -1171,20 +1171,32 @@ fn resolve_and_validate_dependencies(
         let mut resolved = resolved;
         if let manifest::TomlDependency::Detailed(ref mut d) = resolved {
             if d.public.is_some() {
+                let public_feature = manifest_ctx.features.require(Feature::public_dependency());
+                let with_public_feature = public_feature.is_ok();
+                let with_z_public = manifest_ctx.gctx.cli_unstable().public_dependency;
+                if !with_public_feature
+                    && (!with_z_public && !manifest_ctx.gctx.nightly_features_allowed)
+                {
+                    public_feature?;
+                }
                 if matches!(kind, None) {
-                    if !manifest_ctx
-                        .features
-                        .require(Feature::public_dependency())
-                        .is_ok()
-                        && !manifest_ctx.gctx.cli_unstable().public_dependency
-                    {
+                    if !with_public_feature && !with_z_public {
                         d.public = None;
                         manifest_ctx.warnings.push(format!(
                             "ignoring `public` on dependency {name_in_toml}, pass `-Zpublic-dependency` to enable support for it"
                         ))
                     }
                 } else {
-                    d.public = None;
+                    let hint = format!(
+                        "'public' specifier can only be used on regular dependencies, not {kind_name}",
+                    );
+                    if with_public_feature || with_z_public {
+                        bail!(hint)
+                    } else {
+                        // If public feature isn't enabled in nightly, we instead warn that.
+                        manifest_ctx.warnings.push(hint);
+                        d.public = None;
+                    }
                 }
             }
         }
@@ -2131,26 +2143,7 @@ fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
     }
 
     if let Some(p) = orig.public {
-        let public_feature = manifest_ctx.features.require(Feature::public_dependency());
-        let with_z_public = manifest_ctx.gctx.cli_unstable().public_dependency;
-        let with_public_feature = public_feature.is_ok();
-        if !with_public_feature && (!with_z_public && !manifest_ctx.gctx.nightly_features_allowed) {
-            public_feature?;
-        }
-
-        if dep.kind() != DepKind::Normal {
-            let hint = format!(
-                "'public' specifier can only be used on regular dependencies, not {}",
-                dep.kind().kind_table(),
-            );
-            match (with_public_feature, with_z_public) {
-                (true, _) | (_, true) => bail!(hint),
-                // If public feature isn't enabled in nightly, we instead warn that.
-                (false, false) => manifest_ctx.warnings.push(hint),
-            }
-        } else {
-            dep.set_public(p);
-        }
+        dep.set_public(p);
     }
 
     if let (Some(artifact), is_lib, target) = (
