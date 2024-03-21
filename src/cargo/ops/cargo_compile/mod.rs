@@ -427,23 +427,16 @@ pub fn create_bcx<'a, 'gctx>(
         .requested_kinds
         .iter()
         .any(CompileKind::is_host);
-    let should_share_deps = host_kind_requested
-        || gctx.cli_unstable().bindeps
-            && unit_graph
-                .iter()
-                .any(|(unit, _)| unit.artifact_target_for_features.is_some());
-    if should_share_deps {
-        // Rebuild the unit graph, replacing the explicit host targets with
-        // CompileKind::Host, removing `artifact_target_for_features` and merging any dependencies
-        // shared with build and artifact dependencies.
-        (units, scrape_units, unit_graph) = rebuild_unit_graph_shared(
-            interner,
-            unit_graph,
-            &units,
-            &scrape_units,
-            host_kind_requested.then_some(explicit_host_kind),
-        );
-    }
+    // Rebuild the unit graph, replacing the explicit host targets with
+    // CompileKind::Host, removing `artifact_target_for_features` and merging any dependencies
+    // shared with build and artifact dependencies.
+    (units, scrape_units, unit_graph) = rebuild_unit_graph_shared(
+        interner,
+        unit_graph,
+        &units,
+        &scrape_units,
+        host_kind_requested.then_some(explicit_host_kind),
+    );
 
     let mut extra_compiler_args = HashMap::new();
     if let Some(args) = extra_args {
@@ -545,7 +538,8 @@ where `<compatible-ver>` is the latest version supporting rustc {rustc_version}"
     Ok(bcx)
 }
 
-/// This is used to rebuild the unit graph, sharing host dependencies if possible.
+/// This is used to rebuild the unit graph, sharing host dependencies if possible,
+/// and applying other unit adjustments based on the whole graph.
 ///
 /// This will translate any unit's `CompileKind::Target(host)` to
 /// `CompileKind::Host` if `to_host` is not `None` and the kind is equal to `to_host`.
@@ -567,6 +561,14 @@ where `<compatible-ver>` is the latest version supporting rustc {rustc_version}"
 /// to the `Unit`, this allows the `CompileKind` to be changed back to `Host`
 /// and `artifact_target_for_features` to be removed without fear of an unwanted
 /// collision for build or artifact dependencies.
+///
+/// This is also responsible for adjusting the `strip` profile option to
+/// opportunistically strip if debug is 0 for all dependencies. This helps
+/// remove debuginfo added by the standard library.
+///
+/// This is also responsible for adjusting the `debug` setting for host
+/// dependencies, turning off debug if the user has not explicitly enabled it,
+/// and the unit is not shared with a target unit.
 fn rebuild_unit_graph_shared(
     interner: &UnitInterner,
     unit_graph: UnitGraph,
