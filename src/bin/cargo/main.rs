@@ -148,6 +148,13 @@ fn aliased_command(gctx: &GlobalContext, command: &str) -> CargoResult<Option<Ve
     let result = user_alias.or_else(|| {
         builtin_aliases_execs(command).map(|command_str| vec![command_str.1.to_string()])
     });
+    if result
+        .as_ref()
+        .map(|alias| alias.is_empty())
+        .unwrap_or_default()
+    {
+        anyhow::bail!("subcommand is required, but `{alias_name}` is empty");
+    }
     Ok(result)
 }
 

@@ -447,11 +447,19 @@ fn empty_alias() {
 
     p.cargo("string")
         .with_status(101)
-        .with_stderr_contains("[..]panicked at[..]")
+        .with_stderr(
+            "\
+[ERROR] subcommand is required, but `alias.string` is empty
+",
+        )
         .run();
 
     p.cargo("array")
         .with_status(101)
-        .with_stderr_contains("[..]panicked at[..]")
+        .with_stderr(
+            "\
+[ERROR] subcommand is required, but `alias.array` is empty
+",
+        )
         .run();
 }
