@@ -429,3 +429,29 @@ To pass the arguments to the subcommand, remove `--`
         )
         .run();
 }
+
+#[cargo_test]
+fn empty_alias() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config.toml",
+            r#"
+               [alias]
+               string = ""
+               array = []
+            "#,
+        )
+        .build();
+
+    p.cargo("string")
+        .with_status(101)
+        .with_stderr_contains("[..]panicked at[..]")
+        .run();
+
+    p.cargo("array")
+        .with_status(101)
+        .with_stderr_contains("[..]panicked at[..]")
+        .run();
+}
