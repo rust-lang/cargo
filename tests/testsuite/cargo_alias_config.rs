@@ -429,3 +429,37 @@ To pass the arguments to the subcommand, remove `--`
         )
         .run();
 }
+
+#[cargo_test]
+fn empty_alias() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config.toml",
+            r#"
+               [alias]
+               string = ""
+               array = []
+            "#,
+        )
+        .build();
+
+    p.cargo("string")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] subcommand is required, but `alias.string` is empty
+",
+        )
+        .run();
+
+    p.cargo("array")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] subcommand is required, but `alias.array` is empty
+",
+        )
+        .run();
+}
