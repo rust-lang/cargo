@@ -123,36 +123,16 @@ fn emit_diagnostic(
         return e.into();
     };
 
-    let line_num = get_line(&contents, span.start);
-    let source_start = contents[0..span.start]
-        .as_bytes()
-        .iter()
-        .rposition(|b| b == &b'\n')
-        .map(|s| s + 1)
-        .unwrap_or(0);
-    let source_end = contents[span.end.saturating_sub(1)..]
-        .as_bytes()
-        .iter()
-        .position(|b| b == &b'\n')
-        .map(|s| s + span.end)
-        .unwrap_or(contents.len());
-    let source = &contents[source_start..source_end];
-    let highlight_start = span.start - source_start;
-    // Make sure we don't try to highlight past the end of the line,
-    // but also make sure we are highlighting at least one character
-    let highlight_end = (span.end - source_start)
-        .min(source_end - source_start)
-        .max(highlight_start + 1);
     // Get the path to the manifest, relative to the cwd
     let manifest_path = diff_paths(manifest_file, gctx.cwd())
         .unwrap_or_else(|| manifest_file.to_path_buf())
         .display()
         .to_string();
     let message = Level::Error.title(e.message()).snippet(
-        Snippet::source(&source)
+        Snippet::source(contents)
             .origin(&manifest_path)
-            .line_start(line_num + 1)
-            .annotation(Level::Error.span(highlight_start..highlight_end)),
+            .fold(true)
+            .annotation(Level::Error.span(span)),
     );
     let renderer = Renderer::styled().term_width(
         gctx.shell()
@@ -2362,29 +2342,4 @@ impl ResolveToPath for ConfigRelativePath {
     fn resolve(&self, gctx: &GlobalContext) -> PathBuf {
         self.resolve_path(gctx)
     }
-}
-
-fn get_line(input: &str, index: usize) -> usize {
-    if input.is_empty() {
-        return 0;
-    }
-
-    let safe_index = index.min(input.len() - 1);
-
-    let nl = input[0..safe_index]
-        .as_bytes()
-        .iter()
-        .rev()
-        .enumerate()
-        .find(|(_, b)| **b == b'\n')
-        .map(|(nl, _)| safe_index - nl - 1);
-    let line_start = match nl {
-        Some(nl) => nl + 1,
-        None => 0,
-    };
-    input[0..line_start]
-        .as_bytes()
-        .iter()
-        .filter(|c| **c == b'\n')
-        .count()
 }
