@@ -260,8 +260,9 @@ impl<'gctx> PathSource<'gctx> {
         Ok(None)
     }
 
-    /// Returns [`Some(gix::Repository)`](gix::Repository) if there is a sibling `Cargo.toml` and `.git`
-    /// directory; otherwise, the caller should fall back on full file list.
+    /// Returns [`Some(gix::Repository)`](gix::Repository) if the discovered repository
+    /// (searched upwards from `root`) contains a tracked `<root>/Cargo.toml`.
+    /// Otherwise, the caller should fall back on full file list.
     fn discover_gix_repo(&self, root: &Path) -> CargoResult<Option<gix::Repository>> {
         let repo = match gix::ThreadSafeRepository::discover(root) {
             Ok(repo) => repo.to_thread_local(),
@@ -496,7 +497,7 @@ impl<'gctx> PathSource<'gctx> {
 
         let pkg_path = pkg.root();
         let mut target_prefix;
-        let repo_relative_pkg_path = pkg_path.strip_prefix(root).ok().unwrap_or(Path::new(""));
+        let repo_relative_pkg_path = pkg_path.strip_prefix(root).unwrap_or(Path::new(""));
 
         let pathspec = {
             let mut include = gix::path::to_unix_separators_on_windows(gix::path::into_bstr(
