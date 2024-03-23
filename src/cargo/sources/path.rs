@@ -13,7 +13,7 @@ use crate::util::{internal, CargoResult, GlobalContext};
 use anyhow::Context as _;
 use cargo_util::paths;
 use filetime::FileTime;
-use gix::bstr::ByteVec;
+use gix::bstr::{BString, ByteVec};
 use gix::dir::entry::Status;
 use ignore::gitignore::GitignoreBuilder;
 use tracing::{trace, warn};
@@ -498,7 +498,7 @@ impl<'gctx> PathSource<'gctx> {
         let pkg_path = pkg.root();
         let repo_relative_pkg_path = pkg_path.strip_prefix(root).unwrap_or(Path::new(""));
         let target_prefix = gix::path::to_unix_separators_on_windows(gix::path::into_bstr(
-            repo_relative_pkg_path.join("target"),
+            repo_relative_pkg_path.join("target/"),
         ));
         let package_prefix =
             gix::path::to_unix_separators_on_windows(gix::path::into_bstr(repo_relative_pkg_path));
@@ -509,7 +509,7 @@ impl<'gctx> PathSource<'gctx> {
             include.push_str(package_prefix.as_ref());
 
             // Exclude the target directory.
-            let mut exclude = BString::from(":!");
+            let mut exclude = BString::from(":!/");
             exclude.push_str(target_prefix.as_ref());
 
             vec![include, exclude]
