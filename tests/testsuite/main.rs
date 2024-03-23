@@ -103,6 +103,7 @@ mod glob_targets;
 mod global_cache_tracker;
 mod help;
 mod https;
+mod index_cache_sqlite;
 mod inheritable_workspace_fields;
 mod install;
 mod install_upgrade;

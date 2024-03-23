@@ -185,6 +185,10 @@ jobs:
     - name: Clear test output
       run: ci/clean-test-output.sh
 
+    - name: Check operability of index cache in SQLite3
+      run: 'cargo test -p cargo --test testsuite -- alt_registry:: global_cache_tracker::'
+      env:
+        __CARGO_TEST_FORCE_SQLITE_INDEX_CACHE: 1
     # This only tests `cargo fix` because fix-proxy-mode is one of the most
     # complicated subprocess management in Cargo.
     - name: Check operability of rustc invocation with argfile

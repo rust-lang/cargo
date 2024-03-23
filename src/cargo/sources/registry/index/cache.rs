@@ -65,6 +65,7 @@
 //! [`IndexSummary::parse`]: super::IndexSummary::parse
 //! [`RemoteRegistry`]: crate::sources::registry::remote::RemoteRegistry
 
+use std::cell::OnceCell;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
@@ -72,9 +73,14 @@ use std::str;
 
 use anyhow::bail;
 use cargo_util::registry::make_dep_path;
+use rusqlite::params;
+use rusqlite::Connection;
 use semver::Version;
 
 use crate::util::cache_lock::CacheLockMode;
+use crate::util::sqlite;
+use crate::util::sqlite::basic_migration;
+use crate::util::sqlite::Migration;
 use crate::util::Filesystem;
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -220,12 +226,21 @@ impl<'a> SummariesCache<'a> {
     }
 }
 
+/// An abstraction of the actual cache store.
+trait CacheStore {
+    /// Gets the cache associated with the key.
+    fn get(&self, key: &str) -> Option<Vec<u8>>;
+
+    /// Associates the value with the key.
+    fn put(&self, key: &str, value: &[u8]);
+
+    /// Invalidates the cache associated with the key.
+    fn invalidate(&self, key: &str);
+}
+
 /// Manages the on-disk index caches.
 pub struct CacheManager<'gctx> {
-    /// The root path where caches are located.
-    cache_root: Filesystem,
-    /// [`GlobalContext`] reference for convenience.
-    gctx: &'gctx GlobalContext,
+    store: Box<dyn CacheStore + 'gctx>,
 }
 
 impl<'gctx> CacheManager<'gctx> {
@@ -233,11 +248,58 @@ impl<'gctx> CacheManager<'gctx> {
     ///
     /// `root` --- The root path where caches are located.
     pub fn new(cache_root: Filesystem, gctx: &'gctx GlobalContext) -> CacheManager<'gctx> {
-        CacheManager { cache_root, gctx }
+        #[allow(clippy::disallowed_methods)]
+        let use_sqlite = gctx.cli_unstable().index_cache_sqlite
+            || std::env::var("__CARGO_TEST_FORCE_SQLITE_INDEX_CACHE").is_ok();
+        let store: Box<dyn CacheStore> = if use_sqlite {
+            Box::new(LocalDatabase::new(cache_root, gctx))
+        } else {
+            Box::new(LocalFileSystem::new(cache_root, gctx))
+        };
+        CacheManager { store }
     }
 
     /// Gets the cache associated with the key.
     pub fn get(&self, key: &str) -> Option<Vec<u8>> {
+        self.store.get(key)
+    }
+
+    /// Associates the value with the key.
+    pub fn put(&self, key: &str, value: &[u8]) {
+        self.store.put(key, value)
+    }
+
+    /// Invalidates the cache associated with the key.
+    pub fn invalidate(&self, key: &str) {
+        self.store.invalidate(key)
+    }
+}
+
+/// Stores index caches in a file system wth a registry index like layout.
+struct LocalFileSystem<'gctx> {
+    /// The root path where caches are located.
+    cache_root: Filesystem,
+    /// [`GlobalContext`] reference for convenience.
+    gctx: &'gctx GlobalContext,
+}
+
+impl LocalFileSystem<'_> {
+    /// Creates a new instance of the file system index cache store.
+    fn new(cache_root: Filesystem, gctx: &GlobalContext) -> LocalFileSystem<'_> {
+        LocalFileSystem { cache_root, gctx }
+    }
+
+    fn cache_path(&self, key: &str) -> PathBuf {
+        let relative = make_dep_path(key, false);
+        // This is the file we're loading from cache or the index data.
+        // See module comment in `registry/mod.rs` for why this is structured
+        // the way it is.
+        self.cache_root.join(relative).into_path_unlocked()
+    }
+}
+
+impl CacheStore for LocalFileSystem<'_> {
+    fn get(&self, key: &str) -> Option<Vec<u8>> {
         let cache_path = &self.cache_path(key);
         match fs::read(cache_path) {
             Ok(contents) => Some(contents),
@@ -248,8 +310,7 @@ impl<'gctx> CacheManager<'gctx> {
         }
     }
 
-    /// Associates the value with the key.
-    pub fn put(&self, key: &str, value: &[u8]) {
+    fn put(&self, key: &str, value: &[u8]) {
         let cache_path = &self.cache_path(key);
         if fs::create_dir_all(cache_path.parent().unwrap()).is_ok() {
             let path = Filesystem::new(cache_path.clone());
@@ -261,8 +322,7 @@ impl<'gctx> CacheManager<'gctx> {
         }
     }
 
-    /// Invalidates the cache associated with the key.
-    pub fn invalidate(&self, key: &str) {
+    fn invalidate(&self, key: &str) {
         let cache_path = &self.cache_path(key);
         if let Err(e) = fs::remove_file(cache_path) {
             if e.kind() != io::ErrorKind::NotFound {
@@ -270,12 +330,89 @@ impl<'gctx> CacheManager<'gctx> {
             }
         }
     }
+}
 
-    fn cache_path(&self, key: &str) -> PathBuf {
-        let relative = make_dep_path(key, false);
-        // This is the file we're loading from cache or the index data.
-        // See module comment in `registry/mod.rs` for why this is structured
-        // the way it is.
-        self.cache_root.join(relative).into_path_unlocked()
+/// Stores index caches in a local SQLite database.
+struct LocalDatabase<'gctx> {
+    /// The root path where caches are located.
+    cache_root: Filesystem,
+    /// Connection to the SQLite database.
+    conn: OnceCell<Option<Connection>>,
+    /// [`GlobalContext`] reference for convenience.
+    gctx: &'gctx GlobalContext,
+}
+
+impl LocalDatabase<'_> {
+    /// Creates a new instance of the SQLite index cache store.
+    fn new(cache_root: Filesystem, gctx: &GlobalContext) -> LocalDatabase<'_> {
+        LocalDatabase {
+            cache_root,
+            conn: OnceCell::new(),
+            gctx,
+        }
     }
+
+    fn conn(&self) -> Option<&Connection> {
+        self.conn
+            .get_or_init(|| {
+                self.conn_init()
+                    .map_err(|e| tracing::debug!("cannot open index cache db: {e}"))
+                    .ok()
+            })
+            .as_ref()
+    }
+
+    fn conn_init(&self) -> CargoResult<Connection> {
+        let _lock = self
+            .gctx
+            .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)
+            .unwrap();
+        let cache_root = self.cache_root.as_path_unlocked();
+        fs::create_dir_all(cache_root)?;
+        let mut conn = Connection::open(cache_root.join("index-cache.db"))?;
+        sqlite::migrate(&mut conn, &migrations())?;
+        Ok(conn)
+    }
+}
+
+impl CacheStore for LocalDatabase<'_> {
+    fn get(&self, key: &str) -> Option<Vec<u8>> {
+        self.conn()?
+            .prepare_cached("SELECT value FROM summaries WHERE name = ? LIMIT 1")
+            .and_then(|mut stmt| stmt.query_row([key], |row| row.get(0)))
+            .map_err(|e| tracing::debug!(key, "cache missing: {e}"))
+            .ok()
+    }
+
+    fn put(&self, key: &str, value: &[u8]) {
+        if let Some(conn) = self.conn() {
+            _ = conn
+                .prepare_cached("INSERT OR REPLACE INTO summaries (name, value) VALUES (?, ?)")
+                .and_then(|mut stmt| stmt.execute(params!(key, value)))
+                .map_err(|e| tracing::info!(key, "failed to write cache: {e}"));
+        }
+    }
+
+    fn invalidate(&self, key: &str) {
+        if let Some(conn) = self.conn() {
+            _ = conn
+                .prepare_cached("DELETE FROM summaries WHERE name = ?")
+                .and_then(|mut stmt| stmt.execute([key]))
+                .map_err(|e| tracing::debug!(key, "failed to remove from cache: {e}"));
+        }
+    }
+}
+
+/// Migrations which initialize the database, and can be used to evolve it over time.
+///
+/// See [`Migration`] for more detail.
+///
+/// **Be sure to not change the order or entries here!**
+fn migrations() -> Vec<Migration> {
+    vec![basic_migration(
+        "CREATE TABLE IF NOT EXISTS summaries (
+            name TEXT PRIMARY KEY NOT NULL,
+            value BLOB NOT NULL
+        )",
+    )]
 }
