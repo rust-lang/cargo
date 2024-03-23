@@ -496,33 +496,23 @@ impl<'gctx> PathSource<'gctx> {
         );
 
         let pkg_path = pkg.root();
-        let mut target_prefix;
         let repo_relative_pkg_path = pkg_path.strip_prefix(root).unwrap_or(Path::new(""));
+        let target_prefix = gix::path::to_unix_separators_on_windows(gix::path::into_bstr(
+            repo_relative_pkg_path.join("target"),
+        ));
+        let package_prefix =
+            gix::path::to_unix_separators_on_windows(gix::path::into_bstr(repo_relative_pkg_path));
 
         let pathspec = {
-            let mut include = gix::path::to_unix_separators_on_windows(gix::path::into_bstr(
-                repo_relative_pkg_path,
-            ));
+            // Include the package root.
+            let mut include = BString::from(":/");
+            include.push_str(package_prefix.as_ref());
 
-            target_prefix = include.clone();
-            target_prefix.to_mut().push_str(if include.is_empty() {
-                "target/"
-            } else {
-                "/target/"
-            });
+            // Exclude the target directory.
+            let mut exclude = BString::from(":!");
+            exclude.push_str(target_prefix.as_ref());
 
-            // The `target` directory is never included if it is in the package root.
-            let exclude = {
-                let mut pattern = include.clone();
-                pattern
-                    .to_mut()
-                    .insert_str(0, if include.is_empty() { ":!" } else { ":!/" });
-                pattern.to_mut().push_str(b"/target/");
-                pattern
-            };
-            include.to_mut().insert_str(0, ":/");
-
-            vec![include.into_owned(), exclude.into_owned()]
+            vec![include, exclude]
         };
 
         let mut files = Vec::<PathBuf>::new();
