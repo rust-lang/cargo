@@ -140,7 +140,6 @@ impl<'gctx> Compilation<'gctx> {
         }
 
         Ok(Compilation {
-            // TODO: deprecated; remove.
             native_dirs: BTreeSet::new(),
             root_output: HashMap::new(),
             deps_output: HashMap::new(),
