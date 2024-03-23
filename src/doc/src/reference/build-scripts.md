@@ -130,6 +130,8 @@ one detailed below.
   compiler.
 * [`cargo::rustc-cfg=KEY[="VALUE"]`](#rustc-cfg) --- Enables compile-time `cfg`
   settings.
+* [`cargo::rustc-check-cfg=CHECK_CFG`](#rustc-check-cfg) -- Enables compile-time
+  checking of configs. 
 * [`cargo::rustc-env=VAR=VALUE`](#rustc-env) --- Sets an environment variable.
 * [`cargo::rustc-cdylib-link-arg=FLAG`](#rustc-cdylib-link-arg) --- Passes custom
   flags to a linker for cdylib crates.
@@ -233,7 +235,9 @@ equivalent to using [`rustc-link-lib`](#rustc-link-lib) and
 
 The `rustc-cfg` instruction tells Cargo to pass the given value to the
 [`--cfg` flag][option-cfg] to the compiler. This may be used for compile-time
-detection of features to enable [conditional compilation].
+detection of features to enable [conditional compilation]. Each custom cfgs
+must **always** be declared using the [`cargo::rustc-check-cfg`](#rustc-check-cfg)
+instruction.
 
 Note that this does *not* affect Cargo's dependency resolution. This cannot be
 used to enable an optional dependency, or enable other Cargo features.
@@ -249,6 +253,45 @@ identifier, the value should be a string.
 [cargo features]: features.md
 [conditional compilation]: ../../reference/conditional-compilation.md
 [option-cfg]: ../../rustc/command-line-arguments.md#option-cfg
+
+### `cargo::rustc-check-cfg=CHECK_CFG` {#rustc-check-cfg}
+
+The `rustc-check-cfg` instruction tells Cargo to pass the given expected
+configs to the [`--check-cfg` flag][option-check-cfg] to the compiler. This is
+used for compile-time detection of unexpected [conditional compilation] configs.
+
+You can use the instruction like this:
+
+```rust,no_run
+// build.rs
+println!("cargo::rustc-check-cfg=cfg(foo, values(\"bar\"))");
+```
+
+Note that all possible cfgs should be defined, regardless of which cfgs are
+currently enabled. This includes all possible values of a given cfg name.
+
+It is recommended to group the `cargo::rustc-check-cfg` and
+[`cargo::rustc-cfg`][option-cfg] instructions as closely as possible in order to
+avoid typos, missing check-cfg, stalled cfgs...
+
+<details>
+<summary>
+
+Example of using `cargo::rustc-check-cfg` and `cargo::rustc-cfg` together
+
+</summary>
+
+```rust,no_run
+// build.rs
+println!("cargo::rustc-check-cfg=cfg(foo, values(\"bar\"))");
+if foo_bar_condition {
+    println!("cargo::rustc-cfg=foo=\"bar\"");
+}
+```
+
+</details>
+
+[option-cfg]: ../../rustc/command-line-arguments.md#option-check-cfg
 
 ### `cargo::rustc-env=VAR=VALUE` {#rustc-env}
 
