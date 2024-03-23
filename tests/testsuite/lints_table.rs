@@ -111,7 +111,7 @@ fn fail_on_invalid_tool() {
 [..]
 
 Caused by:
-  unsupported `super-awesome-linter` in `[lints]`, must be one of rust, clippy, rustdoc
+  unsupported `super-awesome-linter` in `[lints]`, must be one of cargo, clippy, rust, rustdoc
 ",
         )
         .run();
@@ -745,6 +745,103 @@ pub const Ĕ: i32 = 2;
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]s
 [DOCTEST] foo
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cargo_lints_nightly_required() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [lints.cargo]
+                "unused-features" = "deny"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("check")
+        .with_stderr(
+            "\
+[WARNING] unused manifest key `lints.cargo` (may be supported in a future version)
+
+this Cargo does not support nightly features, but if you
+switch to nightly channel you can pass
+`-Zcargo-lints` to enable this feature.
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cargo_lints_no_z_flag() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [lints.cargo]
+                "unused-features" = "deny"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("check")
+        .masquerade_as_nightly_cargo(&["-Zcargo-lints"])
+        .with_stderr(
+            "\
+[WARNING] unused manifest key `lints.cargo` (may be supported in a future version)
+
+consider passing `-Zcargo-lints` to enable this feature.
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cargo_lints_success() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [lints.cargo]
+                "unused-features" = "deny"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["-Zcargo-lints"])
+        .with_stderr(
+            "\
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] [..]
 ",
         )
         .run();

@@ -24,10 +24,12 @@ use crate::sources::{PathSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::edit_distance;
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
+use crate::util::lints::check_implicit_features;
 use crate::util::toml::{read_manifest, InheritableFields};
 use crate::util::{context::ConfigRelativePath, Filesystem, GlobalContext, IntoUrl};
 use cargo_util::paths;
 use cargo_util::paths::normalize_path;
+use cargo_util_schemas::manifest;
 use cargo_util_schemas::manifest::RustVersion;
 use cargo_util_schemas::manifest::{TomlDependency, TomlProfiles};
 use pathdiff::diff_paths;
@@ -1095,11 +1097,14 @@ impl<'gctx> Workspace<'gctx> {
 
     pub fn emit_warnings(&self) -> CargoResult<()> {
         for (path, maybe_pkg) in &self.packages.packages {
+            let path = path.join("Cargo.toml");
+            if let MaybePackage::Package(pkg) = maybe_pkg {
+                self.emit_lints(pkg, &path)?
+            }
             let warnings = match maybe_pkg {
                 MaybePackage::Package(pkg) => pkg.manifest().warnings().warnings(),
                 MaybePackage::Virtual(vm) => vm.warnings().warnings(),
             };
-            let path = path.join("Cargo.toml");
             for warning in warnings {
                 if warning.is_critical {
                     let err = anyhow::format_err!("{}", warning.message);
@@ -1119,6 +1124,30 @@ impl<'gctx> Workspace<'gctx> {
             }
         }
         Ok(())
+    }
+
+    pub fn emit_lints(&self, pkg: &Package, path: &Path) -> CargoResult<()> {
+        let mut error_count = 0;
+        let lints = pkg
+            .manifest()
+            .resolved_toml()
+            .lints
+            .clone()
+            .map(|lints| lints.lints)
+            .unwrap_or(manifest::TomlLints::default())
+            .get("cargo")
+            .cloned()
+            .unwrap_or(manifest::TomlToolLints::default());
+
+        check_implicit_features(pkg, &path, &lints, &mut error_count, self.gctx)?;
+        if error_count > 0 {
+            Err(crate::util::errors::AlreadyPrintedError::new(anyhow!(
+                "encountered {error_count} errors(s) while running lints"
+            ))
+            .into())
+        } else {
+            Ok(())
+        }
     }
 
     pub fn set_target_dir(&mut self, target_dir: Filesystem) {

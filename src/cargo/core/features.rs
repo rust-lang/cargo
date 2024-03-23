@@ -750,6 +750,7 @@ unstable_cli_options!(
     #[serde(deserialize_with = "deserialize_build_std")]
     build_std: Option<Vec<String>>  = ("Enable Cargo to compile the standard library itself as part of a crate graph compilation"),
     build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
+    cargo_lints: bool = ("Enable the `[lints.cargo]` table"),
     check_cfg: bool = ("Enable compile-time checking of `cfg` names/values/features"),
     codegen_backend: bool = ("Enable the `codegen-backend` option in profiles in .cargo/config.toml file"),
     config_include: bool = ("Enable the `include` key in config files"),
@@ -1117,6 +1118,7 @@ impl CliUnstable {
                 self.build_std = Some(crate::core::compiler::standard_lib::parse_unstable_flag(v))
             }
             "build-std-features" => self.build_std_features = Some(parse_features(v)),
+            "cargo-lints" => self.cargo_lints = parse_empty(k, v)?,
             "check-cfg" => {
                 self.check_cfg = parse_empty(k, v)?;
             }

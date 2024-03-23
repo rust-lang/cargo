@@ -494,7 +494,7 @@ pub fn to_real_manifest(
 
     let workspace_config = match (original_toml.workspace.as_ref(), package.workspace.as_ref()) {
         (Some(toml_config), None) => {
-            verify_lints(toml_config.lints.as_ref())?;
+            verify_lints(toml_config.lints.as_ref(), gctx, &mut warnings)?;
             if let Some(ws_deps) = &toml_config.dependencies {
                 for (name, dep) in ws_deps {
                     unused_dep_keys(
@@ -828,7 +828,7 @@ pub fn to_real_manifest(
         .clone()
         .map(|mw| lints_inherit_with(mw, || inherit()?.lints()))
         .transpose()?;
-    verify_lints(lints.as_ref())?;
+    verify_lints(lints.as_ref(), gctx, manifest_ctx.warnings)?;
     let default = manifest::TomlLints::default();
     let rustflags = lints_to_rustflags(lints.as_ref().unwrap_or(&default));
 
@@ -1322,7 +1322,7 @@ fn to_virtual_manifest(
         .transpose()?;
     let workspace_config = match original_toml.workspace {
         Some(ref toml_config) => {
-            verify_lints(toml_config.lints.as_ref())?;
+            verify_lints(toml_config.lints.as_ref(), gctx, &mut warnings)?;
             let ws_root_config = to_workspace_config(toml_config, root);
             gctx.ws_roots
                 .borrow_mut()
@@ -1448,16 +1448,23 @@ struct ManifestContext<'a, 'b> {
     features: &'a Features,
 }
 
-fn verify_lints(lints: Option<&manifest::TomlLints>) -> CargoResult<()> {
+fn verify_lints(
+    lints: Option<&manifest::TomlLints>,
+    gctx: &GlobalContext,
+    warnings: &mut Vec<String>,
+) -> CargoResult<()> {
     let Some(lints) = lints else {
         return Ok(());
     };
 
     for (tool, lints) in lints {
-        let supported = ["rust", "clippy", "rustdoc"];
+        let supported = ["cargo", "clippy", "rust", "rustdoc"];
         if !supported.contains(&tool.as_str()) {
             let supported = supported.join(", ");
             anyhow::bail!("unsupported `{tool}` in `[lints]`, must be one of {supported}")
+        }
+        if tool == "cargo" && !gctx.cli_unstable().cargo_lints {
+            warn_for_cargo_lint_feature(gctx, warnings);
         }
         for name in lints.keys() {
             if let Some((prefix, suffix)) = name.split_once("::") {
@@ -1479,9 +1486,43 @@ fn verify_lints(lints: Option<&manifest::TomlLints>) -> CargoResult<()> {
     Ok(())
 }
 
+fn warn_for_cargo_lint_feature(gctx: &GlobalContext, warnings: &mut Vec<String>) {
+    use std::fmt::Write as _;
+
+    let key_name = "lints.cargo";
+    let feature_name = "cargo-lints";
+
+    let mut message = String::new();
+
+    let _ = write!(
+        message,
+        "unused manifest key `{key_name}` (may be supported in a future version)"
+    );
+    if gctx.nightly_features_allowed {
+        let _ = write!(
+            message,
+            "
+
+consider passing `-Z{feature_name}` to enable this feature."
+        );
+    } else {
+        let _ = write!(
+            message,
+            "
+
+this Cargo does not support nightly features, but if you
+switch to nightly channel you can pass
+`-Z{feature_name}` to enable this feature.",
+        );
+    }
+    warnings.push(message);
+}
+
 fn lints_to_rustflags(lints: &manifest::TomlLints) -> Vec<String> {
     let mut rustflags = lints
         .iter()
+        // We don't want to pass any of the `cargo` lints to `rustc`
+        .filter(|(tool, _)| tool != &"cargo")
         .flat_map(|(tool, lints)| {
             lints.iter().map(move |(name, config)| {
                 let flag = match config.level() {

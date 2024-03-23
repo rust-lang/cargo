@@ -107,6 +107,7 @@ mod inheritable_workspace_fields;
 mod install;
 mod install_upgrade;
 mod jobserver;
+mod lints;
 mod lints_table;
 mod list_availables;
 mod local_registry;

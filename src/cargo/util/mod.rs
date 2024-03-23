@@ -51,6 +51,7 @@ pub mod into_url;
 mod into_url_with_base;
 mod io;
 pub mod job;
+pub mod lints;
 mod lockserver;
 pub mod machine_message;
 pub mod network;
