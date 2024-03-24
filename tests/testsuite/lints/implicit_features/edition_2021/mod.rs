@@ -1,7 +1,7 @@
 use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
-use cargo_test_support::str;
+use cargo_test_support::{file, str};
 
 #[cargo_test]
 fn case() {
@@ -23,12 +23,10 @@ bar = { version = "0.1.0", optional = true }
         .build();
 
     snapbox::cmd::Command::cargo_ui()
-        .masquerade_as_nightly_cargo(&["always_nightly"])
         .current_dir(p.root())
         .arg("check")
-        .arg("--quiet")
         .assert()
         .success()
         .stdout_matches(str![""])
-        .stderr_matches(str![""]);
+        .stderr_matches(file!["stderr.term.svg"]);
 }
