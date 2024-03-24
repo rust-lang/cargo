@@ -846,3 +846,45 @@ fn cargo_lints_success() {
         )
         .run();
 }
+
+#[cargo_test]
+fn cargo_lints_underscore_supported() {
+    Package::new("bar", "0.1.0").publish();
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+                authors = []
+
+                [lints.cargo]
+                "implicit_features" = "warn"
+
+                [dependencies]
+                bar = { version = "0.1.0", optional = true }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["-Zcargo-lints"])
+        .with_stderr(
+            "\
+warning: unused optional dependency
+  --> Cargo.toml:12:17
+   |
+12 |                 bar = { version = \"0.1.0\", optional = true }
+   |                 ---
+   |
+[UPDATING] `dummy-registry` index
+[LOCKING] [..]
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] [..]
+",
+        )
+        .run();
+}

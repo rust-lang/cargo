@@ -67,7 +67,7 @@ pub struct LintGroup {
 }
 
 const RUST_2024_COMPATIBILITY: LintGroup = LintGroup {
-    name: "rust-2024-compatibility",
+    name: "rust_2024_compatibility",
     default_level: LintLevel::Allow,
     desc: "warn about compatibility with Rust 2024",
     edition_lint_opts: Some((Edition::Edition2024, LintLevel::Deny)),
@@ -150,7 +150,7 @@ impl From<TomlLintLevel> for LintLevel {
 /// [RFC #3143]: https://rust-lang.github.io/rfcs/3143-cargo-weak-namespaced-features.html
 /// [RFC #3491]: https://rust-lang.github.io/rfcs/3491-remove-implicit-features.html
 const IMPLICIT_FEATURES: Lint = Lint {
-    name: "implicit-features",
+    name: "implicit_features",
     desc: "warn about the use of unstable features",
     groups: &[RUST_2024_COMPATIBILITY],
     default_level: LintLevel::Allow,
