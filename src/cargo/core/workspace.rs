@@ -1128,18 +1128,23 @@ impl<'gctx> Workspace<'gctx> {
 
     pub fn emit_lints(&self, pkg: &Package, path: &Path) -> CargoResult<()> {
         let mut error_count = 0;
-        let lints = pkg
+        let toml_lints = pkg
             .manifest()
             .resolved_toml()
             .lints
             .clone()
             .map(|lints| lints.lints)
-            .unwrap_or(manifest::TomlLints::default())
+            .unwrap_or(manifest::TomlLints::default());
+        let cargo_lints = toml_lints
             .get("cargo")
             .cloned()
             .unwrap_or(manifest::TomlToolLints::default());
+        let normalized_lints = cargo_lints
+            .into_iter()
+            .map(|(name, lint)| (name.replace('-', "_"), lint))
+            .collect();
 
-        check_implicit_features(pkg, &path, &lints, &mut error_count, self.gctx)?;
+        check_implicit_features(pkg, &path, &normalized_lints, &mut error_count, self.gctx)?;
         if error_count > 0 {
             Err(crate::util::errors::AlreadyPrintedError::new(anyhow!(
                 "encountered {error_count} errors(s) while running lints"
