@@ -113,11 +113,12 @@ strip either symbols or debuginfo from a binary. This can be enabled like so:
 # ...
 
 [profile.release]
-strip = "debuginfo"
+strip = "symbols"
 ```
 
 Possible string values of `strip` are `"none"`, `"debuginfo"`, and `"symbols"`.
-The default is `"none"`.
+For debug profiles the default is `"none"`, and for profiles with `debug = false` 
+the default is `"debuginfo"`.
 
 You can also configure this option with the boolean values `true` or `false`.
 `strip = true` is equivalent to `strip = "symbols"`. `strip = false` is
@@ -293,7 +294,7 @@ The default settings for the `release` profile are:
 opt-level = 3
 debug = false
 split-debuginfo = '...'  # Platform-specific.
-strip = "none"
+strip = "debuginfo" 
 debug-assertions = false
 overflow-checks = false
 lto = false
