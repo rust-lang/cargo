@@ -479,6 +479,42 @@ fn doc_lib_bin_same_name_documents_lib_when_requested() {
 }
 
 #[cargo_test]
+fn doc_lib_bin_same_name_with_dash() {
+    // Checks `doc` behavior when there is a dash in the package name, and
+    // there is a lib and bin, and the lib name is inferred.
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo-bar", "1.0.0"))
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("doc")
+        .with_stderr_unordered(
+            "\
+warning: output filename collision.
+The bin target `foo-bar` in package `foo-bar v1.0.0 ([ROOT]/foo)` has the same \
+output filename as the lib target `foo_bar` in package `foo-bar v1.0.0 ([ROOT]/foo)`.
+Colliding filename is: [ROOT]/foo/target/doc/foo_bar/index.html
+The output filenames should be unique.
+This is a known bug where multiple crates with the same name use
+the same path; see <https://github.com/rust-lang/cargo/issues/6313>.
+If this looks unexpected, it may be a bug in Cargo. Please file a bug report at
+https://github.com/rust-lang/cargo/issues/ with as much information as you
+can provide.
+cargo [..]
+First unit: [..]
+Second unit: [..]
+[CHECKING] foo-bar v1.0.0 ([ROOT]/foo)
+[DOCUMENTING] foo-bar v1.0.0 ([ROOT]/foo)
+[FINISHED] [..]
+[GENERATED] [ROOT]/foo/target/doc/foo_bar/index.html and 1 other file
+",
+        )
+        .run();
+    assert!(p.build_dir().join("doc/foo_bar/index.html").exists());
+    assert!(p.build_dir().join("doc/foo_bar/fn.main.html").exists());
+}
+
+#[cargo_test]
 fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
     let p = project()
         .file(
