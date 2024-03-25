@@ -155,31 +155,14 @@ pub fn unknown_lints(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let edition = match maybe_pkg {
-        MaybePackage::Package(pkg) => pkg.manifest().edition(),
-        MaybePackage::Virtual(_) => Edition::default(),
-    };
-
-    let lint_level = UNKNOWN_LINTS.level(resolved_lints, edition);
+    let lint_level = UNKNOWN_LINTS.level(resolved_lints, maybe_pkg.edition());
     if lint_level == LintLevel::Allow {
         return Ok(());
     }
 
-    let original_toml = match maybe_pkg {
-        MaybePackage::Package(pkg) => pkg.manifest().original_toml(),
-        MaybePackage::Virtual(vm) => vm.original_toml(),
-    };
-
-    let contents = match maybe_pkg {
-        MaybePackage::Package(pkg) => pkg.manifest().contents(),
-        MaybePackage::Virtual(vm) => vm.contents(),
-    };
-
-    let document = match maybe_pkg {
-        MaybePackage::Package(pkg) => pkg.manifest().document(),
-        MaybePackage::Virtual(vm) => vm.document(),
-    };
-
+    let original_toml = maybe_pkg.original_toml();
+    let contents = maybe_pkg.contents();
+    let document = maybe_pkg.document();
     let renderer = Renderer::styled().term_width(
         gctx.shell()
             .err_width()

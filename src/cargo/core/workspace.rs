@@ -30,7 +30,7 @@ use crate::util::{context::ConfigRelativePath, Filesystem, GlobalContext, IntoUr
 use cargo_util::paths;
 use cargo_util::paths::normalize_path;
 use cargo_util_schemas::manifest;
-use cargo_util_schemas::manifest::RustVersion;
+use cargo_util_schemas::manifest::{RustVersion, TomlManifest};
 use cargo_util_schemas::manifest::{TomlDependency, TomlProfiles};
 use pathdiff::diff_paths;
 
@@ -117,6 +117,43 @@ struct Packages<'gctx> {
 pub enum MaybePackage {
     Package(Package),
     Virtual(VirtualManifest),
+}
+
+impl MaybePackage {
+    pub fn contents(&self) -> &str {
+        match self {
+            MaybePackage::Package(pkg) => pkg.manifest().contents(),
+            MaybePackage::Virtual(vm) => vm.contents(),
+        }
+    }
+
+    pub fn document(&self) -> &toml_edit::ImDocument<String> {
+        match self {
+            MaybePackage::Package(pkg) => pkg.manifest().document(),
+            MaybePackage::Virtual(vm) => vm.document(),
+        }
+    }
+
+    pub fn edition(&self) -> Edition {
+        match self {
+            MaybePackage::Package(p) => p.manifest().edition(),
+            MaybePackage::Virtual(_) => Edition::default(),
+        }
+    }
+
+    pub fn original_toml(&self) -> &TomlManifest {
+        match self {
+            MaybePackage::Package(pkg) => pkg.manifest().original_toml(),
+            MaybePackage::Virtual(vm) => vm.original_toml(),
+        }
+    }
+
+    pub fn resolved_toml(&self) -> &TomlManifest {
+        match self {
+            MaybePackage::Package(pkg) => pkg.manifest().resolved_toml(),
+            MaybePackage::Virtual(vm) => vm.resolved_toml(),
+        }
+    }
 }
 
 /// Configuration of a workspace in a manifest.
@@ -1126,11 +1163,8 @@ impl<'gctx> Workspace<'gctx> {
 
     pub fn emit_lints(&self, maybe_pkg: &MaybePackage, path: &Path) -> CargoResult<()> {
         let mut error_count = 0;
-        let resolved_toml = match maybe_pkg {
-            MaybePackage::Package(p) => p.manifest().resolved_toml(),
-            MaybePackage::Virtual(vm) => vm.resolved_toml(),
-        };
-        let resolved_lints = resolved_toml
+        let resolved_lints = maybe_pkg
+            .resolved_toml()
             .lints
             .clone()
             .map(|lints| lints.lints)
