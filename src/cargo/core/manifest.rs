@@ -28,6 +28,12 @@ pub enum EitherManifest {
 }
 
 impl EitherManifest {
+    pub fn warnings_mut(&mut self) -> &mut Warnings {
+        match self {
+            EitherManifest::Real(r) => r.warnings_mut(),
+            EitherManifest::Virtual(v) => v.warnings_mut(),
+        }
+    }
     pub(crate) fn workspace_config(&self) -> &WorkspaceConfig {
         match *self {
             EitherManifest::Real(ref r) => r.workspace_config(),

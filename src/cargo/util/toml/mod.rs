@@ -48,6 +48,9 @@ pub fn read_manifest(
     source_id: SourceId,
     gctx: &GlobalContext,
 ) -> CargoResult<EitherManifest> {
+    let mut warnings = vec![];
+    let mut errors = vec![];
+
     let contents =
         read_toml_string(path, gctx).map_err(|err| ManifestError::new(err, path.into()))?;
     let document =
@@ -55,13 +58,31 @@ pub fn read_manifest(
     let original_toml = deserialize_toml(&document)
         .map_err(|e| emit_diagnostic(e.into(), &contents, path, gctx))?;
 
-    (|| {
+    let mut manifest = (|| {
         if original_toml.package().is_some() {
-            to_real_manifest(contents, document, original_toml, source_id, path, gctx)
-                .map(EitherManifest::Real)
+            to_real_manifest(
+                contents,
+                document,
+                original_toml,
+                source_id,
+                path,
+                gctx,
+                &mut warnings,
+                &mut errors,
+            )
+            .map(EitherManifest::Real)
         } else {
-            to_virtual_manifest(contents, document, original_toml, source_id, path, gctx)
-                .map(EitherManifest::Virtual)
+            to_virtual_manifest(
+                contents,
+                document,
+                original_toml,
+                source_id,
+                path,
+                gctx,
+                &mut warnings,
+                &mut errors,
+            )
+            .map(EitherManifest::Virtual)
         }
     })()
     .map_err(|err| {
@@ -69,8 +90,16 @@ pub fn read_manifest(
             err.context(format!("failed to parse manifest at `{}`", path.display())),
             path.into(),
         )
-        .into()
-    })
+    })?;
+
+    for warning in warnings {
+        manifest.warnings_mut().add_warning(warning);
+    }
+    for error in errors {
+        manifest.warnings_mut().add_critical_warning(error);
+    }
+
+    Ok(manifest)
 }
 
 #[tracing::instrument(skip_all)]
@@ -438,6 +467,8 @@ pub fn to_real_manifest(
     source_id: SourceId,
     manifest_file: &Path,
     gctx: &GlobalContext,
+    warnings: &mut Vec<String>,
+    errors: &mut Vec<String>,
 ) -> CargoResult<Manifest> {
     let embedded = is_embedded(manifest_file);
     let package_root = manifest_file.parent().unwrap();
@@ -463,13 +494,10 @@ pub fn to_real_manifest(
         }
     }
 
-    let mut warnings = vec![];
-    let mut errors = vec![];
-
     // Parse features first so they will be available when parsing other parts of the TOML.
     let empty = Vec::new();
     let cargo_features = original_toml.cargo_features.as_ref().unwrap_or(&empty);
-    let features = Features::new(cargo_features, gctx, &mut warnings, source_id.is_path())?;
+    let features = Features::new(cargo_features, gctx, warnings, source_id.is_path())?;
 
     let mut package = match (&original_toml.package, &original_toml.project) {
         (Some(_), Some(project)) => {
@@ -494,15 +522,10 @@ pub fn to_real_manifest(
 
     let workspace_config = match (original_toml.workspace.as_ref(), package.workspace.as_ref()) {
         (Some(toml_config), None) => {
-            verify_lints(toml_config.lints.as_ref(), gctx, &mut warnings)?;
+            verify_lints(toml_config.lints.as_ref(), gctx, warnings)?;
             if let Some(ws_deps) = &toml_config.dependencies {
                 for (name, dep) in ws_deps {
-                    unused_dep_keys(
-                        name,
-                        "workspace.dependencies",
-                        dep.unused_keys(),
-                        &mut warnings,
-                    );
+                    unused_dep_keys(name, "workspace.dependencies", dep.unused_keys(), warnings);
                 }
             }
             let ws_root_config = to_workspace_config(toml_config, package_root);
@@ -649,8 +672,8 @@ pub fn to_real_manifest(
         edition,
         &package.build,
         &package.metabuild,
-        &mut warnings,
-        &mut errors,
+        warnings,
+        errors,
     )?;
 
     if targets.iter().all(|t| t.is_custom_build()) {
@@ -689,7 +712,7 @@ pub fn to_real_manifest(
         deps: &mut deps,
         source_id,
         gctx,
-        warnings: &mut warnings,
+        warnings,
         features: &features,
         platform: None,
         root: package_root,
@@ -964,7 +987,7 @@ pub fn to_real_manifest(
 
     if let Some(profiles) = &original_toml.profile {
         let cli_unstable = gctx.cli_unstable();
-        validate_profiles(profiles, cli_unstable, &features, &mut warnings)?;
+        validate_profiles(profiles, cli_unstable, &features, warnings)?;
     }
 
     let publish = package
@@ -1075,7 +1098,7 @@ pub fn to_real_manifest(
         }),
         _unused_keys: Default::default(),
     };
-    let mut manifest = Manifest::new(
+    let manifest = Manifest::new(
         Rc::new(contents),
         Rc::new(document),
         Rc::new(original_toml),
@@ -1114,13 +1137,7 @@ pub fn to_real_manifest(
                 .to_owned(),
         );
     }
-    warn_on_unused(&manifest.original_toml()._unused_keys, &mut warnings);
-    for warning in warnings {
-        manifest.warnings_mut().add_warning(warning);
-    }
-    for error in errors {
-        manifest.warnings_mut().add_critical_warning(error);
-    }
+    warn_on_unused(&manifest.original_toml()._unused_keys, warnings);
 
     manifest.feature_gate()?;
 
@@ -1239,6 +1256,8 @@ fn to_virtual_manifest(
     source_id: SourceId,
     manifest_file: &Path,
     gctx: &GlobalContext,
+    warnings: &mut Vec<String>,
+    _errors: &mut Vec<String>,
 ) -> CargoResult<VirtualManifest> {
     let root = manifest_file.parent().unwrap();
 
@@ -1263,11 +1282,10 @@ fn to_virtual_manifest(
         bail!("this virtual manifest specifies a `{field}` section, which is not allowed");
     }
 
-    let mut warnings = Vec::new();
     let mut deps = Vec::new();
     let empty = Vec::new();
     let cargo_features = original_toml.cargo_features.as_ref().unwrap_or(&empty);
-    let features = Features::new(cargo_features, gctx, &mut warnings, source_id.is_path())?;
+    let features = Features::new(cargo_features, gctx, warnings, source_id.is_path())?;
 
     resolved_toml._unused_keys = Default::default();
 
@@ -1276,7 +1294,7 @@ fn to_virtual_manifest(
             deps: &mut deps,
             source_id,
             gctx,
-            warnings: &mut warnings,
+            warnings,
             platform: None,
             features: &features,
             root,
@@ -1287,7 +1305,7 @@ fn to_virtual_manifest(
         )
     };
     if let Some(profiles) = &original_toml.profile {
-        validate_profiles(profiles, gctx.cli_unstable(), &features, &mut warnings)?;
+        validate_profiles(profiles, gctx.cli_unstable(), &features, warnings)?;
     }
     let resolve_behavior = original_toml
         .workspace
@@ -1297,15 +1315,10 @@ fn to_virtual_manifest(
         .transpose()?;
     let workspace_config = match original_toml.workspace {
         Some(ref toml_config) => {
-            verify_lints(toml_config.lints.as_ref(), gctx, &mut warnings)?;
+            verify_lints(toml_config.lints.as_ref(), gctx, warnings)?;
             if let Some(ws_deps) = &toml_config.dependencies {
                 for (name, dep) in ws_deps {
-                    unused_dep_keys(
-                        name,
-                        "workspace.dependencies",
-                        dep.unused_keys(),
-                        &mut warnings,
-                    );
+                    unused_dep_keys(name, "workspace.dependencies", dep.unused_keys(), warnings);
                 }
             }
             let ws_root_config = to_workspace_config(toml_config, root);
@@ -1318,7 +1331,7 @@ fn to_virtual_manifest(
             bail!("virtual manifests must be configured with [workspace]");
         }
     };
-    let mut manifest = VirtualManifest::new(
+    let manifest = VirtualManifest::new(
         Rc::new(contents),
         Rc::new(document),
         Rc::new(original_toml),
@@ -1330,10 +1343,7 @@ fn to_virtual_manifest(
         resolve_behavior,
     );
 
-    warn_on_unused(&manifest.original_toml()._unused_keys, &mut warnings);
-    for warning in warnings {
-        manifest.warnings_mut().add_warning(warning);
-    }
+    warn_on_unused(&manifest.original_toml()._unused_keys, warnings);
 
     Ok(manifest)
 }
