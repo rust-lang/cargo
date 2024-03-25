@@ -479,6 +479,28 @@ fn doc_lib_bin_same_name_documents_lib_when_requested() {
 }
 
 #[cargo_test]
+fn doc_lib_bin_same_name_with_dash() {
+    // Checks `doc` behavior when there is a dash in the package name, and
+    // there is a lib and bin, and the lib name is inferred.
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo-bar", "1.0.0"))
+        .file("src/lib.rs", "")
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("doc")
+        .with_stderr(
+            "\
+[DOCUMENTING] foo-bar v1.0.0 ([ROOT]/foo)
+[FINISHED] [..]
+[GENERATED] [ROOT]/foo/target/doc/foo_bar/index.html
+",
+        )
+        .run();
+    assert!(p.build_dir().join("doc/foo_bar/index.html").exists());
+    assert!(!p.build_dir().join("doc/foo_bar/fn.main.html").exists());
+}
+
+#[cargo_test]
 fn doc_lib_bin_same_name_documents_named_bin_when_requested() {
     let p = project()
         .file(

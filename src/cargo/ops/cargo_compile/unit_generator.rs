@@ -198,7 +198,9 @@ impl<'a> UnitGenerator<'a, '_> {
                     .filter(|t| {
                         t.documented()
                             && (!t.is_bin()
-                                || !targets.iter().any(|l| l.is_lib() && l.name() == t.name()))
+                                || !targets
+                                    .iter()
+                                    .any(|l| l.is_lib() && l.crate_name() == t.crate_name()))
                     })
                     .collect()
             }
