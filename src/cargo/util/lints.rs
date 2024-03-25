@@ -1,5 +1,5 @@
 use crate::core::FeatureValue::Dep;
-use crate::core::{Edition, FeatureValue, Package};
+use crate::core::{Edition, FeatureValue, MaybePackage};
 use crate::util::interning::InternedString;
 use crate::{CargoResult, GlobalContext};
 use annotate_snippets::{Level, Renderer, Snippet};
@@ -57,6 +57,8 @@ fn rel_cwd_manifest_path(path: &Path, gctx: &GlobalContext) -> String {
         .display()
         .to_string()
 }
+
+const LINT_GROUPS: &[LintGroup] = &[RUST_2024_COMPATIBILITY];
 
 #[derive(Copy, Clone, Debug)]
 pub struct LintGroup {
@@ -136,6 +138,121 @@ impl From<TomlLintLevel> for LintLevel {
     }
 }
 
+const LINTS: &[Lint] = &[IMPLICIT_FEATURES, UNKNOWN_LINTS];
+
+const UNKNOWN_LINTS: Lint = Lint {
+    name: "unknown_lints",
+    desc: "detects unrecognized lint names",
+    groups: &[],
+    default_level: LintLevel::Warn,
+    edition_lint_opts: None,
+};
+
+pub fn unknown_lints(
+    maybe_pkg: &MaybePackage,
+    path: &Path,
+    resolved_lints: &TomlToolLints,
+    error_count: &mut usize,
+    gctx: &GlobalContext,
+) -> CargoResult<()> {
+    let edition = match maybe_pkg {
+        MaybePackage::Package(pkg) => pkg.manifest().edition(),
+        MaybePackage::Virtual(_) => Edition::default(),
+    };
+
+    let lint_level = UNKNOWN_LINTS.level(resolved_lints, edition);
+    if lint_level == LintLevel::Allow {
+        return Ok(());
+    }
+
+    let original_toml = match maybe_pkg {
+        MaybePackage::Package(pkg) => pkg.manifest().original_toml(),
+        MaybePackage::Virtual(vm) => vm.original_toml(),
+    };
+
+    let contents = match maybe_pkg {
+        MaybePackage::Package(pkg) => pkg.manifest().contents(),
+        MaybePackage::Virtual(vm) => vm.contents(),
+    };
+
+    let document = match maybe_pkg {
+        MaybePackage::Package(pkg) => pkg.manifest().document(),
+        MaybePackage::Virtual(vm) => vm.document(),
+    };
+
+    let renderer = Renderer::styled().term_width(
+        gctx.shell()
+            .err_width()
+            .diagnostic_terminal_width()
+            .unwrap_or(annotate_snippets::renderer::DEFAULT_TERM_WIDTH),
+    );
+    let level = lint_level.to_diagnostic_level();
+    let manifest_path = rel_cwd_manifest_path(path, gctx);
+
+    let all_names = LINTS
+        .iter()
+        .map(|lint| lint.name)
+        .chain(LINT_GROUPS.iter().map(|group| group.name))
+        .collect::<HashSet<_>>();
+
+    if let Some(lints) = original_toml
+        .workspace
+        .as_ref()
+        .map_or(&None, |ws| &ws.lints)
+    {
+        if let Some(cargo_lints) = lints.get("cargo") {
+            for (name, _) in cargo_lints.iter() {
+                let normalized_name = name.replace("-", "_");
+                if all_names.contains(normalized_name.as_str()) {
+                    continue;
+                }
+                if lint_level == LintLevel::Forbid || lint_level == LintLevel::Deny {
+                    *error_count += 1;
+                }
+                let title = format!("unknown lint: `{}`", name);
+                let message = level.title(&title).snippet(
+                    Snippet::source(contents)
+                        .origin(&manifest_path)
+                        .annotation(
+                            level.span(
+                                get_span(document, &["workspace", "lints", "cargo", name], false)
+                                    .unwrap(),
+                            ),
+                        )
+                        .fold(true),
+                );
+                writeln!(gctx.shell().err(), "{}", renderer.render(message))?;
+            }
+        }
+    }
+
+    if let Some(lints) = original_toml.lints.as_ref().map(|l| &l.lints) {
+        if let Some(cargo_lints) = lints.get("cargo") {
+            for (name, _) in cargo_lints.iter() {
+                let normalized_name = name.replace("-", "_");
+                if all_names.contains(normalized_name.as_str()) {
+                    continue;
+                }
+                if lint_level == LintLevel::Forbid || lint_level == LintLevel::Deny {
+                    *error_count += 1;
+                }
+                let title = format!("unknown lint: `{}`", name);
+                let message =
+                    level.title(&title).snippet(
+                        Snippet::source(contents)
+                            .origin(&manifest_path)
+                            .annotation(level.span(
+                                get_span(document, &["lints", "cargo", name], false).unwrap(),
+                            ))
+                            .fold(true),
+                    );
+                writeln!(gctx.shell().err(), "{}", renderer.render(message))?;
+            }
+        }
+    }
+    Ok(())
+}
+
 /// By default, cargo will treat any optional dependency as a [feature]. As of
 /// cargo 1.60, these can be disabled by declaring a feature that activates the
 /// optional dependency as `dep:<name>` (see [RFC #3143]).
@@ -158,12 +275,16 @@ const IMPLICIT_FEATURES: Lint = Lint {
 };
 
 pub fn check_implicit_features(
-    pkg: &Package,
+    maybe_pkg: &MaybePackage,
     path: &Path,
     lints: &TomlToolLints,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
+    let MaybePackage::Package(pkg) = maybe_pkg else {
+        return Ok(());
+    };
+
     let lint_level = IMPLICIT_FEATURES.level(lints, pkg.manifest().edition());
     if lint_level == LintLevel::Allow {
         return Ok(());

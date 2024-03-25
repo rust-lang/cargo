@@ -24,7 +24,7 @@ use crate::sources::{PathSource, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::edit_distance;
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
-use crate::util::lints::check_implicit_features;
+use crate::util::lints::{check_implicit_features, unknown_lints};
 use crate::util::toml::{read_manifest, InheritableFields};
 use crate::util::{context::ConfigRelativePath, Filesystem, GlobalContext, IntoUrl};
 use cargo_util::paths;
@@ -1098,9 +1098,7 @@ impl<'gctx> Workspace<'gctx> {
     pub fn emit_warnings(&self) -> CargoResult<()> {
         for (path, maybe_pkg) in &self.packages.packages {
             let path = path.join("Cargo.toml");
-            if let MaybePackage::Package(pkg) = maybe_pkg {
-                self.emit_lints(pkg, &path)?
-            }
+            self.emit_lints(maybe_pkg, &path)?;
             let warnings = match maybe_pkg {
                 MaybePackage::Package(pkg) => pkg.manifest().warnings().warnings(),
                 MaybePackage::Virtual(vm) => vm.warnings().warnings(),
@@ -1126,16 +1124,18 @@ impl<'gctx> Workspace<'gctx> {
         Ok(())
     }
 
-    pub fn emit_lints(&self, pkg: &Package, path: &Path) -> CargoResult<()> {
+    pub fn emit_lints(&self, maybe_pkg: &MaybePackage, path: &Path) -> CargoResult<()> {
         let mut error_count = 0;
-        let toml_lints = pkg
-            .manifest()
-            .resolved_toml()
+        let resolved_toml = match maybe_pkg {
+            MaybePackage::Package(p) => p.manifest().resolved_toml(),
+            MaybePackage::Virtual(vm) => vm.resolved_toml(),
+        };
+        let resolved_lints = resolved_toml
             .lints
             .clone()
             .map(|lints| lints.lints)
             .unwrap_or(manifest::TomlLints::default());
-        let cargo_lints = toml_lints
+        let cargo_lints = resolved_lints
             .get("cargo")
             .cloned()
             .unwrap_or(manifest::TomlToolLints::default());
@@ -1144,7 +1144,20 @@ impl<'gctx> Workspace<'gctx> {
             .map(|(name, lint)| (name.replace('-', "_"), lint))
             .collect();
 
-        check_implicit_features(pkg, &path, &normalized_lints, &mut error_count, self.gctx)?;
+        unknown_lints(
+            maybe_pkg,
+            &path,
+            &normalized_lints,
+            &mut error_count,
+            self.gctx,
+        )?;
+        check_implicit_features(
+            maybe_pkg,
+            &path,
+            &normalized_lints,
+            &mut error_count,
+            self.gctx,
+        )?;
         if error_count > 0 {
             Err(crate::util::errors::AlreadyPrintedError::new(anyhow!(
                 "encountered {error_count} errors(s) while running lints"

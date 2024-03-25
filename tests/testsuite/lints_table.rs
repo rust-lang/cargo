@@ -763,7 +763,6 @@ fn cargo_lints_nightly_required() {
                 authors = []
 
                 [lints.cargo]
-                "unused-features" = "deny"
             "#,
         )
         .file("src/lib.rs", "")
@@ -797,7 +796,6 @@ fn cargo_lints_no_z_flag() {
                 authors = []
 
                 [lints.cargo]
-                "unused-features" = "deny"
             "#,
         )
         .file("src/lib.rs", "")
@@ -830,7 +828,6 @@ fn cargo_lints_success() {
                 authors = []
 
                 [lints.cargo]
-                "unused-features" = "deny"
             "#,
         )
         .file("src/lib.rs", "")
