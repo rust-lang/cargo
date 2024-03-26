@@ -331,7 +331,7 @@ fn print_lockfile_sync(
     Ok(())
 }
 
-pub fn print_lockfile_updates(
+fn print_lockfile_updates(
     gctx: &GlobalContext,
     previous_resolve: &Resolve,
     resolve: &Resolve,

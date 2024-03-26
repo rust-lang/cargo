@@ -9,7 +9,6 @@ pub use self::cargo_doc::{doc, DocOptions, OutputFormat};
 pub use self::cargo_fetch::{fetch, FetchOptions};
 pub use self::cargo_generate_lockfile::generate_lockfile;
 pub use self::cargo_generate_lockfile::print_lockfile_changes;
-pub use self::cargo_generate_lockfile::print_lockfile_updates;
 pub use self::cargo_generate_lockfile::update_lockfile;
 pub use self::cargo_generate_lockfile::UpdateOptions;
 pub use self::cargo_install::{install, install_list};
