@@ -474,9 +474,18 @@ impl Dependency {
         item: &mut toml_edit::Item,
     ) {
         if str_or_1_len_table(item) {
-            // Nothing to preserve
-            *item = self.to_toml(crate_root);
-            key.fmt();
+            // Little to preserve
+            let mut new_item = self.to_toml(crate_root);
+            match (&item, &mut new_item) {
+                (toml_edit::Item::Value(old), toml_edit::Item::Value(new)) => {
+                    *new.decor_mut() = old.decor().clone();
+                }
+                (toml_edit::Item::Table(old), toml_edit::Item::Table(new)) => {
+                    *new.decor_mut() = old.decor().clone();
+                }
+                (_, _) => {}
+            }
+            *item = new_item;
         } else if let Some(table) = item.as_table_like_mut() {
             match &self.source {
                 Some(Source::Registry(src)) => {
