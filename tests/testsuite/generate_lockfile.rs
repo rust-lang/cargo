@@ -237,3 +237,39 @@ fn duplicate_entries_in_lockfile() {
         )
         .run();
 }
+
+#[cargo_test]
+fn generate_lockfile_holds_lock_and_offline() {
+    Package::new("syn", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+
+                [dependencies]
+                syn = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[LOCKING] 2 packages
+",
+        )
+        .run();
+
+    p.cargo("generate-lockfile --offline")
+        .with_stderr_contains(
+            "\
+[LOCKING] 2 packages
+",
+        )
+        .run();
+}

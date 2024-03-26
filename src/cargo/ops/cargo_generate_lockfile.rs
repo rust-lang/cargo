@@ -166,12 +166,17 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     Ok(())
 }
 
+/// Prints lockfile change statuses.
+///
+/// This would acquire the package-cache lock, as it may update the index to
+/// show users latest available versions.
 pub fn print_lockfile_changes(
     gctx: &GlobalContext,
     previous_resolve: Option<&Resolve>,
     resolve: &Resolve,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<()> {
+    let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
     if let Some(previous_resolve) = previous_resolve {
         print_lockfile_sync(gctx, previous_resolve, resolve, registry)
     } else {
@@ -331,7 +336,7 @@ fn print_lockfile_sync(
     Ok(())
 }
 
-pub fn print_lockfile_updates(
+fn print_lockfile_updates(
     gctx: &GlobalContext,
     previous_resolve: &Resolve,
     resolve: &Resolve,
