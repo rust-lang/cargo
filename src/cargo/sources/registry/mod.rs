@@ -752,7 +752,13 @@ impl<'gctx> Source for RegistrySource<'gctx> {
         if let Some((_, requested)) = self
             .source_id
             .precise_registry_version(dep.package_name().as_str())
-            .filter(|(c, _)| req.matches(c))
+            .filter(|(c, _)| {
+                if self.gctx.cli_unstable().unstable_options {
+                    req.matches_prerelease(c)
+                } else {
+                    req.matches(c)
+                }
+            })
         {
             req.precise_to(&requested);
         }
@@ -790,7 +796,13 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                 .index
                 .query_inner(dep.package_name(), &req, &mut *self.ops, &mut |s| {
                     let matched = match kind {
-                        QueryKind::Exact => dep.matches(s.as_summary()),
+                        QueryKind::Exact => {
+                            if self.gctx.cli_unstable().unstable_options {
+                                dep.matches_prerelease(s.as_summary())
+                            } else {
+                                dep.matches(s.as_summary())
+                            }
+                        }
                         QueryKind::Alternatives => true,
                         QueryKind::Normalized => true,
                     };
