@@ -10,4 +10,6 @@ default = ["your-face"]
 other = ["your-face/nose"]
 
 [dependencies]
-your-face = { version = "99999.0.0", optional = true }
+# Before your-face
+your-face = { version = "99999.0.0", optional = true }  # After your-face
+# End

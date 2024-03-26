@@ -10,3 +10,4 @@ my-package = { version = "0.1.0", optional = true }
 
 [features]
 my-package = ["dep:my-package"]
+# End
