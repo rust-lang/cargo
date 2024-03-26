@@ -266,11 +266,9 @@ fn generate_lockfile_holds_lock_and_offline() {
         .run();
 
     p.cargo("generate-lockfile --offline")
-        .with_status(101)
         .with_stderr_contains(
             "\
-[..]thread 'main' panicked[..]
-[..]package cache lock is not currently held[..]
+[LOCKING] 2 packages
 ",
         )
         .run();
