@@ -168,6 +168,8 @@ fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> Car
     let mut cmd = ProcessBuilder::new("cargo");
     cmd.arg("semver-checks")
         .arg("check-release")
+        .args(&["--exclude", "cargo-test-macro"]) // FIXME: Remove once 1.79 is stable.
+        .args(&["--exclude", "cargo-test-support"]) // FIXME: Remove once 1.79 is stable.
         .arg("--workspace");
     gctx.shell().status("Running", &cmd)?;
     cmd.exec()?;
@@ -176,6 +178,8 @@ fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> Car
         let mut cmd = ProcessBuilder::new("cargo");
         cmd.arg("semver-checks")
             .arg("--workspace")
+            .args(&["--exclude", "cargo-test-macro"]) // FIXME: Remove once 1.79 is stable.
+            .args(&["--exclude", "cargo-test-support"]) // FIXME: Remove once 1.79 is stable.
             .arg("--baseline-rev")
             .arg(referenced_commit.id().to_string());
         for krate in crates_not_check_against_channels {

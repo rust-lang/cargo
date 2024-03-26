@@ -1,3 +1,14 @@
+//! # Cargo test macro.
+//!
+//! This is meant to be consumed alongside `cargo-test-support`. See
+//! <https://rust-lang.github.io/cargo/contrib/> for a guide on writing tests.
+//!
+//! WARNING: You might not want to use this outside of Cargo.
+//!
+//! * This is designed for testing Cargo itself. Use at your own risk.
+//! * No guarantee on any stability across versions.
+//! * No feature request would be accepted unless proved useful for testing Cargo.
+
 use proc_macro::*;
 use std::path::Path;
 use std::process::Command;
