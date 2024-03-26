@@ -739,6 +739,11 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
     }
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
+        if cfg!(debug_assertions) {
+            // Force borrow to catch invalid borrows, regardless of which source is used and how it
+            // happens to behave this time
+            self.gctx.shell().verbosity();
+        }
         for (source_id, source) in self.sources.sources_mut() {
             source
                 .block_until_ready()
