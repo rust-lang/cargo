@@ -1748,9 +1748,7 @@ fn crate_env_vars() {
     };
 
     println!("build");
-    p.cargo("build -v")
-        .masquerade_as_nightly_cargo(&["CARGO_RUSTC_CURRENT_DIR"])
-        .run();
+    p.cargo("build -v").run();
 
     println!("bin");
     p.process(&p.bin("foo-bar"))
@@ -1758,20 +1756,14 @@ fn crate_env_vars() {
         .run();
 
     println!("example");
-    p.cargo("run --example ex-env-vars -v")
-        .masquerade_as_nightly_cargo(&["CARGO_RUSTC_CURRENT_DIR"])
-        .run();
+    p.cargo("run --example ex-env-vars -v").run();
 
     println!("test");
-    p.cargo("test -v")
-        .masquerade_as_nightly_cargo(&["CARGO_RUSTC_CURRENT_DIR"])
-        .run();
+    p.cargo("test -v").run();
 
     if is_nightly() {
         println!("bench");
-        p.cargo("bench -v")
-            .masquerade_as_nightly_cargo(&["CARGO_RUSTC_CURRENT_DIR"])
-            .run();
+        p.cargo("bench -v").run();
     }
 }
 
@@ -1857,11 +1849,9 @@ fn cargo_rustc_current_dir_foreign_workspace_dep() {
 
     // Verify it works from a different workspace
     foo.cargo("test -p baz")
-        .masquerade_as_nightly_cargo(&["CARGO_RUSTC_CURRENT_DIR"])
         .with_stdout_contains("running 1 test\ntest baz_env ... ok")
         .run();
     foo.cargo("test -p baz_member")
-        .masquerade_as_nightly_cargo(&["CARGO_RUSTC_CURRENT_DIR"])
         .with_stdout_contains("running 1 test\ntest baz_member_env ... ok")
         .run();
 }
@@ -1906,31 +1896,8 @@ fn cargo_rustc_current_dir_non_local_dep() {
         .build();
 
     p.cargo("test -p bar")
-        .masquerade_as_nightly_cargo(&["CARGO_RUSTC_CURRENT_DIR"])
         .with_stdout_contains("running 1 test\ntest bar_env ... ok")
         .run();
-}
-
-#[cargo_test]
-fn cargo_rustc_current_dir_is_not_stable() {
-    if is_nightly() {
-        return;
-    }
-    let p = project()
-        .file(
-            "tests/env.rs",
-            r#"
-                use std::path::Path;
-
-                #[test]
-                fn env() {
-                    assert_eq!(option_env!("CARGO_RUSTC_CURRENT_DIR"), None);
-                }
-            "#,
-        )
-        .build();
-
-    p.cargo("test").run();
 }
 
 #[cargo_test]
