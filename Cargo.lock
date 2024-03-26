@@ -252,7 +252,7 @@ dependencies = [
 
 [[package]]
 name = "cargo"
-version = "0.78.0"
+version = "0.78.1"
 dependencies = [
  "annotate-snippets",
  "anstream",
