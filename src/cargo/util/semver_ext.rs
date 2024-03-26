@@ -111,6 +111,19 @@ impl OptVersionReq {
         }
     }
 
+    /// Since Semver does not support prerelease versions,
+    /// the simplest implementation is taken here without comparing the prerelease section.
+    /// The logic here is temporary, we'll have to consider more boundary conditions later,
+    /// and we're not sure if this part of the functionality should be implemented in semver or cargo.
+    pub fn matches_prerelease(&self, version: &Version) -> bool {
+        if version.is_prerelease() {
+            let mut version = version.clone();
+            version.pre = semver::Prerelease::EMPTY;
+            return self.matches(&version);
+        }
+        self.matches(version)
+    }
+
     pub fn matches(&self, version: &Version) -> bool {
         match self {
             OptVersionReq::Any => true,

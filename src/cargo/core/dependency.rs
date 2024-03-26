@@ -402,6 +402,14 @@ impl Dependency {
         self.matches_id(sum.package_id())
     }
 
+    pub fn matches_prerelease(&self, sum: &Summary) -> bool {
+        let id = sum.package_id();
+        self.inner.name == id.name()
+            && (self.inner.only_match_name
+                || (self.inner.req.matches_prerelease(id.version())
+                    && self.inner.source_id == id.source_id()))
+    }
+
     /// Returns `true` if the package (`id`) can fulfill this dependency request.
     pub fn matches_ignoring_source(&self, id: PackageId) -> bool {
         self.package_name() == id.name() && self.version_req().matches(id.version())
