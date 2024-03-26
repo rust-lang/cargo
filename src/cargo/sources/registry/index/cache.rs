@@ -66,6 +66,8 @@
 //! [`RemoteRegistry`]: crate::sources::registry::remote::RemoteRegistry
 
 use std::cell::OnceCell;
+use std::cell::RefCell;
+use std::collections::BTreeMap;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
@@ -337,8 +339,9 @@ struct LocalDatabase<'gctx> {
     /// The root path where caches are located.
     cache_root: Filesystem,
     /// Connection to the SQLite database.
-    conn: OnceCell<Option<Connection>>,
+    conn: OnceCell<Option<RefCell<Connection>>>,
     /// [`GlobalContext`] reference for convenience.
+    deferred_writes: RefCell<BTreeMap<String, Vec<u8>>>,
     gctx: &'gctx GlobalContext,
 }
 
@@ -348,14 +351,16 @@ impl LocalDatabase<'_> {
         LocalDatabase {
             cache_root,
             conn: OnceCell::new(),
+            deferred_writes: RefCell::new(BTreeMap::new()),
             gctx,
         }
     }
 
-    fn conn(&self) -> Option<&Connection> {
+    fn conn(&self) -> Option<&RefCell<Connection>> {
         self.conn
             .get_or_init(|| {
                 self.conn_init()
+                    .map(RefCell::new)
                     .map_err(|e| tracing::debug!("cannot open index cache db: {e}"))
                     .ok()
             })
@@ -373,11 +378,37 @@ impl LocalDatabase<'_> {
         sqlite::migrate(&mut conn, &migrations())?;
         Ok(conn)
     }
+
+    fn bulk_put(&self) -> CargoResult<()> {
+        let Some(conn) = self.conn() else {
+            anyhow::bail!("no connection");
+        };
+        let mut conn = conn.borrow_mut();
+        let tx = conn.transaction()?;
+        let mut stmt =
+            tx.prepare_cached("INSERT OR REPLACE INTO summaries (name, value) VALUES (?, ?)")?;
+        for (key, value) in self.deferred_writes.borrow().iter() {
+            stmt.execute(params!(key, value))?;
+        }
+        drop(stmt);
+        tx.commit()?;
+        self.deferred_writes.borrow_mut().clear();
+        Ok(())
+    }
+}
+
+impl Drop for LocalDatabase<'_> {
+    fn drop(&mut self) {
+        let _ = self
+            .bulk_put()
+            .map_err(|e| tracing::info!("failed to flush cache: {e}"));
+    }
 }
 
 impl CacheStore for LocalDatabase<'_> {
     fn get(&self, key: &str) -> Option<Vec<u8>> {
         self.conn()?
+            .borrow()
             .prepare_cached("SELECT value FROM summaries WHERE name = ? LIMIT 1")
             .and_then(|mut stmt| stmt.query_row([key], |row| row.get(0)))
             .map_err(|e| tracing::debug!(key, "cache missing: {e}"))
@@ -385,17 +416,15 @@ impl CacheStore for LocalDatabase<'_> {
     }
 
     fn put(&self, key: &str, value: &[u8]) {
-        if let Some(conn) = self.conn() {
-            _ = conn
-                .prepare_cached("INSERT OR REPLACE INTO summaries (name, value) VALUES (?, ?)")
-                .and_then(|mut stmt| stmt.execute(params!(key, value)))
-                .map_err(|e| tracing::info!(key, "failed to write cache: {e}"));
-        }
+        self.deferred_writes
+            .borrow_mut()
+            .insert(key.into(), value.into());
     }
 
     fn invalidate(&self, key: &str) {
         if let Some(conn) = self.conn() {
             _ = conn
+                .borrow()
                 .prepare_cached("DELETE FROM summaries WHERE name = ?")
                 .and_then(|mut stmt| stmt.execute([key]))
                 .map_err(|e| tracing::debug!(key, "failed to remove from cache: {e}"));
