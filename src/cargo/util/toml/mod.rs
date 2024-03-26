@@ -753,7 +753,42 @@ pub fn to_real_manifest(
         .clone()
         .map(|value| lints_inherit_with(value, || inherit()?.lints()))
         .transpose()?;
+    let resolved_badges = original_toml
+        .badges
+        .clone()
+        .map(|mw| field_inherit_with(mw, "badges", || inherit()?.badges()))
+        .transpose()?;
+    let resolved_toml = manifest::TomlManifest {
+        cargo_features: original_toml.cargo_features.clone(),
+        package: Some(Box::new(resolved_package)),
+        project: None,
+        profile: original_toml.profile.clone(),
+        lib: original_toml.lib.clone(),
+        bin: original_toml.bin.clone(),
+        example: original_toml.example.clone(),
+        test: original_toml.test.clone(),
+        bench: original_toml.bench.clone(),
+        dependencies: resolved_dependencies,
+        dev_dependencies: resolved_dev_dependencies,
+        dev_dependencies2: None,
+        build_dependencies: resolved_build_dependencies,
+        build_dependencies2: None,
+        features: original_toml.features.clone(),
+        target: resolved_target,
+        replace: original_toml.replace.clone(),
+        patch: original_toml.patch.clone(),
+        workspace: original_toml.workspace.clone(),
+        badges: resolved_badges.map(manifest::InheritableField::Value),
+        lints: resolved_lints.map(|lints| manifest::InheritableLints {
+            workspace: false,
+            lints,
+        }),
+        _unused_keys: Default::default(),
+    };
 
+    let resolved_package = resolved_toml
+        .package()
+        .expect("previously verified to have a `[package]`");
     let rust_version = resolved_package
         .resolved_rust_version()
         .expect("previously resolved")
@@ -915,7 +950,7 @@ pub fn to_real_manifest(
         None,
         None,
     )?;
-    gather_dependencies(&mut manifest_ctx, resolved_dependencies.as_ref(), None)?;
+    gather_dependencies(&mut manifest_ctx, resolved_toml.dependencies.as_ref(), None)?;
     if original_toml.dev_dependencies.is_some() && original_toml.dev_dependencies2.is_some() {
         warn_on_deprecated(
             "dev-dependencies",
@@ -932,7 +967,7 @@ pub fn to_real_manifest(
     )?;
     gather_dependencies(
         &mut manifest_ctx,
-        resolved_dev_dependencies.as_ref(),
+        resolved_toml.dev_dependencies(),
         Some(DepKind::Development),
     )?;
     if original_toml.build_dependencies.is_some() && original_toml.build_dependencies2.is_some() {
@@ -951,13 +986,22 @@ pub fn to_real_manifest(
     )?;
     gather_dependencies(
         &mut manifest_ctx,
-        resolved_build_dependencies.as_ref(),
+        resolved_toml.build_dependencies(),
         Some(DepKind::Build),
     )?;
 
-    verify_lints(resolved_lints.as_ref(), gctx, manifest_ctx.warnings)?;
+    verify_lints(
+        resolved_toml.resolved_lints().expect("previously resolved"),
+        gctx,
+        manifest_ctx.warnings,
+    )?;
     let default = manifest::TomlLints::default();
-    let rustflags = lints_to_rustflags(resolved_lints.as_ref().unwrap_or(&default));
+    let rustflags = lints_to_rustflags(
+        resolved_toml
+            .resolved_lints()
+            .expect("previously resolved")
+            .unwrap_or(&default),
+    );
 
     for (name, platform) in original_toml.target.iter().flatten() {
         let platform_kind: Platform = name.parse()?;
@@ -998,7 +1042,7 @@ pub fn to_real_manifest(
             Some(DepKind::Development),
         )?;
     }
-    for (name, platform) in resolved_target.iter().flatten() {
+    for (name, platform) in resolved_toml.target.iter().flatten() {
         manifest_ctx.platform = Some(name.parse()?);
         gather_dependencies(&mut manifest_ctx, platform.dependencies.as_ref(), None)?;
         gather_dependencies(
@@ -1032,11 +1076,6 @@ pub fn to_real_manifest(
         }
     }
 
-    let resolved_badges = original_toml
-        .badges
-        .clone()
-        .map(|mw| field_inherit_with(mw, "badges", || inherit()?.badges()))
-        .transpose()?;
     let metadata = ManifestMetadata {
         description: resolved_package
             .resolved_description()
@@ -1081,7 +1120,11 @@ pub fn to_real_manifest(
             .expect("previously resolved")
             .cloned()
             .unwrap_or_default(),
-        badges: resolved_badges.clone().unwrap_or_default(),
+        badges: resolved_toml
+            .resolved_badges()
+            .expect("previously resolved")
+            .cloned()
+            .unwrap_or_default(),
         links: resolved_package.links.clone(),
         rust_version: rust_version.clone(),
     };
@@ -1180,33 +1223,6 @@ pub fn to_real_manifest(
     let im_a_teapot = resolved_package.im_a_teapot;
     let default_run = resolved_package.default_run.clone();
     let metabuild = resolved_package.metabuild.clone().map(|sov| sov.0);
-    let resolved_toml = manifest::TomlManifest {
-        cargo_features: original_toml.cargo_features.clone(),
-        package: Some(Box::new(resolved_package)),
-        project: None,
-        profile: original_toml.profile.clone(),
-        lib: original_toml.lib.clone(),
-        bin: original_toml.bin.clone(),
-        example: original_toml.example.clone(),
-        test: original_toml.test.clone(),
-        bench: original_toml.bench.clone(),
-        dependencies: resolved_dependencies,
-        dev_dependencies: resolved_dev_dependencies,
-        dev_dependencies2: None,
-        build_dependencies: resolved_build_dependencies,
-        build_dependencies2: None,
-        features: original_toml.features.clone(),
-        target: resolved_target,
-        replace: original_toml.replace.clone(),
-        patch: original_toml.patch.clone(),
-        workspace: original_toml.workspace.clone(),
-        badges: resolved_badges.map(manifest::InheritableField::Value),
-        lints: resolved_lints.map(|lints| manifest::InheritableLints {
-            workspace: false,
-            lints,
-        }),
-        _unused_keys: Default::default(),
-    };
     let manifest = Manifest::new(
         Rc::new(contents),
         Rc::new(document),

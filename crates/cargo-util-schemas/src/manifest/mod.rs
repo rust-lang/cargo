@@ -106,6 +106,12 @@ impl TomlManifest {
         self.features.as_ref()
     }
 
+    pub fn resolved_badges(
+        &self,
+    ) -> Result<Option<&BTreeMap<String, BTreeMap<String, String>>>, UnresolvedError> {
+        self.badges.as_ref().map(|l| l.resolved()).transpose()
+    }
+
     pub fn resolved_lints(&self) -> Result<Option<&TomlLints>, UnresolvedError> {
         self.lints.as_ref().map(|l| l.resolved()).transpose()
     }
