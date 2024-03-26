@@ -184,15 +184,14 @@ fn print_lockfile_generation(
     resolve: &Resolve,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<()> {
-    let mut shell = gctx.shell();
-
     let diff = PackageDiff::new(&resolve);
     let num_pkgs: usize = diff.iter().map(|d| d.added.len()).sum();
     if num_pkgs <= 1 {
         // just ourself, nothing worth reporting
         return Ok(());
     }
-    shell.status("Locking", format!("{num_pkgs} packages"))?;
+    gctx.shell()
+        .status("Locking", format!("{num_pkgs} packages"))?;
 
     for diff in diff {
         fn format_latest(version: semver::Version) -> String {
@@ -226,7 +225,11 @@ fn print_lockfile_generation(
             };
 
             if let Some(latest) = latest {
-                shell.status_with_color("Adding", format!("{package}{latest}"), &style::NOTE)?;
+                gctx.shell().status_with_color(
+                    "Adding",
+                    format!("{package}{latest}"),
+                    &style::NOTE,
+                )?;
             }
         }
     }
@@ -240,15 +243,14 @@ fn print_lockfile_sync(
     resolve: &Resolve,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<()> {
-    let mut shell = gctx.shell();
-
     let diff = PackageDiff::diff(&previous_resolve, &resolve);
     let num_pkgs: usize = diff.iter().map(|d| d.added.len()).sum();
     if num_pkgs == 0 {
         return Ok(());
     }
     let plural = if num_pkgs == 1 { "" } else { "s" };
-    shell.status("Locking", format!("{num_pkgs} package{plural}"))?;
+    gctx.shell()
+        .status("Locking", format!("{num_pkgs} package{plural}"))?;
 
     for diff in diff {
         fn format_latest(version: semver::Version) -> String {
@@ -296,9 +298,11 @@ fn print_lockfile_sync(
             // This metadata is often stuff like git commit hashes, which are
             // not meaningfully ordered.
             if removed.version().cmp_precedence(added.version()) == Ordering::Greater {
-                shell.status_with_color("Downgrading", msg, &style::WARN)?;
+                gctx.shell()
+                    .status_with_color("Downgrading", msg, &style::WARN)?;
             } else {
-                shell.status_with_color("Updating", msg, &style::GOOD)?;
+                gctx.shell()
+                    .status_with_color("Updating", msg, &style::GOOD)?;
             }
         } else {
             for package in diff.added.iter() {
@@ -315,7 +319,11 @@ fn print_lockfile_sync(
                 }
                 .unwrap_or_default();
 
-                shell.status_with_color("Adding", format!("{package}{latest}"), &style::NOTE)?;
+                gctx.shell().status_with_color(
+                    "Adding",
+                    format!("{package}{latest}"),
+                    &style::NOTE,
+                )?;
             }
         }
     }
@@ -329,8 +337,6 @@ pub fn print_lockfile_updates(
     resolve: &Resolve,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<()> {
-    let mut shell = gctx.shell();
-
     let mut unchanged_behind = 0;
     for diff in PackageDiff::diff(&previous_resolve, &resolve) {
         fn format_latest(version: semver::Version) -> String {
@@ -378,13 +384,16 @@ pub fn print_lockfile_updates(
             // This metadata is often stuff like git commit hashes, which are
             // not meaningfully ordered.
             if removed.version().cmp_precedence(added.version()) == Ordering::Greater {
-                shell.status_with_color("Downgrading", msg, &style::WARN)?;
+                gctx.shell()
+                    .status_with_color("Downgrading", msg, &style::WARN)?;
             } else {
-                shell.status_with_color("Updating", msg, &style::GOOD)?;
+                gctx.shell()
+                    .status_with_color("Updating", msg, &style::GOOD)?;
             }
         } else {
             for package in diff.removed.iter() {
-                shell.status_with_color("Removing", format!("{package}"), &style::ERROR)?;
+                gctx.shell()
+                    .status_with_color("Removing", format!("{package}"), &style::ERROR)?;
             }
             for package in diff.added.iter() {
                 let latest = if !possibilities.is_empty() {
@@ -400,7 +409,11 @@ pub fn print_lockfile_updates(
                 }
                 .unwrap_or_default();
 
-                shell.status_with_color("Adding", format!("{package}{latest}"), &style::NOTE)?;
+                gctx.shell().status_with_color(
+                    "Adding",
+                    format!("{package}{latest}"),
+                    &style::NOTE,
+                )?;
             }
         }
         for package in &diff.unchanged {
@@ -418,8 +431,8 @@ pub fn print_lockfile_updates(
 
             if let Some(latest) = latest {
                 unchanged_behind += 1;
-                if shell.verbosity() == Verbosity::Verbose {
-                    shell.status_with_color(
+                if gctx.shell().verbosity() == Verbosity::Verbose {
+                    gctx.shell().status_with_color(
                         "Unchanged",
                         format!("{package}{latest}"),
                         &anstyle::Style::new().bold(),
@@ -428,13 +441,14 @@ pub fn print_lockfile_updates(
             }
         }
     }
-    if shell.verbosity() == Verbosity::Verbose {
-        shell.note(
+
+    if gctx.shell().verbosity() == Verbosity::Verbose {
+        gctx.shell().note(
             "to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`",
         )?;
     } else {
         if 0 < unchanged_behind {
-            shell.note(format!(
+            gctx.shell().note(format!(
                 "pass `--verbose` to see {unchanged_behind} unchanged dependencies behind latest"
             ))?;
         }
