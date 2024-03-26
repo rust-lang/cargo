@@ -1032,6 +1032,11 @@ pub fn to_real_manifest(
         }
     }
 
+    let resolved_badges = original_toml
+        .badges
+        .clone()
+        .map(|mw| field_inherit_with(mw, "badges", || inherit()?.badges()))
+        .transpose()?;
     let metadata = ManifestMetadata {
         description: resolved_package
             .resolved_description()
@@ -1076,12 +1081,7 @@ pub fn to_real_manifest(
             .expect("previously resolved")
             .cloned()
             .unwrap_or_default(),
-        badges: original_toml
-            .badges
-            .clone()
-            .map(|mw| field_inherit_with(mw, "badges", || inherit()?.badges()))
-            .transpose()?
-            .unwrap_or_default(),
+        badges: resolved_badges.clone().unwrap_or_default(),
         links: resolved_package.links.clone(),
         rust_version: rust_version.clone(),
     };
@@ -1200,10 +1200,7 @@ pub fn to_real_manifest(
         replace: original_toml.replace.clone(),
         patch: original_toml.patch.clone(),
         workspace: original_toml.workspace.clone(),
-        badges: original_toml
-            .badges
-            .as_ref()
-            .map(|_| manifest::InheritableField::Value(metadata.badges.clone())),
+        badges: resolved_badges.map(manifest::InheritableField::Value),
         lints: resolved_lints.map(|lints| manifest::InheritableLints {
             workspace: false,
             lints,
