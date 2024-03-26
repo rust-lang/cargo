@@ -632,7 +632,9 @@ fn strip_accepts_false_to_disable_strip() {
         .run();
 }
 
+// Temporarily disabled on Windows due to https://github.com/rust-lang/rust/issues/122857
 #[cargo_test]
+#[cfg(not(windows))]
 fn strip_debuginfo_in_release() {
     let p = project()
         .file(
@@ -656,7 +658,32 @@ fn strip_debuginfo_in_release() {
         .run();
 }
 
+// Using -Cstrip=debuginfo in release mode by default is temporarily disabled on Windows due to
+// https://github.com/rust-lang/rust/issues/122857
 #[cargo_test]
+#[cfg(all(target_os = "windows", target_env = "msvc"))]
+fn do_not_strip_debuginfo_in_release_on_windows() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("build --release -v")
+        .with_stderr_does_not_contain("[..]strip=debuginfo[..]")
+        .run();
+}
+
+// Temporarily disabled on Windows due to https://github.com/rust-lang/rust/issues/122857
+#[cargo_test]
+#[cfg(not(windows))]
 fn strip_debuginfo_without_debug() {
     let p = project()
         .file(
