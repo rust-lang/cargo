@@ -1298,6 +1298,16 @@ fn to_virtual_manifest(
     let workspace_config = match original_toml.workspace {
         Some(ref toml_config) => {
             verify_lints(toml_config.lints.as_ref(), gctx, &mut warnings)?;
+            if let Some(ws_deps) = &toml_config.dependencies {
+                for (name, dep) in ws_deps {
+                    unused_dep_keys(
+                        name,
+                        "workspace.dependencies",
+                        dep.unused_keys(),
+                        &mut warnings,
+                    );
+                }
+            }
             let ws_root_config = to_workspace_config(toml_config, root);
             gctx.ws_roots
                 .borrow_mut()
