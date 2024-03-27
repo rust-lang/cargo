@@ -6,4 +6,6 @@ version = "0.0.0"
 edition = "2015"
 
 [dependencies]
-your-face = { version = "99999.0.0", features = ["eyes"] }
+# Before your-face
+your-face = { version = "99999.0.0", features = ["eyes"] }  # After your-face
+# End

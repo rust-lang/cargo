@@ -6,7 +6,9 @@ version = "0.0.0"
 edition = "2015"
 
 [dependencies]
-versioned-package = { version = "0.3.0", optional = true, git = "[ROOTURL]/versioned-package" }
+# Before versioned-package
+versioned-package = { version = "0.3.0", optional = true, git = "[ROOTURL]/versioned-package" }  # After versioned-package
 
 [features]
 versioned-package = ["dep:versioned-package"]
+# End

@@ -6,7 +6,9 @@ version = "0.0.0"
 edition = "2015"
 
 [dependencies]
-a1 = { package = "versioned-package", version = "0.1.1", optional = true }
+# Before a1
+a1 = { package = "versioned-package", version = "0.1.1", optional = true }  # After a1
 
 [features]
 a1 = ["dep:a1"]
+# End

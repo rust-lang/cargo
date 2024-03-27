@@ -7,4 +7,6 @@ version = "0.0.0"
 edition = "2015"
 
 [dependencies]
-my-package = { version = "0.1.0" }
+# Before my-package
+my-package = { version = "0.1.0" }  # After my-package
+# End

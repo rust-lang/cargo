@@ -6,5 +6,8 @@ version = "0.0.0"
 edition = "2015"
 
 [dependencies]
-my-package1 = "99999.0.0"
-my-package2 = "0.4.1"
+# Before my-package1
+my-package1 = "99999.0.0"  # After my-package1
+# Before my-package2
+my-package2 = "0.4.1"  # After my-package2
+# End
