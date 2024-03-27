@@ -192,10 +192,15 @@ fn env_applied_to_target_info_discovery_rustc() {
             "src/main.rs",
             r#"
             fn main() {
-                let mut args = std::env::args().skip(1);
-                let env_test = std::env::var("ENV_TEST").unwrap();
-                eprintln!("WRAPPER ENV_TEST:{env_test}");
-                let status = std::process::Command::new(&args.next().unwrap())
+                let mut cmd = std::env::args().skip(1).collect::<Vec<_>>();
+                if cmd.get(1).map(|s| &**s) == Some("-vV") {
+                    // This is the version query, not the target info query, so skip this.
+                } else {
+                    let env_test = std::env::var("ENV_TEST").unwrap();
+                    eprintln!("WRAPPER ENV_TEST:{env_test}");
+                }
+                let (prog, args) = cmd.split_first().unwrap();
+                let status = std::process::Command::new(prog)
                     .args(args).status().unwrap();
                 std::process::exit(status.code().unwrap_or(1));
             }
