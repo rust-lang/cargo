@@ -479,21 +479,6 @@ pub fn to_real_manifest(
         );
     };
 
-    if let Some(deps) = original_toml
-        .workspace
-        .as_ref()
-        .and_then(|ws| ws.dependencies.as_ref())
-    {
-        for (name, dep) in deps {
-            if dep.is_optional() {
-                bail!("{name} is optional, but workspace dependencies cannot be optional",);
-            }
-            if dep.is_public() {
-                bail!("{name} is public, but workspace dependencies cannot be public",);
-            }
-        }
-    }
-
     // Parse features first so they will be available when parsing other parts of the TOML.
     let empty = Vec::new();
     let cargo_features = original_toml.cargo_features.as_ref().unwrap_or(&empty);
@@ -1226,6 +1211,15 @@ fn to_workspace_config(
             verify_lints(toml_config.lints.as_ref(), gctx, warnings)?;
             if let Some(ws_deps) = &toml_config.dependencies {
                 for (name, dep) in ws_deps {
+                    if dep.is_optional() {
+                        bail!("{name} is optional, but workspace dependencies cannot be optional",);
+                    }
+                    if dep.is_public() {
+                        bail!("{name} is public, but workspace dependencies cannot be public",);
+                    }
+                }
+
+                for (name, dep) in ws_deps {
                     unused_dep_keys(name, "workspace.dependencies", dep.unused_keys(), warnings);
                 }
             }
@@ -1277,21 +1271,6 @@ fn to_virtual_manifest(
     let root = manifest_file.parent().unwrap();
 
     let mut resolved_toml = original_toml.clone();
-
-    if let Some(deps) = original_toml
-        .workspace
-        .as_ref()
-        .and_then(|ws| ws.dependencies.as_ref())
-    {
-        for (name, dep) in deps {
-            if dep.is_optional() {
-                bail!("{name} is optional, but workspace dependencies cannot be optional",);
-            }
-            if dep.is_public() {
-                bail!("{name} is public, but workspace dependencies cannot be public",);
-            }
-        }
-    }
 
     for field in original_toml.requires_package() {
         bail!("this virtual manifest specifies a `{field}` section, which is not allowed");
