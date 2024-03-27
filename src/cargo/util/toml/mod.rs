@@ -520,28 +520,12 @@ pub fn to_real_manifest(
         (None, None) => bail!("no `package` section found"),
     };
 
-    let workspace_config = match (original_toml.workspace.as_ref(), package.workspace.as_ref()) {
-        (Some(toml_config), None) => {
-            verify_lints(toml_config.lints.as_ref(), gctx, warnings)?;
-            if let Some(ws_deps) = &toml_config.dependencies {
-                for (name, dep) in ws_deps {
-                    unused_dep_keys(name, "workspace.dependencies", dep.unused_keys(), warnings);
-                }
-            }
-            let ws_root_config = to_workspace_config(toml_config, package_root);
-            gctx.ws_roots
-                .borrow_mut()
-                .insert(package_root.to_path_buf(), ws_root_config.clone());
-            WorkspaceConfig::Root(ws_root_config)
-        }
-        (None, root) => WorkspaceConfig::Member {
-            root: root.cloned(),
-        },
-        (Some(..), Some(..)) => bail!(
-            "cannot configure both `package.workspace` and \
-                 `[workspace]`, only one can be specified"
-        ),
-    };
+    let workspace_config = to_workspace_config(&original_toml, package_root, gctx, warnings)?;
+    if let WorkspaceConfig::Root(ws_root_config) = &workspace_config {
+        gctx.ws_roots
+            .borrow_mut()
+            .insert(package_root.to_owned(), ws_root_config.clone());
+    }
     let inherit_cell: LazyCell<InheritableFields> = LazyCell::new();
     let inherit = || {
         inherit_cell
@@ -1229,6 +1213,37 @@ fn resolve_and_validate_dependencies(
 }
 
 fn to_workspace_config(
+    original_toml: &manifest::TomlManifest,
+    package_root: &Path,
+    gctx: &GlobalContext,
+    warnings: &mut Vec<String>,
+) -> CargoResult<WorkspaceConfig> {
+    let workspace_config = match (
+        original_toml.workspace.as_ref(),
+        original_toml.package().and_then(|p| p.workspace.as_ref()),
+    ) {
+        (Some(toml_config), None) => {
+            verify_lints(toml_config.lints.as_ref(), gctx, warnings)?;
+            if let Some(ws_deps) = &toml_config.dependencies {
+                for (name, dep) in ws_deps {
+                    unused_dep_keys(name, "workspace.dependencies", dep.unused_keys(), warnings);
+                }
+            }
+            let ws_root_config = to_workspace_root_config(toml_config, package_root);
+            WorkspaceConfig::Root(ws_root_config)
+        }
+        (None, root) => WorkspaceConfig::Member {
+            root: root.cloned(),
+        },
+        (Some(..), Some(..)) => bail!(
+            "cannot configure both `package.workspace` and \
+                 `[workspace]`, only one can be specified"
+        ),
+    };
+    Ok(workspace_config)
+}
+
+fn to_workspace_root_config(
     resolved_toml: &manifest::TomlWorkspace,
     package_root: &Path,
 ) -> WorkspaceRootConfig {
@@ -1313,24 +1328,14 @@ fn to_virtual_manifest(
         .and_then(|ws| ws.resolver.as_deref())
         .map(|r| ResolveBehavior::from_manifest(r))
         .transpose()?;
-    let workspace_config = match original_toml.workspace {
-        Some(ref toml_config) => {
-            verify_lints(toml_config.lints.as_ref(), gctx, warnings)?;
-            if let Some(ws_deps) = &toml_config.dependencies {
-                for (name, dep) in ws_deps {
-                    unused_dep_keys(name, "workspace.dependencies", dep.unused_keys(), warnings);
-                }
-            }
-            let ws_root_config = to_workspace_config(toml_config, root);
-            gctx.ws_roots
-                .borrow_mut()
-                .insert(root.to_path_buf(), ws_root_config.clone());
-            WorkspaceConfig::Root(ws_root_config)
-        }
-        None => {
-            bail!("virtual manifests must be configured with [workspace]");
-        }
-    };
+    let workspace_config = to_workspace_config(&original_toml, root, gctx, warnings)?;
+    if let WorkspaceConfig::Root(ws_root_config) = &workspace_config {
+        gctx.ws_roots
+            .borrow_mut()
+            .insert(root.to_owned(), ws_root_config.clone());
+    } else {
+        bail!("virtual manifests must be configured with [workspace]");
+    }
     let manifest = VirtualManifest::new(
         Rc::new(contents),
         Rc::new(document),
