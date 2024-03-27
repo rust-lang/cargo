@@ -1228,33 +1228,6 @@ fn to_workspace_config(
     ws_root_config
 }
 
-fn load_inheritable_fields(
-    gctx: &GlobalContext,
-    resolved_path: &Path,
-    workspace_config: &WorkspaceConfig,
-) -> CargoResult<InheritableFields> {
-    match workspace_config {
-        WorkspaceConfig::Root(root) => Ok(root.inheritable().clone()),
-        WorkspaceConfig::Member {
-            root: Some(ref path_to_root),
-        } => {
-            let path = resolved_path
-                .parent()
-                .unwrap()
-                .join(path_to_root)
-                .join("Cargo.toml");
-            let root_path = paths::normalize_path(&path);
-            inheritable_from_path(gctx, root_path)
-        }
-        WorkspaceConfig::Member { root: None } => {
-            match find_workspace_root(&resolved_path, gctx)? {
-                Some(path_to_root) => inheritable_from_path(gctx, path_to_root),
-                None => Err(anyhow!("failed to find a workspace root")),
-            }
-        }
-    }
-}
-
 fn to_virtual_manifest(
     contents: String,
     document: toml_edit::ImDocument<String>,
@@ -1558,6 +1531,33 @@ fn unused_dep_keys(
     for unused in unused_keys {
         let key = format!("unused manifest key: {kind}.{dep_name}.{unused}");
         warnings.push(key);
+    }
+}
+
+fn load_inheritable_fields(
+    gctx: &GlobalContext,
+    resolved_path: &Path,
+    workspace_config: &WorkspaceConfig,
+) -> CargoResult<InheritableFields> {
+    match workspace_config {
+        WorkspaceConfig::Root(root) => Ok(root.inheritable().clone()),
+        WorkspaceConfig::Member {
+            root: Some(ref path_to_root),
+        } => {
+            let path = resolved_path
+                .parent()
+                .unwrap()
+                .join(path_to_root)
+                .join("Cargo.toml");
+            let root_path = paths::normalize_path(&path);
+            inheritable_from_path(gctx, root_path)
+        }
+        WorkspaceConfig::Member { root: None } => {
+            match find_workspace_root(&resolved_path, gctx)? {
+                Some(path_to_root) => inheritable_from_path(gctx, path_to_root),
+                None => Err(anyhow!("failed to find a workspace root")),
+            }
+        }
     }
 }
 
