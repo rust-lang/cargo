@@ -22,7 +22,7 @@ use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::resolver::features::ForceAllTargets;
 use crate::core::resolver::{HasDevUnits, Resolve};
-use crate::core::{manifest, Dependency, Manifest, PackageId, PackageIdSpec, SourceId, Target};
+use crate::core::{Dependency, Manifest, PackageId, PackageIdSpec, SourceId, Target};
 use crate::core::{Summary, Workspace};
 use crate::sources::source::{MaybePackage, SourceMap};
 use crate::util::cache_lock::{CacheLock, CacheLockMode};
@@ -32,7 +32,6 @@ use crate::util::network::http::http_handle_and_timeout;
 use crate::util::network::http::HttpTimeout;
 use crate::util::network::retry::{Retry, RetryResult};
 use crate::util::network::sleep::SleepTracker;
-use crate::util::toml::prepare_for_publish;
 use crate::util::{self, internal, GlobalContext, Progress, ProgressStyle};
 
 /// Information about a package that is available somewhere in the file system.
@@ -182,12 +181,6 @@ impl Package {
                 manifest_path: self.manifest_path().to_owned(),
             }),
         }
-    }
-
-    pub fn to_registry_toml(&self, ws: &Workspace<'_>) -> CargoResult<String> {
-        let manifest = prepare_for_publish(self.manifest().resolved_toml(), ws, self.root())?;
-        let toml = toml::to_string_pretty(&manifest)?;
-        Ok(format!("{}\n{}", manifest::MANIFEST_PREAMBLE, toml))
     }
 
     /// Returns if package should include `Cargo.lock`.

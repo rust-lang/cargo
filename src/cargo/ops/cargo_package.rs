@@ -7,6 +7,7 @@ use std::sync::Arc;
 use std::task::Poll;
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
+use crate::core::manifest;
 use crate::core::manifest::Target;
 use crate::core::resolver::CliFeatures;
 use crate::core::{registry::PackageRegistry, resolver::HasDevUnits};
@@ -734,7 +735,12 @@ fn tar(
             }
             FileContents::Generated(generated_kind) => {
                 let contents = match generated_kind {
-                    GeneratedFile::Manifest => pkg.to_registry_toml(ws)?,
+                    GeneratedFile::Manifest => {
+                        let manifest =
+                            prepare_for_publish(pkg.manifest().resolved_toml(), ws, pkg.root())?;
+                        let toml = toml::to_string_pretty(&manifest)?;
+                        format!("{}\n{}", manifest::MANIFEST_PREAMBLE, toml)
+                    }
                     GeneratedFile::Lockfile => build_lock(ws, pkg)?,
                     GeneratedFile::VcsInfo(ref s) => serde_json::to_string_pretty(s)?,
                 };
