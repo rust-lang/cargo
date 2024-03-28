@@ -27,10 +27,10 @@ rust-2024-compatibility = "warn"
         .build();
 
     snapbox::cmd::Command::cargo_ui()
-        .masquerade_as_nightly_cargo(&["always_nightly"])
+        .masquerade_as_nightly_cargo(&["cargo-lints", "edition2024"])
         .current_dir(p.root())
         .arg("check")
-        .arg("--quiet")
+        .arg("-Zcargo-lints")
         .assert()
         .success()
         .stdout_matches(str![""])

@@ -1,25 +1,23 @@
 use cargo_test_support::prelude::*;
-use cargo_test_support::registry::Package;
-use cargo_test_support::str;
-use cargo_test_support::{file, project};
+use cargo_test_support::project;
+use cargo_test_support::{file, str};
 
 #[cargo_test]
 fn case() {
-    Package::new("bar", "0.1.0").publish();
     let p = project()
         .file(
             "Cargo.toml",
             r#"
+[workspace.lints.cargo]
+this-lint-does-not-exist-ws = "warn"
+
 [package]
 name = "foo"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
-bar = { version = "0.1.0", optional = true }
-
 [lints.cargo]
-implicit-features = "warn"
+this-lint-does-not-exist = "warn"
 "#,
         )
         .file("src/lib.rs", "")
