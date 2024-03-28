@@ -458,6 +458,8 @@ fn build_lock(ws: &Workspace<'_>, orig_pkg: &Package) -> CargoResult<String> {
     let toml_manifest =
         prepare_for_publish(orig_pkg.manifest().resolved_toml(), ws, orig_pkg.root())?;
     let source_id = orig_pkg.package_id().source_id();
+    let mut warnings = Default::default();
+    let mut errors = Default::default();
     let manifest = to_real_manifest(
         contents.to_owned(),
         document.clone(),
@@ -465,6 +467,8 @@ fn build_lock(ws: &Workspace<'_>, orig_pkg: &Package) -> CargoResult<String> {
         source_id,
         orig_pkg.manifest_path(),
         gctx,
+        &mut warnings,
+        &mut errors,
     )?;
     let new_pkg = Package::new(manifest, orig_pkg.manifest_path());
 
