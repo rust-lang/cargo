@@ -420,8 +420,14 @@ pub fn prepare_target(
     let mtime_on_use = build_runner.bcx.gctx.cli_unstable().mtime_on_use;
     let dirty_reason = compare_old_fingerprint(unit, &loc, &*fingerprint, mtime_on_use, force);
 
-    let Some(dirty_reason) = dirty_reason else {
-        return Ok(Job::new_fresh());
+    let dirty_reason = match dirty_reason {
+        Some(dr) => dr,
+        None => {
+            let Some(dr) = env_config_modified(bcx.gctx) else {
+                return Ok(Job::new_fresh());
+            };
+            dr
+        }
     };
 
     // We're going to rebuild, so ensure the source of the crate passes all
@@ -2230,4 +2236,18 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
         }
         Ok(ret)
     }
+}
+
+/// Detects if environment variables from config `[env]` is newly seted.
+fn env_config_modified(gctx: &crate::GlobalContext) -> Option<DirtyReason> {
+    for (key, value) in gctx.env_config().unwrap().iter() {
+        if !gctx.env().any(|(k, _)| k == key) {
+            continue;
+        }
+
+        if !value.is_force() && gctx.env().find(|(k, _)| k == key).is_some() {
+            return Some(DirtyReason::EnvConfigChanged);
+        }
+    }
+    None
 }
