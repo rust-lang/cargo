@@ -21,8 +21,8 @@
 #![allow(clippy::disallowed_methods)]
 
 use cargo_test_support::*;
-use std::env;
 use std::path::Path;
+use std::{env, fs};
 
 fn enable_build_std(e: &mut Execs, arg: Option<&str>) {
     e.env_remove("CARGO_HOME");
@@ -127,6 +127,154 @@ fn basic() {
         .join("deps");
     assert!(p.glob(deps_dir.join("*.rlib")).count() > 0);
     assert_eq!(p.glob(deps_dir.join("*.dylib")).count(), 0);
+}
+
+#[cargo_test(build_std_real)]
+fn validate_std_crate_graph() {
+    let p = project()
+        .file(
+            "src/main.rs",
+            "
+                fn main() {
+                    foo::f();
+                }
+
+                #[test]
+                fn smoke_bin_unit() {
+                    foo::f();
+                }
+            ",
+        )
+        .file(
+            "src/lib.rs",
+            "
+                extern crate alloc;
+                extern crate proc_macro;
+
+                /// ```
+                /// foo::f();
+                /// ```
+                pub fn f() {
+                }
+
+                #[test]
+                fn smoke_lib_unit() {
+                    f();
+                }
+            ",
+        )
+        .file(
+            "tests/smoke.rs",
+            "
+                #[test]
+                fn smoke_integration() {
+                    foo::f();
+                }
+            ",
+        )
+        .build();
+
+    // Extract serialized crate graph from build.
+    let serialized_graph = p
+        .cargo("build -Zunstable-options --unit-graph")
+        .build_std()
+        .target_host()
+        .exec_with_output()
+        .unwrap();
+    let crate_graph: serde_json::Value =
+        serde_json::from_slice(serialized_graph.stdout.as_slice()).unwrap();
+
+    // Find the stdlib sysroot.
+    let sysroot = String::from_utf8(
+        p.cargo("rustc -Zunstable-options --print sysroot")
+            .masquerade_as_nightly_cargo(&["unstable-options"])
+            .exec_with_output()
+            .unwrap()
+            .stdout,
+    )
+    .unwrap();
+
+    // Load stdlib lockfile.
+    let s = fs::read_to_string(Path::new(sysroot.trim()).join("lib/rustlib/src/rust/Cargo.lock"))
+        .unwrap();
+    let encoded_lockfile: cargo::core::resolver::EncodableResolve = toml::from_str(&s).unwrap();
+
+    // Extract the graph from both of the versions.
+    let out_graph = crate_graph
+        .as_object()
+        .unwrap()
+        .get("units")
+        .unwrap()
+        .as_array()
+        .unwrap();
+    let lockfile_graph = encoded_lockfile.package().unwrap();
+
+    // Check that resolved graph is subgraph of lockfile.
+    for out_unit in out_graph.iter() {
+        // Extract package name, version from ID.
+        let mut id_elems = out_unit.get("pkg_id").unwrap().as_str().unwrap().split(" ");
+        let pkg_id = id_elems.next().unwrap();
+        let pkg_version = id_elems.next().unwrap();
+
+        // Ignore if this is our dummy package.
+        if pkg_id == "foo" {
+            continue;
+        }
+
+        // Extract package dependencies.
+        let dependencies = out_unit.get("dependencies").unwrap().as_array().unwrap();
+
+        // Ensure this package exists in the lockfile & versions match.
+        let lockfile_pkg = lockfile_graph.iter().find(|pkg| pkg.name() == pkg_id);
+        if lockfile_pkg.is_none() {
+            panic!(
+                "Package '{}' ({}) was present in build-std unit graph, but not in lockfile.",
+                pkg_id, pkg_version
+            );
+        }
+        let lockfile_pkg = lockfile_pkg.unwrap();
+        if lockfile_pkg.version() != pkg_version {
+            panic!("Package '{}' ({}) from build-std unit graph does not match version in lockfile ({}).", pkg_id, pkg_version, lockfile_pkg.version());
+        }
+
+        // Check dependencies match (resolved must be subset of lockfile).
+        if lockfile_pkg.dependencies().is_some() && dependencies.len() > 0 {
+            let lockfile_deps = lockfile_pkg
+                .dependencies()
+                .unwrap()
+                .iter()
+                .map(|x| x.name().replace("-", "_"))
+                // Lockfile dependencies may have a prefix.
+                .map(|x| {
+                    x.strip_prefix("rustc_std_workspace_")
+                        .unwrap_or(&x)
+                        .to_string()
+                })
+                .collect::<Vec<String>>();
+
+            // When collecting resolved dependencies, we ignore the build script unit.
+            let dep_names = dependencies
+                .iter()
+                .map(|x| x.get("extern_crate_name").unwrap().as_str().unwrap())
+                // Resolved dependencies may start with a prefix.
+                .map(|x| {
+                    x.strip_prefix("rustc_std_workspace_")
+                        .unwrap_or(&x)
+                        .to_string()
+                })
+                .filter(|x| *x != "build_script_build");
+
+            for dep in dep_names {
+                if !lockfile_deps.contains(&dep.to_string()) {
+                    panic!("Package '{}' from build-std unit graph lists differing dependencies in unit graph from lockfile.", pkg_id);
+                }
+            }
+        } else if lockfile_pkg.dependencies().is_some()
+            && dependencies.len() > lockfile_pkg.dependencies().unwrap().len()
+        {
+            panic!("Package '{}' from build-std unit graph lists differing dependencies in unit graph from lockfile.", pkg_id);
+        }
+    }
 }
 
 #[cargo_test(build_std_real)]
