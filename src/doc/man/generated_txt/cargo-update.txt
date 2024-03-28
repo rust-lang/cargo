@@ -40,6 +40,10 @@ OPTIONS
            SemVer-compatible versions or seek help from the maintainers of the
            package.
 
+           It’s allows you choose any compatible pre-release version (nightly
+           only) even when a pre-release is not specified by a projects
+           Cargo.toml.
+
        -w, --workspace
            Attempt to update only packages defined in the workspace. Other
            packages are updated only if they don’t already exist in the

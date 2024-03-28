@@ -46,6 +46,9 @@ revision (such as a SHA hash or tag).
 While not recommended, you can specify a yanked version of a package (nightly only).
 When possible, try other non-yanked SemVer-compatible versions or seek help
 from the maintainers of the package.
+
+It's allows you choose any compatible `pre-release` version (nightly only) even when a pre-release is not specified by a projects `Cargo.toml`.
+
 {{/option}}
 
 {{#option "`-w`" "`--workspace`" }}
