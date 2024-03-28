@@ -640,17 +640,17 @@ See '<cyan,bold>cargo help</> <cyan><<command>></>' for more information on a sp
                 .value_parser(clap::builder::ValueParser::path_buf()),
         )
         .arg(
-            flag("frozen", "Require Cargo.lock and cache to be up-to-date")
-                .help_heading(heading::MANIFEST_OPTIONS)
-                .global(true),
-        )
-        .arg(
-            flag("locked", "Require Cargo.lock to be up-to-date")
+            flag("locked", "Assert that `Cargo.lock` will remain unchanged")
                 .help_heading(heading::MANIFEST_OPTIONS)
                 .global(true),
         )
         .arg(
             flag("offline", "Run without accessing the network")
+                .help_heading(heading::MANIFEST_OPTIONS)
+                .global(true),
+        )
+        .arg(
+            flag("frozen", "Equivalent to specifying both --locked and --offline")
                 .help_heading(heading::MANIFEST_OPTIONS)
                 .global(true),
         )

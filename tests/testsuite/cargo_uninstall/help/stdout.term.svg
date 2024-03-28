@@ -65,11 +65,11 @@
 </tspan>
     <tspan x="10px" y="424px"><tspan class="fg-green bold">Manifest Options:</tspan>
 </tspan>
-    <tspan x="10px" y="442px"><tspan>      </tspan><tspan class="fg-cyan bold">--frozen</tspan><tspan>   Require Cargo.lock and cache to be up-to-date</tspan>
+    <tspan x="10px" y="442px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan><tspan>   Assert that `Cargo.lock` will remain unchanged</tspan>
 </tspan>
-    <tspan x="10px" y="460px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan><tspan>   Require Cargo.lock to be up-to-date</tspan>
+    <tspan x="10px" y="460px"><tspan>      </tspan><tspan class="fg-cyan bold">--offline</tspan><tspan>  Run without accessing the network</tspan>
 </tspan>
-    <tspan x="10px" y="478px"><tspan>      </tspan><tspan class="fg-cyan bold">--offline</tspan><tspan>  Run without accessing the network</tspan>
+    <tspan x="10px" y="478px"><tspan>      </tspan><tspan class="fg-cyan bold">--frozen</tspan><tspan>   Equivalent to specifying both --locked and --offline</tspan>
 </tspan>
     <tspan x="10px" y="496px">
 </tspan>

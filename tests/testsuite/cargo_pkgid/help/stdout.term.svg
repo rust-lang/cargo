@@ -59,11 +59,11 @@
 </tspan>
     <tspan x="10px" y="370px"><tspan>      </tspan><tspan class="fg-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.toml</tspan>
 </tspan>
-    <tspan x="10px" y="388px"><tspan>      </tspan><tspan class="fg-cyan bold">--frozen</tspan><tspan>                Require Cargo.lock and cache to be up-to-date</tspan>
+    <tspan x="10px" y="388px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan><tspan>                Assert that `Cargo.lock` will remain unchanged</tspan>
 </tspan>
-    <tspan x="10px" y="406px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan><tspan>                Require Cargo.lock to be up-to-date</tspan>
+    <tspan x="10px" y="406px"><tspan>      </tspan><tspan class="fg-cyan bold">--offline</tspan><tspan>               Run without accessing the network</tspan>
 </tspan>
-    <tspan x="10px" y="424px"><tspan>      </tspan><tspan class="fg-cyan bold">--offline</tspan><tspan>               Run without accessing the network</tspan>
+    <tspan x="10px" y="424px"><tspan>      </tspan><tspan class="fg-cyan bold">--frozen</tspan><tspan>                Equivalent to specifying both --locked and --offline</tspan>
 </tspan>
     <tspan x="10px" y="442px">
 </tspan>
