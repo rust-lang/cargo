@@ -7,7 +7,6 @@ use std::sync::Arc;
 use std::task::Poll;
 
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
-use crate::core::manifest;
 use crate::core::manifest::Target;
 use crate::core::resolver::CliFeatures;
 use crate::core::{registry::PackageRegistry, resolver::HasDevUnits};
@@ -17,7 +16,7 @@ use crate::sources::PathSource;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::JobsConfig;
 use crate::util::errors::CargoResult;
-use crate::util::toml::{prepare_for_publish, to_real_manifest};
+use crate::util::toml::prepare_for_publish;
 use crate::util::{self, human_readable_bytes, restricted_names, FileLock, GlobalContext};
 use crate::{drop_println, ops};
 use anyhow::Context as _;
@@ -453,24 +452,7 @@ fn build_lock(ws: &Workspace<'_>, orig_pkg: &Package) -> CargoResult<String> {
     let gctx = ws.gctx();
     let orig_resolve = ops::load_pkg_lockfile(ws)?;
 
-    // Convert Package -> TomlManifest -> Manifest -> Package
-    let contents = orig_pkg.manifest().contents();
-    let document = orig_pkg.manifest().document();
-    let toml_manifest =
-        prepare_for_publish(orig_pkg.manifest().resolved_toml(), ws, orig_pkg.root())?;
-    let source_id = orig_pkg.package_id().source_id();
-    let mut warnings = Default::default();
-    let mut errors = Default::default();
-    let manifest = to_real_manifest(
-        contents.to_owned(),
-        document.clone(),
-        toml_manifest,
-        source_id,
-        orig_pkg.manifest_path(),
-        gctx,
-        &mut warnings,
-        &mut errors,
-    )?;
+    let manifest = prepare_for_publish(orig_pkg, ws)?;
     let new_pkg = Package::new(manifest, orig_pkg.manifest_path());
 
     // Regenerate Cargo.lock using the old one as a guide.
@@ -736,10 +718,8 @@ fn tar(
             FileContents::Generated(generated_kind) => {
                 let contents = match generated_kind {
                     GeneratedFile::Manifest => {
-                        let manifest =
-                            prepare_for_publish(pkg.manifest().resolved_toml(), ws, pkg.root())?;
-                        let toml = toml::to_string_pretty(&manifest)?;
-                        format!("{}\n{}", manifest::MANIFEST_PREAMBLE, toml)
+                        let manifest = prepare_for_publish(pkg, ws)?;
+                        manifest.to_resolved_contents()?
                     }
                     GeneratedFile::Lockfile => build_lock(ws, pkg)?,
                     GeneratedFile::VcsInfo(ref s) => serde_json::to_string_pretty(s)?,
