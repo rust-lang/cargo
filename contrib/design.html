@@ -1,0 +1,313 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Design Principles - Cargo Contributor Guide</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="issues.html"><strong aria-hidden="true">2.</strong> Issue Tracker</a></li><li class="chapter-item expanded "><a href="team.html"><strong aria-hidden="true">3.</strong> Cargo Team</a></li><li class="chapter-item expanded "><a href="process/index.html"><strong aria-hidden="true">4.</strong> Process</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="process/working-on-cargo.html"><strong aria-hidden="true">4.1.</strong> Working on Cargo</a></li><li class="chapter-item expanded "><a href="process/release.html"><strong aria-hidden="true">4.2.</strong> Release process</a></li><li class="chapter-item expanded "><a href="process/unstable.html"><strong aria-hidden="true">4.3.</strong> Unstable features</a></li><li class="chapter-item expanded "><a href="process/security.html"><strong aria-hidden="true">4.4.</strong> Security issues</a></li></ol></li><li class="chapter-item expanded "><a href="design.html" class="active"><strong aria-hidden="true">5.</strong> Design Principles</a></li><li class="chapter-item expanded "><a href="implementation/index.html"><strong aria-hidden="true">6.</strong> Implementing a Change</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="implementation/architecture.html"><strong aria-hidden="true">6.1.</strong> Architecture</a></li><li class="chapter-item expanded "><a href="implementation/packages.html"><strong aria-hidden="true">6.2.</strong> New packages</a></li><li class="chapter-item expanded "><a href="implementation/subcommands.html"><strong aria-hidden="true">6.3.</strong> New subcommands</a></li><li class="chapter-item expanded "><a href="implementation/console.html"><strong aria-hidden="true">6.4.</strong> Console Output</a></li><li class="chapter-item expanded "><a href="implementation/filesystem.html"><strong aria-hidden="true">6.5.</strong> Filesystem</a></li><li class="chapter-item expanded "><a href="implementation/formatting.html"><strong aria-hidden="true">6.6.</strong> Formatting</a></li><li class="chapter-item expanded "><a href="implementation/debugging.html"><strong aria-hidden="true">6.7.</strong> Debugging</a></li></ol></li><li class="chapter-item expanded "><a href="tests/index.html"><strong aria-hidden="true">7.</strong> Tests</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="tests/running.html"><strong aria-hidden="true">7.1.</strong> Running Tests</a></li><li class="chapter-item expanded "><a href="tests/writing.html"><strong aria-hidden="true">7.2.</strong> Writing Tests</a></li><li class="chapter-item expanded "><a href="tests/profiling.html"><strong aria-hidden="true">7.3.</strong> Benchmarking and Profiling</a></li><li class="chapter-item expanded "><a href="tests/crater.html"><strong aria-hidden="true">7.4.</strong> Crater</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Cargo Contributor Guide</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/rust-lang/cargo/tree/master/src/doc/contrib/src" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/rust-lang/cargo/edit/master/src/doc/contrib/src/design.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="design-principles"><a class="header" href="#design-principles">Design Principles</a></h1>
+<p>The purpose of Cargo is to formalize a canonical Rust workflow, by automating
+the standard tasks associated with distributing software. Cargo simplifies
+structuring a new project, adding dependencies, writing and running unit
+tests, and more.</p>
+<p>Cargo is not intended to be a general-purpose build tool. Ideally, it should
+be easy to integrate it within another build tool, though admittedly that is
+not as seamless as desired.</p>
+<h2 id="stability-and-compatibility"><a class="header" href="#stability-and-compatibility">Stability and compatibility</a></h2>
+<h3 id="backwards-compatibility"><a class="header" href="#backwards-compatibility">Backwards compatibility</a></h3>
+<p>Cargo strives to remain backwards compatible with projects created in previous
+versions. The CLI interface also strives to remain backwards compatible, such
+that the commands and options behave the same. That being said, changes in
+behavior, and even outright breakage are sometimes done in limited situations.
+The following outlines some situations where backwards-incompatible changes are
+made:</p>
+<ul>
+<li>Anything that addresses a security concern.</li>
+<li>Dropping support for older platforms and tooling. Cargo follows the Rust
+<a href="https://doc.rust-lang.org/nightly/rustc/platform-support.html">tiered platform support</a>.</li>
+<li>Changes to resolve possibly unsafe or unreliable behavior.</li>
+</ul>
+<p>None of these changes should be taken lightly, and should be avoided if
+possible, or possibly with some transition period to alert the user of the
+potential change.</p>
+<p>Behavior is sometimes changed in ways that have a high confidence that it
+won’t break existing workflows. Almost every change carries this risk, so it
+is often a judgment call balancing the benefit of the change with the
+perceived possibility of its negative consequences.</p>
+<p>At times, some changes fall in the gray area, where the current behavior is
+undocumented, or not working as intended. These are more difficult judgment
+calls. The general preference is to balance towards avoiding breaking existing
+workflows.</p>
+<p>Support for older registry APIs and index formats may be dropped, if there is
+high confidence that there aren’t any active registries that may be affected.
+This has never (to my knowledge) happened so far, and is unlikely to happen in
+the future, but remains a possibility.</p>
+<p>In all of the above, a transition period may be employed if a change is known
+to cause breakage. A warning can be issued to alert the user that something
+will change, and provide them with an alternative to resolve the issue
+(preferably in a way that is compatible across versions if possible).</p>
+<p>Cargo is only expected to work with the version of the related Rust tools
+(<code>rustc</code>, <code>rustdoc</code>, etc.) that it is released with. As a matter of choice,
+the latest nightly works with the most recent stable release, but that is
+mostly to accommodate development of Cargo itself, and should not be expected
+by users.</p>
+<h3 id="forwards-compatibility"><a class="header" href="#forwards-compatibility">Forwards compatibility</a></h3>
+<p>Additionally, Cargo strives a limited degree of <em>forwards compatibility</em>.
+Changes should not egregiously prevent older versions from working. This is
+mostly relevant for persistent data, such as on-disk files and the registry
+interface and index. It also applies to a lesser degree to the registry API.</p>
+<p>Changes to <code>Cargo.lock</code> require a transition time, where the new format is not
+automatically written when the lock file is updated. The transition time
+should not be less than 6 months, though preferably longer. New projects may
+use the new format in a shorter time frame.</p>
+<p>Changes to <code>Cargo.toml</code> can be made in any release. This is because the user
+must manually modify the file, and opt-in to any new changes. Additionally,
+Cargo will usually only issue a warning about new fields it doesn’t
+understand, but otherwise continue to function.</p>
+<p>Changes to cache files (such as artifacts in the <code>target</code> directory, or cached
+data in Cargo’s home directory) should not <em>prevent</em> older versions from
+running, but they may cause older versions to recreate the cache, which may
+result in a performance impact.</p>
+<p>Changes to the registry index should not prevent older versions from working.
+Generally, older versions ignore new fields, so the format should be easily
+extensible. Changes to the format or interpretation of existing fields should
+be done very carefully to avoid preventing older versions of Cargo from
+working. In some cases, this may mean that older versions of Cargo will not be
+able to <em>select</em> a newly published crate, but it shouldn’t prevent them from
+working at all. This level of compatibility may not last forever, but the
+exact time frame for such a change has not yet been decided.</p>
+<p>The registry API may be changed in such a way to prevent older versions of
+Cargo from working. Generally, compatibility should be retained for as long as
+possible, but the exact length of time is not specified.</p>
+<h2 id="simplicity-and-layers"><a class="header" href="#simplicity-and-layers">Simplicity and layers</a></h2>
+<p>Standard workflows should be easy and consistent. Each knob that is added has
+a high cost, regardless if it is intended for a small audience. Layering and
+defaults can help avoid the surface area that the user needs to be concerned
+with. Try to avoid small functionalities that may have complex interactions
+with one another.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="process/security.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="implementation/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="process/security.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="implementation/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

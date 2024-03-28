@@ -1,0 +1,377 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Cargo Team - Cargo Contributor Guide</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="index.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="issues.html"><strong aria-hidden="true">2.</strong> Issue Tracker</a></li><li class="chapter-item expanded "><a href="team.html" class="active"><strong aria-hidden="true">3.</strong> Cargo Team</a></li><li class="chapter-item expanded "><a href="process/index.html"><strong aria-hidden="true">4.</strong> Process</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="process/working-on-cargo.html"><strong aria-hidden="true">4.1.</strong> Working on Cargo</a></li><li class="chapter-item expanded "><a href="process/release.html"><strong aria-hidden="true">4.2.</strong> Release process</a></li><li class="chapter-item expanded "><a href="process/unstable.html"><strong aria-hidden="true">4.3.</strong> Unstable features</a></li><li class="chapter-item expanded "><a href="process/security.html"><strong aria-hidden="true">4.4.</strong> Security issues</a></li></ol></li><li class="chapter-item expanded "><a href="design.html"><strong aria-hidden="true">5.</strong> Design Principles</a></li><li class="chapter-item expanded "><a href="implementation/index.html"><strong aria-hidden="true">6.</strong> Implementing a Change</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="implementation/architecture.html"><strong aria-hidden="true">6.1.</strong> Architecture</a></li><li class="chapter-item expanded "><a href="implementation/packages.html"><strong aria-hidden="true">6.2.</strong> New packages</a></li><li class="chapter-item expanded "><a href="implementation/subcommands.html"><strong aria-hidden="true">6.3.</strong> New subcommands</a></li><li class="chapter-item expanded "><a href="implementation/console.html"><strong aria-hidden="true">6.4.</strong> Console Output</a></li><li class="chapter-item expanded "><a href="implementation/filesystem.html"><strong aria-hidden="true">6.5.</strong> Filesystem</a></li><li class="chapter-item expanded "><a href="implementation/formatting.html"><strong aria-hidden="true">6.6.</strong> Formatting</a></li><li class="chapter-item expanded "><a href="implementation/debugging.html"><strong aria-hidden="true">6.7.</strong> Debugging</a></li></ol></li><li class="chapter-item expanded "><a href="tests/index.html"><strong aria-hidden="true">7.</strong> Tests</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="tests/running.html"><strong aria-hidden="true">7.1.</strong> Running Tests</a></li><li class="chapter-item expanded "><a href="tests/writing.html"><strong aria-hidden="true">7.2.</strong> Writing Tests</a></li><li class="chapter-item expanded "><a href="tests/profiling.html"><strong aria-hidden="true">7.3.</strong> Benchmarking and Profiling</a></li><li class="chapter-item expanded "><a href="tests/crater.html"><strong aria-hidden="true">7.4.</strong> Crater</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Cargo Contributor Guide</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/rust-lang/cargo/tree/master/src/doc/contrib/src" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/rust-lang/cargo/edit/master/src/doc/contrib/src/team.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="cargo-team"><a class="header" href="#cargo-team">Cargo Team</a></h1>
+<h2 id="mission"><a class="header" href="#mission">Mission</a></h2>
+<p>The Cargo Team is a group of volunteers that support the Rust community in developing and maintaining Cargo, the Rust package manager and build tool.
+The team is responsible for deciding how Cargo and its related libraries operate and evolve.
+The team has a shared responsibility with the <a href="https://www.rust-lang.org/governance/teams/crates-io">crates.io team</a> for the design and usage of Cargo’s index format and its registry API as it relates to the <a href="https://crates.io/">crates.io</a> service.</p>
+<p>The team is expected to keep Cargo in an operational state, to support Rust’s 6-week release cycle, and to uphold the <a href="design.html">Design Principles</a> of Cargo.</p>
+<h2 id="team-membership"><a class="header" href="#team-membership">Team membership</a></h2>
+<p>The Cargo Team consists of team members with one serving as a team leader.
+The team leader is responsible for coordinating the team and providing a contact point with other teams.
+The leader is selected by consensus of the existing members with no objections.</p>
+<p>Membership is maintained in the <a href="https://github.com/rust-lang/team/blob/master/teams/cargo.toml">Rust team database</a>.</p>
+<h3 id="membership-expectations"><a class="header" href="#membership-expectations">Membership expectations</a></h3>
+<p>Team members are expected to participate in voting on RFCs and major change proposals</p>
+<p>Team members are expected to regularly participate in at least some of the following membership-related activities.
+Members are not expected to participate in all of these activities, but exhibit some interest and involvement in the project that covers some of these activities.</p>
+<ul>
+<li>Attending meetings</li>
+<li>Reviewing contributions (auto-assignment is managed in <a href="https://github.com/rust-lang/cargo/blob/master/triagebot.toml">triagebot.toml</a>)</li>
+<li>Triaging and responding to issues</li>
+<li>Mentoring new contributors</li>
+<li>Shepherding major changes and RFCs</li>
+<li>Coordinating interaction with other Rust groups and outside interests</li>
+<li>Managing and updating the policies of the Cargo Team itself</li>
+<li>Keeping up with maintenance of the Cargo codebase, ensuring it stays functional and that infrastructure and team processes continue to run smoothly</li>
+</ul>
+<p>Breaks and vacations are welcome and encouraged.
+If a member is no longer participating after a few months, they may be asked to step down.</p>
+<p>Members are required to always:</p>
+<ul>
+<li>Represent the Rust project in a way that upholds the <a href="https://www.rust-lang.org/policies/code-of-conduct">Rust code of conduct</a> to a high standard.</li>
+<li>Represent the Cargo Team in a way that upholds the expectations of this charter, and be friendly, welcoming, and constructive with contributors and users.</li>
+</ul>
+<p>Members are given privileges, such as:</p>
+<ul>
+<li>Merge permissions (bors rights)</li>
+<li>Issue and project management (GitHub permissions)</li>
+<li>Voting and decision making (RFCs, major changes)</li>
+<li>Access to private communications related to team management and security discussions</li>
+</ul>
+<h3 id="meetings"><a class="header" href="#meetings">Meetings</a></h3>
+<p>The team meets on a weekly basis on a video chat.
+If you are interested in participating, feel free to contact us on <a href="https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo">Zulip</a>.</p>
+<p>Minutes for all meetings are recorded on <a href="https://hackmd.io/@rust-cargo-team?tags=%5B%22meetings%22%5D">HackMD</a>.</p>
+<h3 id="becoming-a-member"><a class="header" href="#becoming-a-member">Becoming a member</a></h3>
+<p>A contributor can become a member of the Cargo Team by requesting a review or being nominated by one of the existing members.
+They can be added by unanimous consent of the team.
+The team lead or another member of the team will also confirm with the moderation team that there are no concerns involving the proposed team member.</p>
+<p>Contributors who wish to join the team should exhibit an interest in carrying the design principles of Cargo and participate in some of the activities listed above in <a href="#membership-expectations">Membership Expectations</a>.</p>
+<p>Members may leave at any time, preferably by letting the team know ahead of time.</p>
+<h2 id="team-resources"><a class="header" href="#team-resources">Team resources</a></h2>
+<h3 id="zulip"><a class="header" href="#zulip">Zulip</a></h3>
+<p>The Cargo team has several streams on Zulip:</p>
+<ul>
+<li><a href="https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo"><code>#t-cargo</code></a> — General public channel for discussing any topics related to Cargo.</li>
+<li><a href="https://rust-lang.zulipchat.com/#narrow/stream/334885-t-cargo.2Fbuild-integration"><code>#t-cargo/build-integration</code></a> — Discussions about integration with build systems.</li>
+<li><a href="https://rust-lang.zulipchat.com/#narrow/stream/260232-t-cargo.2FPubGrub"><code>#t-cargo/PubGrub</code></a> — Discussions about the <a href="https://github.com/pubgrub-rs/pubgrub">PubGrub</a> project.</li>
+</ul>
+<p>The following are private streams for the Cargo team. The team should avoid using this unless necessary (for example, discussing a security issue or team and meeting organization).</p>
+<ul>
+<li><a href="https://rust-lang.zulipchat.com/#narrow/stream/296752-t-cargo.2Fprivate"><code>#t-cargo/private</code></a> — Private channel for discussions among the team.</li>
+<li><a href="https://rust-lang.zulipchat.com/#narrow/stream/364532-t-cargo.2Fmeetings"><code>#t-cargo/meetings</code></a> — Private channel for discussions about team meetings, including non-members who regularly attend the meetings.</li>
+</ul>
+<h3 id="hackmd"><a class="header" href="#hackmd">HackMD</a></h3>
+<p>The Cargo team has a shared, public workspace on HackMD at <a href="https://hackmd.io/@rust-cargo-team">https://hackmd.io/@rust-cargo-team</a> for drafting documents and recording meeting minutes.</p>
+<p>Since this HackMD workspace is using the free service, it does not support private documents. If you need to draft a private document, create it in your personal workspace and use private channels to share the link.</p>
+<h2 id="decision-process"><a class="header" href="#decision-process">Decision process</a></h2>
+<p>The team uses a consensus-driven process for making decisions ranging from new features and major changes to management of the team itself.
+The degree of process is correlated with the degree of change being proposed:</p>
+<ul>
+<li>
+<p>Bug fixes, refactorings, documentation updates, and other small changes are usually delegated to a single team member (who is not the author) to approve based on their judgement.
+Team members may also solicit feedback from other members or the whole team for any change should they want to gather other perspectives from the team.</p>
+<p>Some examples of what this might cover are:</p>
+<ul>
+<li>Bug fixes that do not introduce backwards-incompatible changes, and adhere to Cargo’s expected behavior.</li>
+<li>Addition of new warnings, or other diagnostic changes.</li>
+<li>New or updated documentation.</li>
+<li>Localized refactorings (that is, those that do not have a significant, wide-ranging impact to the usage and maintenance of the codebase).</li>
+<li>Minor or planned changes to Cargo’s console output.</li>
+<li>Beta backports that clearly address a regression, and are expected to be low-risk.</li>
+<li>Development of a previously approved unstable feature that matches the expected development of that feature.</li>
+</ul>
+</li>
+<li>
+<p>Small features or changes, large refactorings, or major changes to Cargo’s codebase or process require an approval by the team via consensus.
+These decisions can be done via the FCP process of <a href="https://github.com/rust-lang/rfcbot-rs">rfcbot</a>, or in an ad-hoc manner such as during a team meeting.
+rfcbot FCP requests do not require waiting for the 10-day feedback window if there is a complete team consensus, as this process is mostly aimed at polling the team rather than publicly soliciting feedback.
+Though, public feedback is welcome at any time.</p>
+<p>Some examples of what this might cover are:</p>
+<ul>
+<li>Addition of a new, minor command-line argument, or an addition of an option to an existing one.</li>
+<li>Addition of new fields and values to JSON outputs.</li>
+<li>A bug fix or change that may technically involve a backwards-incompatible change.
+See the <a href="design.html#backwards-compatibility">Backwards compatibility</a> section for some examples.</li>
+<li>Documentation changes that may substantially change the expected usage of Rust and Cargo.
+For example, the <a href="https://doc.rust-lang.org/cargo/reference/semver.html">SemVer chapter</a> contains subjective prescriptions for how users should develop their code.</li>
+<li>A significant change in Cargo’s console output.</li>
+<li>A significant change to Cargo’s code structure, or how maintenance or usage of the Cargo codebase is handled.</li>
+<li>Beta backports that are risky or have any uncertainty about their necessity.</li>
+<li><a href="process/release.html#stable-backports">Stable backports</a>.
+These usually also require involvement with the Release team.</li>
+<li>A significant change to the management of the Cargo team itself or the processes it uses, such as significant updates to this document.</li>
+<li>Addition of new members to the Cargo team, or other actions involving the team membership.
+These decisions are usually processed via private channels by the entirety of the team.</li>
+<li>A change that is a “one-way door”.
+That is, something that is difficult to reverse without breaking backwards compatibility.</li>
+</ul>
+</li>
+<li>
+<p>Larger features should usually go through the <a href="https://github.com/rust-lang/rfcs/">RFC process</a>.
+This usually involves first soliciting feedback from the Cargo team and the rest of the community, often via the <a href="https://internals.rust-lang.org/">Rust Internals</a> discussion board, <a href="https://github.com/rust-lang/cargo/issues/">Cargo’s issue tracker</a>, and the <a href="https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo">Zulip</a> channel.
+If there is positive feedback to the idea, the next step is to formally post an RFC on the RFC repo.
+The community and the Cargo team will have an opportunity to provide feedback on the proposal.
+After some period of time, the Cargo team may decide to either accept, postpone, or close a proposal based on the interest in the proposal and the team’s availability.</p>
+<p>Some examples of what this might cover are:</p>
+<ul>
+<li>Major changes or new features or options in <code>Cargo.toml</code> or the config files.</li>
+<li>Changes to the registry index or API.</li>
+<li>New or changed CLI options that are expected to have a significant impact on how Cargo is used.</li>
+<li>New <code>cargo</code> commands that are not trivial.
+In some cases, the team may decide to adopt a pre-existing external command without an RFC if the command has already been broadly adopted.</li>
+</ul>
+</li>
+<li>
+<p>Stabilization of <a href="process/unstable.html">Unstable</a> features requires an approval via the FCP process of <a href="https://github.com/rust-lang/rfcbot-rs">rfcbot</a>.
+This provides a final opportunity to solicit feedback from the public, and for the Cargo team to agree via consensus.</p>
+</li>
+<li>
+<p>The team may decide to experiment with larger features without starting the RFC process if it is an initiative that the team has consensus that it is something they want to pursue.
+This is usually reserved for something that has an unclear path that the RFC process is not expected to provide feedback that would substantially move the process forward.
+Such experiments are expected to be nightly-only (see the <a href="process/unstable.html">Unstable</a> chapter), and involve efforts to shape the final result via exploration, testing, and public involvement.
+Any such features <em>must</em> ultimately have an RFC approved before they can be stabilized.</p>
+</li>
+</ul>
+<h2 id="contacting-the-team"><a class="header" href="#contacting-the-team">Contacting the team</a></h2>
+<p>The team may be contacted through several channels:</p>
+<ul>
+<li>If you have a <strong>security concern</strong>, please refer to Rust’s <a href="https://www.rust-lang.org/security.html">security policy</a> for the correct contact method.</li>
+<li>Issues and feature requests can be submitted to <a href="https://github.com/rust-lang/cargo/issues/">Cargo’s issue tracker</a>.
+Please see the <a href="issues.html">Issues chapter</a> for more detail.</li>
+<li>The <a href="https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo"><code>t-cargo</code> Zulip channel</a> stream is the chat platform the Cargo Team uses to coordinate on.</li>
+<li>The <a href="mailto:cargo@rust-lang.org">cargo@rust-lang.org</a> email address can be used to contact the team.
+However, using one of the other channels is strongly encouraged.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="process/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="process/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

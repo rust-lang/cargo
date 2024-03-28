@@ -1,0 +1,520 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Writing Tests - Cargo Contributor Guide</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../index.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../issues.html"><strong aria-hidden="true">2.</strong> Issue Tracker</a></li><li class="chapter-item expanded "><a href="../team.html"><strong aria-hidden="true">3.</strong> Cargo Team</a></li><li class="chapter-item expanded "><a href="../process/index.html"><strong aria-hidden="true">4.</strong> Process</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../process/working-on-cargo.html"><strong aria-hidden="true">4.1.</strong> Working on Cargo</a></li><li class="chapter-item expanded "><a href="../process/release.html"><strong aria-hidden="true">4.2.</strong> Release process</a></li><li class="chapter-item expanded "><a href="../process/unstable.html"><strong aria-hidden="true">4.3.</strong> Unstable features</a></li><li class="chapter-item expanded "><a href="../process/security.html"><strong aria-hidden="true">4.4.</strong> Security issues</a></li></ol></li><li class="chapter-item expanded "><a href="../design.html"><strong aria-hidden="true">5.</strong> Design Principles</a></li><li class="chapter-item expanded "><a href="../implementation/index.html"><strong aria-hidden="true">6.</strong> Implementing a Change</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../implementation/architecture.html"><strong aria-hidden="true">6.1.</strong> Architecture</a></li><li class="chapter-item expanded "><a href="../implementation/packages.html"><strong aria-hidden="true">6.2.</strong> New packages</a></li><li class="chapter-item expanded "><a href="../implementation/subcommands.html"><strong aria-hidden="true">6.3.</strong> New subcommands</a></li><li class="chapter-item expanded "><a href="../implementation/console.html"><strong aria-hidden="true">6.4.</strong> Console Output</a></li><li class="chapter-item expanded "><a href="../implementation/filesystem.html"><strong aria-hidden="true">6.5.</strong> Filesystem</a></li><li class="chapter-item expanded "><a href="../implementation/formatting.html"><strong aria-hidden="true">6.6.</strong> Formatting</a></li><li class="chapter-item expanded "><a href="../implementation/debugging.html"><strong aria-hidden="true">6.7.</strong> Debugging</a></li></ol></li><li class="chapter-item expanded "><a href="../tests/index.html"><strong aria-hidden="true">7.</strong> Tests</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../tests/running.html"><strong aria-hidden="true">7.1.</strong> Running Tests</a></li><li class="chapter-item expanded "><a href="../tests/writing.html" class="active"><strong aria-hidden="true">7.2.</strong> Writing Tests</a></li><li class="chapter-item expanded "><a href="../tests/profiling.html"><strong aria-hidden="true">7.3.</strong> Benchmarking and Profiling</a></li><li class="chapter-item expanded "><a href="../tests/crater.html"><strong aria-hidden="true">7.4.</strong> Crater</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Cargo Contributor Guide</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/rust-lang/cargo/tree/master/src/doc/contrib/src" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/rust-lang/cargo/edit/master/src/doc/contrib/src/tests/writing.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="writing-tests"><a class="header" href="#writing-tests">Writing Tests</a></h1>
+<p>The following focuses on writing an integration test. However, writing unit
+tests is also encouraged!</p>
+<h2 id="testsuite"><a class="header" href="#testsuite">Testsuite</a></h2>
+<p>Cargo has a wide variety of integration tests that execute the <code>cargo</code> binary
+and verify its behavior, located in the <a href="https://github.com/rust-lang/cargo/tree/master/tests/testsuite/"><code>testsuite</code></a> directory.  The
+<a href="https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/lib.rs"><code>support</code></a> crate and <a href="https://docs.rs/snapbox/latest/snapbox/"><code>snapbox</code></a> contain many helpers to make this process easy.</p>
+<p>There are two styles of tests that can roughly be categorized as</p>
+<ul>
+<li>functional tests
+<ul>
+<li>The fixture is programmatically defined</li>
+<li>The assertions are regular string comparisons</li>
+<li>Easier to share in an issue as a code block is completely self-contained</li>
+<li>More resilient to insignificant changes though ui tests are easy to update when a change does occur</li>
+</ul>
+</li>
+<li>ui tests
+<ul>
+<li>The fixture is file-based</li>
+<li>The assertions use file-backed snapshots that can be updated with an env variable</li>
+<li>Easier to review the expected behavior of the command as more details are included</li>
+<li>Easier to get up and running from an existing project</li>
+<li>Easier to reason about as everything is just files in the repo</li>
+</ul>
+</li>
+</ul>
+<p>These tests typically work by creating a temporary “project” with a
+<code>Cargo.toml</code> file, executing the <code>cargo</code> binary process, and checking the
+stdout and stderr output against the expected output.</p>
+<h3 id="functional-tests"><a class="header" href="#functional-tests">Functional Tests</a></h3>
+<p>Generally, a functional test will be placed in <code>tests/testsuite/&lt;command&gt;.rs</code> and will look roughly like:</p>
+<pre><code class="language-rust ignore">#[cargo_test]
+fn &lt;description&gt;() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("hi!"); }"#)
+        .build();
+
+    p.cargo("run --bin foo")
+        .with_stderr(
+            "\
+    [COMPILING] foo [..]
+    [FINISHED] [..]
+    [RUNNING] `target/debug/foo`
+    ",
+        )
+        .with_stdout("hi!")
+        .run();
+    }
+}</code></pre>
+<p>The <a href="#cargo_test-attribute"><code>#[cargo_test]</code> attribute</a> is used in place of <code>#[test]</code> to inject some setup code.</p>
+<p><a href="https://github.com/rust-lang/cargo/blob/d847468768446168b596f721844193afaaf9d3f2/crates/cargo-test-support/src/lib.rs#L196-L202"><code>ProjectBuilder</code></a> via <code>project()</code>:</p>
+<ul>
+<li>Each project is in a separate directory in the sandbox</li>
+<li>If you do not specify a <code>Cargo.toml</code> manifest using <code>file()</code>, one is
+automatically created with a project name of <code>foo</code> using <code>basic_manifest()</code>.</li>
+</ul>
+<p><a href="https://github.com/rust-lang/cargo/blob/d847468768446168b596f721844193afaaf9d3f2/crates/cargo-test-support/src/lib.rs#L531-L550"><code>Execs</code></a> via <code>p.cargo(...)</code>:</p>
+<ul>
+<li>This executes the command and evaluates different assertions
+<ul>
+<li>See <a href="https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/compare.rs"><code>support::compare</code></a> for an explanation of the string pattern matching.
+Patterns are used to make it easier to match against the expected output.</li>
+</ul>
+</li>
+</ul>
+<h4 id="cargo_test-attribute"><a class="header" href="#cargo_test-attribute"><code>#[cargo_test]</code> attribute</a></h4>
+<p>The <code>#[cargo_test]</code> attribute injects code which does some setup before starting the test.
+It will create a filesystem “sandbox” under the “cargo integration test” directory for each test, such as <code>/path/to/cargo/target/tmp/cit/t123/</code>.
+The sandbox will contain a <code>home</code> directory that will be used instead of your normal home directory.</p>
+<p>The <code>#[cargo_test]</code> attribute takes several options that will affect how the test is generated.
+They are listed in parentheses separated with commas, such as:</p>
+<pre><code class="language-rust ignore">#[cargo_test(nightly, reason = "-Zfoo is unstable")]</code></pre>
+<p>The options it supports are:</p>
+<ul>
+<li><code>nightly</code> — This will cause the test to be ignored if not running on the nightly toolchain.
+This is useful for tests that use unstable options in <code>rustc</code> or <code>rustdoc</code>.
+These tests are run in Cargo’s CI, but are disabled in rust-lang/rust’s CI due to the difficulty of updating both repos simultaneously.
+A <code>reason</code> field is required to explain why it is nightly-only.</li>
+<li><code>build_std_real</code> — This is a “real” <code>-Zbuild-std</code> test (in the <code>build_std</code> integration test).
+This only runs on nightly, and only if the environment variable <code>CARGO_RUN_BUILD_STD_TESTS</code> is set (these tests on run on Linux).</li>
+<li><code>build_std_mock</code> — This is a “mock” <code>-Zbuild-std</code> test (which uses a mock standard library).
+This only runs on nightly, and is disabled for windows-gnu.</li>
+<li><code>requires_</code> — This indicates a command that is required to be installed to be run.
+For example, <code>requires_rustfmt</code> means the test will only run if the executable <code>rustfmt</code> is installed.
+These tests are <em>always</em> run on CI.
+This is mainly used to avoid requiring contributors from having every dependency installed.</li>
+<li><code>&gt;=1.64</code> — This indicates that the test will only run with the given version of <code>rustc</code> or newer.
+This can be used when a new <code>rustc</code> feature has been stabilized that the test depends on.
+If this is specified, a <code>reason</code> is required to explain why it is being checked.</li>
+<li><code>public_network_test</code> — This tests contacts the public internet.
+These tests are disabled unless the <code>CARGO_PUBLIC_NETWORK_TESTS</code> environment variable is set.
+Use of this should be <em>extremely rare</em>, please avoid using it if possible.
+The hosts it contacts should have a relatively high confidence that they are reliable and stable (such as github.com), especially in CI.
+The tests should be carefully considered for developer security and privacy as well.</li>
+<li><code>container_test</code> — This indicates that it is a test that uses Docker.
+These tests are disabled unless the <code>CARGO_CONTAINER_TESTS</code> environment variable is set.
+This requires that you have Docker installed.
+The SSH tests also assume that you have OpenSSH installed.
+These should work on Linux, macOS, and Windows where possible.
+Unfortunately these tests are not run in CI for macOS or Windows (no Docker on macOS, and Windows does not support Linux images).
+See <a href="https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/containers.rs"><code>crates/cargo-test-support/src/containers.rs</code></a> for more on writing these tests.</li>
+<li><code>ignore_windows="reason"</code> — Indicates that the test should be ignored on windows for the given reason.</li>
+</ul>
+<h4 id="testing-nightly-features"><a class="header" href="#testing-nightly-features">Testing Nightly Features</a></h4>
+<p>If you are testing a Cargo feature that only works on “nightly” Cargo, then
+you need to call <code>masquerade_as_nightly_cargo</code> on the process builder and pass
+the name of the feature as the reason, like this:</p>
+<pre><code class="language-rust ignore">p.cargo("build").masquerade_as_nightly_cargo(&amp;["print-im-a-teapot"])</code></pre>
+<p>If you are testing a feature that only works on <em>nightly rustc</em> (such as
+benchmarks), then you should use the <code>nightly</code> option of the <code>cargo_test</code>
+attribute, like this:</p>
+<pre><code class="language-rust ignore">#[cargo_test(nightly, reason = "-Zfoo is unstable")]</code></pre>
+<p>This will cause the test to be ignored if not running on the nightly toolchain.</p>
+<h4 id="specifying-dependencies"><a class="header" href="#specifying-dependencies">Specifying Dependencies</a></h4>
+<p>You should not write any tests that use the network such as contacting
+crates.io. Typically, simple path dependencies are the easiest way to add a
+dependency. Example:</p>
+<pre><code class="language-rust ignore">let p = project()
+    .file("Cargo.toml", r#"
+        [package]
+        name = "foo"
+        version = "1.0.0"
+
+        [dependencies]
+        bar = {path = "bar"}
+    "#)
+    .file("src/lib.rs", "extern crate bar;")
+    .file("bar/Cargo.toml", &amp;basic_manifest("bar", "1.0.0"))
+    .file("bar/src/lib.rs", "")
+    .build();</code></pre>
+<p>If you need to test with registry dependencies, see
+<a href="https://github.com/rust-lang/cargo/blob/d847468768446168b596f721844193afaaf9d3f2/crates/cargo-test-support/src/registry.rs#L311-L389"><code>support::registry::Package</code></a> for creating packages you can depend on.</p>
+<p>If you need to test git dependencies, see <a href="https://github.com/rust-lang/cargo/blob/master/crates/cargo-test-support/src/git.rs"><code>support::git</code></a> to create a git
+dependency.</p>
+<h4 id="cross-compilation"><a class="header" href="#cross-compilation">Cross compilation</a></h4>
+<p>There are some utilities to help support tests that need to work against a
+target other than the host. See <a href="running.html#running-cross-tests">Running cross
+tests</a> for more an introduction on cross
+compilation tests.</p>
+<p>Tests that need to do cross-compilation should include this at the top of the
+test to disable it in scenarios where cross compilation isn’t available:</p>
+<pre><code class="language-rust ignore">if cargo_test_support::cross_compile::disabled() {
+    return;
+}</code></pre>
+<p>The name of the target can be fetched with the <a href="https://github.com/rust-lang/cargo/blob/d58902e22e148426193cf3b8c4449fd3c05c0afd/crates/cargo-test-support/src/cross_compile.rs#L208-L225"><code>cross_compile::alternate()</code></a>
+function. The name of the host target can be fetched with
+<a href="https://github.com/rust-lang/cargo/blob/d58902e22e148426193cf3b8c4449fd3c05c0afd/crates/cargo-test-support/src/lib.rs#L1137-L1140"><code>cargo_test_support::rustc_host()</code></a>.</p>
+<p>The cross-tests need to distinguish between targets which can <em>build</em> versus
+those which can actually <em>run</em> the resulting executable. Unfortunately, macOS is
+currently unable to run an alternate target (Apple removed 32-bit support a
+long time ago). For building, <code>x86_64-apple-darwin</code> will target
+<code>x86_64-apple-ios</code> as its alternate. However, the iOS target can only execute
+binaries if the iOS simulator is installed and configured. The simulator is
+not available in CI, so all tests that need to run cross-compiled binaries are
+disabled on CI. If you are running on macOS locally, and have the simulator
+installed, then it should be able to run them.</p>
+<p>If the test needs to run the cross-compiled binary, then it should have
+something like this to exit the test before doing so:</p>
+<pre><code class="language-rust ignore">if cargo_test_support::cross_compile::can_run_on_host() {
+    return;
+}</code></pre>
+<h3 id="ui-tests"><a class="header" href="#ui-tests">UI Tests</a></h3>
+<p>UI Tests are a bit more spread out and generally look like:</p>
+<p><code>tests/testsuite/&lt;command&gt;/mod.rs</code>:</p>
+<pre><code class="language-rust ignore">mod &lt;case&gt;;</code></pre>
+<p><code>tests/testsuite/&lt;command&gt;/&lt;case&gt;/mod.rs</code>:</p>
+<pre><code class="language-rust ignore">use cargo_test_support::prelude::*;
+use cargo_test_support::compare::assert_ui;
+use cargo_test_support::Project;
+use cargo_test_support::curr_dir;
+
+#[cargo_test]
+fn case() {
+    let project = Project::from_template(curr_dir!().join("in"));
+    let project_root = project.root();
+    let cwd = &amp;project_root;
+
+    snapbox::cmd::Command::cargo_ui()
+        .arg("run")
+        .arg_line("--bin foo")
+        .current_dir(cwd)
+        .assert()
+        .success()
+        .stdout_matches_path(curr_dir!().join("stdout.log"))
+        .stderr_matches_path(curr_dir!().join("stderr.log"));
+
+    assert_ui().subset_matches(curr_dir!().join("out"), &amp;project_root);
+}</code></pre>
+<p>Then populate</p>
+<ul>
+<li><code>tests/testsuite/&lt;command&gt;/&lt;case&gt;/in</code> with the project’s directory structure</li>
+<li><code>tests/testsuite/&lt;command&gt;/&lt;case&gt;/out</code> with the files you want verified</li>
+<li><code>tests/testsuite/&lt;command&gt;/&lt;case&gt;/stdout.log</code> with nothing</li>
+<li><code>tests/testsuite/&lt;command&gt;/&lt;case&gt;/stderr.log</code> with nothing</li>
+</ul>
+<p><code>#[cargo_test]</code>:</p>
+<ul>
+<li>This is used in place of <code>#[test]</code></li>
+<li>This attribute injects code which does some setup before starting the
+test, creating a filesystem “sandbox” under the “cargo integration test”
+directory for each test such as
+<code>/path/to/cargo/target/cit/t123/</code></li>
+<li>The sandbox will contain a <code>home</code> directory that will be used instead of your normal home directory</li>
+</ul>
+<p><code>Project</code>:</p>
+<ul>
+<li>The project is copied from a directory in the repo</li>
+<li>Each project is in a separate directory in the sandbox</li>
+</ul>
+<p><a href="https://docs.rs/snapbox/latest/snapbox/cmd/struct.Command.html"><code>Command</code></a> via <code>Command::cargo_ui()</code>:</p>
+<ul>
+<li>Set up and run a command.</li>
+</ul>
+<p><a href="https://docs.rs/snapbox/latest/snapbox/cmd/struct.OutputAssert.html"><code>OutputAssert</code></a> via <code>Command::assert()</code>:</p>
+<ul>
+<li>Perform assertions on the result of the <a href="https://docs.rs/snapbox/latest/snapbox/cmd/struct.Command.html"><code>Command</code></a></li>
+</ul>
+<p><a href="https://docs.rs/snapbox/latest/snapbox/struct.Assert.html"><code>Assert</code></a> via <code>assert_ui()</code>:</p>
+<ul>
+<li>Verify the command modified the file system as expected</li>
+</ul>
+<h4 id="updating-snapshots"><a class="header" href="#updating-snapshots">Updating Snapshots</a></h4>
+<p>The project, stdout, and stderr snapshots can be updated by running with the
+<code>SNAPSHOTS=overwrite</code> environment variable, like:</p>
+<pre><code class="language-console">$ SNAPSHOTS=overwrite cargo test
+</code></pre>
+<p>Be sure to check the snapshots to make sure they make sense.</p>
+<h4 id="testing-nightly-features-1"><a class="header" href="#testing-nightly-features-1">Testing Nightly Features</a></h4>
+<p>If you are testing a Cargo feature that only works on “nightly” Cargo, then
+you need to call <code>masquerade_as_nightly_cargo</code> on the process builder and pass
+the name of the feature as the reason, like this:</p>
+<pre><code class="language-rust ignore">    snapbox::cmd::Command::cargo()
+        .masquerade_as_nightly_cargo(&amp;["print-im-a-teapot"])</code></pre>
+<p>If you are testing a feature that only works on <em>nightly rustc</em> (such as
+benchmarks), then you should use the <code>nightly</code> option of the <code>cargo_test</code>
+attribute, like this:</p>
+<pre><code class="language-rust ignore">#[cargo_test(nightly, reason = "-Zfoo is unstable")]</code></pre>
+<p>This will cause the test to be ignored if not running on the nightly toolchain.</p>
+<h3 id="platform-specific-notes"><a class="header" href="#platform-specific-notes">Platform-specific Notes</a></h3>
+<p>When checking output, use <code>/</code> for paths even on Windows: the actual output
+of <code>\</code> on Windows will be replaced with <code>/</code>.</p>
+<p>Be careful when executing binaries on Windows. You should not rename, delete,
+or overwrite a binary immediately after running it. Under some conditions
+Windows will fail with errors like “directory not empty” or “failed to remove”
+or “access is denied”.</p>
+<h2 id="debugging-tests"><a class="header" href="#debugging-tests">Debugging tests</a></h2>
+<p>In some cases, you may need to dig into a test that is not working as you
+expect, or you just generally want to experiment within the sandbox
+environment. The general process is:</p>
+<ol>
+<li>
+<p>Build the sandbox for the test you want to investigate. For example:</p>
+<p><code>cargo test --test testsuite -- features2::inactivate_targets</code>.</p>
+</li>
+<li>
+<p>In another terminal, head into the sandbox directory to inspect the files and run <code>cargo</code> directly.</p>
+<ol>
+<li>
+<p>The sandbox directories start with <code>t0</code> for the first test.</p>
+<p><code>cd target/tmp/cit/t0</code></p>
+</li>
+<li>
+<p>Set up the environment so that the sandbox configuration takes effect:</p>
+<p><code>export CARGO_HOME=$(pwd)/home/.cargo</code></p>
+</li>
+<li>
+<p>Most tests create a <code>foo</code> project, so head into that:</p>
+<p><code>cd foo</code></p>
+</li>
+</ol>
+</li>
+<li>
+<p>Run whatever cargo command you want. See <a href="../process/working-on-cargo.html#running-cargo">Running Cargo</a> for more details
+on running the correct <code>cargo</code> process. Some examples:</p>
+<ul>
+<li><code>/path/to/my/cargo/target/debug/cargo check</code></li>
+<li>Using a debugger like <code>lldb</code> or <code>gdb</code>:
+<ol>
+<li><code>lldb /path/to/my/cargo/target/debug/cargo</code></li>
+<li>Set a breakpoint, for example: <code>b generate_root_units</code></li>
+<li>Run with arguments: <code>r check</code></li>
+</ol>
+</li>
+</ul>
+</li>
+</ol>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../tests/running.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../tests/profiling.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../tests/running.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../tests/profiling.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>

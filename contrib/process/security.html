@@ -1,0 +1,423 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Security issues - Cargo Contributor Guide</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body class="sidebar-visible no-js">
+    <div id="body-container">
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('light')
+            html.classList.add(theme);
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var body = document.querySelector('body');
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../index.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../issues.html"><strong aria-hidden="true">2.</strong> Issue Tracker</a></li><li class="chapter-item expanded "><a href="../team.html"><strong aria-hidden="true">3.</strong> Cargo Team</a></li><li class="chapter-item expanded "><a href="../process/index.html"><strong aria-hidden="true">4.</strong> Process</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../process/working-on-cargo.html"><strong aria-hidden="true">4.1.</strong> Working on Cargo</a></li><li class="chapter-item expanded "><a href="../process/release.html"><strong aria-hidden="true">4.2.</strong> Release process</a></li><li class="chapter-item expanded "><a href="../process/unstable.html"><strong aria-hidden="true">4.3.</strong> Unstable features</a></li><li class="chapter-item expanded "><a href="../process/security.html" class="active"><strong aria-hidden="true">4.4.</strong> Security issues</a></li></ol></li><li class="chapter-item expanded "><a href="../design.html"><strong aria-hidden="true">5.</strong> Design Principles</a></li><li class="chapter-item expanded "><a href="../implementation/index.html"><strong aria-hidden="true">6.</strong> Implementing a Change</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../implementation/architecture.html"><strong aria-hidden="true">6.1.</strong> Architecture</a></li><li class="chapter-item expanded "><a href="../implementation/packages.html"><strong aria-hidden="true">6.2.</strong> New packages</a></li><li class="chapter-item expanded "><a href="../implementation/subcommands.html"><strong aria-hidden="true">6.3.</strong> New subcommands</a></li><li class="chapter-item expanded "><a href="../implementation/console.html"><strong aria-hidden="true">6.4.</strong> Console Output</a></li><li class="chapter-item expanded "><a href="../implementation/filesystem.html"><strong aria-hidden="true">6.5.</strong> Filesystem</a></li><li class="chapter-item expanded "><a href="../implementation/formatting.html"><strong aria-hidden="true">6.6.</strong> Formatting</a></li><li class="chapter-item expanded "><a href="../implementation/debugging.html"><strong aria-hidden="true">6.7.</strong> Debugging</a></li></ol></li><li class="chapter-item expanded "><a href="../tests/index.html"><strong aria-hidden="true">7.</strong> Tests</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../tests/running.html"><strong aria-hidden="true">7.1.</strong> Running Tests</a></li><li class="chapter-item expanded "><a href="../tests/writing.html"><strong aria-hidden="true">7.2.</strong> Writing Tests</a></li><li class="chapter-item expanded "><a href="../tests/profiling.html"><strong aria-hidden="true">7.3.</strong> Benchmarking and Profiling</a></li><li class="chapter-item expanded "><a href="../tests/crater.html"><strong aria-hidden="true">7.4.</strong> Crater</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <!-- Track and set sidebar scroll position -->
+        <script>
+            var sidebarScrollbox = document.querySelector('#sidebar .sidebar-scrollbox');
+            sidebarScrollbox.addEventListener('click', function(e) {
+                if (e.target.tagName === 'A') {
+                    sessionStorage.setItem('sidebar-scroll', sidebarScrollbox.scrollTop);
+                }
+            }, { passive: true });
+            var sidebarScrollTop = sessionStorage.getItem('sidebar-scroll');
+            sessionStorage.removeItem('sidebar-scroll');
+            if (sidebarScrollTop) {
+                // preserve sidebar scroll position when navigating via links within sidebar
+                sidebarScrollbox.scrollTop = sidebarScrollTop;
+            } else {
+                // scroll sidebar to current active section when navigating via "next/previous chapter" buttons
+                var activeSection = document.querySelector('#sidebar .active');
+                if (activeSection) {
+                    activeSection.scrollIntoView({ block: 'center' });
+                }
+            }
+        </script>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Cargo Contributor Guide</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/rust-lang/cargo/tree/master/src/doc/contrib/src" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/rust-lang/cargo/edit/master/src/doc/contrib/src/process/security.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="security-issues"><a class="header" href="#security-issues">Security issues</a></h1>
+<p>Issues involving reporting a security vulnerability in cargo usually start by following the <a href="https://www.rust-lang.org/policies/security">Rust security policy</a>.
+The Security Response Working Group (“the WG”) is responsible for running the process of handling the response to a security issue.
+Their process is documented at <a href="https://github.com/rust-lang/wg-security-response/blob/main/docs/handling-reports.md">Handling Reports</a>.
+This document gives an overview of the process from a Cargo team member’s perspective.</p>
+<p>The general order of events happens as follows:</p>
+<ol>
+<li>
+<p>The “reporter” (even if it is a Cargo team member) reports an issue to <a href="mailto:security@rust-lang.org">security@rust-lang.org</a>.</p>
+</li>
+<li>
+<p>The WG will evaluate if the report is credible, and manages responses to the reporter.</p>
+</li>
+<li>
+<p>The WG will start a private Zulip stream to coordinate discussion and plans for a fix.</p>
+</li>
+<li>
+<p>The WG will pull in one or more team members into the Zulip stream (“responders”).</p>
+<ul>
+<li>Security vulnerabilities are <strong>embargoed</strong> until they are released publicly.
+People who are brought into these discussions should <strong>not</strong> discuss the issue with <em>anyone</em> outside of the group, including your employer, without first consulting The WG.</li>
+</ul>
+</li>
+<li>
+<p>A discussion then starts to evaluate the severity of the issue and what possible solutions should be considered.
+This includes figuring out who will volunteer to actually develop the patches to resolve the issue, and who will review it.</p>
+</li>
+<li>
+<p>The WG will create a temporary private fork of the <code>rust-lang/cargo</code> repo using GitHub’s <a href="https://docs.github.com/en/code-security/security-advisories/repository-security-advisories">repository security advisory</a> system.
+This provides a space where changes can be securely posted, and the security advisory can be drafted.
+See <a href="https://docs.github.com/en/code-security/security-advisories/repository-security-advisories/collaborating-in-a-temporary-private-fork-to-resolve-a-repository-security-vulnerability">“Collaborating in a temporary private fork”</a> for some screenshots of what this looks like.
+GitHub includes instructions on how to work with the fork.</p>
+<p>Beware that the private fork has some limitations, such as not supporting CI, or (for some weird reason) not supporting syntax highlighting.</p>
+</li>
+<li>
+<p>Someone will need to review the patches and make sure everyone agrees on the solution.
+This may also involve the WG conferring with the reporter to validate the fix.</p>
+</li>
+<li>
+<p>Create a rollout plan.
+This includes deciding if there will be a new patch release of Rust, or if it should wait for the next stable release, or whether to remove the embargo on the fix.</p>
+</li>
+<li>
+<p>The WG will handle drafting a Security Advisory using GitHub’s Security Advisory (“GHSA”) system.
+<a href="https://github.com/rust-lang/cargo/security/advisories/GHSA-r5w3-xm58-jv6j">GHSA-r5w3-xm58-jv6j</a> is an example of what this looks like.
+This process also involves reserving a <a href="https://www.cve.org/">CVE</a> number, where the report will eventually be posted.</p>
+<p>The responders should carefully review the report to make sure it is correct.</p>
+<p>This process may also involve deciding on the CVSS score.
+There are a bunch of calculators on the web where you can see how this works (such as the <a href="https://www.first.org/cvss/calculator">FIRST CVSS Calculator</a>, or you can view GitHub’s calculator by drafting a security advisory in one of your personal repos).
+FIRST has a <a href="https://www.first.org/cvss/user-guide">user guide</a> for deciding how to score each characteristic.</p>
+</li>
+<li>
+<p>If it is decided to do a patch release of Rust, the general overview of steps is:</p>
+<ol>
+<li>Finalizing the patches.
+This includes all the little details like updating changelogs, version numbers, and such.</li>
+<li>Preparing PRs in the private fork against the stable, beta, and nightly (master) branches.</li>
+<li>The WG handles creating a private fork of <code>rust-lang/rust</code> to prepare the point release.
+This usually includes changes for stable, beta, and nightly.</li>
+<li>The WG handles posting patches in various places (such as mailing lists), possibly several days in advance.</li>
+<li>The WG handles posting public PRs to <code>rust-lang/rust</code> to incorporate the fix and prepare a new release.</li>
+<li>The WG handles announcing everything, including publishing the GHSA, publishing a blog post, and several other places.</li>
+</ol>
+</li>
+</ol>
+<h2 id="external-dependency-patches"><a class="header" href="#external-dependency-patches">External dependency patches</a></h2>
+<p>Sometimes it may be necessary to make changes to external dependencies to support a fix.
+This can make things complicated.
+If the change is by itself benign and not directly related to the security issue,
+then it may be safe to publicly propose the change (but not giving context) and try to get a new release of the dependency made (though confer with the WG first!).
+However, if the issue is directly related to the dependency, then it becomes significantly more awkward.</p>
+<p>The general process for <a href="https://github.com/rust-lang/cargo/security/advisories/GHSA-r5w3-xm58-jv6j">GHSA-r5w3-xm58-jv6j</a> which involved a fix in <code>git2-rs</code> was handled by the responders because it is a dependency owned by the rust-lang org.
+The general outline of how we managed this is:</p>
+<ul>
+<li>Pre-release:
+<ol>
+<li>Created a private fork of <code>rust-lang/git2-rs</code> just like we did for <code>rust-lang/cargo</code>.
+git2-rs also had its own Security Advisory just like cargo did.</li>
+<li>Created and reviewed PRs in the private fork for the fixes.
+<ul>
+<li>The PRs in the <code>rust-lang/cargo</code> private fork had to have a temporary <code>[patch]</code> git dependency on the <code>git2-rs</code> private fork.</li>
+</ul>
+</li>
+<li>Before the release, the PRs were changed to remove the <code>[patch]</code>, and pretend as-if git2-rs had already been published.</li>
+</ol>
+</li>
+<li>Showtime:
+<ol>
+<li>The git2-rs changes were publicly merged, and a new release was published to crates.io.</li>
+<li>The cargo PR was merged to cargo’s stable branch.</li>
+<li>The private rust-lang/rust PR updated the cargo submodule and updated <code>Cargo.lock</code> to pick up the new git2 dependencies.</li>
+<li>Release proceeds as normal (publish both GHSA, create release, etc.).</li>
+</ol>
+</li>
+<li>Post-release:
+<ol>
+<li>Various forward ports were created in git2-rs, and new releases were made.</li>
+</ol>
+</li>
+</ul>
+<p>If the change is in a crate not managed by any responder, then confer with the WG on a strategy.
+One option is to create a temporary fork used for the security response that will be removed as soon as the security advisory is released and a new public release of the dependency is made with the fix.</p>
+<h2 id="checklist"><a class="header" href="#checklist">Checklist</a></h2>
+<p>There are a lot of details to handle, and it can be a bit of a challenge under time pressure.
+The following is a checklist of some items to pay attention to during the process.</p>
+<p>Pre-release:</p>
+<ul>
+<li><input disabled="" type="checkbox"/>
+Check for any SemVer-incompatible changes in the public API of any crates that are modified.
+<ul>
+<li>Try to avoid these if at all possible.
+Although not a severe problem, making Cargo’s version number drift farther from Rust’s can contribute to confusion.</li>
+<li>If a SemVer-breaking release is made to a dependency, make sure this is coordinated correctly between the stable, beta, and master branches.</li>
+</ul>
+</li>
+<li><input disabled="" type="checkbox"/>
+With a checkout of the proposed fixes, run as much of cargo’s CI testsuite locally as you can.
+Since private forks don’t support CI, the responders will be responsible for making sure all tests pass.
+Enlist other responders if you don’t have the necessary systems like Windows.</li>
+<li><input disabled="" type="checkbox"/>
+Manually exercise the fix locally.
+Since we will essentially have <em>no</em> nightly testing, the responders are responsible for making sure things work.
+Try to consider all the different environments users may be using.</li>
+<li><input disabled="" type="checkbox"/>
+Make sure any comments or docs that need updating get updated.</li>
+<li><input disabled="" type="checkbox"/>
+Review the git commit messages of the patch.
+Make sure they clearly and accurately reflect what is being changed and why.
+Clean up the commit history if it goes through several revisions during review.</li>
+<li><input disabled="" type="checkbox"/>
+Make sure that the <em>public</em> cargo repo’s stable and beta branches are in a state where they are passing CI.
+This may require backporting changes that fix problems that have already been fixed in master.
+This can be done publicly at any time, and helps with ensuring a smooth process once the security issue is released.
+(The WG may disable branch protections to push directly to the stable branch, but this step is still useful to assist with local testing and the beta branch.)</li>
+<li><input disabled="" type="checkbox"/>
+After the fix is approved, create backports to the stable and beta master branches and post PRs to the private fork.</li>
+<li><input disabled="" type="checkbox"/>
+If any internal dependencies are changed, make sure their versions are bumped appropriately, and dependency specifications are updated (stable, beta, and master branches).</li>
+<li><input disabled="" type="checkbox"/>
+Thoroughly test the stable and beta PRs locally, too. We want to make sure everything goes smoothly, and we can’t assume that just because a patch applied cleanly that there won’t be issues.</li>
+<li><input disabled="" type="checkbox"/>
+Make sure cargo’s version in <a href="https://github.com/rust-lang/cargo/blob/master/Cargo.toml"><code>Cargo.toml</code></a> is updated correctly on the stable branch private PR.</li>
+<li><input disabled="" type="checkbox"/>
+Make sure cargo’s <code>Cargo.lock</code> is updated (stable, beta, master branches).</li>
+<li><input disabled="" type="checkbox"/>
+Update <a href="https://github.com/rust-lang/cargo/blob/master/CHANGELOG.md"><code>CHANGELOG.md</code></a> on cargo’s master branch private PR.</li>
+<li><input disabled="" type="checkbox"/>
+Update <a href="https://github.com/rust-lang/rust/blob/master/RELEASES.md"><code>RELEASES.md</code></a> on rust’s master branch private PR (and stable and beta?).</li>
+<li><input disabled="" type="checkbox"/>
+Remove any temporary things in the patch, like a temporary <code>[patch]</code> table.</li>
+</ul>
+<p>Showtime:</p>
+<ul>
+<li><input disabled="" type="checkbox"/>
+Publish any embargoed external dependencies to crates.io.</li>
+<li><input disabled="" type="checkbox"/>
+(WG) Merge the cargo stable change.</li>
+<li><input disabled="" type="checkbox"/>
+(WG) Update the cargo submodule in the rust-lang/rust private PR to point to the new stable commit.
+<ul>
+<li><input disabled="" type="checkbox"/>
+Also update <code>Cargo.lock</code>.</li>
+</ul>
+</li>
+<li><input disabled="" type="checkbox"/>
+(WG) Make a new stable release.</li>
+<li><input disabled="" type="checkbox"/>
+(WG) Publish the GHSA.</li>
+<li><input disabled="" type="checkbox"/>
+(WG) Send announcements.</li>
+<li><input disabled="" type="checkbox"/>
+Make sure stable, beta, and master branches of <code>rust-lang/cargo</code> get updated.</li>
+<li><input disabled="" type="checkbox"/>
+Make sure stable, beta, and master branches of <code>rust-lang/rust</code> get updated, pointing to the correct submodule versions.</li>
+<li><input disabled="" type="checkbox"/>
+If any external dependencies are updated, make sure their back or forward ports are handled.</li>
+</ul>
+<p>Post release:</p>
+<ul>
+<li><input disabled="" type="checkbox"/>
+Verify that the appropriate crates are published on crates.io.</li>
+<li><input disabled="" type="checkbox"/>
+Verify that <code>rust-lang/cargo</code> got a new tag.</li>
+<li><input disabled="" type="checkbox"/>
+Verify that the patches were backported to the correct branches in the <code>rust-lang/cargo</code> repository (stable, beta, and master).</li>
+<li><input disabled="" type="checkbox"/>
+Verify that the cargo submodule is updated on the correct branches in the <code>rust-lang/rust</code> repository (stable, beta, and master).</li>
+<li><input disabled="" type="checkbox"/>
+Follow up on any non-critical tasks that were identified during review.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../process/unstable.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../design.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../process/unstable.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../design.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </div>
+    </body>
+</html>
