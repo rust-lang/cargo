@@ -181,7 +181,7 @@
 </tspan>
     <tspan x="10px" y="1468px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan>
 </tspan>
-    <tspan x="10px" y="1486px"><tspan>          Require Cargo.lock to be up-to-date</tspan>
+    <tspan x="10px" y="1486px"><tspan>          Assert that `Cargo.lock` will remain unchanged</tspan>
 </tspan>
     <tspan x="10px" y="1504px">
 </tspan>

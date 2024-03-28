@@ -63,7 +63,7 @@
 </tspan>
     <tspan x="10px" y="406px"><tspan class="fg-green bold">Manifest Options:</tspan>
 </tspan>
-    <tspan x="10px" y="424px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan><tspan>   Require Cargo.lock to be up-to-date</tspan>
+    <tspan x="10px" y="424px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan><tspan>   Assert that `Cargo.lock` will remain unchanged</tspan>
 </tspan>
     <tspan x="10px" y="442px"><tspan>      </tspan><tspan class="fg-cyan bold">--offline</tspan><tspan>  Run without accessing the network</tspan>
 </tspan>

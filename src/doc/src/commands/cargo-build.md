@@ -309,11 +309,15 @@ See <a href="https://github.com/rust-lang/cargo/issues/5579">https://github.com/
 
 
 <dt class="option-term" id="option-cargo-build---locked"><a class="option-anchor" href="#option-cargo-build---locked"></a><code>--locked</code></dt>
-<dd class="option-desc">Requires the <code>Cargo.lock</code> file be up-to-date. If the lock file is missing,
-or it needs to be updated due to changes in the <code>Cargo.toml</code> file, for example
-a new dependency is added, Cargo will exit with an error.</p>
-<p>It may be used in environments where you want to assert that the <code>Cargo.lock</code>
-file is up-to-date (such as a CI build).</dd>
+<dd class="option-desc">Asserts that the exact same dependencies and versions are used as when the
+existing <code>Cargo.lock</code> file was originally generated. Cargo will exit with an
+error when either of the following scenarios arises:</p>
+<ul>
+<li>The lock file is missing.</li>
+<li>Cargo attempted to change the lock file due to a different dependency resolution.</li>
+</ul>
+<p>It may be used in environments where deterministic builds are desired,
+such as in CI pipelines.</dd>
 
 
 <dt class="option-term" id="option-cargo-build---offline"><a class="option-anchor" href="#option-cargo-build---offline"></a><code>--offline</code></dt>
