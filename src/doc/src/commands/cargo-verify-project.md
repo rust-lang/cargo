@@ -63,15 +63,12 @@ terminal.</li>
 <code>Cargo.toml</code> file in the current directory or any parent directory.</dd>
 
 
-<dt class="option-term" id="option-cargo-verify-project---frozen"><a class="option-anchor" href="#option-cargo-verify-project---frozen"></a><code>--frozen</code></dt>
 <dt class="option-term" id="option-cargo-verify-project---locked"><a class="option-anchor" href="#option-cargo-verify-project---locked"></a><code>--locked</code></dt>
-<dd class="option-desc">Either of these flags requires that the <code>Cargo.lock</code> file be
-up-to-date. If the lock file is missing, or it needs to be updated, Cargo will
-exit with an error. The <code>--frozen</code> flag also prevents Cargo from
-attempting to access the network to determine if it is out-of-date.</p>
-<p>These may be used in environments where you want to assert that the
-<code>Cargo.lock</code> file is up-to-date (such as a CI build) or want to avoid network
-access.</dd>
+<dd class="option-desc">Requires the <code>Cargo.lock</code> file be up-to-date. If the lock file is missing,
+or it needs to be updated due to changes in the <code>Cargo.toml</code> file, for example
+a new dependency is added, Cargo will exit with an error.</p>
+<p>It may be used in environments where you want to assert that the <code>Cargo.lock</code>
+file is up-to-date (such as a CI build).</dd>
 
 
 <dt class="option-term" id="option-cargo-verify-project---offline"><a class="option-anchor" href="#option-cargo-verify-project---offline"></a><code>--offline</code></dt>
@@ -85,6 +82,10 @@ if there might be a newer version as indicated in the local copy of the index.
 See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download dependencies before going
 offline.</p>
 <p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</dd>
+
+
+<dt class="option-term" id="option-cargo-verify-project---frozen"><a class="option-anchor" href="#option-cargo-verify-project---frozen"></a><code>--frozen</code></dt>
+<dd class="option-desc">Equivalent to specifying both <code>--locked</code> and <code>--offline</code>.</dd>
 
 
 </dl>
