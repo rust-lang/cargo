@@ -57,7 +57,9 @@ impl Rustc {
             gctx,
         );
 
-        let mut cmd = ProcessBuilder::new(&path);
+        let mut cmd = ProcessBuilder::new(&path)
+            .wrapped(workspace_wrapper.as_ref())
+            .wrapped(wrapper.as_deref());
         cmd.arg("-vV");
         let verbose_version = cache.cached_output(&cmd, 0)?.0;
 
