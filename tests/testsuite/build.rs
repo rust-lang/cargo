@@ -4272,7 +4272,7 @@ fn compiler_json_error_format() {
                     "overflow_checks": true,
                     "test": false
                 },
-                "executable": null,
+                "executable": "[..]/build-script-build[EXE]",
                 "features": [],
                 "filenames": "{...}",
                 "fresh": $FRESH
