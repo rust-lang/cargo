@@ -391,10 +391,20 @@ fn add_pkg(
         let dep_pkg = graph.package_map[&dep_id];
 
         for dep in deps {
-            let dep_features_for = if dep.is_build() || dep_pkg.proc_macro() {
-                FeaturesFor::HostDep
-            } else {
-                features_for
+            let dep_features_for = match dep
+                .artifact()
+                .and_then(|artifact| artifact.target())
+                .and_then(|target| target.to_resolved_compile_target(requested_kind))
+            {
+                // Dependency has a `{ …, target = <triple> }`
+                Some(target) => FeaturesFor::ArtifactDep(target),
+                None => {
+                    if dep.is_build() || dep_pkg.proc_macro() {
+                        FeaturesFor::HostDep
+                    } else {
+                        features_for
+                    }
+                }
             };
             let dep_index = add_pkg(
                 graph,
