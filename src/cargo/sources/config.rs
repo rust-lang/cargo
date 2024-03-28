@@ -33,6 +33,8 @@ pub struct SourceConfigMap<'gctx> {
 struct SourceConfigDef {
     /// Indicates this source should be replaced with another of the given name.
     replace_with: OptValue<String>,
+    /// A path source.
+    path: Option<ConfigRelativePath>,
     /// A directory source.
     directory: Option<ConfigRelativePath>,
     /// A registry source. Value is a URL.
@@ -248,6 +250,10 @@ restore the source replacement configuration to continue the build
         if let Some(directory) = def.directory {
             let path = directory.resolve_path(self.gctx);
             srcs.push(SourceId::for_directory(&path)?);
+        }
+        if let Some(path) = def.path {
+            let path = path.resolve_path(self.config);
+            srcs.push(SourceId::for_path(&path)?);
         }
         if let Some(git) = def.git {
             let url = url(&git, &format!("source.{}.git", name))?;
