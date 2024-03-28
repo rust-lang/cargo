@@ -218,7 +218,7 @@ fn warn_on_unused(unused: &BTreeSet<String>, warnings: &mut Vec<String>) {
     }
 }
 
-pub fn prepare_for_publish(me: &Package, ws: &Workspace<'_>) -> CargoResult<Manifest> {
+pub fn prepare_for_publish(me: &Package, ws: &Workspace<'_>) -> CargoResult<Package> {
     let contents = me.manifest().contents();
     let document = me.manifest().document();
     let toml_manifest = prepare_toml_for_publish(me.manifest().resolved_toml(), ws, me.root())?;
@@ -236,7 +236,8 @@ pub fn prepare_for_publish(me: &Package, ws: &Workspace<'_>) -> CargoResult<Mani
         &mut warnings,
         &mut errors,
     )?;
-    Ok(manifest)
+    let new_pkg = Package::new(manifest, me.manifest_path());
+    Ok(new_pkg)
 }
 
 /// Prepares the manifest for publishing.
