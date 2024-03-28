@@ -48,8 +48,8 @@ pub fn read_manifest(
     source_id: SourceId,
     gctx: &GlobalContext,
 ) -> CargoResult<EitherManifest> {
-    let mut warnings = vec![];
-    let mut errors = vec![];
+    let mut warnings = Default::default();
+    let mut errors = Default::default();
 
     let contents =
         read_toml_string(path, gctx).map_err(|err| ManifestError::new(err, path.into()))?;
