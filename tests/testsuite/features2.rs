@@ -1708,7 +1708,7 @@ homepage = "https://example.com/"
 license = "MIT"
 resolver = "2"
 "#,
-        cargo::core::package::MANIFEST_PREAMBLE
+        cargo::core::manifest::MANIFEST_PREAMBLE
     );
 
     let f = File::open(&p.root().join("target/package/a-0.1.0.crate")).unwrap();
