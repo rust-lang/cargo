@@ -37,13 +37,15 @@ system:
   Useful to set up a build cache tool such as `sccache`. See
   [`build.rustc-wrapper`] to set via config. Setting this to the empty string
   overwrites the config and resets cargo to not use a wrapper.
-* `RUSTC_WORKSPACE_WRAPPER` --- Instead of simply running `rustc`, for workspace
-  members Cargo will execute this specified wrapper, passing
-  as its command-line arguments the rustc invocation, with the first argument
-  being the path to the actual rustc. It affects the filename hash
-  so that artifacts produced by the wrapper are cached separately.
-  See [`build.rustc-workspace-wrapper`] to set via config. Setting this to the empty string
-  overwrites the config and resets cargo to not use a wrapper for workspace members.
+* `RUSTC_WORKSPACE_WRAPPER` --- Instead of simply running `rustc`, for workspace members Cargo will
+  execute this specified wrapper, passing as its command-line arguments the rustc invocation, with
+  the first argument being the path to the actual rustc. When building a single-package project
+  without workspaces, that package is considered to be the workspace. It affects the filename hash
+  so that artifacts produced by the wrapper are cached separately. See
+  [`build.rustc-workspace-wrapper`] to set via config. Setting this to the empty string overwrites
+  the config and resets cargo to not use a wrapper for workspace members. If both `RUSTC_WRAPPER`
+  and `RUSTC_WORKSPACE_WRAPPER` are set, then they will be nested: the final invocation is
+  `$RUSTC_WRAPPER $RUSTC_WORKSPACE_WRAPPER $RUSTC`.
 * `RUSTDOC` --- Instead of running `rustdoc`, Cargo will execute this specified
   `rustdoc` instance instead. See [`build.rustdoc`] to set via config.
 * `RUSTDOCFLAGS` --- A space-separated list of custom flags to pass to all `rustdoc`

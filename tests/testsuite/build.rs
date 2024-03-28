@@ -5210,6 +5210,27 @@ fn rustc_wrapper() {
         .run();
 }
 
+/// Checks what happens when both rust-wrapper and rustc-workspace-wrapper are set.
+#[cargo_test]
+fn rustc_wrapper_precendence() {
+    let p = project().file("src/lib.rs", "").build();
+    let rustc_wrapper = tools::echo_wrapper();
+    let ws_wrapper = rustc_wrapper.with_file_name("rustc-ws-wrapper");
+    assert_ne!(rustc_wrapper, ws_wrapper);
+    std::fs::hard_link(&rustc_wrapper, &ws_wrapper).unwrap();
+
+    let running = format!(
+        "[RUNNING] `{} {} rustc --crate-name foo [..]",
+        rustc_wrapper.display(),
+        ws_wrapper.display(),
+    );
+    p.cargo("build -v")
+        .env("RUSTC_WRAPPER", &rustc_wrapper)
+        .env("RUSTC_WORKSPACE_WRAPPER", &ws_wrapper)
+        .with_stderr_contains(running)
+        .run();
+}
+
 #[cargo_test]
 fn rustc_wrapper_relative() {
     Package::new("bar", "1.0.0").publish();
