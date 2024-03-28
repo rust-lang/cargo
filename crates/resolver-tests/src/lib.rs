@@ -835,7 +835,7 @@ fn meta_test_multiple_versions_strategy() {
             .unwrap()
             .current();
         let reg = registry(input.clone());
-        for this in input.iter().rev().take(10) {
+        for this in input.iter().rev().take(11) {
             let res = resolve(
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
