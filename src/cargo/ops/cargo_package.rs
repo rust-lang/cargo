@@ -16,7 +16,7 @@ use crate::sources::PathSource;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::JobsConfig;
 use crate::util::errors::CargoResult;
-use crate::util::toml::{prepare_for_publish, to_real_manifest};
+use crate::util::toml::prepare_for_publish;
 use crate::util::{self, human_readable_bytes, restricted_names, FileLock, GlobalContext};
 use crate::{drop_println, ops};
 use anyhow::Context as _;
@@ -448,32 +448,11 @@ fn error_custom_build_file_not_in_package(
 }
 
 /// Construct `Cargo.lock` for the package to be published.
-fn build_lock(ws: &Workspace<'_>, orig_pkg: &Package) -> CargoResult<String> {
+fn build_lock(ws: &Workspace<'_>, publish_pkg: &Package) -> CargoResult<String> {
     let gctx = ws.gctx();
     let orig_resolve = ops::load_pkg_lockfile(ws)?;
 
-    // Convert Package -> TomlManifest -> Manifest -> Package
-    let contents = orig_pkg.manifest().contents();
-    let document = orig_pkg.manifest().document();
-    let toml_manifest =
-        prepare_for_publish(orig_pkg.manifest().resolved_toml(), ws, orig_pkg.root())?;
-    let source_id = orig_pkg.package_id().source_id();
-    let mut warnings = Default::default();
-    let mut errors = Default::default();
-    let manifest = to_real_manifest(
-        contents.to_owned(),
-        document.clone(),
-        toml_manifest,
-        source_id,
-        orig_pkg.manifest_path(),
-        gctx,
-        &mut warnings,
-        &mut errors,
-    )?;
-    let new_pkg = Package::new(manifest, orig_pkg.manifest_path());
-
-    // Regenerate Cargo.lock using the old one as a guide.
-    let tmp_ws = Workspace::ephemeral(new_pkg, ws.gctx(), None, true)?;
+    let tmp_ws = Workspace::ephemeral(publish_pkg.clone(), ws.gctx(), None, true)?;
     let mut tmp_reg = PackageRegistry::new(ws.gctx())?;
     let mut new_resolve = ops::resolve_with_previous(
         &mut tmp_reg,
@@ -704,6 +683,7 @@ fn tar(
 
     let base_name = format!("{}-{}", pkg.name(), pkg.version());
     let base_path = Path::new(&base_name);
+    let publish_pkg = prepare_for_publish(pkg, ws)?;
 
     let mut uncompressed_size = 0;
     for ar_file in ar_files {
@@ -734,8 +714,8 @@ fn tar(
             }
             FileContents::Generated(generated_kind) => {
                 let contents = match generated_kind {
-                    GeneratedFile::Manifest => pkg.to_registry_toml(ws)?,
-                    GeneratedFile::Lockfile => build_lock(ws, pkg)?,
+                    GeneratedFile::Manifest => publish_pkg.manifest().to_resolved_contents()?,
+                    GeneratedFile::Lockfile => build_lock(ws, &publish_pkg)?,
                     GeneratedFile::VcsInfo(ref s) => serde_json::to_string_pretty(s)?,
                 };
                 header.set_entry_type(EntryType::file());

@@ -642,7 +642,7 @@ optional = true
 feat1 = []
 feat2 = ["bar?/feat"]
 "#,
-                cargo::core::package::MANIFEST_PREAMBLE
+                cargo::core::manifest::MANIFEST_PREAMBLE
             ),
         )],
     );

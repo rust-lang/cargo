@@ -21,7 +21,7 @@ use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath};
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{find_workspace_root, resolve_relative_path, CliUnstable, FeatureValue};
-use crate::core::{Dependency, Manifest, PackageId, Summary, Target};
+use crate::core::{Dependency, Manifest, Package, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
 use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, WorkspaceRootConfig};
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
@@ -48,8 +48,8 @@ pub fn read_manifest(
     source_id: SourceId,
     gctx: &GlobalContext,
 ) -> CargoResult<EitherManifest> {
-    let mut warnings = vec![];
-    let mut errors = vec![];
+    let mut warnings = Default::default();
+    let mut errors = Default::default();
 
     let contents =
         read_toml_string(path, gctx).map_err(|err| ManifestError::new(err, path.into()))?;
@@ -218,10 +218,32 @@ fn warn_on_unused(unused: &BTreeSet<String>, warnings: &mut Vec<String>) {
     }
 }
 
+pub fn prepare_for_publish(me: &Package, ws: &Workspace<'_>) -> CargoResult<Package> {
+    let contents = me.manifest().contents();
+    let document = me.manifest().document();
+    let toml_manifest = prepare_toml_for_publish(me.manifest().resolved_toml(), ws, me.root())?;
+    let source_id = me.package_id().source_id();
+    let mut warnings = Default::default();
+    let mut errors = Default::default();
+    let gctx = ws.gctx();
+    let manifest = to_real_manifest(
+        contents.to_owned(),
+        document.clone(),
+        toml_manifest,
+        source_id,
+        me.manifest_path(),
+        gctx,
+        &mut warnings,
+        &mut errors,
+    )?;
+    let new_pkg = Package::new(manifest, me.manifest_path());
+    Ok(new_pkg)
+}
+
 /// Prepares the manifest for publishing.
 // - Path and git components of dependency specifications are removed.
 // - License path is updated to point within the package.
-pub fn prepare_for_publish(
+fn prepare_toml_for_publish(
     me: &manifest::TomlManifest,
     ws: &Workspace<'_>,
     package_root: &Path,
