@@ -1566,7 +1566,7 @@ You may press ctrl-c [..]
                      [dependencies.dep1]\n\
                      version = \"1.0\"\n\
                     ",
-                    cargo::core::package::MANIFEST_PREAMBLE
+                    cargo::core::manifest::MANIFEST_PREAMBLE
                 ),
             ),
             (
@@ -1680,7 +1680,7 @@ repository = "foo"
 
 [dev-dependencies]
 "#,
-                cargo::core::package::MANIFEST_PREAMBLE
+                cargo::core::manifest::MANIFEST_PREAMBLE
             ),
         )],
     );
@@ -1979,7 +1979,7 @@ features = ["cat"]
 version = "1.0"
 features = ["cat"]
 "#,
-                cargo::core::package::MANIFEST_PREAMBLE
+                cargo::core::manifest::MANIFEST_PREAMBLE
             ),
         )],
     );

@@ -2184,7 +2184,7 @@ artifact = [
     "staticlib",
 ]
 target = "target""#,
-                cargo::core::package::MANIFEST_PREAMBLE
+                cargo::core::manifest::MANIFEST_PREAMBLE
             ),
         )],
     );

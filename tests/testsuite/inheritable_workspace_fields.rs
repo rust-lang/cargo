@@ -245,7 +245,7 @@ repository = "https://github.com/example/example"
 branch = "master"
 repository = "https://gitlab.com/rust-lang/rust"
 "#,
-                cargo::core::package::MANIFEST_PREAMBLE
+                cargo::core::manifest::MANIFEST_PREAMBLE
             ),
         )],
     );
@@ -406,7 +406,7 @@ version = "0.5.2"
 [build-dependencies.dep-build]
 version = "0.8"
 "#,
-                cargo::core::package::MANIFEST_PREAMBLE
+                cargo::core::manifest::MANIFEST_PREAMBLE
             ),
         )],
     );
@@ -532,7 +532,7 @@ authors = []
 version = "0.1.2"
 features = ["testing"]
 "#,
-                cargo::core::package::MANIFEST_PREAMBLE
+                cargo::core::manifest::MANIFEST_PREAMBLE
             ),
         )],
     );
@@ -796,7 +796,7 @@ repository = "https://github.com/example/example"
 branch = "master"
 repository = "https://gitlab.com/rust-lang/rust"
 "#,
-                cargo::core::package::MANIFEST_PREAMBLE
+                cargo::core::manifest::MANIFEST_PREAMBLE
             ),
         )],
     );
@@ -959,7 +959,7 @@ version = "0.5.2"
 [build-dependencies.dep-build]
 version = "0.8"
 "#,
-                cargo::core::package::MANIFEST_PREAMBLE
+                cargo::core::manifest::MANIFEST_PREAMBLE
             ),
         )],
     );
