@@ -39,7 +39,7 @@ system:
   overwrites the config and resets cargo to not use a wrapper.
 * `RUSTC_WORKSPACE_WRAPPER` --- Instead of simply running `rustc`, for workspace members Cargo will
   execute this specified wrapper, passing as its command-line arguments the rustc invocation, with
-  the first argument being the path to the actual rustc. (hen building a single-package project
+  the first argument being the path to the actual rustc. When building a single-package project
   without workspaces, that package is considered to be the workspace. It affects the filename hash
   so that artifacts produced by the wrapper are cached separately. See
   [`build.rustc-workspace-wrapper`] to set via config. Setting this to the empty string overwrites
