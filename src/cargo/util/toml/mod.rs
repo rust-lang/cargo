@@ -59,11 +59,16 @@ pub fn read_manifest(
         .map_err(|e| emit_diagnostic(e.into(), &contents, path, gctx))?;
 
     let mut manifest = (|| {
+        let empty = Vec::new();
+        let cargo_features = original_toml.cargo_features.as_ref().unwrap_or(&empty);
+        let features = Features::new(cargo_features, gctx, &mut warnings, source_id.is_path())?;
+
         if original_toml.package().is_some() {
             to_real_manifest(
                 contents,
                 document,
                 original_toml,
+                features,
                 source_id,
                 path,
                 gctx,
@@ -76,6 +81,7 @@ pub fn read_manifest(
                 contents,
                 document,
                 original_toml,
+                features,
                 source_id,
                 path,
                 gctx,
@@ -222,6 +228,7 @@ pub fn prepare_for_publish(me: &Package, ws: &Workspace<'_>) -> CargoResult<Pack
     let contents = me.manifest().contents();
     let document = me.manifest().document();
     let toml_manifest = prepare_toml_for_publish(me.manifest().resolved_toml(), ws, me.root())?;
+    let features = me.manifest().unstable_features().clone();
     let source_id = me.package_id().source_id();
     let mut warnings = Default::default();
     let mut errors = Default::default();
@@ -230,6 +237,7 @@ pub fn prepare_for_publish(me: &Package, ws: &Workspace<'_>) -> CargoResult<Pack
         contents.to_owned(),
         document.clone(),
         toml_manifest,
+        features,
         source_id,
         me.manifest_path(),
         gctx,
@@ -486,6 +494,7 @@ pub fn to_real_manifest(
     contents: String,
     document: toml_edit::ImDocument<String>,
     original_toml: manifest::TomlManifest,
+    features: Features,
     source_id: SourceId,
     manifest_file: &Path,
     gctx: &GlobalContext,
@@ -500,11 +509,6 @@ pub fn to_real_manifest(
             package_root.display()
         );
     };
-
-    // Parse features first so they will be available when parsing other parts of the TOML.
-    let empty = Vec::new();
-    let cargo_features = original_toml.cargo_features.as_ref().unwrap_or(&empty);
-    let features = Features::new(cargo_features, gctx, warnings, source_id.is_path())?;
 
     let original_package = match (&original_toml.package, &original_toml.project) {
         (Some(_), Some(project)) => {
@@ -1462,6 +1466,7 @@ fn to_virtual_manifest(
     contents: String,
     document: toml_edit::ImDocument<String>,
     original_toml: manifest::TomlManifest,
+    features: Features,
     source_id: SourceId,
     manifest_file: &Path,
     gctx: &GlobalContext,
@@ -1476,13 +1481,9 @@ fn to_virtual_manifest(
         bail!("this virtual manifest specifies a `{field}` section, which is not allowed");
     }
 
-    let mut deps = Vec::new();
-    let empty = Vec::new();
-    let cargo_features = original_toml.cargo_features.as_ref().unwrap_or(&empty);
-    let features = Features::new(cargo_features, gctx, warnings, source_id.is_path())?;
-
     resolved_toml._unused_keys = Default::default();
 
+    let mut deps = Vec::new();
     let (replace, patch) = {
         let mut manifest_ctx = ManifestContext {
             deps: &mut deps,
