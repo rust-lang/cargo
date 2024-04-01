@@ -400,13 +400,8 @@ fn resolve_dependency(
             }
             dependency = dependency.set_source(src);
         } else {
-            let latest = get_latest_dependency(
-                spec,
-                &dependency,
-                honor_rust_version,
-                gctx,
-                registry,
-            )?;
+            let latest =
+                get_latest_dependency(spec, &dependency, honor_rust_version, gctx, registry)?;
 
             if dependency.name != latest.name {
                 gctx.shell().warn(format!(
