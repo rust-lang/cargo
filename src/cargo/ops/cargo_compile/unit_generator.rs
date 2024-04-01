@@ -68,8 +68,6 @@ impl<'a> UnitGenerator<'a, '_> {
         target: &Target,
         initial_target_mode: CompileMode,
     ) -> Vec<Unit> {
-        // Custom build units are added in `build_unit_dependencies`.
-        assert!(!target.is_custom_build());
         let target_mode = match initial_target_mode {
             CompileMode::Test => {
                 if target.is_example() && !self.filter.is_specific() && !target.tested() {
@@ -202,7 +200,8 @@ impl<'a> UnitGenerator<'a, '_> {
                     })
                     .collect()
             }
-            CompileMode::Doctest | CompileMode::RunCustomBuild | CompileMode::Docscrape => {
+            CompileMode::RunCustomBuild => targets.iter().filter(|t| t.is_custom_build()).collect(),
+            CompileMode::Doctest | CompileMode::Docscrape => {
                 panic!("Invalid mode {:?}", self.mode)
             }
         }

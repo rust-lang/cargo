@@ -5,6 +5,7 @@ pub fn builtin() -> Vec<Command> {
         add::cli(),
         bench::cli(),
         build::cli(),
+        run_custom_build::cli(),
         check::cli(),
         clean::cli(),
         config::cli(),
@@ -50,6 +51,7 @@ pub fn builtin_exec(cmd: &str) -> Option<Exec> {
         "add" => add::exec,
         "bench" => bench::exec,
         "build" => build::exec,
+        "run-custom-build" => run_custom_build::exec,
         "check" => check::exec,
         "clean" => clean::exec,
         "config" => config::exec,
@@ -117,6 +119,7 @@ pub mod read_manifest;
 pub mod remove;
 pub mod report;
 pub mod run;
+pub mod run_custom_build;
 pub mod rustc;
 pub mod rustdoc;
 pub mod search;

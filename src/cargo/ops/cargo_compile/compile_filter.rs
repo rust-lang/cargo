@@ -232,7 +232,7 @@ impl CompileFilter {
                     ..
                 } => examples.is_specific() || tests.is_specific() || benches.is_specific(),
             },
-            CompileMode::RunCustomBuild => panic!("Invalid mode"),
+            CompileMode::RunCustomBuild => true,
         }
     }
 
