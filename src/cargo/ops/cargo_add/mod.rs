@@ -403,7 +403,6 @@ fn resolve_dependency(
             let latest = get_latest_dependency(
                 spec,
                 &dependency,
-                false,
                 honor_rust_version,
                 gctx,
                 registry,
@@ -577,7 +576,6 @@ fn get_existing_dependency(
 fn get_latest_dependency(
     spec: &Package,
     dependency: &Dependency,
-    _flag_allow_prerelease: bool,
     honor_rust_version: bool,
     gctx: &GlobalContext,
     registry: &mut PackageRegistry<'_>,
