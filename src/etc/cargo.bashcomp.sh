@@ -154,7 +154,7 @@ _cargo()
 				else
 					local opt_var=opt__${cmd//-/_}
 				fi
-				if [[ -z "${!opt_var}" ]]; then
+				if [[ -z "${!opt_var-}" ]]; then
 					# Fallback to filename completion.
 					_filedir
 				else
