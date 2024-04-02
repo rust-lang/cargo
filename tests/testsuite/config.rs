@@ -1801,3 +1801,57 @@ fn trim_paths_parsing() {
     let trim_paths: TomlTrimPaths = gctx.get("profile.dev.trim-paths").unwrap();
     assert_eq!(trim_paths, expected, "failed to parse {val}");
 }
+
+#[cargo_test]
+fn incomplete_cli() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            rust-version = "1.1.1"
+            [[bin]]
+            name = "foo"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .arg("--config=term.progress.width=2")
+        .with_status(101)
+        .with_stdout("")
+        .with_stderr("[ERROR] missing field `when`")
+        .run();
+}
+
+#[cargo_test]
+fn incomplete_env() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            rust-version = "1.1.1"
+            [[bin]]
+            name = "foo"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .env("CARGO_TERM_PROGRESS_WIDTH", "2")
+        .with_status(101)
+        .with_stdout("")
+        .with_stderr("[ERROR] missing field `when`")
+        .run();
+}
