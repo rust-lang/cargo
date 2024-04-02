@@ -523,6 +523,31 @@ fn resolve_toml(
     warnings: &mut Vec<String>,
     _errors: &mut Vec<String>,
 ) -> CargoResult<manifest::TomlManifest> {
+    let mut resolved_toml = manifest::TomlManifest {
+        cargo_features: original_toml.cargo_features.clone(),
+        package: None,
+        project: None,
+        profile: original_toml.profile.clone(),
+        lib: original_toml.lib.clone(),
+        bin: original_toml.bin.clone(),
+        example: original_toml.example.clone(),
+        test: original_toml.test.clone(),
+        bench: original_toml.bench.clone(),
+        dependencies: None,
+        dev_dependencies: None,
+        dev_dependencies2: None,
+        build_dependencies: None,
+        build_dependencies2: None,
+        features: original_toml.features.clone(),
+        target: None,
+        replace: original_toml.replace.clone(),
+        patch: original_toml.patch.clone(),
+        workspace: original_toml.workspace.clone(),
+        badges: None,
+        lints: None,
+        _unused_keys: Default::default(),
+    };
+
     let package_root = manifest_file.parent().unwrap();
 
     let inherit_cell: LazyCell<InheritableFields> = LazyCell::new();
@@ -531,13 +556,11 @@ fn resolve_toml(
             .try_borrow_with(|| load_inheritable_fields(gctx, manifest_file, &workspace_config))
     };
 
-    let resolved_package = if let Some(original_package) = original_toml.package() {
+    if let Some(original_package) = original_toml.package() {
         let resolved_package = resolve_package_toml(original_package, package_root, &inherit)?;
-        Some(resolved_package)
-    } else {
-        None
-    };
-    let resolved_dependencies = resolve_dependencies(
+        resolved_toml.package = Some(resolved_package);
+    }
+    resolved_toml.dependencies = resolve_dependencies(
         gctx,
         &features,
         original_toml.dependencies.as_ref(),
@@ -546,7 +569,7 @@ fn resolve_toml(
         package_root,
         warnings,
     )?;
-    let resolved_dev_dependencies = resolve_dependencies(
+    resolved_toml.dev_dependencies = resolve_dependencies(
         gctx,
         &features,
         original_toml.dev_dependencies(),
@@ -555,7 +578,7 @@ fn resolve_toml(
         package_root,
         warnings,
     )?;
-    let resolved_build_dependencies = resolve_dependencies(
+    resolved_toml.build_dependencies = resolve_dependencies(
         gctx,
         &features,
         original_toml.build_dependencies(),
@@ -604,44 +627,24 @@ fn resolve_toml(
             },
         );
     }
-    let resolved_target = (!resolved_target.is_empty()).then_some(resolved_target);
+    resolved_toml.target = (!resolved_target.is_empty()).then_some(resolved_target);
+
     let resolved_lints = original_toml
         .lints
         .clone()
         .map(|value| lints_inherit_with(value, || inherit()?.lints()))
         .transpose()?;
+    resolved_toml.lints = resolved_lints.map(|lints| manifest::InheritableLints {
+        workspace: false,
+        lints,
+    });
+
     let resolved_badges = original_toml
         .badges
         .clone()
         .map(|mw| field_inherit_with(mw, "badges", || inherit()?.badges()))
         .transpose()?;
-    let resolved_toml = manifest::TomlManifest {
-        cargo_features: original_toml.cargo_features.clone(),
-        package: resolved_package,
-        project: None,
-        profile: original_toml.profile.clone(),
-        lib: original_toml.lib.clone(),
-        bin: original_toml.bin.clone(),
-        example: original_toml.example.clone(),
-        test: original_toml.test.clone(),
-        bench: original_toml.bench.clone(),
-        dependencies: resolved_dependencies,
-        dev_dependencies: resolved_dev_dependencies,
-        dev_dependencies2: None,
-        build_dependencies: resolved_build_dependencies,
-        build_dependencies2: None,
-        features: original_toml.features.clone(),
-        target: resolved_target,
-        replace: original_toml.replace.clone(),
-        patch: original_toml.patch.clone(),
-        workspace: original_toml.workspace.clone(),
-        badges: resolved_badges.map(manifest::InheritableField::Value),
-        lints: resolved_lints.map(|lints| manifest::InheritableLints {
-            workspace: false,
-            lints,
-        }),
-        _unused_keys: Default::default(),
-    };
+    resolved_toml.badges = resolved_badges.map(manifest::InheritableField::Value);
 
     Ok(resolved_toml)
 }
