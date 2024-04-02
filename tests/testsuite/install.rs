@@ -2124,6 +2124,7 @@ fn git_install_the_same_bin_twice_with_different_rev() {
         "\
 [UPDATING] git repository [..]
 [INSTALLING] bin1 v0.1.0 [..]
+[COMPILING] bin1 v0.1.0 [..]
 [FINISHED] [..]
 [REPLACING] [..]home/.cargo/bin/bin1[..]
 [REPLACED] package `bin1 [..]
