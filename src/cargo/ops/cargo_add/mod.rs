@@ -893,7 +893,7 @@ impl DependencyUI {
                     .map(|s| s.as_str()),
             );
         }
-        activated.remove("default");
+        activated.swap_remove("default");
         activated.sort();
         let mut deactivated = self
             .available_features
