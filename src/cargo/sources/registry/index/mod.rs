@@ -40,7 +40,7 @@ use std::task::{ready, Poll};
 use tracing::{debug, info};
 
 mod cache;
-use self::cache::CacheManager;
+use self::cache::{CacheManager, MaybeSummaries};
 use self::cache::SummariesCache;
 
 /// The maximum schema version of the `v` field in the index this version of
@@ -115,7 +115,8 @@ struct Summaries {
 enum MaybeIndexSummary {
     /// A summary which has not been parsed, The `start` and `end` are pointers
     /// into [`Summaries::raw_data`] which this is an entry of.
-    Unparsed { start: usize, end: usize },
+    Unparsed(std::ops::Range<usize>),
+    UnparsedData(Vec<u8>),
 
     /// An actually parsed summary.
     Parsed(IndexSummary),
@@ -551,14 +552,20 @@ impl Summaries {
 
         let mut cached_summaries = None;
         let mut index_version = None;
-        if let Some(contents) = cache_manager.get(name) {
-            match Summaries::parse_cache(contents) {
-                Ok((s, v)) => {
-                    cached_summaries = Some(s);
-                    index_version = Some(v);
+        if let Some(maybe_summaries) = cache_manager.get(name) {
+            match maybe_summaries {
+                MaybeSummaries::Unparsed(contents) => match Summaries::parse_cache(contents) {
+                    Ok((s, v)) => {
+                        cached_summaries = Some(s);
+                        index_version = Some(v);
+                    }
+                    Err(e) => {
+                        tracing::debug!("failed to parse {name:?} cache: {e}");
+                    }
                 }
-                Err(e) => {
-                    tracing::debug!("failed to parse {name:?} cache: {e}");
+                MaybeSummaries::Parsed(summaries) => {
+                    cached_summaries = Some(summaries);
+                    index_version = Some("2".into());
                 }
             }
         }
@@ -611,9 +618,18 @@ impl Summaries {
                         }
                     };
                     let version = summary.package_id().version().clone();
-                    cache.versions.push((version.clone(), line));
+                    if cache_manager.is_sqlite() {
+                        cache_manager.put_summary((&name, &version), line);
+                    } else {
+                        cache.versions.push((version.clone(), line));
+                    }
                     ret.versions.insert(version, summary.into());
                 }
+
+                if cache_manager.is_sqlite() {
+                    return Poll::Ready(Ok(Some(ret)));
+                }
+
                 if let Some(index_version) = index_version {
                     tracing::trace!("caching index_version {}", index_version);
                     let cache_bytes = cache.serialize(index_version.as_str());
@@ -649,7 +665,7 @@ impl Summaries {
         for (version, summary) in cache.versions {
             let (start, end) = subslice_bounds(&contents, summary);
             ret.versions
-                .insert(version, MaybeIndexSummary::Unparsed { start, end });
+                .insert(version, MaybeIndexSummary::Unparsed(start..end));
         }
         ret.raw_data = contents;
         return Ok((ret, index_version));
@@ -680,14 +696,16 @@ impl MaybeIndexSummary {
         source_id: SourceId,
         bindeps: bool,
     ) -> CargoResult<&IndexSummary> {
-        let (start, end) = match self {
-            MaybeIndexSummary::Unparsed { start, end } => (*start, *end),
+        let data = match self {
+            MaybeIndexSummary::Unparsed(range) => &raw_data[range.clone()],
+            MaybeIndexSummary::UnparsedData(data) => data,
             MaybeIndexSummary::Parsed(summary) => return Ok(summary),
         };
-        let summary = IndexSummary::parse(&raw_data[start..end], source_id, bindeps)?;
+        let summary = IndexSummary::parse(data, source_id, bindeps)?;
         *self = MaybeIndexSummary::Parsed(summary);
         match self {
             MaybeIndexSummary::Unparsed { .. } => unreachable!(),
+            MaybeIndexSummary::UnparsedData { .. } => unreachable!(),
             MaybeIndexSummary::Parsed(summary) => Ok(summary),
         }
     }

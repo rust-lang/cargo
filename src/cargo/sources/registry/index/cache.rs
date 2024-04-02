@@ -88,6 +88,8 @@ use crate::CargoResult;
 use crate::GlobalContext;
 
 use super::split;
+use super::Summaries;
+use super::MaybeIndexSummary;
 use super::INDEX_V_MAX;
 
 /// The current version of [`SummariesCache`].
@@ -231,18 +233,27 @@ impl<'a> SummariesCache<'a> {
 /// An abstraction of the actual cache store.
 trait CacheStore {
     /// Gets the cache associated with the key.
-    fn get(&self, key: &str) -> Option<Vec<u8>>;
+    fn get(&self, key: &str) -> Option<MaybeSummaries>;
 
     /// Associates the value with the key.
     fn put(&self, key: &str, value: &[u8]);
+
+    /// Associates the value with the key + version tuple.
+    fn put_summary(&self, key: (&str, &Version), value: &[u8]);
 
     /// Invalidates the cache associated with the key.
     fn invalidate(&self, key: &str);
 }
 
+pub enum MaybeSummaries {
+    Unparsed(Vec<u8>),
+    Parsed(Summaries),
+}
+
 /// Manages the on-disk index caches.
 pub struct CacheManager<'gctx> {
     store: Box<dyn CacheStore + 'gctx>,
+    is_sqlite: bool,
 }
 
 impl<'gctx> CacheManager<'gctx> {
@@ -258,17 +269,26 @@ impl<'gctx> CacheManager<'gctx> {
         } else {
             Box::new(LocalFileSystem::new(cache_root, gctx))
         };
-        CacheManager { store }
+        CacheManager { store, is_sqlite: use_sqlite }
+    }
+
+    pub fn is_sqlite(&self) -> bool {
+        self.is_sqlite
     }
 
     /// Gets the cache associated with the key.
-    pub fn get(&self, key: &str) -> Option<Vec<u8>> {
+    pub fn get(&self, key: &str) -> Option<MaybeSummaries> {
         self.store.get(key)
     }
 
     /// Associates the value with the key.
     pub fn put(&self, key: &str, value: &[u8]) {
         self.store.put(key, value)
+    }
+
+    /// Associates the value with the key + version tuple.
+    pub fn put_summary(&self, key: (&str, &Version), value: &[u8]) {
+        self.store.put_summary(key, value)
     }
 
     /// Invalidates the cache associated with the key.
@@ -301,10 +321,10 @@ impl LocalFileSystem<'_> {
 }
 
 impl CacheStore for LocalFileSystem<'_> {
-    fn get(&self, key: &str) -> Option<Vec<u8>> {
+    fn get(&self, key: &str) -> Option<MaybeSummaries> {
         let cache_path = &self.cache_path(key);
         match fs::read(cache_path) {
-            Ok(contents) => Some(contents),
+            Ok(contents) => Some(MaybeSummaries::Unparsed(contents)),
             Err(e) => {
                 tracing::debug!(?cache_path, "cache missing: {e}");
                 None
@@ -324,6 +344,10 @@ impl CacheStore for LocalFileSystem<'_> {
         }
     }
 
+    fn put_summary(&self, _key: (&str, &Version), _value: &[u8]) {
+        panic!("unsupported");
+    }
+
     fn invalidate(&self, key: &str) {
         let cache_path = &self.cache_path(key);
         if let Err(e) = fs::remove_file(cache_path) {
@@ -341,7 +365,7 @@ struct LocalDatabase<'gctx> {
     /// Connection to the SQLite database.
     conn: OnceCell<Option<RefCell<Connection>>>,
     /// [`GlobalContext`] reference for convenience.
-    deferred_writes: RefCell<BTreeMap<String, Vec<u8>>>,
+    deferred_writes: RefCell<BTreeMap<String, Vec<(String, Vec<u8>)>>>,
     gctx: &'gctx GlobalContext,
 }
 
@@ -351,7 +375,7 @@ impl LocalDatabase<'_> {
         LocalDatabase {
             cache_root,
             conn: OnceCell::new(),
-            deferred_writes: RefCell::new(BTreeMap::new()),
+            deferred_writes: Default::default(),
             gctx,
         }
     }
@@ -386,9 +410,11 @@ impl LocalDatabase<'_> {
         let mut conn = conn.borrow_mut();
         let tx = conn.transaction()?;
         let mut stmt =
-            tx.prepare_cached("INSERT OR REPLACE INTO summaries (name, value) VALUES (?, ?)")?;
-        for (key, value) in self.deferred_writes.borrow().iter() {
-            stmt.execute(params!(key, value))?;
+            tx.prepare_cached("INSERT OR REPLACE INTO summaries (name, version, value) VALUES (?, ?, ?)")?;
+        for (name, summaries) in self.deferred_writes.borrow().iter() {
+            for (version, value) in summaries {
+                stmt.execute(params!(name, version, value))?;
+            }
         }
         drop(stmt);
         tx.commit()?;
@@ -406,19 +432,36 @@ impl Drop for LocalDatabase<'_> {
 }
 
 impl CacheStore for LocalDatabase<'_> {
-    fn get(&self, key: &str) -> Option<Vec<u8>> {
+    fn get(&self, key: &str) -> Option<MaybeSummaries> {
         self.conn()?
             .borrow()
-            .prepare_cached("SELECT value FROM summaries WHERE name = ? LIMIT 1")
-            .and_then(|mut stmt| stmt.query_row([key], |row| row.get(0)))
-            .map_err(|e| tracing::debug!(key, "cache missing: {e}"))
+            .prepare_cached("SELECT version, value FROM summaries WHERE name = ?")
+            .and_then(|mut stmt| {
+                let rows = stmt.query_map([key], |row| Ok((row.get(0)?, row.get(1)?)))?;
+                let mut summaries = Summaries::default();
+                for row in rows {
+                    let (version, raw_data): (String, Vec<u8>) = row?;
+                    let version = Version::parse(&version).expect("semver");
+                    summaries.versions.insert(version, MaybeIndexSummary::UnparsedData(raw_data));
+                }
+                Ok(MaybeSummaries::Parsed(summaries))
+            })
+            .map_err(|e| {
+                tracing::debug!(key, "cache missing: {e}");
+            })
             .ok()
     }
 
-    fn put(&self, key: &str, value: &[u8]) {
+    fn put(&self, _key: &str, _value: &[u8]) {
+        panic!("unsupported");
+    }
+
+    fn put_summary(&self, (name, version): (&str, &Version), value: &[u8]) {
         self.deferred_writes
             .borrow_mut()
-            .insert(key.into(), value.into());
+            .entry(name.into())
+            .or_insert(Default::default())
+            .push((version.to_string(), value.to_vec()));
     }
 
     fn invalidate(&self, key: &str) {
@@ -440,8 +483,10 @@ impl CacheStore for LocalDatabase<'_> {
 fn migrations() -> Vec<Migration> {
     vec![basic_migration(
         "CREATE TABLE IF NOT EXISTS summaries (
-            name TEXT PRIMARY KEY NOT NULL,
-            value BLOB NOT NULL
+            name TEXT NOT NULL,
+            version TEXT NOT NULL,
+            value BLOB NOT NULL,
+            PRIMARY KEY (name, version)
         )",
     )]
 }
