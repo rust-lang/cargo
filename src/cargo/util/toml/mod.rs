@@ -62,6 +62,13 @@ pub fn read_manifest(
         let empty = Vec::new();
         let cargo_features = original_toml.cargo_features.as_ref().unwrap_or(&empty);
         let features = Features::new(cargo_features, gctx, &mut warnings, source_id.is_path())?;
+        let workspace_config = to_workspace_config(&original_toml, path, gctx, &mut warnings)?;
+        if let WorkspaceConfig::Root(ws_root_config) = &workspace_config {
+            let package_root = path.parent().unwrap();
+            gctx.ws_roots
+                .borrow_mut()
+                .insert(package_root.to_owned(), ws_root_config.clone());
+        }
 
         if original_toml.package().is_some() {
             to_real_manifest(
@@ -69,6 +76,7 @@ pub fn read_manifest(
                 document,
                 original_toml,
                 features,
+                workspace_config,
                 source_id,
                 path,
                 gctx,
@@ -82,6 +90,7 @@ pub fn read_manifest(
                 document,
                 original_toml,
                 features,
+                workspace_config,
                 source_id,
                 path,
                 gctx,
@@ -229,6 +238,7 @@ pub fn prepare_for_publish(me: &Package, ws: &Workspace<'_>) -> CargoResult<Pack
     let document = me.manifest().document();
     let toml_manifest = prepare_toml_for_publish(me.manifest().resolved_toml(), ws, me.root())?;
     let features = me.manifest().unstable_features().clone();
+    let workspace_config = me.manifest().workspace_config().clone();
     let source_id = me.package_id().source_id();
     let mut warnings = Default::default();
     let mut errors = Default::default();
@@ -238,6 +248,7 @@ pub fn prepare_for_publish(me: &Package, ws: &Workspace<'_>) -> CargoResult<Pack
         document.clone(),
         toml_manifest,
         features,
+        workspace_config,
         source_id,
         me.manifest_path(),
         gctx,
@@ -495,6 +506,7 @@ pub fn to_real_manifest(
     document: toml_edit::ImDocument<String>,
     original_toml: manifest::TomlManifest,
     features: Features,
+    workspace_config: WorkspaceConfig,
     source_id: SourceId,
     manifest_file: &Path,
     gctx: &GlobalContext,
@@ -531,12 +543,6 @@ pub fn to_real_manifest(
         (None, None) => bail!("no `package` section found"),
     };
 
-    let workspace_config = to_workspace_config(&original_toml, package_root, gctx, warnings)?;
-    if let WorkspaceConfig::Root(ws_root_config) = &workspace_config {
-        gctx.ws_roots
-            .borrow_mut()
-            .insert(package_root.to_owned(), ws_root_config.clone());
-    }
     let inherit_cell: LazyCell<InheritableFields> = LazyCell::new();
     let inherit = || {
         inherit_cell
@@ -1403,7 +1409,7 @@ fn gather_dependencies(
 
 fn to_workspace_config(
     original_toml: &manifest::TomlManifest,
-    package_root: &Path,
+    manifest_file: &Path,
     gctx: &GlobalContext,
     warnings: &mut Vec<String>,
 ) -> CargoResult<WorkspaceConfig> {
@@ -1427,7 +1433,7 @@ fn to_workspace_config(
                     unused_dep_keys(name, "workspace.dependencies", dep.unused_keys(), warnings);
                 }
             }
-            let ws_root_config = to_workspace_root_config(toml_config, package_root);
+            let ws_root_config = to_workspace_root_config(toml_config, manifest_file);
             WorkspaceConfig::Root(ws_root_config)
         }
         (None, root) => WorkspaceConfig::Member {
@@ -1443,8 +1449,9 @@ fn to_workspace_config(
 
 fn to_workspace_root_config(
     resolved_toml: &manifest::TomlWorkspace,
-    package_root: &Path,
+    manifest_file: &Path,
 ) -> WorkspaceRootConfig {
+    let package_root = manifest_file.parent().unwrap();
     let inheritable = InheritableFields {
         package: resolved_toml.package.clone(),
         dependencies: resolved_toml.dependencies.clone(),
@@ -1467,6 +1474,7 @@ fn to_virtual_manifest(
     document: toml_edit::ImDocument<String>,
     original_toml: manifest::TomlManifest,
     features: Features,
+    workspace_config: WorkspaceConfig,
     source_id: SourceId,
     manifest_file: &Path,
     gctx: &GlobalContext,
@@ -1507,12 +1515,7 @@ fn to_virtual_manifest(
         .and_then(|ws| ws.resolver.as_deref())
         .map(|r| ResolveBehavior::from_manifest(r))
         .transpose()?;
-    let workspace_config = to_workspace_config(&original_toml, root, gctx, warnings)?;
-    if let WorkspaceConfig::Root(ws_root_config) = &workspace_config {
-        gctx.ws_roots
-            .borrow_mut()
-            .insert(root.to_owned(), ws_root_config.clone());
-    } else {
+    if let WorkspaceConfig::Member { .. } = &workspace_config {
         bail!("virtual manifests must be configured with [workspace]");
     }
     let manifest = VirtualManifest::new(
