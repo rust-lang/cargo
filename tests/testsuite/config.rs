@@ -1825,7 +1825,14 @@ fn incomplete_cli() {
         .arg("--config=term.progress.width=2")
         .with_status(101)
         .with_stdout("")
-        .with_stderr("[ERROR] missing field `when`")
+        .with_stderr(
+            "\
+error: failed to read `term` config field
+
+Caused by:
+  missing field `when`
+",
+        )
         .run();
 }
 
@@ -1852,6 +1859,13 @@ fn incomplete_env() {
         .env("CARGO_TERM_PROGRESS_WIDTH", "2")
         .with_status(101)
         .with_stdout("")
-        .with_stderr("[ERROR] missing field `when`")
+        .with_stderr(
+            "\
+error: failed to read `term` config field
+
+Caused by:
+  missing field `when`
+",
+        )
         .run();
 }

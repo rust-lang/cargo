@@ -1939,7 +1939,7 @@ impl GlobalContext {
             key: ConfigKey::from_str(key),
             env_prefix_ok: true,
         };
-        T::deserialize(d).map_err(|e| e.into())
+        T::deserialize(d).with_context(|| format!("failed to read `{key}` config field"))
     }
 
     /// Obtain a [`Path`] from a [`Filesystem`], verifying that the
