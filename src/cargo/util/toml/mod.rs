@@ -995,10 +995,10 @@ pub fn to_real_manifest(
 
     // Collect the dependencies.
     validate_dependencies(
-        &mut manifest_ctx,
         original_toml.dependencies.as_ref(),
         None,
         None,
+        manifest_ctx.warnings,
     )?;
     gather_dependencies(&mut manifest_ctx, resolved_toml.dependencies.as_ref(), None)?;
     if original_toml.dev_dependencies.is_some() && original_toml.dev_dependencies2.is_some() {
@@ -1010,10 +1010,10 @@ pub fn to_real_manifest(
         );
     }
     validate_dependencies(
-        &mut manifest_ctx,
         original_toml.dev_dependencies(),
         None,
         Some(DepKind::Development),
+        manifest_ctx.warnings,
     )?;
     gather_dependencies(
         &mut manifest_ctx,
@@ -1029,10 +1029,10 @@ pub fn to_real_manifest(
         );
     }
     validate_dependencies(
-        &mut manifest_ctx,
         original_toml.build_dependencies(),
         None,
         Some(DepKind::Build),
+        manifest_ctx.warnings,
     )?;
     gather_dependencies(
         &mut manifest_ctx,
@@ -1058,10 +1058,10 @@ pub fn to_real_manifest(
         platform_kind.check_cfg_attributes(manifest_ctx.warnings);
         let platform_kind = Some(platform_kind);
         validate_dependencies(
-            &mut manifest_ctx,
             platform.dependencies.as_ref(),
             platform_kind.as_ref(),
             None,
+            manifest_ctx.warnings,
         )?;
         if platform.build_dependencies.is_some() && platform.build_dependencies2.is_some() {
             warn_on_deprecated(
@@ -1072,10 +1072,10 @@ pub fn to_real_manifest(
             );
         }
         validate_dependencies(
-            &mut manifest_ctx,
             platform.build_dependencies(),
             platform_kind.as_ref(),
             Some(DepKind::Build),
+            manifest_ctx.warnings,
         )?;
         if platform.dev_dependencies.is_some() && platform.dev_dependencies2.is_some() {
             warn_on_deprecated(
@@ -1086,10 +1086,10 @@ pub fn to_real_manifest(
             );
         }
         validate_dependencies(
-            &mut manifest_ctx,
             platform.dev_dependencies(),
             platform_kind.as_ref(),
             Some(DepKind::Development),
+            manifest_ctx.warnings,
         )?;
     }
     for (name, platform) in resolved_toml.target.iter().flatten() {
@@ -1393,10 +1393,10 @@ fn resolve_dependencies<'a>(
 
 #[tracing::instrument(skip_all)]
 fn validate_dependencies(
-    manifest_ctx: &mut ManifestContext<'_, '_>,
     original_deps: Option<&BTreeMap<manifest::PackageName, manifest::InheritableDependency>>,
     platform: Option<&Platform>,
     kind: Option<DepKind>,
+    warnings: &mut Vec<String>,
 ) -> CargoResult<()> {
     let Some(dependencies) = original_deps else {
         return Ok(());
@@ -1412,12 +1412,7 @@ fn validate_dependencies(
         } else {
             kind_name.to_string()
         };
-        unused_dep_keys(
-            name_in_toml,
-            &table_in_toml,
-            v.unused_keys(),
-            manifest_ctx.warnings,
-        );
+        unused_dep_keys(name_in_toml, &table_in_toml, v.unused_keys(), warnings);
     }
     Ok(())
 }
