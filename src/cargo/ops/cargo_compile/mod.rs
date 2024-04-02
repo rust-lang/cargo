@@ -98,7 +98,7 @@ pub struct CompileOptions {
     pub rustdoc_document_private_items: bool,
     /// Whether the build process should check the minimum Rust version
     /// defined in the cargo metadata for a crate.
-    pub honor_rust_version: bool,
+    pub honor_rust_version: Option<bool>,
 }
 
 impl CompileOptions {
@@ -116,7 +116,7 @@ impl CompileOptions {
             target_rustc_args: None,
             target_rustc_crate_types: None,
             rustdoc_document_private_items: false,
-            honor_rust_version: true,
+            honor_rust_version: None,
         })
     }
 }
@@ -474,7 +474,7 @@ pub fn create_bcx<'a, 'gctx>(
             .extend(args);
     }
 
-    if honor_rust_version {
+    if honor_rust_version.unwrap_or(true) {
         let rustc_version = target_data.rustc.version.clone().into();
 
         let mut incompatible = Vec::new();

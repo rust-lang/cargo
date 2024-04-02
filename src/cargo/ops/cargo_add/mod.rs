@@ -55,7 +55,7 @@ pub struct AddOptions<'a> {
     /// Act as if dependencies will be added
     pub dry_run: bool,
     /// Whether the minimum supported Rust version should be considered during resolution
-    pub honor_rust_version: bool,
+    pub honor_rust_version: Option<bool>,
 }
 
 /// Add dependencies to a manifest
@@ -288,7 +288,7 @@ fn resolve_dependency(
     ws: &Workspace<'_>,
     spec: &Package,
     section: &DepTable,
-    honor_rust_version: bool,
+    honor_rust_version: Option<bool>,
     gctx: &GlobalContext,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<DependencyUI> {
@@ -571,7 +571,7 @@ fn get_existing_dependency(
 fn get_latest_dependency(
     spec: &Package,
     dependency: &Dependency,
-    honor_rust_version: bool,
+    honor_rust_version: Option<bool>,
     gctx: &GlobalContext,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<Dependency> {
@@ -608,7 +608,7 @@ fn get_latest_dependency(
                 )
             })?;
 
-            if honor_rust_version {
+            if honor_rust_version.unwrap_or(true) {
                 let (req_msrv, is_msrv) = spec
                     .rust_version()
                     .cloned()

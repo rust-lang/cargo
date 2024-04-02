@@ -534,6 +534,10 @@ pub trait ArgMatchesExt {
         self.maybe_flag("keep-going")
     }
 
+    fn honor_rust_version(&self) -> Option<bool> {
+        self.flag("ignore-rust-version").then_some(false)
+    }
+
     fn targets(&self) -> CargoResult<Vec<String>> {
         if self.is_present_with_zero_values("target") {
             let cmd = if is_rustup() {
@@ -763,7 +767,7 @@ Run `{cmd}` to see possible targets."
             target_rustc_args: None,
             target_rustc_crate_types: None,
             rustdoc_document_private_items: false,
-            honor_rust_version: !self.flag("ignore-rust-version"),
+            honor_rust_version: self.honor_rust_version(),
         };
 
         if let Some(ws) = workspace {

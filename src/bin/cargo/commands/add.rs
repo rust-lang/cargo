@@ -205,8 +205,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
 
     let dependencies = parse_dependencies(gctx, args)?;
 
-    let ignore_rust_version = args.flag("ignore-rust-version");
-    let honor_rust_version = !ignore_rust_version;
+    let honor_rust_version = args.honor_rust_version();
 
     let options = AddOptions {
         gctx,
