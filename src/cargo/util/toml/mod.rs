@@ -559,92 +559,93 @@ fn resolve_toml(
     if let Some(original_package) = original_toml.package() {
         let resolved_package = resolve_package_toml(original_package, package_root, &inherit)?;
         resolved_toml.package = Some(resolved_package);
-    }
-    resolved_toml.dependencies = resolve_dependencies(
-        gctx,
-        &features,
-        original_toml.dependencies.as_ref(),
-        None,
-        &inherit,
-        package_root,
-        warnings,
-    )?;
-    resolved_toml.dev_dependencies = resolve_dependencies(
-        gctx,
-        &features,
-        original_toml.dev_dependencies(),
-        Some(DepKind::Development),
-        &inherit,
-        package_root,
-        warnings,
-    )?;
-    resolved_toml.build_dependencies = resolve_dependencies(
-        gctx,
-        &features,
-        original_toml.build_dependencies(),
-        Some(DepKind::Build),
-        &inherit,
-        package_root,
-        warnings,
-    )?;
-    let mut resolved_target = BTreeMap::new();
-    for (name, platform) in original_toml.target.iter().flatten() {
-        let resolved_dependencies = resolve_dependencies(
+
+        resolved_toml.dependencies = resolve_dependencies(
             gctx,
             &features,
-            platform.dependencies.as_ref(),
+            original_toml.dependencies.as_ref(),
             None,
             &inherit,
             package_root,
             warnings,
         )?;
-        let resolved_dev_dependencies = resolve_dependencies(
+        resolved_toml.dev_dependencies = resolve_dependencies(
             gctx,
             &features,
-            platform.dev_dependencies(),
+            original_toml.dev_dependencies(),
             Some(DepKind::Development),
             &inherit,
             package_root,
             warnings,
         )?;
-        let resolved_build_dependencies = resolve_dependencies(
+        resolved_toml.build_dependencies = resolve_dependencies(
             gctx,
             &features,
-            platform.build_dependencies(),
+            original_toml.build_dependencies(),
             Some(DepKind::Build),
             &inherit,
             package_root,
             warnings,
         )?;
-        resolved_target.insert(
-            name.clone(),
-            manifest::TomlPlatform {
-                dependencies: resolved_dependencies,
-                build_dependencies: resolved_build_dependencies,
-                build_dependencies2: None,
-                dev_dependencies: resolved_dev_dependencies,
-                dev_dependencies2: None,
-            },
-        );
+        let mut resolved_target = BTreeMap::new();
+        for (name, platform) in original_toml.target.iter().flatten() {
+            let resolved_dependencies = resolve_dependencies(
+                gctx,
+                &features,
+                platform.dependencies.as_ref(),
+                None,
+                &inherit,
+                package_root,
+                warnings,
+            )?;
+            let resolved_dev_dependencies = resolve_dependencies(
+                gctx,
+                &features,
+                platform.dev_dependencies(),
+                Some(DepKind::Development),
+                &inherit,
+                package_root,
+                warnings,
+            )?;
+            let resolved_build_dependencies = resolve_dependencies(
+                gctx,
+                &features,
+                platform.build_dependencies(),
+                Some(DepKind::Build),
+                &inherit,
+                package_root,
+                warnings,
+            )?;
+            resolved_target.insert(
+                name.clone(),
+                manifest::TomlPlatform {
+                    dependencies: resolved_dependencies,
+                    build_dependencies: resolved_build_dependencies,
+                    build_dependencies2: None,
+                    dev_dependencies: resolved_dev_dependencies,
+                    dev_dependencies2: None,
+                },
+            );
+        }
+        resolved_toml.target = (!resolved_target.is_empty()).then_some(resolved_target);
+
+        let resolved_lints = original_toml
+            .lints
+            .clone()
+            .map(|value| lints_inherit_with(value, || inherit()?.lints()))
+            .transpose()?;
+        resolved_toml.lints = resolved_lints.map(|lints| manifest::InheritableLints {
+            workspace: false,
+            lints,
+        });
+
+        let resolved_badges = original_toml
+            .badges
+            .clone()
+            .map(|mw| field_inherit_with(mw, "badges", || inherit()?.badges()))
+            .transpose()?;
+        resolved_toml.badges = resolved_badges.map(manifest::InheritableField::Value);
     }
-    resolved_toml.target = (!resolved_target.is_empty()).then_some(resolved_target);
-
-    let resolved_lints = original_toml
-        .lints
-        .clone()
-        .map(|value| lints_inherit_with(value, || inherit()?.lints()))
-        .transpose()?;
-    resolved_toml.lints = resolved_lints.map(|lints| manifest::InheritableLints {
-        workspace: false,
-        lints,
-    });
-
-    let resolved_badges = original_toml
-        .badges
-        .clone()
-        .map(|mw| field_inherit_with(mw, "badges", || inherit()?.badges()))
-        .transpose()?;
-    resolved_toml.badges = resolved_badges.map(manifest::InheritableField::Value);
 
     Ok(resolved_toml)
 }
