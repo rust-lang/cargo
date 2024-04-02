@@ -645,6 +645,10 @@ fn resolve_toml(
             .map(|mw| field_inherit_with(mw, "badges", || inherit()?.badges()))
             .transpose()?;
         resolved_toml.badges = resolved_badges.map(manifest::InheritableField::Value);
+    } else {
+        for field in original_toml.requires_package() {
+            bail!("this virtual manifest specifies a `{field}` section, which is not allowed");
+        }
     }
 
     Ok(resolved_toml)
@@ -1512,10 +1516,6 @@ fn to_virtual_manifest(
     _errors: &mut Vec<String>,
 ) -> CargoResult<VirtualManifest> {
     let root = manifest_file.parent().unwrap();
-
-    for field in original_toml.requires_package() {
-        bail!("this virtual manifest specifies a `{field}` section, which is not allowed");
-    }
 
     let mut deps = Vec::new();
     let (replace, patch) = {
