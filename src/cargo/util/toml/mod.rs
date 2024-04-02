@@ -982,8 +982,57 @@ pub fn to_real_manifest(
         }
     }
 
-    let mut deps = Vec::new();
+    validate_dependencies(original_toml.dependencies.as_ref(), None, None, warnings)?;
+    if original_toml.dev_dependencies.is_some() && original_toml.dev_dependencies2.is_some() {
+        warn_on_deprecated("dev-dependencies", package_name, "package", warnings);
+    }
+    validate_dependencies(
+        original_toml.dev_dependencies(),
+        None,
+        Some(DepKind::Development),
+        warnings,
+    )?;
+    if original_toml.build_dependencies.is_some() && original_toml.build_dependencies2.is_some() {
+        warn_on_deprecated("build-dependencies", package_name, "package", warnings);
+    }
+    validate_dependencies(
+        original_toml.build_dependencies(),
+        None,
+        Some(DepKind::Build),
+        warnings,
+    )?;
+    for (name, platform) in original_toml.target.iter().flatten() {
+        let platform_kind: Platform = name.parse()?;
+        platform_kind.check_cfg_attributes(warnings);
+        let platform_kind = Some(platform_kind);
+        validate_dependencies(
+            platform.dependencies.as_ref(),
+            platform_kind.as_ref(),
+            None,
+            warnings,
+        )?;
+        if platform.build_dependencies.is_some() && platform.build_dependencies2.is_some() {
+            warn_on_deprecated("build-dependencies", name, "platform target", warnings);
+        }
+        validate_dependencies(
+            platform.build_dependencies(),
+            platform_kind.as_ref(),
+            Some(DepKind::Build),
+            warnings,
+        )?;
+        if platform.dev_dependencies.is_some() && platform.dev_dependencies2.is_some() {
+            warn_on_deprecated("dev-dependencies", name, "platform target", warnings);
+        }
+        validate_dependencies(
+            platform.dev_dependencies(),
+            platform_kind.as_ref(),
+            Some(DepKind::Development),
+            warnings,
+        )?;
+    }
 
+    // Collect the dependencies.
+    let mut deps = Vec::new();
     let mut manifest_ctx = ManifestContext {
         deps: &mut deps,
         source_id,
@@ -992,106 +1041,17 @@ pub fn to_real_manifest(
         platform: None,
         root: package_root,
     };
-
-    // Collect the dependencies.
-    validate_dependencies(
-        original_toml.dependencies.as_ref(),
-        None,
-        None,
-        manifest_ctx.warnings,
-    )?;
     gather_dependencies(&mut manifest_ctx, resolved_toml.dependencies.as_ref(), None)?;
-    if original_toml.dev_dependencies.is_some() && original_toml.dev_dependencies2.is_some() {
-        warn_on_deprecated(
-            "dev-dependencies",
-            package_name,
-            "package",
-            manifest_ctx.warnings,
-        );
-    }
-    validate_dependencies(
-        original_toml.dev_dependencies(),
-        None,
-        Some(DepKind::Development),
-        manifest_ctx.warnings,
-    )?;
     gather_dependencies(
         &mut manifest_ctx,
         resolved_toml.dev_dependencies(),
         Some(DepKind::Development),
-    )?;
-    if original_toml.build_dependencies.is_some() && original_toml.build_dependencies2.is_some() {
-        warn_on_deprecated(
-            "build-dependencies",
-            package_name,
-            "package",
-            manifest_ctx.warnings,
-        );
-    }
-    validate_dependencies(
-        original_toml.build_dependencies(),
-        None,
-        Some(DepKind::Build),
-        manifest_ctx.warnings,
     )?;
     gather_dependencies(
         &mut manifest_ctx,
         resolved_toml.build_dependencies(),
         Some(DepKind::Build),
     )?;
-
-    verify_lints(
-        resolved_toml.resolved_lints().expect("previously resolved"),
-        gctx,
-        manifest_ctx.warnings,
-    )?;
-    let default = manifest::TomlLints::default();
-    let rustflags = lints_to_rustflags(
-        resolved_toml
-            .resolved_lints()
-            .expect("previously resolved")
-            .unwrap_or(&default),
-    );
-
-    for (name, platform) in original_toml.target.iter().flatten() {
-        let platform_kind: Platform = name.parse()?;
-        platform_kind.check_cfg_attributes(manifest_ctx.warnings);
-        let platform_kind = Some(platform_kind);
-        validate_dependencies(
-            platform.dependencies.as_ref(),
-            platform_kind.as_ref(),
-            None,
-            manifest_ctx.warnings,
-        )?;
-        if platform.build_dependencies.is_some() && platform.build_dependencies2.is_some() {
-            warn_on_deprecated(
-                "build-dependencies",
-                name,
-                "platform target",
-                manifest_ctx.warnings,
-            );
-        }
-        validate_dependencies(
-            platform.build_dependencies(),
-            platform_kind.as_ref(),
-            Some(DepKind::Build),
-            manifest_ctx.warnings,
-        )?;
-        if platform.dev_dependencies.is_some() && platform.dev_dependencies2.is_some() {
-            warn_on_deprecated(
-                "dev-dependencies",
-                name,
-                "platform target",
-                manifest_ctx.warnings,
-            );
-        }
-        validate_dependencies(
-            platform.dev_dependencies(),
-            platform_kind.as_ref(),
-            Some(DepKind::Development),
-            manifest_ctx.warnings,
-        )?;
-    }
     for (name, platform) in resolved_toml.target.iter().flatten() {
         manifest_ctx.platform = Some(name.parse()?);
         gather_dependencies(&mut manifest_ctx, platform.dependencies.as_ref(), None)?;
@@ -1106,7 +1066,6 @@ pub fn to_real_manifest(
             Some(DepKind::Development),
         )?;
     }
-
     let replace = replace(&resolved_toml, &mut manifest_ctx)?;
     let patch = patch(&resolved_toml, &mut manifest_ctx)?;
 
@@ -1125,6 +1084,19 @@ pub fn to_real_manifest(
             }
         }
     }
+
+    verify_lints(
+        resolved_toml.resolved_lints().expect("previously resolved"),
+        gctx,
+        warnings,
+    )?;
+    let default = manifest::TomlLints::default();
+    let rustflags = lints_to_rustflags(
+        resolved_toml
+            .resolved_lints()
+            .expect("previously resolved")
+            .unwrap_or(&default),
+    );
 
     let metadata = ManifestMetadata {
         description: resolved_package
