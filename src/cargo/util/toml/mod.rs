@@ -69,12 +69,22 @@ pub fn read_manifest(
                 .borrow_mut()
                 .insert(package_root.to_owned(), ws_root_config.clone());
         }
+        let resolved_toml = resolve_toml(
+            &original_toml,
+            &features,
+            &workspace_config,
+            path,
+            gctx,
+            &mut warnings,
+            &mut errors,
+        )?;
 
-        if original_toml.package().is_some() {
+        if resolved_toml.package().is_some() {
             to_real_manifest(
                 contents,
                 document,
                 original_toml,
+                resolved_toml,
                 features,
                 workspace_config,
                 source_id,
@@ -89,6 +99,7 @@ pub fn read_manifest(
                 contents,
                 document,
                 original_toml,
+                resolved_toml,
                 features,
                 workspace_config,
                 source_id,
@@ -236,7 +247,8 @@ fn warn_on_unused(unused: &BTreeSet<String>, warnings: &mut Vec<String>) {
 pub fn prepare_for_publish(me: &Package, ws: &Workspace<'_>) -> CargoResult<Package> {
     let contents = me.manifest().contents();
     let document = me.manifest().document();
-    let toml_manifest = prepare_toml_for_publish(me.manifest().resolved_toml(), ws, me.root())?;
+    let original_toml = prepare_toml_for_publish(me.manifest().resolved_toml(), ws, me.root())?;
+    let resolved_toml = original_toml.clone();
     let features = me.manifest().unstable_features().clone();
     let workspace_config = me.manifest().workspace_config().clone();
     let source_id = me.package_id().source_id();
@@ -246,7 +258,8 @@ pub fn prepare_for_publish(me: &Package, ws: &Workspace<'_>) -> CargoResult<Pack
     let manifest = to_real_manifest(
         contents.to_owned(),
         document.clone(),
-        toml_manifest,
+        original_toml,
+        resolved_toml,
         features,
         workspace_config,
         source_id,
@@ -501,47 +514,16 @@ fn prepare_toml_for_publish(
 }
 
 #[tracing::instrument(skip_all)]
-pub fn to_real_manifest(
-    contents: String,
-    document: toml_edit::ImDocument<String>,
-    original_toml: manifest::TomlManifest,
-    features: Features,
-    workspace_config: WorkspaceConfig,
-    source_id: SourceId,
+fn resolve_toml(
+    original_toml: &manifest::TomlManifest,
+    features: &Features,
+    workspace_config: &WorkspaceConfig,
     manifest_file: &Path,
     gctx: &GlobalContext,
     warnings: &mut Vec<String>,
-    errors: &mut Vec<String>,
-) -> CargoResult<Manifest> {
-    let embedded = is_embedded(manifest_file);
+    _errors: &mut Vec<String>,
+) -> CargoResult<manifest::TomlManifest> {
     let package_root = manifest_file.parent().unwrap();
-    if !package_root.is_dir() {
-        bail!(
-            "package root '{}' is not a directory",
-            package_root.display()
-        );
-    };
-
-    let original_package = match (&original_toml.package, &original_toml.project) {
-        (Some(_), Some(project)) => {
-            warnings.push(format!(
-                "manifest at `{}` contains both `project` and `package`, \
-                    this could become a hard error in the future",
-                package_root.display()
-            ));
-            project.clone()
-        }
-        (Some(package), None) => package.clone(),
-        (None, Some(project)) => {
-            warnings.push(format!(
-                "manifest at `{}` contains `[project]` instead of `[package]`, \
-                                this could become a hard error in the future",
-                package_root.display()
-            ));
-            project.clone()
-        }
-        (None, None) => bail!("no `package` section found"),
-    };
 
     let inherit_cell: LazyCell<InheritableFields> = LazyCell::new();
     let inherit = || {
@@ -549,134 +531,138 @@ pub fn to_real_manifest(
             .try_borrow_with(|| load_inheritable_fields(gctx, manifest_file, &workspace_config))
     };
 
-    let package_name = &original_package.name;
-    if package_name.contains(':') {
-        features.require(Feature::open_namespaces())?;
-    }
-
-    let resolved_package = manifest::TomlPackage {
-        edition: original_package
-            .edition
-            .clone()
-            .map(|value| field_inherit_with(value, "edition", || inherit()?.edition()))
-            .transpose()?
-            .map(manifest::InheritableField::Value),
-        rust_version: original_package
-            .rust_version
-            .clone()
-            .map(|value| field_inherit_with(value, "rust-version", || inherit()?.rust_version()))
-            .transpose()?
-            .map(manifest::InheritableField::Value),
-        name: original_package.name.clone(),
-        version: original_package
-            .version
-            .clone()
-            .map(|value| field_inherit_with(value, "version", || inherit()?.version()))
-            .transpose()?
-            .map(manifest::InheritableField::Value),
-        authors: original_package
-            .authors
-            .clone()
-            .map(|value| field_inherit_with(value, "authors", || inherit()?.authors()))
-            .transpose()?
-            .map(manifest::InheritableField::Value),
-        build: original_package.build.clone(),
-        metabuild: original_package.metabuild.clone(),
-        default_target: original_package.default_target.clone(),
-        forced_target: original_package.forced_target.clone(),
-        links: original_package.links.clone(),
-        exclude: original_package
-            .exclude
-            .clone()
-            .map(|value| field_inherit_with(value, "exclude", || inherit()?.exclude()))
-            .transpose()?
-            .map(manifest::InheritableField::Value),
-        include: original_package
-            .include
-            .clone()
-            .map(|value| field_inherit_with(value, "include", || inherit()?.include()))
-            .transpose()?
-            .map(manifest::InheritableField::Value),
-        publish: original_package
-            .publish
-            .clone()
-            .map(|value| field_inherit_with(value, "publish", || inherit()?.publish()))
-            .transpose()?
-            .map(manifest::InheritableField::Value),
-        workspace: original_package.workspace.clone(),
-        im_a_teapot: original_package.im_a_teapot.clone(),
-        autobins: original_package.autobins.clone(),
-        autoexamples: original_package.autoexamples.clone(),
-        autotests: original_package.autotests.clone(),
-        autobenches: original_package.autobenches.clone(),
-        default_run: original_package.default_run.clone(),
-        description: original_package
-            .description
-            .clone()
-            .map(|value| field_inherit_with(value, "description", || inherit()?.description()))
-            .transpose()?
-            .map(manifest::InheritableField::Value),
-        homepage: original_package
-            .homepage
-            .clone()
-            .map(|value| field_inherit_with(value, "homepage", || inherit()?.homepage()))
-            .transpose()?
-            .map(manifest::InheritableField::Value),
-        documentation: original_package
-            .documentation
-            .clone()
-            .map(|value| field_inherit_with(value, "documentation", || inherit()?.documentation()))
-            .transpose()?
-            .map(manifest::InheritableField::Value),
-        readme: readme_for_package(
-            package_root,
-            original_package
-                .readme
+    let resolved_package = if let Some(original_package) = original_toml.package() {
+        let resolved_package = manifest::TomlPackage {
+            edition: original_package
+                .edition
+                .clone()
+                .map(|value| field_inherit_with(value, "edition", || inherit()?.edition()))
+                .transpose()?
+                .map(manifest::InheritableField::Value),
+            rust_version: original_package
+                .rust_version
                 .clone()
                 .map(|value| {
-                    field_inherit_with(value, "readme", || inherit()?.readme(package_root))
+                    field_inherit_with(value, "rust-version", || inherit()?.rust_version())
                 })
                 .transpose()?
-                .as_ref(),
-        )
-        .map(|s| manifest::InheritableField::Value(StringOrBool::String(s))),
-        keywords: original_package
-            .keywords
-            .clone()
-            .map(|value| field_inherit_with(value, "keywords", || inherit()?.keywords()))
-            .transpose()?
-            .map(manifest::InheritableField::Value),
-        categories: original_package
-            .categories
-            .clone()
-            .map(|value| field_inherit_with(value, "categories", || inherit()?.categories()))
-            .transpose()?
-            .map(manifest::InheritableField::Value),
-        license: original_package
-            .license
-            .clone()
-            .map(|value| field_inherit_with(value, "license", || inherit()?.license()))
-            .transpose()?
-            .map(manifest::InheritableField::Value),
-        license_file: original_package
-            .license_file
-            .clone()
-            .map(|value| {
-                field_inherit_with(value, "license-file", || {
-                    inherit()?.license_file(package_root)
+                .map(manifest::InheritableField::Value),
+            name: original_package.name.clone(),
+            version: original_package
+                .version
+                .clone()
+                .map(|value| field_inherit_with(value, "version", || inherit()?.version()))
+                .transpose()?
+                .map(manifest::InheritableField::Value),
+            authors: original_package
+                .authors
+                .clone()
+                .map(|value| field_inherit_with(value, "authors", || inherit()?.authors()))
+                .transpose()?
+                .map(manifest::InheritableField::Value),
+            build: original_package.build.clone(),
+            metabuild: original_package.metabuild.clone(),
+            default_target: original_package.default_target.clone(),
+            forced_target: original_package.forced_target.clone(),
+            links: original_package.links.clone(),
+            exclude: original_package
+                .exclude
+                .clone()
+                .map(|value| field_inherit_with(value, "exclude", || inherit()?.exclude()))
+                .transpose()?
+                .map(manifest::InheritableField::Value),
+            include: original_package
+                .include
+                .clone()
+                .map(|value| field_inherit_with(value, "include", || inherit()?.include()))
+                .transpose()?
+                .map(manifest::InheritableField::Value),
+            publish: original_package
+                .publish
+                .clone()
+                .map(|value| field_inherit_with(value, "publish", || inherit()?.publish()))
+                .transpose()?
+                .map(manifest::InheritableField::Value),
+            workspace: original_package.workspace.clone(),
+            im_a_teapot: original_package.im_a_teapot.clone(),
+            autobins: original_package.autobins.clone(),
+            autoexamples: original_package.autoexamples.clone(),
+            autotests: original_package.autotests.clone(),
+            autobenches: original_package.autobenches.clone(),
+            default_run: original_package.default_run.clone(),
+            description: original_package
+                .description
+                .clone()
+                .map(|value| field_inherit_with(value, "description", || inherit()?.description()))
+                .transpose()?
+                .map(manifest::InheritableField::Value),
+            homepage: original_package
+                .homepage
+                .clone()
+                .map(|value| field_inherit_with(value, "homepage", || inherit()?.homepage()))
+                .transpose()?
+                .map(manifest::InheritableField::Value),
+            documentation: original_package
+                .documentation
+                .clone()
+                .map(|value| {
+                    field_inherit_with(value, "documentation", || inherit()?.documentation())
                 })
-            })
-            .transpose()?
-            .map(manifest::InheritableField::Value),
-        repository: original_package
-            .repository
-            .clone()
-            .map(|value| field_inherit_with(value, "repository", || inherit()?.repository()))
-            .transpose()?
-            .map(manifest::InheritableField::Value),
-        resolver: original_package.resolver.clone(),
-        metadata: original_package.metadata.clone(),
-        _invalid_cargo_features: Default::default(),
+                .transpose()?
+                .map(manifest::InheritableField::Value),
+            readme: readme_for_package(
+                package_root,
+                original_package
+                    .readme
+                    .clone()
+                    .map(|value| {
+                        field_inherit_with(value, "readme", || inherit()?.readme(package_root))
+                    })
+                    .transpose()?
+                    .as_ref(),
+            )
+            .map(|s| manifest::InheritableField::Value(StringOrBool::String(s))),
+            keywords: original_package
+                .keywords
+                .clone()
+                .map(|value| field_inherit_with(value, "keywords", || inherit()?.keywords()))
+                .transpose()?
+                .map(manifest::InheritableField::Value),
+            categories: original_package
+                .categories
+                .clone()
+                .map(|value| field_inherit_with(value, "categories", || inherit()?.categories()))
+                .transpose()?
+                .map(manifest::InheritableField::Value),
+            license: original_package
+                .license
+                .clone()
+                .map(|value| field_inherit_with(value, "license", || inherit()?.license()))
+                .transpose()?
+                .map(manifest::InheritableField::Value),
+            license_file: original_package
+                .license_file
+                .clone()
+                .map(|value| {
+                    field_inherit_with(value, "license-file", || {
+                        inherit()?.license_file(package_root)
+                    })
+                })
+                .transpose()?
+                .map(manifest::InheritableField::Value),
+            repository: original_package
+                .repository
+                .clone()
+                .map(|value| field_inherit_with(value, "repository", || inherit()?.repository()))
+                .transpose()?
+                .map(manifest::InheritableField::Value),
+            resolver: original_package.resolver.clone(),
+            metadata: original_package.metadata.clone(),
+            _invalid_cargo_features: Default::default(),
+        };
+        Some(Box::new(resolved_package))
+    } else {
+        None
     };
     let resolved_dependencies = resolve_dependencies(
         gctx,
@@ -770,7 +756,7 @@ pub fn to_real_manifest(
         .transpose()?;
     let resolved_toml = manifest::TomlManifest {
         cargo_features: original_toml.cargo_features.clone(),
-        package: Some(Box::new(resolved_package)),
+        package: resolved_package,
         project: None,
         profile: original_toml.profile.clone(),
         lib: original_toml.lib.clone(),
@@ -795,6 +781,58 @@ pub fn to_real_manifest(
         }),
         _unused_keys: Default::default(),
     };
+
+    Ok(resolved_toml)
+}
+
+#[tracing::instrument(skip_all)]
+pub fn to_real_manifest(
+    contents: String,
+    document: toml_edit::ImDocument<String>,
+    original_toml: manifest::TomlManifest,
+    resolved_toml: manifest::TomlManifest,
+    features: Features,
+    workspace_config: WorkspaceConfig,
+    source_id: SourceId,
+    manifest_file: &Path,
+    gctx: &GlobalContext,
+    warnings: &mut Vec<String>,
+    errors: &mut Vec<String>,
+) -> CargoResult<Manifest> {
+    let embedded = is_embedded(manifest_file);
+    let package_root = manifest_file.parent().unwrap();
+    if !package_root.is_dir() {
+        bail!(
+            "package root '{}' is not a directory",
+            package_root.display()
+        );
+    };
+
+    let original_package = match (&original_toml.package, &original_toml.project) {
+        (Some(_), Some(project)) => {
+            warnings.push(format!(
+                "manifest at `{}` contains both `project` and `package`, \
+                    this could become a hard error in the future",
+                package_root.display()
+            ));
+            project.clone()
+        }
+        (Some(package), None) => package.clone(),
+        (None, Some(project)) => {
+            warnings.push(format!(
+                "manifest at `{}` contains `[project]` instead of `[package]`, \
+                                this could become a hard error in the future",
+                package_root.display()
+            ));
+            project.clone()
+        }
+        (None, None) => bail!("no `package` section found"),
+    };
+
+    let package_name = &original_package.name;
+    if package_name.contains(':') {
+        features.require(Feature::open_namespaces())?;
+    }
 
     let resolved_package = resolved_toml
         .package()
@@ -1473,6 +1511,7 @@ fn to_virtual_manifest(
     contents: String,
     document: toml_edit::ImDocument<String>,
     original_toml: manifest::TomlManifest,
+    resolved_toml: manifest::TomlManifest,
     features: Features,
     workspace_config: WorkspaceConfig,
     source_id: SourceId,
@@ -1483,13 +1522,9 @@ fn to_virtual_manifest(
 ) -> CargoResult<VirtualManifest> {
     let root = manifest_file.parent().unwrap();
 
-    let mut resolved_toml = original_toml.clone();
-
     for field in original_toml.requires_package() {
         bail!("this virtual manifest specifies a `{field}` section, which is not allowed");
     }
-
-    resolved_toml._unused_keys = Default::default();
 
     let mut deps = Vec::new();
     let (replace, patch) = {
