@@ -532,135 +532,8 @@ fn resolve_toml(
     };
 
     let resolved_package = if let Some(original_package) = original_toml.package() {
-        let resolved_package = manifest::TomlPackage {
-            edition: original_package
-                .edition
-                .clone()
-                .map(|value| field_inherit_with(value, "edition", || inherit()?.edition()))
-                .transpose()?
-                .map(manifest::InheritableField::Value),
-            rust_version: original_package
-                .rust_version
-                .clone()
-                .map(|value| {
-                    field_inherit_with(value, "rust-version", || inherit()?.rust_version())
-                })
-                .transpose()?
-                .map(manifest::InheritableField::Value),
-            name: original_package.name.clone(),
-            version: original_package
-                .version
-                .clone()
-                .map(|value| field_inherit_with(value, "version", || inherit()?.version()))
-                .transpose()?
-                .map(manifest::InheritableField::Value),
-            authors: original_package
-                .authors
-                .clone()
-                .map(|value| field_inherit_with(value, "authors", || inherit()?.authors()))
-                .transpose()?
-                .map(manifest::InheritableField::Value),
-            build: original_package.build.clone(),
-            metabuild: original_package.metabuild.clone(),
-            default_target: original_package.default_target.clone(),
-            forced_target: original_package.forced_target.clone(),
-            links: original_package.links.clone(),
-            exclude: original_package
-                .exclude
-                .clone()
-                .map(|value| field_inherit_with(value, "exclude", || inherit()?.exclude()))
-                .transpose()?
-                .map(manifest::InheritableField::Value),
-            include: original_package
-                .include
-                .clone()
-                .map(|value| field_inherit_with(value, "include", || inherit()?.include()))
-                .transpose()?
-                .map(manifest::InheritableField::Value),
-            publish: original_package
-                .publish
-                .clone()
-                .map(|value| field_inherit_with(value, "publish", || inherit()?.publish()))
-                .transpose()?
-                .map(manifest::InheritableField::Value),
-            workspace: original_package.workspace.clone(),
-            im_a_teapot: original_package.im_a_teapot.clone(),
-            autobins: original_package.autobins.clone(),
-            autoexamples: original_package.autoexamples.clone(),
-            autotests: original_package.autotests.clone(),
-            autobenches: original_package.autobenches.clone(),
-            default_run: original_package.default_run.clone(),
-            description: original_package
-                .description
-                .clone()
-                .map(|value| field_inherit_with(value, "description", || inherit()?.description()))
-                .transpose()?
-                .map(manifest::InheritableField::Value),
-            homepage: original_package
-                .homepage
-                .clone()
-                .map(|value| field_inherit_with(value, "homepage", || inherit()?.homepage()))
-                .transpose()?
-                .map(manifest::InheritableField::Value),
-            documentation: original_package
-                .documentation
-                .clone()
-                .map(|value| {
-                    field_inherit_with(value, "documentation", || inherit()?.documentation())
-                })
-                .transpose()?
-                .map(manifest::InheritableField::Value),
-            readme: readme_for_package(
-                package_root,
-                original_package
-                    .readme
-                    .clone()
-                    .map(|value| {
-                        field_inherit_with(value, "readme", || inherit()?.readme(package_root))
-                    })
-                    .transpose()?
-                    .as_ref(),
-            )
-            .map(|s| manifest::InheritableField::Value(StringOrBool::String(s))),
-            keywords: original_package
-                .keywords
-                .clone()
-                .map(|value| field_inherit_with(value, "keywords", || inherit()?.keywords()))
-                .transpose()?
-                .map(manifest::InheritableField::Value),
-            categories: original_package
-                .categories
-                .clone()
-                .map(|value| field_inherit_with(value, "categories", || inherit()?.categories()))
-                .transpose()?
-                .map(manifest::InheritableField::Value),
-            license: original_package
-                .license
-                .clone()
-                .map(|value| field_inherit_with(value, "license", || inherit()?.license()))
-                .transpose()?
-                .map(manifest::InheritableField::Value),
-            license_file: original_package
-                .license_file
-                .clone()
-                .map(|value| {
-                    field_inherit_with(value, "license-file", || {
-                        inherit()?.license_file(package_root)
-                    })
-                })
-                .transpose()?
-                .map(manifest::InheritableField::Value),
-            repository: original_package
-                .repository
-                .clone()
-                .map(|value| field_inherit_with(value, "repository", || inherit()?.repository()))
-                .transpose()?
-                .map(manifest::InheritableField::Value),
-            resolver: original_package.resolver.clone(),
-            metadata: original_package.metadata.clone(),
-            _invalid_cargo_features: Default::default(),
-        };
-        Some(Box::new(resolved_package))
+        let resolved_package = resolve_package_toml(original_package, package_root, &inherit)?;
+        Some(resolved_package)
     } else {
         None
     };
@@ -771,6 +644,139 @@ fn resolve_toml(
     };
 
     Ok(resolved_toml)
+}
+
+#[tracing::instrument(skip_all)]
+fn resolve_package_toml<'a>(
+    original_package: &manifest::TomlPackage,
+    package_root: &Path,
+    inherit: &dyn Fn() -> CargoResult<&'a InheritableFields>,
+) -> CargoResult<Box<manifest::TomlPackage>> {
+    let resolved_package = manifest::TomlPackage {
+        edition: original_package
+            .edition
+            .clone()
+            .map(|value| field_inherit_with(value, "edition", || inherit()?.edition()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        rust_version: original_package
+            .rust_version
+            .clone()
+            .map(|value| field_inherit_with(value, "rust-version", || inherit()?.rust_version()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        name: original_package.name.clone(),
+        version: original_package
+            .version
+            .clone()
+            .map(|value| field_inherit_with(value, "version", || inherit()?.version()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        authors: original_package
+            .authors
+            .clone()
+            .map(|value| field_inherit_with(value, "authors", || inherit()?.authors()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        build: original_package.build.clone(),
+        metabuild: original_package.metabuild.clone(),
+        default_target: original_package.default_target.clone(),
+        forced_target: original_package.forced_target.clone(),
+        links: original_package.links.clone(),
+        exclude: original_package
+            .exclude
+            .clone()
+            .map(|value| field_inherit_with(value, "exclude", || inherit()?.exclude()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        include: original_package
+            .include
+            .clone()
+            .map(|value| field_inherit_with(value, "include", || inherit()?.include()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        publish: original_package
+            .publish
+            .clone()
+            .map(|value| field_inherit_with(value, "publish", || inherit()?.publish()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        workspace: original_package.workspace.clone(),
+        im_a_teapot: original_package.im_a_teapot.clone(),
+        autobins: original_package.autobins.clone(),
+        autoexamples: original_package.autoexamples.clone(),
+        autotests: original_package.autotests.clone(),
+        autobenches: original_package.autobenches.clone(),
+        default_run: original_package.default_run.clone(),
+        description: original_package
+            .description
+            .clone()
+            .map(|value| field_inherit_with(value, "description", || inherit()?.description()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        homepage: original_package
+            .homepage
+            .clone()
+            .map(|value| field_inherit_with(value, "homepage", || inherit()?.homepage()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        documentation: original_package
+            .documentation
+            .clone()
+            .map(|value| field_inherit_with(value, "documentation", || inherit()?.documentation()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        readme: readme_for_package(
+            package_root,
+            original_package
+                .readme
+                .clone()
+                .map(|value| {
+                    field_inherit_with(value, "readme", || inherit()?.readme(package_root))
+                })
+                .transpose()?
+                .as_ref(),
+        )
+        .map(|s| manifest::InheritableField::Value(StringOrBool::String(s))),
+        keywords: original_package
+            .keywords
+            .clone()
+            .map(|value| field_inherit_with(value, "keywords", || inherit()?.keywords()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        categories: original_package
+            .categories
+            .clone()
+            .map(|value| field_inherit_with(value, "categories", || inherit()?.categories()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        license: original_package
+            .license
+            .clone()
+            .map(|value| field_inherit_with(value, "license", || inherit()?.license()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        license_file: original_package
+            .license_file
+            .clone()
+            .map(|value| {
+                field_inherit_with(value, "license-file", || {
+                    inherit()?.license_file(package_root)
+                })
+            })
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        repository: original_package
+            .repository
+            .clone()
+            .map(|value| field_inherit_with(value, "repository", || inherit()?.repository()))
+            .transpose()?
+            .map(manifest::InheritableField::Value),
+        resolver: original_package.resolver.clone(),
+        metadata: original_package.metadata.clone(),
+        _invalid_cargo_features: Default::default(),
+    };
+    Ok(Box::new(resolved_package))
 }
 
 #[tracing::instrument(skip_all)]
