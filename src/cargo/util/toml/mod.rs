@@ -667,33 +667,27 @@ fn resolve_toml(
     let resolved_dependencies = resolve_dependencies(
         gctx,
         &features,
-        manifest_file,
         original_toml.dependencies.as_ref(),
         None,
-        &workspace_config,
-        &inherit_cell,
+        &inherit,
         package_root,
         warnings,
     )?;
     let resolved_dev_dependencies = resolve_dependencies(
         gctx,
         &features,
-        manifest_file,
         original_toml.dev_dependencies(),
         Some(DepKind::Development),
-        &workspace_config,
-        &inherit_cell,
+        &inherit,
         package_root,
         warnings,
     )?;
     let resolved_build_dependencies = resolve_dependencies(
         gctx,
         &features,
-        manifest_file,
         original_toml.build_dependencies(),
         Some(DepKind::Build),
-        &workspace_config,
-        &inherit_cell,
+        &inherit,
         package_root,
         warnings,
     )?;
@@ -702,33 +696,27 @@ fn resolve_toml(
         let resolved_dependencies = resolve_dependencies(
             gctx,
             &features,
-            manifest_file,
             platform.dependencies.as_ref(),
             None,
-            &workspace_config,
-            &inherit_cell,
+            &inherit,
             package_root,
             warnings,
         )?;
         let resolved_dev_dependencies = resolve_dependencies(
             gctx,
             &features,
-            manifest_file,
             platform.dev_dependencies(),
             Some(DepKind::Development),
-            &workspace_config,
-            &inherit_cell,
+            &inherit,
             package_root,
             warnings,
         )?;
         let resolved_build_dependencies = resolve_dependencies(
             gctx,
             &features,
-            manifest_file,
             platform.build_dependencies(),
             Some(DepKind::Build),
-            &workspace_config,
-            &inherit_cell,
+            &inherit,
             package_root,
             warnings,
         )?;
@@ -1330,14 +1318,12 @@ pub fn to_real_manifest(
 }
 
 #[tracing::instrument(skip_all)]
-fn resolve_dependencies(
+fn resolve_dependencies<'a>(
     gctx: &GlobalContext,
     features: &Features,
-    manifest_file: &Path,
     orig_deps: Option<&BTreeMap<manifest::PackageName, manifest::InheritableDependency>>,
     kind: Option<DepKind>,
-    workspace_config: &WorkspaceConfig,
-    inherit_cell: &LazyCell<InheritableFields>,
+    inherit: &dyn Fn() -> CargoResult<&'a InheritableFields>,
     package_root: &Path,
     warnings: &mut Vec<String>,
 ) -> CargoResult<Option<BTreeMap<manifest::PackageName, manifest::InheritableDependency>>> {
@@ -1345,15 +1331,10 @@ fn resolve_dependencies(
         return Ok(None);
     };
 
-    let inheritable = || {
-        inherit_cell
-            .try_borrow_with(|| load_inheritable_fields(gctx, manifest_file, &workspace_config))
-    };
-
     let mut deps = BTreeMap::new();
     for (name_in_toml, v) in dependencies.iter() {
         let mut resolved =
-            dependency_inherit_with(v.clone(), name_in_toml, inheritable, package_root, warnings)?;
+            dependency_inherit_with(v.clone(), name_in_toml, inherit, package_root, warnings)?;
         if let manifest::TomlDependency::Detailed(ref mut d) = resolved {
             if d.public.is_some() {
                 let public_feature = features.require(Feature::public_dependency());
@@ -2030,14 +2011,14 @@ fn lints_inherit_with(
 fn dependency_inherit_with<'a>(
     dependency: manifest::InheritableDependency,
     name: &str,
-    inheritable: impl FnOnce() -> CargoResult<&'a InheritableFields>,
+    inherit: &dyn Fn() -> CargoResult<&'a InheritableFields>,
     package_root: &Path,
     warnings: &mut Vec<String>,
 ) -> CargoResult<manifest::TomlDependency> {
     match dependency {
         manifest::InheritableDependency::Value(value) => Ok(value),
         manifest::InheritableDependency::Inherit(w) => {
-            inner_dependency_inherit_with(w, name, inheritable, package_root, warnings).with_context(|| {
+            inner_dependency_inherit_with(w, name, inherit, package_root, warnings).with_context(|| {
                 format!(
                     "error inheriting `{name}` from workspace root manifest's `workspace.dependencies.{name}`",
                 )
@@ -2049,7 +2030,7 @@ fn dependency_inherit_with<'a>(
 fn inner_dependency_inherit_with<'a>(
     dependency: manifest::TomlInheritedDependency,
     name: &str,
-    inheritable: impl FnOnce() -> CargoResult<&'a InheritableFields>,
+    inherit: &dyn Fn() -> CargoResult<&'a InheritableFields>,
     package_root: &Path,
     warnings: &mut Vec<String>,
 ) -> CargoResult<manifest::TomlDependency> {
@@ -2068,7 +2049,7 @@ fn inner_dependency_inherit_with<'a>(
     if dependency.default_features.is_some() && dependency.default_features2.is_some() {
         warn_on_deprecated("default-features", name, "dependency", warnings);
     }
-    inheritable()?.get_dependency(name, package_root).map(|d| {
+    inherit()?.get_dependency(name, package_root).map(|d| {
         match d {
             manifest::TomlDependency::Simple(s) => {
                 if let Some(false) = dependency.default_features() {
