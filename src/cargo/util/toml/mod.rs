@@ -925,7 +925,7 @@ pub fn to_real_manifest(
 
     let resolve_behavior = match (
         resolved_package.resolver.as_ref(),
-        original_toml
+        resolved_toml
             .workspace
             .as_ref()
             .and_then(|ws| ws.resolver.as_ref()),
@@ -942,7 +942,7 @@ pub fn to_real_manifest(
     // If we have a lib with no path, use the inferred lib or else the package name.
     let targets = targets(
         &features,
-        &original_toml,
+        &resolved_toml,
         package_name,
         package_root,
         edition,
@@ -1107,8 +1107,8 @@ pub fn to_real_manifest(
         )?;
     }
 
-    let replace = replace(&original_toml, &mut manifest_ctx)?;
-    let patch = patch(&original_toml, &mut manifest_ctx)?;
+    let replace = replace(&resolved_toml, &mut manifest_ctx)?;
+    let patch = patch(&resolved_toml, &mut manifest_ctx)?;
 
     {
         let mut names_sources = BTreeMap::new();
@@ -1179,7 +1179,7 @@ pub fn to_real_manifest(
         rust_version: rust_version.clone(),
     };
 
-    if let Some(profiles) = &original_toml.profile {
+    if let Some(profiles) = &resolved_toml.profile {
         let cli_unstable = gctx.cli_unstable();
         validate_profiles(profiles, cli_unstable, &features, warnings)?;
     }
@@ -1211,7 +1211,7 @@ pub fn to_real_manifest(
     let summary = Summary::new(
         pkgid,
         deps,
-        &original_toml
+        &resolved_toml
             .features
             .as_ref()
             .unwrap_or(&Default::default())
