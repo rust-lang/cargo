@@ -105,6 +105,16 @@ impl TomlManifest {
     pub fn features(&self) -> Option<&BTreeMap<FeatureName, Vec<String>>> {
         self.features.as_ref()
     }
+
+    pub fn resolved_badges(
+        &self,
+    ) -> Result<Option<&BTreeMap<String, BTreeMap<String, String>>>, UnresolvedError> {
+        self.badges.as_ref().map(|l| l.resolved()).transpose()
+    }
+
+    pub fn resolved_lints(&self) -> Result<Option<&TomlLints>, UnresolvedError> {
+        self.lints.as_ref().map(|l| l.resolved()).transpose()
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -194,6 +204,83 @@ pub struct TomlPackage {
     pub _invalid_cargo_features: Option<InvalidCargoFeatures>,
 }
 
+impl TomlPackage {
+    pub fn resolved_edition(&self) -> Result<Option<&String>, UnresolvedError> {
+        self.edition.as_ref().map(|v| v.resolved()).transpose()
+    }
+
+    pub fn resolved_rust_version(&self) -> Result<Option<&RustVersion>, UnresolvedError> {
+        self.rust_version.as_ref().map(|v| v.resolved()).transpose()
+    }
+
+    pub fn resolved_version(&self) -> Result<Option<&semver::Version>, UnresolvedError> {
+        self.version.as_ref().map(|v| v.resolved()).transpose()
+    }
+
+    pub fn resolved_authors(&self) -> Result<Option<&Vec<String>>, UnresolvedError> {
+        self.authors.as_ref().map(|v| v.resolved()).transpose()
+    }
+
+    pub fn resolved_exclude(&self) -> Result<Option<&Vec<String>>, UnresolvedError> {
+        self.exclude.as_ref().map(|v| v.resolved()).transpose()
+    }
+
+    pub fn resolved_include(&self) -> Result<Option<&Vec<String>>, UnresolvedError> {
+        self.include.as_ref().map(|v| v.resolved()).transpose()
+    }
+
+    pub fn resolved_publish(&self) -> Result<Option<&VecStringOrBool>, UnresolvedError> {
+        self.publish.as_ref().map(|v| v.resolved()).transpose()
+    }
+
+    pub fn resolved_description(&self) -> Result<Option<&String>, UnresolvedError> {
+        self.description.as_ref().map(|v| v.resolved()).transpose()
+    }
+
+    pub fn resolved_homepage(&self) -> Result<Option<&String>, UnresolvedError> {
+        self.homepage.as_ref().map(|v| v.resolved()).transpose()
+    }
+
+    pub fn resolved_documentation(&self) -> Result<Option<&String>, UnresolvedError> {
+        self.documentation
+            .as_ref()
+            .map(|v| v.resolved())
+            .transpose()
+    }
+
+    pub fn resolved_readme(&self) -> Result<Option<&String>, UnresolvedError> {
+        self.readme
+            .as_ref()
+            .map(|v| {
+                v.resolved().and_then(|sb| match sb {
+                    StringOrBool::Bool(_) => Err(UnresolvedError),
+                    StringOrBool::String(value) => Ok(value),
+                })
+            })
+            .transpose()
+    }
+
+    pub fn resolved_keywords(&self) -> Result<Option<&Vec<String>>, UnresolvedError> {
+        self.keywords.as_ref().map(|v| v.resolved()).transpose()
+    }
+
+    pub fn resolved_categories(&self) -> Result<Option<&Vec<String>>, UnresolvedError> {
+        self.categories.as_ref().map(|v| v.resolved()).transpose()
+    }
+
+    pub fn resolved_license(&self) -> Result<Option<&String>, UnresolvedError> {
+        self.license.as_ref().map(|v| v.resolved()).transpose()
+    }
+
+    pub fn resolved_license_file(&self) -> Result<Option<&String>, UnresolvedError> {
+        self.license_file.as_ref().map(|v| v.resolved()).transpose()
+    }
+
+    pub fn resolved_repository(&self) -> Result<Option<&String>, UnresolvedError> {
+        self.repository.as_ref().map(|v| v.resolved()).transpose()
+    }
+}
+
 /// An enum that allows for inheriting keys from a workspace in a Cargo.toml.
 #[derive(Serialize, Copy, Clone, Debug)]
 #[serde(untagged)]
@@ -205,6 +292,10 @@ pub enum InheritableField<T> {
 }
 
 impl<T> InheritableField<T> {
+    pub fn resolved(&self) -> Result<&T, UnresolvedError> {
+        self.as_value().ok_or(UnresolvedError)
+    }
+
     pub fn as_value(&self) -> Option<&T> {
         match self {
             InheritableField::Inherit(_) => None,
@@ -502,6 +593,13 @@ impl InheritableDependency {
         match self {
             InheritableDependency::Value(d) => d.unused_keys(),
             InheritableDependency::Inherit(w) => w._unused_keys.keys().cloned().collect(),
+        }
+    }
+
+    pub fn resolved(&self) -> Result<&TomlDependency, UnresolvedError> {
+        match self {
+            InheritableDependency::Value(d) => Ok(d),
+            InheritableDependency::Inherit(_) => Err(UnresolvedError),
         }
     }
 }
@@ -1297,6 +1395,16 @@ pub struct InheritableLints {
     pub lints: TomlLints,
 }
 
+impl InheritableLints {
+    pub fn resolved(&self) -> Result<&TomlLints, UnresolvedError> {
+        if self.workspace {
+            Err(UnresolvedError)
+        } else {
+            Ok(&self.lints)
+        }
+    }
+}
+
 fn is_false(b: &bool) -> bool {
     !b
 }
@@ -1512,3 +1620,9 @@ impl<'de> de::Deserialize<'de> for PathValue {
         Ok(PathValue(String::deserialize(deserializer)?.into()))
     }
 }
+
+/// Error validating names in Cargo.
+#[derive(Debug, thiserror::Error)]
+#[error("manifest field was not resolved")]
+#[non_exhaustive]
+pub struct UnresolvedError;
