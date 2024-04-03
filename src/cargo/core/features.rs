@@ -909,8 +909,6 @@ fn parse_git(it: impl Iterator<Item = impl AsRef<str>>) -> CargoResult<Option<Gi
 pub struct GitoxideFeatures {
     /// All fetches are done with `gitoxide`, which includes git dependencies as well as the crates index.
     pub fetch: bool,
-    /// Listing of files suitable for packaging with Git support.
-    pub list_files: bool,
     /// Checkout git dependencies using `gitoxide` (submodules are still handled by git2 ATM, and filters
     /// like linefeed conversions are unsupported).
     pub checkout: bool,
@@ -924,7 +922,6 @@ impl GitoxideFeatures {
     fn all() -> Self {
         GitoxideFeatures {
             fetch: true,
-            list_files: true,
             checkout: true,
             internal_use_git2: false,
         }
@@ -935,7 +932,6 @@ impl GitoxideFeatures {
     fn safe() -> Self {
         GitoxideFeatures {
             fetch: true,
-            list_files: true,
             checkout: true,
             internal_use_git2: false,
         }
@@ -948,7 +944,6 @@ fn parse_gitoxide(
     let mut out = GitoxideFeatures::default();
     let GitoxideFeatures {
         fetch,
-        list_files,
         checkout,
         internal_use_git2,
     } = &mut out;
@@ -957,10 +952,9 @@ fn parse_gitoxide(
         match e.as_ref() {
             "fetch" => *fetch = true,
             "checkout" => *checkout = true,
-            "list-files" => *list_files = true,
             "internal-use-git2" => *internal_use_git2 = true,
             _ => {
-                bail!("unstable 'gitoxide' only takes `fetch`, `list-files` and 'checkout' as valid input, for shallow fetches see `-Zgit=shallow-index,shallow-deps`")
+                bail!("unstable 'gitoxide' only takes `fetch` and 'checkout' as valid input, for shallow fetches see `-Zgit=shallow-index,shallow-deps`")
             }
         }
     }

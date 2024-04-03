@@ -143,13 +143,14 @@ impl<'gctx> PathSource<'gctx> {
         let git_repo = if no_include_option {
             if self
                 .gctx
-                .cli_unstable()
-                .gitoxide
-                .map_or(false, |features| features.list_files)
+                .get_env("__CARGO_GITOXIDE_DISABLE_LIST_FILES")
+                .ok()
+                .as_deref()
+                == Some("1")
             {
-                self.discover_gix_repo(root)?.map(Git2OrGixRepository::Gix)
-            } else {
                 self.discover_git_repo(root)?.map(Git2OrGixRepository::Git2)
+            } else {
+                self.discover_gix_repo(root)?.map(Git2OrGixRepository::Gix)
             }
         } else {
             None

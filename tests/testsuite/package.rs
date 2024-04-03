@@ -3510,3 +3510,36 @@ Please update the `build` setting in the manifest at `[CWD]/Cargo.toml` and poin
         .with_stderr(&expect_msg)
         .run();
 }
+
+#[cargo_test]
+fn symlink_manifest_path() {
+    // Test `cargo install --manifest-path` pointing through a symlink.
+    if !symlink_supported() {
+        return;
+    }
+    let p = git::new("foo", |p| {
+        p.file("Cargo.toml", &basic_manifest("foo", "1.0.0"))
+            .file("src/main.rs", "fn main() {}")
+            // Triggers discover_git_and_list_files for detecting changed files.
+            .file("build.rs", "fn main() {}")
+    });
+    #[cfg(unix)]
+    use std::os::unix::fs::symlink;
+    #[cfg(windows)]
+    use std::os::windows::fs::symlink_dir as symlink;
+
+    let foo_symlink = paths::root().join("foo-symlink");
+    t!(symlink(p.root(), &foo_symlink));
+
+    cargo_process("package --no-verify --manifest-path")
+        .arg(foo_symlink.join("Cargo.toml"))
+        .with_stderr(
+            "\
+warning: manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v1.0.0 ([..]foo-symlink)
+[PACKAGED] 5 files[..]
+",
+        )
+        .run()
+}
