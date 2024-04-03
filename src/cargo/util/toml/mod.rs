@@ -476,7 +476,7 @@ fn resolve_package_toml<'a>(
             .map(|value| field_inherit_with(value, "documentation", || inherit()?.documentation()))
             .transpose()?
             .map(manifest::InheritableField::Value),
-        readme: readme_for_package(
+        readme: resolve_package_readme(
             package_root,
             original_package
                 .readme
@@ -530,7 +530,7 @@ fn resolve_package_toml<'a>(
 }
 
 /// Returns the name of the README file for a [`manifest::TomlPackage`].
-fn readme_for_package(
+fn resolve_package_readme(
     package_root: &Path,
     readme: Option<&manifest::StringOrBool>,
 ) -> Option<String> {
@@ -764,7 +764,7 @@ impl InheritableFields {
 
     /// Gets the field `workspace.package.readme`.
     fn readme(&self, package_root: &Path) -> CargoResult<manifest::StringOrBool> {
-        let Some(readme) = readme_for_package(
+        let Some(readme) = resolve_package_readme(
             self._ws_root.as_path(),
             self.package.as_ref().and_then(|p| p.readme.as_ref()),
         ) else {
