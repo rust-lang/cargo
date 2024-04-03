@@ -3538,7 +3538,7 @@ fn symlink_manifest_path() {
 warning: manifest has no description, license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v1.0.0 ([..]foo-symlink)
-[PACKAGED] 5 files[..]
+[PACKAGED] 6 files[..]
 ",
         )
         .run()
