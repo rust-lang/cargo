@@ -987,6 +987,7 @@ name = "foo"
 version = "0.1.0"
 description = "foo"
 homepage = "https://example.com/"
+readme = false
 license = "MIT"
 
 [dependencies.opt-dep1]
@@ -1105,6 +1106,7 @@ name = "foo"
 version = "0.1.0"
 description = "foo"
 homepage = "https://example.com/"
+readme = false
 license = "MIT"
 
 [dependencies.bar]

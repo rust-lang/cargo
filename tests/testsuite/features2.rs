@@ -1705,6 +1705,7 @@ version = "0.1.0"
 authors = ["Zzz"]
 description = "foo"
 homepage = "https://example.com/"
+readme = false
 license = "MIT"
 resolver = "2"
 "#,

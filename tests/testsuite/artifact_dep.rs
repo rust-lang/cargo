@@ -2217,6 +2217,7 @@ authors = []
 description = "foo"
 homepage = "foo"
 documentation = "foo"
+readme = false
 license = "MIT"
 repository = "foo"
 resolver = "2"

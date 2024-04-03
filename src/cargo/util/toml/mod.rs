@@ -553,7 +553,10 @@ fn resolve_package_toml<'a>(
                 .transpose()?
                 .as_ref(),
         )
-        .map(|s| manifest::InheritableField::Value(StringOrBool::String(s))),
+        .map(|s| manifest::InheritableField::Value(StringOrBool::String(s)))
+        .or(Some(manifest::InheritableField::Value(StringOrBool::Bool(
+            false,
+        )))),
         keywords: original_package
             .keywords
             .clone()

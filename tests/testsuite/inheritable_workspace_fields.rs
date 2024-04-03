@@ -227,6 +227,7 @@ publish = true
 description = "This is a crate"
 homepage = "https://www.rust-lang.org"
 documentation = "https://www.rust-lang.org/learn"
+readme = false
 keywords = ["cli"]
 categories = ["development-tools"]
 license = "MIT"
@@ -383,6 +384,7 @@ edition = "2015"
 name = "bar"
 version = "0.2.0"
 authors = []
+readme = false
 
 [dependencies.dep]
 version = "0.1"
@@ -514,6 +516,7 @@ edition = "2015"
 name = "bar"
 version = "0.2.0"
 authors = []
+readme = false
 
 [dependencies.dep]
 version = "0.1.2"
@@ -927,6 +930,7 @@ edition = "2015"
 name = "bar"
 version = "0.2.0"
 authors = []
+readme = false
 
 [dependencies.dep]
 version = "0.1"

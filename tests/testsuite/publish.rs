@@ -1561,6 +1561,7 @@ You may press ctrl-c [..]
                      version = \"0.1.0\"\n\
                      authors = []\n\
                      description = \"foo\"\n\
+                     readme = false\n\
                      license = \"MIT\"\n\
                      \n\
                      [dependencies.dep1]\n\
@@ -1675,6 +1676,7 @@ authors = []
 description = "foo"
 homepage = "foo"
 documentation = "foo"
+readme = false
 license = "MIT"
 repository = "foo"
 
@@ -1934,6 +1936,7 @@ authors = []
 description = "foo"
 homepage = "foo"
 documentation = "foo"
+readme = false
 license = "MIT"
 repository = "foo"
 

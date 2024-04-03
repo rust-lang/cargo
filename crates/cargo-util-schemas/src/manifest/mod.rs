@@ -243,15 +243,12 @@ impl TomlPackage {
     }
 
     pub fn resolved_readme(&self) -> Result<Option<&String>, UnresolvedError> {
-        self.readme
-            .as_ref()
-            .map(|v| {
-                v.resolved().and_then(|sb| match sb {
-                    StringOrBool::Bool(_) => Err(UnresolvedError),
-                    StringOrBool::String(value) => Ok(value),
-                })
-            })
-            .transpose()
+        let readme = self.readme.as_ref().ok_or(UnresolvedError)?;
+        readme.resolved().and_then(|sb| match sb {
+            StringOrBool::Bool(false) => Ok(None),
+            StringOrBool::Bool(true) => Err(UnresolvedError),
+            StringOrBool::String(value) => Ok(Some(value)),
+        })
     }
 
     pub fn resolved_keywords(&self) -> Result<Option<&Vec<String>>, UnresolvedError> {
