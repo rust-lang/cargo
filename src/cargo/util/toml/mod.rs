@@ -494,7 +494,7 @@ fn resolve_package_toml<'a>(
             .map(|value| field_inherit_with(value, "authors", || inherit()?.authors()))
             .transpose()?
             .map(manifest::InheritableField::Value),
-        build: original_package.build.clone(),
+        build: targets::resolve_build(original_package.build.as_ref(), package_root),
         metabuild: original_package.metabuild.clone(),
         default_target: original_package.default_target.clone(),
         forced_target: original_package.forced_target.clone(),
@@ -1153,7 +1153,6 @@ fn to_real_manifest(
         package_name,
         package_root,
         edition,
-        &resolved_package.build,
         &resolved_package.metabuild,
         warnings,
         errors,
@@ -2360,10 +2359,15 @@ fn unused_dep_keys(
     }
 }
 
-pub fn prepare_for_publish(me: &Package, ws: &Workspace<'_>) -> CargoResult<Package> {
+pub fn prepare_for_publish(
+    me: &Package,
+    ws: &Workspace<'_>,
+    included: &[PathBuf],
+) -> CargoResult<Package> {
     let contents = me.manifest().contents();
     let document = me.manifest().document();
-    let original_toml = prepare_toml_for_publish(me.manifest().resolved_toml(), ws, me.root())?;
+    let original_toml =
+        prepare_toml_for_publish(me.manifest().resolved_toml(), ws, me.root(), included)?;
     let resolved_toml = original_toml.clone();
     let features = me.manifest().unstable_features().clone();
     let workspace_config = me.manifest().workspace_config().clone();
@@ -2395,6 +2399,7 @@ fn prepare_toml_for_publish(
     me: &manifest::TomlManifest,
     ws: &Workspace<'_>,
     package_root: &Path,
+    included: &[PathBuf],
 ) -> CargoResult<manifest::TomlManifest> {
     let gctx = ws.gctx();
 
@@ -2411,11 +2416,21 @@ fn prepare_toml_for_publish(
     package.workspace = None;
     if let Some(StringOrBool::String(path)) = &package.build {
         let path = paths::normalize_path(Path::new(path));
-        let path = path
-            .into_os_string()
-            .into_string()
-            .map_err(|_err| anyhow::format_err!("non-UTF8 `package.build`"))?;
-        package.build = Some(StringOrBool::String(normalize_path_string_sep(path)));
+        let build = if included.contains(&path) {
+            let path = path
+                .into_os_string()
+                .into_string()
+                .map_err(|_err| anyhow::format_err!("non-UTF8 `package.build`"))?;
+            let path = normalize_path_string_sep(path);
+            StringOrBool::String(path)
+        } else {
+            ws.gctx().shell().warn(format!(
+                "ignoring `package.build` as `{}` is not included in the published package",
+                path.display()
+            ))?;
+            StringOrBool::Bool(false)
+        };
+        package.build = Some(build);
     }
     let current_resolver = package
         .resolver

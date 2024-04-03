@@ -38,7 +38,6 @@ pub(super) fn to_targets(
     package_name: &str,
     package_root: &Path,
     edition: Edition,
-    custom_build: &Option<StringOrBool>,
     metabuild: &Option<StringOrVec>,
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
@@ -120,10 +119,11 @@ pub(super) fn to_targets(
     targets.extend(to_bench_targets(&toml_benches, package_root, edition)?);
 
     // processing the custom build script
-    if let Some(custom_build) = maybe_custom_build(custom_build, package_root) {
+    if let Some(custom_build) = package.resolved_build().expect("should be resolved") {
         if metabuild.is_some() {
             anyhow::bail!("cannot specify both `metabuild` and `build`");
         }
+        let custom_build = Path::new(custom_build);
         let name = format!(
             "build-script-{}",
             custom_build
@@ -1072,22 +1072,22 @@ Cargo doesn't know which to use because multiple target files found at `{}` and 
 }
 
 /// Returns the path to the build script if one exists for this crate.
-fn maybe_custom_build(build: &Option<StringOrBool>, package_root: &Path) -> Option<PathBuf> {
-    let build_rs = package_root.join("build.rs");
-    match *build {
-        // Explicitly no build script.
-        Some(StringOrBool::Bool(false)) => None,
-        Some(StringOrBool::Bool(true)) => Some(build_rs),
-        Some(StringOrBool::String(ref s)) => Some(PathBuf::from(s)),
+pub fn resolve_build(build: Option<&StringOrBool>, package_root: &Path) -> Option<StringOrBool> {
+    const BUILD_RS: &str = "build.rs";
+    match build {
         None => {
             // If there is a `build.rs` file next to the `Cargo.toml`, assume it is
             // a build script.
+            let build_rs = package_root.join(BUILD_RS);
             if build_rs.is_file() {
-                Some(build_rs)
+                Some(StringOrBool::String(BUILD_RS.to_owned()))
             } else {
-                None
+                Some(StringOrBool::Bool(false))
             }
         }
+        // Explicitly no build script.
+        Some(StringOrBool::Bool(false)) | Some(StringOrBool::String(_)) => build.cloned(),
+        Some(StringOrBool::Bool(true)) => Some(StringOrBool::String(BUILD_RS.to_owned())),
     }
 }
 

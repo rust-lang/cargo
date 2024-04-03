@@ -1703,6 +1703,7 @@ edition = "2015"
 name = "a"
 version = "0.1.0"
 authors = ["Zzz"]
+build = false
 description = "foo"
 homepage = "https://example.com/"
 readme = false

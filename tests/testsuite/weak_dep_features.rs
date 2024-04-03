@@ -630,6 +630,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
 edition = "2015"
 name = "foo"
 version = "0.1.0"
+build = false
 description = "foo"
 homepage = "https://example.com/"
 readme = false

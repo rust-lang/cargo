@@ -217,6 +217,7 @@ rust-version = "1.60"
 name = "foo"
 version = "1.2.3"
 authors = ["Rustaceans"]
+build = false
 exclude = ["foo.txt"]
 include = [
     "bar.txt",
@@ -384,6 +385,7 @@ edition = "2015"
 name = "bar"
 version = "0.2.0"
 authors = []
+build = false
 readme = false
 
 [dependencies.dep]
@@ -516,6 +518,7 @@ edition = "2015"
 name = "bar"
 version = "0.2.0"
 authors = []
+build = false
 readme = false
 
 [dependencies.dep]
@@ -758,6 +761,7 @@ rust-version = "1.60"
 name = "bar"
 version = "1.2.3"
 authors = ["Rustaceans"]
+build = false
 exclude = ["foo.txt"]
 include = [
     "bar.txt",
@@ -930,6 +934,7 @@ edition = "2015"
 name = "bar"
 version = "0.2.0"
 authors = []
+build = false
 readme = false
 
 [dependencies.dep]
