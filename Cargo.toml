@@ -22,7 +22,7 @@ annotate-snippets = "0.11.1"
 anstream = "0.6.13"
 anstyle = "1.0.6"
 anyhow = "1.0.81"
-base64 = "0.21.7"
+base64 = "0.22.0"
 bytesize = "1.3"
 cargo = { path = "" }
 cargo-credential = { version = "0.4.2", path = "credential/cargo-credential" }
