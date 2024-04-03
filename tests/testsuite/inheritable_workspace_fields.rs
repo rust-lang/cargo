@@ -225,6 +225,10 @@ include = [
     "Cargo.toml",
 ]
 publish = true
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "This is a crate"
 homepage = "https://www.rust-lang.org"
 documentation = "https://www.rust-lang.org/learn"
@@ -233,6 +237,10 @@ keywords = ["cli"]
 categories = ["development-tools"]
 license = "MIT"
 repository = "https://github.com/example/example"
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
 "#,
                 cargo::core::manifest::MANIFEST_PREAMBLE
             ),
@@ -386,7 +394,15 @@ name = "bar"
 version = "0.2.0"
 authors = []
 build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 readme = false
+
+[[bin]]
+name = "bar"
+path = "src/main.rs"
 
 [dependencies.dep]
 version = "0.1"
@@ -519,7 +535,15 @@ name = "bar"
 version = "0.2.0"
 authors = []
 build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 readme = false
+
+[[bin]]
+name = "bar"
+path = "src/main.rs"
 
 [dependencies.dep]
 version = "0.1.2"
@@ -771,6 +795,10 @@ include = [
     "README.md",
 ]
 publish = true
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "This is a crate"
 homepage = "https://www.rust-lang.org"
 documentation = "https://www.rust-lang.org/learn"
@@ -780,6 +808,10 @@ categories = ["development-tools"]
 license = "MIT"
 license-file = "LICENSE"
 repository = "https://github.com/example/example"
+
+[[bin]]
+name = "bar"
+path = "src/main.rs"
 "#,
                 cargo::core::manifest::MANIFEST_PREAMBLE
             ),
@@ -935,7 +967,15 @@ name = "bar"
 version = "0.2.0"
 authors = []
 build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 readme = false
+
+[[bin]]
+name = "bar"
+path = "src/main.rs"
 
 [dependencies.dep]
 version = "0.1"

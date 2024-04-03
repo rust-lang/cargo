@@ -1219,12 +1219,20 @@ version = "0.0.1"
 authors = []
 build = false
 exclude = ["*.txt"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 readme = false
 license = "MIT"
 
 [package.metadata]
 foo = "bar"
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
 
 [dependencies.abc]
 version = "1.0"
@@ -1296,7 +1304,15 @@ name = "bar"
 version = "0.1.0"
 authors = []
 build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 readme = false
+
+[lib]
+name = "bar"
+path = "src/lib.rs"
 "#,
         cargo::core::manifest::MANIFEST_PREAMBLE
     );
@@ -1365,7 +1381,15 @@ edition = "2015"
 name = "foo"
 version = "0.0.1"
 build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 readme = false
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
 
 [dependencies.bar]
 version = "1.0.0"
@@ -1385,7 +1409,15 @@ edition = "2015"
 name = "foo"
 version = "0.0.1"
 build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 readme = false
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
 
 [dependencies.bar]
 version = "1.0.0"
@@ -2864,8 +2896,16 @@ edition = "2021"
 name = "bar"
 version = "0.1.0"
 build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 readme = false
 resolver = "1"
+
+[lib]
+name = "bar"
+path = "src/lib.rs"
 "#,
         cargo::core::manifest::MANIFEST_PREAMBLE
     );
@@ -2885,7 +2925,15 @@ edition = "2015"
 name = "baz"
 version = "0.1.0"
 build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 readme = false
+
+[lib]
+name = "baz"
+path = "src/lib.rs"
 "#,
         cargo::core::manifest::MANIFEST_PREAMBLE
     );
@@ -2949,10 +2997,18 @@ version = "0.0.1"
 authors = []
 build = false
 exclude = ["*.txt"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 homepage = "https://example.com/"
 readme = false
 license = "MIT"
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
 "#,
         cargo::core::manifest::MANIFEST_PREAMBLE
     );
@@ -3045,10 +3101,18 @@ name = "foo"
 version = "0.0.1"
 authors = []
 build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 documentation = "https://example.com/"
 readme = false
 license = "MIT"
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
 "#,
         cargo::core::manifest::MANIFEST_PREAMBLE
     );
@@ -3154,10 +3218,18 @@ name = "foo"
 version = "0.0.1"
 authors = []
 build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 homepage = "https://example.com/"
 readme = false
 license = "MIT"
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
 "#,
         cargo::core::manifest::MANIFEST_PREAMBLE
     );
@@ -3277,6 +3349,10 @@ fn normalize_case() {
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [WARNING] ignoring `package.build` as `build.rs` is not included in the published package
+[WARNING] ignoring binary `foo` as `src/main.rs` is not included in the published package
+[WARNING] ignoring example `ExampleFoo` as `examples/ExampleFoo.rs` is not included in the published package
+[WARNING] ignoring test `explicitpath` as `tests/explicitpath.rs` is not included in the published package
+[WARNING] ignoring test `ExplicitPath` as `tests/ExplicitPath.rs` is not included in the published package
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -3306,6 +3382,10 @@ src/lib.rs
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
 [WARNING] ignoring `package.build` as `build.rs` is not included in the published package
+[WARNING] ignoring binary `foo` as `src/main.rs` is not included in the published package
+[WARNING] ignoring example `ExampleFoo` as `examples/ExampleFoo.rs` is not included in the published package
+[WARNING] ignoring test `explicitpath` as `tests/explicitpath.rs` is not included in the published package
+[WARNING] ignoring test `ExplicitPath` as `tests/ExplicitPath.rs` is not included in the published package
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -3339,13 +3419,17 @@ version = "0.0.1"
 authors = []
 build = false
 exclude = ["*.txt"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 readme = false
 license = "MIT"
 
-[[test]]
-name = "explicitpath"
-path = "tests/explicitpath.rs"
+[lib]
+name = "foo"
+path = "src/lib.rs"
 "#,
                 cargo::core::manifest::MANIFEST_PREAMBLE
             ),
@@ -3750,12 +3834,17 @@ name = "foo"
 version = "0.0.1"
 authors = []
 build = "src/build.rs"
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 documentation = "docs.rs/foo"
 readme = "docs/README.md"
 license-file = "docs/LICENSE"
 
 [lib]
+name = "foo"
 path = "src/lib.rs"
 
 [[bin]]
@@ -3840,10 +3929,18 @@ include = [
     "src/lib.rs",
     "build.rs",
 ]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 documentation = "docs.rs/foo"
 readme = false
 license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
 "#,
         )],
     );
@@ -3909,10 +4006,18 @@ version = "0.0.1"
 authors = []
 build = false
 include = ["src/lib.rs"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 documentation = "docs.rs/foo"
 readme = false
 license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
 "#,
         )],
     );
@@ -3981,10 +4086,18 @@ include = [
     "src/lib.rs",
     "build.rs",
 ]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 documentation = "docs.rs/foo"
 readme = false
 license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
 "#,
         )],
     );
@@ -4051,10 +4164,18 @@ version = "0.0.1"
 authors = []
 build = false
 include = ["src/lib.rs"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 documentation = "docs.rs/foo"
 readme = false
 license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
 "#,
         )],
     );
@@ -4128,10 +4249,22 @@ include = [
     "src/main.rs",
     "src/lib.rs",
 ]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 documentation = "docs.rs/foo"
 readme = false
 license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
 "#,
         )],
     );
@@ -4163,6 +4296,7 @@ fn discovery_inferred_lib_excluded() {
         .with_stderr(
             "\
 [PACKAGING] foo v0.0.1 ([CWD])
+[WARNING] ignoring library `foo` as `src/lib.rs` is not included in the published package
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -4196,10 +4330,18 @@ version = "0.0.1"
 authors = []
 build = false
 include = ["src/main.rs"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 documentation = "docs.rs/foo"
 readme = false
 license = "MIT"
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
 "#,
         )],
     );
@@ -4276,13 +4418,22 @@ include = [
     "src/main.rs",
     "src/lib.rs",
 ]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 documentation = "docs.rs/foo"
 readme = false
 license = "MIT"
 
 [lib]
+name = "foo"
 path = "src/lib.rs"
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
 "#,
         )],
     );
@@ -4313,20 +4464,59 @@ fn discovery_explicit_lib_excluded() {
         .build();
 
     p.cargo("package")
-        .with_status(101)
         .with_stdout("")
         .with_stderr(
             "\
 [PACKAGING] foo v0.0.1 ([CWD])
+[WARNING] ignoring library `foo` as `src/lib.rs` is not included in the published package
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
-[ERROR] couldn't read src/lib.rs: [..]
-
-[ERROR] could not compile `foo` (lib) due to 1 previous error
-[ERROR] failed to verify package tarball
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[(
+            "Cargo.toml",
+            r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
+#
+# When uploading crates to the registry Cargo will automatically
+# "normalize" Cargo.toml files for maximal compatibility
+# with all versions of Cargo and also rewrite `path` dependencies
+# to registry (e.g., crates.io) dependencies.
+#
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
+
+[package]
+edition = "2015"
+name = "foo"
+version = "0.0.1"
+authors = []
+build = false
+include = ["src/main.rs"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "foo"
+documentation = "docs.rs/foo"
+readme = false
+license = "MIT"
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
+"#,
+        )],
+    );
 }
 
 #[cargo_test]
@@ -4406,10 +4596,34 @@ include = [
     "tests/test_foo.rs",
     "benches/bench_foo.rs",
 ]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 documentation = "docs.rs/foo"
 readme = false
 license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
+
+[[bin]]
+name = "foo"
+path = "src/bin/foo/main.rs"
+
+[[example]]
+name = "example_foo"
+path = "examples/example_foo.rs"
+
+[[test]]
+name = "test_foo"
+path = "tests/test_foo.rs"
+
+[[bench]]
+name = "bench_foo"
+path = "benches/bench_foo.rs"
 "#,
         )],
     );
@@ -4444,6 +4658,10 @@ fn discovery_inferred_other_excluded() {
         .with_stderr(
             "\
 [PACKAGING] foo v0.0.1 ([CWD])
+[WARNING] ignoring binary `foo` as `src/bin/foo/main.rs` is not included in the published package
+[WARNING] ignoring example `example_foo` as `examples/example_foo.rs` is not included in the published package
+[WARNING] ignoring test `test_foo` as `tests/test_foo.rs` is not included in the published package
+[WARNING] ignoring benchmark `bench_foo` as `benches/bench_foo.rs` is not included in the published package
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -4477,10 +4695,18 @@ version = "0.0.1"
 authors = []
 build = false
 include = ["src/lib.rs"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 documentation = "docs.rs/foo"
 readme = false
 license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
 "#,
         )],
     );
@@ -4575,22 +4801,34 @@ include = [
     "tests/test_foo.rs",
     "benches/bench_foo.rs",
 ]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 documentation = "docs.rs/foo"
 readme = false
 license = "MIT"
 
+[lib]
+name = "foo"
+path = "src/lib.rs"
+
 [[bin]]
 name = "foo"
+path = "src/bin/foo/main.rs"
 
 [[example]]
 name = "example_foo"
+path = "examples/example_foo.rs"
 
 [[test]]
 name = "test_foo"
+path = "tests/test_foo.rs"
 
 [[bench]]
 name = "bench_foo"
+path = "benches/bench_foo.rs"
 "#,
         )],
     );
@@ -4633,20 +4871,60 @@ fn discovery_explicit_other_excluded() {
         .build();
 
     p.cargo("package")
-        .with_status(101)
         .with_stdout("")
         .with_stderr(
             "\
 [PACKAGING] foo v0.0.1 ([CWD])
+[WARNING] ignoring binary `foo` as `src/bin/foo/main.rs` is not included in the published package
+[WARNING] ignoring example `example_foo` as `examples/example_foo.rs` is not included in the published package
+[WARNING] ignoring test `test_foo` as `tests/test_foo.rs` is not included in the published package
+[WARNING] ignoring benchmark `bench_foo` as `benches/bench_foo.rs` is not included in the published package
 [VERIFYING] foo v0.0.1 ([CWD])
-[ERROR] failed to verify package tarball
-
-Caused by:
-  failed to parse manifest at `[CWD]/target/package/foo-0.0.1/Cargo.toml`
-
-Caused by:
-  can't find `example_foo` example at `examples/example_foo.rs` or `examples/example_foo/main.rs`. Please specify example.path if you want to use a non-default path.
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
 ",
         )
         .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[(
+            "Cargo.toml",
+            r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
+#
+# When uploading crates to the registry Cargo will automatically
+# "normalize" Cargo.toml files for maximal compatibility
+# with all versions of Cargo and also rewrite `path` dependencies
+# to registry (e.g., crates.io) dependencies.
+#
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
+
+[package]
+edition = "2015"
+name = "foo"
+version = "0.0.1"
+authors = []
+build = false
+include = ["src/lib.rs"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "foo"
+documentation = "docs.rs/foo"
+readme = false
+license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
+"#,
+        )],
+    );
 }

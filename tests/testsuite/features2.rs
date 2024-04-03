@@ -1704,11 +1704,19 @@ name = "a"
 version = "0.1.0"
 authors = ["Zzz"]
 build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 homepage = "https://example.com/"
 readme = false
 license = "MIT"
 resolver = "2"
+
+[lib]
+name = "a"
+path = "src/lib.rs"
 "#,
         cargo::core::manifest::MANIFEST_PREAMBLE
     );

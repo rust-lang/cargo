@@ -34,8 +34,8 @@ const DEFAULT_EXAMPLE_DIR_NAME: &'static str = "examples";
 #[tracing::instrument(skip_all)]
 pub(super) fn to_targets(
     features: &Features,
+    original_toml: &TomlManifest,
     resolved_toml: &TomlManifest,
-    package_name: &str,
     package_root: &Path,
     edition: Edition,
     metabuild: &Option<StringOrVec>,
@@ -44,26 +44,14 @@ pub(super) fn to_targets(
 ) -> CargoResult<Vec<Target>> {
     let mut targets = Vec::new();
 
-    let has_lib;
-
-    let lib = resolve_lib(
-        resolved_toml.lib.as_ref(),
-        package_root,
-        package_name,
-        edition,
-        warnings,
-    )?;
     if let Some(target) = to_lib_target(
+        original_toml.lib.as_ref(),
         resolved_toml.lib.as_ref(),
-        lib.as_ref(),
         package_root,
         edition,
         warnings,
     )? {
         targets.push(target);
-        has_lib = true;
-    } else {
-        has_lib = false;
     }
 
     let package = resolved_toml
@@ -71,52 +59,31 @@ pub(super) fn to_targets(
         .as_ref()
         .ok_or_else(|| anyhow::format_err!("manifest has no `package` (or `project`)"))?;
 
-    let bins = resolve_bins(
-        resolved_toml.bin.as_ref(),
-        package_root,
-        package_name,
-        edition,
-        package.autobins,
-        warnings,
-        has_lib,
-    )?;
     targets.extend(to_bin_targets(
         features,
-        &bins,
+        resolved_toml.bin.as_deref().unwrap_or_default(),
         package_root,
         edition,
         errors,
     )?);
 
-    let toml_examples = resolve_examples(
-        resolved_toml.example.as_ref(),
+    targets.extend(to_example_targets(
+        resolved_toml.example.as_deref().unwrap_or_default(),
         package_root,
         edition,
-        package.autoexamples,
-        warnings,
-        errors,
-    )?;
-    targets.extend(to_example_targets(&toml_examples, package_root, edition)?);
+    )?);
 
-    let toml_tests = resolve_tests(
-        resolved_toml.test.as_ref(),
+    targets.extend(to_test_targets(
+        resolved_toml.test.as_deref().unwrap_or_default(),
         package_root,
         edition,
-        package.autotests,
-        warnings,
-        errors,
-    )?;
-    targets.extend(to_test_targets(&toml_tests, package_root, edition)?);
+    )?);
 
-    let toml_benches = resolve_benches(
-        resolved_toml.bench.as_ref(),
+    targets.extend(to_bench_targets(
+        resolved_toml.bench.as_deref().unwrap_or_default(),
         package_root,
         edition,
-        package.autobenches,
-        warnings,
-        errors,
-    )?;
-    targets.extend(to_bench_targets(&toml_benches, package_root, edition)?);
+    )?);
 
     // processing the custom build script
     if let Some(custom_build) = package.resolved_build().expect("should be resolved") {
@@ -158,7 +125,7 @@ pub(super) fn to_targets(
     Ok(targets)
 }
 
-fn resolve_lib(
+pub fn resolve_lib(
     original_lib: Option<&TomlLibTarget>,
     package_root: &Path,
     package_name: &str,
@@ -283,7 +250,7 @@ fn to_lib_target(
     Ok(Some(target))
 }
 
-fn resolve_bins(
+pub fn resolve_bins(
     toml_bins: Option<&Vec<TomlBinTarget>>,
     package_root: &Path,
     package_name: &str,
@@ -409,7 +376,7 @@ fn legacy_bin_path(package_root: &Path, name: &str, has_lib: bool) -> Option<Pat
     None
 }
 
-fn resolve_examples(
+pub fn resolve_examples(
     toml_examples: Option<&Vec<TomlExampleTarget>>,
     package_root: &Path,
     edition: Edition,
@@ -464,7 +431,7 @@ fn to_example_targets(
     Ok(result)
 }
 
-fn resolve_tests(
+pub fn resolve_tests(
     toml_tests: Option<&Vec<TomlTestTarget>>,
     package_root: &Path,
     edition: Edition,
@@ -512,7 +479,7 @@ fn to_test_targets(
     Ok(result)
 }
 
-fn resolve_benches(
+pub fn resolve_benches(
     toml_benches: Option<&Vec<TomlBenchTarget>>,
     package_root: &Path,
     edition: Edition,

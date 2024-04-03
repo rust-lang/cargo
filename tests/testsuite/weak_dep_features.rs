@@ -631,10 +631,18 @@ edition = "2015"
 name = "foo"
 version = "0.1.0"
 build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 homepage = "https://example.com/"
 readme = false
 license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
 
 [dependencies.bar]
 version = "1.0"
