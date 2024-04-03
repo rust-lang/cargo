@@ -42,7 +42,8 @@ the package to. If the package comes from a git repository, this can be a git
 revision (such as a SHA hash or tag).</p>
 <p>While not recommended, you can specify a yanked version of a package (nightly only).
 When possible, try other non-yanked SemVer-compatible versions or seek help
-from the maintainers of the package.</dd>
+from the maintainers of the package.</p>
+<p>A compatible <code>pre-release</code> version can also be specified even when the version requirement in <code>Cargo.toml</code> doesn’t contain any pre-release identifer (nightly only).</dd>
 
 
 <dt class="option-term" id="option-cargo-update--w"><a class="option-anchor" href="#option-cargo-update--w"></a><code>-w</code></dt>
