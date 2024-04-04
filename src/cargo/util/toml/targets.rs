@@ -301,18 +301,17 @@ fn to_bin_targets(
 
     // This loop performs basic checks on each of the TomlTarget in `bins`.
     for bin in &bins {
+        validate_bin_name(bin, warnings)?;
+
         // For each binary, check if the `filename` parameter is populated. If it is,
         // check if the corresponding cargo feature has been activated.
         if bin.filename.is_some() {
             features.require(Feature::different_binary_name())?;
         }
 
-        validate_target_name(bin, "binary", "bin", warnings)?;
-
-        let name = name_or_panic(bin).to_owned();
-
         if let Some(crate_types) = bin.crate_types() {
             if !crate_types.is_empty() {
+                let name = name_or_panic(bin);
                 errors.push(format!(
                     "the target `{}` is a binary and can't have any \
                      crate-types set (currently \"{}\")",
@@ -323,19 +322,12 @@ fn to_bin_targets(
         }
 
         if bin.proc_macro() == Some(true) {
+            let name = name_or_panic(bin);
             errors.push(format!(
                 "the target `{}` is a binary and can't have `proc-macro` \
                  set `true`",
                 name
             ));
-        }
-
-        if restricted_names::is_conflicting_artifact_name(&name) {
-            anyhow::bail!(
-                "the binary target name `{}` is forbidden, \
-                 it conflicts with cargo's build directory names",
-                name
-            )
         }
     }
 
@@ -789,6 +781,19 @@ fn validate_lib_name(target: &TomlTarget, warnings: &mut Vec<String>) -> CargoRe
     let name = name_or_panic(target);
     if name.contains('-') {
         anyhow::bail!("library target names cannot contain hyphens: {}", name)
+    }
+
+    Ok(())
+}
+
+fn validate_bin_name(bin: &TomlTarget, warnings: &mut Vec<String>) -> CargoResult<()> {
+    validate_target_name(bin, "binary", "bin", warnings)?;
+    let name = name_or_panic(bin).to_owned();
+    if restricted_names::is_conflicting_artifact_name(&name) {
+        anyhow::bail!(
+            "the binary target name `{name}` is forbidden, \
+                 it conflicts with cargo's build directory names",
+        )
     }
 
     Ok(())
