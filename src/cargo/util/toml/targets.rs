@@ -73,17 +73,16 @@ pub(super) fn to_targets(
         .as_ref()
         .ok_or_else(|| anyhow::format_err!("manifest has no `package` (or `project`)"))?;
 
-    targets.extend(to_bin_targets(
-        features,
+    let bins = resolve_bins(
         resolved_toml.bin.as_ref(),
         package_root,
         package_name,
         edition,
         package.autobins,
         warnings,
-        errors,
         has_lib,
-    )?);
+    )?;
+    targets.extend(to_bin_targets(features, &bins, edition, errors)?);
 
     targets.extend(to_example_targets(
         resolved_toml.example.as_ref(),
@@ -325,27 +324,12 @@ fn resolve_bins(
 
 fn to_bin_targets(
     features: &Features,
-    toml_bins: Option<&Vec<TomlBinTarget>>,
-    package_root: &Path,
-    package_name: &str,
+    bins: &[TomlBinTarget],
     edition: Edition,
-    autodiscover: Option<bool>,
-    warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
-    has_lib: bool,
 ) -> CargoResult<Vec<Target>> {
-    let bins = resolve_bins(
-        toml_bins,
-        package_root,
-        package_name,
-        edition,
-        autodiscover,
-        warnings,
-        has_lib,
-    )?;
-
     // This loop performs basic checks on each of the TomlTarget in `bins`.
-    for bin in &bins {
+    for bin in bins {
         // For each binary, check if the `filename` parameter is populated. If it is,
         // check if the corresponding cargo feature has been activated.
         if bin.filename.is_some() {
@@ -377,7 +361,7 @@ fn to_bin_targets(
     validate_unique_names(&bins, "binary")?;
 
     let mut result = Vec::new();
-    for bin in &bins {
+    for bin in bins {
         let path = bin.path.clone().expect("previously resolved").0;
         let mut target = Target::bin_target(
             name_or_panic(bin),
