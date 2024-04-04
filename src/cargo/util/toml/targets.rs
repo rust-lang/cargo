@@ -274,20 +274,18 @@ fn to_lib_target(
     Ok(Some(target))
 }
 
-fn to_bin_targets(
-    features: &Features,
+fn resolve_bins(
     toml_bins: Option<&Vec<TomlBinTarget>>,
     package_root: &Path,
     package_name: &str,
     edition: Edition,
     autodiscover: Option<bool>,
     warnings: &mut Vec<String>,
-    errors: &mut Vec<String>,
     has_lib: bool,
-) -> CargoResult<Vec<Target>> {
+) -> CargoResult<Vec<TomlBinTarget>> {
     let inferred = inferred_bins(package_root, package_name);
 
-    let bins = toml_targets_and_inferred(
+    let mut bins = toml_targets_and_inferred(
         toml_bins,
         &inferred,
         package_root,
@@ -299,10 +297,55 @@ fn to_bin_targets(
         "autobins",
     );
 
-    // This loop performs basic checks on each of the TomlTarget in `bins`.
-    for bin in &bins {
+    for bin in &mut bins {
         validate_bin_name(bin, warnings)?;
 
+        let path = target_path(bin, &inferred, "bin", package_root, edition, &mut |_| {
+            if let Some(legacy_path) = legacy_bin_path(package_root, name_or_panic(bin), has_lib) {
+                warnings.push(format!(
+                    "path `{}` was erroneously implicitly accepted for binary `{}`,\n\
+                     please set bin.path in Cargo.toml",
+                    legacy_path.display(),
+                    name_or_panic(bin)
+                ));
+                Some(legacy_path)
+            } else {
+                None
+            }
+        });
+        let path = match path {
+            Ok(path) => path,
+            Err(e) => anyhow::bail!("{}", e),
+        };
+        bin.path = Some(PathValue(path));
+    }
+
+    Ok(bins)
+}
+
+fn to_bin_targets(
+    features: &Features,
+    toml_bins: Option<&Vec<TomlBinTarget>>,
+    package_root: &Path,
+    package_name: &str,
+    edition: Edition,
+    autodiscover: Option<bool>,
+    warnings: &mut Vec<String>,
+    errors: &mut Vec<String>,
+    has_lib: bool,
+) -> CargoResult<Vec<Target>> {
+    let bins = resolve_bins(
+        toml_bins,
+        package_root,
+        package_name,
+        edition,
+        autodiscover,
+        warnings,
+        has_lib,
+    )?;
+
+    // This loop performs basic checks on each of the TomlTarget in `bins`.
+    for bin in &bins {
         // For each binary, check if the `filename` parameter is populated. If it is,
         // check if the corresponding cargo feature has been activated.
         if bin.filename.is_some() {
@@ -335,24 +378,7 @@ fn to_bin_targets(
 
     let mut result = Vec::new();
     for bin in &bins {
-        let path = target_path(bin, &inferred, "bin", package_root, edition, &mut |_| {
-            if let Some(legacy_path) = legacy_bin_path(package_root, name_or_panic(bin), has_lib) {
-                warnings.push(format!(
-                    "path `{}` was erroneously implicitly accepted for binary `{}`,\n\
-                     please set bin.path in Cargo.toml",
-                    legacy_path.display(),
-                    name_or_panic(bin)
-                ));
-                Some(legacy_path)
-            } else {
-                None
-            }
-        });
-        let path = match path {
-            Ok(path) => path,
-            Err(e) => anyhow::bail!("{}", e),
-        };
-
+        let path = bin.path.clone().expect("previously resolved").0;
         let mut target = Target::bin_target(
             name_or_panic(bin),
             bin.filename.clone(),
