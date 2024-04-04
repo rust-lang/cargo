@@ -372,29 +372,29 @@ fn to_bin_targets(
         configure(bin, &mut target)?;
         result.push(target);
     }
-    return Ok(result);
+    Ok(result)
+}
 
-    fn legacy_bin_path(package_root: &Path, name: &str, has_lib: bool) -> Option<PathBuf> {
-        if !has_lib {
-            let path = package_root.join("src").join(format!("{}.rs", name));
-            if path.exists() {
-                return Some(path);
-            }
-        }
-        let path = package_root.join("src").join("main.rs");
+fn legacy_bin_path(package_root: &Path, name: &str, has_lib: bool) -> Option<PathBuf> {
+    if !has_lib {
+        let path = package_root.join("src").join(format!("{}.rs", name));
         if path.exists() {
             return Some(path);
         }
-
-        let path = package_root
-            .join("src")
-            .join(DEFAULT_BIN_DIR_NAME)
-            .join("main.rs");
-        if path.exists() {
-            return Some(path);
-        }
-        None
     }
+    let path = package_root.join("src").join("main.rs");
+    if path.exists() {
+        return Some(path);
+    }
+
+    let path = package_root
+        .join("src")
+        .join(DEFAULT_BIN_DIR_NAME)
+        .join("main.rs");
+    if path.exists() {
+        return Some(path);
+    }
+    None
 }
 
 fn to_example_targets(
