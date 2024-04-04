@@ -409,7 +409,7 @@ fn resolve_examples(
 ) -> CargoResult<Vec<TomlExampleTarget>> {
     let inferred = infer_from_directory(&package_root.join(DEFAULT_EXAMPLE_DIR_NAME));
 
-    let targets = clean_targets(
+    let targets = resolve_targets(
         "example",
         "example",
         toml_examples,
@@ -477,7 +477,7 @@ fn resolve_tests(
 ) -> CargoResult<Vec<TomlTestTarget>> {
     let inferred = infer_from_directory(&package_root.join(DEFAULT_TEST_DIR_NAME));
 
-    let targets = clean_targets(
+    let targets = resolve_targets(
         "test",
         "test",
         toml_tests,
@@ -552,7 +552,7 @@ fn resolve_benches(
 
     let inferred = infer_from_directory(&package_root.join("benches"));
 
-    let targets = clean_targets_with_legacy_path(
+    let targets = resolve_targets_with_legacy_path(
         "benchmark",
         "bench",
         toml_benches,
@@ -605,7 +605,7 @@ fn to_bench_targets(
     Ok(result)
 }
 
-fn clean_targets(
+fn resolve_targets(
     target_kind_human: &str,
     target_kind: &str,
     toml_targets: Option<&Vec<TomlTarget>>,
@@ -617,7 +617,7 @@ fn clean_targets(
     errors: &mut Vec<String>,
     autodiscover_flag_name: &str,
 ) -> CargoResult<Vec<TomlTarget>> {
-    clean_targets_with_legacy_path(
+    resolve_targets_with_legacy_path(
         target_kind_human,
         target_kind,
         toml_targets,
@@ -632,7 +632,7 @@ fn clean_targets(
     )
 }
 
-fn clean_targets_with_legacy_path(
+fn resolve_targets_with_legacy_path(
     target_kind_human: &str,
     target_kind: &str,
     toml_targets: Option<&Vec<TomlTarget>>,
