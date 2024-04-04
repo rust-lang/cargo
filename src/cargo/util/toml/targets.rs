@@ -35,7 +35,7 @@ const DEFAULT_BIN_DIR_NAME: &'static str = "bin";
 #[tracing::instrument(skip_all)]
 pub(super) fn targets(
     features: &Features,
-    manifest: &TomlManifest,
+    resolved_toml: &TomlManifest,
     package_name: &str,
     package_root: &Path,
     edition: Edition,
@@ -49,7 +49,7 @@ pub(super) fn targets(
     let has_lib;
 
     if let Some(target) = clean_lib(
-        manifest.lib.as_ref(),
+        resolved_toml.lib.as_ref(),
         package_root,
         package_name,
         edition,
@@ -61,15 +61,14 @@ pub(super) fn targets(
         has_lib = false;
     }
 
-    let package = manifest
+    let package = resolved_toml
         .package
         .as_ref()
-        .or_else(|| manifest.project.as_ref())
         .ok_or_else(|| anyhow::format_err!("manifest has no `package` (or `project`)"))?;
 
     targets.extend(clean_bins(
         features,
-        manifest.bin.as_ref(),
+        resolved_toml.bin.as_ref(),
         package_root,
         package_name,
         edition,
@@ -80,7 +79,7 @@ pub(super) fn targets(
     )?);
 
     targets.extend(clean_examples(
-        manifest.example.as_ref(),
+        resolved_toml.example.as_ref(),
         package_root,
         edition,
         package.autoexamples,
@@ -89,7 +88,7 @@ pub(super) fn targets(
     )?);
 
     targets.extend(clean_tests(
-        manifest.test.as_ref(),
+        resolved_toml.test.as_ref(),
         package_root,
         edition,
         package.autotests,
@@ -98,7 +97,7 @@ pub(super) fn targets(
     )?);
 
     targets.extend(clean_benches(
-        manifest.bench.as_ref(),
+        resolved_toml.bench.as_ref(),
         package_root,
         edition,
         package.autobenches,
@@ -126,7 +125,7 @@ pub(super) fn targets(
     }
     if let Some(metabuild) = metabuild {
         // Verify names match available build deps.
-        let bdeps = manifest.build_dependencies.as_ref();
+        let bdeps = resolved_toml.build_dependencies.as_ref();
         for name in &metabuild.0 {
             if !bdeps.map_or(false, |bd| bd.contains_key(name.as_str())) {
                 anyhow::bail!(
@@ -146,14 +145,14 @@ pub(super) fn targets(
 }
 
 fn clean_lib(
-    toml_lib: Option<&TomlLibTarget>,
+    resolved_lib: Option<&TomlLibTarget>,
     package_root: &Path,
     package_name: &str,
     edition: Edition,
     warnings: &mut Vec<String>,
 ) -> CargoResult<Option<Target>> {
     let inferred = inferred_lib(package_root);
-    let lib = match toml_lib {
+    let lib = match resolved_lib {
         Some(lib) => {
             if let Some(ref name) = lib.name {
                 if name.contains('-') {
@@ -264,7 +263,7 @@ fn clean_lib(
 
     let mut target = Target::lib_target(name_or_panic(lib), crate_types, path, edition);
     configure(lib, &mut target)?;
-    target.set_name_inferred(toml_lib.map_or(true, |v| v.name.is_none()));
+    target.set_name_inferred(resolved_lib.map_or(true, |v| v.name.is_none()));
     Ok(Some(target))
 }
 
