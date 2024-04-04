@@ -84,32 +84,35 @@ pub(super) fn to_targets(
     )?;
     targets.extend(to_bin_targets(features, &bins, edition, errors)?);
 
-    targets.extend(to_example_targets(
+    let toml_examples = resolve_examples(
         resolved_toml.example.as_ref(),
         package_root,
         edition,
         package.autoexamples,
         warnings,
         errors,
-    )?);
+    )?;
+    targets.extend(to_example_targets(&toml_examples, edition, warnings)?);
 
-    targets.extend(to_test_targets(
+    let toml_tests = resolve_tests(
         resolved_toml.test.as_ref(),
         package_root,
         edition,
         package.autotests,
         warnings,
         errors,
-    )?);
+    )?;
+    targets.extend(to_test_targets(&toml_tests, edition)?);
 
-    targets.extend(to_bench_targets(
+    let toml_benches = resolve_benches(
         resolved_toml.bench.as_ref(),
         package_root,
         edition,
         package.autobenches,
         warnings,
         errors,
-    )?);
+    )?;
+    targets.extend(to_bench_targets(&toml_benches, edition)?);
 
     // processing the custom build script
     if let Some(custom_build) = maybe_custom_build(custom_build, package_root) {
@@ -426,22 +429,10 @@ fn resolve_examples(
 }
 
 fn to_example_targets(
-    toml_examples: Option<&Vec<TomlExampleTarget>>,
-    package_root: &Path,
+    targets: &[TomlExampleTarget],
     edition: Edition,
-    autodiscover: Option<bool>,
     warnings: &mut Vec<String>,
-    errors: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
-    let targets = resolve_examples(
-        toml_examples,
-        package_root,
-        edition,
-        autodiscover,
-        warnings,
-        errors,
-    )?;
-
     validate_unique_names(&targets, "example")?;
 
     let mut result = Vec::new();
@@ -493,23 +484,7 @@ fn resolve_tests(
     Ok(targets)
 }
 
-fn to_test_targets(
-    toml_tests: Option<&Vec<TomlTestTarget>>,
-    package_root: &Path,
-    edition: Edition,
-    autodiscover: Option<bool>,
-    warnings: &mut Vec<String>,
-    errors: &mut Vec<String>,
-) -> CargoResult<Vec<Target>> {
-    let targets = resolve_tests(
-        toml_tests,
-        package_root,
-        edition,
-        autodiscover,
-        warnings,
-        errors,
-    )?;
-
+fn to_test_targets(targets: &[TomlTestTarget], edition: Edition) -> CargoResult<Vec<Target>> {
     validate_unique_names(&targets, "test")?;
 
     let mut result = Vec::new();
@@ -570,23 +545,7 @@ fn resolve_benches(
     Ok(targets)
 }
 
-fn to_bench_targets(
-    toml_benches: Option<&Vec<TomlBenchTarget>>,
-    package_root: &Path,
-    edition: Edition,
-    autodiscover: Option<bool>,
-    warnings: &mut Vec<String>,
-    errors: &mut Vec<String>,
-) -> CargoResult<Vec<Target>> {
-    let targets = resolve_benches(
-        toml_benches,
-        package_root,
-        edition,
-        autodiscover,
-        warnings,
-        errors,
-    )?;
-
+fn to_bench_targets(targets: &[TomlBenchTarget], edition: Edition) -> CargoResult<Vec<Target>> {
     validate_unique_names(&targets, "bench")?;
 
     let mut result = Vec::new();
