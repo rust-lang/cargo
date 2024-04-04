@@ -399,14 +399,14 @@ fn legacy_bin_path(package_root: &Path, name: &str, has_lib: bool) -> Option<Pat
     None
 }
 
-fn to_example_targets(
+fn resolve_examples(
     toml_examples: Option<&Vec<TomlExampleTarget>>,
     package_root: &Path,
     edition: Edition,
     autodiscover: Option<bool>,
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
-) -> CargoResult<Vec<Target>> {
+) -> CargoResult<Vec<TomlExampleTarget>> {
     let inferred = infer_from_directory(&package_root.join(DEFAULT_EXAMPLE_DIR_NAME));
 
     let targets = clean_targets(
@@ -420,6 +420,26 @@ fn to_example_targets(
         warnings,
         errors,
         "autoexamples",
+    )?;
+
+    Ok(targets)
+}
+
+fn to_example_targets(
+    toml_examples: Option<&Vec<TomlExampleTarget>>,
+    package_root: &Path,
+    edition: Edition,
+    autodiscover: Option<bool>,
+    warnings: &mut Vec<String>,
+    errors: &mut Vec<String>,
+) -> CargoResult<Vec<Target>> {
+    let targets = resolve_examples(
+        toml_examples,
+        package_root,
+        edition,
+        autodiscover,
+        warnings,
+        errors,
     )?;
 
     validate_unique_names(&targets, "example")?;
@@ -447,14 +467,14 @@ fn to_example_targets(
     Ok(result)
 }
 
-fn to_test_targets(
+fn resolve_tests(
     toml_tests: Option<&Vec<TomlTestTarget>>,
     package_root: &Path,
     edition: Edition,
     autodiscover: Option<bool>,
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
-) -> CargoResult<Vec<Target>> {
+) -> CargoResult<Vec<TomlTestTarget>> {
     let inferred = infer_from_directory(&package_root.join(DEFAULT_TEST_DIR_NAME));
 
     let targets = clean_targets(
@@ -468,6 +488,26 @@ fn to_test_targets(
         warnings,
         errors,
         "autotests",
+    )?;
+
+    Ok(targets)
+}
+
+fn to_test_targets(
+    toml_tests: Option<&Vec<TomlTestTarget>>,
+    package_root: &Path,
+    edition: Edition,
+    autodiscover: Option<bool>,
+    warnings: &mut Vec<String>,
+    errors: &mut Vec<String>,
+) -> CargoResult<Vec<Target>> {
+    let targets = resolve_tests(
+        toml_tests,
+        package_root,
+        edition,
+        autodiscover,
+        warnings,
+        errors,
     )?;
 
     validate_unique_names(&targets, "test")?;
@@ -487,6 +527,49 @@ fn to_test_targets(
     Ok(result)
 }
 
+fn resolve_benches(
+    toml_benches: Option<&Vec<TomlBenchTarget>>,
+    package_root: &Path,
+    edition: Edition,
+    autodiscover: Option<bool>,
+    warnings: &mut Vec<String>,
+    errors: &mut Vec<String>,
+) -> CargoResult<Vec<TomlBenchTarget>> {
+    let mut legacy_warnings = vec![];
+    let mut legacy_bench_path = |bench: &TomlTarget| {
+        let legacy_path = package_root.join("src").join("bench.rs");
+        if !(name_or_panic(bench) == "bench" && legacy_path.exists()) {
+            return None;
+        }
+        legacy_warnings.push(format!(
+            "path `{}` was erroneously implicitly accepted for benchmark `{}`,\n\
+                 please set bench.path in Cargo.toml",
+            legacy_path.display(),
+            name_or_panic(bench)
+        ));
+        Some(legacy_path)
+    };
+
+    let inferred = infer_from_directory(&package_root.join("benches"));
+
+    let targets = clean_targets_with_legacy_path(
+        "benchmark",
+        "bench",
+        toml_benches,
+        &inferred,
+        package_root,
+        edition,
+        autodiscover,
+        warnings,
+        errors,
+        &mut legacy_bench_path,
+        "autobenches",
+    )?;
+    warnings.append(&mut legacy_warnings);
+
+    Ok(targets)
+}
+
 fn to_bench_targets(
     toml_benches: Option<&Vec<TomlBenchTarget>>,
     package_root: &Path,
@@ -495,40 +578,14 @@ fn to_bench_targets(
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
-    let mut legacy_warnings = vec![];
-
-    let targets = {
-        let mut legacy_bench_path = |bench: &TomlTarget| {
-            let legacy_path = package_root.join("src").join("bench.rs");
-            if !(name_or_panic(bench) == "bench" && legacy_path.exists()) {
-                return None;
-            }
-            legacy_warnings.push(format!(
-                "path `{}` was erroneously implicitly accepted for benchmark `{}`,\n\
-                 please set bench.path in Cargo.toml",
-                legacy_path.display(),
-                name_or_panic(bench)
-            ));
-            Some(legacy_path)
-        };
-
-        let inferred = infer_from_directory(&package_root.join("benches"));
-
-        clean_targets_with_legacy_path(
-            "benchmark",
-            "bench",
-            toml_benches,
-            &inferred,
-            package_root,
-            edition,
-            autodiscover,
-            warnings,
-            errors,
-            &mut legacy_bench_path,
-            "autobenches",
-        )?
-    };
-    warnings.append(&mut legacy_warnings);
+    let targets = resolve_benches(
+        toml_benches,
+        package_root,
+        edition,
+        autodiscover,
+        warnings,
+        errors,
+    )?;
 
     validate_unique_names(&targets, "bench")?;
 
