@@ -686,18 +686,18 @@ fn infer_any(entry: &DirEntry) -> Option<(String, PathBuf)> {
 
 fn infer_file(entry: &DirEntry) -> Option<(String, PathBuf)> {
     let path = entry.path();
-    path.file_stem()
-        .and_then(|p| p.to_str())
-        .map(|p| (p.to_owned(), path.clone()))
+    let stem = path.file_stem()?.to_str()?.to_owned();
+    Some((stem, path))
 }
 
 fn infer_subdirectory(entry: &DirEntry) -> Option<(String, PathBuf)> {
     let path = entry.path();
     let main = path.join("main.rs");
-    let name = path.file_name().and_then(|n| n.to_str());
-    match (name, main.exists()) {
-        (Some(name), true) => Some((name.to_owned(), main)),
-        _ => None,
+    let name = path.file_name()?.to_str()?.to_owned();
+    if main.exists() {
+        Some((name, main))
+    } else {
+        None
     }
 }
 
