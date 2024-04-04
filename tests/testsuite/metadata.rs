@@ -4546,3 +4546,109 @@ fn versionless_packages() {
         )
         .run();
 }
+
+/// Record how TOML-specific types are deserialized by `toml` so we can make sure we know if these change and
+/// can have a conversation about what should be done.
+#[cargo_test]
+fn cargo_metadata_toml_types() {
+    let p = project()
+        .file("src/lib.rs", "")
+        .file(
+            "Cargo.toml",
+            "
+[package]
+name = 'foo'
+edition = '2015'
+
+[package.metadata]
+offset-datetime = 1979-05-27T07:32:00Z
+local-datetime = 1979-05-27T07:32:00
+local-date = 1979-05-27
+local-time = 1979-05-27
+",
+        )
+        .build();
+
+    p.cargo("metadata")
+        .with_json(
+            r#"
+    {
+        "packages": [
+            {
+                "authors": [],
+                "categories": [],
+                "default_run": null,
+                "name": "foo",
+                "version": "0.0.0",
+                "id": "[..]foo#0.0.0",
+                "keywords": [],
+                "source": null,
+                "dependencies": [],
+                "edition": "2015",
+                "license": null,
+                "license_file": null,
+                "links": null,
+                "description": null,
+                "readme": null,
+                "repository": null,
+                "rust_version": null,
+                "homepage": null,
+                "documentation": null,
+                "homepage": null,
+                "documentation": null,
+                "targets": [
+                    {
+                        "kind": [
+                            "lib"
+                        ],
+                        "crate_types": [
+                            "lib"
+                        ],
+                        "doc": true,
+                        "doctest": true,
+                        "test": true,
+                        "edition": "2015",
+                        "name": "foo",
+                        "src_path": "[..]/foo/src/lib.rs"
+                    }
+                ],
+                "features": {},
+                "manifest_path": "[..]Cargo.toml",
+                "metadata": {
+                  "local-date": {
+                    "$__toml_private_datetime": "1979-05-27"
+                  },
+                  "local-datetime": {
+                    "$__toml_private_datetime": "1979-05-27T07:32:00"
+                  },
+                  "local-time": {
+                    "$__toml_private_datetime": "1979-05-27"
+                  },
+                  "offset-datetime": {
+                    "$__toml_private_datetime": "1979-05-27T07:32:00Z"
+                  }
+                },
+                "publish": []
+            }
+        ],
+        "workspace_members": ["path+file:[..]foo#0.0.0"],
+        "workspace_default_members": ["path+file:[..]foo#0.0.0"],
+        "resolve": {
+            "nodes": [
+                {
+                    "dependencies": [],
+                    "deps": [],
+                    "features": [],
+                    "id": "path+file:[..]foo#0.0.0"
+                }
+            ],
+            "root": "path+file:[..]foo#0.0.0"
+        },
+        "target_directory": "[..]foo/target",
+        "version": 1,
+        "workspace_root": "[..]/foo",
+        "metadata": null
+    }"#,
+        )
+        .run();
+}
