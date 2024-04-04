@@ -1,3 +1,14 @@
+//! Types that hold source information for a group of packages.
+//!
+//! The primary type you're looking for is [`PackageRegistry`]. It is an
+//! abstraction over multiple [`Source`]s. [`PackageRegistry`] also implements
+//! the [`Registry`] trait, allowing a dependency resolver to query necessary
+//! package metadata (i.e., [Summary]) from it.
+//!
+//! Not to be confused with [`crate::sources::registry`] and [`crate::ops::registry`].
+//! The former is just one kind of source,
+//! while the latter involves operations on the registry Web API.
+
 use std::collections::{HashMap, HashSet};
 use std::task::{ready, Poll};
 
@@ -15,9 +26,15 @@ use anyhow::{bail, Context as _};
 use tracing::{debug, trace};
 use url::Url;
 
-/// Source of information about a group of packages.
+/// An abstraction provides a set of methods for querying source information
+/// about a group of packages, without leaking too much implementation details
+/// of the actual registry.
 ///
-/// See also `core::Source`.
+/// As of 2024-04, only [`PackageRegistry`] and `MyRegistry` in resolver-tests
+/// are found implementing this.
+///
+/// See also the [`Source`] trait, as many of the methods here mirror and
+/// abstract over its functionalities.
 pub trait Registry {
     /// Attempt to find the packages that match a dependency request.
     fn query(
@@ -27,6 +44,8 @@ pub trait Registry {
         f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>>;
 
+    /// Gathers the result from [`Registry::query`] as a list of [`IndexSummary`] items
+    /// when they become available.
     fn query_vec(
         &mut self,
         dep: &Dependency,
@@ -36,34 +55,40 @@ pub trait Registry {
         self.query(dep, kind, &mut |s| ret.push(s)).map_ok(|()| ret)
     }
 
+    /// Gets the description of a source, to provide useful messages.
     fn describe_source(&self, source: SourceId) -> String;
+
+    /// Checks if a source is replaced with some other source.
     fn is_replaced(&self, source: SourceId) -> bool;
 
-    /// Block until all outstanding Poll::Pending requests are Poll::Ready.
+    /// Block until all outstanding [`Poll::Pending`] requests are [`Poll::Ready`].
     fn block_until_ready(&mut self) -> CargoResult<()>;
 }
 
 /// This structure represents a registry of known packages. It internally
-/// contains a number of `Box<Source>` instances which are used to load a
-/// `Package` from.
+/// contains a number of [`Source`] instances which are used to load a
+/// [`Package`] from.
 ///
 /// The resolution phase of Cargo uses this to drive knowledge about new
-/// packages as well as querying for lists of new packages. It is here that
-/// sources are updated (e.g., network operations) and overrides are
-/// handled.
+/// packages as well as querying for lists of new packages.
+/// It is here that sources are updated (e.g., network operations) and
+/// overrides/patches are handled.
 ///
 /// The general idea behind this registry is that it is centered around the
-/// `SourceMap` structure, contained within which is a mapping of a `SourceId` to
-/// a `Source`. Each `Source` in the map has been updated (using network
+/// [`SourceMap`] structure, contained within which is a mapping of a [`SourceId`]
+/// to a [`Source`]. Each [`Source`] in the map has been updated (using network
 /// operations if necessary) and is ready to be queried for packages.
+///
+/// [`Package`]: crate::core::Package
 pub struct PackageRegistry<'gctx> {
     gctx: &'gctx GlobalContext,
     sources: SourceMap<'gctx>,
 
-    // A list of sources which are considered "overrides" which take precedent
-    // when querying for packages.
+    /// A list of sources which are considered "path-overrides" which take
+    /// precedent when querying for packages.
     overrides: Vec<SourceId>,
 
+    /// Use for tracking sources that are already loaded into the registry.
     // Note that each SourceId does not take into account its `precise` field
     // when hashing or testing for equality. When adding a new `SourceId`, we
     // want to avoid duplicates in the `SourceMap` (to prevent re-updating the
@@ -81,11 +106,17 @@ pub struct PackageRegistry<'gctx> {
     // what exactly the key is.
     source_ids: HashMap<SourceId, (SourceId, Kind)>,
 
+    /// This is constructed via [`PackageRegistry::register_lock`].
+    /// See also [`LockedMap`].
     locked: LockedMap,
+    /// A group of packages tha allows to use even when yanked.
     yanked_whitelist: HashSet<PackageId>,
     source_config: SourceConfigMap<'gctx>,
 
     patches: HashMap<CanonicalUrl, Vec<Summary>>,
+    /// Whether patches are locked. That is, they are available to resolution.
+    ///
+    /// See [`PackageRegistry::lock_patches`] and [`PackageRegistry::patch`] for more.
     patches_locked: bool,
     patches_available: HashMap<CanonicalUrl, Vec<PackageId>>,
 }
@@ -110,14 +141,23 @@ type LockedMap = HashMap<
     Vec<(PackageId, Vec<PackageId>)>,
 >;
 
+/// Kinds of sources a [`PackageRegistry`] has loaded.
 #[derive(PartialEq, Eq, Clone, Copy)]
 enum Kind {
+    /// A source from a [path override].
+    ///
+    /// [path overrides]: https://doc.rust-lang.org/nightly/cargo/reference/overriding-dependencies.html#paths-overrides
     Override,
+    /// A source that is locked and not going to change.
+    ///
+    /// For example, sources of workspace members are loaded during the
+    /// workspace initialization, so not allowed to change.
     Locked,
+    /// A source that is not locked nor a path-override.
     Normal,
 }
 
-/// Argument to `PackageRegistry::patch` which is information about a `[patch]`
+/// Argument to [`PackageRegistry::patch`] which is information about a `[patch]`
 /// directive that we found in a lockfile, if present.
 pub struct LockedPatchDependency {
     /// The original `Dependency` directive, except "locked" so it's version
@@ -154,6 +194,8 @@ impl<'gctx> PackageRegistry<'gctx> {
         PackageSet::new(package_ids, self.sources, self.gctx)
     }
 
+    /// Ensures the [`Source`] of the given [`SourceId`] is loaded.
+    /// If not, this will block until the source is ready.
     fn ensure_loaded(&mut self, namespace: SourceId, kind: Kind) -> CargoResult<()> {
         match self.source_ids.get(&namespace) {
             // We've previously loaded this source, and we've already locked it,
@@ -203,21 +245,28 @@ impl<'gctx> PackageRegistry<'gctx> {
         Ok(())
     }
 
+    /// Adds a source which will be locked.
+    /// Useful for path sources such as the source of a workspace member.
     pub fn add_preloaded(&mut self, source: Box<dyn Source + 'gctx>) {
         self.add_source(source, Kind::Locked);
     }
 
+    /// Adds a source to the registry.
     fn add_source(&mut self, source: Box<dyn Source + 'gctx>, kind: Kind) {
         let id = source.source_id();
         self.sources.insert(source);
         self.source_ids.insert(id, (id, kind));
     }
 
+    /// Adds a source from a [path override].
+    ///
+    /// [path override]: https://doc.rust-lang.org/nightly/cargo/reference/overriding-dependencies.html#paths-overrides
     pub fn add_override(&mut self, source: Box<dyn Source + 'gctx>) {
         self.overrides.push(source.source_id());
         self.add_source(source, Kind::Override);
     }
 
+    /// Allows a group of package to be available to query even if they are yanked.
     pub fn add_to_yanked_whitelist(&mut self, iter: impl Iterator<Item = PackageId>) {
         let pkgs = iter.collect::<Vec<_>>();
         for (_, source) in self.sources.sources_mut() {
@@ -232,6 +281,8 @@ impl<'gctx> PackageRegistry<'gctx> {
         self.locked = HashMap::new();
     }
 
+    /// Registers one "locked package" to the registry, for guiding the
+    /// dependency resolution. See [`LockedMap`] for more.
     pub fn register_lock(&mut self, id: PackageId, deps: Vec<PackageId>) {
         trace!("register_lock: {}", id);
         for dep in deps.iter() {
@@ -262,8 +313,8 @@ impl<'gctx> PackageRegistry<'gctx> {
     /// entries in `Cargo.lock`.
     ///
     /// Note that the patch list specified here *will not* be available to
-    /// `query` until `lock_patches` is called below, which should be called
-    /// once all patches have been added.
+    /// [`Registry::query`] until [`PackageRegistry::lock_patches`] is called
+    /// below, which should be called once all patches have been added.
     ///
     /// The return value is a `Vec` of patches that should *not* be locked.
     /// This happens when the patch is locked, but the patch has been updated
@@ -434,13 +485,8 @@ impl<'gctx> PackageRegistry<'gctx> {
         Ok(unlock_patches)
     }
 
-    /// Lock all patch summaries added via `patch`, making them available to
-    /// resolution via `query`.
-    ///
-    /// This function will internally `lock` each summary added via `patch`
-    /// above now that the full set of `patch` packages are known. This'll allow
-    /// us to correctly resolve overridden dependencies between patches
-    /// hopefully!
+    /// Lock all patch summaries added via [`patch`](Self::patch),
+    /// making them available to resolution via [`Registry::query`].
     pub fn lock_patches(&mut self) {
         assert!(!self.patches_locked);
         for summaries in self.patches.values_mut() {
@@ -452,7 +498,7 @@ impl<'gctx> PackageRegistry<'gctx> {
         self.patches_locked = true;
     }
 
-    /// Gets all patches grouped by the source URLS they are going to patch.
+    /// Gets all patches grouped by the source URLs they are going to patch.
     ///
     /// These patches are mainly collected from [`patch`](Self::patch).
     /// They might not be the same as patches actually used during dependency resolving.
@@ -460,6 +506,8 @@ impl<'gctx> PackageRegistry<'gctx> {
         &self.patches
     }
 
+    /// Loads the [`Source`] for a given [`SourceId`] to this registry, making
+    /// them available to resolution.
     fn load(&mut self, source_id: SourceId, kind: Kind) -> CargoResult<()> {
         debug!("loading source {}", source_id);
         let source = self
@@ -488,6 +536,7 @@ impl<'gctx> PackageRegistry<'gctx> {
         Ok(())
     }
 
+    /// Queries path overrides from this registry.
     fn query_overrides(&mut self, dep: &Dependency) -> Poll<CargoResult<Option<IndexSummary>>> {
         for &s in self.overrides.iter() {
             let src = self.sources.get_mut(s).unwrap();
@@ -753,6 +802,7 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
     }
 }
 
+/// See [`PackageRegistry::lock`].
 fn lock(
     locked: &LockedMap,
     patches: &HashMap<CanonicalUrl, Vec<PackageId>>,
