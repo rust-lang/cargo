@@ -422,6 +422,8 @@ fn to_example_targets(
         "autoexamples",
     )?;
 
+    validate_unique_names(&targets, "example")?;
+
     let mut result = Vec::new();
     for toml in targets {
         let path = toml.path.clone().expect("previously resolved").0;
@@ -467,6 +469,8 @@ fn to_test_targets(
         errors,
         "autotests",
     )?;
+
+    validate_unique_names(&targets, "test")?;
 
     let mut result = Vec::new();
     for toml in targets {
@@ -524,8 +528,9 @@ fn to_bench_targets(
             "autobenches",
         )?
     };
-
     warnings.append(&mut legacy_warnings);
+
+    validate_unique_names(&targets, "bench")?;
 
     let mut result = Vec::new();
     for toml in targets {
@@ -599,7 +604,6 @@ fn clean_targets_with_legacy_path(
         validate_target_name(target, target_kind_human, target_kind, warnings)?;
     }
 
-    validate_unique_names(&toml_targets, target_kind)?;
     let mut result = Vec::new();
     for mut target in toml_targets {
         let path = target_path(
