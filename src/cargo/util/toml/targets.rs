@@ -406,7 +406,7 @@ fn resolve_examples(
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) -> CargoResult<Vec<TomlExampleTarget>> {
-    let inferred = infer_from_directory(&package_root.join(DEFAULT_EXAMPLE_DIR_NAME));
+    let inferred = infer_from_directory(&package_root, Path::new(DEFAULT_EXAMPLE_DIR_NAME));
 
     let targets = resolve_targets(
         "example",
@@ -462,7 +462,7 @@ fn resolve_tests(
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) -> CargoResult<Vec<TomlTestTarget>> {
-    let inferred = infer_from_directory(&package_root.join(DEFAULT_TEST_DIR_NAME));
+    let inferred = infer_from_directory(&package_root, Path::new(DEFAULT_TEST_DIR_NAME));
 
     let targets = resolve_targets(
         "test",
@@ -521,7 +521,7 @@ fn resolve_benches(
         Some(legacy_path)
     };
 
-    let inferred = infer_from_directory(&package_root.join(DEFAULT_BENCH_DIR_NAME));
+    let inferred = infer_from_directory(&package_root, Path::new(DEFAULT_BENCH_DIR_NAME));
 
     let targets = resolve_targets_with_legacy_path(
         "benchmark",
@@ -654,12 +654,14 @@ fn inferred_bins(package_root: &Path, package_name: &str) -> Vec<(String, PathBu
     if main.exists() {
         result.push((package_name.to_string(), main));
     }
-    result.extend(infer_from_directory(&package_root.join("src").join("bin")));
+    let default_bin_dir_name = Path::new("src").join("bin");
+    result.extend(infer_from_directory(&package_root, &default_bin_dir_name));
 
     result
 }
 
-fn infer_from_directory(directory: &Path) -> Vec<(String, PathBuf)> {
+fn infer_from_directory(package_root: &Path, relpath: &Path) -> Vec<(String, PathBuf)> {
+    let directory = package_root.join(relpath);
     let entries = match fs::read_dir(directory) {
         Err(_) => return Vec::new(),
         Ok(dir) => dir,
