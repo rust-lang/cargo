@@ -81,7 +81,13 @@ pub(super) fn to_targets(
         warnings,
         has_lib,
     )?;
-    targets.extend(to_bin_targets(features, &bins, edition, errors)?);
+    targets.extend(to_bin_targets(
+        features,
+        &bins,
+        package_root,
+        edition,
+        errors,
+    )?);
 
     let toml_examples = resolve_examples(
         resolved_toml.example.as_ref(),
@@ -91,7 +97,12 @@ pub(super) fn to_targets(
         warnings,
         errors,
     )?;
-    targets.extend(to_example_targets(&toml_examples, edition, warnings)?);
+    targets.extend(to_example_targets(
+        &toml_examples,
+        package_root,
+        edition,
+        warnings,
+    )?);
 
     let toml_tests = resolve_tests(
         resolved_toml.test.as_ref(),
@@ -101,7 +112,7 @@ pub(super) fn to_targets(
         warnings,
         errors,
     )?;
-    targets.extend(to_test_targets(&toml_tests, edition)?);
+    targets.extend(to_test_targets(&toml_tests, package_root, edition)?);
 
     let toml_benches = resolve_benches(
         resolved_toml.bench.as_ref(),
@@ -111,7 +122,7 @@ pub(super) fn to_targets(
         warnings,
         errors,
     )?;
-    targets.extend(to_bench_targets(&toml_benches, edition)?);
+    targets.extend(to_bench_targets(&toml_benches, package_root, edition)?);
 
     // processing the custom build script
     if let Some(custom_build) = maybe_custom_build(custom_build, package_root) {
@@ -327,6 +338,7 @@ fn resolve_bins(
 fn to_bin_targets(
     features: &Features,
     bins: &[TomlBinTarget],
+    package_root: &Path,
     edition: Edition,
     errors: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
@@ -364,7 +376,7 @@ fn to_bin_targets(
 
     let mut result = Vec::new();
     for bin in bins {
-        let path = bin.path.clone().expect("previously resolved").0;
+        let path = package_root.join(&bin.path.as_ref().expect("previously resolved").0);
         let mut target = Target::bin_target(
             name_or_panic(bin),
             bin.filename.clone(),
@@ -381,19 +393,21 @@ fn to_bin_targets(
 
 fn legacy_bin_path(package_root: &Path, name: &str, has_lib: bool) -> Option<PathBuf> {
     if !has_lib {
-        let path = package_root.join("src").join(format!("{}.rs", name));
-        if path.exists() {
-            return Some(path);
+        let rel_path = Path::new("src").join(format!("{}.rs", name));
+        if package_root.join(&rel_path).exists() {
+            return Some(rel_path);
         }
     }
-    let path = package_root.join("src").join("main.rs");
-    if path.exists() {
-        return Some(path);
+
+    let rel_path = Path::new("src").join("main.rs");
+    if package_root.join(&rel_path).exists() {
+        return Some(rel_path);
     }
 
-    let path = package_root.join("src").join("bin").join("main.rs");
-    if path.exists() {
-        return Some(path);
+    let default_bin_dir_name = Path::new("src").join("bin");
+    let rel_path = default_bin_dir_name.join("main.rs");
+    if package_root.join(&rel_path).exists() {
+        return Some(rel_path);
     }
     None
 }
@@ -426,6 +440,7 @@ fn resolve_examples(
 
 fn to_example_targets(
     targets: &[TomlExampleTarget],
+    package_root: &Path,
     edition: Edition,
     warnings: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
@@ -433,7 +448,7 @@ fn to_example_targets(
 
     let mut result = Vec::new();
     for toml in targets {
-        let path = toml.path.clone().expect("previously resolved").0;
+        let path = package_root.join(&toml.path.as_ref().expect("previously resolved").0);
         validate_crate_types(&toml, "example", warnings);
         let crate_types = match toml.crate_types() {
             Some(kinds) => kinds.iter().map(|s| s.into()).collect(),
@@ -480,12 +495,16 @@ fn resolve_tests(
     Ok(targets)
 }
 
-fn to_test_targets(targets: &[TomlTestTarget], edition: Edition) -> CargoResult<Vec<Target>> {
+fn to_test_targets(
+    targets: &[TomlTestTarget],
+    package_root: &Path,
+    edition: Edition,
+) -> CargoResult<Vec<Target>> {
     validate_unique_names(&targets, "test")?;
 
     let mut result = Vec::new();
     for toml in targets {
-        let path = toml.path.clone().expect("previously resolved").0;
+        let path = package_root.join(&toml.path.as_ref().expect("previously resolved").0);
         let mut target = Target::test_target(
             name_or_panic(&toml),
             path,
@@ -508,8 +527,8 @@ fn resolve_benches(
 ) -> CargoResult<Vec<TomlBenchTarget>> {
     let mut legacy_warnings = vec![];
     let mut legacy_bench_path = |bench: &TomlTarget| {
-        let legacy_path = package_root.join("src").join("bench.rs");
-        if !(name_or_panic(bench) == "bench" && legacy_path.exists()) {
+        let legacy_path = Path::new("src").join("bench.rs");
+        if !(name_or_panic(bench) == "bench" && package_root.join(&legacy_path).exists()) {
             return None;
         }
         legacy_warnings.push(format!(
@@ -541,12 +560,16 @@ fn resolve_benches(
     Ok(targets)
 }
 
-fn to_bench_targets(targets: &[TomlBenchTarget], edition: Edition) -> CargoResult<Vec<Target>> {
+fn to_bench_targets(
+    targets: &[TomlBenchTarget],
+    package_root: &Path,
+    edition: Edition,
+) -> CargoResult<Vec<Target>> {
     validate_unique_names(&targets, "bench")?;
 
     let mut result = Vec::new();
     for toml in targets {
-        let path = toml.path.clone().expect("previously resolved").0;
+        let path = package_root.join(&toml.path.as_ref().expect("previously resolved").0);
         let mut target = Target::bench_target(
             name_or_panic(&toml),
             path,
@@ -640,8 +663,8 @@ fn resolve_targets_with_legacy_path(
 }
 
 fn inferred_lib(package_root: &Path) -> Option<PathBuf> {
-    let lib = package_root.join("src").join("lib.rs");
-    if lib.exists() {
+    let lib = Path::new("src").join("lib.rs");
+    if package_root.join(&lib).exists() {
         Some(lib)
     } else {
         None
@@ -649,13 +672,14 @@ fn inferred_lib(package_root: &Path) -> Option<PathBuf> {
 }
 
 fn inferred_bins(package_root: &Path, package_name: &str) -> Vec<(String, PathBuf)> {
-    let main = package_root.join("src").join("main.rs");
+    let main = "src/main.rs";
     let mut result = Vec::new();
-    if main.exists() {
+    if package_root.join(main).exists() {
+        let main = PathBuf::from(main);
         result.push((package_name.to_string(), main));
     }
     let default_bin_dir_name = Path::new("src").join("bin");
-    result.extend(infer_from_directory(&package_root, &default_bin_dir_name));
+    result.extend(infer_from_directory(package_root, &default_bin_dir_name));
 
     result
 }
@@ -670,31 +694,39 @@ fn infer_from_directory(package_root: &Path, relpath: &Path) -> Vec<(String, Pat
     entries
         .filter_map(|e| e.ok())
         .filter(is_not_dotfile)
-        .filter_map(|d| infer_any(&d))
+        .filter_map(|d| infer_any(package_root, &d))
         .collect()
 }
 
-fn infer_any(entry: &DirEntry) -> Option<(String, PathBuf)> {
+fn infer_any(package_root: &Path, entry: &DirEntry) -> Option<(String, PathBuf)> {
     if entry.file_type().map_or(false, |t| t.is_dir()) {
-        infer_subdirectory(entry)
+        infer_subdirectory(package_root, entry)
     } else if entry.path().extension().and_then(|p| p.to_str()) == Some("rs") {
-        infer_file(entry)
+        infer_file(package_root, entry)
     } else {
         None
     }
 }
 
-fn infer_file(entry: &DirEntry) -> Option<(String, PathBuf)> {
+fn infer_file(package_root: &Path, entry: &DirEntry) -> Option<(String, PathBuf)> {
     let path = entry.path();
     let stem = path.file_stem()?.to_str()?.to_owned();
+    let path = path
+        .strip_prefix(package_root)
+        .map(|p| p.to_owned())
+        .unwrap_or(path);
     Some((stem, path))
 }
 
-fn infer_subdirectory(entry: &DirEntry) -> Option<(String, PathBuf)> {
+fn infer_subdirectory(package_root: &Path, entry: &DirEntry) -> Option<(String, PathBuf)> {
     let path = entry.path();
     let main = path.join("main.rs");
     let name = path.file_name()?.to_str()?.to_owned();
     if main.exists() {
+        let main = main
+            .strip_prefix(package_root)
+            .map(|p| p.to_owned())
+            .unwrap_or(main);
         Some((name, main))
     } else {
         None
@@ -997,7 +1029,7 @@ fn target_path(
 ) -> Result<PathBuf, String> {
     if let Some(ref path) = target.path {
         // Should we verify that this path exists here?
-        return Ok(package_root.join(&path.0));
+        return Ok(path.0.clone());
     }
     let name = name_or_panic(target).to_owned();
 
