@@ -33,7 +33,7 @@ const DEFAULT_EXAMPLE_DIR_NAME: &'static str = "examples";
 const DEFAULT_BIN_DIR_NAME: &'static str = "bin";
 
 #[tracing::instrument(skip_all)]
-pub(super) fn targets(
+pub(super) fn to_targets(
     features: &Features,
     resolved_toml: &TomlManifest,
     package_name: &str,
@@ -48,7 +48,7 @@ pub(super) fn targets(
 
     let has_lib;
 
-    if let Some(target) = clean_lib(
+    if let Some(target) = to_lib_target(
         resolved_toml.lib.as_ref(),
         package_root,
         package_name,
@@ -66,7 +66,7 @@ pub(super) fn targets(
         .as_ref()
         .ok_or_else(|| anyhow::format_err!("manifest has no `package` (or `project`)"))?;
 
-    targets.extend(clean_bins(
+    targets.extend(to_bin_targets(
         features,
         resolved_toml.bin.as_ref(),
         package_root,
@@ -78,7 +78,7 @@ pub(super) fn targets(
         has_lib,
     )?);
 
-    targets.extend(clean_examples(
+    targets.extend(to_example_targets(
         resolved_toml.example.as_ref(),
         package_root,
         edition,
@@ -87,7 +87,7 @@ pub(super) fn targets(
         errors,
     )?);
 
-    targets.extend(clean_tests(
+    targets.extend(to_test_targets(
         resolved_toml.test.as_ref(),
         package_root,
         edition,
@@ -96,7 +96,7 @@ pub(super) fn targets(
         errors,
     )?);
 
-    targets.extend(clean_benches(
+    targets.extend(to_bench_targets(
         resolved_toml.bench.as_ref(),
         package_root,
         edition,
@@ -144,7 +144,7 @@ pub(super) fn targets(
     Ok(targets)
 }
 
-fn clean_lib(
+fn to_lib_target(
     resolved_lib: Option<&TomlLibTarget>,
     package_root: &Path,
     package_name: &str,
@@ -267,7 +267,7 @@ fn clean_lib(
     Ok(Some(target))
 }
 
-fn clean_bins(
+fn to_bin_targets(
     features: &Features,
     toml_bins: Option<&Vec<TomlBinTarget>>,
     package_root: &Path,
@@ -390,7 +390,7 @@ fn clean_bins(
     }
 }
 
-fn clean_examples(
+fn to_example_targets(
     toml_examples: Option<&Vec<TomlExampleTarget>>,
     package_root: &Path,
     edition: Edition,
@@ -435,7 +435,7 @@ fn clean_examples(
     Ok(result)
 }
 
-fn clean_tests(
+fn to_test_targets(
     toml_tests: Option<&Vec<TomlTestTarget>>,
     package_root: &Path,
     edition: Edition,
@@ -472,7 +472,7 @@ fn clean_tests(
     Ok(result)
 }
 
-fn clean_benches(
+fn to_bench_targets(
     toml_benches: Option<&Vec<TomlBenchTarget>>,
     package_root: &Path,
     edition: Edition,

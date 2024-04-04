@@ -32,7 +32,7 @@ use crate::util::{self, context::ConfigRelativePath, GlobalContext, IntoUrl, Opt
 mod embedded;
 mod targets;
 
-use self::targets::targets;
+use self::targets::to_targets;
 
 /// See also `bin/cargo/commands/run.rs`s `is_manifest_command`
 pub fn is_embedded(path: &Path) -> bool {
@@ -1065,7 +1065,7 @@ fn to_real_manifest(
     // If we have no lib at all, use the inferred lib, if available.
     // If we have a lib with a path, we're done.
     // If we have a lib with no path, use the inferred lib or else the package name.
-    let targets = targets(
+    let targets = to_targets(
         &features,
         &resolved_toml,
         package_name,
