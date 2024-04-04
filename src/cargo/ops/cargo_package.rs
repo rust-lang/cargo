@@ -533,8 +533,9 @@ fn check_repo_state(
         if let Some(workdir) = repo.workdir() {
             debug!("found a git repo at {:?}", workdir);
             let path = p.manifest_path();
-            let path = path.strip_prefix(workdir).unwrap_or(path);
-            if let Ok(status) = repo.status_file(path) {
+            let path =
+                paths::strip_prefix_canonical(path, workdir).unwrap_or_else(|_| path.to_path_buf());
+            if let Ok(status) = repo.status_file(&path) {
                 if (status & git2::Status::IGNORED).is_empty() {
                     debug!(
                         "found (git) Cargo.toml at {:?} in workdir {:?}",
