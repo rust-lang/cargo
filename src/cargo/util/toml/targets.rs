@@ -423,7 +423,8 @@ fn to_example_targets(
     )?;
 
     let mut result = Vec::new();
-    for (path, toml) in targets {
+    for toml in targets {
+        let path = toml.path.clone().expect("previously resolved").0;
         validate_crate_types(&toml, "example", warnings);
         let crate_types = match toml.crate_types() {
             Some(kinds) => kinds.iter().map(|s| s.into()).collect(),
@@ -468,7 +469,8 @@ fn to_test_targets(
     )?;
 
     let mut result = Vec::new();
-    for (path, toml) in targets {
+    for toml in targets {
+        let path = toml.path.clone().expect("previously resolved").0;
         let mut target = Target::test_target(
             name_or_panic(&toml),
             path,
@@ -526,7 +528,8 @@ fn to_bench_targets(
     warnings.append(&mut legacy_warnings);
 
     let mut result = Vec::new();
-    for (path, toml) in targets {
+    for toml in targets {
+        let path = toml.path.clone().expect("previously resolved").0;
         let mut target = Target::bench_target(
             name_or_panic(&toml),
             path,
@@ -551,7 +554,7 @@ fn clean_targets(
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
     autodiscover_flag_name: &str,
-) -> CargoResult<Vec<(PathBuf, TomlTarget)>> {
+) -> CargoResult<Vec<TomlTarget>> {
     clean_targets_with_legacy_path(
         target_kind_human,
         target_kind,
@@ -579,7 +582,7 @@ fn clean_targets_with_legacy_path(
     errors: &mut Vec<String>,
     legacy_path: &mut dyn FnMut(&TomlTarget) -> Option<PathBuf>,
     autodiscover_flag_name: &str,
-) -> CargoResult<Vec<(PathBuf, TomlTarget)>> {
+) -> CargoResult<Vec<TomlTarget>> {
     let toml_targets = toml_targets_and_inferred(
         toml_targets,
         inferred,
@@ -598,7 +601,7 @@ fn clean_targets_with_legacy_path(
 
     validate_unique_names(&toml_targets, target_kind)?;
     let mut result = Vec::new();
-    for target in toml_targets {
+    for mut target in toml_targets {
         let path = target_path(
             &target,
             inferred,
@@ -614,7 +617,8 @@ fn clean_targets_with_legacy_path(
                 continue;
             }
         };
-        result.push((path, target));
+        target.path = Some(PathValue(path));
+        result.push(target);
     }
     Ok(result)
 }
