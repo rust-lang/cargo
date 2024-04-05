@@ -152,29 +152,21 @@ fn to_lib_target(
     warnings: &mut Vec<String>,
 ) -> CargoResult<Option<Target>> {
     let inferred = inferred_lib(package_root);
-    let lib = match resolved_lib {
-        Some(lib) => {
-            if let Some(ref name) = lib.name {
-                if name.contains('-') {
-                    anyhow::bail!("library target names cannot contain hyphens: {}", name)
-                }
-            }
-            Some(TomlTarget {
-                name: lib
-                    .name
-                    .clone()
-                    .or_else(|| Some(package_name.replace("-", "_"))),
-                ..lib.clone()
-            })
-        }
-        None => inferred.as_ref().map(|lib| TomlTarget {
-            name: Some(package_name.replace("-", "_")),
+    let lib = resolved_lib.cloned().or_else(|| {
+        inferred.as_ref().map(|lib| TomlTarget {
             path: Some(PathValue(lib.clone())),
             ..TomlTarget::new()
-        }),
-    };
+        })
+    });
+    let Some(mut lib) = lib else { return Ok(None) };
+    let name = lib
+        .name
+        .get_or_insert_with(|| package_name.replace("-", "_"));
+    if name.contains('-') {
+        anyhow::bail!("library target names cannot contain hyphens: {}", name)
+    }
 
-    let Some(ref lib) = lib else { return Ok(None) };
+    let lib = &lib;
     validate_proc_macro(lib, "library", warnings);
     validate_crate_types(lib, "library", warnings);
 
