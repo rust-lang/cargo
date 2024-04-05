@@ -62,6 +62,12 @@ impl<'de, 'gctx> de::Deserializer<'de> for Deserializer<'gctx> {
             let (res, def) = res;
             return res.map_err(|e| e.with_key_context(&self.key, Some(def)));
         }
+
+        // The effect here is the same as in `deserialize_option`.
+        if self.gctx.has_key(&self.key, self.env_prefix_ok)? {
+            return visitor.visit_some(self);
+        }
+
         Err(ConfigError::missing(&self.key))
     }
 
