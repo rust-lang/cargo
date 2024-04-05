@@ -144,15 +144,15 @@ pub(super) fn to_targets(
     Ok(targets)
 }
 
-fn to_lib_target(
-    resolved_lib: Option<&TomlLibTarget>,
+fn resolve_lib(
+    original_lib: Option<&TomlLibTarget>,
     package_root: &Path,
     package_name: &str,
     edition: Edition,
     warnings: &mut Vec<String>,
-) -> CargoResult<Option<Target>> {
+) -> CargoResult<Option<TomlLibTarget>> {
     let inferred = inferred_lib(package_root);
-    let lib = resolved_lib.cloned().or_else(|| {
+    let lib = original_lib.cloned().or_else(|| {
         inferred.as_ref().map(|lib| TomlTarget {
             path: Some(PathValue(lib.clone())),
             ..TomlTarget::new()
@@ -186,7 +186,21 @@ fn to_lib_target(
         }
     }
 
-    let lib = &lib;
+    Ok(Some(lib))
+}
+
+fn to_lib_target(
+    original_lib: Option<&TomlLibTarget>,
+    package_root: &Path,
+    package_name: &str,
+    edition: Edition,
+    warnings: &mut Vec<String>,
+) -> CargoResult<Option<Target>> {
+    let lib = resolve_lib(original_lib, package_root, package_name, edition, warnings)?;
+
+    let Some(lib) = &lib else {
+        return Ok(None);
+    };
     validate_proc_macro(lib, "library", warnings);
     validate_crate_types(lib, "library", warnings);
 
@@ -251,7 +265,7 @@ fn to_lib_target(
 
     let mut target = Target::lib_target(name_or_panic(lib), crate_types, path, edition);
     configure(lib, &mut target)?;
-    target.set_name_inferred(resolved_lib.map_or(true, |v| v.name.is_none()));
+    target.set_name_inferred(original_lib.map_or(true, |v| v.name.is_none()));
     Ok(Some(target))
 }
 
