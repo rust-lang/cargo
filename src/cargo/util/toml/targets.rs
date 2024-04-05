@@ -48,10 +48,17 @@ pub(super) fn to_targets(
 
     let has_lib;
 
-    if let Some(target) = to_lib_target(
+    let lib = resolve_lib(
         resolved_toml.lib.as_ref(),
         package_root,
         package_name,
+        edition,
+        warnings,
+    )?;
+    if let Some(target) = to_lib_target(
+        resolved_toml.lib.as_ref(),
+        lib.as_ref(),
+        package_root,
         edition,
         warnings,
     )? {
@@ -191,14 +198,12 @@ fn resolve_lib(
 
 fn to_lib_target(
     original_lib: Option<&TomlLibTarget>,
+    resolved_lib: Option<&TomlLibTarget>,
     package_root: &Path,
-    package_name: &str,
     edition: Edition,
     warnings: &mut Vec<String>,
 ) -> CargoResult<Option<Target>> {
-    let lib = resolve_lib(original_lib, package_root, package_name, edition, warnings)?;
-
-    let Some(lib) = &lib else {
+    let Some(lib) = resolved_lib else {
         return Ok(None);
     };
     validate_proc_macro(lib, "library", warnings);
