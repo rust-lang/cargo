@@ -30,7 +30,6 @@ use crate::util::toml::warn_on_deprecated;
 const DEFAULT_TEST_DIR_NAME: &'static str = "tests";
 const DEFAULT_BENCH_DIR_NAME: &'static str = "benches";
 const DEFAULT_EXAMPLE_DIR_NAME: &'static str = "examples";
-const DEFAULT_BIN_DIR_NAME: &'static str = "bin";
 
 #[tracing::instrument(skip_all)]
 pub(super) fn to_targets(
@@ -392,10 +391,7 @@ fn legacy_bin_path(package_root: &Path, name: &str, has_lib: bool) -> Option<Pat
         return Some(path);
     }
 
-    let path = package_root
-        .join("src")
-        .join(DEFAULT_BIN_DIR_NAME)
-        .join("main.rs");
+    let path = package_root.join("src").join("bin").join("main.rs");
     if path.exists() {
         return Some(path);
     }
@@ -658,9 +654,7 @@ fn inferred_bins(package_root: &Path, package_name: &str) -> Vec<(String, PathBu
     if main.exists() {
         result.push((package_name.to_string(), main));
     }
-    result.extend(infer_from_directory(
-        &package_root.join("src").join(DEFAULT_BIN_DIR_NAME),
-    ));
+    result.extend(infer_from_directory(&package_root.join("src").join("bin")));
 
     result
 }
@@ -938,7 +932,7 @@ fn target_path_not_found_error_message(
             ("example", false) => target_path.push(DEFAULT_EXAMPLE_DIR_NAME),
             ("bin", false) => {
                 target_path.push("src");
-                target_path.push(DEFAULT_BIN_DIR_NAME);
+                target_path.push("bin");
             }
             _ => unreachable!("invalid target kind: {}", kind),
         }
