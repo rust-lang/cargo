@@ -161,37 +161,37 @@ fn to_lib_target(
     let Some(mut lib) = lib else { return Ok(None) };
     lib.name
         .get_or_insert_with(|| package_name.replace("-", "_"));
+    // Check early to improve error messages
+    validate_lib_name(&lib, warnings)?;
+
+    if lib.path.is_none() {
+        if let Some(inferred) = inferred {
+            lib.path = Some(PathValue(inferred));
+        } else {
+            let name = name_or_panic(&lib);
+            let legacy_path = Path::new("src").join(format!("{name}.rs"));
+            if edition == Edition::Edition2015 && package_root.join(&legacy_path).exists() {
+                warnings.push(format!(
+                    "path `{}` was erroneously implicitly accepted for library `{name}`,\n\
+                     please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
+                    legacy_path.display(),
+                ));
+                lib.path = Some(PathValue(legacy_path));
+            } else {
+                anyhow::bail!(
+                    "can't find library `{name}`, \
+                     rename file to `src/lib.rs` or specify lib.path",
+                )
+            }
+        }
+    }
 
     let lib = &lib;
     validate_proc_macro(lib, "library", warnings);
     validate_crate_types(lib, "library", warnings);
 
-    validate_lib_name(lib, warnings)?;
-
-    let path = match (lib.path.as_ref(), inferred) {
-        (Some(path), _) => package_root.join(&path.0),
-        (None, Some(path)) => path,
-        (None, None) => {
-            let legacy_path = package_root
-                .join("src")
-                .join(format!("{}.rs", name_or_panic(lib)));
-            if edition == Edition::Edition2015 && legacy_path.exists() {
-                warnings.push(format!(
-                    "path `{}` was erroneously implicitly accepted for library `{}`,\n\
-                     please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
-                    legacy_path.display(),
-                    name_or_panic(lib)
-                ));
-                legacy_path
-            } else {
-                anyhow::bail!(
-                    "can't find library `{}`, \
-                     rename file to `src/lib.rs` or specify lib.path",
-                    name_or_panic(lib)
-                )
-            }
-        }
-    };
+    let path = lib.path.as_ref().expect("previously resolved");
+    let path = package_root.join(&path.0);
 
     if lib.plugin == Some(true) {
         warnings.push(format!(
