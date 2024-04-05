@@ -116,6 +116,49 @@ fn build_sbom_with_simple_build_script() {
     let path = p.bin("foo").with_extension("cargo-sbom.json");
     assert!(path.is_file());
 
-    let json = read_json(path).expect("Failed to read JSON");
-    dbg!(&json);
+    let _json = read_json(path).expect("Failed to read JSON");
+    // TODO: check SBOM output
+}
+
+#[cargo_test]
+fn build_sbom_with_build_dependencies() {
+    let p = configured_project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                bar = { path = "./bar" }
+            "#,
+        )
+        .file("src/main.rs", "fn main() { let _i = bar::bar(); }")
+        .file("bar/src/lib.rs", "pub fn bar() -> i32 { 2 }")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                build = "build.rs"
+
+                [build-dependencies]
+                cc = "1.0.46"
+            "#,
+        )
+        .file(
+            "bar/build.rs",
+            r#"fn main() { println!("cargo::rustc-cfg=foo"); }"#,
+        )
+        .build();
+
+    p.cargo("build -Zsbom")
+        .masquerade_as_nightly_cargo(&["sbom"])
+        .run();
+    let path = p.bin("foo").with_extension("cargo-sbom.json");
+    let _json = read_json(path).expect("Failed to read JSON");
+    // TODO: check SBOM output
 }
