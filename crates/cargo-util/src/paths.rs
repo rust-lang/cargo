@@ -510,8 +510,7 @@ fn _remove_file(p: &Path) -> Result<()> {
         }
     }
 
-    Err(err).with_context(|| format!("failed to remove file `{}`", p.display()))?;
-    Ok(())
+    Err(err).with_context(|| format!("failed to remove file `{}`", p.display()))
 }
 
 fn set_not_readonly(p: &Path) -> io::Result<bool> {
