@@ -525,7 +525,7 @@ fn resolve_benches(
         Some(legacy_path)
     };
 
-    let inferred = infer_from_directory(&package_root.join("benches"));
+    let inferred = infer_from_directory(&package_root.join(DEFAULT_BENCH_DIR_NAME));
 
     let targets = resolve_targets_with_legacy_path(
         "benchmark",
