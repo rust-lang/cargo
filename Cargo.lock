@@ -308,7 +308,7 @@ dependencies = [
  "im-rc",
  "indexmap",
  "itertools 0.12.1",
- "jobserver",
+ "jobserver 0.1.28 (git+https://github.com/rust-lang/jobserver-rs.git?rev=refs/pull/73/head)",
  "lazycell",
  "libc",
  "libgit2-sys",
@@ -452,7 +452,7 @@ dependencies = [
  "filetime",
  "hex",
  "ignore",
- "jobserver",
+ "jobserver 0.1.28 (git+https://github.com/rust-lang/jobserver-rs.git?rev=refs/pull/73/head)",
  "libc",
  "miow",
  "same-file",
@@ -504,7 +504,7 @@ version = "1.0.90"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8cd6604a82acf3039f1144f54b8eb34e91ffba622051189e71b781822d5ee1f5"
 dependencies = [
- "jobserver",
+ "jobserver 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc",
 ]
 
@@ -2087,6 +2087,14 @@ name = "jobserver"
 version = "0.1.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab46a6e9526ddef3ae7f787c06f0f2600639ba80ea3eade3d8e670a2230f51d6"
+dependencies = [
+ "libc",
+]
+
+[[package]]
+name = "jobserver"
+version = "0.1.28"
+source = "git+https://github.com/rust-lang/jobserver-rs.git?rev=refs/pull/73/head#03020d4d69700f8c67c0e17d103d5046d55872d6"
 dependencies = [
  "libc",
 ]
