@@ -487,7 +487,7 @@ fn check_invalid_ws_keys(toml_key: &str, arg: &DepOp) -> CargoResult<()> {
 }
 
 /// When the `--optional` option is added using `cargo add`, we need to
-/// check the current rust-version. As the `dep:` syntax is only avaliable
+/// check the current rust-version. As the `dep:` syntax is only available
 /// starting with Rust 1.60.0
 ///
 /// `true` means that the rust-version is None or the rust-version is higher

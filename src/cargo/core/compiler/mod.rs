@@ -1238,7 +1238,7 @@ fn trim_paths_args(
         return Ok(());
     }
 
-    // feature gate was checked during mainfest/config parsing.
+    // feature gate was checked during manifest/config parsing.
     cmd.arg("-Zunstable-options");
     cmd.arg(format!("-Zremap-path-scope={trim_paths}"));
 
