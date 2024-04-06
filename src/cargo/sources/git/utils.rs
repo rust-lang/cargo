@@ -1413,6 +1413,7 @@ fn github_fast_path(
                 // the branch has moved.
                 if let Some(local_object) = local_object {
                     if is_short_hash_of(rev, local_object) {
+                        debug!("github fast path already has {local_object}");
                         return Ok(FastPathRev::UpToDate);
                     }
                 }
@@ -1452,6 +1453,7 @@ fn github_fast_path(
     handle.get(true)?;
     handle.url(&url)?;
     handle.useragent("cargo")?;
+    handle.follow_location(true)?; // follow redirects
     handle.http_headers({
         let mut headers = List::new();
         headers.append("Accept: application/vnd.github.3.sha")?;
@@ -1472,14 +1474,17 @@ fn github_fast_path(
 
     let response_code = handle.response_code()?;
     if response_code == 304 {
+        debug!("github fast path up-to-date");
         Ok(FastPathRev::UpToDate)
     } else if response_code == 200 {
         let oid_to_fetch = str::from_utf8(&response_body)?.parse::<Oid>()?;
+        debug!("github fast path fetch {oid_to_fetch}");
         Ok(FastPathRev::NeedsFetch(oid_to_fetch))
     } else {
         // Usually response_code == 404 if the repository does not exist, and
         // response_code == 422 if exists but GitHub is unable to resolve the
         // requested rev.
+        debug!("github fast path bad response code {response_code}");
         Ok(FastPathRev::Indeterminate)
     }
 }
