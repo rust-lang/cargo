@@ -377,7 +377,7 @@ macro_rules! features {
             activated: Vec<String>,
             /// Whether is allowed to use any unstable features.
             nightly_features_allowed: bool,
-            /// Whether the source mainfest is from a local package.
+            /// Whether the source manifest is from a local package.
             is_local: bool,
         }
 

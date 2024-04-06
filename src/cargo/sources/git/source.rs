@@ -101,7 +101,7 @@ impl<'gctx> GitSource<'gctx> {
         assert!(source_id.is_git(), "id is not git, id={}", source_id);
 
         let remote = GitRemote::new(source_id.url());
-        // Fallback to git ref from mainfest if there is no locked revision.
+        // Fallback to git ref from manifest if there is no locked revision.
         let locked_rev = source_id
             .precise_git_fragment()
             .map(|s| Revision::new(s.into()))
