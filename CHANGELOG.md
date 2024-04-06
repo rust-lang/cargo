@@ -225,6 +225,13 @@
 - test: disable lldb test as it requires privileges to run on macOS 
   [#13416](https://github.com/rust-lang/cargo/pull/13416)
 
+## Cargo 1.77.1 (2024-03-28)
+
+### Fixed
+
+- Debuginfo is no longer stripped by default for Windows MSVC targets. This caused an unexpected regression in 1.77.0 that broke backtraces.
+  [#13654](https://github.com/rust-lang/cargo/pull/13654)
+
 ## Cargo 1.77 (2024-03-21)
 [1a2666dd...rust-1.77.0](https://github.com/rust-lang/cargo/compare/1a2666dd...rust-1.77.0)
 
