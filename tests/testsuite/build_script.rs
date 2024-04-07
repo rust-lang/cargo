@@ -5578,6 +5578,9 @@ fn build_script_rerun_when_target_rustflags_change() {
 [RUNNING] [..]
 ",
         )
-        .with_stdout("")
+        .with_stdout(
+            "\
+hello",
+        )
         .run();
 }
