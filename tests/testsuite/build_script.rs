@@ -5537,3 +5537,60 @@ fn test_old_syntax_with_old_msrv() {
     p.cargo("build -v").run();
     p.cargo("run -v").with_stdout("foo\n").run();
 }
+
+#[cargo_test]
+fn build_script_rerun_when_target_rustflags_change() {
+    let target = rustc_host();
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                #[cfg(enable)]
+                println!("hello");
+            }
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+            use std::env;
+
+            fn main() {
+                if let Ok(rustflags) = env::var("CARGO_ENCODED_RUSTFLAGS") {
+                    if !rustflags.is_empty() {
+                        println!("cargo::rustc-cfg=enable")
+                    }
+                }
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("run --target")
+        .arg(&target)
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] [..]
+[RUNNING] [..]
+",
+        )
+        .run();
+
+    p.cargo("run --target")
+        .arg(&target)
+        .env("RUSTFLAGS", "-C opt-level=3")
+        .with_stderr(
+            "\
+[COMPILING] foo v0.0.1 ([..])
+[FINISHED] [..]
+[RUNNING] [..]
+",
+        )
+        .with_stdout(
+            "\
+hello",
+        )
+        .run();
+}
