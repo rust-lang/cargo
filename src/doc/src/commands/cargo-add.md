@@ -137,11 +137,7 @@ which enables all specified features.</dd>
 
 
 <dt class="option-term" id="option-cargo-add---ignore-rust-version"><a class="option-anchor" href="#option-cargo-add---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
-<dd class="option-desc">Ignore <code>rust-version</code> specification in packages.</p>
-<p>This option is unstable and available only on the
-<a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly channel</a>
-and requires the <code>-Z unstable-options</code> flag to enable.
-See <a href="https://github.com/rust-lang/cargo/issues/5579">https://github.com/rust-lang/cargo/issues/5579</a> for more information.</dd>
+<dd class="option-desc">Ignore <code>rust-version</code> specification in packages.</dd>
 
 
 </dl>
