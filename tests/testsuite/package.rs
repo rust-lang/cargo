@@ -3638,30 +3638,30 @@ edition = "2015"
 name = "foo"
 version = "0.0.1"
 authors = []
-build = './src/build.rs'
+build = 'src/build.rs'
 description = "foo"
 documentation = "docs.rs/foo"
-readme = './docs/README.md'
-license-file = './docs/LICENSE'
+readme = 'docs/README.md'
+license-file = 'docs/LICENSE'
 
 [lib]
-path = './src/lib.rs'
+path = 'src/lib.rs'
 
 [[bin]]
 name = "foo"
-path = './src/bin/foo/main.rs'
+path = 'src/bin/foo/main.rs'
 
 [[example]]
 name = "example_foo"
-path = './examples/example_foo.rs'
+path = 'examples/example_foo.rs'
 
 [[test]]
 name = "test_foo"
-path = './tests/test_foo.rs'
+path = 'tests/test_foo.rs'
 
 [[bench]]
 name = "bench_foo"
-path = './benches/bench_foo.rs'
+path = 'benches/bench_foo.rs'
 "#,
         )],
     );
