@@ -264,10 +264,10 @@ fn resolve_with_registry<'gctx>(
 /// Resolves all dependencies for a package using an optional previous instance
 /// of resolve to guide the resolution process.
 ///
-/// This also takes an optional filter `keep`, which informs the `registry`
+/// This also takes an optional filter `keep_previous`, which informs the `registry`
 /// which package ID should be locked to the previous instance of resolve
 /// (often used in pairings with updates). See comments in [`register_previous_locks`]
-/// for scenarios that might override `keep`.
+/// for scenarios that might override this.
 ///
 /// The previous resolve normally comes from a lock file. This function does not
 /// read or write lock files from the filesystem.
@@ -284,7 +284,7 @@ pub fn resolve_with_previous<'gctx>(
     cli_features: &CliFeatures,
     has_dev_units: HasDevUnits,
     previous: Option<&Resolve>,
-    keep: Option<&dyn Fn(&PackageId) -> bool>,
+    keep_previous: Option<&dyn Fn(&PackageId) -> bool>,
     specs: &[PackageIdSpec],
     register_patches: bool,
 ) -> CargoResult<Resolve> {
@@ -295,7 +295,7 @@ pub fn resolve_with_previous<'gctx>(
         .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
     // Try to keep all from previous resolve if no instruction given.
-    let pre_patch_keep = keep.unwrap_or(&|_| true);
+    let keep_previous = keep_previous.unwrap_or(&|_| true);
 
     // While registering patches, we will record preferences for particular versions
     // of various packages.
@@ -308,12 +308,13 @@ pub fn resolve_with_previous<'gctx>(
     }
 
     let avoid_patch_ids = if register_patches {
-        register_patch_entries(registry, ws, previous, &mut version_prefs, pre_patch_keep)?
+        register_patch_entries(registry, ws, previous, &mut version_prefs, keep_previous)?
     } else {
         HashSet::new()
     };
 
-    let keep = |p: &PackageId| pre_patch_keep(p) && !avoid_patch_ids.contains(p);
+    // Refine `keep` with patches that should avoid locking.
+    let keep = |p: &PackageId| keep_previous(p) && !avoid_patch_ids.contains(p);
 
     let dev_deps = ws.require_optional_deps() || has_dev_units == HasDevUnits::Yes;
 
@@ -769,7 +770,7 @@ fn register_patch_entries(
     ws: &Workspace<'_>,
     previous: Option<&Resolve>,
     version_prefs: &mut VersionPreferences,
-    pre_patch_keep: &dyn Fn(&PackageId) -> bool,
+    keep_previous: &dyn Fn(&PackageId) -> bool,
 ) -> CargoResult<HashSet<PackageId>> {
     let mut avoid_patch_ids = HashSet::new();
     for (url, patches) in ws.root_patch()?.iter() {
@@ -797,7 +798,7 @@ fn register_patch_entries(
                 previous
                     .iter()
                     .chain(previous.unused_patches().iter().cloned())
-                    .filter(&pre_patch_keep)
+                    .filter(&keep_previous)
             };
 
             let lock = match candidates().find(|id| dep.matches_id(*id)) {
