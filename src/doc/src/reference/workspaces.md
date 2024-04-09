@@ -57,6 +57,9 @@ version = "0.1.0"    # the current version, obeying semver
 authors = ["Alice <a@example.com>", "Bob <b@example.com>"]
 ```
 
+Unless explicitly set through [`workspace.default-members`](#the-default-members-field),
+the root package is considered as the only default member of the workspace.
+
 ### Virtual workspace
 
 Alternatively, a `Cargo.toml` file can be created with a `[workspace]` section
@@ -79,6 +82,9 @@ version = "0.1.0"    # the current version, obeying semver
 edition = "2021"     # the edition, will have no effect on a resolver used in the workspace
 authors = ["Alice <a@example.com>", "Bob <b@example.com>"]
 ```
+
+Unless explicitly set through [`workspace.default-members`](#the-default-members-field),
+every member of a virtual workspace is considered as a default member.
 
 Note that in a virtual manifest the [`resolver = "2"`](resolver.md#resolver-versions)
 should be specified manually. It is usually deduced from the [`package.edition`][package-edition]

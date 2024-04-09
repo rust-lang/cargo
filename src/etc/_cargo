@@ -87,6 +87,7 @@ _cargo() {
                         '--path=[local filesystem path to crate to add]: :_directories' \
                         '--rev=[specific commit to use when adding from git]:commit' \
                         '--tag=[tag to use when adding from git]:tag' \
+                        '--ignore-rust-version[Ignore rust-version specification in packages]' \
                         '1: :_guard "^-*" "crate name"' \
                         '*:args:_default'
                         ;;
