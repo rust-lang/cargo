@@ -5,9 +5,9 @@
 
 macro_rules! foo {
     ($x:ident) => {
-        pub unsafe fn $x() { unsafe { unsafe {
+        pub unsafe fn $x() { unsafe {
             let _ = String::new().as_mut_vec();
-        }}}
+        }}
     };
 }
 

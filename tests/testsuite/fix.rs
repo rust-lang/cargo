@@ -1924,21 +1924,21 @@ fn fix_only_once_for_duplicates() {
         .build();
 
     p.cargo("fix --allow-no-vcs")
-        .with_stderr_contains(
+        .with_stderr(
             "\
 [CHECKING] foo v0.0.1 ([CWD])
-[FIXED] src/lib.rs (2 fixes)
+[FIXED] src/lib.rs (1 fix)
+[FINISHED] `dev` profile [..]
 ",
         )
-        .with_stderr_contains("[WARNING] unnecessary `unsafe` block[..]")
         .run();
 
     assert_eq!(
         p.read_file("src/lib.rs").matches("unsafe").count(),
-        5,
+        4,
         "unsafe keyword in src/lib.rs:\n\
             2 in lint name;\n\
             1 from original unsafe fn;\n\
-            2 from newly-applied unsafe blocks"
+            1 from newly-applied unsafe blocks"
     );
 }

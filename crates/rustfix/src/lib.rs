@@ -253,8 +253,19 @@ impl CodeFix {
 
 /// Applies multiple `suggestions` to the given `code`.
 pub fn apply_suggestions(code: &str, suggestions: &[Suggestion]) -> Result<String, Error> {
+    let mut already_applied = HashSet::new();
     let mut fix = CodeFix::new(code);
     for suggestion in suggestions.iter().rev() {
+        // This assumes that if any of the machine applicable fixes in
+        // a diagnostic suggestion is a duplicate, we should see the
+        // entire suggestion as a duplicate.
+        if suggestion
+            .solutions
+            .iter()
+            .any(|sol| !already_applied.insert(sol))
+        {
+            continue;
+        }
         fix.apply(suggestion)?;
     }
     fix.finish()
