@@ -144,13 +144,28 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         registry.add_sources(sources)?;
     }
 
+    // Here we place an artificial limitation that all non-registry sources
+    // cannot be locked at more than one revision. This means that if a Git
+    // repository provides more than one package, they must all be updated in
+    // step when any of them are updated.
+    //
+    // TODO: this seems like a hokey reason to single out the registry as being
+    // different.
+    let to_avoid_sources: HashSet<_> = to_avoid
+        .iter()
+        .map(|p| p.source_id())
+        .filter(|s| !s.is_registry())
+        .collect();
+
+    let keep = |p: &PackageId| !to_avoid_sources.contains(&p.source_id()) && !to_avoid.contains(p);
+
     let mut resolve = ops::resolve_with_previous(
         &mut registry,
         ws,
         &CliFeatures::new_all(true),
         HasDevUnits::Yes,
         Some(&previous_resolve),
-        Some(&to_avoid),
+        Some(&keep),
         &[],
         true,
     )?;

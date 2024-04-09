@@ -264,9 +264,10 @@ fn resolve_with_registry<'gctx>(
 /// Resolves all dependencies for a package using an optional previous instance
 /// of resolve to guide the resolution process.
 ///
-/// This also takes an optional hash set, `to_avoid`, which is a list of package
-/// IDs that should be avoided when consulting the previous instance of resolve
-/// (often used in pairings with updates).
+/// This also takes an optional filter `keep`, which informs the `registry`
+/// which package ID should be locked to the previous instance of resolve
+/// (often used in pairings with updates). See comments in [`register_previous_locks`]
+/// for scenarios that might override `keep`.
 ///
 /// The previous resolve normally comes from a lock file. This function does not
 /// read or write lock files from the filesystem.
@@ -283,7 +284,7 @@ pub fn resolve_with_previous<'gctx>(
     cli_features: &CliFeatures,
     has_dev_units: HasDevUnits,
     previous: Option<&Resolve>,
-    to_avoid: Option<&HashSet<PackageId>>,
+    keep: Option<&dyn Fn(&PackageId) -> bool>,
     specs: &[PackageIdSpec],
     register_patches: bool,
 ) -> CargoResult<Resolve> {
@@ -293,29 +294,8 @@ pub fn resolve_with_previous<'gctx>(
         .gctx()
         .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
-    // Here we place an artificial limitation that all non-registry sources
-    // cannot be locked at more than one revision. This means that if a Git
-    // repository provides more than one package, they must all be updated in
-    // step when any of them are updated.
-    //
-    // TODO: this seems like a hokey reason to single out the registry as being
-    // different.
-    let to_avoid_sources: HashSet<SourceId> = to_avoid
-        .map(|set| {
-            set.iter()
-                .map(|p| p.source_id())
-                .filter(|s| !s.is_registry())
-                .collect()
-        })
-        .unwrap_or_default();
-
-    let pre_patch_keep = |p: &PackageId| {
-        !to_avoid_sources.contains(&p.source_id())
-            && match to_avoid {
-                Some(set) => !set.contains(p),
-                None => true,
-            }
-    };
+    // Try to keep all from previous resolve if no instruction given.
+    let pre_patch_keep = keep.unwrap_or(&|_| true);
 
     // While registering patches, we will record preferences for particular versions
     // of various packages.
