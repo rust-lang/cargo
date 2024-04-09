@@ -911,7 +911,12 @@ fn lock(
     })
 }
 
-/// This is a helper for selecting the summary, or generating a helpful error message.
+/// A helper for selecting the summary, or generating a helpful error message.
+///
+/// Returns a tuple that the first element is the summary selected. The second
+/// is a package ID indicating that the patch entry should be unlocked. This
+/// happens when a match cannot be found with the `locked` one, but found one
+/// via the original patch, so we need to inform the resolver to "unlock" it.
 fn summary_for_patch(
     orig_patch: &Dependency,
     locked: &Option<LockedPatchDependency>,
@@ -961,9 +966,6 @@ fn summary_for_patch(
         let orig_matches = orig_matches.into_iter().map(|s| s.into_summary()).collect();
 
         let summary = ready!(summary_for_patch(orig_patch, &None, orig_matches, source))?;
-
-        // The unlocked version found a match. This returns a value to
-        // indicate that this entry should be unlocked.
         return Poll::Ready(Ok((summary.0, Some(locked.package_id))));
     }
     // Try checking if there are *any* packages that match this by name.
