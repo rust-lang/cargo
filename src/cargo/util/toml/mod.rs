@@ -2342,7 +2342,7 @@ fn prepare_toml_for_publish(
             .into_os_string()
             .into_string()
             .map_err(|_err| anyhow::format_err!("non-UTF8 `package.build`"))?;
-        package.build = Some(StringOrBool::String(path));
+        package.build = Some(StringOrBool::String(normalize_path_string_sep(path)));
     }
     let current_resolver = package
         .resolver
@@ -2372,10 +2372,12 @@ fn prepare_toml_for_publish(
         let abs_license_path = paths::normalize_path(&package_root.join(license_path));
         if let Ok(license_file) = abs_license_path.strip_prefix(package_root) {
             package.license_file = Some(manifest::InheritableField::Value(
-                license_file
-                    .to_str()
-                    .ok_or_else(|| anyhow::format_err!("non-UTF8 `package.license-file`"))?
-                    .to_owned(),
+                normalize_path_string_sep(
+                    license_file
+                        .to_str()
+                        .ok_or_else(|| anyhow::format_err!("non-UTF8 `package.license-file`"))?
+                        .to_owned(),
+                ),
             ));
         } else {
             // This path points outside of the package root. `cargo package`
@@ -2401,10 +2403,14 @@ fn prepare_toml_for_publish(
                 let abs_readme_path = paths::normalize_path(&package_root.join(readme_path));
                 if let Ok(readme_path) = abs_readme_path.strip_prefix(package_root) {
                     package.readme = Some(manifest::InheritableField::Value(StringOrBool::String(
-                        readme_path
-                            .to_str()
-                            .ok_or_else(|| anyhow::format_err!("non-UTF8 `package.license-file`"))?
-                            .to_owned(),
+                        normalize_path_string_sep(
+                            readme_path
+                                .to_str()
+                                .ok_or_else(|| {
+                                    anyhow::format_err!("non-UTF8 `package.license-file`")
+                                })?
+                                .to_owned(),
+                        ),
                     )));
                 } else {
                     // This path points outside of the package root. `cargo package`
@@ -2426,14 +2432,14 @@ fn prepare_toml_for_publish(
     }
 
     let lib = if let Some(target) = &me.lib {
-        Some(prepare_target_for_publish(target))
+        Some(prepare_target_for_publish(target, "library")?)
     } else {
         None
     };
-    let bin = prepare_targets_for_publish(me.bin.as_ref());
-    let example = prepare_targets_for_publish(me.example.as_ref());
-    let test = prepare_targets_for_publish(me.test.as_ref());
-    let bench = prepare_targets_for_publish(me.bench.as_ref());
+    let bin = prepare_targets_for_publish(me.bin.as_ref(), "binary")?;
+    let example = prepare_targets_for_publish(me.example.as_ref(), "example")?;
+    let test = prepare_targets_for_publish(me.test.as_ref(), "test")?;
+    let bench = prepare_targets_for_publish(me.bench.as_ref(), "benchmark")?;
 
     let all = |_d: &manifest::TomlDependency| true;
     let mut manifest = manifest::TomlManifest {
@@ -2591,22 +2597,46 @@ fn prepare_toml_for_publish(
 
 fn prepare_targets_for_publish(
     targets: Option<&Vec<manifest::TomlTarget>>,
-) -> Option<Vec<manifest::TomlTarget>> {
-    let targets = targets?;
+    context: &str,
+) -> CargoResult<Option<Vec<manifest::TomlTarget>>> {
+    let Some(targets) = targets else {
+        return Ok(None);
+    };
 
     let mut prepared = Vec::with_capacity(targets.len());
     for target in targets {
-        let target = prepare_target_for_publish(target);
+        let target = prepare_target_for_publish(target, context)?;
         prepared.push(target);
     }
 
-    Some(prepared)
+    Ok(Some(prepared))
 }
 
-fn prepare_target_for_publish(target: &manifest::TomlTarget) -> manifest::TomlTarget {
+fn prepare_target_for_publish(
+    target: &manifest::TomlTarget,
+    context: &str,
+) -> CargoResult<manifest::TomlTarget> {
     let mut target = target.clone();
     if let Some(path) = target.path {
-        target.path = Some(manifest::PathValue(normalize_path(&path.0)));
+        let path = normalize_path(&path.0);
+        target.path = Some(manifest::PathValue(normalize_path_sep(path, context)?));
     }
-    target
+    Ok(target)
+}
+
+fn normalize_path_sep(path: PathBuf, context: &str) -> CargoResult<PathBuf> {
+    let path = path
+        .into_os_string()
+        .into_string()
+        .map_err(|_err| anyhow::format_err!("non-UTF8 path for {context}"))?;
+    let path = normalize_path_string_sep(path);
+    Ok(path.into())
+}
+
+fn normalize_path_string_sep(path: String) -> String {
+    if std::path::MAIN_SEPARATOR != '/' {
+        path.replace(std::path::MAIN_SEPARATOR, "/")
+    } else {
+        path
+    }
 }
