@@ -1897,3 +1897,48 @@ warning: `foo` (lib) generated 1 warning (run `cargo fix --lib -p foo` to apply 
 ")
         .run();
 }
+
+// This fixes rust-lang/rust#123304.
+// If that lint stops emitting duplicate suggestions,
+// we might need to find a substitution.
+#[cargo_test]
+fn fix_only_once_for_duplicates() {
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"
+                #![warn(unsafe_op_in_unsafe_fn)]
+
+                macro_rules! foo {
+                    ($x:ident) => {
+                        pub unsafe fn $x() {
+                            let _ = String::new().as_mut_vec();
+                        }
+                    };
+                }
+
+                foo!(a);
+                foo!(b);
+            "#,
+        )
+        .build();
+
+    p.cargo("fix --allow-no-vcs")
+        .with_stderr(
+            "\
+[CHECKING] foo v0.0.1 ([CWD])
+[FIXED] src/lib.rs (1 fix)
+[FINISHED] `dev` profile [..]
+",
+        )
+        .run();
+
+    assert_eq!(
+        p.read_file("src/lib.rs").matches("unsafe").count(),
+        4,
+        "unsafe keyword in src/lib.rs:\n\
+            2 in lint name;\n\
+            1 from original unsafe fn;\n\
+            1 from newly-applied unsafe blocks"
+    );
+}

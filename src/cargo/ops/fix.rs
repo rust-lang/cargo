@@ -735,12 +735,23 @@ fn rustfix_and_fix(
         });
         let mut fixed = CodeFix::new(&code);
 
-        // As mentioned above in `rustfix_crate`, we don't immediately warn
-        // about suggestions that fail to apply here, and instead we save them
-        // off for later processing.
+        let mut already_applied = HashSet::new();
         for suggestion in suggestions.iter().rev() {
+            // This assumes that if any of the machine applicable fixes in
+            // a diagnostic suggestion is a duplicate, we should see the
+            // entire suggestion as a duplicate.
+            if suggestion
+                .solutions
+                .iter()
+                .any(|sol| !already_applied.insert(sol))
+            {
+                continue;
+            }
             match fixed.apply(suggestion) {
                 Ok(()) => fixed_file.fixes_applied += 1,
+                // As mentioned above in `rustfix_crate`, we don't immediately
+                // warn about suggestions that fail to apply here, and instead
+                // we save them off for later processing.
                 Err(e) => fixed_file.errors_applying_fixes.push(e.to_string()),
             }
         }
