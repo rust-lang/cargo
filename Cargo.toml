@@ -67,6 +67,7 @@ memchr = "2.7.2"
 miow = "0.6.0"
 opener = "0.7.0"
 openssl = "0.10.57"
+openssl-sys = "=0.9.92" # See rust-lang/cargo#13546 and openssl/openssl#23376 for pinning
 os_info = "3.8.2"
 pasetors = { version = "0.6.8", features = ["v3", "paserk", "std", "serde"] }
 pathdiff = "0.2"
