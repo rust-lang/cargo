@@ -624,7 +624,7 @@ pub fn install(
     let dst = root.join("bin").into_path_unlocked();
     let map = SourceConfigMap::new(gctx)?;
 
-    let current_rust_version = if opts.honor_rust_version {
+    let current_rust_version = if opts.honor_rust_version.unwrap_or(true) {
         let rustc = gctx.load_global_rustc(None)?;
         Some(rustc.version.clone().into())
     } else {

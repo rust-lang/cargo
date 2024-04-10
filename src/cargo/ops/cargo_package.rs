@@ -933,7 +933,7 @@ fn run_verify(
             target_rustc_args: rustc_args,
             target_rustc_crate_types: None,
             rustdoc_document_private_items: false,
-            honor_rust_version: true,
+            honor_rust_version: None,
         },
         &exec,
     )?;
