@@ -78,6 +78,8 @@
       matchUpdateTypes: [
         'patch',
       ],
+      // See rust-lang/cargo#13546 and openssl/openssl#23376 for the exclusion
+      excludePackageNames: ['openssl', 'openssl-src', 'openssl-sys'],
       automerge: false,
       groupName: 'compatible',
     },
@@ -89,6 +91,8 @@
       matchUpdateTypes: [
         'minor',
       ],
+      // See rust-lang/cargo#13546 and openssl/openssl#23376 for the exclusion
+      excludePackageNames: ['openssl', 'openssl-src', 'openssl-sys'],
       automerge: false,
       groupName: 'compatible',
     },
