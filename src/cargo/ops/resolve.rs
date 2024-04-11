@@ -304,7 +304,8 @@ pub fn resolve_with_previous<'gctx>(
         version_prefs.version_ordering(VersionOrdering::MinimumVersionsFirst)
     }
     if ws.resolve_honors_rust_version() {
-        version_prefs.max_rust_version(ws.rust_version().cloned().map(RustVersion::into_partial));
+        let rust_version = ws.rust_version().cloned().map(RustVersion::into_partial);
+        version_prefs.max_rust_version(rust_version);
     }
 
     let avoid_patch_ids = if register_patches {
