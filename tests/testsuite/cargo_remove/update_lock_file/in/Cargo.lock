@@ -19,40 +19,40 @@ dependencies = [
 name = "clippy"
 version = "0.4.1+my-package"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47ced0eda54e9ddc6063f0e1d0164493cd16c84c6b6a0329a536967c44e205f7"
+checksum = "e95568c5ce98de9c470c1d9b387466f4d5efa9687d3af7998e7c9c1da5e399fb"
 
 [[package]]
 name = "docopt"
 version = "0.6.2+my-package"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b600540c4fafb27bf6e6961f0f1e6f547c9d6126ce581ab3a92f878c8e2c9a2c"
+checksum = "d4414d2705e6b42fe10772b4ab4e3260f362669e45606eb562dc4c0023e911f6"
 
 [[package]]
 name = "regex"
 version = "0.1.1+my-package"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84949cb53285a6c481d0133065a7b669871acfd9e20f273f4ce1283c309775d5"
+checksum = "bc4552a1d503f3a436bb18d1efff62eb95bd97f724d06466c55ef151ea2de9e0"
 
 [[package]]
 name = "rustc-serialize"
-version = "0.4.1+my-package"
+version = "0.4.0+my-package"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31162e7d23a085553c42dee375787b451a481275473f7779c4a63bcc267a24fd"
+checksum = "48c3645ec42f69a343fbe9734a477ae59448192e779206dbcb1a9c3397563fd8"
 
 [[package]]
 name = "semver"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "106bee742e3199d9e59f4269e458dfc825c1b4648c483b1c2b7a45cd2610a308"
+checksum = "20070289360e74dcdc28f437b08dda0c0c861c2328d749bb0d6e1a428013af83"
 
 [[package]]
 name = "serde"
 version = "1.0.90"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be7d269f612a60e3c2c4a4a120e2d878a3f3298a5285eda6e95453905a107d9a"
+checksum = "ba76b226746eabf28375d5ad184926bbb9cd727425c8d027ea10f6c508895c6c"
 
 [[package]]
 name = "toml"
 version = "0.1.1+my-package"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0f6c7804525ce0a968ef270e55a516cf4bdcf1fea0b09d130e0aa34a66745b3"
+checksum = "a9ea5fa6eaed7d7e6d9fb4571bb9d915b577e19bf2a95321ebb70fd3d894ce49"

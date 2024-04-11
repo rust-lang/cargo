@@ -1493,7 +1493,7 @@ dependencies = [
 name = "foo"
 version = "0.1.0"
 source = "sparse+http://[..]/"
-checksum = "f6a200a9339fef960979d94d5c99cbbfd899b6f5a396a55d9775089119050203""#,
+checksum = "458c1addb23fde7dfbca0410afdbcc0086f96197281ec304d9e0e10def3cb899""#,
     );
 }
 
