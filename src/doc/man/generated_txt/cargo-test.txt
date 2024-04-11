@@ -266,11 +266,6 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
            details on profiles.
 
-       --ignore-rust-version
-           Test the target even if the selected Rust compiler is older than the
-           required Rust version as configured in the project’s rust-version
-           field.
-
        --timings=fmts
            Output information how long each compilation takes, and track
            concurrency information over time. Accepts an optional
@@ -363,6 +358,9 @@ OPTIONS
        --manifest-path path
            Path to the Cargo.toml file. By default, Cargo searches for the
            Cargo.toml file in the current directory or any parent directory.
+
+       --ignore-rust-version
+           Ignore rust-version specification in packages.
 
        --locked
            Asserts that the exact same dependencies and versions are used as

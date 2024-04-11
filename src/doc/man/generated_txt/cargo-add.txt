@@ -128,9 +128,6 @@ OPTIONS
            be enabled with package-name/feature-name syntax. This flag may be
            specified multiple times, which enables all specified features.
 
-       --ignore-rust-version
-           Ignore rust-version specification in packages.
-
    Display Options
        -v, --verbose
            Use verbose output. May be specified twice for “very verbose”
@@ -164,6 +161,9 @@ OPTIONS
 
        -p spec, --package spec
            Add dependencies to only the specified package.
+
+       --ignore-rust-version
+           Ignore rust-version specification in packages.
 
        --locked
            Asserts that the exact same dependencies and versions are used as

@@ -28,7 +28,6 @@ pub fn cli() -> Command {
             "Comma separated list of types of crates for the compiler to emit",
         ))
         .arg_future_incompat_report()
-        .arg_ignore_rust_version()
         .arg_message_format()
         .arg_silent_suggestion()
         .arg_package("Package to build")
@@ -53,6 +52,7 @@ pub fn cli() -> Command {
         .arg_unit_graph()
         .arg_timings()
         .arg_manifest_path()
+        .arg_ignore_rust_version()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help rustc</>` for more detailed information.\n"
         ))

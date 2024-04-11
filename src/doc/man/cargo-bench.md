@@ -112,8 +112,6 @@ for more information on per-target settings.
 
 {{> options-profile }}
 
-{{> options-ignore-rust-version }}
-
 {{> options-timings }}
 
 {{/options}}
@@ -144,6 +142,8 @@ passing `--nocapture` to the benchmark binaries:
 
 {{#options}}
 {{> options-manifest-path }}
+
+{{> options-ignore-rust-version }}
 
 {{> options-locked }}
 {{/options}}

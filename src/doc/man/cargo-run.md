@@ -57,8 +57,6 @@ Run the specified example.
 
 {{> options-profile }}
 
-{{> options-ignore-rust-version }}
-
 {{> options-timings }}
 
 {{/options}}
@@ -84,6 +82,8 @@ Run the specified example.
 {{#options}}
 
 {{> options-manifest-path }}
+
+{{> options-ignore-rust-version }}
 
 {{> options-locked }}
 

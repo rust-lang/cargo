@@ -16,7 +16,6 @@ pub fn cli() -> Command {
             "Don't build documentation for dependencies",
         ))
         .arg(flag("document-private-items", "Document private items"))
-        .arg_ignore_rust_version()
         .arg_message_format()
         .arg_silent_suggestion()
         .arg_package_spec(
@@ -40,6 +39,7 @@ pub fn cli() -> Command {
         .arg_unit_graph()
         .arg_timings()
         .arg_manifest_path()
+        .arg_ignore_rust_version()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help doc</>` for more detailed information.\n"
         ))

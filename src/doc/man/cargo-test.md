@@ -136,8 +136,6 @@ target options.
 
 {{> options-profile }}
 
-{{> options-ignore-rust-version }}
-
 {{> options-timings }}
 
 {{/options}}
@@ -169,6 +167,8 @@ results readable. Test output can be recovered (e.g., for debugging) by passing
 {{#options}}
 
 {{> options-manifest-path }}
+
+{{> options-ignore-rust-version }}
 
 {{> options-locked }}
 

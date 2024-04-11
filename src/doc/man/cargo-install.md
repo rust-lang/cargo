@@ -180,8 +180,6 @@ See also the `--profile` option for choosing a specific profile by name.
 
 {{> options-profile }}
 
-{{> options-ignore-rust-version }}
-
 {{> options-timings }}
 
 {{/options}}
@@ -189,6 +187,8 @@ See also the `--profile` option for choosing a specific profile by name.
 ### Manifest Options
 
 {{#options}}
+{{> options-ignore-rust-version }}
+
 {{> options-locked }}
 {{/options}}
 

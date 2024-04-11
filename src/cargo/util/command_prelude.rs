@@ -352,10 +352,13 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_ignore_rust_version(self) -> Self {
-        self._arg(flag(
-            "ignore-rust-version",
-            "Ignore `rust-version` specification in packages",
-        ))
+        self._arg(
+            flag(
+                "ignore-rust-version",
+                "Ignore `rust-version` specification in packages",
+            )
+            .help_heading(heading::MANIFEST_OPTIONS),
+        )
     }
 
     fn arg_future_incompat_report(self) -> Self {

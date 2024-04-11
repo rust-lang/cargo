@@ -238,11 +238,6 @@ See also the <code>--profile</code> option for choosing a specific profile by na
 See <a href="../reference/profiles.html">the reference</a> for more details on profiles.</dd>
 
 
-<dt class="option-term" id="option-cargo-install---ignore-rust-version"><a class="option-anchor" href="#option-cargo-install---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
-<dd class="option-desc">Install the target even if the selected Rust compiler is older than the
-required Rust version as configured in the project’s <code>rust-version</code> field.</dd>
-
-
 <dt class="option-term" id="option-cargo-install---timings=fmts"><a class="option-anchor" href="#option-cargo-install---timings=fmts"></a><code>--timings=</code><em>fmts</em></dt>
 <dd class="option-desc">Output information how long each compilation takes, and track concurrency
 information over time. Accepts an optional comma-separated list of output
@@ -266,6 +261,10 @@ information about timing information.</li>
 ### Manifest Options
 
 <dl>
+<dt class="option-term" id="option-cargo-install---ignore-rust-version"><a class="option-anchor" href="#option-cargo-install---ignore-rust-version"></a><code>--ignore-rust-version</code></dt>
+<dd class="option-desc">Ignore <code>rust-version</code> specification in packages.</dd>
+
+
 <dt class="option-term" id="option-cargo-install---locked"><a class="option-anchor" href="#option-cargo-install---locked"></a><code>--locked</code></dt>
 <dd class="option-desc">Asserts that the exact same dependencies and versions are used as when the
 existing <code>Cargo.lock</code> file was originally generated. Cargo will exit with an

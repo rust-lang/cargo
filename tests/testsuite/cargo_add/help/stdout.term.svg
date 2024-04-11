@@ -123,59 +123,59 @@
 </tspan>
     <tspan x="10px" y="946px">
 </tspan>
-    <tspan x="10px" y="964px"><tspan>      </tspan><tspan class="fg-cyan bold">--ignore-rust-version</tspan>
+    <tspan x="10px" y="964px"><tspan>  </tspan><tspan class="fg-cyan bold">-n</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--dry-run</tspan>
 </tspan>
-    <tspan x="10px" y="982px"><tspan>          Ignore `rust-version` specification in packages</tspan>
+    <tspan x="10px" y="982px"><tspan>          Don't actually write the manifest</tspan>
 </tspan>
     <tspan x="10px" y="1000px">
 </tspan>
-    <tspan x="10px" y="1018px"><tspan>  </tspan><tspan class="fg-cyan bold">-n</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--dry-run</tspan>
+    <tspan x="10px" y="1018px"><tspan>  </tspan><tspan class="fg-cyan bold">-v</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--verbose</tspan><tspan class="fg-cyan">...</tspan>
 </tspan>
-    <tspan x="10px" y="1036px"><tspan>          Don't actually write the manifest</tspan>
+    <tspan x="10px" y="1036px"><tspan>          Use verbose output (-vv very verbose/build.rs output)</tspan>
 </tspan>
     <tspan x="10px" y="1054px">
 </tspan>
-    <tspan x="10px" y="1072px"><tspan>  </tspan><tspan class="fg-cyan bold">-v</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--verbose</tspan><tspan class="fg-cyan">...</tspan>
+    <tspan x="10px" y="1072px"><tspan>  </tspan><tspan class="fg-cyan bold">-q</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--quiet</tspan>
 </tspan>
-    <tspan x="10px" y="1090px"><tspan>          Use verbose output (-vv very verbose/build.rs output)</tspan>
+    <tspan x="10px" y="1090px"><tspan>          Do not print cargo log messages</tspan>
 </tspan>
     <tspan x="10px" y="1108px">
 </tspan>
-    <tspan x="10px" y="1126px"><tspan>  </tspan><tspan class="fg-cyan bold">-q</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--quiet</tspan>
+    <tspan x="10px" y="1126px"><tspan>      </tspan><tspan class="fg-cyan bold">--color</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;WHEN&gt;</tspan>
 </tspan>
-    <tspan x="10px" y="1144px"><tspan>          Do not print cargo log messages</tspan>
+    <tspan x="10px" y="1144px"><tspan>          Coloring: auto, always, never</tspan>
 </tspan>
     <tspan x="10px" y="1162px">
 </tspan>
-    <tspan x="10px" y="1180px"><tspan>      </tspan><tspan class="fg-cyan bold">--color</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;WHEN&gt;</tspan>
+    <tspan x="10px" y="1180px"><tspan>      </tspan><tspan class="fg-cyan bold">--config</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;KEY=VALUE&gt;</tspan>
 </tspan>
-    <tspan x="10px" y="1198px"><tspan>          Coloring: auto, always, never</tspan>
+    <tspan x="10px" y="1198px"><tspan>          Override a configuration value</tspan>
 </tspan>
     <tspan x="10px" y="1216px">
 </tspan>
-    <tspan x="10px" y="1234px"><tspan>      </tspan><tspan class="fg-cyan bold">--config</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;KEY=VALUE&gt;</tspan>
+    <tspan x="10px" y="1234px"><tspan>  </tspan><tspan class="fg-cyan bold">-Z</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FLAG&gt;</tspan>
 </tspan>
-    <tspan x="10px" y="1252px"><tspan>          Override a configuration value</tspan>
+    <tspan x="10px" y="1252px"><tspan>          Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details</tspan>
 </tspan>
     <tspan x="10px" y="1270px">
 </tspan>
-    <tspan x="10px" y="1288px"><tspan>  </tspan><tspan class="fg-cyan bold">-Z</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FLAG&gt;</tspan>
+    <tspan x="10px" y="1288px"><tspan>  </tspan><tspan class="fg-cyan bold">-h</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--help</tspan>
 </tspan>
-    <tspan x="10px" y="1306px"><tspan>          Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details</tspan>
+    <tspan x="10px" y="1306px"><tspan>          Print help (see a summary with '-h')</tspan>
 </tspan>
     <tspan x="10px" y="1324px">
 </tspan>
-    <tspan x="10px" y="1342px"><tspan>  </tspan><tspan class="fg-cyan bold">-h</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--help</tspan>
+    <tspan x="10px" y="1342px"><tspan class="fg-green bold">Manifest Options:</tspan>
 </tspan>
-    <tspan x="10px" y="1360px"><tspan>          Print help (see a summary with '-h')</tspan>
+    <tspan x="10px" y="1360px"><tspan>      </tspan><tspan class="fg-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan>
 </tspan>
-    <tspan x="10px" y="1378px">
+    <tspan x="10px" y="1378px"><tspan>          Path to Cargo.toml</tspan>
 </tspan>
-    <tspan x="10px" y="1396px"><tspan class="fg-green bold">Manifest Options:</tspan>
+    <tspan x="10px" y="1396px">
 </tspan>
-    <tspan x="10px" y="1414px"><tspan>      </tspan><tspan class="fg-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan>
+    <tspan x="10px" y="1414px"><tspan>      </tspan><tspan class="fg-cyan bold">--ignore-rust-version</tspan>
 </tspan>
-    <tspan x="10px" y="1432px"><tspan>          Path to Cargo.toml</tspan>
+    <tspan x="10px" y="1432px"><tspan>          Ignore `rust-version` specification in packages</tspan>
 </tspan>
     <tspan x="10px" y="1450px">
 </tspan>

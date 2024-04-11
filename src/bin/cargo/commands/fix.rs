@@ -26,7 +26,6 @@ pub fn cli() -> Command {
             "allow-staged",
             "Fix code even if the working directory has staged changes",
         ))
-        .arg_ignore_rust_version()
         .arg_message_format()
         .arg_silent_suggestion()
         .arg_package_spec(
@@ -54,6 +53,7 @@ pub fn cli() -> Command {
         .arg_target_dir()
         .arg_timings()
         .arg_manifest_path()
+        .arg_ignore_rust_version()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help fix</>` for more detailed information.\n"
         ))

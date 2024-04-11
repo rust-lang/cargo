@@ -217,11 +217,6 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/profiles.html> for more
            details on profiles.
 
-       --ignore-rust-version
-           Install the target even if the selected Rust compiler is older than
-           the required Rust version as configured in the project’s
-           rust-version field.
-
        --timings=fmts
            Output information how long each compilation takes, and track
            concurrency information over time. Accepts an optional
@@ -242,6 +237,9 @@ OPTIONS
               machine-readable JSON information about timing information.
 
    Manifest Options
+       --ignore-rust-version
+           Ignore rust-version specification in packages.
+
        --locked
            Asserts that the exact same dependencies and versions are used as
            when the existing Cargo.lock file was originally generated. Cargo
