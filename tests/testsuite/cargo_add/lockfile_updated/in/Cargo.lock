@@ -14,4 +14,4 @@ dependencies = [
 name = "unrelateed-crate"
 version = "0.2.0+my-package"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "266de4849a570b5dfda5e8e082a2aff885e9d2d4965dae8f8b6c8535e1ec731f"
+checksum = "b16af1a8ba7e4331ca62d945483a3028c2afbbe06a7f2ffaa0a3538ef0a7d63e"

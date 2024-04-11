@@ -1469,7 +1469,7 @@ impl Package {
         let dst = self.archive_dst();
         t!(fs::create_dir_all(dst.parent().unwrap()));
         let f = t!(File::create(&dst));
-        let mut a = Builder::new(GzEncoder::new(f, Compression::default()));
+        let mut a = Builder::new(GzEncoder::new(f, Compression::none()));
 
         if !self
             .files
