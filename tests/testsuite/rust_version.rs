@@ -414,6 +414,7 @@ fn resolve_with_rustc() {
             "\
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages
+[ADDING] bar v1.5.0 (latest: v1.6.0)
 ",
         )
         .run();

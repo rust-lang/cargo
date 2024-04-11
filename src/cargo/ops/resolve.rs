@@ -73,7 +73,6 @@ use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::CanonicalUrl;
 use anyhow::Context as _;
-use cargo_util_schemas::manifest::RustVersion;
 use std::collections::{HashMap, HashSet};
 use tracing::{debug, trace};
 
@@ -304,8 +303,14 @@ pub fn resolve_with_previous<'gctx>(
         version_prefs.version_ordering(VersionOrdering::MinimumVersionsFirst)
     }
     if ws.resolve_honors_rust_version() {
-        let rust_version = ws.rust_version().cloned().map(RustVersion::into_partial);
-        version_prefs.max_rust_version(rust_version);
+        let rust_version = if let Some(ver) = ws.rust_version() {
+            ver.clone().into_partial()
+        } else {
+            let rustc = ws.gctx().load_global_rustc(Some(ws))?;
+            let rustc_version = rustc.version.clone().into();
+            rustc_version
+        };
+        version_prefs.max_rust_version(Some(rust_version));
     }
 
     let avoid_patch_ids = if register_patches {
