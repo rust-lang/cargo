@@ -347,15 +347,13 @@ fn dependency_rust_version_older_and_newer_than_package() {
     p.cargo("check --ignore-rust-version")
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
-        // This should pick 1.6.0
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages
-[ADDING] bar v1.5.0 (latest: v1.6.0)
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v1.5.0 (registry `dummy-registry`)
-[CHECKING] bar v1.5.0
+[DOWNLOADED] bar v1.6.0 (registry `dummy-registry`)
+[CHECKING] bar v1.6.0
 [CHECKING] [..]
 [FINISHED] [..]
 ",
@@ -483,15 +481,13 @@ fn workspace_with_mixed_rust_version() {
     p.cargo("check --ignore-rust-version")
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
-        // This should pick 1.6.0
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
 [LOCKING] 3 packages
-[ADDING] bar v1.4.0 (latest: v1.6.0)
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v1.4.0 (registry `dummy-registry`)
-[CHECKING] bar v1.4.0
+[DOWNLOADED] bar v1.6.0 (registry `dummy-registry`)
+[CHECKING] bar v1.6.0
 [CHECKING] [..]
 [FINISHED] [..]
 ",

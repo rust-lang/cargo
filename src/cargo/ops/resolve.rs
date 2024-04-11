@@ -303,7 +303,7 @@ pub fn resolve_with_previous<'gctx>(
     if ws.gctx().cli_unstable().minimal_versions {
         version_prefs.version_ordering(VersionOrdering::MinimumVersionsFirst)
     }
-    if ws.gctx().cli_unstable().msrv_policy {
+    if ws.resolve_honors_rust_version() {
         version_prefs.max_rust_version(ws.rust_version().cloned().map(RustVersion::into_partial));
     }
 

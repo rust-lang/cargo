@@ -100,6 +100,7 @@ pub struct Workspace<'gctx> {
 
     /// The resolver behavior specified with the `resolver` field.
     resolve_behavior: ResolveBehavior,
+    honor_rust_version: Option<bool>,
 
     /// Workspace-level custom metadata
     custom_metadata: Option<toml::Value>,
@@ -229,6 +230,7 @@ impl<'gctx> Workspace<'gctx> {
             loaded_packages: RefCell::new(HashMap::new()),
             ignore_lock: false,
             resolve_behavior: ResolveBehavior::V1,
+            honor_rust_version: None,
             custom_metadata: None,
         }
     }
@@ -605,6 +607,14 @@ impl<'gctx> Workspace<'gctx> {
         self.members().filter_map(|pkg| pkg.rust_version()).min()
     }
 
+    pub fn set_honor_rust_version(&mut self, honor_rust_version: Option<bool>) {
+        self.honor_rust_version = honor_rust_version;
+    }
+
+    pub fn resolve_honors_rust_version(&self) -> bool {
+        self.gctx().cli_unstable().msrv_policy && self.honor_rust_version.unwrap_or(true)
+    }
+
     pub fn custom_metadata(&self) -> Option<&toml::Value> {
         self.custom_metadata.as_ref()
     }
@@ -771,7 +781,7 @@ impl<'gctx> Workspace<'gctx> {
             }
         }
 
-        debug!("find_members - {}", manifest_path.display());
+        debug!("find_path_deps - {}", manifest_path.display());
         self.members.push(manifest_path.clone());
 
         let candidates = {
