@@ -2619,6 +2619,70 @@ src/main.rs
 }
 
 #[cargo_test]
+fn package_in_workspace_not_found() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "bar"
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "baz"
+            "#,
+        )
+        .file("baz/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package -p doesnt-exist")
+        .with_stderr(
+            "\
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] bar v0.0.1 ([CWD]/bar)
+[VERIFYING] bar v0.0.1 ([CWD]/bar)
+[COMPILING] bar v0.0.1 ([CWD][..])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
+[WARNING] manifest has no documentation, [..]
+See [..]
+[PACKAGING] baz v0.0.1 ([CWD]/baz)
+[VERIFYING] baz v0.0.1 ([CWD]/baz)
+[COMPILING] baz v0.0.1 ([CWD][..])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] [..] files, [..] ([..] compressed)
+",
+        )
+        .run();
+
+    assert!(p.root().join("target/package/bar-0.0.1.crate").is_file());
+    assert!(p.root().join("target/package/baz-0.0.1.crate").is_file());
+}
+
+#[cargo_test]
 fn in_workspace() {
     let p = project()
         .file(
