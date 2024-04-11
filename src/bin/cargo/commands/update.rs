@@ -42,12 +42,23 @@ pub fn cli() -> Command {
                 .help_heading(heading::PACKAGE_SELECTION),
         )
         .arg_manifest_path()
+        .arg_ignore_rust_version_with_help(
+            "Ignore `rust-version` specification in packages (unstable)",
+        )
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help update</>` for more detailed information.\n"
         ))
 }
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
+    if args.honor_rust_version().is_some() {
+        gctx.cli_unstable().fail_if_stable_opt_custom_z(
+            "--ignore-rust-version",
+            9930,
+            "msrv-policy",
+            gctx.cli_unstable().msrv_policy,
+        )?;
+    }
     let ws = args.workspace(gctx)?;
 
     if args.is_present_with_zero_values("package") {

@@ -75,6 +75,8 @@ Displays what would be updated, but doesn't actually write the lockfile.
 
 {{> options-manifest-path }}
 
+{{> options-ignore-rust-version }}
+
 {{> options-locked }}
 
 {{/options}}

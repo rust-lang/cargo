@@ -533,16 +533,22 @@ fn generate_lockfile_msrv_resolve() {
         .build();
 
     p.cargo("generate-lockfile --ignore-rust-version")
-        .arg("-Zmsrv-policy")
-        .masquerade_as_nightly_cargo(&["msrv-policy"])
-        .with_status(1)
+        .with_status(101)
         .with_stderr(
             "\
-error: unexpected argument '--ignore-rust-version' found
-
-Usage: cargo generate-lockfile [OPTIONS]
-
-For more information, try '--help'.
+[ERROR] the `--ignore-rust-version` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+See https://github.com/rust-lang/cargo/issues/9930 for more information about the `--ignore-rust-version` flag.
+",
+        )
+        .run();
+    p.cargo("generate-lockfile --ignore-rust-version")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
 ",
         )
         .run();
@@ -599,18 +605,22 @@ fn update_msrv_resolve() {
         )
         .run();
     p.cargo("update --ignore-rust-version")
-        .arg("-Zmsrv-policy")
-        .masquerade_as_nightly_cargo(&["msrv-policy"])
-        .with_status(1)
+        .with_status(101)
         .with_stderr(
             "\
-error: unexpected argument '--ignore-rust-version' found
-
-  tip: to pass '--ignore-rust-version' as a value, use '-- --ignore-rust-version'
-
-Usage: cargo update [OPTIONS] [SPEC]...
-
-For more information, try '--help'.
+[ERROR] the `--ignore-rust-version` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+See https://github.com/rust-lang/cargo/issues/9930 for more information about the `--ignore-rust-version` flag.
+",
+        )
+        .run();
+    p.cargo("update --ignore-rust-version")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[UPDATING] bar v1.5.0 -> v1.6.0
 ",
         )
         .run();
