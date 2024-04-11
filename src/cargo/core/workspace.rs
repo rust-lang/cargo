@@ -605,6 +605,10 @@ impl<'gctx> Workspace<'gctx> {
         self.members().filter_map(|pkg| pkg.rust_version()).min()
     }
 
+    pub fn resolve_honors_rust_version(&self) -> bool {
+        self.gctx().cli_unstable().msrv_policy
+    }
+
     pub fn custom_metadata(&self) -> Option<&toml::Value> {
         self.custom_metadata.as_ref()
     }
