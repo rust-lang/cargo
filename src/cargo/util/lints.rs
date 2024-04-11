@@ -66,13 +66,6 @@ pub struct LintGroup {
     pub edition_lint_opts: Option<(Edition, LintLevel)>,
 }
 
-const RUST_2024_COMPATIBILITY: LintGroup = LintGroup {
-    name: "rust_2024_compatibility",
-    default_level: LintLevel::Allow,
-    desc: "warn about compatibility with Rust 2024",
-    edition_lint_opts: Some((Edition::Edition2024, LintLevel::Deny)),
-};
-
 #[derive(Copy, Clone, Debug)]
 pub struct Lint {
     pub name: &'static str,
@@ -152,7 +145,7 @@ impl From<TomlLintLevel> for LintLevel {
 const IMPLICIT_FEATURES: Lint = Lint {
     name: "implicit_features",
     desc: "warn about the use of unstable features",
-    groups: &[RUST_2024_COMPATIBILITY],
+    groups: &[],
     default_level: LintLevel::Allow,
     edition_lint_opts: Some((Edition::Edition2024, LintLevel::Deny)),
 };
