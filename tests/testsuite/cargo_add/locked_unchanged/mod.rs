@@ -24,6 +24,8 @@ fn case() {
     let project_root = project.root();
     let cwd = &project_root;
 
+    project.cargo("generate-lockfile").run();
+
     snapbox::cmd::Command::cargo_ui()
         .arg("add")
         .arg_line("my-package --locked")

@@ -24,6 +24,8 @@ fn case() {
     let project_root = project.root();
     let cwd = &project_root;
 
+    project.cargo("generate-lockfile").run();
+
     snapbox::cmd::Command::cargo_ui()
         .arg("remove")
         .args(["rustc-serialize"])
@@ -33,5 +35,7 @@ fn case() {
         .stdout_matches(str![""])
         .stderr_matches(file!["stderr.term.svg"]);
 
-    assert_ui().subset_matches(current_dir!().join("out"), &project_root);
+    let expected = Project::from_expected(current_dir!().join("out"));
+    expected.cargo("generate-lockfile").run();
+    assert_ui().subset_matches(&expected.root(), &project_root);
 }

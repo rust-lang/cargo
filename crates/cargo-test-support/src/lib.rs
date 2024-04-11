@@ -311,12 +311,21 @@ impl ProjectBuilder {
 }
 
 impl Project {
+    fn new(template_path: &std::path::Path, name: &str) -> Self {
+        let root = paths::root();
+        let project_root = root.join(name);
+        snapbox::path::copy_template(template_path, &project_root).unwrap();
+        Self { root: project_root }
+    }
+
     /// Copy the test project from a fixed state
     pub fn from_template(template_path: impl AsRef<std::path::Path>) -> Self {
-        let root = paths::root();
-        let project_root = root.join("case");
-        snapbox::path::copy_template(template_path.as_ref(), &project_root).unwrap();
-        Self { root: project_root }
+        Self::new(template_path.as_ref(), "case")
+    }
+
+    /// Copy the test project from expected output
+    pub fn from_expected(template_path: impl AsRef<std::path::Path>) -> Self {
+        Self::new(template_path.as_ref(), "expected")
     }
 
     /// Root of the project, ex: `/path/to/cargo/target/cit/t0/foo`
