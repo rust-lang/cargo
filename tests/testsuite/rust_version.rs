@@ -505,6 +505,118 @@ fn workspace_with_mixed_rust_version() {
 }
 
 #[cargo_test]
+fn generate_lockfile_msrv_resolve() {
+    Package::new("bar", "1.5.0")
+        .rust_version("1.55.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+    Package::new("bar", "1.6.0")
+        .rust_version("1.65.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            rust-version = "1.60.0"
+            [dependencies]
+            bar = "1.0.0"
+        "#,
+        )
+        .file("src/main.rs", "fn main(){}")
+        .build();
+
+    p.cargo("generate-lockfile --ignore-rust-version")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .with_status(1)
+        .with_stderr(
+            "\
+error: unexpected argument '--ignore-rust-version' found
+
+Usage: cargo generate-lockfile [OPTIONS]
+
+For more information, try '--help'.
+",
+        )
+        .run();
+    p.cargo("generate-lockfile")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
+[ADDING] bar v1.5.0 (latest: v1.6.0)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn update_msrv_resolve() {
+    Package::new("bar", "1.5.0")
+        .rust_version("1.55.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+    Package::new("bar", "1.6.0")
+        .rust_version("1.65.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            rust-version = "1.60.0"
+            [dependencies]
+            bar = "1.0.0"
+        "#,
+        )
+        .file("src/main.rs", "fn main(){}")
+        .build();
+
+    p.cargo("update")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
+[ADDING] bar v1.5.0 (latest: v1.6.0)
+",
+        )
+        .run();
+    p.cargo("update --ignore-rust-version")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .with_status(1)
+        .with_stderr(
+            "\
+error: unexpected argument '--ignore-rust-version' found
+
+  tip: to pass '--ignore-rust-version' as a value, use '-- --ignore-rust-version'
+
+Usage: cargo update [OPTIONS] [SPEC]...
+
+For more information, try '--help'.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn rust_version_older_than_edition() {
     project()
         .file(
