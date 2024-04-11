@@ -2658,28 +2658,13 @@ fn package_in_workspace_not_found() {
         .build();
 
     p.cargo("package -p doesnt-exist")
-        .with_stderr(
+        .with_status(101)
+        .with_stderr_contains(
             "\
-[WARNING] manifest has no documentation, [..]
-See [..]
-[PACKAGING] bar v0.0.1 ([CWD]/bar)
-[VERIFYING] bar v0.0.1 ([CWD]/bar)
-[COMPILING] bar v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[PACKAGED] [..] files, [..] ([..] compressed)
-[WARNING] manifest has no documentation, [..]
-See [..]
-[PACKAGING] baz v0.0.1 ([CWD]/baz)
-[VERIFYING] baz v0.0.1 ([CWD]/baz)
-[COMPILING] baz v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[PACKAGED] [..] files, [..] ([..] compressed)
+[ERROR] package ID specification `doesnt-exist` did not match any packages
 ",
         )
         .run();
-
-    assert!(p.root().join("target/package/bar-0.0.1.crate").is_file());
-    assert!(p.root().join("target/package/baz-0.0.1.crate").is_file());
 }
 
 #[cargo_test]
