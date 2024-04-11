@@ -771,7 +771,7 @@ impl<'gctx> Workspace<'gctx> {
             }
         }
 
-        debug!("find_members - {}", manifest_path.display());
+        debug!("find_path_deps - {}", manifest_path.display());
         self.members.push(manifest_path.clone());
 
         let candidates = {
