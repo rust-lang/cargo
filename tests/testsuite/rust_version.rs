@@ -371,6 +371,55 @@ fn dependency_rust_version_older_and_newer_than_package() {
 }
 
 #[cargo_test]
+fn resolve_with_rustc() {
+    Package::new("bar", "1.5.0")
+        .rust_version("1.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+    Package::new("bar", "1.6.0")
+        .rust_version("1.2345")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            [dependencies]
+            bar = "1.0.0"
+        "#,
+        )
+        .file("src/main.rs", "fn main(){}")
+        .build();
+
+    p.cargo("generate-lockfile --ignore-rust-version")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
+",
+        )
+        .run();
+    p.cargo("generate-lockfile")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn dependency_rust_version_backtracking() {
     Package::new("has-rust-version", "1.6.0")
         .rust_version("1.65.0")
