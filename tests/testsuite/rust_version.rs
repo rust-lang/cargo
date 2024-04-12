@@ -505,6 +505,128 @@ fn workspace_with_mixed_rust_version() {
 }
 
 #[cargo_test]
+fn generate_lockfile_msrv_resolve() {
+    Package::new("bar", "1.5.0")
+        .rust_version("1.55.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+    Package::new("bar", "1.6.0")
+        .rust_version("1.65.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            rust-version = "1.60.0"
+            [dependencies]
+            bar = "1.0.0"
+        "#,
+        )
+        .file("src/main.rs", "fn main(){}")
+        .build();
+
+    p.cargo("generate-lockfile --ignore-rust-version")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] the `--ignore-rust-version` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+See https://github.com/rust-lang/cargo/issues/9930 for more information about the `--ignore-rust-version` flag.
+",
+        )
+        .run();
+    p.cargo("generate-lockfile --ignore-rust-version")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
+",
+        )
+        .run();
+    p.cargo("generate-lockfile")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
+[ADDING] bar v1.5.0 (latest: v1.6.0)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn update_msrv_resolve() {
+    Package::new("bar", "1.5.0")
+        .rust_version("1.55.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+    Package::new("bar", "1.6.0")
+        .rust_version("1.65.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            rust-version = "1.60.0"
+            [dependencies]
+            bar = "1.0.0"
+        "#,
+        )
+        .file("src/main.rs", "fn main(){}")
+        .build();
+
+    p.cargo("update")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[LOCKING] 2 packages
+[ADDING] bar v1.5.0 (latest: v1.6.0)
+",
+        )
+        .run();
+    p.cargo("update --ignore-rust-version")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] the `--ignore-rust-version` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+See https://github.com/rust-lang/cargo/issues/9930 for more information about the `--ignore-rust-version` flag.
+",
+        )
+        .run();
+    p.cargo("update --ignore-rust-version")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[UPDATING] bar v1.5.0 -> v1.6.0
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn rust_version_older_than_edition() {
     project()
         .file(

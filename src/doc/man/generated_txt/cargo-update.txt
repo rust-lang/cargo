@@ -85,6 +85,9 @@ OPTIONS
            Path to the Cargo.toml file. By default, Cargo searches for the
            Cargo.toml file in the current directory or any parent directory.
 
+       --ignore-rust-version
+           Ignore rust-version specification in packages.
+
        --locked
            Asserts that the exact same dependencies and versions are used as
            when the existing Cargo.lock file was originally generated. Cargo
