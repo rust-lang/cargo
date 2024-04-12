@@ -1975,7 +1975,7 @@ edition = "2021"
         .with_stderr(
             "\
 [MIGRATING] Cargo.toml from 2021 edition to 2024
-[WARNING] `[project]` is deprecated in favor of `[package]`
+[FIXED] Cargo.toml (1 fix)
 [CHECKING] foo v0.0.0 ([CWD])
 [MIGRATING] src/lib.rs from 2021 edition to 2024
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
@@ -1988,7 +1988,7 @@ edition = "2021"
 cargo-features = ["edition2024"]
 
 # Before project
-[ project ] # After project header
+[ package ] # After project header
 # After project header line
 name = "foo"
 edition = "2021"
@@ -2028,7 +2028,7 @@ edition = "2021"
         .with_stderr(
             "\
 [MIGRATING] Cargo.toml from 2021 edition to 2024
-[WARNING] `[project]` is deprecated in favor of `[package]`
+[FIXED] Cargo.toml (1 fix)
 [CHECKING] foo v0.0.0 ([CWD])
 [MIGRATING] src/lib.rs from 2021 edition to 2024
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
@@ -2043,13 +2043,6 @@ cargo-features = ["edition2024"]
 # Before package
 [ package ] # After package header
 # After package header line
-name = "foo"
-edition = "2021"
-# After package table
-
-# Before project
-[ project ] # After project header
-# After project header line
 name = "foo"
 edition = "2021"
 # After project table

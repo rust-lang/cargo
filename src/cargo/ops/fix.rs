@@ -247,9 +247,44 @@ fn migrate_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
             "Migrating",
             format!("{file} from {existing_edition} edition to {prepare_for_edition}"),
         )?;
+
+        if Edition::Edition2024 <= prepare_for_edition {
+            let mut document = pkg.manifest().document().clone().into_mut();
+            let mut fixes = 0;
+
+            let root = document.as_table_mut();
+            if rename_table(root, "project", "package") {
+                fixes += 1;
+            }
+
+            if 0 < fixes {
+                let verb = if fixes == 1 { "fix" } else { "fixes" };
+                let msg = format!("{file} ({fixes} {verb})");
+                ws.gctx().shell().status("Fixed", msg)?;
+
+                let s = document.to_string();
+                let new_contents_bytes = s.as_bytes();
+                cargo_util::paths::write_atomic(pkg.manifest_path(), new_contents_bytes)?;
+            }
+        }
     }
 
     Ok(())
+}
+
+fn rename_table(parent: &mut dyn toml_edit::TableLike, old: &str, new: &str) -> bool {
+    let Some(old_key) = parent.key(old).cloned() else {
+        return false;
+    };
+
+    let project = parent.remove(old).expect("returned early");
+    if !parent.contains_key(new) {
+        parent.insert(new, project);
+        let mut new_key = parent.key_mut(new).expect("just inserted");
+        *new_key.dotted_decor_mut() = old_key.dotted_decor().clone();
+        *new_key.leaf_decor_mut() = old_key.leaf_decor().clone();
+    }
+    true
 }
 
 fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<()> {
