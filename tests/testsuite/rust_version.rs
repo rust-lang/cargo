@@ -576,6 +576,7 @@ fn resolve_unstable_config_on_stable() {
         )
         .with_stderr(
             "\
+[WARNING] ignoring `resolver` config table without `-Zmsrv-policy`
 [UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest compatible versions
 ",
@@ -595,6 +596,7 @@ foo v0.0.1 ([CWD])
         .env("CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE", "non-existent")
         .with_stderr(
             "\
+[WARNING] ignoring `resolver` config table without `-Zmsrv-policy`
 [UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest compatible versions
 ",
