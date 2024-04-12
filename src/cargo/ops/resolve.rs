@@ -255,7 +255,7 @@ fn resolve_with_registry<'gctx>(
         false
     };
     if print {
-        ops::print_lockfile_changes(ws.gctx(), prev.as_ref(), &resolve, registry)?;
+        ops::print_lockfile_changes(ws, prev.as_ref(), &resolve, registry)?;
     }
     Ok(resolve)
 }

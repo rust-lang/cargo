@@ -37,7 +37,7 @@ pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
         true,
     )?;
     ops::write_pkg_lockfile(ws, &mut resolve)?;
-    print_lockfile_changes(ws.gctx(), previous_resolve, &resolve, &mut registry)?;
+    print_lockfile_changes(ws, previous_resolve, &resolve, &mut registry)?;
     Ok(())
 }
 
@@ -170,7 +170,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         true,
     )?;
 
-    print_lockfile_updates(opts.gctx, &previous_resolve, &resolve, &mut registry)?;
+    print_lockfile_updates(ws, &previous_resolve, &resolve, &mut registry)?;
     if opts.dry_run {
         opts.gctx
             .shell()
@@ -186,21 +186,23 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
 /// This would acquire the package-cache lock, as it may update the index to
 /// show users latest available versions.
 pub fn print_lockfile_changes(
-    gctx: &GlobalContext,
+    ws: &Workspace<'_>,
     previous_resolve: Option<&Resolve>,
     resolve: &Resolve,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<()> {
-    let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
+    let _lock = ws
+        .gctx()
+        .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
     if let Some(previous_resolve) = previous_resolve {
-        print_lockfile_sync(gctx, previous_resolve, resolve, registry)
+        print_lockfile_sync(ws, previous_resolve, resolve, registry)
     } else {
-        print_lockfile_generation(gctx, resolve, registry)
+        print_lockfile_generation(ws, resolve, registry)
     }
 }
 
 fn print_lockfile_generation(
-    gctx: &GlobalContext,
+    ws: &Workspace<'_>,
     resolve: &Resolve,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<()> {
@@ -210,7 +212,8 @@ fn print_lockfile_generation(
         // just ourself, nothing worth reporting
         return Ok(());
     }
-    gctx.shell()
+    ws.gctx()
+        .shell()
         .status("Locking", format!("{num_pkgs} packages"))?;
 
     for diff in diff {
@@ -245,7 +248,7 @@ fn print_lockfile_generation(
             };
 
             if let Some(latest) = latest {
-                gctx.shell().status_with_color(
+                ws.gctx().shell().status_with_color(
                     "Adding",
                     format!("{package}{latest}"),
                     &style::NOTE,
@@ -258,7 +261,7 @@ fn print_lockfile_generation(
 }
 
 fn print_lockfile_sync(
-    gctx: &GlobalContext,
+    ws: &Workspace<'_>,
     previous_resolve: &Resolve,
     resolve: &Resolve,
     registry: &mut PackageRegistry<'_>,
@@ -269,7 +272,8 @@ fn print_lockfile_sync(
         return Ok(());
     }
     let plural = if num_pkgs == 1 { "" } else { "s" };
-    gctx.shell()
+    ws.gctx()
+        .shell()
         .status("Locking", format!("{num_pkgs} package{plural}"))?;
 
     for diff in diff {
@@ -318,10 +322,12 @@ fn print_lockfile_sync(
             // This metadata is often stuff like git commit hashes, which are
             // not meaningfully ordered.
             if removed.version().cmp_precedence(added.version()) == Ordering::Greater {
-                gctx.shell()
+                ws.gctx()
+                    .shell()
                     .status_with_color("Downgrading", msg, &style::WARN)?;
             } else {
-                gctx.shell()
+                ws.gctx()
+                    .shell()
                     .status_with_color("Updating", msg, &style::GOOD)?;
             }
         } else {
@@ -339,7 +345,7 @@ fn print_lockfile_sync(
                 }
                 .unwrap_or_default();
 
-                gctx.shell().status_with_color(
+                ws.gctx().shell().status_with_color(
                     "Adding",
                     format!("{package}{latest}"),
                     &style::NOTE,
@@ -352,7 +358,7 @@ fn print_lockfile_sync(
 }
 
 fn print_lockfile_updates(
-    gctx: &GlobalContext,
+    ws: &Workspace<'_>,
     previous_resolve: &Resolve,
     resolve: &Resolve,
     registry: &mut PackageRegistry<'_>,
@@ -404,16 +410,21 @@ fn print_lockfile_updates(
             // This metadata is often stuff like git commit hashes, which are
             // not meaningfully ordered.
             if removed.version().cmp_precedence(added.version()) == Ordering::Greater {
-                gctx.shell()
+                ws.gctx()
+                    .shell()
                     .status_with_color("Downgrading", msg, &style::WARN)?;
             } else {
-                gctx.shell()
+                ws.gctx()
+                    .shell()
                     .status_with_color("Updating", msg, &style::GOOD)?;
             }
         } else {
             for package in diff.removed.iter() {
-                gctx.shell()
-                    .status_with_color("Removing", format!("{package}"), &style::ERROR)?;
+                ws.gctx().shell().status_with_color(
+                    "Removing",
+                    format!("{package}"),
+                    &style::ERROR,
+                )?;
             }
             for package in diff.added.iter() {
                 let latest = if !possibilities.is_empty() {
@@ -429,7 +440,7 @@ fn print_lockfile_updates(
                 }
                 .unwrap_or_default();
 
-                gctx.shell().status_with_color(
+                ws.gctx().shell().status_with_color(
                     "Adding",
                     format!("{package}{latest}"),
                     &style::NOTE,
@@ -451,8 +462,8 @@ fn print_lockfile_updates(
 
             if let Some(latest) = latest {
                 unchanged_behind += 1;
-                if gctx.shell().verbosity() == Verbosity::Verbose {
-                    gctx.shell().status_with_color(
+                if ws.gctx().shell().verbosity() == Verbosity::Verbose {
+                    ws.gctx().shell().status_with_color(
                         "Unchanged",
                         format!("{package}{latest}"),
                         &anstyle::Style::new().bold(),
@@ -462,13 +473,13 @@ fn print_lockfile_updates(
         }
     }
 
-    if gctx.shell().verbosity() == Verbosity::Verbose {
-        gctx.shell().note(
+    if ws.gctx().shell().verbosity() == Verbosity::Verbose {
+        ws.gctx().shell().note(
             "to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`",
         )?;
     } else {
         if 0 < unchanged_behind {
-            gctx.shell().note(format!(
+            ws.gctx().shell().note(format!(
                 "pass `--verbose` to see {unchanged_behind} unchanged dependencies behind latest"
             ))?;
         }
