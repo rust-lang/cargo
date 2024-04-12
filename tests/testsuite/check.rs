@@ -980,6 +980,32 @@ fn rustc_workspace_wrapper_excludes_published_deps() {
 }
 
 #[cargo_test]
+fn warn_manifest_with_project() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[WARNING] `[project]` is deprecated in favor of `[package]`
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn warn_manifest_package_and_project() {
     let p = project()
         .file(
@@ -1058,32 +1084,6 @@ fn git_manifest_package_and_project() {
 [UPDATING] git repository `[..]`
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.0.1 ([..])
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn warn_manifest_with_project() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [project]
-                name = "foo"
-                version = "0.0.1"
-                edition = "2015"
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("check")
-        .with_stderr(
-            "\
-[WARNING] `[project]` is deprecated in favor of `[package]`
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
