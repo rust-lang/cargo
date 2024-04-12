@@ -71,7 +71,8 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     // Unlike other commands default `cargo fix` to all targets to fix as much
     // code as we can.
     let root_manifest = args.root_manifest(gctx)?;
-    let ws = Workspace::new(&root_manifest, gctx)?;
+    let mut ws = Workspace::new(&root_manifest, gctx)?;
+    ws.set_honor_rust_version(args.honor_rust_version());
     let mut opts = args.compile_options(gctx, mode, Some(&ws), ProfileChecking::LegacyTestOnly)?;
 
     if !opts.filter.is_specific() {
@@ -80,7 +81,9 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     }
 
     ops::fix(
+        gctx,
         &ws,
+        &root_manifest,
         &mut ops::FixOptions {
             edition: args.flag("edition"),
             idioms: args.flag("edition-idioms"),

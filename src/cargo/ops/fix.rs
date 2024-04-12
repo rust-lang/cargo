@@ -87,11 +87,19 @@ pub struct FixOptions {
     pub broken_code: bool,
 }
 
-pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions) -> CargoResult<()> {
-    check_version_control(ws.gctx(), opts)?;
+pub fn fix(
+    gctx: &GlobalContext,
+    original_ws: &Workspace<'_>,
+    root_manifest: &Path,
+    opts: &mut FixOptions,
+) -> CargoResult<()> {
+    check_version_control(gctx, opts)?;
+
     if opts.edition {
-        check_resolver_change(ws, opts)?;
+        check_resolver_change(&original_ws, opts)?;
     }
+    let mut ws = Workspace::new(&root_manifest, gctx)?;
+    ws.set_honor_rust_version(original_ws.honor_rust_version());
 
     // Spin up our lock server, which our subprocesses will use to synchronize fixes.
     let lock_server = LockServer::new()?;
@@ -128,7 +136,7 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions) -> CargoResult<()> {
         server.configure(&mut wrapper);
     }
 
-    let rustc = ws.gctx().load_global_rustc(Some(ws))?;
+    let rustc = ws.gctx().load_global_rustc(Some(&ws))?;
     wrapper.arg(&rustc.path);
     // This is calling rustc in cargo fix-proxy-mode, so it also need to retry.
     // The argfile handling are located at `FixArgs::from_args`.
@@ -138,7 +146,7 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions) -> CargoResult<()> {
     // repeating build until there are no more changes to be applied
     opts.compile_opts.build_config.primary_unit_rustc = Some(wrapper);
 
-    ops::compile(ws, &opts.compile_opts)?;
+    ops::compile(&ws, &opts.compile_opts)?;
     Ok(())
 }
 
