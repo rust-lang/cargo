@@ -60,7 +60,6 @@ pub fn cli() -> Command {
 }
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
-    let ws = args.workspace(gctx)?;
     // This is a legacy behavior that causes `cargo fix` to pass `--test`.
     let test = matches!(
         args.get_one::<String>("profile").map(String::as_str),
@@ -70,6 +69,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
 
     // Unlike other commands default `cargo fix` to all targets to fix as much
     // code as we can.
+    let ws = args.workspace(gctx)?;
     let mut opts = args.compile_options(gctx, mode, Some(&ws), ProfileChecking::LegacyTestOnly)?;
 
     if !opts.filter.is_specific() {
