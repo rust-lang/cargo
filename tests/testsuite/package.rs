@@ -2619,6 +2619,55 @@ src/main.rs
 }
 
 #[cargo_test]
+fn package_in_workspace_not_found() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["bar", "baz"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "bar"
+            "#,
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "baz"
+            "#,
+        )
+        .file("baz/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package -p doesnt-exist")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+[ERROR] package ID specification `doesnt-exist` did not match any packages
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn in_workspace() {
     let p = project()
         .file(

@@ -10,7 +10,7 @@ use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor}
 use crate::core::manifest::Target;
 use crate::core::resolver::CliFeatures;
 use crate::core::{registry::PackageRegistry, resolver::HasDevUnits};
-use crate::core::{Feature, Shell, Verbosity, Workspace};
+use crate::core::{Feature, PackageIdSpecQuery, Shell, Verbosity, Workspace};
 use crate::core::{Package, PackageId, PackageSet, Resolve, SourceId};
 use crate::sources::PathSource;
 use crate::util::cache_lock::CacheLockMode;
@@ -176,10 +176,15 @@ pub fn package_one(
 }
 
 pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option<Vec<FileLock>>> {
-    let pkgs = ws.members_with_features(
-        &opts.to_package.to_package_id_specs(ws)?,
-        &opts.cli_features,
-    )?;
+    let specs = &opts.to_package.to_package_id_specs(ws)?;
+    // If -p is used, we should check spec is matched with the members (See #13719)
+    if let ops::Packages::Packages(_) = opts.to_package {
+        for spec in specs.iter() {
+            let member_ids = ws.members().map(|p| p.package_id());
+            spec.query(member_ids)?;
+        }
+    }
+    let pkgs = ws.members_with_features(specs, &opts.cli_features)?;
 
     let mut dsts = Vec::with_capacity(pkgs.len());
 
