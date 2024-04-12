@@ -2065,6 +2065,75 @@ fn git_install_reads_workspace_manifest() {
 }
 
 #[cargo_test]
+fn git_install_the_same_bin_twice_with_different_rev() {
+    let project = git::new("foo", |project| {
+        project
+            .file(
+                "Cargo.toml",
+                r#"
+            [workspace]
+            members = ["bin1"]
+            "#,
+            )
+            .file("bin1/Cargo.toml", &basic_manifest("bin1", "0.1.0"))
+            .file(
+                "bin1/src/main.rs",
+                r#"fn main() { println!("Hello, world!"); }"#,
+            )
+    });
+    let repository = git2::Repository::open(&project.root()).unwrap();
+    let first_rev = repository.revparse_single("HEAD").unwrap().id().to_string();
+
+    // Change the main.rs.
+    fs::write(
+        project.root().join("bin1/src/main.rs"),
+        r#"fn main() { println!("Hello, world! 2"); }"#,
+    )
+    .expect("failed to write file");
+    git::commit(&repository);
+    let second_rev = repository.revparse_single("HEAD").unwrap().id().to_string();
+
+    // Set up a temp target directory.
+    let temp_dir = paths::root().join("temp-target");
+    cargo_process(&format!(
+        "install --git {} --rev {} bin1 --target-dir {}",
+        project.url().to_string(),
+        second_rev,
+        temp_dir.display()
+    ))
+    .with_stderr(
+        "\
+[UPDATING] git repository [..]
+[INSTALLING] bin1 v0.1.0 [..]
+[COMPILING] bin1 v0.1.0 [..]
+[FINISHED] [..]
+[INSTALLING] [..]home/.cargo/bin/bin1[..]
+[INSTALLED] package `bin1 [..]
+[WARNING] be sure to add [..]
+",
+    )
+    .run();
+
+    cargo_process(&format!(
+        "install --git {} --rev {} bin1 --target-dir {}",
+        project.url().to_string(),
+        first_rev,
+        temp_dir.display()
+    ))
+    .with_stderr(
+        "\
+[UPDATING] git repository [..]
+[INSTALLING] bin1 v0.1.0 [..]
+[FINISHED] [..]
+[REPLACING] [..]home/.cargo/bin/bin1[..]
+[REPLACED] package `bin1 [..]
+[WARNING] be sure to add [..]
+",
+    )
+    .run();
+}
+
+#[cargo_test]
 fn install_git_with_symlink_home() {
     // Ensure that `cargo install` with a git repo is OK when CARGO_HOME is a
     // symlink, and uses an build script.
