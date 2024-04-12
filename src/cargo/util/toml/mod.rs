@@ -1027,22 +1027,8 @@ fn to_real_manifest(
         )));
     }
 
-    match (&original_toml.package, &original_toml.project) {
-        (Some(_), Some(_)) => {
-            warnings.push(format!(
-                "manifest at `{}` contains both `project` and `package`, \
-                    this could become a hard error in the future",
-                package_root.display()
-            ));
-        }
-        (None, Some(_)) => {
-            warnings.push(format!(
-                "manifest at `{}` contains `[project]` instead of `[package]`, \
-                                this could become a hard error in the future",
-                package_root.display()
-            ));
-        }
-        (Some(_), None) | (None, None) => {}
+    if original_toml.project.is_some() {
+        warnings.push(format!("`[project]` is deprecated in favor of `[package]`"));
     }
 
     if resolved_package.metabuild.is_some() {

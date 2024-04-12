@@ -1002,7 +1002,7 @@ fn warn_manifest_package_and_project() {
     p.cargo("check")
         .with_stderr(
             "\
-[WARNING] manifest at `[CWD]` contains both `project` and `package`, this could become a hard error in the future
+[WARNING] `[project]` is deprecated in favor of `[package]`
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -1083,7 +1083,7 @@ fn warn_manifest_with_project() {
     p.cargo("check")
         .with_stderr(
             "\
-[WARNING] manifest at `[CWD]` contains `[project]` instead of `[package]`, this could become a hard error in the future
+[WARNING] `[project]` is deprecated in favor of `[package]`
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
