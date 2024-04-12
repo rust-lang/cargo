@@ -131,6 +131,7 @@ impl NewOptions {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
 struct CargoNewConfig {
     #[deprecated = "cargo-new no longer supports adding the authors field"]
     #[allow(dead_code)]
