@@ -158,11 +158,6 @@ crates, the features for a specific crate may be enabled with
 \fBpackage\-name/feature\-name\fR syntax. This flag may be specified multiple times,
 which enables all specified features.
 .RE
-.sp
-\fB\-\-ignore\-rust\-version\fR
-.RS 4
-Ignore \fBrust\-version\fR specification in packages.
-.RE
 .SS "Display Options"
 .sp
 \fB\-v\fR, 
@@ -214,6 +209,11 @@ Path to the \fBCargo.toml\fR file. By default, Cargo searches for the
 \fB\-\-package\fR \fIspec\fR
 .RS 4
 Add dependencies to only the specified package.
+.RE
+.sp
+\fB\-\-ignore\-rust\-version\fR
+.RS 4
+Ignore \fBrust\-version\fR specification in packages.
 .RE
 .sp
 \fB\-\-locked\fR

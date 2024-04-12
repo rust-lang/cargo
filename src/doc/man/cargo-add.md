@@ -139,10 +139,6 @@ crates, the features for a specific crate may be enabled with
 which enables all specified features.
 {{/option}}
 
-{{#option "`--ignore-rust-version`" }}
-Ignore `rust-version` specification in packages.
-{{/option}}
-
 {{/options}}
 
 
@@ -160,6 +156,8 @@ Ignore `rust-version` specification in packages.
 {{#option "`-p` _spec_" "`--package` _spec_" }}
 Add dependencies to only the specified package.
 {{/option}}
+
+{{> options-ignore-rust-version }}
 
 {{> options-locked }}
 {{/options}}

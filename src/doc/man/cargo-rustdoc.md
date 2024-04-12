@@ -67,8 +67,6 @@ if its name is the same as the lib target. Binaries are skipped if they have
 
 {{> options-profile }}
 
-{{> options-ignore-rust-version }}
-
 {{> options-timings }}
 
 {{/options}}
@@ -91,6 +89,8 @@ if its name is the same as the lib target. Binaries are skipped if they have
 
 {{#options}}
 {{> options-manifest-path }}
+
+{{> options-ignore-rust-version }}
 
 {{> options-locked }}
 {{/options}}

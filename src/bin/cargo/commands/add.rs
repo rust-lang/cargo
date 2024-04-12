@@ -85,13 +85,10 @@ While you can use the crate in your implementation, it cannot be referenced in y
 Example uses:
 - Depending on multiple versions of a crate
 - Depend on crates with the same name from different registries"),
-            flag(
-                "ignore-rust-version",
-                "Ignore `rust-version` specification in packages"
-            ),
         ])
         .arg_manifest_path_without_unsupported_path_tip()
         .arg_package("Package to modify")
+        .arg_ignore_rust_version()
         .arg_dry_run("Don't actually write the manifest")
         .arg_silent_suggestion()
         .next_help_heading("Source")

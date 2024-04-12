@@ -7,7 +7,6 @@ pub fn cli() -> Command {
         // subcommand aliases are handled in aliased_command()
         // .alias("c")
         .about("Check a local package and all of its dependencies for errors")
-        .arg_ignore_rust_version()
         .arg_future_incompat_report()
         .arg_message_format()
         .arg_silent_suggestion()
@@ -37,6 +36,7 @@ pub fn cli() -> Command {
         .arg_unit_graph()
         .arg_timings()
         .arg_manifest_path()
+        .arg_ignore_rust_version()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help check</>` for more detailed information.\n"
         ))

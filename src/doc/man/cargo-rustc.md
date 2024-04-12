@@ -69,8 +69,6 @@ The `rustc` subcommand will treat the following named profiles with special beha
 See [the reference](../reference/profiles.html) for more details on profiles.
 {{/option}}
 
-{{> options-ignore-rust-version }}
-
 {{> options-timings }}
 
 {{#option "`--crate-type` _crate-type_"}}
@@ -109,6 +107,8 @@ This flag only works when building a `lib` or `example` library target.
 {{#options}}
 
 {{> options-manifest-path }}
+
+{{> options-ignore-rust-version }}
 
 {{> options-locked }}
 

@@ -21,7 +21,6 @@ pub fn cli() -> Command {
         .arg(flag("doc", "Test only this library's documentation"))
         .arg(flag("no-run", "Compile, but don't run tests"))
         .arg(flag("no-fail-fast", "Run all tests regardless of failure"))
-        .arg_ignore_rust_version()
         .arg_future_incompat_report()
         .arg_message_format()
         .arg(
@@ -58,6 +57,7 @@ pub fn cli() -> Command {
         .arg_unit_graph()
         .arg_timings()
         .arg_manifest_path()
+        .arg_ignore_rust_version()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help test</>` for more detailed information.\n\
              Run `<cyan,bold>cargo test -- --help</>` for test binary options.\n",

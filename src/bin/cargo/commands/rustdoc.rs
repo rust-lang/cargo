@@ -16,7 +16,6 @@ pub fn cli() -> Command {
             "open",
             "Opens the docs in a browser after the operation",
         ))
-        .arg_ignore_rust_version()
         .arg_message_format()
         .arg_silent_suggestion()
         .arg_package("Package to document")
@@ -46,6 +45,7 @@ pub fn cli() -> Command {
         .arg_unit_graph()
         .arg_timings()
         .arg_manifest_path()
+        .arg_ignore_rust_version()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help rustdoc</>` for more detailed information.\n"
         ))

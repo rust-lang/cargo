@@ -24,7 +24,6 @@ pub fn cli() -> Command {
                 .num_args(0..)
                 .trailing_var_arg(true),
         )
-        .arg_ignore_rust_version()
         .arg_message_format()
         .arg_silent_suggestion()
         .arg_package("Package with the target to run")
@@ -39,6 +38,7 @@ pub fn cli() -> Command {
         .arg_target_triple("Build for the target triple")
         .arg_target_dir()
         .arg_manifest_path()
+        .arg_ignore_rust_version()
         .arg_unit_graph()
         .arg_timings()
         .after_help(color_print::cstr!(

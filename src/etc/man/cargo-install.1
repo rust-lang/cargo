@@ -273,12 +273,6 @@ Install with the given profile.
 See \fIthe reference\fR <https://doc.rust\-lang.org/cargo/reference/profiles.html> for more details on profiles.
 .RE
 .sp
-\fB\-\-ignore\-rust\-version\fR
-.RS 4
-Install the target even if the selected Rust compiler is older than the
-required Rust version as configured in the project\[cq]s \fBrust\-version\fR field.
-.RE
-.sp
 \fB\-\-timings=\fR\fIfmts\fR
 .RS 4
 Output information how long each compilation takes, and track concurrency
@@ -301,6 +295,11 @@ information about timing information.
 .RE
 .RE
 .SS "Manifest Options"
+.sp
+\fB\-\-ignore\-rust\-version\fR
+.RS 4
+Ignore \fBrust\-version\fR specification in packages.
+.RE
 .sp
 \fB\-\-locked\fR
 .RS 4
