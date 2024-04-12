@@ -1942,3 +1942,107 @@ fn fix_only_once_for_duplicates() {
             1 from newly-applied unsafe blocks"
     );
 }
+
+#[cargo_test]
+fn migrate_project_to_package() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+cargo-features = ["edition2024"]
+
+# Before project
+[ project ] # After project header
+# After project header line
+name = "foo"
+edition = "2021"
+# After project table
+"#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --edition --allow-no-vcs")
+        .masquerade_as_nightly_cargo(&["edition2024"])
+        .with_stderr(
+            "\
+[WARNING] `[project]` is deprecated in favor of `[package]`
+[CHECKING] foo v0.0.0 ([CWD])
+[MIGRATING] src/lib.rs from 2021 edition to 2024
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+    assert_eq!(
+        p.read_file("Cargo.toml"),
+        r#"
+cargo-features = ["edition2024"]
+
+# Before project
+[ project ] # After project header
+# After project header line
+name = "foo"
+edition = "2021"
+# After project table
+"#
+    );
+}
+
+#[cargo_test]
+fn migrate_removes_project() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+cargo-features = ["edition2024"]
+
+# Before package
+[ package ] # After package header
+# After package header line
+name = "foo"
+edition = "2021"
+# After package table
+
+# Before project
+[ project ] # After project header
+# After project header line
+name = "foo"
+edition = "2021"
+# After project table
+"#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --edition --allow-no-vcs")
+        .masquerade_as_nightly_cargo(&["edition2024"])
+        .with_stderr(
+            "\
+[WARNING] `[project]` is deprecated in favor of `[package]`
+[CHECKING] foo v0.0.0 ([CWD])
+[MIGRATING] src/lib.rs from 2021 edition to 2024
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+    assert_eq!(
+        p.read_file("Cargo.toml"),
+        r#"
+cargo-features = ["edition2024"]
+
+# Before package
+[ package ] # After package header
+# After package header line
+name = "foo"
+edition = "2021"
+# After package table
+
+# Before project
+[ project ] # After project header
+# After project header line
+name = "foo"
+edition = "2021"
+# After project table
+"#
+    );
+}
