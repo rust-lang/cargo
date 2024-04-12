@@ -172,6 +172,7 @@ fn prepare_for_2018() {
         .build();
 
     let stderr = "\
+[MIGRATING] Cargo.toml from 2015 edition to 2018
 [CHECKING] foo v0.0.1 ([..])
 [MIGRATING] src/lib.rs from 2015 edition to 2018
 [FIXED] src/lib.rs (2 fixes)
@@ -211,6 +212,7 @@ fn local_paths() {
     p.cargo("fix --edition --allow-no-vcs")
         .with_stderr(
             "\
+[MIGRATING] Cargo.toml from 2015 edition to 2018
 [CHECKING] foo v0.0.1 ([..])
 [MIGRATING] src/lib.rs from 2015 edition to 2018
 [FIXED] src/lib.rs (1 fix)
@@ -298,6 +300,7 @@ fn specify_rustflags() {
         .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr(
             "\
+[MIGRATING] Cargo.toml from 2015 edition to 2018
 [CHECKING] foo v0.0.1 ([..])
 [MIGRATING] src/lib.rs from 2015 edition to 2018
 [FIXED] src/lib.rs (1 fix)
@@ -770,6 +773,7 @@ https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-proje
         .masquerade_as_nightly_cargo(&["always_nightly"])
         .with_stderr(&format!(
             "\
+[MIGRATING] Cargo.toml from {latest_stable} edition to {next}
 [CHECKING] foo [..]
 [MIGRATING] src/lib.rs from {latest_stable} edition to {next}
 [FINISHED] [..]
@@ -804,11 +808,11 @@ fn prepare_for_latest_stable() {
     p.cargo("fix --edition --allow-no-vcs")
         .with_stderr(&format!(
             "\
+[MIGRATING] Cargo.toml from {previous} edition to {latest_stable}
 [CHECKING] foo [..]
-[MIGRATING] src/lib.rs from {} edition to {}
+[MIGRATING] src/lib.rs from {previous} edition to {latest_stable}
 [FINISHED] [..]
 ",
-            previous, latest_stable
         ))
         .run();
 }
@@ -911,6 +915,7 @@ fn fix_overlapping() {
     p.cargo("fix --allow-no-vcs --edition --lib")
         .with_stderr(
             "\
+[MIGRATING] Cargo.toml from 2015 edition to 2018
 [CHECKING] foo [..]
 [MIGRATING] src/lib.rs from 2015 edition to 2018
 [FIXED] src/lib.rs (2 fixes)
@@ -1202,6 +1207,7 @@ fn only_warn_for_relevant_crates() {
     p.cargo("fix --allow-no-vcs --edition")
         .with_stderr(
             "\
+[MIGRATING] Cargo.toml from 2015 edition to 2018
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] a v0.1.0 ([..])
 [CHECKING] foo v0.1.0 ([..])
@@ -1398,6 +1404,7 @@ fn edition_v2_resolver_report() {
 
     p.cargo("fix --edition --allow-no-vcs")
         .with_stderr_unordered("\
+[MIGRATING] Cargo.toml from 2018 edition to 2021
 [UPDATING] [..]
 [LOCKING] 4 packages to latest compatible versions
 [DOWNLOADING] crates ...
@@ -1477,6 +1484,7 @@ fn fix_edition_2021() {
     p.cargo("fix --edition --allow-no-vcs")
         .with_stderr(
             "\
+[MIGRATING] Cargo.toml from 2018 edition to 2021
 [CHECKING] foo v0.1.0 [..]
 [MIGRATING] src/lib.rs from 2018 edition to 2021
 [FIXED] src/lib.rs (1 fix)
@@ -1966,6 +1974,7 @@ edition = "2021"
         .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stderr(
             "\
+[MIGRATING] Cargo.toml from 2021 edition to 2024
 [WARNING] `[project]` is deprecated in favor of `[package]`
 [CHECKING] foo v0.0.0 ([CWD])
 [MIGRATING] src/lib.rs from 2021 edition to 2024
@@ -2018,6 +2027,7 @@ edition = "2021"
         .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stderr(
             "\
+[MIGRATING] Cargo.toml from 2021 edition to 2024
 [WARNING] `[project]` is deprecated in favor of `[package]`
 [CHECKING] foo v0.0.0 ([CWD])
 [MIGRATING] src/lib.rs from 2021 edition to 2024

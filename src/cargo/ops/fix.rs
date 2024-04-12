@@ -53,7 +53,8 @@ use tracing::{debug, trace, warn};
 use crate::core::compiler::RustcTargetData;
 use crate::core::resolver::features::{DiffMap, FeatureOpts, FeatureResolver, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveBehavior};
-use crate::core::{Edition, MaybePackage, PackageId, Workspace};
+use crate::core::PackageIdSpecQuery as _;
+use crate::core::{Edition, MaybePackage, Package, PackageId, Workspace};
 use crate::ops::resolve::WorkspaceResolve;
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
@@ -96,6 +97,13 @@ pub fn fix(
     check_version_control(gctx, opts)?;
 
     if opts.edition {
+        let specs = opts.compile_opts.spec.to_package_id_specs(&original_ws)?;
+        let members: Vec<&Package> = original_ws
+            .members()
+            .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id())))
+            .collect();
+        migrate_manifests(original_ws, &members)?;
+
         check_resolver_change(&original_ws, opts)?;
     }
     let mut ws = Workspace::new(&root_manifest, gctx)?;
@@ -221,6 +229,27 @@ fn check_version_control(gctx: &GlobalContext, opts: &FixOptions) -> CargoResult
          ",
         files_list
     );
+}
+
+fn migrate_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
+    for pkg in pkgs {
+        let existing_edition = pkg.manifest().edition();
+        let prepare_for_edition = existing_edition.saturating_next();
+        if existing_edition == prepare_for_edition
+            || (!prepare_for_edition.is_stable() && !ws.gctx().nightly_features_allowed)
+        {
+            continue;
+        }
+        let file = pkg.manifest_path();
+        let file = file.strip_prefix(ws.root()).unwrap_or(file);
+        let file = file.display();
+        ws.gctx().shell().status(
+            "Migrating",
+            format!("{file} from {existing_edition} edition to {prepare_for_edition}"),
+        )?;
+    }
+
+    Ok(())
 }
 
 fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<()> {
