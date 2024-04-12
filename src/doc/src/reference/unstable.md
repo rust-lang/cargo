@@ -327,8 +327,24 @@ Documentation updates:
 ## msrv-policy
 - [#9930](https://github.com/rust-lang/cargo/issues/9930) (MSRV-aware resolver)
 
-The `msrv-policy` feature enables experiments in MSRV-aware policy for cargo in
-preparation for an upcoming RFC.
+Catch-all unstable feature for MSRV-aware cargo features under
+[RFC 2495](https://github.com/rust-lang/rfcs/pull/2495).
+
+### MSRV-aware cargo add
+
+This was stabilized in 1.79 in [#13608](https://github.com/rust-lang/cargo/pull/13608).
+
+### MSRV-aware resolver
+
+By default, `-Zmsrv-policy` enables an MSRV-aware resolver.
+The resolver will prefer dependencies with a `package.rust-version` that is the same or older than your project's MSRV.
+Your project's MSRV is determined by taking the lowest `package.rust-version` set among your workspace members.
+If there is none set, your toolchain version will be used with the intent to pick up the version from rustup's `rust-toolchain.toml`, if present.
+
+MSRV-incompatible dependencies can still be selected by:
+- Setting the dependency's version requirement too high
+- Specifying the version to `cargo update` with `--precise`
+- Passing `--ignore-rust-version`
 
 ## precise-pre-release
 
