@@ -1907,7 +1907,10 @@ fn descriptive_pkg_name(name: &str, target: &Target, mode: &CompileMode) -> Stri
 }
 
 /// Applies environment variables from config `[env]` to [`ProcessBuilder`].
-fn apply_env_config(gctx: &crate::GlobalContext, cmd: &mut ProcessBuilder) -> CargoResult<()> {
+pub(crate) fn apply_env_config(
+    gctx: &crate::GlobalContext,
+    cmd: &mut ProcessBuilder,
+) -> CargoResult<()> {
     for (key, value) in gctx.env_config()?.iter() {
         // never override a value that has already been set by cargo
         if cmd.get_envs().contains_key(key) {
