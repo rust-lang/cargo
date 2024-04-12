@@ -1005,6 +1005,37 @@ fn warn_manifest_with_project() {
         .run();
 }
 
+#[cargo_test(nightly, reason = "edition2024")]
+fn error_manifest_with_project_on_2024() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["edition2024"]
+
+                [project]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2024"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["edition2024"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  `[project]` is not supported as of the 2024 Edition, please use `[package]`
+",
+        )
+        .run();
+}
+
 #[cargo_test]
 fn warn_manifest_package_and_project() {
     let p = project()

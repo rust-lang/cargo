@@ -1028,7 +1028,13 @@ fn to_real_manifest(
     }
 
     if original_toml.project.is_some() {
-        warnings.push(format!("`[project]` is deprecated in favor of `[package]`"));
+        if Edition::Edition2024 <= edition {
+            anyhow::bail!(
+                "`[project]` is not supported as of the 2024 Edition, please use `[package]`"
+            );
+        } else {
+            warnings.push(format!("`[project]` is deprecated in favor of `[package]`"));
+        }
     }
 
     if resolved_package.metabuild.is_some() {
