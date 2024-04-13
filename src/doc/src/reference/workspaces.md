@@ -15,7 +15,7 @@ The key points of workspaces are:
   sections in `Cargo.toml` are only recognized in the *root* manifest, and
   ignored in member crates' manifests.
 
-In the `Cargo.toml`, the `[workspace]` table supports the following sections:
+The root `Cargo.toml` of a workspace supports the following sections:
 
 * [`[workspace]`](#the-workspace-section) --- Defines a workspace.
   * [`resolver`](resolver.md#resolver-versions) --- Sets the dependency resolver to use.
