@@ -212,9 +212,7 @@ fn print_lockfile_generation(
         // just ourself, nothing worth reporting
         return Ok(());
     }
-    ws.gctx()
-        .shell()
-        .status("Locking", format!("{num_pkgs} packages"))?;
+    status_locking(ws, num_pkgs)?;
 
     for diff in diff {
         fn format_latest(version: semver::Version) -> String {
@@ -271,10 +269,7 @@ fn print_lockfile_sync(
     if num_pkgs == 0 {
         return Ok(());
     }
-    let plural = if num_pkgs == 1 { "" } else { "s" };
-    ws.gctx()
-        .shell()
-        .status("Locking", format!("{num_pkgs} package{plural}"))?;
+    status_locking(ws, num_pkgs)?;
 
     for diff in diff {
         fn format_latest(version: semver::Version) -> String {
@@ -485,6 +480,14 @@ fn print_lockfile_updates(
         }
     }
 
+    Ok(())
+}
+
+fn status_locking(ws: &Workspace<'_>, num_pkgs: usize) -> CargoResult<()> {
+    let plural = if num_pkgs == 1 { "" } else { "s" };
+    ws.gctx()
+        .shell()
+        .status("Locking", format!("{num_pkgs} package{plural}"))?;
     Ok(())
 }
 
