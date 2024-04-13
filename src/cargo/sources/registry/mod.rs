@@ -227,6 +227,7 @@ pub const CRATES_IO_DOMAIN: &str = "crates.io";
 /// The content inside `.cargo-ok`.
 /// See [`RegistrySource::unpack_package`] for more.
 #[derive(Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
 struct LockMetadata {
     /// The version of `.cargo-ok` file
     v: u32,

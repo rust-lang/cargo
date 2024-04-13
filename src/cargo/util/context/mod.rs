@@ -2514,6 +2514,7 @@ impl<'de> Deserialize<'de> for SslVersionConfig {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "kebab-case")]
 pub struct SslVersionConfigRange {
     pub min: Option<String>,
     pub max: Option<String>,
@@ -2644,6 +2645,7 @@ impl BuildTargetConfig {
 }
 
 #[derive(Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
 pub struct TermConfig {
     pub verbose: Option<bool>,
     pub quiet: Option<bool>,
@@ -2656,13 +2658,14 @@ pub struct TermConfig {
 }
 
 #[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct ProgressConfig {
     pub when: ProgressWhen,
     pub width: Option<usize>,
 }
 
 #[derive(Debug, Default, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 pub enum ProgressWhen {
     #[default]
     Auto,

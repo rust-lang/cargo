@@ -70,6 +70,7 @@ pub struct DirectorySource<'gctx> {
 /// The file name is simply `.cargo-checksum.json`. The checksum algorithm as
 /// of now is SHA256.
 #[derive(Deserialize)]
+#[serde(rename_all = "kebab-case")]
 struct Checksum {
     /// Checksum of the package. Normally it is computed from the `.crate` file.
     package: Option<String>,
