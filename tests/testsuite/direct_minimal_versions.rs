@@ -28,6 +28,13 @@ fn simple() {
 
     p.cargo("generate-lockfile -Zdirect-minimal-versions")
         .masquerade_as_nightly_cargo(&["direct-minimal-versions"])
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[LOCKING] 2 packages
+[ADDING] dep v1.0.0 (latest: v1.1.0)
+",
+        )
         .run();
 
     let lock = p.read_lockfile();
@@ -111,6 +118,13 @@ fn yanked() {
 
     p.cargo("generate-lockfile -Zdirect-minimal-versions")
         .masquerade_as_nightly_cargo(&["direct-minimal-versions"])
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[LOCKING] 2 packages
+[ADDING] dep v1.1.0 (latest: v1.2.0)
+",
+        )
         .run();
 
     let lock = p.read_lockfile();
@@ -159,6 +173,13 @@ fn indirect() {
 
     p.cargo("generate-lockfile -Zdirect-minimal-versions")
         .masquerade_as_nightly_cargo(&["direct-minimal-versions"])
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[LOCKING] 3 packages
+[ADDING] direct v1.0.0 (latest: v1.1.0)
+",
+        )
         .run();
 
     let lock = p.read_lockfile();
