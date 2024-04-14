@@ -107,7 +107,7 @@ fn simple() {
     p.cargo("check")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0
 [CHECKING] foo v0.1.0 ([CWD])
 [FINISHED] [..]
@@ -331,7 +331,7 @@ fn multiple() {
     p.cargo("check")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [ADDING] bar v0.1.0 (latest: v0.2.0)
 [CHECKING] bar v0.1.0
 [CHECKING] foo v0.1.0 ([CWD])
@@ -371,7 +371,7 @@ fn crates_io_then_directory() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 ([..])
 [CHECKING] bar v0.1.0
@@ -483,7 +483,7 @@ fn bad_file_checksum() {
         .with_status(101)
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 error: the listed checksum of `[..]lib.rs` has changed:
 expected: [..]
 actual:   [..]
@@ -746,7 +746,7 @@ fn workspace_different_locations() {
         .cwd("bar")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar [..]
 [FINISHED] [..]
 ",

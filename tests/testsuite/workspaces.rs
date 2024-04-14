@@ -112,7 +112,7 @@ fn non_virtual_default_members_build_other_member() {
     p.cargo("check")
         .with_stderr(
             "\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [CHECKING] baz v0.1.0 ([..])
 [..] Finished `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -154,7 +154,7 @@ fn non_virtual_default_members_build_root_project() {
     p.cargo("check")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] foo v0.1.0 ([..])
 [..] Finished `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -701,7 +701,7 @@ fn share_dependencies() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [ADDING] dep1 v0.1.3 (latest: v0.1.8)
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep1 v0.1.3 ([..])
@@ -752,7 +752,7 @@ fn fetch_fetches_all() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep1 v0.1.3 ([..])
 ",
@@ -803,7 +803,7 @@ fn lock_works_for_everyone() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 4 packages",
+[LOCKING] 4 packages to latest compatible versions",
         )
         .run();
 
@@ -985,7 +985,7 @@ fn virtual_default_members_build_other_member() {
     p.cargo("check --manifest-path bar/Cargo.toml")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([..])
 [..] Finished `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -2065,7 +2065,7 @@ fn dep_used_with_separate_features() {
     p.cargo("build --workspace")
         .with_stderr(
             "\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [..]Compiling feat_lib v0.1.0 ([..])
 [..]Compiling caller1 v0.1.0 ([..])
 [..]Compiling caller2 v0.1.0 ([..])

@@ -736,7 +736,7 @@ fn main() {
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] script v1.0.0 (registry `dummy-registry`)
 [COMPILING] script v1.0.0
@@ -775,7 +775,7 @@ fn main() {
         .with_stderr(
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s

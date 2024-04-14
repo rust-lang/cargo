@@ -43,7 +43,7 @@ fn dependency_warning_ignored() {
     foo.cargo("check")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] [..]
 [CHECKING] [..]
 [FINISHED] [..]

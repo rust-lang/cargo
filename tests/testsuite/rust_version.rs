@@ -217,7 +217,7 @@ fn dependency_rust_version_newer_than_rustc() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `[..]`)
 [ERROR] rustc [..] is not supported by the following package:
@@ -265,7 +265,7 @@ fn dependency_tree_rust_version_newer_than_rustc() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.0.1 (registry `[..]`)
 [DOWNLOADED] bar v0.0.1 (registry `[..]`)
@@ -350,7 +350,7 @@ fn dependency_rust_version_older_and_newer_than_package() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.6.0 (registry `dummy-registry`)
 [CHECKING] bar v1.6.0
@@ -403,7 +403,7 @@ fn resolve_with_rustc() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 ",
         )
         .run();
@@ -413,7 +413,7 @@ fn resolve_with_rustc() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest Rust [..] compatible versions
 [ADDING] bar v1.5.0 (latest: v1.6.0)
 ",
         )
@@ -457,7 +457,7 @@ fn dependency_rust_version_backtracking() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] no-rust-version v2.2.0 (registry `dummy-registry`)
 [DOWNLOADED] has-rust-version v1.6.0 (registry `dummy-registry`)
@@ -534,7 +534,7 @@ fn workspace_with_mixed_rust_version() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.6.0 (registry `dummy-registry`)
 [CHECKING] bar v1.6.0
@@ -598,7 +598,7 @@ See https://github.com/rust-lang/cargo/issues/9930 for more information about th
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 ",
         )
         .run();
@@ -608,7 +608,7 @@ See https://github.com/rust-lang/cargo/issues/9930 for more information about th
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
 [ADDING] bar v1.5.0 (latest: v1.6.0)
 ",
         )
@@ -649,7 +649,7 @@ fn update_msrv_resolve() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
 [ADDING] bar v1.5.0 (latest: v1.6.0)
 ",
         )

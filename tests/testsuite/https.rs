@@ -130,7 +130,7 @@ fn self_signed_with_cacert() {
         .with_stderr(
             "\
 [UPDATING] git repository `https://127.0.0.1:[..]/repos/bar.git`
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 ",
         )
         .run();
@@ -158,7 +158,7 @@ fn github_works() {
         .with_stderr(
             "\
 [UPDATING] git repository `https://github.com/rust-lang/bitflags.git`
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 ",
         )
         .run();

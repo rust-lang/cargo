@@ -484,10 +484,36 @@ fn print_lockfile_updates(
 }
 
 fn status_locking(ws: &Workspace<'_>, num_pkgs: usize) -> CargoResult<()> {
+    use std::fmt::Write as _;
+
     let plural = if num_pkgs == 1 { "" } else { "s" };
+
+    let mut cfg = String::new();
+    // Don't have a good way to describe `direct_minimal_versions` atm
+    if !ws.gctx().cli_unstable().direct_minimal_versions {
+        write!(&mut cfg, " to")?;
+        if ws.gctx().cli_unstable().minimal_versions {
+            write!(&mut cfg, " earliest")?;
+        } else {
+            write!(&mut cfg, " latest")?;
+        }
+
+        if ws.resolve_honors_rust_version() {
+            let rust_version = if let Some(ver) = ws.rust_version() {
+                ver.clone().into_partial()
+            } else {
+                let rustc = ws.gctx().load_global_rustc(Some(ws))?;
+                let rustc_version = rustc.version.clone().into();
+                rustc_version
+            };
+            write!(&mut cfg, " Rust {rust_version}")?;
+        }
+        write!(&mut cfg, " compatible version{plural}")?;
+    }
+
     ws.gctx()
         .shell()
-        .status("Locking", format!("{num_pkgs} package{plural}"))?;
+        .status("Locking", format!("{num_pkgs} package{plural}{cfg}"))?;
     Ok(())
 }
 

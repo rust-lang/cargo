@@ -78,7 +78,7 @@ fn exported_pub_dep() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] pub_dep v0.1.0 ([..])
 [CHECKING] pub_dep v0.1.0
@@ -144,7 +144,7 @@ fn requires_feature() {
             "\
 [WARNING] ignoring `public` on dependency pub_dep, pass `-Zpublic-dependency` to enable support for it
 [UPDATING] `[..]` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] pub_dep v0.1.0 ([..])
 [CHECKING] pub_dep v0.1.0
@@ -233,7 +233,7 @@ fn pub_dev_dependency_without_feature() {
             "\
 [WARNING] 'public' specifier can only be used on regular dependencies, not dev-dependencies
 [UPDATING] `[..]` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
         )
@@ -334,7 +334,7 @@ fn allow_priv_in_tests() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] priv_dep v0.1.0 ([..])
 [CHECKING] priv_dep v0.1.0
@@ -380,7 +380,7 @@ fn allow_priv_in_benchs() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] priv_dep v0.1.0 ([..])
 [CHECKING] priv_dep v0.1.0
@@ -427,7 +427,7 @@ fn allow_priv_in_bins() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] priv_dep v0.1.0 ([..])
 [CHECKING] priv_dep v0.1.0
@@ -474,7 +474,7 @@ fn allow_priv_in_examples() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] priv_dep v0.1.0 ([..])
 [CHECKING] priv_dep v0.1.0
@@ -522,7 +522,7 @@ fn allow_priv_in_custom_build() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] priv_dep v0.1.0 ([..])
 [COMPILING] priv_dep v0.1.0
@@ -577,7 +577,7 @@ fn publish_package_with_public_dependency() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] pub_bar v0.1.0 ([..])
 [DOWNLOADED] bar v0.1.0 ([..])

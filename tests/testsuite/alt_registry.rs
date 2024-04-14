@@ -33,7 +33,7 @@ fn depend_on_alt_registry() {
         .with_stderr(
             "\
 [UPDATING] `alternative` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
 [CHECKING] bar v0.0.1 (registry `alternative`)
@@ -88,7 +88,7 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
         .with_stderr(
             "\
 [UPDATING] `alternative` index
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..] v0.0.1 (registry `alternative`)
 [DOWNLOADED] [..] v0.0.1 (registry `alternative`)
@@ -132,7 +132,7 @@ fn depend_on_alt_registry_depends_on_same_registry() {
         .with_stderr(
             "\
 [UPDATING] `alternative` index
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..] v0.0.1 (registry `alternative`)
 [DOWNLOADED] [..] v0.0.1 (registry `alternative`)
@@ -177,7 +177,7 @@ fn depend_on_alt_registry_depends_on_crates_io() {
             "\
 [UPDATING] `alternative` index
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
@@ -217,7 +217,7 @@ fn registry_and_path_dep_works() {
     p.cargo("check")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.0.1 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
@@ -421,7 +421,7 @@ fn alt_registry_and_crates_io_deps() {
             "\
 [UPDATING] `alternative` index
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] crates_io_dep v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] alt_reg_dep v0.1.0 (registry `alternative`)
@@ -698,7 +698,7 @@ fn patch_alt_reg() {
         .with_stderr(
             "\
 [UPDATING] `alternative` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -791,7 +791,7 @@ fn no_api() {
         .with_stderr(
             "\
 [UPDATING] `alternative` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
 [CHECKING] bar v0.0.1 (registry `alternative`)
@@ -1354,7 +1354,7 @@ fn registries_index_relative_url() {
         .with_stderr(
             "\
 [UPDATING] `relative` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `relative`)
 [CHECKING] bar v0.0.1 (registry `relative`)

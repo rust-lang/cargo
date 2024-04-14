@@ -383,7 +383,7 @@ fn check_all_exclude() {
         .with_stderr_does_not_contain("[CHECKING] baz v0.1.0 [..]")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -411,7 +411,7 @@ fn check_all_exclude_glob() {
         .with_stderr_does_not_contain("[CHECKING] baz v0.1.0 [..]")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -461,7 +461,7 @@ fn check_virtual_manifest_one_project() {
         .with_stderr_does_not_contain("[CHECKING] baz v0.1.0 [..]")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -489,7 +489,7 @@ fn check_virtual_manifest_glob() {
         .with_stderr_does_not_contain("[CHECKING] bar v0.1.0 [..]")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] baz v0.1.0 ([..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -1056,7 +1056,7 @@ fn git_manifest_package_and_project() {
         .with_stderr(
             "\
 [UPDATING] git repository `[..]`
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.0.1 ([..])
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -1132,7 +1132,7 @@ fn git_manifest_with_project() {
         .with_stderr(
             "\
 [UPDATING] git repository `[..]`
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.0.1 ([..])
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -1456,7 +1456,7 @@ fn check_unused_manifest_keys() {
 [WARNING] unused manifest key: target.cfg(windows).dependencies.foo.wxz
 [WARNING] unused manifest key: target.x86_64-pc-windows-gnu.dev-dependencies.foo.wxz
 [UPDATING] `[..]` index
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.1.0 ([..])
 [DOWNLOADED] dep v0.1.0 ([..])

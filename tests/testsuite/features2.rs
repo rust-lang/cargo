@@ -836,7 +836,7 @@ fn required_features_host_dep() {
         .with_status(101)
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [ERROR] target `x` in package `foo` requires the features: `bdep/f1`
 Consider enabling them by passing, e.g., `--features=\"bdep/f1\"`
 ",
@@ -950,7 +950,7 @@ fn required_features_inactive_dep() {
     p.cargo("check")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [FINISHED] [..]",
         )
         .run();
@@ -1188,7 +1188,7 @@ fn has_dev_dep_for_test() {
     p.cargo("check -v")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] foo v0.1.0 [..]
 [RUNNING] `rustc --crate-name foo [..]
 [FINISHED] [..]
@@ -1605,7 +1605,7 @@ fn resolver_enables_new_features() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] common [..]
 [COMPILING] common v1.0.0
@@ -1840,7 +1840,7 @@ fn shared_dep_same_but_dependencies() {
         // unordered because bin1 and bin2 build at the same time
         .with_stderr_unordered(
             "\
-[LOCKING] 4 packages
+[LOCKING] 4 packages to latest compatible versions
 [COMPILING] subdep [..]
 [COMPILING] dep [..]
 [COMPILING] bin2 [..]
@@ -1991,7 +1991,7 @@ fn doc_optional() {
         .with_stderr_unordered(
             "\
 [UPDATING] [..]
-[LOCKING] 4 packages
+[LOCKING] 4 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] spin v1.0.0 [..]
 [DOWNLOADED] bar v1.0.0 [..]
@@ -2106,7 +2106,7 @@ fn minimal_download() {
         .with_stderr_unordered(
             "\
 [UPDATING] [..]
-[LOCKING] 15 packages
+[LOCKING] 15 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] normal_pm v1.0.0 [..]
 [DOWNLOADED] normal v1.0.0 [..]
@@ -2344,7 +2344,7 @@ fn pm_with_int_shared() {
     p.cargo("build --workspace --all-targets --all-features -v")
         .with_stderr_unordered(
             "\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] shared [..]
 [RUNNING] `rustc --crate-name shared [..]--crate-type lib [..]
 [RUNNING] `rustc --crate-name shared [..]--crate-type lib [..]
@@ -2546,7 +2546,7 @@ fn all_features_merges_with_features() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..]
 [COMPILING] dep v0.1.0
@@ -2632,7 +2632,7 @@ fn dep_with_optional_host_deps_activated() {
     p.cargo("check")
         .with_stderr(
             "\
-[LOCKING] 4 packages
+[LOCKING] 4 packages to latest compatible versions
 [COMPILING] serde_build v0.1.0 ([CWD]/serde_build)
 [COMPILING] serde_derive v0.1.0 ([CWD]/serde_derive)
 [COMPILING] serde v0.1.0 ([CWD]/serde)

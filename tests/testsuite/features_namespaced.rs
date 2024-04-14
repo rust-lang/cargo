@@ -32,7 +32,7 @@ fn dependency_with_crate_syntax() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] [..]
 [DOWNLOADED] [..]
@@ -175,7 +175,7 @@ fn namespaced_implicit_feature() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] foo v0.0.1 [..]
 [FINISHED] [..]
 ",
@@ -325,7 +325,7 @@ fn namespaced_same_name() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] foo v0.0.1 [..]
 [FINISHED] [..]
 [RUNNING] [..]
@@ -387,7 +387,7 @@ fn no_implicit_feature() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] foo v0.1.0 [..]
 [FINISHED] [..]
 [RUNNING] `target/debug/foo[EXE]`
@@ -568,7 +568,7 @@ fn crate_required_features() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [ERROR] invalid feature `dep:bar` in required-features of target `foo`: \
 `dep:` prefixed feature values are not allowed in required-features
 ",
@@ -691,7 +691,7 @@ fn crate_feature_with_explicit() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 [..]
 [CHECKING] bar v1.0.0
@@ -1297,7 +1297,7 @@ foo v0.1.0 ([ROOT]/foo) features=",
         )
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 ",
         )
         .run();

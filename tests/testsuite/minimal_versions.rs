@@ -33,7 +33,7 @@ fn minimal_version_cli() {
         .with_stderr(
             "\
 [UPDATING] [..]
-[LOCKING] 2 packages
+[LOCKING] 2 packages to earliest compatible versions
 [ADDING] dep v1.0.0 (latest: v1.1.0)
 ",
         )

@@ -88,7 +88,7 @@ fn profile_selection_build() {
     //   are built with debuginfo=0.
     p.cargo("build -vv")
         .with_stderr_unordered("\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
@@ -123,7 +123,7 @@ fn profile_selection_build_release() {
 
     // `build --release`
     p.cargo("build --release -vv").with_stderr_unordered("\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
@@ -184,7 +184,7 @@ fn profile_selection_build_all_targets() {
     //   example  dev        build
     p.cargo("build --all-targets -vv")
         .with_stderr_unordered("\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=1 -C debuginfo=2 [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C codegen-units=1 -C debuginfo=2 [..]
@@ -254,7 +254,7 @@ fn profile_selection_build_all_targets_release() {
     //   bin      release        build
     //   example  release        build
     p.cargo("build --all-targets --release -vv").with_stderr_unordered("\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3[..]-C codegen-units=2 [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
@@ -312,7 +312,7 @@ fn profile_selection_test() {
     //   bin      test           build
     //
     p.cargo("test -vv").with_stderr_unordered("\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=3 -C debuginfo=2 [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
@@ -380,7 +380,7 @@ fn profile_selection_test_release() {
     //   bin      release        build
     //
     p.cargo("test --release -vv").with_stderr_unordered("\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=2 [..]
@@ -447,7 +447,7 @@ fn profile_selection_bench() {
     //   bin      bench          build
     //
     p.cargo("bench -vv").with_stderr_unordered("\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3[..]-C codegen-units=4 [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C opt-level=3 -C panic=abort[..]-C codegen-units=4 [..]
@@ -513,7 +513,7 @@ fn profile_selection_check_all_targets() {
     //   bin      dev-panic      check-test (checking bin as a unittest)
     //
     p.cargo("check --all-targets -vv").with_stderr_unordered("\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata[..]-C codegen-units=1 -C debuginfo=2 [..]
@@ -559,7 +559,7 @@ fn profile_selection_check_all_targets_release() {
     // `profile_selection_check_all_targets` that uses `release` instead of
     // `dev` for all targets.
     p.cargo("check --all-targets --release -vv").with_stderr_unordered("\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=6 [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata -C opt-level=3[..]-C codegen-units=2 [..]
@@ -619,7 +619,7 @@ fn profile_selection_check_all_targets_test() {
     //   bin      test-panic  check-test
     //
     p.cargo("check --all-targets --profile=test -vv").with_stderr_unordered("\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]metadata[..]-C codegen-units=3 -C debuginfo=2 [..]
@@ -665,7 +665,7 @@ fn profile_selection_doc() {
     //
     //   `*` = wants panic, but it is cleared when args are built.
     p.cargo("doc -vv").with_stderr_unordered("\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] bar [..]
 [DOCUMENTING] bar [..]
 [RUNNING] `[..] rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C codegen-units=5 [..]

@@ -30,7 +30,7 @@ fn timings_works() {
         .with_stderr_unordered(
             "\
 [UPDATING] [..]
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v0.1.0 [..]
 [COMPILING] dep v0.1.0

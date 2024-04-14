@@ -115,7 +115,7 @@ impl Foo {
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr_unordered(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] a v0.0.1 ([CWD]/crates/a)
 [CHECKING] foo v0.0.1 ([CWD])
 [SCRAPING] foo v0.0.1 ([CWD])
@@ -603,7 +603,7 @@ fn no_scrape_with_dev_deps() {
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 warning: Rustdoc did not scrape the following examples because they require dev-dependencies: ex
     If you want Rustdoc to scrape these examples, then add `doc-scrape-examples = true`
     to the [[example]] target configuration of at least one example.
@@ -671,7 +671,7 @@ fn use_dev_deps_if_explicitly_enabled() {
         .masquerade_as_nightly_cargo(&["rustdoc-scrape-examples"])
         .with_stderr_unordered(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] foo v0.0.1 ([CWD])
 [CHECKING] a v0.0.1 ([CWD]/a)
 [SCRAPING] foo v0.0.1 ([CWD])
