@@ -996,7 +996,6 @@ fn update_lockfile() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 1 package to latest compatible version
 [UPDATING] bar v0.0.1 -> v0.0.2
 ",
         )
@@ -3776,7 +3775,6 @@ fn differ_only_by_metadata_with_lockfile() {
         .with_stderr(
             "\
 [UPDATING] [..] index
-[LOCKING] 1 package to latest compatible version
 [..] baz v0.0.1+c -> v0.0.1+b
 ",
         )

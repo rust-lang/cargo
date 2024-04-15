@@ -405,7 +405,6 @@ fn update_precise() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 1 package to latest compatible version
 [DOWNGRADING] serde v0.2.1 -> v0.2.0
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
@@ -496,7 +495,6 @@ fn update_precise_build_metadata() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 1 package to latest compatible version
 [UPDATING] serde v0.0.1+first -> v0.0.1+second
 ",
         )
@@ -508,7 +506,6 @@ fn update_precise_build_metadata() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 1 package to latest compatible version
 [UPDATING] serde v0.0.1+second -> v0.0.1+first
 ",
         )
@@ -546,7 +543,6 @@ fn update_precise_do_not_force_update_deps() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 1 package to latest compatible version
 [UPDATING] serde v0.2.1 -> v0.2.2
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
@@ -702,7 +698,6 @@ fn update_precise_first_run() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 1 package to latest compatible version
 [DOWNGRADING] serde v0.2.1 -> v0.2.0
 ",
         )
@@ -857,7 +852,6 @@ fn update_precise_first_run() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 0 packages to latest compatible versions
 ",
         )
         .run();
@@ -1024,7 +1018,6 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
         .with_stderr(
             "\
 [UPDATING] [..] index
-[LOCKING] 1 package to latest compatible version
 [UPDATING] bar v0.1.0+extra-stuff.0 -> v0.1.1+extra-stuff.1
 ",
         )
@@ -1047,7 +1040,6 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
         .with_stderr(
             "\
 [UPDATING] [..] index
-[LOCKING] 1 package to latest compatible version
 [UPDATING] bar v0.1.1+extra-stuff.1 -> v0.1.3
 ",
         )
@@ -1379,7 +1371,6 @@ fn update_precise_git_revisions() {
         .with_stderr(format!(
             "\
 [UPDATING] git repository `{url}`
-[LOCKING] 1 package to latest compatible version
 [UPDATING] git v0.5.0 ([..]) -> #{}",
             &tag_commit_id[..8],
         ))
@@ -1393,7 +1384,6 @@ fn update_precise_git_revisions() {
         .with_stderr(format!(
             "\
 [UPDATING] git repository `{url}`
-[LOCKING] 1 package to latest compatible version
 [UPDATING] git v0.5.0 ([..]) -> #{short_id}",
         ))
         .run();
@@ -1408,7 +1398,6 @@ fn update_precise_git_revisions() {
         .with_stderr(format!(
             "\
 [UPDATING] git repository `{url}`
-[LOCKING] 1 package to latest compatible version
 [UPDATING] git v0.5.0 ([..]) -> #{}",
             &tag_commit_id[..8],
         ))
@@ -1427,7 +1416,6 @@ fn update_precise_git_revisions() {
         .with_stderr(format!(
             "\
 [UPDATING] git repository `{url}`
-[LOCKING] 1 package to latest compatible version
 [UPDATING] git v0.5.0 ([..]) -> #{}",
             &head_id[..8],
         ))
@@ -1487,7 +1475,6 @@ Caused by:
 [UPDATING] `dummy-registry` index
 [WARNING] selected package `bar@0.1.1` was yanked by the author
 [NOTE] if possible, try a compatible non-yanked version
-[LOCKING] 1 package to latest compatible version
 [UPDATING] bar v0.1.0 -> v0.1.1
 ",
         )
@@ -1531,7 +1518,6 @@ fn precise_yanked_multiple_presence() {
 [UPDATING] `dummy-registry` index
 [WARNING] selected package `bar@0.1.1` was yanked by the author
 [NOTE] if possible, try a compatible non-yanked version
-[LOCKING] 1 package to latest compatible version
 [UPDATING] bar v0.1.0 -> v0.1.1
 ",
         )

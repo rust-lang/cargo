@@ -799,7 +799,6 @@ Caused by:
         .arg(&old_head.to_string())
         .with_stderr(
             "\
-[LOCKING] 1 package to latest compatible version
 [UPDATING] bar v0.5.0 [..]",
         )
         .run();
