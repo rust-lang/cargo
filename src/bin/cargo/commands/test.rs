@@ -18,7 +18,6 @@ pub fn cli() -> Command {
                 .num_args(0..)
                 .last(true),
         )
-        .arg(flag("doc", "Test only this library's documentation"))
         .arg(flag("no-run", "Compile, but don't run tests"))
         .arg(flag("no-fail-fast", "Run all tests regardless of failure"))
         .arg_future_incompat_report()
@@ -46,6 +45,10 @@ pub fn cli() -> Command {
             "Test only the specified bench target",
             "Test all bench targets",
             "Test all targets (does not include doctests)",
+        )
+        .arg(
+            flag("doc", "Test only this library's documentation")
+                .help_heading(heading::TARGET_SELECTION),
         )
         .arg_features()
         .arg_jobs()
