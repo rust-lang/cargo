@@ -641,12 +641,12 @@ mod tests {
             ErrorKind::UnexpectedQueryString(_)
         );
         err!(
-            "registry+https://github.com/rust-lang/cargo#0.52.0?branch=dev",
-            ErrorKind::PartialVersion(_)
+            "registry+https://github.com/rust-lang/cargo?branch=dev#0.52.0",
+            ErrorKind::UnexpectedQueryString(_)
         );
         err!(
-            "sparse+https://github.com/rust-lang/cargo#0.52.0?branch=dev",
-            ErrorKind::PartialVersion(_)
+            "sparse+https://github.com/rust-lang/cargo?branch=dev#0.52.0",
+            ErrorKind::UnexpectedQueryString(_)
         );
         err!("@1.2.3", ErrorKind::NameValidation(_));
         err!("registry+https://github.com", ErrorKind::NameValidation(_));
