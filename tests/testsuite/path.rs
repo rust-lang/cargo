@@ -73,7 +73,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
     p.cargo("build")
         .with_stderr(
             "\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] baz v0.5.0 ([CWD]/bar/baz)
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [COMPILING] foo v0.5.0 ([CWD])
@@ -195,7 +195,7 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
     p.cargo("test")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] [..] v0.5.0 ([..])
 [COMPILING] [..] v0.5.0 ([..])
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
@@ -257,7 +257,7 @@ fn cargo_compile_with_transitive_dev_deps() {
     p.cargo("build")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -295,7 +295,7 @@ fn no_rebuild_dependency() {
     p.cargo("check")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.5.0 ([CWD]/bar)
 [CHECKING] foo v0.5.0 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -365,7 +365,7 @@ fn deep_dependencies_trigger_rebuild() {
     p.cargo("check")
         .with_stderr(
             "\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [CHECKING] baz v0.5.0 ([CWD]/baz)
 [CHECKING] bar v0.5.0 ([CWD]/bar)
 [CHECKING] foo v0.5.0 ([CWD])
@@ -455,7 +455,7 @@ fn no_rebuild_two_deps() {
     p.cargo("build")
         .with_stderr(
             "\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] baz v0.5.0 ([CWD]/baz)
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [COMPILING] foo v0.5.0 ([CWD])
@@ -495,7 +495,7 @@ fn nested_deps_recompile() {
     p.cargo("check")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.5.0 ([CWD]/src/bar)
 [CHECKING] foo v0.5.0 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -745,7 +745,7 @@ fn path_dep_build_cmd() {
     p.cargo("build")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -806,7 +806,7 @@ fn dev_deps_no_rebuild_lib() {
         .env("FOO", "bar")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] foo v0.5.0 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -862,7 +862,7 @@ fn custom_target_no_rebuild() {
     p.cargo("check")
         .with_stderr(
             "\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [CHECKING] a v0.5.0 ([..])
 [CHECKING] foo v0.5.0 ([..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -924,7 +924,7 @@ fn override_and_depend() {
         .cwd("b")
         .with_stderr(
             "\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [WARNING] skipping duplicate package `a2` found at `[..]`
 [CHECKING] a2 v0.5.0 ([..])
 [CHECKING] a1 v0.5.0 ([..])

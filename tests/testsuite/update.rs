@@ -1109,7 +1109,7 @@ rustdns.workspace = true
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{}`
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 ",
             git_project.url(),
         ))
@@ -1200,7 +1200,7 @@ rustdns.workspace = true
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{}`
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 ",
             git_project.url(),
         ))
@@ -1291,7 +1291,7 @@ rustdns.workspace = true
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{}`
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 ",
             git_project.url(),
         ))
@@ -1352,7 +1352,7 @@ fn update_precise_git_revisions() {
         .with_stderr(format!(
             "\
 [UPDATING] git repository `{url}`
-[LOCKING] 2 packages"
+[LOCKING] 2 packages to latest compatible versions"
         ))
         .run();
 

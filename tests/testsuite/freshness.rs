@@ -138,7 +138,7 @@ fn rebuild_sub_package_then_while_package() {
     p.cargo("build")
         .with_stderr(
             "\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] b [..]
 [COMPILING] a [..]
 [COMPILING] foo [..]
@@ -383,7 +383,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
         .with_stdout("ftest off")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [..]Compiling dep_crate v0.0.1 ([..])
 [..]Compiling a v0.0.1 ([..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -410,7 +410,7 @@ fn changing_bin_paths_common_target_features_caches_targets() {
         .with_stdout("ftest on")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [..]Compiling dep_crate v0.0.1 ([..])
 [..]Compiling b v0.0.1 ([..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -756,7 +756,7 @@ fn same_build_dir_cached_packages() {
         .cwd("a1")
         .with_stderr(&format!(
             "\
-[LOCKING] 4 packages
+[LOCKING] 4 packages to latest compatible versions
 [COMPILING] d v0.0.1 ({dir}/d)
 [COMPILING] c v0.0.1 ({dir}/c)
 [COMPILING] b v0.0.1 ({dir}/b)
@@ -770,7 +770,7 @@ fn same_build_dir_cached_packages() {
         .cwd("a2")
         .with_stderr(
             "\
-[LOCKING] 4 packages
+[LOCKING] 4 packages to latest compatible versions
 [COMPILING] a2 v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 ",
@@ -1317,7 +1317,7 @@ fn update_dependency_mtime_does_not_rebuild() {
         .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
@@ -1463,7 +1463,7 @@ fn reuse_panic_build_dep_test() {
     p.cargo("test --lib --no-run -v")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar [..]
 [COMPILING] foo [..]
@@ -1524,7 +1524,7 @@ fn reuse_panic_pm() {
     p.cargo("build -v")
         .with_stderr_unordered(
             "\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]
 [RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C debuginfo=2 [..]
@@ -1695,7 +1695,7 @@ fn rebuild_on_mid_build_file_modification() {
     p.cargo("build")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] proc_macro_dep v0.1.0 ([..]/proc_macro_dep)
 [COMPILING] root v0.1.0 ([..]/root)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]

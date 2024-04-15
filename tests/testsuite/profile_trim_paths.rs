@@ -239,7 +239,7 @@ fn registry_dependency() {
         .with_stderr(&format!(
             "\
 [UPDATING] [..]
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 ([..])
 [COMPILING] bar v0.0.1
@@ -297,7 +297,7 @@ fn git_dependency() {
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `{url}`
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.0.1 ({url}[..])
 [RUNNING] `rustc [..]\
     -Zremap-path-scope=object \
@@ -345,7 +345,7 @@ fn path_dependency() {
         .with_stdout("cocktail-bar/src/lib.rs")
         .with_stderr(&format!(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.0.1 ([..]/cocktail-bar)
 [RUNNING] `rustc [..]\
     -Zremap-path-scope=object \
@@ -396,7 +396,7 @@ fn path_dependency_outside_workspace() {
         .with_stdout("bar-0.0.1/src/lib.rs")
         .with_stderr(&format!(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.0.1 ([..]/bar)
 [RUNNING] `rustc [..]\
     -Zremap-path-scope=object \

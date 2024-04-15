@@ -984,7 +984,7 @@ fn build_script_with_platform_specific_dependencies() {
         .arg(&target)
         .with_stderr(&format!(
             "\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] d2 v0.0.0 ([..])
 [RUNNING] `rustc [..] d2/src/lib.rs [..]`
 [COMPILING] d1 v0.0.0 ([..])
@@ -1233,7 +1233,7 @@ fn cross_test_dylib() {
         .arg(&target)
         .with_stderr(&format!(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]

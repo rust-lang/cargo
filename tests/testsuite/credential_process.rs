@@ -613,7 +613,7 @@ fn basic_provider() {
         .with_stderr(
             "\
 [UPDATING] `alternative` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 CARGO=Some([..])
 CARGO_REGISTRY_NAME_OPT=Some(\"alternative\")
 CARGO_REGISTRY_INDEX_URL=Some([..])

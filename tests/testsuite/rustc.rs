@@ -244,7 +244,7 @@ fn build_with_crate_type_for_foo_with_deps() {
     p.cargo("rustc -v --crate-type cdylib")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] a v0.1.0 ([CWD]/a)
 [RUNNING] `rustc --crate-name a --edition=2015 a/src/lib.rs [..]--crate-type lib [..]
 [COMPILING] foo v0.0.1 ([CWD])
@@ -424,7 +424,7 @@ fn build_foo_with_bar_dependency() {
     foo.cargo("rustc -v -- -C debug-assertions")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `[..] -C debuginfo=2 [..]`
 [COMPILING] foo v0.0.1 ([CWD])
@@ -462,7 +462,7 @@ fn build_only_bar_dependency() {
     foo.cargo("rustc -v -p bar -- -C debug-assertions")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.1.0 ([..])
 [RUNNING] `rustc --crate-name bar [..]--crate-type lib [..] -C debug-assertions [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]

@@ -30,6 +30,13 @@ fn minimal_version_cli() {
 
     p.cargo("generate-lockfile -Zminimal-versions")
         .masquerade_as_nightly_cargo(&["minimal-versions"])
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[LOCKING] 2 packages to earliest compatible versions
+[ADDING] dep v1.0.0 (latest: v1.1.0)
+",
+        )
         .run();
 
     let lock = p.read_lockfile();

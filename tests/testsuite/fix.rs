@@ -98,7 +98,7 @@ fn fix_path_deps() {
         .with_stdout("")
         .with_stderr_unordered(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([..])
 [FIXED] bar/src/lib.rs (1 fix)
 [CHECKING] foo v0.1.0 ([..])
@@ -260,7 +260,7 @@ fn upgrade_extern_crate() {
         .build();
 
     let stderr = "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([..])
 [CHECKING] foo v0.1.0 ([..])
 [FIXED] src/lib.rs (1 fix)
@@ -1097,7 +1097,7 @@ fn doesnt_rebuild_dependencies() {
         .with_stdout("")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([..])
 [CHECKING] foo v0.1.0 ([..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -1202,7 +1202,7 @@ fn only_warn_for_relevant_crates() {
     p.cargo("fix --allow-no-vcs --edition")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] a v0.1.0 ([..])
 [CHECKING] foo v0.1.0 ([..])
 [MIGRATING] src/lib.rs from 2015 edition to 2018
@@ -1399,7 +1399,7 @@ fn edition_v2_resolver_report() {
     p.cargo("fix --edition --allow-no-vcs")
         .with_stderr_unordered("\
 [UPDATING] [..]
-[LOCKING] 4 packages
+[LOCKING] 4 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] common v1.0.0 [..]
 [DOWNLOADED] bar v1.0.0 [..]
@@ -1520,7 +1520,7 @@ fn fix_shared_cross_workspace() {
         .env("__CARGO_FIX_YOLO", "1")
         .with_stderr_unordered(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] foo v0.1.0 [..]
 [CHECKING] bar v0.1.0 [..]
 [FIXED] [..]foo/src/shared.rs (2 fixes)

@@ -1051,7 +1051,7 @@ fn dep_feature_in_cmd_line() {
     p.cargo("build")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [FINISHED] `dev` profile [..]",
         )
         .run();
@@ -1376,7 +1376,7 @@ fn renamed_required_features() {
         .with_status(101)
         .with_stderr(
             "\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [ERROR] target `x` in package `foo` requires the features: `a1/f1`
 Consider enabling them by passing, e.g., `--features=\"a1/f1\"`
 ",

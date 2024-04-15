@@ -206,7 +206,7 @@ fn known_host_works() {
         .with_stderr(
             "\
 [UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 ",
         )
         .run();
@@ -283,7 +283,7 @@ fn known_host_without_port() {
         .with_stderr(
             "\
 [UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 ",
         )
         .run();
@@ -320,7 +320,7 @@ fn hostname_case_insensitive() {
         .with_stderr(&format!(
             "\
 [UPDATING] git repository `ssh://testuser@{hostname}:{port}/repos/bar.git`
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 "
         ))
         .run();
@@ -398,7 +398,7 @@ Caused by:
         .with_stderr(
             "\
 [UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 ",
         )
         .run();
@@ -611,7 +611,7 @@ fn ssh_key_in_config() {
         .with_stderr(
             "\
 [UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 ",
         )
         .run();

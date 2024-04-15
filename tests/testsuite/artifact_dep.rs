@@ -213,7 +213,7 @@ fn disallow_artifact_and_no_artifact_dep_to_same_package_within_the_same_dep_cat
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_status(101)
         .with_stderr("\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [WARNING] foo v0.0.0 ([CWD]) ignoring invalid dependency `bar_stable` which is missing a lib target
 [ERROR] the crate `foo v0.0.0 ([CWD])` depends on crate `bar v0.5.0 ([CWD]/bar)` multiple times with different names",
         )
@@ -323,7 +323,7 @@ fn features_are_unified_among_lib_and_bin_dep_of_same_target() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr(
             "\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] d2 v0.0.1 ([CWD]/d2)
 [COMPILING] d1 v0.0.1 ([CWD]/d1)
 [COMPILING] foo v0.0.1 ([CWD])
@@ -775,7 +775,7 @@ fn build_script_with_selected_dashed_bin_artifact_and_lib_true() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar-baz v0.5.0 ([CWD]/bar)
 [COMPILING] foo [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
@@ -877,7 +877,7 @@ fn lib_with_selected_dashed_bin_artifact_and_lib_true() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar-baz v0.5.0 ([CWD]/bar)
 [COMPILING] foo [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
@@ -998,7 +998,7 @@ fn disallow_using_example_binaries_as_artifacts() {
         .with_status(101)
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [ERROR] dependency `bar` in package `foo` requires a `bin:one-example` artifact to be present.",
         )
         .run();
@@ -1169,7 +1169,7 @@ fn build_script_deps_adopt_do_not_allow_multiple_targets_under_different_name_an
         .with_status(101)
         .with_stderr(format!(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 error: the crate `foo v0.0.0 ([CWD])` depends on crate `bar v0.5.0 ([CWD]/bar)` multiple times with different names",
         ))
         .run();
@@ -1274,7 +1274,7 @@ fn no_cross_doctests_works_with_artifacts() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr(&format!(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
@@ -1757,7 +1757,7 @@ fn allow_artifact_and_non_artifact_dependency_to_same_crate_if_these_are_not_the
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar [..]
 [COMPILING] foo [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -1794,7 +1794,7 @@ fn prevent_no_lib_warning_with_artifact_dependencies() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr(
             "\
-            [LOCKING] 2 packages\n\
+            [LOCKING] 2 packages to latest compatible versions\n\
             [COMPILING] bar v0.5.0 ([CWD]/bar)\n\
             [CHECKING] foo v0.0.0 ([CWD])\n\
             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
@@ -1895,7 +1895,7 @@ fn check_missing_crate_type_in_package_fails() {
             .with_status(101)
             .with_stderr(
                 "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [ERROR] dependency `bar` in package `foo` requires a `[..]` artifact to be present.",
             )
             .run();
@@ -2042,7 +2042,7 @@ fn env_vars_and_build_products_for_various_build_targets() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar [..]
 [COMPILING] foo [..]
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
@@ -2219,7 +2219,7 @@ fn doc_lib_true() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [DOCUMENTING] bar v0.0.1 ([CWD]/bar)
 [DOCUMENTING] foo v0.0.1 ([CWD])
@@ -2302,7 +2302,7 @@ fn rustdoc_works_on_libs_with_artifacts_and_lib_false() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [DOCUMENTING] foo v0.0.1 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -2510,7 +2510,7 @@ fn calc_bin_artifact_fingerprint() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.5.0 ([CWD]/bar)
 [CHECKING] foo v0.1.0 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -2592,7 +2592,7 @@ fn with_target_and_optional() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] d1 v0.0.1 [..]
 [RUNNING] `rustc --crate-name d1 [..]--crate-type bin[..]
 [CHECKING] foo v0.0.1 [..]
@@ -2642,7 +2642,7 @@ fn with_assumed_host_target_and_optional_build_dep() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_unordered(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] foo v0.0.1 ([CWD])
 [COMPILING] d1 v0.0.1 ([CWD]/d1)
 [RUNNING] `rustc --crate-name build_script_build --edition=2021 [..]--crate-type bin[..]
@@ -2770,7 +2770,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr(
             "\
-[LOCKING] 5 packages
+[LOCKING] 5 packages to latest compatible versions
 [COMPILING] c v0.1.0 ([CWD]/c)
 [COMPILING] b v0.1.0 ([CWD]/b)
 [COMPILING] a v0.1.0 ([CWD]/a)
@@ -2874,7 +2874,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_lib() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr(
             "\
-[LOCKING] 4 packages
+[LOCKING] 4 packages to latest compatible versions
 [COMPILING] b v0.1.0 ([CWD]/b)
 [COMPILING] a v0.1.0 ([CWD]/a)
 [COMPILING] bar v0.1.0 ([CWD]/bar)
@@ -3001,7 +3001,7 @@ fn decouple_same_target_transitive_dep_from_artifact_dep_and_proc_macro() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_unordered(
             "\
-[LOCKING] 6 packages
+[LOCKING] 6 packages to latest compatible versions
 [COMPILING] d v0.1.0 ([CWD]/d)
 [COMPILING] a v0.1.0 ([CWD]/a)
 [COMPILING] b v0.1.0 ([CWD]/b)
@@ -3067,7 +3067,7 @@ fn same_target_artifact_dep_sharing() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr(
             "\
-[LOCKING] 3 packages
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] a v0.1.0 ([CWD]/a)
 [COMPILING] bar v0.1.0 ([CWD]/bar)
 [COMPILING] foo v0.1.0 ([CWD])

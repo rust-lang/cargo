@@ -90,7 +90,7 @@ fn no_index_update() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 ",
         )
         .run();
@@ -100,7 +100,7 @@ fn no_index_update() {
         .with_stdout("")
         .with_stderr(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 ",
         )
         .run();
@@ -260,7 +260,7 @@ fn generate_lockfile_holds_lock_and_offline() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 ",
         )
         .run();
@@ -268,7 +268,7 @@ fn generate_lockfile_holds_lock_and_offline() {
     p.cargo("generate-lockfile --offline")
         .with_stderr_contains(
             "\
-[LOCKING] 2 packages
+[LOCKING] 2 packages to latest compatible versions
 ",
         )
         .run();
