@@ -15,6 +15,7 @@ use cargo_util::paths;
 use filetime::FileTime;
 use gix::bstr::{BString, ByteVec};
 use gix::dir::entry::Status;
+use gix::index::entry::Stage;
 use ignore::gitignore::GitignoreBuilder;
 use tracing::{debug, trace, warn};
 use walkdir::WalkDir;
@@ -533,7 +534,7 @@ impl<'gctx> PathSource<'gctx> {
                     .iter()
                     .filter(|entry| {
                         // probably not needed as conflicts prevent this to run, but let's be explicit.
-                        entry.stage() == 0
+                        entry.stage() == Stage::Unconflicted
                     })
                     .map(|entry| {
                         (
