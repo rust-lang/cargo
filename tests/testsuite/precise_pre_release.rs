@@ -65,6 +65,7 @@ fn update_pre_release() {
         .masquerade_as_nightly_cargo(&["precise-pre-release"])
         .with_stderr(
             r#"[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
 [UPDATING] my-dependency v0.1.1 -> v0.1.2-pre.0
 "#,
         )
@@ -98,6 +99,7 @@ fn update_pre_release_differ() {
         .masquerade_as_nightly_cargo(&["precise-pre-release"])
         .with_stderr(
             r#"[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
 [DOWNGRADING] my-dependency v0.1.2 -> v0.1.2-pre.0
 "#,
         )
@@ -107,6 +109,7 @@ fn update_pre_release_differ() {
         .masquerade_as_nightly_cargo(&["precise-pre-release"])
         .with_stderr(
             r#"[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
 [UPDATING] my-dependency v0.1.2-pre.0 -> v0.1.2-pre.1
 "#,
         )

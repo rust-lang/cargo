@@ -114,6 +114,7 @@ fn transitive_minor_update() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 0 packages to latest compatible versions
 [NOTE] pass `--verbose` to see 2 unchanged dependencies behind latest
 ",
         )
@@ -167,6 +168,7 @@ fn conservative() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 1 package to latest compatible version
 [UPDATING] serde v0.1.0 -> v0.1.1
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
@@ -403,6 +405,7 @@ fn update_precise() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 1 package to latest compatible version
 [DOWNGRADING] serde v0.2.1 -> v0.2.0
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
@@ -493,6 +496,7 @@ fn update_precise_build_metadata() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 1 package to latest compatible version
 [UPDATING] serde v0.0.1+first -> v0.0.1+second
 ",
         )
@@ -504,6 +508,7 @@ fn update_precise_build_metadata() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 1 package to latest compatible version
 [UPDATING] serde v0.0.1+second -> v0.0.1+first
 ",
         )
@@ -541,6 +546,7 @@ fn update_precise_do_not_force_update_deps() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 1 package to latest compatible version
 [UPDATING] serde v0.2.1 -> v0.2.2
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
@@ -579,6 +585,7 @@ fn update_recursive() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 2 packages to latest compatible versions
 [UPDATING] log v0.1.0 -> v0.1.1
 [UPDATING] serde v0.2.1 -> v0.2.2
 ",
@@ -617,6 +624,7 @@ fn update_aggressive_alias_for_recursive() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 2 packages to latest compatible versions
 [UPDATING] log v0.1.0 -> v0.1.1
 [UPDATING] serde v0.2.1 -> v0.2.2
 ",
@@ -694,6 +702,7 @@ fn update_precise_first_run() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 1 package to latest compatible version
 [DOWNGRADING] serde v0.2.1 -> v0.2.0
 ",
         )
@@ -848,6 +857,7 @@ fn update_precise_first_run() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 0 packages to latest compatible versions
 ",
         )
         .run();
@@ -926,6 +936,7 @@ fn dry_run_update() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 1 package to latest compatible version
 [UPDATING] serde v0.1.0 -> v0.1.1
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 [WARNING] not updating lockfile due to dry run
@@ -1013,6 +1024,7 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
         .with_stderr(
             "\
 [UPDATING] [..] index
+[LOCKING] 1 package to latest compatible version
 [UPDATING] bar v0.1.0+extra-stuff.0 -> v0.1.1+extra-stuff.1
 ",
         )
@@ -1035,6 +1047,7 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
         .with_stderr(
             "\
 [UPDATING] [..] index
+[LOCKING] 1 package to latest compatible version
 [UPDATING] bar v0.1.1+extra-stuff.1 -> v0.1.3
 ",
         )
@@ -1126,6 +1139,7 @@ rustdns.workspace = true
     p.cargo("update -p rootcrate")
         .with_stderr(&format!(
             "\
+[LOCKING] 2 packages to latest compatible versions
 [UPDATING] rootcrate v2.29.8 ([CWD]/rootcrate) -> v2.29.81
 [UPDATING] subcrate v2.29.8 ([CWD]/subcrate) -> v2.29.81",
         ))
@@ -1217,6 +1231,7 @@ rustdns.workspace = true
     p.cargo("update -p crate2")
         .with_stderr(&format!(
             "\
+[LOCKING] 2 packages to latest compatible versions
 [UPDATING] crate1 v2.29.8 ([CWD]/crate1) -> v2.29.81
 [UPDATING] crate2 v2.29.8 ([CWD]/crate2) -> v2.29.81",
         ))
@@ -1308,6 +1323,7 @@ rustdns.workspace = true
     p.cargo("update --workspace")
         .with_stderr(
             "\
+[LOCKING] 2 packages to latest compatible versions
 [UPDATING] crate1 v2.29.8 ([CWD]/crate1) -> v2.29.81
 [UPDATING] crate2 v2.29.8 ([CWD]/crate2) -> v2.29.81",
         )
@@ -1363,6 +1379,7 @@ fn update_precise_git_revisions() {
         .with_stderr(format!(
             "\
 [UPDATING] git repository `{url}`
+[LOCKING] 1 package to latest compatible version
 [UPDATING] git v0.5.0 ([..]) -> #{}",
             &tag_commit_id[..8],
         ))
@@ -1376,6 +1393,7 @@ fn update_precise_git_revisions() {
         .with_stderr(format!(
             "\
 [UPDATING] git repository `{url}`
+[LOCKING] 1 package to latest compatible version
 [UPDATING] git v0.5.0 ([..]) -> #{short_id}",
         ))
         .run();
@@ -1390,6 +1408,7 @@ fn update_precise_git_revisions() {
         .with_stderr(format!(
             "\
 [UPDATING] git repository `{url}`
+[LOCKING] 1 package to latest compatible version
 [UPDATING] git v0.5.0 ([..]) -> #{}",
             &tag_commit_id[..8],
         ))
@@ -1408,6 +1427,7 @@ fn update_precise_git_revisions() {
         .with_stderr(format!(
             "\
 [UPDATING] git repository `{url}`
+[LOCKING] 1 package to latest compatible version
 [UPDATING] git v0.5.0 ([..]) -> #{}",
             &head_id[..8],
         ))
@@ -1467,6 +1487,7 @@ Caused by:
 [UPDATING] `dummy-registry` index
 [WARNING] selected package `bar@0.1.1` was yanked by the author
 [NOTE] if possible, try a compatible non-yanked version
+[LOCKING] 1 package to latest compatible version
 [UPDATING] bar v0.1.0 -> v0.1.1
 ",
         )
@@ -1510,6 +1531,7 @@ fn precise_yanked_multiple_presence() {
 [UPDATING] `dummy-registry` index
 [WARNING] selected package `bar@0.1.1` was yanked by the author
 [NOTE] if possible, try a compatible non-yanked version
+[LOCKING] 1 package to latest compatible version
 [UPDATING] bar v0.1.0 -> v0.1.1
 ",
         )
@@ -1553,6 +1575,7 @@ fn report_behind() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
 [UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.0)
 [NOTE] pass `--verbose` to see 2 unchanged dependencies behind latest
 [WARNING] not updating lockfile due to dry run
@@ -1564,6 +1587,7 @@ fn report_behind() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
 [UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.0)
 [UNCHANGED] pre v1.0.0-alpha.0 (latest: v1.0.0-alpha.1)
 [UNCHANGED] two-ver v0.1.0 (latest: v0.2.0)
@@ -1579,6 +1603,7 @@ fn report_behind() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 0 packages to latest compatible versions
 [NOTE] pass `--verbose` to see 3 unchanged dependencies behind latest
 [WARNING] not updating lockfile due to dry run
 ",
@@ -1589,6 +1614,7 @@ fn report_behind() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 0 packages to latest compatible versions
 [UNCHANGED] breaking v0.1.1 (latest: v0.2.0)
 [UNCHANGED] pre v1.0.0-alpha.0 (latest: v1.0.0-alpha.1)
 [UNCHANGED] two-ver v0.1.0 (latest: v0.2.0)
@@ -1629,6 +1655,7 @@ fn update_with_missing_feature() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 0 packages to latest compatible versions
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
         )
@@ -1640,6 +1667,7 @@ fn update_with_missing_feature() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 1 package to latest compatible version
 [UPDATING] bar v0.1.0 -> v0.1.2
 ",
         )

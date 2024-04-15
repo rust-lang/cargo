@@ -560,6 +560,7 @@ fn override_adds_some_deps() {
             "\
 [UPDATING] git repository `file://[..]`
 [UPDATING] `dummy-registry` index
+[LOCKING] 0 packages to latest compatible versions
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
         )
@@ -568,6 +569,7 @@ fn override_adds_some_deps() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 0 packages to latest compatible versions
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
         )
@@ -901,6 +903,7 @@ fn update() {
             "\
 [UPDATING] `[..]` index
 [UPDATING] git repository `[..]`
+[LOCKING] 0 packages to latest compatible versions
 ",
         )
         .run();

@@ -2061,6 +2061,7 @@ fn update_unused_new_version() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
 [ADDING] bar v0.1.6 ([..]/bar)
 [REMOVING] bar v0.1.5
 ",
@@ -2073,6 +2074,7 @@ fn update_unused_new_version() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
 [ADDING] bar v0.1.6 ([..]/bar)
 [REMOVING] bar v0.1.5
 ",
@@ -2542,6 +2544,7 @@ fn can_update_with_alt_reg() {
             "\
 [UPDATING] `alternative` index
 [UPDATING] `dummy-registry` index
+[LOCKING] 0 packages to latest compatible versions
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 ",
         )

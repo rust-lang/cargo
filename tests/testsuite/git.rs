@@ -616,7 +616,10 @@ fn recompilation() {
 
     p.cargo("update")
         .with_stderr(&format!(
-            "[UPDATING] git repository `{}`",
+            "\
+[UPDATING] git repository `{}`
+[LOCKING] 0 packages to latest compatible versions
+",
             git_project.url()
         ))
         .run();
@@ -636,9 +639,11 @@ fn recompilation() {
     // Update the dependency and carry on!
     p.cargo("update")
         .with_stderr(&format!(
-            "[UPDATING] git repository `{}`\n\
-             [UPDATING] bar v0.5.0 ([..]) -> #[..]\n\
-             ",
+            "\
+[UPDATING] git repository `{}`
+[LOCKING] 1 package to latest compatible version
+[UPDATING] bar v0.5.0 ([..]) -> #[..]
+",
             git_project.url()
         ))
         .run();
@@ -766,6 +771,7 @@ fn update_with_shared_deps() {
         .with_stderr(
             "\
 [UPDATING] git repository [..]
+[LOCKING] 1 package to latest compatible version
 [UPDATING] bar v0.5.0 [..]
 ",
         )
@@ -791,16 +797,22 @@ Caused by:
     println!("bar precise update");
     p.cargo("update bar --precise")
         .arg(&old_head.to_string())
-        .with_stderr("[UPDATING] bar v0.5.0 [..]")
+        .with_stderr(
+            "\
+[LOCKING] 1 package to latest compatible version
+[UPDATING] bar v0.5.0 [..]",
+        )
         .run();
 
     // Updating recursively should, however, update the repo.
     println!("dep1 recursive update");
     p.cargo("update dep1 --recursive")
         .with_stderr(&format!(
-            "[UPDATING] git repository `{}`\n\
-             [UPDATING] bar v0.5.0 ([..]) -> #[..]\n\
-             ",
+            "\
+[UPDATING] git repository `{}`
+[LOCKING] 1 package to latest compatible version
+[UPDATING] bar v0.5.0 ([..]) -> #[..]
+",
             git_project.url()
         ))
         .run();
@@ -822,7 +834,10 @@ Caused by:
     // We should be able to update transitive deps
     p.cargo("update bar")
         .with_stderr(&format!(
-            "[UPDATING] git repository `{}`",
+            "\
+[UPDATING] git repository `{}`
+[LOCKING] 0 packages to latest compatible versions
+",
             git_project.url()
         ))
         .run();
@@ -1223,9 +1238,11 @@ fn two_deps_only_update_one() {
 
     p.cargo("update dep1")
         .with_stderr(&format!(
-            "[UPDATING] git repository `{}`\n\
-             [UPDATING] dep1 v0.5.0 ([..]) -> #[..]\n\
-             ",
+            "\
+[UPDATING] git repository `{}`
+[LOCKING] 1 package to latest compatible version
+[UPDATING] dep1 v0.5.0 ([..]) -> #[..]
+",
             git1.url()
         ))
         .run();
@@ -1411,10 +1428,12 @@ fn dep_with_changed_submodule() {
     p.cargo("update")
         .with_stderr("")
         .with_stderr(&format!(
-            "[UPDATING] git repository `{}`\n\
-             [UPDATING] git submodule `file://[..]/dep3`\n\
-             [UPDATING] dep1 v0.5.0 ([..]) -> #[..]\n\
-             ",
+            "\
+[UPDATING] git repository `{}`
+[UPDATING] git submodule `file://[..]/dep3`
+[LOCKING] 1 package to latest compatible version
+[UPDATING] dep1 v0.5.0 ([..]) -> #[..]
+",
             git_project.url()
         ))
         .run();
@@ -1993,7 +2012,13 @@ fn update_one_dep_in_repo_with_many_deps() {
 
     p.cargo("generate-lockfile").run();
     p.cargo("update bar")
-        .with_stderr(&format!("[UPDATING] git repository `{}`", bar.url()))
+        .with_stderr(&format!(
+            "\
+[UPDATING] git repository `{}`
+[LOCKING] 0 packages to latest compatible versions
+",
+            bar.url()
+        ))
         .run();
 }
 

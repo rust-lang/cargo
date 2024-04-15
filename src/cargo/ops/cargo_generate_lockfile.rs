@@ -358,8 +358,12 @@ fn print_lockfile_updates(
     resolve: &Resolve,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<()> {
+    let diff = PackageDiff::diff(&previous_resolve, &resolve);
+    let num_pkgs: usize = diff.iter().map(|d| d.added.len()).sum();
+    status_locking(ws, num_pkgs)?;
+
     let mut unchanged_behind = 0;
-    for diff in PackageDiff::diff(&previous_resolve, &resolve) {
+    for diff in diff {
         fn format_latest(version: semver::Version) -> String {
             let warn = style::WARN;
             format!(" {warn}(latest: v{version}){warn:#}")
