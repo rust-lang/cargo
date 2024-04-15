@@ -192,10 +192,13 @@ fn env_applied_to_target_info_discovery_rustc() {
             "src/main.rs",
             r#"
             fn main() {
-                let mut args = std::env::args().skip(1);
+                let mut cmd = std::env::args().skip(1).collect::<Vec<_>>();
+                // This will be invoked twice (with `-vV` and with all the `--print`),
+                // make sure the environment variable exists each time.
                 let env_test = std::env::var("ENV_TEST").unwrap();
                 eprintln!("WRAPPER ENV_TEST:{env_test}");
-                let status = std::process::Command::new(&args.next().unwrap())
+                let (prog, args) = cmd.split_first().unwrap();
+                let status = std::process::Command::new(prog)
                     .args(args).status().unwrap();
                 std::process::exit(status.code().unwrap_or(1));
             }

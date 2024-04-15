@@ -5232,6 +5232,30 @@ fn rustc_wrapper_precendence() {
 }
 
 #[cargo_test]
+fn rustc_wrapper_queries() {
+    // Check that the invocations querying rustc for information are done with the wrapper.
+    let p = project().file("src/lib.rs", "").build();
+    let wrapper = tools::echo_wrapper();
+    p.cargo("build")
+        .env("CARGO_LOG", "cargo::util::rustc=debug")
+        .env("RUSTC_WRAPPER", &wrapper)
+        .with_stderr_contains("[..]running [..]rustc-echo-wrapper[EXE] rustc -vV[..]")
+        .with_stderr_contains(
+            "[..]running [..]rustc-echo-wrapper[EXE] rustc - --crate-name ___ --print[..]",
+        )
+        .run();
+    p.build_dir().rm_rf();
+    p.cargo("build")
+        .env("CARGO_LOG", "cargo::util::rustc=debug")
+        .env("RUSTC_WORKSPACE_WRAPPER", &wrapper)
+        .with_stderr_contains("[..]running [..]rustc-echo-wrapper[EXE] rustc -vV[..]")
+        .with_stderr_contains(
+            "[..]running [..]rustc-echo-wrapper[EXE] rustc - --crate-name ___ --print[..]",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn rustc_wrapper_relative() {
     Package::new("bar", "1.0.0").publish();
     let p = project()
