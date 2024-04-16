@@ -147,6 +147,7 @@ pub fn resolve_ws_with_opts<'gctx>(
             specs,
             add_patches,
         )?;
+        ops::print_lockfile_changes(ws, None, &resolved_with_overrides, &mut registry)?;
         (resolve, resolved_with_overrides)
     } else if ws.require_optional_deps() {
         // First, resolve the root_package's *listed* dependencies, as well as
@@ -205,6 +206,8 @@ pub fn resolve_ws_with_opts<'gctx>(
             specs,
             add_patches,
         )?;
+        // Skipping `print_lockfile_changes` as there are cases where this prints irrelevant
+        // information
         (resolve, resolved_with_overrides)
     };
 
