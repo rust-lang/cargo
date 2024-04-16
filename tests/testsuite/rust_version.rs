@@ -158,6 +158,31 @@ fn rust_version_bad_nonsense() {
 }
 
 #[cargo_test]
+fn rust_version_older_than_edition() {
+    project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            authors = []
+            rust-version = "1.1"
+            edition = "2018"
+            [[bin]]
+            name = "foo"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build()
+        .cargo("check")
+        .with_status(101)
+        .with_stderr_contains("  rust-version 1.1 is older than first version (1.31.0) required by the specified edition (2018)",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn rust_version_too_high() {
     let p = project()
         .file(
@@ -673,31 +698,6 @@ See https://github.com/rust-lang/cargo/issues/9930 for more information about th
 [LOCKING] 1 package to latest compatible version
 [UPDATING] bar v1.5.0 -> v1.6.0
 ",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn rust_version_older_than_edition() {
-    project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.0.1"
-            authors = []
-            rust-version = "1.1"
-            edition = "2018"
-            [[bin]]
-            name = "foo"
-        "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build()
-        .cargo("check")
-        .with_status(101)
-        .with_stderr_contains("  rust-version 1.1 is older than first version (1.31.0) required by the specified edition (2018)",
         )
         .run();
 }
