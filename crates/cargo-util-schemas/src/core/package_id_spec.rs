@@ -318,6 +318,7 @@ enum ErrorKind {
 
 #[cfg(test)]
 mod tests {
+    use super::ErrorKind;
     use super::PackageIdSpec;
     use crate::core::{GitReference, SourceKind};
     use url::Url;
@@ -602,31 +603,53 @@ mod tests {
 
     #[test]
     fn bad_parsing() {
-        assert!(PackageIdSpec::parse("baz:").is_err());
-        assert!(PackageIdSpec::parse("baz:*").is_err());
-        assert!(PackageIdSpec::parse("baz@").is_err());
-        assert!(PackageIdSpec::parse("baz@*").is_err());
-        assert!(PackageIdSpec::parse("baz@^1.0").is_err());
-        assert!(PackageIdSpec::parse("https://baz:1.0").is_err());
-        assert!(PackageIdSpec::parse("https://#baz:1.0").is_err());
-        assert!(
-            PackageIdSpec::parse("foobar+https://github.com/rust-lang/crates.io-index").is_err()
+        macro_rules! err {
+            ($spec:expr, $expected:pat) => {
+                let err = PackageIdSpec::parse($spec).unwrap_err();
+                let kind = err.0;
+                assert!(
+                    matches!(kind, $expected),
+                    "`{}` parse error mismatch, got {kind:?}",
+                    $spec
+                );
+            };
+        }
+
+        err!("baz:", ErrorKind::PartialVersion(_));
+        err!("baz:*", ErrorKind::PartialVersion(_));
+        err!("baz@", ErrorKind::PartialVersion(_));
+        err!("baz@*", ErrorKind::PartialVersion(_));
+        err!("baz@^1.0", ErrorKind::PartialVersion(_));
+        err!("https://baz:1.0", ErrorKind::PartialVersion(_));
+        err!("https://#baz:1.0", ErrorKind::PartialVersion(_));
+        err!(
+            "foobar+https://github.com/rust-lang/crates.io-index",
+            ErrorKind::UnsupportedProtocol(_)
         );
-        assert!(PackageIdSpec::parse("path+https://github.com/rust-lang/crates.io-index").is_err());
+        err!(
+            "path+https://github.com/rust-lang/crates.io-index",
+            ErrorKind::UnsupportedPathPlusScheme(_)
+        );
 
         // Only `git+` can use `?`
-        assert!(PackageIdSpec::parse("file:///path/to/my/project/foo?branch=dev").is_err());
-        assert!(PackageIdSpec::parse("path+file:///path/to/my/project/foo?branch=dev").is_err());
-        assert!(PackageIdSpec::parse(
-            "registry+https://github.com/rust-lang/cargo#0.52.0?branch=dev"
-        )
-        .is_err());
-        assert!(PackageIdSpec::parse(
-            "sparse+https://github.com/rust-lang/cargo#0.52.0?branch=dev"
-        )
-        .is_err());
-        assert!(PackageIdSpec::parse("@1.2.3").is_err());
-        assert!(PackageIdSpec::parse("registry+https://github.com").is_err());
-        assert!(PackageIdSpec::parse("https://crates.io/1foo#1.2.3").is_err())
+        err!(
+            "file:///path/to/my/project/foo?branch=dev",
+            ErrorKind::UnexpectedQueryString(_)
+        );
+        err!(
+            "path+file:///path/to/my/project/foo?branch=dev",
+            ErrorKind::UnexpectedQueryString(_)
+        );
+        err!(
+            "registry+https://github.com/rust-lang/cargo?branch=dev#0.52.0",
+            ErrorKind::UnexpectedQueryString(_)
+        );
+        err!(
+            "sparse+https://github.com/rust-lang/cargo?branch=dev#0.52.0",
+            ErrorKind::UnexpectedQueryString(_)
+        );
+        err!("@1.2.3", ErrorKind::NameValidation(_));
+        err!("registry+https://github.com", ErrorKind::NameValidation(_));
+        err!("https://crates.io/1foo#1.2.3", ErrorKind::NameValidation(_));
     }
 }
