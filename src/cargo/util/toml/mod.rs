@@ -935,40 +935,10 @@ fn to_real_manifest(
     };
 
     let package_name = match &original_toml.package {
-        Some(package) => {
-            package.clone().name
-        }
-        None => {
-            bail!("no `package` section found");
-        }
+        Some(package) => package.clone().name,
+        None => bail!("no `package` section found"),
     };
 
-    // let original_package = match (&original_toml.package, &original_toml.project) {
-    //     (Some(_), Some(project)) => {
-    //         bail!(format!(
-    //             "manifest at `{}` contains both `project` and `package`",
-    //             package_root.display()
-    //         ));
-    //         // warnings.push(format!(
-    //         //     "manifest at `{}` contains both `project` and `package`, \
-    //         //         this could become a hard error in the future",
-    //         //     package_root.display()
-    //         // ));
-    //         project.clone()
-    //     }
-    //     (Some(package), None) => package.clone(),
-    //     (None, Some(project)) => {
-    //         warnings.push(format!(
-    //             "manifest at `{}` contains `[project]` instead of `[package]`, \
-    //                             this could become a hard error in the future",
-    //             package_root.display()
-    //         ));
-    //         project.clone()
-    //     }
-    //     (None, None) => bail!("no `package` section found"),
-    // };
-
-    // let package_name = &original_package.name;
     if package_name.contains(':') {
         features.require(Feature::open_namespaces())?;
     }
