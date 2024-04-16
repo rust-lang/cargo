@@ -1,4 +1,5 @@
 use annotate_snippets::{Level, Snippet};
+use cargo_util_schemas::core::PatchInfo;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -28,6 +29,7 @@ use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, Worksp
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
+use crate::util::CanonicalUrl;
 use crate::util::{self, context::ConfigRelativePath, GlobalContext, IntoUrl, OptVersionReq};
 
 mod embedded;
@@ -1326,7 +1328,7 @@ fn to_real_manifest(
         )?;
     }
     let replace = replace(&resolved_toml, &mut manifest_ctx)?;
-    let patch = patch(&resolved_toml, &mut manifest_ctx)?;
+    let patch = patch(&resolved_toml, &mut manifest_ctx, &features)?;
 
     {
         let mut names_sources = BTreeMap::new();
@@ -1585,7 +1587,7 @@ fn to_virtual_manifest(
         };
         (
             replace(&original_toml, &mut manifest_ctx)?,
-            patch(&original_toml, &mut manifest_ctx)?,
+            patch(&original_toml, &mut manifest_ctx, &features)?,
         )
     };
     if let Some(profiles) = &original_toml.profile {
@@ -1664,7 +1666,7 @@ fn gather_dependencies(
 
     for (n, v) in dependencies.iter() {
         let resolved = v.resolved().expect("previously resolved");
-        let dep = dep_to_dependency(&resolved, n, manifest_ctx, kind)?;
+        let dep = dep_to_dependency(&resolved, n, manifest_ctx, kind, None)?;
         manifest_ctx.deps.push(dep);
     }
     Ok(())
@@ -1698,7 +1700,7 @@ fn replace(
             );
         }
 
-        let mut dep = dep_to_dependency(replacement, spec.name(), manifest_ctx, None)?;
+        let mut dep = dep_to_dependency(replacement, spec.name(), manifest_ctx, None, None)?;
         let version = spec.version().ok_or_else(|| {
             anyhow!(
                 "replacements must specify a version \
@@ -1721,7 +1723,9 @@ fn replace(
 fn patch(
     me: &manifest::TomlManifest,
     manifest_ctx: &mut ManifestContext<'_, '_>,
+    features: &Features,
 ) -> CargoResult<HashMap<Url, Vec<Dependency>>> {
+    let patch_files_enabled = features.require(Feature::patch_files()).is_ok();
     let mut patch = HashMap::new();
     for (toml_url, deps) in me.patch.iter().flatten() {
         let url = match &toml_url[..] {
@@ -1738,7 +1742,7 @@ fn patch(
                 })?,
         };
         patch.insert(
-            url,
+            url.clone(),
             deps.iter()
                 .map(|(name, dep)| {
                     unused_dep_keys(
@@ -1747,7 +1751,13 @@ fn patch(
                         dep.unused_keys(),
                         &mut manifest_ctx.warnings,
                     );
-                    dep_to_dependency(dep, name, manifest_ctx, None)
+                    dep_to_dependency(
+                        dep,
+                        name,
+                        manifest_ctx,
+                        None,
+                        Some((&url, patch_files_enabled)),
+                    )
                 })
                 .collect::<CargoResult<Vec<_>>>()?,
         );
@@ -1755,6 +1765,7 @@ fn patch(
     Ok(patch)
 }
 
+/// Transforms a `patch` entry to a [`Dependency`].
 pub(crate) fn to_dependency<P: ResolveToPath + Clone>(
     dep: &manifest::TomlDependency<P>,
     name: &str,
@@ -1764,20 +1775,18 @@ pub(crate) fn to_dependency<P: ResolveToPath + Clone>(
     platform: Option<Platform>,
     root: &Path,
     kind: Option<DepKind>,
+    patch_source_url: &Url,
 ) -> CargoResult<Dependency> {
-    dep_to_dependency(
-        dep,
-        name,
-        &mut ManifestContext {
-            deps: &mut Vec::new(),
-            source_id,
-            gctx,
-            warnings,
-            platform,
-            root,
-        },
-        kind,
-    )
+    let manifest_ctx = &mut ManifestContext {
+        deps: &mut Vec::new(),
+        source_id,
+        gctx,
+        warnings,
+        platform,
+        root,
+    };
+    let patch_source_url = Some((patch_source_url, gctx.cli_unstable().patch_files));
+    dep_to_dependency(dep, name, manifest_ctx, kind, patch_source_url)
 }
 
 fn dep_to_dependency<P: ResolveToPath + Clone>(
@@ -1785,6 +1794,7 @@ fn dep_to_dependency<P: ResolveToPath + Clone>(
     name: &str,
     manifest_ctx: &mut ManifestContext<'_, '_>,
     kind: Option<DepKind>,
+    patch_source_url: Option<(&Url, bool)>,
 ) -> CargoResult<Dependency> {
     match *orig {
         manifest::TomlDependency::Simple(ref version) => detailed_dep_to_dependency(
@@ -1795,9 +1805,10 @@ fn dep_to_dependency<P: ResolveToPath + Clone>(
             name,
             manifest_ctx,
             kind,
+            patch_source_url,
         ),
         manifest::TomlDependency::Detailed(ref details) => {
-            detailed_dep_to_dependency(details, name, manifest_ctx, kind)
+            detailed_dep_to_dependency(details, name, manifest_ctx, kind, patch_source_url)
         }
     }
 }
@@ -1807,6 +1818,7 @@ fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
     name_in_toml: &str,
     manifest_ctx: &mut ManifestContext<'_, '_>,
     kind: Option<DepKind>,
+    patch_source_url: Option<(&Url, bool)>,
 ) -> CargoResult<Dependency> {
     if orig.version.is_none() && orig.path.is_none() && orig.git.is_none() {
         anyhow::bail!(
@@ -1942,6 +1954,11 @@ fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
             )
         }
     }
+
+    if let Some(source_id) = patched_source_id(orig, manifest_ctx, &dep, patch_source_url)? {
+        dep.set_source_id(source_id);
+    }
+
     Ok(dep)
 }
 
@@ -2027,6 +2044,88 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
             SourceId::for_registry(&url)
         }
         (None, None, None, None) => SourceId::crates_io(manifest_ctx.gctx),
+    }
+}
+
+// Handle `patches` field for `[patch]` table, if any.
+fn patched_source_id<P: ResolveToPath + Clone>(
+    orig: &manifest::TomlDetailedDependency<P>,
+    manifest_ctx: &mut ManifestContext<'_, '_>,
+    dep: &Dependency,
+    patch_source_url: Option<(&Url, bool)>,
+) -> CargoResult<Option<SourceId>> {
+    let name_in_toml = dep.name_in_toml().as_str();
+    let message = "see https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#patch-files about the status of this feature.";
+    match (patch_source_url, orig.patches.as_ref()) {
+        (_, None) => {
+            // not a SourceKind::Patched dep.
+            Ok(None)
+        }
+        (None, Some(_)) => {
+            let kind = dep.kind().kind_table();
+            manifest_ctx.warnings.push(format!(
+                "unused manifest key: {kind}.{name_in_toml}.patches; {message}"
+            ));
+            Ok(None)
+        }
+        (Some((url, false)), Some(_)) => {
+            manifest_ctx.warnings.push(format!(
+                "ignoring `patches` on patch for `{name_in_toml}` in `{url}`; {message}"
+            ));
+            Ok(None)
+        }
+        (Some((url, true)), Some(patches)) => {
+            let source_id = dep.source_id();
+            if !source_id.is_registry() {
+                bail!(
+                    "patch for `{name_in_toml}` in `{url}` requires a registry source \
+                    when patching with patch files"
+                );
+            }
+            if &CanonicalUrl::new(url)? != source_id.canonical_url() {
+                bail!(
+                    "patch for `{name_in_toml}` in `{url}` must refer to the same source \
+                    when patching with patch files"
+                )
+            }
+            let version = match dep.version_req().locked_version() {
+                Some(v) => Some(v.to_owned()),
+                None if dep.version_req().is_exact() => {
+                    // Remove the `=` exact operator.
+                    orig.version
+                        .as_deref()
+                        .map(|v| v[1..].trim().parse().ok())
+                        .flatten()
+                }
+                None => None,
+            };
+            let Some(version) = version else {
+                bail!(
+                    "patch for `{name_in_toml}` in `{url}` requires an exact version \
+                    when patching with patch files"
+                );
+            };
+            let patches: Vec<_> = patches
+                .iter()
+                .map(|path| {
+                    let path = path.resolve(manifest_ctx.gctx);
+                    let path = manifest_ctx.root.join(path);
+                    // keep paths inside workspace relative to workspace, otherwise absolute.
+                    path.strip_prefix(manifest_ctx.gctx.cwd())
+                        .map(Into::into)
+                        .unwrap_or_else(|_| paths::normalize_path(&path))
+                })
+                .collect();
+            if patches.is_empty() {
+                bail!(
+                    "patch for `{name_in_toml}` in `{url}` requires at least one patch file \
+                    when patching with patch files"
+                );
+            }
+            let pkg_name = dep.package_name().to_string();
+            let patch_info = PatchInfo::new(pkg_name, version.to_string(), patches);
+            SourceId::for_patches(source_id, patch_info).map(Some)
+        }
     }
 }
 
