@@ -268,7 +268,6 @@ fn resolve_toml(
     let mut resolved_toml = manifest::TomlManifest {
         cargo_features: original_toml.cargo_features.clone(),
         package: None,
-        project: None,
         profile: original_toml.profile.clone(),
         lib: original_toml.lib.clone(),
         bin: original_toml.bin.clone(),
@@ -935,28 +934,41 @@ fn to_real_manifest(
         );
     };
 
-    let original_package = match (&original_toml.package, &original_toml.project) {
-        (Some(_), Some(project)) => {
-            warnings.push(format!(
-                "manifest at `{}` contains both `project` and `package`, \
-                    this could become a hard error in the future",
-                package_root.display()
-            ));
-            project.clone()
+    let package_name = match &original_toml.package {
+        Some(package) => {
+            package.clone().name
         }
-        (Some(package), None) => package.clone(),
-        (None, Some(project)) => {
-            warnings.push(format!(
-                "manifest at `{}` contains `[project]` instead of `[package]`, \
-                                this could become a hard error in the future",
-                package_root.display()
-            ));
-            project.clone()
+        None => {
+            bail!("no `package` section found");
         }
-        (None, None) => bail!("no `package` section found"),
     };
 
-    let package_name = &original_package.name;
+    // let original_package = match (&original_toml.package, &original_toml.project) {
+    //     (Some(_), Some(project)) => {
+    //         bail!(format!(
+    //             "manifest at `{}` contains both `project` and `package`",
+    //             package_root.display()
+    //         ));
+    //         // warnings.push(format!(
+    //         //     "manifest at `{}` contains both `project` and `package`, \
+    //         //         this could become a hard error in the future",
+    //         //     package_root.display()
+    //         // ));
+    //         project.clone()
+    //     }
+    //     (Some(package), None) => package.clone(),
+    //     (None, Some(project)) => {
+    //         warnings.push(format!(
+    //             "manifest at `{}` contains `[project]` instead of `[package]`, \
+    //                             this could become a hard error in the future",
+    //             package_root.display()
+    //         ));
+    //         project.clone()
+    //     }
+    //     (None, None) => bail!("no `package` section found"),
+    // };
+
+    // let package_name = &original_package.name;
     if package_name.contains(':') {
         features.require(Feature::open_namespaces())?;
     }
@@ -1068,7 +1080,7 @@ fn to_real_manifest(
     let targets = to_targets(
         &features,
         &resolved_toml,
-        package_name,
+        &package_name,
         package_root,
         edition,
         &resolved_package.build,
@@ -1109,7 +1121,7 @@ fn to_real_manifest(
 
     validate_dependencies(original_toml.dependencies.as_ref(), None, None, warnings)?;
     if original_toml.dev_dependencies.is_some() && original_toml.dev_dependencies2.is_some() {
-        warn_on_deprecated("dev-dependencies", package_name, "package", warnings);
+        warn_on_deprecated("dev-dependencies", &package_name, "package", warnings);
     }
     validate_dependencies(
         original_toml.dev_dependencies(),
@@ -1118,7 +1130,7 @@ fn to_real_manifest(
         warnings,
     )?;
     if original_toml.build_dependencies.is_some() && original_toml.build_dependencies2.is_some() {
-        warn_on_deprecated("build-dependencies", package_name, "package", warnings);
+        warn_on_deprecated("build-dependencies", &package_name, "package", warnings);
     }
     validate_dependencies(
         original_toml.build_dependencies(),
@@ -2444,7 +2456,6 @@ fn prepare_toml_for_publish(
     let all = |_d: &manifest::TomlDependency| true;
     let mut manifest = manifest::TomlManifest {
         package: Some(package),
-        project: None,
         profile: me.profile.clone(),
         lib,
         bin,

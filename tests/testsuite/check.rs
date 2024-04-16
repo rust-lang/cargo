@@ -980,37 +980,6 @@ fn rustc_workspace_wrapper_excludes_published_deps() {
 }
 
 #[cargo_test]
-fn warn_manifest_package_and_project() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                edition = "2015"
-
-                [project]
-                name = "foo"
-                version = "0.0.1"
-                edition = "2015"
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("check")
-        .with_stderr(
-            "\
-[WARNING] manifest at `[CWD]` contains both `project` and `package`, this could become a hard error in the future
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn git_manifest_package_and_project() {
     let p = project();
     let git_project = git::new("bar", |p| {
@@ -1066,39 +1035,13 @@ fn git_manifest_package_and_project() {
 }
 
 #[cargo_test]
-fn warn_manifest_with_project() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [project]
-                name = "foo"
-                version = "0.0.1"
-                edition = "2015"
-            "#,
-        )
-        .file("src/main.rs", "fn main() {}")
-        .build();
-
-    p.cargo("check")
-        .with_stderr(
-            "\
-[WARNING] manifest at `[CWD]` contains `[project]` instead of `[package]`, this could become a hard error in the future
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn git_manifest_with_project() {
     let p = project();
     let git_project = git::new("bar", |p| {
         p.file(
             "Cargo.toml",
             r#"
-            [project]
+            [package]
             name = "bar"
             version = "0.0.1"
             edition = "2015"

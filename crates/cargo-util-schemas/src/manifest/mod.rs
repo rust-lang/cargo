@@ -32,7 +32,6 @@ pub struct TomlManifest {
     // when adding new fields, be sure to check whether `requires_package` should disallow them
     pub cargo_features: Option<Vec<String>>,
     pub package: Option<Box<TomlPackage>>,
-    pub project: Option<Box<TomlPackage>>,
     pub profile: Option<TomlProfiles>,
     pub lib: Option<TomlLibTarget>,
     pub bin: Option<Vec<TomlBinTarget>>,
@@ -87,7 +86,7 @@ impl TomlManifest {
     }
 
     pub fn package(&self) -> Option<&Box<TomlPackage>> {
-        self.package.as_ref().or(self.project.as_ref())
+        self.package.as_ref()
     }
 
     pub fn dev_dependencies(&self) -> Option<&BTreeMap<PackageName, InheritableDependency>> {

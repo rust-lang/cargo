@@ -62,7 +62,7 @@ fn explicit_version_with_asymmetric() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []

@@ -2864,7 +2864,7 @@ You may press ctrl-c [..]
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "bar"
                 version = "0.0.1"
                 edition = "2015"

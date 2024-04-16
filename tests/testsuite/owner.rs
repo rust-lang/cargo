@@ -103,7 +103,7 @@ fn simple_add_with_asymmetric() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []
@@ -170,7 +170,7 @@ fn simple_remove_with_asymmetric() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "foo"
                 version = "0.0.1"
                 authors = []

@@ -1462,7 +1462,7 @@ fn sparse_lockfile() {
         .file(
             "Cargo.toml",
             r#"
-                [project]
+                [package]
                 name = "a"
                 version = "0.5.0"
                 authors = []
