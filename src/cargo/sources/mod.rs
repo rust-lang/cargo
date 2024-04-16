@@ -40,6 +40,7 @@ pub mod config;
 pub mod directory;
 pub mod git;
 pub mod overlay;
+pub mod patched;
 pub mod path;
 pub mod registry;
 pub mod replaced;
