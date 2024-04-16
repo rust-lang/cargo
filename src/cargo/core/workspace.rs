@@ -484,7 +484,7 @@ impl<'gctx> Workspace<'gctx> {
                     })?,
             };
             patch.insert(
-                url,
+                url.clone(),
                 deps.iter()
                     .map(|(name, dep)| {
                         crate::util::toml::to_dependency(
@@ -498,6 +498,7 @@ impl<'gctx> Workspace<'gctx> {
                             // any relative paths are resolved before they'd be joined with root.
                             Path::new("unused-relative-path"),
                             /* kind */ None,
+                            &url,
                         )
                     })
                     .collect::<CargoResult<Vec<_>>>()?,
