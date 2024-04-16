@@ -369,6 +369,24 @@ fn dependency_rust_version_older_and_newer_than_package() {
         .file("src/main.rs", "fn main(){}")
         .build();
 
+    p.cargo("check")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
+[ADDING] bar v1.5.0 (latest: v1.6.0)
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.5.0 (registry `dummy-registry`)
+[CHECKING] bar v1.5.0
+[CHECKING] [..]
+[FINISHED] [..]
+",
+        )
+        .run();
+
+    std::fs::remove_file(p.root().join("Cargo.lock")).unwrap();
     p.cargo("check --ignore-rust-version")
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
@@ -380,15 +398,6 @@ fn dependency_rust_version_older_and_newer_than_package() {
 [DOWNLOADED] bar v1.6.0 (registry `dummy-registry`)
 [CHECKING] bar v1.6.0
 [CHECKING] [..]
-[FINISHED] [..]
-",
-        )
-        .run();
-    p.cargo("check")
-        .arg("-Zmsrv-policy")
-        .masquerade_as_nightly_cargo(&["msrv-policy"])
-        .with_stderr(
-            "\
 [FINISHED] [..]
 ",
         )
