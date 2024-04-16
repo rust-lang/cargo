@@ -935,26 +935,9 @@ fn to_real_manifest(
         );
     };
 
-    let original_package = match (&original_toml.package, &original_toml.project) {
-        (Some(_), Some(project)) => {
-            warnings.push(format!(
-                "manifest at `{}` contains both `project` and `package`, \
-                    this could become a hard error in the future",
-                package_root.display()
-            ));
-            project.clone()
-        }
-        (Some(package), None) => package.clone(),
-        (None, Some(project)) => {
-            warnings.push(format!(
-                "manifest at `{}` contains `[project]` instead of `[package]`, \
-                                this could become a hard error in the future",
-                package_root.display()
-            ));
-            project.clone()
-        }
-        (None, None) => bail!("no `package` section found"),
-    };
+    let original_package = original_toml
+        .package()
+        .ok_or_else(|| anyhow::format_err!("no `package` section found"))?;
 
     let package_name = &original_package.name;
     if package_name.contains(':') {
@@ -1042,6 +1025,16 @@ fn to_real_manifest(
             "edition {} should be gated",
             edition
         )));
+    }
+
+    if original_toml.project.is_some() {
+        if Edition::Edition2024 <= edition {
+            anyhow::bail!(
+                "`[project]` is not supported as of the 2024 Edition, please use `[package]`"
+            );
+        } else {
+            warnings.push(format!("`[project]` is deprecated in favor of `[package]`"));
+        }
     }
 
     if resolved_package.metabuild.is_some() {

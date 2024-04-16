@@ -53,7 +53,8 @@ use tracing::{debug, trace, warn};
 use crate::core::compiler::RustcTargetData;
 use crate::core::resolver::features::{DiffMap, FeatureOpts, FeatureResolver, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveBehavior};
-use crate::core::{Edition, MaybePackage, PackageId, Workspace};
+use crate::core::PackageIdSpecQuery as _;
+use crate::core::{Edition, MaybePackage, Package, PackageId, Workspace};
 use crate::ops::resolve::WorkspaceResolve;
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
@@ -87,11 +88,26 @@ pub struct FixOptions {
     pub broken_code: bool,
 }
 
-pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions) -> CargoResult<()> {
-    check_version_control(ws.gctx(), opts)?;
+pub fn fix(
+    gctx: &GlobalContext,
+    original_ws: &Workspace<'_>,
+    root_manifest: &Path,
+    opts: &mut FixOptions,
+) -> CargoResult<()> {
+    check_version_control(gctx, opts)?;
+
     if opts.edition {
-        check_resolver_change(ws, opts)?;
+        let specs = opts.compile_opts.spec.to_package_id_specs(&original_ws)?;
+        let members: Vec<&Package> = original_ws
+            .members()
+            .filter(|m| specs.iter().any(|spec| spec.matches(m.package_id())))
+            .collect();
+        migrate_manifests(original_ws, &members)?;
+
+        check_resolver_change(&original_ws, opts)?;
     }
+    let mut ws = Workspace::new(&root_manifest, gctx)?;
+    ws.set_honor_rust_version(original_ws.honor_rust_version());
 
     // Spin up our lock server, which our subprocesses will use to synchronize fixes.
     let lock_server = LockServer::new()?;
@@ -128,7 +144,7 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions) -> CargoResult<()> {
         server.configure(&mut wrapper);
     }
 
-    let rustc = ws.gctx().load_global_rustc(Some(ws))?;
+    let rustc = ws.gctx().load_global_rustc(Some(&ws))?;
     wrapper.arg(&rustc.path);
     // This is calling rustc in cargo fix-proxy-mode, so it also need to retry.
     // The argfile handling are located at `FixArgs::from_args`.
@@ -138,7 +154,7 @@ pub fn fix(ws: &Workspace<'_>, opts: &mut FixOptions) -> CargoResult<()> {
     // repeating build until there are no more changes to be applied
     opts.compile_opts.build_config.primary_unit_rustc = Some(wrapper);
 
-    ops::compile(ws, &opts.compile_opts)?;
+    ops::compile(&ws, &opts.compile_opts)?;
     Ok(())
 }
 
@@ -213,6 +229,62 @@ fn check_version_control(gctx: &GlobalContext, opts: &FixOptions) -> CargoResult
          ",
         files_list
     );
+}
+
+fn migrate_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
+    for pkg in pkgs {
+        let existing_edition = pkg.manifest().edition();
+        let prepare_for_edition = existing_edition.saturating_next();
+        if existing_edition == prepare_for_edition
+            || (!prepare_for_edition.is_stable() && !ws.gctx().nightly_features_allowed)
+        {
+            continue;
+        }
+        let file = pkg.manifest_path();
+        let file = file.strip_prefix(ws.root()).unwrap_or(file);
+        let file = file.display();
+        ws.gctx().shell().status(
+            "Migrating",
+            format!("{file} from {existing_edition} edition to {prepare_for_edition}"),
+        )?;
+
+        if Edition::Edition2024 <= prepare_for_edition {
+            let mut document = pkg.manifest().document().clone().into_mut();
+            let mut fixes = 0;
+
+            let root = document.as_table_mut();
+            if rename_table(root, "project", "package") {
+                fixes += 1;
+            }
+
+            if 0 < fixes {
+                let verb = if fixes == 1 { "fix" } else { "fixes" };
+                let msg = format!("{file} ({fixes} {verb})");
+                ws.gctx().shell().status("Fixed", msg)?;
+
+                let s = document.to_string();
+                let new_contents_bytes = s.as_bytes();
+                cargo_util::paths::write_atomic(pkg.manifest_path(), new_contents_bytes)?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn rename_table(parent: &mut dyn toml_edit::TableLike, old: &str, new: &str) -> bool {
+    let Some(old_key) = parent.key(old).cloned() else {
+        return false;
+    };
+
+    let project = parent.remove(old).expect("returned early");
+    if !parent.contains_key(new) {
+        parent.insert(new, project);
+        let mut new_key = parent.key_mut(new).expect("just inserted");
+        *new_key.dotted_decor_mut() = old_key.dotted_decor().clone();
+        *new_key.leaf_decor_mut() = old_key.leaf_decor().clone();
+    }
+    true
 }
 
 fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<()> {

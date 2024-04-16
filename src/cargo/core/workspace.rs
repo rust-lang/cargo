@@ -611,6 +611,10 @@ impl<'gctx> Workspace<'gctx> {
         self.honor_rust_version = honor_rust_version;
     }
 
+    pub fn honor_rust_version(&self) -> Option<bool> {
+        self.honor_rust_version
+    }
+
     pub fn resolve_honors_rust_version(&self) -> bool {
         self.gctx().cli_unstable().msrv_policy && self.honor_rust_version.unwrap_or(true)
     }
