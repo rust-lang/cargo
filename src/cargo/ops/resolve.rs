@@ -252,6 +252,10 @@ fn resolve_with_registry<'gctx>(
     let print = if !ws.is_ephemeral() && ws.require_optional_deps() {
         ops::write_pkg_lockfile(ws, &mut resolve)?
     } else {
+        // This mostly represents
+        // - `cargo install --locked` and the only change is the package is no longer local but
+        //   from the registry which is noise
+        // - publish of libraries
         false
     };
     if print {
