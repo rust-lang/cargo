@@ -8,6 +8,7 @@ use crate::sources::{GitSource, PathSource, RegistrySource};
 use crate::util::interning::InternedString;
 use crate::util::{context, CanonicalUrl, CargoResult, GlobalContext, IntoUrl};
 use anyhow::Context as _;
+use cargo_util_schemas::core::PatchInfo;
 use serde::de;
 use serde::ser;
 use std::cmp::{self, Ordering};
@@ -176,6 +177,14 @@ impl SourceId {
                 let url = url.into_url()?;
                 SourceId::new(SourceKind::Path, url, None)
             }
+            "patched" => {
+                let mut url = url.into_url()?;
+                let patch_info = PatchInfo::from_query(url.query_pairs())
+                    .with_context(|| format!("parse `{url}`"))?;
+                url.set_fragment(None);
+                url.set_query(None);
+                SourceId::for_patches(SourceId::from_url(url.as_str())?, patch_info)
+            }
             kind => Err(anyhow::format_err!("unsupported source protocol: {}", kind)),
         }
     }
@@ -243,6 +252,16 @@ impl SourceId {
     pub fn for_directory(path: &Path) -> CargoResult<SourceId> {
         let url = path.into_url()?;
         SourceId::new(SourceKind::Directory, url, None)
+    }
+
+    pub fn for_patches(orig_source_id: SourceId, patch_info: PatchInfo) -> CargoResult<SourceId> {
+        let url = orig_source_id.as_encoded_url();
+        // `Url::set_scheme` disallow conversions between non-special and speicial schemes,
+        // so parse the url from string again.
+        let url = format!("patched+{url}")
+            .parse()
+            .with_context(|| format!("cannot set patched scheme on `{url}`"))?;
+        SourceId::new(SourceKind::Patched(patch_info), url, None)
     }
 
     /// Returns the `SourceId` corresponding to the main repository.
@@ -666,7 +685,13 @@ impl fmt::Display for SourceId {
             }
             SourceKind::LocalRegistry => write!(f, "registry `{}`", url_display(&self.inner.url)),
             SourceKind::Directory => write!(f, "dir {}", url_display(&self.inner.url)),
-            SourceKind::Patched(_) => todo!(),
+            SourceKind::Patched(ref patch_info) => {
+                let n = patch_info.patches().len();
+                let plural = if n == 1 { "" } else { "s" };
+                let name = patch_info.name();
+                let version = patch_info.version();
+                write!(f, "{name}@{version} with {n} patch file{plural}")
+            }
         }
     }
 }
@@ -731,6 +756,14 @@ impl<'a> fmt::Display for SourceIdAsUrl<'a> {
             if let Some(precise) = precise.as_ref() {
                 write!(f, "#{}", precise)?;
             }
+        }
+
+        if let SourceIdInner {
+            kind: SourceKind::Patched(patch_info),
+            ..
+        } = &self.inner
+        {
+            write!(f, "?{}", patch_info.as_query())?;
         }
         Ok(())
     }
@@ -808,6 +841,8 @@ mod tests {
         use std::hash::Hasher;
         use std::path::Path;
 
+        use cargo_util_schemas::core::PatchInfo;
+
         let gen_hash = |source_id: SourceId| {
             let mut hasher = std::collections::hash_map::DefaultHasher::new();
             source_id.stable_hash(Path::new("/tmp/ws"), &mut hasher);
@@ -852,6 +887,12 @@ mod tests {
         let source_id = SourceId::for_directory(path).unwrap();
         assert_eq!(gen_hash(source_id), 17459999773908528552);
         assert_eq!(crate::util::hex::short_hash(&source_id), "6568fe2c2fab5bfe");
+
+        let patch_info = PatchInfo::new("foo".into(), "1.0.0".into(), vec![path.into()]);
+        let registry_source_id = SourceId::for_registry(&url).unwrap();
+        let source_id = SourceId::for_patches(registry_source_id, patch_info).unwrap();
+        assert_eq!(gen_hash(source_id), 10476212805277277232);
+        assert_eq!(crate::util::hex::short_hash(&source_id), "45f3b913ab447282");
     }
 
     #[test]
