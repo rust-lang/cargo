@@ -1,6 +1,7 @@
 use crate::core::GitReference;
 use crate::core::PackageId;
 use crate::core::SourceKind;
+use crate::sources::patched::PatchedSource;
 use crate::sources::registry::CRATES_IO_HTTP_INDEX;
 use crate::sources::source::Source;
 use crate::sources::{DirectorySource, CRATES_IO_DOMAIN, CRATES_IO_INDEX, CRATES_IO_REGISTRY};
@@ -438,7 +439,7 @@ impl SourceId {
                     .expect("path sources cannot be remote");
                 Ok(Box::new(DirectorySource::new(&path, self, gctx)))
             }
-            SourceKind::Patched(_) => todo!(),
+            SourceKind::Patched(_) => Ok(Box::new(PatchedSource::new(self, gctx)?)),
         }
     }
 

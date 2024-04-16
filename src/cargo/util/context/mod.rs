@@ -402,6 +402,11 @@ impl GlobalContext {
         self.registry_base_path().join("src")
     }
 
+    /// Gets the directory containg patched package sources (`<cargo_home>/patched-src`).
+    pub fn patched_source_path(&self) -> Filesystem {
+        self.home_path.join("patched-src")
+    }
+
     /// Gets the default Cargo registry.
     pub fn default_registry(&self) -> CargoResult<Option<String>> {
         Ok(self
