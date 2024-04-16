@@ -670,6 +670,7 @@ See https://github.com/rust-lang/cargo/issues/9930 for more information about th
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
 [UPDATING] bar v1.5.0 -> v1.6.0
 ",
         )

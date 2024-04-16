@@ -833,6 +833,7 @@ required by package `foo v0.0.1 ([..])`
         .with_stderr_contains(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 1 package to latest compatible version
 [UPDATING] baz v0.0.1 -> v0.0.2
 ",
         )
@@ -1018,6 +1019,7 @@ fn update_lockfile() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 1 package to latest compatible version
 [UPDATING] bar v0.0.2 -> v0.0.3
 ",
         )
@@ -1043,6 +1045,7 @@ fn update_lockfile() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 2 packages to latest compatible versions
 [UPDATING] bar v0.0.3 -> v0.0.4
 [ADDING] spam v0.2.5
 ",
@@ -1055,6 +1058,7 @@ fn update_lockfile() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 1 package to latest compatible version
 [UPDATING] bar v0.0.4 -> v0.0.5
 [REMOVING] spam v0.2.5
 ",
@@ -1493,6 +1497,7 @@ fn update_transitive_dependency() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 1 package to latest compatible version
 [UPDATING] b v0.1.0 -> v0.1.1
 ",
         )
@@ -1565,6 +1570,7 @@ fn update_backtracking_ok() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 2 packages to latest compatible versions
 [UPDATING] hyper v0.6.5 -> v0.6.6
 [UPDATING] openssl v0.1.0 -> v0.1.1
 ",
@@ -1617,6 +1623,7 @@ fn update_multiple_packages() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 2 packages to latest compatible versions
 [UPDATING] a v0.1.0 -> v0.1.1
 [UPDATING] b v0.1.0 -> v0.1.1
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
@@ -1628,6 +1635,7 @@ fn update_multiple_packages() {
         .with_stderr(
             "\
 [UPDATING] `[..]` index
+[LOCKING] 1 package to latest compatible version
 [UPDATING] c v0.1.0 -> v0.1.1
 ",
         )

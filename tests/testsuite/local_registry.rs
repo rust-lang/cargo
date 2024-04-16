@@ -190,7 +190,11 @@ fn multiple_versions() {
         .publish();
 
     p.cargo("update")
-        .with_stderr("[UPDATING] bar v0.1.0 -> v0.2.0")
+        .with_stderr(
+            "\
+[LOCKING] 1 package to latest compatible version
+[UPDATING] bar v0.1.0 -> v0.2.0",
+        )
         .run();
 }
 

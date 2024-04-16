@@ -1481,6 +1481,7 @@ fn clean_max_git_age() {
         .with_stderr(
             "\
 [UPDATING] git repository [..]
+[LOCKING] 1 package to latest compatible version
 [UPDATING] git_a v1.0.0 [..]
 ",
         )
@@ -1562,6 +1563,7 @@ fn clean_max_src_crate_age() {
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
 [UPDATING] bar v1.0.0 -> v1.0.1
 ",
         )

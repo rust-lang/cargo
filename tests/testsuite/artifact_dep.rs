@@ -1590,6 +1590,7 @@ fn index_version_filtering() {
         .with_stderr(
             "\
 [UPDATING] [..]
+[LOCKING] 2 packages to latest compatible versions
 [ADDING] artifact v1.0.0
 [UPDATING] bar v1.0.0 -> v1.0.1",
         )

@@ -725,6 +725,7 @@ fn main(){
         .with_status(0)
         .with_stderr(
             "\
+[LOCKING] 1 package to latest compatible version
 [UPDATING] present_dep v1.2.3 -> v1.2.9
 ",
         )

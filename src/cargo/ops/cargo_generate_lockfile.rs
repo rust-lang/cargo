@@ -170,7 +170,13 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         true,
     )?;
 
-    print_lockfile_updates(ws, &previous_resolve, &resolve, &mut registry)?;
+    print_lockfile_updates(
+        ws,
+        &previous_resolve,
+        &resolve,
+        opts.precise.is_some(),
+        &mut registry,
+    )?;
     if opts.dry_run {
         opts.gctx
             .shell()
@@ -356,10 +362,17 @@ fn print_lockfile_updates(
     ws: &Workspace<'_>,
     previous_resolve: &Resolve,
     resolve: &Resolve,
+    precise: bool,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<()> {
+    let diff = PackageDiff::diff(&previous_resolve, &resolve);
+    let num_pkgs: usize = diff.iter().map(|d| d.added.len()).sum();
+    if !precise {
+        status_locking(ws, num_pkgs)?;
+    }
+
     let mut unchanged_behind = 0;
-    for diff in PackageDiff::diff(&previous_resolve, &resolve) {
+    for diff in diff {
         fn format_latest(version: semver::Version) -> String {
             let warn = style::WARN;
             format!(" {warn}(latest: v{version}){warn:#}")
