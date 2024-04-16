@@ -293,7 +293,7 @@ The default settings for the `release` profile are:
 opt-level = 3
 debug = false
 split-debuginfo = '...'  # Platform-specific.
-strip = "none"
+strip = "debuginfo"
 debug-assertions = false
 overflow-checks = false
 lto = false
