@@ -83,9 +83,6 @@ impl std::str::FromStr for PartialVersion {
     type Err = PartialVersionError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        if is_req(value) {
-            return Err(ErrorKind::VersionReq.into());
-        }
         match semver::Version::parse(value) {
             Ok(ver) => Ok(ver.into()),
             Err(_) => {
@@ -96,9 +93,16 @@ impl std::str::FromStr for PartialVersion {
                     Err(_) if value.contains('+') => return Err(ErrorKind::BuildMetadata.into()),
                     Err(_) => return Err(ErrorKind::Unexpected.into()),
                 };
-                assert_eq!(version_req.comparators.len(), 1, "guaranteed by is_req");
+                if version_req.comparators.len() != 1 {
+                    return Err(ErrorKind::VersionReq.into());
+                }
                 let comp = version_req.comparators.pop().unwrap();
-                assert_eq!(comp.op, semver::Op::Caret, "guaranteed by is_req");
+                if comp.op != semver::Op::Caret {
+                    return Err(ErrorKind::VersionReq.into());
+                } else if value.starts_with('^') {
+                    // Can't distinguish between `^` present or not
+                    return Err(ErrorKind::VersionReq.into());
+                }
                 let pre = if comp.pre.is_empty() {
                     None
                 } else {
@@ -179,17 +183,6 @@ enum ErrorKind {
     Unexpected,
 }
 
-fn is_req(value: &str) -> bool {
-    let Some(first) = value.chars().next() else {
-        return false;
-    };
-    "<>=^~".contains(first)
-        || value.contains('*')
-        || value.contains(',')
-        || value.contains('x')
-        || value.contains('X')
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -200,6 +193,8 @@ mod test {
         let cases = &[
             // Valid pre-release
             ("1.43.0-beta.1", str!["1.43.0-beta.1"]),
+            // Valid pre-release with wildcard
+            ("1.43.0-beta.1.x", str!["1.43.0-beta.1.x"]),
         ];
         for (input, expected) in cases {
             let actual: Result<PartialVersion, _> = input.parse();
