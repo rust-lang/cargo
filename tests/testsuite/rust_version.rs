@@ -213,6 +213,10 @@ fn resolve_with_rust_version() {
         .build();
 
     p.cargo("generate-lockfile --ignore-rust-version")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -233,6 +237,10 @@ foo v0.0.1 ([CWD])
         .run();
 
     p.cargo("generate-lockfile")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -289,6 +297,10 @@ fn resolve_with_rustc() {
         .build();
 
     p.cargo("generate-lockfile --ignore-rust-version")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -309,6 +321,10 @@ foo v0.0.1 ([CWD])
         .run();
 
     p.cargo("generate-lockfile")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -363,6 +379,10 @@ fn resolve_with_backtracking() {
         .build();
 
     p.cargo("generate-lockfile --ignore-rust-version")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -384,6 +404,10 @@ foo v0.0.1 ([CWD])
 
     // Ideally we'd pick `has-rust-version` 1.6.0 which requires backtracking
     p.cargo("generate-lockfile")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -462,6 +486,10 @@ fn resolve_with_multiple_rust_versions() {
         .build();
 
     p.cargo("generate-lockfile --ignore-rust-version")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -482,6 +510,10 @@ higher v0.0.1 ([CWD])
         .run();
 
     p.cargo("generate-lockfile")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -572,6 +604,10 @@ fn update_msrv_resolve() {
         .build();
 
     p.cargo("update")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -593,6 +629,10 @@ See https://github.com/rust-lang/cargo/issues/9930 for more information about th
         )
         .run();
     p.cargo("update --ignore-rust-version")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -634,6 +674,10 @@ fn update_precise_overrides_msrv_resolver() {
         .build();
 
     p.cargo("update")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -645,6 +689,10 @@ fn update_precise_overrides_msrv_resolver() {
         )
         .run();
     p.cargo("update --precise 1.6.0 bar")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -691,6 +739,10 @@ fn check_msrv_resolve() {
         .build();
 
     p.cargo("check --ignore-rust-version")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -719,6 +771,10 @@ foo v0.0.1 ([CWD])
 
     std::fs::remove_file(p.root().join("Cargo.lock")).unwrap();
     p.cargo("check")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
