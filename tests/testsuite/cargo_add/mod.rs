@@ -25,6 +25,7 @@ mod features;
 mod features_activated_over_limit;
 mod features_deactivated_over_limit;
 mod features_empty;
+mod features_fuzzy;
 mod features_multiple_occurrences;
 mod features_preserve;
 mod features_spaced_values;
