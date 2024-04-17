@@ -536,6 +536,82 @@ higher v0.0.1 ([CWD])
 }
 
 #[cargo_test]
+fn resolve_unstable_config_on_stable() {
+    Package::new("only-newer", "1.6.0")
+        .rust_version("1.65.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+    Package::new("newer-and-older", "1.5.0")
+        .rust_version("1.55.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+    Package::new("newer-and-older", "1.6.0")
+        .rust_version("1.65.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            rust-version = "1.60.0"
+
+            [dependencies]
+            only-newer = "1.0.0"
+            newer-and-older = "1.0.0"
+        "#,
+        )
+        .file("src/main.rs", "fn main(){}")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to latest compatible versions
+",
+        )
+        .run();
+    p.cargo("tree")
+        .with_stdout(
+            "\
+foo v0.0.1 ([CWD])
+├── newer-and-older v1.6.0
+└── only-newer v1.6.0
+",
+        )
+        .run();
+
+    p.cargo("generate-lockfile")
+        .env("CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE", "non-existent")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to latest compatible versions
+",
+        )
+        .run();
+    p.cargo("tree")
+        .with_stdout(
+            "\
+foo v0.0.1 ([CWD])
+├── newer-and-older v1.6.0
+└── only-newer v1.6.0
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn generate_lockfile_ignore_rust_version_is_unstable() {
     Package::new("bar", "1.5.0")
         .rust_version("1.55.0")
