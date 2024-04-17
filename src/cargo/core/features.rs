@@ -513,6 +513,9 @@ features! {
 
     /// Allow multiple packages to participate in the same API namespace
     (unstable, open_namespaces, "", "reference/unstable.html#open-namespaces"),
+
+    /// Allow patching dependencies with patch files.
+    (unstable, patch_files, "", "reference/unstable.html#patch-files"),
 }
 
 /// Status and metadata for a single unstable feature.
@@ -775,6 +778,7 @@ unstable_cli_options!(
     next_lockfile_bump: bool,
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
+    patch_files: bool = ("Allow patching dependencies with patch files"),
     profile_rustflags: bool = ("Enable the `rustflags` option in profiles in .cargo/config.toml file"),
     public_dependency: bool = ("Respect a dependency's `public` field in Cargo.toml to control public/private dependencies"),
     publish_timeout: bool = ("Enable the `publish.timeout` key in .cargo/config.toml file"),
@@ -1277,6 +1281,7 @@ impl CliUnstable {
             "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,
             "no-index-update" => self.no_index_update = parse_empty(k, v)?,
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
+            "patch-files" => self.patch_files = parse_empty(k, v)?,
             "public-dependency" => self.public_dependency = parse_empty(k, v)?,
             "profile-rustflags" => self.profile_rustflags = parse_empty(k, v)?,
             "trim-paths" => self.trim_paths = parse_empty(k, v)?,
