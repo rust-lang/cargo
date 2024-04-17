@@ -20,3 +20,6 @@ url.workspace = true
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+snapbox.workspace = true
