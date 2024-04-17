@@ -2609,7 +2609,10 @@ fn cfg_test() {
         )
         .file(
             "build.rs",
-            r#"fn main() { println!("cargo::rustc-cfg=foo"); }"#,
+            r#"fn main() {
+                println!("cargo::rustc-cfg=foo");
+                println!("cargo::rustc-check-cfg=cfg(foo)");
+            }"#,
         )
         .file(
             "src/lib.rs",
@@ -2714,6 +2717,9 @@ fn cfg_override_test() {
                 authors = []
                 build = "build.rs"
                 links = "a"
+
+                [lints.rust]
+                unexpected_cfgs = "allow" # bc of override, stable/nightly, tests
             "#,
         )
         .file("build.rs", "")
@@ -5590,9 +5596,10 @@ fn build_script_rerun_when_target_rustflags_change() {
             use std::env;
 
             fn main() {
+                println!("cargo::rustc-check-cfg=cfg(enable)");
                 if let Ok(rustflags) = env::var("CARGO_ENCODED_RUSTFLAGS") {
                     if !rustflags.is_empty() {
-                        println!("cargo::rustc-cfg=enable")
+                        println!("cargo::rustc-cfg=enable");
                     }
                 }
             }

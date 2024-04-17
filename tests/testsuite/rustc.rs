@@ -41,7 +41,7 @@ fn lib() {
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib \
         --emit=[..]link[..]-C debuginfo=2 [..]\
-        -C debug-assertions=off \
+        -C debug-assertions=off[..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
@@ -69,7 +69,7 @@ fn build_main_and_allow_unstable_options() {
         -L dependency=[CWD]/target/debug/deps`
 [RUNNING] `rustc --crate-name {name} --edition=2015 src/main.rs [..]--crate-type bin \
         --emit=[..]link[..]-C debuginfo=2 [..]\
-        -C debug-assertions \
+        -C debug-assertions[..]\
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps \

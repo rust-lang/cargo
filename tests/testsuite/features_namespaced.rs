@@ -377,6 +377,7 @@ fn no_implicit_feature() {
             r#"
                 fn main() {
                     if cfg!(feature = "regex") { println!("regex"); }
+                    #[allow(unexpected_cfgs)]
                     if cfg!(feature = "lazy_static") { println!("lazy_static"); }
                 }
             "#,
