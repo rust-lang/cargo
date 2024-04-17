@@ -905,7 +905,7 @@ fn inner_dependency_inherit_with<'a>(
         ))
     }
     if dependency.default_features.is_some() && dependency.default_features2.is_some() {
-        warn_on_deprecated("default-features", name, "dependency", warnings);
+        deprecated_underscore("default-features", name, "dependency", warnings);
     }
     inherit()?.get_dependency(name, package_root).map(|d| {
         match d {
@@ -1158,7 +1158,7 @@ fn to_real_manifest(
 
     validate_dependencies(original_toml.dependencies.as_ref(), None, None, warnings)?;
     if original_toml.dev_dependencies.is_some() && original_toml.dev_dependencies2.is_some() {
-        warn_on_deprecated("dev-dependencies", package_name, "package", warnings);
+        deprecated_underscore("dev-dependencies", package_name, "package", warnings);
     }
     validate_dependencies(
         original_toml.dev_dependencies(),
@@ -1167,7 +1167,7 @@ fn to_real_manifest(
         warnings,
     )?;
     if original_toml.build_dependencies.is_some() && original_toml.build_dependencies2.is_some() {
-        warn_on_deprecated("build-dependencies", package_name, "package", warnings);
+        deprecated_underscore("build-dependencies", package_name, "package", warnings);
     }
     validate_dependencies(
         original_toml.build_dependencies(),
@@ -1186,7 +1186,7 @@ fn to_real_manifest(
             warnings,
         )?;
         if platform.build_dependencies.is_some() && platform.build_dependencies2.is_some() {
-            warn_on_deprecated("build-dependencies", name, "platform target", warnings);
+            deprecated_underscore("build-dependencies", name, "platform target", warnings);
         }
         validate_dependencies(
             platform.build_dependencies(),
@@ -1195,7 +1195,7 @@ fn to_real_manifest(
             warnings,
         )?;
         if platform.dev_dependencies.is_some() && platform.dev_dependencies2.is_some() {
-            warn_on_deprecated("dev-dependencies", name, "platform target", warnings);
+            deprecated_underscore("dev-dependencies", name, "platform target", warnings);
         }
         validate_dependencies(
             platform.dev_dependencies(),
@@ -1886,7 +1886,7 @@ fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
     let version = orig.version.as_deref();
     let mut dep = Dependency::parse(pkg_name, version, new_source_id)?;
     if orig.default_features.is_some() && orig.default_features2.is_some() {
-        warn_on_deprecated(
+        deprecated_underscore(
             "default-features",
             name_in_toml,
             "dependency",
@@ -2304,7 +2304,7 @@ fn emit_diagnostic(
 }
 
 /// Warn about paths that have been deprecated and may conflict.
-fn warn_on_deprecated(new_path: &str, name: &str, kind: &str, warnings: &mut Vec<String>) {
+fn deprecated_underscore(new_path: &str, name: &str, kind: &str, warnings: &mut Vec<String>) {
     let old_path = new_path.replace("-", "_");
     warnings.push(format!(
         "conflicting between `{new_path}` and `{old_path}` in the `{name}` {kind}.\n
