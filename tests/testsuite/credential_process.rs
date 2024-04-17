@@ -709,7 +709,7 @@ fn login_token_from_stdin() {
         .with_stdin("abcdefg\n")
         .with_stderr(
             r#"[UPDATING] [..]
-{"v":1,"registry":{"index-url":"https://github.com/rust-lang/crates.io-index","name":"crates-io"},"kind":"login","token":"abcdefg\n","login-url":"[..]"}
+{"v":1,"registry":{"index-url":"https://github.com/rust-lang/crates.io-index","name":"crates-io"},"kind":"login","token":"abcdefg","login-url":"[..]"}
 "#,
         )
         .run();

@@ -113,6 +113,7 @@ fn empty_login_token() {
         .with_stderr(
             "\
 [UPDATING] crates.io index
+please paste the token found on [..] below
 [ERROR] credential provider `cargo:token` failed action `login`
 
 Caused by:
