@@ -1129,6 +1129,7 @@ Consider enabling them by passing, e.g., `--features=\"bar/a\"`
         .with_stderr(
             "\
 [INSTALLING] foo v0.0.1 ([..])
+[LOCKING] 2 packages to latest compatible versions
 [FINISHED] `release` profile [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
   bin \"foo\" requires the features: `bar/a`

@@ -415,6 +415,7 @@ dependencies = [
             "\
 [UPDATING] `[..]` index
 [INSTALLING] foo v0.1.0
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.1 (registry `[..]`)
 [COMPILING] bar v0.1.1

@@ -148,6 +148,7 @@ fn simple_install() {
         .with_stderr(
             "\
 [INSTALLING] bar v0.1.0
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] foo v0.0.1
 [COMPILING] bar v0.1.0
 [FINISHED] `release` profile [optimized] target(s) in [..]s
@@ -243,6 +244,7 @@ fn install_without_feature_dep() {
         .with_stderr(
             "\
 [INSTALLING] bar v0.1.0
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] foo v0.0.1
 [COMPILING] bar v0.1.0
 [FINISHED] `release` profile [optimized] target(s) in [..]s

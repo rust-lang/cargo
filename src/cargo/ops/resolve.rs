@@ -134,15 +134,27 @@ pub fn resolve_ws_with_opts<'gctx>(
     force_all_targets: ForceAllTargets,
 ) -> CargoResult<WorkspaceResolve<'gctx>> {
     let mut registry = PackageRegistry::new(ws.gctx())?;
-    let mut add_patches = true;
-    let resolve = if ws.ignore_lock() {
-        None
+    let (resolve, resolved_with_overrides) = if ws.ignore_lock() {
+        let add_patches = true;
+        let resolve = None;
+        let resolved_with_overrides = resolve_with_previous(
+            &mut registry,
+            ws,
+            cli_features,
+            has_dev_units,
+            resolve.as_ref(),
+            None,
+            specs,
+            add_patches,
+        )?;
+        ops::print_lockfile_changes(ws, None, &resolved_with_overrides, &mut registry)?;
+        (resolve, resolved_with_overrides)
     } else if ws.require_optional_deps() {
         // First, resolve the root_package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
         let resolve = resolve_with_registry(ws, &mut registry)?;
         // No need to add patches again, `resolve_with_registry` has done it.
-        add_patches = false;
+        let add_patches = false;
 
         // Second, resolve with precisely what we're doing. Filter out
         // transitive dependencies if necessary, specify features, handle
@@ -170,21 +182,34 @@ pub fn resolve_ws_with_opts<'gctx>(
             }
         }
 
-        Some(resolve)
+        let resolved_with_overrides = resolve_with_previous(
+            &mut registry,
+            ws,
+            cli_features,
+            has_dev_units,
+            Some(&resolve),
+            None,
+            specs,
+            add_patches,
+        )?;
+        (Some(resolve), resolved_with_overrides)
     } else {
-        ops::load_pkg_lockfile(ws)?
+        let add_patches = true;
+        let resolve = ops::load_pkg_lockfile(ws)?;
+        let resolved_with_overrides = resolve_with_previous(
+            &mut registry,
+            ws,
+            cli_features,
+            has_dev_units,
+            resolve.as_ref(),
+            None,
+            specs,
+            add_patches,
+        )?;
+        // Skipping `print_lockfile_changes` as there are cases where this prints irrelevant
+        // information
+        (resolve, resolved_with_overrides)
     };
-
-    let resolved_with_overrides = resolve_with_previous(
-        &mut registry,
-        ws,
-        cli_features,
-        has_dev_units,
-        resolve.as_ref(),
-        None,
-        specs,
-        add_patches,
-    )?;
 
     let pkg_set = get_resolved_packages(&resolved_with_overrides, registry)?;
 
@@ -252,6 +277,10 @@ fn resolve_with_registry<'gctx>(
     let print = if !ws.is_ephemeral() && ws.require_optional_deps() {
         ops::write_pkg_lockfile(ws, &mut resolve)?
     } else {
+        // This mostly represents
+        // - `cargo install --locked` and the only change is the package is no longer local but
+        //   from the registry which is noise
+        // - publish of libraries
         false
     };
     if print {
