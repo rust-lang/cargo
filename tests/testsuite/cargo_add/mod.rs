@@ -13,6 +13,7 @@ mod deprecated_default_features;
 mod deprecated_section;
 mod detect_workspace_inherit;
 mod detect_workspace_inherit_features;
+mod detect_workspace_inherit_fuzzy;
 mod detect_workspace_inherit_optional;
 mod detect_workspace_inherit_public;
 mod dev;
