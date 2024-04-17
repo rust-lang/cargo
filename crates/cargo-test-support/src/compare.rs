@@ -300,6 +300,7 @@ static E2E_LITERAL_REDACTIONS: &[(&str, &str)] = &[
     ("[DOCTEST]", "   Doc-tests"),
     ("[PACKAGING]", "   Packaging"),
     ("[PACKAGED]", "    Packaged"),
+    ("[PATCHING]", "    Patching"),
     ("[DOWNLOADING]", " Downloading"),
     ("[DOWNLOADED]", "  Downloaded"),
     ("[UPLOADING]", "   Uploading"),
