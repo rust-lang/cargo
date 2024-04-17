@@ -189,3 +189,64 @@ fn is_req(value: &str) -> bool {
         || value.contains('x')
         || value.contains('X')
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use snapbox::str;
+
+    #[test]
+    fn parse_success() {
+        let cases = &[
+            // Valid pre-release
+            ("1.43.0-beta.1", str!["1.43.0-beta.1"]),
+        ];
+        for (input, expected) in cases {
+            let actual: Result<PartialVersion, _> = input.parse();
+            let actual = match actual {
+                Ok(result) => result.to_string(),
+                Err(err) => format!("didn't pass: {err}"),
+            };
+            snapbox::assert_eq(expected.clone(), actual);
+        }
+    }
+
+    #[test]
+    fn parse_errors() {
+        let cases = &[
+            // Disallow caret
+            (
+                "^1.43",
+                str![[r#"unexpected version requirement, expected a version like "1.32""#]],
+            ),
+            // Bad pre-release
+            (
+                "1.43-beta.1",
+                str![[r#"unexpected prerelease field, expected a version like "1.32""#]],
+            ),
+            // Weird wildcard
+            (
+                "x",
+                str![[r#"unexpected version requirement, expected a version like "1.32""#]],
+            ),
+            (
+                "1.x",
+                str![[r#"unexpected version requirement, expected a version like "1.32""#]],
+            ),
+            (
+                "1.1.x",
+                str![[r#"unexpected version requirement, expected a version like "1.32""#]],
+            ),
+            // Non-sense
+            ("foodaddle", str![[r#"expected a version like "1.32""#]]),
+        ];
+        for (input, expected) in cases {
+            let actual: Result<PartialVersion, _> = input.parse();
+            let actual = match actual {
+                Ok(result) => format!("didn't fail: {result:?}"),
+                Err(err) => err.to_string(),
+            };
+            snapbox::assert_eq(expected.clone(), actual);
+        }
+    }
+}
