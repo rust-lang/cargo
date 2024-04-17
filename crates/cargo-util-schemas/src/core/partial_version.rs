@@ -183,5 +183,9 @@ fn is_req(value: &str) -> bool {
     let Some(first) = value.chars().next() else {
         return false;
     };
-    "<>=^~".contains(first) || value.contains('*') || value.contains(',')
+    "<>=^~".contains(first)
+        || value.contains('*')
+        || value.contains(',')
+        || value.contains('x')
+        || value.contains('X')
 }

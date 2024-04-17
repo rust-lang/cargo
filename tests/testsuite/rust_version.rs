@@ -125,7 +125,6 @@ fn rust_version_bad_pre_release() {
 }
 
 #[cargo_test]
-#[should_panic]
 fn rust_version_x_wildcard() {
     project()
         .file(
@@ -150,8 +149,8 @@ fn rust_version_x_wildcard() {
 [ERROR] unexpected version requirement, expected a version like \"1.32\"
  --> Cargo.toml:7:28
   |
-7 |             rust-version = \"^1.43\"
-  |                            ^^^^^^^
+7 |             rust-version = \"x\"
+  |                            ^^^
   |
 ",
         )
@@ -159,7 +158,6 @@ fn rust_version_x_wildcard() {
 }
 
 #[cargo_test]
-#[should_panic]
 fn rust_version_minor_x_wildcard() {
     project()
         .file(
@@ -193,7 +191,6 @@ fn rust_version_minor_x_wildcard() {
 }
 
 #[cargo_test]
-#[should_panic]
 fn rust_version_patch_x_wildcard() {
     project()
         .file(
