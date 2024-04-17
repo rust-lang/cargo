@@ -125,6 +125,108 @@ fn rust_version_bad_pre_release() {
 }
 
 #[cargo_test]
+#[should_panic]
+fn rust_version_x_wildcard() {
+    project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            rust-version = "x"
+            [[bin]]
+            name = "foo"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build()
+        .cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] unexpected version requirement, expected a version like \"1.32\"
+ --> Cargo.toml:7:28
+  |
+7 |             rust-version = \"^1.43\"
+  |                            ^^^^^^^
+  |
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+#[should_panic]
+fn rust_version_minor_x_wildcard() {
+    project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            rust-version = "1.x"
+            [[bin]]
+            name = "foo"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build()
+        .cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] unexpected version requirement, expected a version like \"1.32\"
+ --> Cargo.toml:7:28
+  |
+7 |             rust-version = \"1.x\"
+  |                            ^^^^^
+  |
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+#[should_panic]
+fn rust_version_patch_x_wildcard() {
+    project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            rust-version = "1.30.x"
+            [[bin]]
+            name = "foo"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build()
+        .cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] unexpected version requirement, expected a version like \"1.32\"
+ --> Cargo.toml:7:28
+  |
+7 |             rust-version = \"1.30.x\"
+  |                            ^^^^^^^^
+  |
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn rust_version_bad_nonsense() {
     project()
         .file(
