@@ -1300,14 +1300,10 @@ fn error_workspace_dependency_looked_for_workspace_itself() {
         .with_status(101)
         .with_stderr(
             "\
-[WARNING] [CWD]/Cargo.toml: unused manifest key: workspace.dependencies.dep.workspace
-[WARNING] [CWD]/Cargo.toml: dependency (dep) specified without providing a local path, Git repository, version, \
-or workspace dependency to use. \
-This will be considered an error in future versions
-[UPDATING] `dummy-registry` index
-[ERROR] no matching package named `dep` found
-location searched: registry `crates-io`
-required by package `bar v1.2.3 ([CWD])`
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  dependency (dep) specified without providing a local path, Git repository, version, or workspace dependency to use
 ",
         )
         .run();
@@ -1627,15 +1623,10 @@ fn cannot_inherit_in_patch() {
         .with_status(101)
         .with_stderr(
             "\
-[WARNING] [CWD]/Cargo.toml: unused manifest key: patch.crates-io.bar.workspace
-[WARNING] [CWD]/Cargo.toml: dependency (bar) specified without providing a local path, Git repository, version, \
-or workspace dependency to use. \
-This will be considered an error in future versions
-[UPDATING] `dummy-registry` index
-[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
 
 Caused by:
-  patch for `bar` in `https://github.com/rust-lang/crates.io-index` points to the same source, but patches must point to different sources
+  dependency (bar) specified without providing a local path, Git repository, version, or workspace dependency to use
 ",
         )
         .run();

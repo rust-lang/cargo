@@ -1672,14 +1672,11 @@ fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
     kind: Option<DepKind>,
 ) -> CargoResult<Dependency> {
     if orig.version.is_none() && orig.path.is_none() && orig.git.is_none() {
-        let msg = format!(
-            "dependency ({}) specified without \
+        anyhow::bail!(
+            "dependency ({name_in_toml}) specified without \
                  providing a local path, Git repository, version, or \
-                 workspace dependency to use. This will be considered an \
-                 error in future versions",
-            name_in_toml
+                 workspace dependency to use"
         );
-        manifest_ctx.warnings.push(msg);
     }
 
     if let Some(version) = &orig.version {

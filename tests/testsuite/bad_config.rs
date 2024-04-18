@@ -792,10 +792,13 @@ fn empty_dependencies() {
     Package::new("bar", "0.0.1").publish();
 
     p.cargo("check")
-        .with_stderr_contains(
+        .with_status(101)
+        .with_stderr(
             "\
-warning: dependency (bar) specified without providing a local path, Git repository, version, \
-or workspace dependency to use. This will be considered an error in future versions
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  dependency (bar) specified without providing a local path, Git repository, version, or workspace dependency to use
 ",
         )
         .run();
