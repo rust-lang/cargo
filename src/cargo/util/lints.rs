@@ -1,3 +1,4 @@
+use crate::core::dependency::DepKind;
 use crate::core::FeatureValue::Dep;
 use crate::core::{Edition, FeatureValue, Package};
 use crate::util::interning::InternedString;
@@ -254,7 +255,7 @@ pub fn unused_dependencies(
 ) -> CargoResult<()> {
     let edition = pkg.manifest().edition();
     // Unused optional dependencies can only exist on edition 2024+
-    if edition <= Edition::Edition2021 {
+    if edition < Edition::Edition2024 {
         return Ok(());
     }
 
@@ -262,63 +263,88 @@ pub fn unused_dependencies(
     if lint_level == LintLevel::Allow {
         return Ok(());
     }
-
-    let manifest = pkg.manifest();
-    let activated_opt_deps = manifest
-        .resolved_toml()
-        .features()
-        .map(|map| {
-            map.values()
-                .flatten()
-                .filter_map(|f| match FeatureValue::new(InternedString::new(f)) {
-                    Dep { dep_name } => Some(dep_name.as_str()),
-                    _ => None,
-                })
-                .collect::<HashSet<_>>()
-        })
-        .unwrap_or_default();
-
     let mut emitted_source = None;
-    for dep in manifest.dependencies() {
-        let dep_name_in_toml = dep.name_in_toml();
-        if !dep.is_optional() || activated_opt_deps.contains(dep_name_in_toml.as_str()) {
-            continue;
+    let manifest = pkg.manifest();
+    let original_toml = manifest.original_toml();
+    // Unused dependencies were stripped from the manifest, leaving only the used ones
+    let used_dependencies = manifest
+        .dependencies()
+        .into_iter()
+        .map(|d| d.name_in_toml().to_string())
+        .collect::<HashSet<String>>();
+    let mut orig_deps = vec![
+        (
+            original_toml.dependencies.as_ref(),
+            vec![DepKind::Normal.kind_table()],
+        ),
+        (
+            original_toml.dev_dependencies.as_ref(),
+            vec![DepKind::Development.kind_table()],
+        ),
+        (
+            original_toml.build_dependencies.as_ref(),
+            vec![DepKind::Build.kind_table()],
+        ),
+    ];
+    for (name, platform) in original_toml.target.iter().flatten() {
+        orig_deps.push((
+            platform.dependencies.as_ref(),
+            vec!["target", name, DepKind::Normal.kind_table()],
+        ));
+        orig_deps.push((
+            platform.dev_dependencies.as_ref(),
+            vec!["target", name, DepKind::Development.kind_table()],
+        ));
+        orig_deps.push((
+            platform.build_dependencies.as_ref(),
+            vec!["target", name, DepKind::Normal.kind_table()],
+        ));
+    }
+    for (deps, toml_path) in orig_deps {
+        if let Some(deps) = deps {
+            for name in deps.keys() {
+                if !used_dependencies.contains(name.as_str()) {
+                    if lint_level == LintLevel::Forbid || lint_level == LintLevel::Deny {
+                        *error_count += 1;
+                    }
+                    let toml_path = toml_path
+                        .iter()
+                        .map(|s| *s)
+                        .chain(std::iter::once(name.as_str()))
+                        .collect::<Vec<_>>();
+                    let level = lint_level.to_diagnostic_level();
+                    let manifest_path = rel_cwd_manifest_path(path, gctx);
+
+                    let mut message = level.title(UNUSED_OPTIONAL_DEPENDENCY.desc).snippet(
+                        Snippet::source(manifest.contents())
+                            .origin(&manifest_path)
+                            .annotation(level.span(
+                                get_span(manifest.document(), toml_path.as_slice(), false).unwrap(),
+                            ))
+                            .fold(true),
+                    );
+                    if emitted_source.is_none() {
+                        emitted_source = Some(format!(
+                            "`cargo::{}` is set to `{lint_level}`",
+                            UNUSED_OPTIONAL_DEPENDENCY.name
+                        ));
+                        message =
+                            message.footer(Level::Note.title(emitted_source.as_ref().unwrap()));
+                    }
+                    let help = format!(
+                        "remove the dependency or activate it in a feature with `dep:{name}`"
+                    );
+                    message = message.footer(Level::Help.title(&help));
+                    let renderer = Renderer::styled().term_width(
+                        gctx.shell()
+                            .err_width()
+                            .diagnostic_terminal_width()
+                            .unwrap_or(annotate_snippets::renderer::DEFAULT_TERM_WIDTH),
+                    );
+                    writeln!(gctx.shell().err(), "{}", renderer.render(message))?;
+                }
+            }
         }
-        if lint_level == LintLevel::Forbid || lint_level == LintLevel::Deny {
-            *error_count += 1;
-        }
-        let mut toml_path = vec![dep.kind().kind_table(), dep_name_in_toml.as_str()];
-        let platform = dep.platform().map(|p| p.to_string());
-        if let Some(platform) = platform.as_ref() {
-            toml_path.insert(0, platform);
-            toml_path.insert(0, "target");
-        }
-        let level = lint_level.to_diagnostic_level();
-        let manifest_path = rel_cwd_manifest_path(path, gctx);
-        let mut message = level.title(UNUSED_OPTIONAL_DEPENDENCY.desc).snippet(
-            Snippet::source(manifest.contents())
-                .origin(&manifest_path)
-                .annotation(level.span(get_span(manifest.document(), &toml_path, false).unwrap()))
-                .fold(true),
-        );
-        if emitted_source.is_none() {
-            emitted_source = Some(format!(
-                "`cargo::{}` is set to `{lint_level}`",
-                UNUSED_OPTIONAL_DEPENDENCY.name
-            ));
-            message = message.footer(Level::Note.title(emitted_source.as_ref().unwrap()));
-        }
-        let help = format!(
-            "remove the dependency or activate it in a feature with `dep:{dep_name_in_toml}`"
-        );
-        message = message.footer(Level::Help.title(&help));
-        let renderer = Renderer::styled().term_width(
-            gctx.shell()
-                .err_width()
-                .diagnostic_terminal_width()
-                .unwrap_or(annotate_snippets::renderer::DEFAULT_TERM_WIDTH),
-        );
-        writeln!(gctx.shell().err(), "{}", renderer.render(message))?;
     }
     Ok(())
 }

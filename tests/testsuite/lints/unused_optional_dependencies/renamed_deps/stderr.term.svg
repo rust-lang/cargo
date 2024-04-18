@@ -44,7 +44,7 @@
 </tspan>
     <tspan x="10px" y="208px"><tspan class="fg-bright-blue bold">   |</tspan>
 </tspan>
-    <tspan x="10px" y="226px"><tspan class="fg-bright-blue bold">12 |</tspan><tspan> baz = { version = "0.1.0", optional = true }</tspan>
+    <tspan x="10px" y="226px"><tspan class="fg-bright-blue bold">12 |</tspan><tspan> baz = { version = "0.2.0", package = "bar", optional = true }</tspan>
 </tspan>
     <tspan x="10px" y="244px"><tspan class="fg-bright-blue bold">   |</tspan><tspan class="fg-yellow bold"> ---</tspan>
 </tspan>
