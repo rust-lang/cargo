@@ -196,7 +196,7 @@ impl FeatureOpts {
         }
         match ws.resolve_behavior() {
             ResolveBehavior::V1 => {}
-            ResolveBehavior::V2 => {
+            ResolveBehavior::V2 | ResolveBehavior::V3 => {
                 enable(&vec!["all".to_string()]).unwrap();
             }
         }
@@ -214,7 +214,7 @@ impl FeatureOpts {
     pub fn new_behavior(behavior: ResolveBehavior, has_dev_units: HasDevUnits) -> FeatureOpts {
         match behavior {
             ResolveBehavior::V1 => FeatureOpts::default(),
-            ResolveBehavior::V2 => FeatureOpts {
+            ResolveBehavior::V2 | ResolveBehavior::V3 => FeatureOpts {
                 decouple_host_deps: true,
                 decouple_dev_deps: has_dev_units == HasDevUnits::No,
                 ignore_inactive_targets: true,

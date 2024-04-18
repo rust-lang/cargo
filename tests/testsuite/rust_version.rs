@@ -613,6 +613,133 @@ foo v0.0.1 ([CWD])
         .run();
 }
 
+#[cargo_test(nightly, reason = "edition2024 in rustc is unstable")]
+fn resolve_v3() {
+    Package::new("only-newer", "1.6.0")
+        .rust_version("1.65.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+    Package::new("newer-and-older", "1.5.0")
+        .rust_version("1.55.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+    Package::new("newer-and-older", "1.6.0")
+        .rust_version("1.65.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["edition2024"]
+
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            rust-version = "1.60.0"
+            resolver = "3"
+
+            [dependencies]
+            only-newer = "1.0.0"
+            newer-and-older = "1.0.0"
+        "#,
+        )
+        .file("src/main.rs", "fn main(){}")
+        .build();
+
+    // v3 should resolve for MSRV
+    p.cargo("generate-lockfile")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["edition2024", "msrv-policy"])
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to latest Rust 1.60.0 compatible versions
+[ADDING] newer-and-older v1.5.0 (latest: v1.6.0)
+",
+        )
+        .run();
+    p.cargo("tree")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["edition2024", "msrv-policy"])
+        .with_stdout(
+            "\
+foo v0.0.1 ([CWD])
+├── newer-and-older v1.5.0
+└── only-newer v1.6.0
+",
+        )
+        .run();
+
+    // `--ignore-rust-version` has precedence over v3
+    p.cargo("generate-lockfile --ignore-rust-version")
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to latest compatible versions
+",
+        )
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .run();
+    p.cargo("tree")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["edition2024", "msrv-policy"])
+        .with_stdout(
+            "\
+foo v0.0.1 ([CWD])
+├── newer-and-older v1.6.0
+└── only-newer v1.6.0
+",
+        )
+        .run();
+
+    // config has precedence over v3
+    p.cargo("generate-lockfile")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-maximum",
+        )
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to latest compatible versions
+",
+        )
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .run();
+    p.cargo("tree")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["edition2024", "msrv-policy"])
+        .with_stdout(
+            "\
+foo v0.0.1 ([CWD])
+├── newer-and-older v1.6.0
+└── only-newer v1.6.0
+",
+        )
+        .run();
+
+    // unstable
+    p.cargo("generate-lockfile")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  the cargo feature `edition2024` requires a nightly version of Cargo, but this is the `stable` channel
+  See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+  See https://doc.rust-lang.org/cargo/reference/unstable.html#edition-2024 for more information about using this feature.
+",
+        )
+        .run();
+}
+
 #[cargo_test]
 fn generate_lockfile_ignore_rust_version_is_unstable() {
     Package::new("bar", "1.5.0")
