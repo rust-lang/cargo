@@ -816,7 +816,7 @@ fn make_ws_rustc_target<'gctx>(
     source_id: &SourceId,
     pkg: Package,
 ) -> CargoResult<(Workspace<'gctx>, Rustc, String)> {
-    let mut ws = if source_id.is_git() || source_id.is_path() {
+    let mut ws = if source_id.is_path() {
         Workspace::new(pkg.manifest_path(), gctx)?
     } else {
         Workspace::ephemeral(pkg, gctx, None, false)?

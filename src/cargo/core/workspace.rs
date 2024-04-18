@@ -285,6 +285,10 @@ impl<'gctx> Workspace<'gctx> {
         ws.member_ids.insert(id);
         ws.default_members.push(ws.current_manifest.clone());
         ws.set_resolve_behavior();
+        // The find_root function is used here to traverse the directory tree and locate the root of the workspace.
+        // Despite being ephemeral, we still need to validate all the manifests in the workspace,
+        // which is what `find_root` helps us achieve here.
+        ws.find_root(ws.current_manifest.clone().as_path())?;
         Ok(ws)
     }
 
