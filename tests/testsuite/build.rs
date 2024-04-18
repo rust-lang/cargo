@@ -1496,7 +1496,7 @@ fn cargo_default_env_metadata_env_var() {
 
                 [lib]
                 name = "bar"
-                crate_type = ["dylib"]
+                crate-type = ["dylib"]
             "#,
         )
         .file("bar/src/lib.rs", "// hello")
@@ -2089,7 +2089,7 @@ fn many_crate_types_old_style_lib_location() {
                 [lib]
 
                 name = "foo"
-                crate_type = ["rlib", "dylib"]
+                crate-type = ["rlib", "dylib"]
             "#,
         )
         .file("src/foo.rs", "pub fn foo() {}")
@@ -2123,7 +2123,7 @@ fn many_crate_types_correct() {
                 [lib]
 
                 name = "foo"
-                crate_type = ["rlib", "dylib"]
+                crate-type = ["rlib", "dylib"]
             "#,
         )
         .file("src/lib.rs", "pub fn foo() {}")
@@ -2151,7 +2151,7 @@ fn set_both_dylib_and_cdylib_crate_types() {
                 [lib]
 
                 name = "foo"
-                crate_type = ["cdylib", "dylib"]
+                crate-type = ["cdylib", "dylib"]
             "#,
         )
         .file("src/lib.rs", "pub fn foo() {}")
@@ -2521,7 +2521,7 @@ fn verbose_release_build_deps() {
 
                 [lib]
                 name = "foo"
-                crate_type = ["dylib", "rlib"]
+                crate-type = ["dylib", "rlib"]
             "#,
         )
         .file("foo/src/lib.rs", "")

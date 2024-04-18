@@ -853,7 +853,7 @@ fn bench_dylib() {
 
                 [lib]
                 name = "foo"
-                crate_type = ["dylib"]
+                crate-type = ["dylib"]
 
                 [dependencies.bar]
                 path = "bar"
@@ -895,7 +895,7 @@ fn bench_dylib() {
 
                 [lib]
                 name = "bar"
-                crate_type = ["dylib"]
+                crate-type = ["dylib"]
             "#,
         )
         .file("bar/src/lib.rs", "pub fn baz() {}")

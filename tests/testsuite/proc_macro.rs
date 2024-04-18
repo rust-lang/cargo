@@ -509,7 +509,7 @@ fn proc_macro_built_once() {
                 edition = "2015"
 
                 [lib]
-                proc_macro = true
+                proc-macro = true
 
                 [features]
                 a = []
