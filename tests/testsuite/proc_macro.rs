@@ -346,7 +346,7 @@ fn proc_macro_crate_type_warning() {
 }
 
 #[cargo_test]
-fn proc_macro_conflicting_warning() {
+fn proc_macro2_conflict() {
     let foo = project()
         .file(
             "Cargo.toml",

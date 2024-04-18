@@ -2206,7 +2206,7 @@ fn invalid_feature_name_slash_error() {
 }
 
 #[cargo_test]
-fn default_features_conflicting_warning() {
+fn default_features2_conflict() {
     let p = project()
         .file(
             "Cargo.toml",

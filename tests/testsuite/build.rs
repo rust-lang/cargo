@@ -2170,7 +2170,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn dev_dependencies_conflicting_warning() {
+fn dev_dependencies2_conflict() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2207,7 +2207,7 @@ fn dev_dependencies_conflicting_warning() {
 }
 
 #[cargo_test]
-fn build_dependencies_conflicting_warning() {
+fn build_dependencies2_conflict() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2244,7 +2244,7 @@ fn build_dependencies_conflicting_warning() {
 }
 
 #[cargo_test]
-fn lib_crate_types_conflicting_warning() {
+fn lib_crate_type2_conflict() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2272,7 +2272,7 @@ fn lib_crate_types_conflicting_warning() {
 }
 
 #[cargo_test]
-fn examples_crate_types_conflicting_warning() {
+fn examples_crate_type2_conflict() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -3507,7 +3507,7 @@ fn cargo_platform_specific_dependency() {
 }
 
 #[cargo_test]
-fn cargo_platform_specific_dependency_build_dependencies_conflicting_warning() {
+fn cargo_platform_build_dependencies2_conflict() {
     let host = rustc_host();
     let p = project()
         .file(
@@ -3549,7 +3549,7 @@ fn cargo_platform_specific_dependency_build_dependencies_conflicting_warning() {
 }
 
 #[cargo_test]
-fn cargo_platform_specific_dependency_dev_dependencies_conflicting_warning() {
+fn cargo_platform_dev_dependencies2_conflict() {
     let host = rustc_host();
     let p = project()
         .file(
