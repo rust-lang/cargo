@@ -38,7 +38,7 @@ use some of the helper functions in this file to interact with the repository.
 
 */
 
-use crate::{path2url, project, Project, ProjectBuilder};
+use crate::{path2url, project, Project, ProjectBuilder, SymlinkBuilder};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Once;
@@ -74,6 +74,13 @@ impl RepoBuilder {
         let mut me = self.nocommit_file(path, contents);
         me.files.push(PathBuf::from(path));
         me
+    }
+
+    /// Create a symlink to a directory
+    pub fn nocommit_symlink_dir<T: AsRef<Path>>(self, dst: T, src: T) -> Self {
+        let workdir = self.repo.workdir().unwrap();
+        SymlinkBuilder::new_dir(workdir.join(dst), workdir.join(src)).mk();
+        self
     }
 
     /// Add a file that will be left in the working directory, but not added
