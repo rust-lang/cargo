@@ -236,3 +236,89 @@ pub fn check_implicit_features(
     }
     Ok(())
 }
+
+const UNUSED_OPTIONAL_DEPENDENCY: Lint = Lint {
+    name: "unused_optional_dependency",
+    desc: "unused optional dependency",
+    groups: &[],
+    default_level: LintLevel::Warn,
+    edition_lint_opts: None,
+};
+
+pub fn unused_dependencies(
+    pkg: &Package,
+    path: &Path,
+    lints: &TomlToolLints,
+    error_count: &mut usize,
+    gctx: &GlobalContext,
+) -> CargoResult<()> {
+    let edition = pkg.manifest().edition();
+    // Unused optional dependencies can only exist on edition 2024+
+    if edition <= Edition::Edition2021 {
+        return Ok(());
+    }
+
+    let lint_level = UNUSED_OPTIONAL_DEPENDENCY.level(lints, edition);
+    if lint_level == LintLevel::Allow {
+        return Ok(());
+    }
+
+    let manifest = pkg.manifest();
+    let activated_opt_deps = manifest
+        .resolved_toml()
+        .features()
+        .map(|map| {
+            map.values()
+                .flatten()
+                .filter_map(|f| match FeatureValue::new(InternedString::new(f)) {
+                    Dep { dep_name } => Some(dep_name.as_str()),
+                    _ => None,
+                })
+                .collect::<HashSet<_>>()
+        })
+        .unwrap_or_default();
+
+    let mut emitted_source = None;
+    for dep in manifest.dependencies() {
+        let dep_name_in_toml = dep.name_in_toml();
+        if !dep.is_optional() || activated_opt_deps.contains(dep_name_in_toml.as_str()) {
+            continue;
+        }
+        if lint_level == LintLevel::Forbid || lint_level == LintLevel::Deny {
+            *error_count += 1;
+        }
+        let mut toml_path = vec![dep.kind().kind_table(), dep_name_in_toml.as_str()];
+        let platform = dep.platform().map(|p| p.to_string());
+        if let Some(platform) = platform.as_ref() {
+            toml_path.insert(0, platform);
+            toml_path.insert(0, "target");
+        }
+        let level = lint_level.to_diagnostic_level();
+        let manifest_path = rel_cwd_manifest_path(path, gctx);
+        let mut message = level.title(UNUSED_OPTIONAL_DEPENDENCY.desc).snippet(
+            Snippet::source(manifest.contents())
+                .origin(&manifest_path)
+                .annotation(level.span(get_span(manifest.document(), &toml_path, false).unwrap()))
+                .fold(true),
+        );
+        if emitted_source.is_none() {
+            emitted_source = Some(format!(
+                "`cargo::{}` is set to `{lint_level}`",
+                UNUSED_OPTIONAL_DEPENDENCY.name
+            ));
+            message = message.footer(Level::Note.title(emitted_source.as_ref().unwrap()));
+        }
+        let help = format!(
+            "remove the dependency or activate it in a feature with `dep:{dep_name_in_toml}`"
+        );
+        message = message.footer(Level::Help.title(&help));
+        let renderer = Renderer::styled().term_width(
+            gctx.shell()
+                .err_width()
+                .diagnostic_terminal_width()
+                .unwrap_or(annotate_snippets::renderer::DEFAULT_TERM_WIDTH),
+        );
+        writeln!(gctx.shell().err(), "{}", renderer.render(message))?;
+    }
+    Ok(())
+}

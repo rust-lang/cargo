@@ -7,6 +7,7 @@ use cargo_test_support::{file, project};
 fn case() {
     Package::new("bar", "0.1.0").publish();
     Package::new("baz", "0.1.0").publish();
+    Package::new("target-dep", "0.1.0").publish();
     let p = project()
         .file(
             "Cargo.toml",
@@ -19,23 +20,21 @@ edition = "2024"
 
 [dependencies]
 bar = { version = "0.1.0", optional = true }
+
+[build-dependencies]
 baz = { version = "0.1.0", optional = true }
 
-[features]
-baz = ["dep:baz"]
-
-[lints.cargo]
-unused-optional-dependency = "allow"
+[target.'cfg(target_os = "linux")'.dependencies]
+target-dep = { version = "0.1.0", optional = true }
 "#,
         )
         .file("src/lib.rs", "")
         .build();
 
     snapbox::cmd::Command::cargo_ui()
-        .masquerade_as_nightly_cargo(&["cargo-lints", "edition2024"])
+        .masquerade_as_nightly_cargo(&["edition2024"])
         .current_dir(p.root())
         .arg("check")
-        .arg("-Zcargo-lints")
         .assert()
         .success()
         .stdout_matches(str![""])
