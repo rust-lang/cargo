@@ -836,9 +836,7 @@ fn dev_dependencies2_conflict() {
     p.cargo("check")
         .with_stderr_contains(
             "\
-[WARNING] conflicting between `dev-dependencies` and `dev_dependencies` in the `foo` package.
-
-        `dev_dependencies` is ignored and not recommended for use in the future
+[WARNING] unused manifest key `dev_dependencies` in the `foo` package
 ",
         )
         .run();
@@ -876,9 +874,7 @@ fn build_dependencies2_conflict() {
     p.cargo("check")
         .with_stderr_contains(
             "\
-[WARNING] conflicting between `build-dependencies` and `build_dependencies` in the `foo` package.
-
-        `build_dependencies` is ignored and not recommended for use in the future
+[WARNING] unused manifest key `build_dependencies` in the `foo` package
 ",
         )
         .run();
@@ -907,9 +903,7 @@ fn lib_crate_type2_conflict() {
     p.cargo("check")
         .with_stderr_contains(
             "\
-[WARNING] conflicting between `crate-type` and `crate_type` in the `foo` library target.
-
-        `crate_type` is ignored and not recommended for use in the future
+[WARNING] unused manifest key `crate_type` in the `foo` library target
 ",
         )
         .run();
@@ -956,12 +950,9 @@ fn examples_crate_type2_conflict() {
     p.cargo("check")
         .with_stderr_contains(
             "\
-[WARNING] conflicting between `crate-type` and `crate_type` in the `ex` example target.
-
-        `crate_type` is ignored and not recommended for use in the future
-[WARNING] conflicting between `crate-type` and `crate_type` in the `goodbye` example target.
-
-        `crate_type` is ignored and not recommended for use in the future",
+[WARNING] unused manifest key `crate_type` in the `ex` example target
+[WARNING] unused manifest key `crate_type` in the `goodbye` example target
+",
         )
         .run();
 }
@@ -999,13 +990,11 @@ fn cargo_platform_build_dependencies2_conflict() {
         .build();
 
     p.cargo("check")
-        .with_stderr_contains(
-        format!("\
-[WARNING] conflicting between `build-dependencies` and `build_dependencies` in the `{host}` platform target.
-
-        `build_dependencies` is ignored and not recommended for use in the future
-")
-        )
+        .with_stderr_contains(format!(
+            "\
+[WARNING] unused manifest key `build_dependencies` in the `{host}` platform target
+"
+        ))
         .run();
 }
 
@@ -1041,13 +1030,11 @@ fn cargo_platform_dev_dependencies2_conflict() {
         .build();
 
     p.cargo("check")
-        .with_stderr_contains(
-        format!("\
-[WARNING] conflicting between `dev-dependencies` and `dev_dependencies` in the `{host}` platform target.
-
-        `dev_dependencies` is ignored and not recommended for use in the future
-")
-        )
+        .with_stderr_contains(format!(
+            "\
+[WARNING] unused manifest key `dev_dependencies` in the `{host}` platform target
+"
+        ))
         .run();
 }
 
@@ -1088,9 +1075,7 @@ fn default_features2_conflict() {
     p.cargo("check")
         .with_stderr_contains(
             "\
-[WARNING] conflicting between `default-features` and `default_features` in the `a` dependency.
-
-        `default_features` is ignored and not recommended for use in the future
+[WARNING] unused manifest key `default_features` in the `a` dependency
 ",
         )
         .run();
@@ -1117,9 +1102,7 @@ fn proc_macro2_conflict() {
     foo.cargo("check")
         .with_stderr_contains(
             "\
-[WARNING] conflicting between `proc-macro` and `proc_macro` in the `foo` library target.
-
-        `proc_macro` is ignored and not recommended for use in the future
+[WARNING] unused manifest key `proc_macro` in the `foo` library target
 ",
         )
         .run();

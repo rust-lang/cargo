@@ -2340,8 +2340,7 @@ fn deprecated_underscore<T>(
     if old.is_some() && new.is_some() {
         let old_path = new_path.replace("-", "_");
         warnings.push(format!(
-            "conflicting between `{new_path}` and `{old_path}` in the `{name}` {kind}.\n
-        `{old_path}` is ignored and not recommended for use in the future"
+            "unused manifest key `{old_path}` in the `{name}` {kind}"
         ))
     }
 }
