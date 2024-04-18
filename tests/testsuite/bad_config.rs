@@ -832,10 +832,11 @@ fn dev_dependencies2() {
         .file("a/src/lib.rs", "")
         .build();
     p.cargo("check")
-        .with_stderr_does_not_contain(
+        .with_stderr_contains(
             "\
-[WARNING] [..]
-",
+[WARNING] `dev_dependencies` is deprecated in favor of `dev-dependencies` and will not work in the 2024 edition
+(in the `foo` package)
+"
         )
         .run();
 }
@@ -906,10 +907,11 @@ fn build_dependencies2() {
         .file("a/src/lib.rs", "")
         .build();
     p.cargo("check")
-        .with_stderr_does_not_contain(
+        .with_stderr_contains(
             "\
-[WARNING] [..]
-",
+[WARNING] `build_dependencies` is deprecated in favor of `build-dependencies` and will not work in the 2024 edition
+(in the `foo` package)
+"
         )
         .run();
 }
@@ -972,9 +974,10 @@ fn lib_crate_type2() {
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
     p.cargo("check")
-        .with_stderr_does_not_contain(
+        .with_stderr_contains(
             "\
-[WARNING] [..]
+[WARNING] `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
+(in the `foo` library target)
 ",
         )
         .run();
@@ -1046,9 +1049,12 @@ fn examples_crate_type2() {
         )
         .build();
     p.cargo("check")
-        .with_stderr_does_not_contain(
+        .with_stderr_contains(
             "\
-[WARNING] [..]
+[WARNING] `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
+(in the `ex` example target)
+[WARNING] `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
+(in the `goodbye` example target)
 ",
         )
         .run();
@@ -1133,10 +1139,11 @@ fn cargo_platform_build_dependencies2() {
         .build();
 
     p.cargo("check")
-        .with_stderr_does_not_contain(
-            "\
-[WARNING] [..]
-",
+        .with_stderr_contains(
+            format!("\
+[WARNING] `build_dependencies` is deprecated in favor of `build-dependencies` and will not work in the 2024 edition
+(in the `{host}` platform target)
+")
         )
         .run();
 }
@@ -1212,10 +1219,11 @@ fn cargo_platform_dev_dependencies2() {
         .build();
 
     p.cargo("check")
-        .with_stderr_does_not_contain(
-            "\
-[WARNING] [..]
-",
+        .with_stderr_contains(
+            format!("\
+[WARNING] `dev_dependencies` is deprecated in favor of `dev-dependencies` and will not work in the 2024 edition
+(in the `{host}` platform target)
+")
         )
         .run();
 }
@@ -1295,10 +1303,11 @@ fn default_features2() {
         .build();
 
     p.cargo("check")
-        .with_stderr_does_not_contain(
+        .with_stderr_contains(
             "\
-[WARNING] [..]
-",
+[WARNING] `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `a` dependency)
+"
         )
         .run();
 }
@@ -1364,9 +1373,10 @@ fn proc_macro2() {
         .build();
 
     foo.cargo("check")
-        .with_stderr_does_not_contain(
+        .with_stderr_contains(
             "\
-[WARNING] [..]
+[WARNING] `proc_macro` is deprecated in favor of `proc-macro` and will not work in the 2024 edition
+(in the `foo` library target)
 ",
         )
         .run();

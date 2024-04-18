@@ -2342,6 +2342,11 @@ fn deprecated_underscore<T>(
         warnings.push(format!(
             "unused manifest key `{old_path}` in the `{name}` {kind}"
         ))
+    } else if old.is_some() {
+        let old_path = new_path.replace("-", "_");
+        warnings.push(format!(
+            "`{old_path}` is deprecated in favor of `{new_path}` and will not work in the 2024 edition\n(in the `{name}` {kind})"
+        ))
     }
 }
 
