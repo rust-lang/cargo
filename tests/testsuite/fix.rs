@@ -2049,3 +2049,138 @@ edition = "2021"
 "#
     );
 }
+
+#[cargo_test]
+fn add_feature_for_unused_dep() {
+    Package::new("bar", "0.1.0").publish();
+    Package::new("baz", "0.1.0").publish();
+    Package::new("target-dep", "0.1.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bar = { version = "0.1.0", optional = true }
+
+[build-dependencies]
+baz = { version = "0.1.0", optional = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+target-dep = { version = "0.1.0", optional = true }
+"#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --edition --allow-no-vcs")
+        .masquerade_as_nightly_cargo(&["edition2024"])
+        .with_stderr(
+            "\
+[MIGRATING] Cargo.toml from 2021 edition to 2024
+[FIXED] Cargo.toml (3 fixes)
+[UPDATING] `dummy-registry` index
+[LOCKING] 4 packages to latest compatible versions
+[CHECKING] foo v0.1.0 ([CWD])
+[MIGRATING] src/lib.rs from 2021 edition to 2024
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+    assert_eq!(
+        p.read_file("Cargo.toml"),
+        r#"
+[package]
+name = "foo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bar = { version = "0.1.0", optional = true }
+
+[build-dependencies]
+baz = { version = "0.1.0", optional = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+target-dep = { version = "0.1.0", optional = true }
+
+[features]
+bar = ["dep:bar"]
+baz = ["dep:baz"]
+target-dep = ["dep:target-dep"]
+"#
+    );
+}
+
+#[cargo_test]
+fn add_feature_for_unused_dep_existing_table() {
+    Package::new("bar", "0.1.0").publish();
+    Package::new("baz", "0.1.0").publish();
+    Package::new("target-dep", "0.1.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bar = { version = "0.1.0", optional = true }
+
+[build-dependencies]
+baz = { version = "0.1.0", optional = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+target-dep = { version = "0.1.0", optional = true }
+
+[features]
+target-dep = ["dep:target-dep"]
+"#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --edition --allow-no-vcs")
+        .masquerade_as_nightly_cargo(&["edition2024"])
+        .with_stderr(
+            "\
+[MIGRATING] Cargo.toml from 2021 edition to 2024
+[FIXED] Cargo.toml (2 fixes)
+[UPDATING] `dummy-registry` index
+[LOCKING] 4 packages to latest compatible versions
+[CHECKING] foo v0.1.0 ([CWD])
+[MIGRATING] src/lib.rs from 2021 edition to 2024
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+    assert_eq!(
+        p.read_file("Cargo.toml"),
+        r#"
+[package]
+name = "foo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bar = { version = "0.1.0", optional = true }
+
+[build-dependencies]
+baz = { version = "0.1.0", optional = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+target-dep = { version = "0.1.0", optional = true }
+
+[features]
+target-dep = ["dep:target-dep"]
+bar = ["dep:bar"]
+baz = ["dep:baz"]
+"#
+    );
+}

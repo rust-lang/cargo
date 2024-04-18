@@ -53,12 +53,13 @@ use tracing::{debug, trace, warn};
 use crate::core::compiler::RustcTargetData;
 use crate::core::resolver::features::{DiffMap, FeatureOpts, FeatureResolver, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveBehavior};
-use crate::core::PackageIdSpecQuery as _;
 use crate::core::{Edition, MaybePackage, Package, PackageId, Workspace};
+use crate::core::{FeatureValue, PackageIdSpecQuery as _};
 use crate::ops::resolve::WorkspaceResolve;
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use crate::util::errors::CargoResult;
+use crate::util::interning::InternedString;
 use crate::util::GlobalContext;
 use crate::util::{existing_vcs_repo, LockServer, LockServerClient};
 use crate::{drop_eprint, drop_eprintln};
@@ -253,6 +254,7 @@ fn migrate_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
             let mut fixes = 0;
 
             let root = document.as_table_mut();
+            fixes += add_feature_for_unused_deps(pkg, root);
             if rename_table(root, "project", "package") {
                 fixes += 1;
             }
@@ -285,6 +287,45 @@ fn rename_table(parent: &mut dyn toml_edit::TableLike, old: &str, new: &str) -> 
         *new_key.leaf_decor_mut() = old_key.leaf_decor().clone();
     }
     true
+}
+
+fn add_feature_for_unused_deps(pkg: &Package, parent: &mut dyn toml_edit::TableLike) -> usize {
+    let manifest = pkg.manifest();
+
+    let activated_opt_deps = manifest
+        .resolved_toml()
+        .features()
+        .map(|map| {
+            map.values()
+                .flatten()
+                .filter_map(|f| match FeatureValue::new(InternedString::new(f)) {
+                    FeatureValue::Dep { dep_name } => Some(dep_name.as_str()),
+                    _ => None,
+                })
+                .collect::<HashSet<_>>()
+        })
+        .unwrap_or_default();
+
+    let mut fixes = 0;
+    for dep in manifest.dependencies() {
+        let dep_name_in_toml = dep.name_in_toml();
+        if dep.is_optional() && !activated_opt_deps.contains(dep_name_in_toml.as_str()) {
+            fixes += 1;
+            if let Some(features) = parent
+                .entry("features")
+                .or_insert(toml_edit::table())
+                .as_table_like_mut()
+            {
+                features.insert(
+                    dep_name_in_toml.as_str(),
+                    toml_edit::Item::Value(toml_edit::Value::Array(toml_edit::Array::from_iter(
+                        &[format!("dep:{}", dep_name_in_toml)],
+                    ))),
+                );
+            }
+        }
+    }
+    fixes
 }
 
 fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<()> {
