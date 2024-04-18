@@ -21,6 +21,10 @@ fn case() {
         .arg("add")
         .arg_line("rust-version-user")
         .current_dir(cwd)
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .assert()
         .failure()

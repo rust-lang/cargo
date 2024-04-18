@@ -2644,6 +2644,19 @@ impl BuildTargetConfig {
     }
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct CargoResolverConfig {
+    pub something_like_precedence: Option<CargoResolverPrecedence>,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum CargoResolverPrecedence {
+    SomethingLikeMaximum,
+    SomethingLikeRustVersion,
+}
+
 #[derive(Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct TermConfig {

@@ -336,15 +336,26 @@ This was stabilized in 1.79 in [#13608](https://github.com/rust-lang/cargo/pull/
 
 ### MSRV-aware resolver
 
-By default, `-Zmsrv-policy` enables an MSRV-aware resolver.
+`-Zmsrv-policy` allows access to an MSRV-aware resolver which can be enabled with:
+- `resolver.something-like-precedence` config field
+
 The resolver will prefer dependencies with a `package.rust-version` that is the same or older than your project's MSRV.
 Your project's MSRV is determined by taking the lowest `package.rust-version` set among your workspace members.
 If there is none set, your toolchain version will be used with the intent to pick up the version from rustup's `rust-toolchain.toml`, if present.
 
-MSRV-incompatible dependencies can still be selected by:
+#### `resolver.something-like-precedence`
+* Type: string
+* Default: "something-like-maximum"
+* Environment: `CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE`
+
+Select which policy should be used when resolving dependencies.  Values include
+- `something-like-maximum`: prefer highest compatible versions of a package
+- `something-like-rust-version`: prefer versions of packages compatible with your project's Rust version
+
+Can be overridden with
+- `--ignore-rust-version` CLI option
 - Setting the dependency's version requirement too high
 - Specifying the version to `cargo update` with `--precise`
-- Passing `--ignore-rust-version`
 
 ## precise-pre-release
 

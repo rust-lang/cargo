@@ -1,6 +1,6 @@
 //! Tests for targets with `rust-version`.
 
-use cargo_test_support::{project, registry::Package};
+use cargo_test_support::{cargo_process, project, registry::Package};
 
 #[cargo_test]
 fn rust_version_satisfied() {
@@ -213,6 +213,10 @@ fn resolve_with_rust_version() {
         .build();
 
     p.cargo("generate-lockfile --ignore-rust-version")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -233,6 +237,10 @@ foo v0.0.1 ([CWD])
         .run();
 
     p.cargo("generate-lockfile")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -289,6 +297,10 @@ fn resolve_with_rustc() {
         .build();
 
     p.cargo("generate-lockfile --ignore-rust-version")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -309,6 +321,10 @@ foo v0.0.1 ([CWD])
         .run();
 
     p.cargo("generate-lockfile")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -363,6 +379,10 @@ fn resolve_with_backtracking() {
         .build();
 
     p.cargo("generate-lockfile --ignore-rust-version")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -384,6 +404,10 @@ foo v0.0.1 ([CWD])
 
     // Ideally we'd pick `has-rust-version` 1.6.0 which requires backtracking
     p.cargo("generate-lockfile")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -462,6 +486,10 @@ fn resolve_with_multiple_rust_versions() {
         .build();
 
     p.cargo("generate-lockfile --ignore-rust-version")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -482,6 +510,10 @@ higher v0.0.1 ([CWD])
         .run();
 
     p.cargo("generate-lockfile")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -497,6 +529,84 @@ higher v0.0.1 ([CWD])
             "\
 higher v0.0.1 ([CWD])
 ├── newer-and-older v1.5.0
+└── only-newer v1.6.0
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn resolve_unstable_config_on_stable() {
+    Package::new("only-newer", "1.6.0")
+        .rust_version("1.65.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+    Package::new("newer-and-older", "1.5.0")
+        .rust_version("1.55.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+    Package::new("newer-and-older", "1.6.0")
+        .rust_version("1.65.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            rust-version = "1.60.0"
+
+            [dependencies]
+            only-newer = "1.0.0"
+            newer-and-older = "1.0.0"
+        "#,
+        )
+        .file("src/main.rs", "fn main(){}")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
+        .with_stderr(
+            "\
+[WARNING] ignoring `resolver` config table without `-Zmsrv-policy`
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to latest compatible versions
+",
+        )
+        .run();
+    p.cargo("tree")
+        .with_stdout(
+            "\
+foo v0.0.1 ([CWD])
+├── newer-and-older v1.6.0
+└── only-newer v1.6.0
+",
+        )
+        .run();
+
+    p.cargo("generate-lockfile")
+        .env("CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE", "non-existent")
+        .with_stderr(
+            "\
+[WARNING] ignoring `resolver` config table without `-Zmsrv-policy`
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to latest compatible versions
+",
+        )
+        .run();
+    p.cargo("tree")
+        .with_stdout(
+            "\
+foo v0.0.1 ([CWD])
+├── newer-and-older v1.6.0
 └── only-newer v1.6.0
 ",
         )
@@ -572,6 +682,10 @@ fn update_msrv_resolve() {
         .build();
 
     p.cargo("update")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -593,12 +707,75 @@ See https://github.com/rust-lang/cargo/issues/9930 for more information about th
         )
         .run();
     p.cargo("update --ignore-rust-version")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
+[UPDATING] bar v1.5.0 -> v1.6.0
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn update_precise_overrides_msrv_resolver() {
+    Package::new("bar", "1.5.0")
+        .rust_version("1.55.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+    Package::new("bar", "1.6.0")
+        .rust_version("1.65.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            rust-version = "1.60.0"
+            [dependencies]
+            bar = "1.0.0"
+        "#,
+        )
+        .file("src/main.rs", "fn main(){}")
+        .build();
+
+    p.cargo("update")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
+[ADDING] bar v1.5.0 (latest: v1.6.0)
+",
+        )
+        .run();
+    p.cargo("update --precise 1.6.0 bar")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
 [UPDATING] bar v1.5.0 -> v1.6.0
 ",
         )
@@ -640,6 +817,10 @@ fn check_msrv_resolve() {
         .build();
 
     p.cargo("check --ignore-rust-version")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -668,6 +849,10 @@ foo v0.0.1 ([CWD])
 
     std::fs::remove_file(p.root().join("Cargo.lock")).unwrap();
     p.cargo("check")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
         .arg("-Zmsrv-policy")
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr(
@@ -689,6 +874,50 @@ foo v0.0.1 ([CWD])
 foo v0.0.1 ([CWD])
 ├── newer-and-older v1.5.0
 └── only-newer v1.6.0
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cargo_install_ignores_msrv_config() {
+    Package::new("dep", "1.0.0")
+        .rust_version("1.50")
+        .file("src/lib.rs", "fn hello() {}")
+        .publish();
+    Package::new("dep", "1.1.0")
+        .rust_version("1.70")
+        .file("src/lib.rs", "fn hello() {}")
+        .publish();
+    Package::new("foo", "0.0.1")
+        .rust_version("1.60")
+        .file("src/main.rs", "fn main() {}")
+        .dep("dep", "1")
+        .publish();
+
+    cargo_process("install foo")
+        .env(
+            "CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE",
+            "something-like-rust-version",
+        )
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry [..])
+[INSTALLING] foo v0.0.1
+[LOCKING] 2 packages to latest Rust 1.60 compatible versions
+[ADDING] dep v1.0.0 (latest: v1.1.0)
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep v1.0.0 (registry [..])
+[COMPILING] dep v1.0.0
+[COMPILING] foo v0.0.1
+[FINISHED] `release` profile [optimized] target(s) in [..]
+[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 ",
         )
         .run();
