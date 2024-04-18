@@ -228,6 +228,7 @@ pub struct GlobalContext {
     doc_extern_map: LazyCell<RustdocExternMap>,
     progress_config: ProgressConfig,
     env_config: LazyCell<EnvConfig>,
+    patchtool_config: LazyCell<PatchtoolConfig>,
     /// This should be false if:
     /// - this is an artifact of the rustc distribution process for "stable" or for "beta"
     /// - this is an `#[test]` that does not opt in with `enable_nightly_features`
@@ -322,6 +323,7 @@ impl GlobalContext {
             doc_extern_map: LazyCell::new(),
             progress_config: ProgressConfig::default(),
             env_config: LazyCell::new(),
+            patchtool_config: LazyCell::new(),
             nightly_features_allowed: matches!(&*features::channel(), "nightly" | "dev"),
             ws_roots: RefCell::new(HashMap::new()),
             global_cache_tracker: LazyCell::new(),
@@ -1860,6 +1862,11 @@ impl GlobalContext {
         Ok(env_config)
     }
 
+    pub fn patchtool_config(&self) -> CargoResult<&PatchtoolConfig> {
+        self.patchtool_config
+            .try_borrow_with(|| self.get::<PatchtoolConfig>("patchtool"))
+    }
+
     /// This is used to validate the `term` table has valid syntax.
     ///
     /// This is necessary because loading the term settings happens very
@@ -2776,6 +2783,12 @@ where
     }
 
     deserializer.deserialize_option(ProgressVisitor)
+}
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct PatchtoolConfig {
+    pub path: Option<PathAndArgs>,
 }
 
 #[derive(Debug)]
