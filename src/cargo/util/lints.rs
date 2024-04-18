@@ -192,21 +192,18 @@ pub fn check_implicit_features(
         if lint_level == LintLevel::Forbid || lint_level == LintLevel::Deny {
             *error_count += 1;
         }
+        let mut toml_path = vec![dep.kind().kind_table(), dep_name_in_toml.as_str()];
+        let platform = dep.platform().map(|p| p.to_string());
+        if let Some(platform) = platform.as_ref() {
+            toml_path.insert(0, platform);
+            toml_path.insert(0, "target");
+        }
         let level = lint_level.to_diagnostic_level();
         let manifest_path = rel_cwd_manifest_path(path, gctx);
         let message = level.title(IMPLICIT_FEATURES.desc).snippet(
             Snippet::source(manifest.contents())
                 .origin(&manifest_path)
-                .annotation(
-                    level.span(
-                        get_span(
-                            manifest.document(),
-                            &["dependencies", &dep_name_in_toml],
-                            false,
-                        )
-                        .unwrap(),
-                    ),
-                )
+                .annotation(level.span(get_span(manifest.document(), &toml_path, false).unwrap()))
                 .fold(true),
         );
         let renderer = Renderer::styled().term_width(
