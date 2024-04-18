@@ -339,6 +339,7 @@ This was stabilized in 1.79 in [#13608](https://github.com/rust-lang/cargo/pull/
 `-Zmsrv-policy` allows access to an MSRV-aware resolver which can be enabled with:
 - `resolver.something-like-precedence` config field
 - `workspace.resolver = "3"` / `package.resolver = "3"`
+- `package.edition = "2024"` (only in workspace root)
 
 The resolver will prefer dependencies with a `package.rust-version` that is the same or older than your project's MSRV.
 Your project's MSRV is determined by taking the lowest `package.rust-version` set among your workspace members.

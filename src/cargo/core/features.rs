@@ -300,7 +300,9 @@ impl Edition {
     }
 
     pub(crate) fn default_resolve_behavior(&self) -> ResolveBehavior {
-        if *self >= Edition::Edition2021 {
+        if *self >= Edition::Edition2024 {
+            ResolveBehavior::V3
+        } else if *self >= Edition::Edition2021 {
             ResolveBehavior::V2
         } else {
             ResolveBehavior::V1
