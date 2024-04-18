@@ -805,6 +805,42 @@ Caused by:
 }
 
 #[cargo_test]
+fn dev_dependencies2() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [dev_dependencies]
+                a = {path = "a"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+    p.cargo("check")
+        .with_stderr_does_not_contain(
+            "\
+[WARNING] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn dev_dependencies2_conflict() {
     let p = project()
         .file(
@@ -837,6 +873,42 @@ fn dev_dependencies2_conflict() {
         .with_stderr_contains(
             "\
 [WARNING] unused manifest key `dev_dependencies` in the `foo` package
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn build_dependencies2() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2018"
+
+                [build_dependencies]
+                a = {path = "a"}
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+    p.cargo("check")
+        .with_stderr_does_not_contain(
+            "\
+[WARNING] [..]
 ",
         )
         .run();
@@ -881,6 +953,34 @@ fn build_dependencies2_conflict() {
 }
 
 #[cargo_test]
+fn lib_crate_type2() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                edition = "2015"
+                authors = ["wycats@example.com"]
+
+                [lib]
+                name = "foo"
+                crate_type = ["staticlib", "dylib"]
+            "#,
+        )
+        .file("src/lib.rs", "pub fn foo() {}")
+        .build();
+    p.cargo("check")
+        .with_stderr_does_not_contain(
+            "\
+[WARNING] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn lib_crate_type2_conflict() {
     let p = project()
         .file(
@@ -904,6 +1004,51 @@ fn lib_crate_type2_conflict() {
         .with_stderr_contains(
             "\
 [WARNING] unused manifest key `crate_type` in the `foo` library target
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn examples_crate_type2() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                edition = "2015"
+                authors = ["wycats@example.com"]
+
+                [[example]]
+                name = "ex"
+                path = "examples/ex.rs"
+                crate_type = ["proc_macro"]
+                [[example]]
+                name = "goodbye"
+                path = "examples/ex-goodbye.rs"
+                crate_type = ["rlib", "staticlib"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "examples/ex.rs",
+            r#"
+                fn main() { println!("ex"); }
+            "#,
+        )
+        .file(
+            "examples/ex-goodbye.rs",
+            r#"
+                fn main() { println!("goodbye"); }
+            "#,
+        )
+        .build();
+    p.cargo("check")
+        .with_stderr_does_not_contain(
+            "\
+[WARNING] [..]
 ",
         )
         .run();
@@ -958,6 +1103,45 @@ fn examples_crate_type2_conflict() {
 }
 
 #[cargo_test]
+fn cargo_platform_build_dependencies2() {
+    let host = rustc_host();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.5.0"
+                    edition = "2015"
+                    authors = ["wycats@example.com"]
+                    build = "build.rs"
+
+                    [target.{host}.build_dependencies]
+                    build = {{ path = "build" }}
+                "#,
+                host = host
+            ),
+        )
+        .file("src/main.rs", "fn main() { }")
+        .file(
+            "build.rs",
+            "extern crate build; fn main() { build::build(); }",
+        )
+        .file("build/Cargo.toml", &basic_manifest("build", "0.5.0"))
+        .file("build/src/lib.rs", "pub fn build() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_does_not_contain(
+            "\
+[WARNING] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn cargo_platform_build_dependencies2_conflict() {
     let host = rustc_host();
     let p = project()
@@ -995,6 +1179,44 @@ fn cargo_platform_build_dependencies2_conflict() {
 [WARNING] unused manifest key `build_dependencies` in the `{host}` platform target
 "
         ))
+        .run();
+}
+
+#[cargo_test]
+fn cargo_platform_dev_dependencies2() {
+    let host = rustc_host();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.5.0"
+                    edition = "2015"
+                    authors = ["wycats@example.com"]
+
+                    [target.{host}.dev_dependencies]
+                    dev = {{ path = "dev" }}
+                "#,
+                host = host
+            ),
+        )
+        .file("src/main.rs", "fn main() { }")
+        .file(
+            "tests/foo.rs",
+            "extern crate dev; #[test] fn foo() { dev::dev() }",
+        )
+        .file("dev/Cargo.toml", &basic_manifest("dev", "0.5.0"))
+        .file("dev/src/lib.rs", "pub fn dev() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_does_not_contain(
+            "\
+[WARNING] [..]
+",
+        )
         .run();
 }
 
@@ -1039,6 +1261,49 @@ fn cargo_platform_dev_dependencies2_conflict() {
 }
 
 #[cargo_test]
+fn default_features2() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                a = { path = "a", features = ["f1"], default_features = false }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+
+                [features]
+                default = ["f1"]
+                f1 = []
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_does_not_contain(
+            "\
+[WARNING] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn default_features2_conflict() {
     let p = project()
         .file(
@@ -1076,6 +1341,32 @@ fn default_features2_conflict() {
         .with_stderr_contains(
             "\
 [WARNING] unused manifest key `default_features` in the `a` dependency
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn proc_macro2() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+                [lib]
+                proc_macro = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("check")
+        .with_stderr_does_not_contain(
+            "\
+[WARNING] [..]
 ",
         )
         .run();
