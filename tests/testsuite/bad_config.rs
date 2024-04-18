@@ -833,7 +833,7 @@ fn dev_dependencies2_conflict() {
         )
         .file("a/src/lib.rs", "")
         .build();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr_contains(
 "[WARNING] conflicting between `dev-dependencies` and `dev_dependencies` in the `foo` package.\n
         `dev_dependencies` is ignored and not recommended for use in the future"
@@ -870,7 +870,7 @@ fn build_dependencies2_conflict() {
         )
         .file("a/src/lib.rs", "")
         .build();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr_contains(
 "[WARNING] conflicting between `build-dependencies` and `build_dependencies` in the `foo` package.\n
         `build_dependencies` is ignored and not recommended for use in the future"
@@ -898,7 +898,7 @@ fn lib_crate_type2_conflict() {
         )
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr_contains(
 "[WARNING] conflicting between `crate-type` and `crate_type` in the `foo` library target.\n
         `crate_type` is ignored and not recommended for use in the future",
@@ -944,7 +944,7 @@ fn examples_crate_type2_conflict() {
             "#,
         )
         .build();
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr_contains(
             "\
 [WARNING] conflicting between `crate-type` and `crate_type` in the `ex` example target.\n
@@ -987,14 +987,12 @@ fn cargo_platform_build_dependencies2_conflict() {
         .file("build/src/lib.rs", "pub fn build() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr_contains(
         format!("[WARNING] conflicting between `build-dependencies` and `build_dependencies` in the `{}` platform target.\n
         `build_dependencies` is ignored and not recommended for use in the future", host)
         )
         .run();
-
-    assert!(p.bin("foo").is_file());
 }
 
 #[cargo_test]
@@ -1028,15 +1026,12 @@ fn cargo_platform_dev_dependencies2_conflict() {
         .file("dev/src/lib.rs", "pub fn dev() {}")
         .build();
 
-    p.cargo("build")
+    p.cargo("check")
         .with_stderr_contains(
         format!("[WARNING] conflicting between `dev-dependencies` and `dev_dependencies` in the `{}` platform target.\n
         `dev_dependencies` is ignored and not recommended for use in the future", host)
         )
         .run();
-
-    assert!(p.bin("foo").is_file());
-    p.cargo("test").run();
 }
 
 #[cargo_test]
