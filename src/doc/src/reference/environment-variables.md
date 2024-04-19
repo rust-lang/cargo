@@ -430,3 +430,33 @@ Cargo exposes this environment variable to 3rd party subcommands
 * `CARGO` --- Path to the `cargo` binary performing the build.
 
 For extended information about your environment you may run `cargo metadata`.
+
+## Apple deployment targets environment variables
+
+Apple platforms have a concept of [deployment target], i.e. the minimum OS
+version that a binary is built to run on. This can be set with the following
+standard environment variables (variable name depends on the target).
+
+* `MACOSX_DEPLOYMENT_TARGET` --- macOS deployment target
+* `IPHONEOS_DEPLOYMENT_TARGET` --- iOS / iPadOS deployment target
+* `TVOS_DEPLOYMENT_TARGET` --- tvOS deployment target
+* `WATCHOS_DEPLOYMENT_TARGET` --- watchOS deployment target
+* `XROS_DEPLOYMENT_TARGET` --- visionOS deployment target
+
+These are shared between the target and the host platform, although they only
+apply to the specific platform for which they're defined. They can be defined
+in [the `[env]` config section][config-env], just like regular environment
+variables.
+
+```toml
+[env]
+# Require minimum macOS 11.0, which allows unconditional usage of newer APIs
+MACOSX_DEPLOYMENT_TARGET = 11.0
+```
+
+The current default (and also minimum) deployment target for `rustc` can be
+retrieved with [`rustc --print=deployment-target`].
+
+[deployment target]: https://developer.apple.com/library/archive/documentation/DeveloperTools/Conceptual/cross_development/Configuring/configuring.html
+[`rustc --print=deployment-target`]: https://doc.rust-lang.org/nightly/rustc/command-line-arguments.html#--print-print-compiler-information
+[config-env]: config.md#env
