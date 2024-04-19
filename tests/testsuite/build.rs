@@ -6,14 +6,14 @@ use cargo::{
     ops::CompileOptions,
     GlobalContext,
 };
-use cargo_test_support::compare;
 use cargo_test_support::paths::{root, CargoPathExt};
 use cargo_test_support::registry::Package;
-use cargo_test_support::tools;
 use cargo_test_support::{
     basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, git, is_nightly, main_file,
     paths, process, project, rustc_host, sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
 };
+use cargo_test_support::{cargo_process, compare};
+use cargo_test_support::{git_process, tools};
 use cargo_util::paths::dylib_path_envvar;
 use std::env;
 use std::fs;
@@ -31,6 +31,58 @@ fn cargo_compile_simple() {
     assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo")).with_stdout("i am foo\n").run();
+}
+
+#[cargo_test]
+fn build_with_symlink_to_path_dependency_with_build_script_in_git() {
+    if !symlink_supported() {
+        return;
+    }
+
+    let root = paths::root();
+    git::repo(&root)
+        .nocommit_file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+
+               [dependencies]
+               # the path leads through a symlink, 'symlink-to-original' is a worktree root,
+               # and symlink-to-dir/ is a symlink to a sub-directory to be stepped through.
+               lib = { version = "0.1.0", path = "symlink-to-original/symlink-to-dir/lib" }
+            "#,
+        )
+        .nocommit_file("src/main.rs", "fn main() { }")
+        .nocommit_file("original/dir/lib/build.rs", "fn main() {}")
+        .nocommit_file(
+            "original/dir/lib/Cargo.toml",
+            r#"
+                [package]
+                name = "lib"
+                version = "0.1.0"
+                edition = "2021"
+              "#,
+        )
+        .nocommit_file("original/dir/lib/src/lib.rs", "")
+        .nocommit_symlink_dir("original", "symlink-to-original")
+        .nocommit_symlink_dir("original/dir", "original/symlink-to-dir")
+        .build();
+
+    // It is necessary to have a sub-repository and to add files so there is an index.
+    git_process("init")
+        .cwd(root.join("original"))
+        .build_command()
+        .status()
+        .unwrap();
+    git_process("add .")
+        .cwd(root.join("original"))
+        .build_command()
+        .status()
+        .unwrap();
+    cargo_process("build").run()
 }
 
 #[cargo_test]
