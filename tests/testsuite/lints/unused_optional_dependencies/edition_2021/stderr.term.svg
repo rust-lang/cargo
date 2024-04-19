@@ -4,14 +4,14 @@
     .bg { background: #000000 }
     .fg-green { fill: #00AA00 }
     .container {
-      padding: 0 10px;
-      line-height: 18px;
+    padding: 0 10px;
+    line-height: 18px;
     }
     .bold { font-weight: bold; }
     tspan {
-      font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
-      white-space: pre;
-      line-height: 18px;
+    font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+    white-space: pre;
+    line-height: 18px;
     }
   </style>
 
