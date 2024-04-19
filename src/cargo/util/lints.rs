@@ -170,28 +170,23 @@ pub fn check_implicit_features(
     }
 
     let manifest = pkg.manifest();
-    let user_defined_features = manifest.resolved_toml().features();
-    let features = user_defined_features.map_or(HashSet::new(), |f| {
-        f.keys().map(|k| InternedString::new(&k)).collect()
-    });
-    // Add implicit features for optional dependencies if they weren't
-    // explicitly listed anywhere.
-    let explicitly_listed = user_defined_features.map_or(HashSet::new(), |f| {
-        f.values()
-            .flatten()
-            .filter_map(|v| match FeatureValue::new(v.into()) {
-                Dep { dep_name } => Some(dep_name),
-                _ => None,
-            })
-            .collect()
-    });
+    let activated_opt_deps = manifest
+        .resolved_toml()
+        .features()
+        .map(|map| {
+            map.values()
+                .flatten()
+                .filter_map(|f| match FeatureValue::new(InternedString::new(f)) {
+                    Dep { dep_name } => Some(dep_name.as_str()),
+                    _ => None,
+                })
+                .collect::<HashSet<_>>()
+        })
+        .unwrap_or_default();
 
     for dep in manifest.dependencies() {
         let dep_name_in_toml = dep.name_in_toml();
-        if !dep.is_optional()
-            || features.contains(&dep_name_in_toml)
-            || explicitly_listed.contains(&dep_name_in_toml)
-        {
+        if !dep.is_optional() || activated_opt_deps.contains(dep_name_in_toml.as_str()) {
             continue;
         }
         if lint_level == LintLevel::Forbid || lint_level == LintLevel::Deny {
