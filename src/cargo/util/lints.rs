@@ -144,7 +144,7 @@ impl From<TomlLintLevel> for LintLevel {
 /// [RFC #3491]: https://rust-lang.github.io/rfcs/3491-remove-implicit-features.html
 const IMPLICIT_FEATURES: Lint = Lint {
     name: "implicit_features",
-    desc: "warn about the use of unstable features",
+    desc: "implicit features for optional dependencies is deprecated and will be unavailable in the 2024 edition",
     groups: &[],
     default_level: LintLevel::Allow,
     edition_lint_opts: Some((Edition::Edition2024, LintLevel::Deny)),
