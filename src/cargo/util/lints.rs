@@ -6,6 +6,7 @@ use annotate_snippets::{Level, Renderer, Snippet};
 use cargo_util_schemas::manifest::{TomlLintLevel, TomlToolLints};
 use pathdiff::diff_paths;
 use std::collections::HashSet;
+use std::fmt::Display;
 use std::ops::Range;
 use std::path::Path;
 use toml_edit::ImDocument;
@@ -107,6 +108,17 @@ pub enum LintLevel {
     Forbid,
 }
 
+impl Display for LintLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LintLevel::Allow => write!(f, "allow"),
+            LintLevel::Warn => write!(f, "warn"),
+            LintLevel::Deny => write!(f, "deny"),
+            LintLevel::Forbid => write!(f, "forbid"),
+        }
+    }
+}
+
 impl LintLevel {
     pub fn to_diagnostic_level(self) -> Level {
         match self {
@@ -184,6 +196,7 @@ pub fn check_implicit_features(
         })
         .unwrap_or_default();
 
+    let mut emitted_source = None;
     for dep in manifest.dependencies() {
         let dep_name_in_toml = dep.name_in_toml();
         if !dep.is_optional() || activated_opt_deps.contains(dep_name_in_toml.as_str()) {
@@ -200,12 +213,19 @@ pub fn check_implicit_features(
         }
         let level = lint_level.to_diagnostic_level();
         let manifest_path = rel_cwd_manifest_path(path, gctx);
-        let message = level.title(IMPLICIT_FEATURES.desc).snippet(
+        let mut message = level.title(IMPLICIT_FEATURES.desc).snippet(
             Snippet::source(manifest.contents())
                 .origin(&manifest_path)
                 .annotation(level.span(get_span(manifest.document(), &toml_path, false).unwrap()))
                 .fold(true),
         );
+        if emitted_source.is_none() {
+            emitted_source = Some(format!(
+                "`cargo::{}` is set to `{lint_level}`",
+                IMPLICIT_FEATURES.name
+            ));
+            message = message.footer(Level::Note.title(emitted_source.as_ref().unwrap()));
+        }
         let renderer = Renderer::styled().term_width(
             gctx.shell()
                 .err_width()
