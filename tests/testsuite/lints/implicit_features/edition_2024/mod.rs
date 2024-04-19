@@ -33,7 +33,7 @@ baz = ["dep:baz"]
         .current_dir(p.root())
         .arg("check")
         .assert()
-        .code(101)
+        .success()
         .stdout_matches(str![""])
         .stderr_matches(file!["stderr.term.svg"]);
 }

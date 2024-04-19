@@ -147,7 +147,7 @@ const IMPLICIT_FEATURES: Lint = Lint {
     desc: "implicit features for optional dependencies is deprecated and will be unavailable in the 2024 edition",
     groups: &[],
     default_level: LintLevel::Allow,
-    edition_lint_opts: Some((Edition::Edition2024, LintLevel::Deny)),
+    edition_lint_opts: None,
 };
 
 pub fn check_implicit_features(
@@ -157,7 +157,14 @@ pub fn check_implicit_features(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let lint_level = IMPLICIT_FEATURES.level(lints, pkg.manifest().edition());
+    let edition = pkg.manifest().edition();
+    // In Edition 2024+, instead of creating optional features, the dependencies are unused.
+    // See `UNUSED_OPTIONAL_DEPENDENCY`
+    if edition >= Edition::Edition2024 {
+        return Ok(());
+    }
+
+    let lint_level = IMPLICIT_FEATURES.level(lints, edition);
     if lint_level == LintLevel::Allow {
         return Ok(());
     }
