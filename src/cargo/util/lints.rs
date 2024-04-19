@@ -192,7 +192,7 @@ pub fn check_implicit_features(
         }
         let level = lint_level.to_diagnostic_level();
         let manifest_path = rel_cwd_manifest_path(path, gctx);
-        let message = level.title("unused optional dependency").snippet(
+        let message = level.title(IMPLICIT_FEATURES.desc).snippet(
             Snippet::source(manifest.contents())
                 .origin(&manifest_path)
                 .annotation(

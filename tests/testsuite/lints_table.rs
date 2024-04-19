@@ -874,7 +874,7 @@ fn cargo_lints_underscore_supported() {
         .masquerade_as_nightly_cargo(&["-Zcargo-lints"])
         .with_stderr(
             "\
-warning: unused optional dependency
+warning: implicit features for optional dependencies is deprecated and will be unavailable in the 2024 edition
   --> Cargo.toml:12:17
    |
 12 |                 bar = { version = \"0.1.0\", optional = true }
