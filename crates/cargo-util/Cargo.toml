@@ -14,7 +14,6 @@ filetime.workspace = true
 hex.workspace = true
 ignore.workspace = true
 jobserver.workspace = true
-libc.workspace = true
 same-file.workspace = true
 sha2.workspace = true
 shell-escape.workspace = true
@@ -24,6 +23,9 @@ walkdir.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 miow.workspace = true
