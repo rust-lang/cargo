@@ -123,7 +123,7 @@ impl Display for LintLevel {
 impl LintLevel {
     pub fn to_diagnostic_level(self) -> Level {
         match self {
-            LintLevel::Allow => Level::Note,
+            LintLevel::Allow => unreachable!("allow does not map to a diagnostic level"),
             LintLevel::Warn => Level::Warning,
             LintLevel::Deny => Level::Error,
             LintLevel::Forbid => Level::Error,
