@@ -306,6 +306,17 @@ impl<'gctx> Workspace<'gctx> {
             MaybePackage::Virtual(vm) => vm.resolve_behavior().unwrap_or(ResolveBehavior::V1),
         };
 
+        match self.resolve_behavior() {
+            ResolveBehavior::V1 | ResolveBehavior::V2 => {}
+            ResolveBehavior::V3 => {
+                if self.resolve_behavior == ResolveBehavior::V3 {
+                    if !self.gctx().cli_unstable().msrv_policy {
+                        anyhow::bail!("`resolver=\"3\"` requires `-Zmsrv-policy`");
+                    }
+                    self.resolve_honors_rust_version = true;
+                }
+            }
+        }
         match self.gctx().get::<CargoResolverConfig>("resolver") {
             Ok(CargoResolverConfig {
                 something_like_precedence: Some(precedence),
@@ -869,7 +880,7 @@ impl<'gctx> Workspace<'gctx> {
         self.is_virtual()
             || match self.resolve_behavior() {
                 ResolveBehavior::V1 => false,
-                ResolveBehavior::V2 => true,
+                ResolveBehavior::V2 | ResolveBehavior::V3 => true,
             }
     }
 

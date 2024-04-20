@@ -266,6 +266,12 @@ fn resolve_toml(
     warnings: &mut Vec<String>,
     _errors: &mut Vec<String>,
 ) -> CargoResult<manifest::TomlManifest> {
+    if let Some(workspace) = &original_toml.workspace {
+        if workspace.resolver.as_deref() == Some("3") {
+            features.require(Feature::edition2024())?;
+        }
+    }
+
     let mut resolved_toml = manifest::TomlManifest {
         cargo_features: original_toml.cargo_features.clone(),
         package: None,
@@ -300,7 +306,8 @@ fn resolve_toml(
     };
 
     if let Some(original_package) = original_toml.package() {
-        let resolved_package = resolve_package_toml(original_package, package_root, &inherit)?;
+        let resolved_package =
+            resolve_package_toml(original_package, features, package_root, &inherit)?;
         let edition = resolved_package
             .resolved_edition()
             .expect("previously resolved")
@@ -432,6 +439,7 @@ fn resolve_toml(
 #[tracing::instrument(skip_all)]
 fn resolve_package_toml<'a>(
     original_package: &manifest::TomlPackage,
+    features: &Features,
     package_root: &Path,
     inherit: &dyn Fn() -> CargoResult<&'a InheritableFields>,
 ) -> CargoResult<Box<manifest::TomlPackage>> {
@@ -559,6 +567,11 @@ fn resolve_package_toml<'a>(
         metadata: original_package.metadata.clone(),
         _invalid_cargo_features: Default::default(),
     };
+
+    if resolved_package.resolver.as_deref() == Some("3") {
+        features.require(Feature::edition2024())?;
+    }
+
     Ok(Box::new(resolved_package))
 }
 
