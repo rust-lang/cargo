@@ -142,6 +142,61 @@ impl From<TomlLintLevel> for LintLevel {
     }
 }
 
+const IM_A_TEAPOT: Lint = Lint {
+    name: "im_a_teapot",
+    desc: "`im_a_teapot` is specified",
+    groups: &[],
+    default_level: LintLevel::Allow,
+    edition_lint_opts: None,
+};
+
+pub fn check_im_a_teapot(
+    pkg: &Package,
+    path: &Path,
+    lints: &TomlToolLints,
+    error_count: &mut usize,
+    gctx: &GlobalContext,
+) -> CargoResult<()> {
+    let manifest = pkg.manifest();
+    let lint_level = IM_A_TEAPOT.level(lints, manifest.edition());
+    if lint_level == LintLevel::Allow {
+        return Ok(());
+    }
+
+    if manifest
+        .resolved_toml()
+        .package()
+        .is_some_and(|p| p.im_a_teapot.is_some())
+    {
+        if lint_level == LintLevel::Forbid || lint_level == LintLevel::Deny {
+            *error_count += 1;
+        }
+        let level = lint_level.to_diagnostic_level();
+        let manifest_path = rel_cwd_manifest_path(path, gctx);
+        let emitted_reason = format!("`cargo::{}` is set to `{lint_level}`", IM_A_TEAPOT.name);
+
+        let key_span = get_span(manifest.document(), &["package", "im-a-teapot"], false).unwrap();
+        let value_span = get_span(manifest.document(), &["package", "im-a-teapot"], true).unwrap();
+        let message = level
+            .title(IM_A_TEAPOT.desc)
+            .snippet(
+                Snippet::source(manifest.contents())
+                    .origin(&manifest_path)
+                    .annotation(level.span(key_span.start..value_span.end))
+                    .fold(true),
+            )
+            .footer(Level::Note.title(&emitted_reason));
+        let renderer = Renderer::styled().term_width(
+            gctx.shell()
+                .err_width()
+                .diagnostic_terminal_width()
+                .unwrap_or(annotate_snippets::renderer::DEFAULT_TERM_WIDTH),
+        );
+        writeln!(gctx.shell().err(), "{}", renderer.render(message))?;
+    }
+    Ok(())
+}
+
 /// By default, cargo will treat any optional dependency as a [feature]. As of
 /// cargo 1.60, these can be disabled by declaring a feature that activates the
 /// optional dependency as `dep:<name>` (see [RFC #3143]).
