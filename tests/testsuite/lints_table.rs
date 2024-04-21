@@ -899,3 +899,43 @@ warning: `im_a_teapot` is specified
         )
         .run();
 }
+
+#[cargo_test]
+fn forbid_not_overridden() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+cargo-features = ["test-dummy-unstable"]
+
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+authors = []
+im-a-teapot = true
+
+[lints.cargo]
+im-a-teapot = { level = "warn", priority = 10 }
+test-dummy-unstable = { level = "forbid", priority = -1 }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+        .with_status(101)
+        .with_stderr(
+            "\
+error: `im_a_teapot` is specified
+ --> Cargo.toml:9:1
+  |
+9 | im-a-teapot = true
+  | ^^^^^^^^^^^^^^^^^^
+  |
+  = note: `cargo::im_a_teapot` is set to `forbid`
+",
+        )
+        .run();
+}

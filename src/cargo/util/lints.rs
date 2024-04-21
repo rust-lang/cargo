@@ -68,6 +68,13 @@ pub struct LintGroup {
     pub edition_lint_opts: Option<(Edition, LintLevel)>,
 }
 
+const TEST_DUMMY_UNSTABLE: LintGroup = LintGroup {
+    name: "test_dummy_unstable",
+    desc: "test_dummy_unstable is meant to only be used in tests",
+    default_level: LintLevel::Allow,
+    edition_lint_opts: None,
+};
+
 #[derive(Copy, Clone, Debug)]
 pub struct Lint {
     pub name: &'static str,
@@ -79,23 +86,37 @@ pub struct Lint {
 
 impl Lint {
     pub fn level(&self, lints: &TomlToolLints, edition: Edition) -> LintLevel {
+        let edition_level = self
+            .edition_lint_opts
+            .filter(|(e, _)| edition >= *e)
+            .map(|(_, l)| l);
+
+        if self.default_level == LintLevel::Forbid || edition_level == Some(LintLevel::Forbid) {
+            return LintLevel::Forbid;
+        }
+
         let level = self
             .groups
             .iter()
             .map(|g| g.name)
             .chain(std::iter::once(self.name))
             .filter_map(|n| lints.get(n).map(|l| (n, l)))
-            .max_by_key(|(n, l)| (l.priority(), std::cmp::Reverse(*n)));
+            .max_by_key(|(n, l)| {
+                (
+                    l.level() == TomlLintLevel::Forbid,
+                    l.priority(),
+                    std::cmp::Reverse(*n),
+                )
+            });
 
         match level {
             Some((_, toml_lint)) => toml_lint.level().into(),
             None => {
-                if let Some((lint_edition, lint_level)) = self.edition_lint_opts {
-                    if edition >= lint_edition {
-                        return lint_level;
-                    }
+                if let Some(level) = edition_level {
+                    level
+                } else {
+                    self.default_level
                 }
-                self.default_level
             }
         }
     }
@@ -145,7 +166,7 @@ impl From<TomlLintLevel> for LintLevel {
 const IM_A_TEAPOT: Lint = Lint {
     name: "im_a_teapot",
     desc: "`im_a_teapot` is specified",
-    groups: &[],
+    groups: &[TEST_DUMMY_UNSTABLE],
     default_level: LintLevel::Allow,
     edition_lint_opts: None,
 };
