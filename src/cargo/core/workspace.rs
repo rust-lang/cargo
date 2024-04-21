@@ -1159,7 +1159,9 @@ impl<'gctx> Workspace<'gctx> {
         for (path, maybe_pkg) in &self.packages.packages {
             let path = path.join("Cargo.toml");
             if let MaybePackage::Package(pkg) = maybe_pkg {
-                self.emit_lints(pkg, &path)?
+                if self.gctx.cli_unstable().cargo_lints {
+                    self.emit_lints(pkg, &path)?
+                }
             }
             let warnings = match maybe_pkg {
                 MaybePackage::Package(pkg) => pkg.manifest().warnings().warnings(),
