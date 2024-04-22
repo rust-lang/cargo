@@ -873,7 +873,7 @@ fn dev_dependencies2_conflict() {
     p.cargo("check")
         .with_stderr_contains(
             "\
-[WARNING] unused manifest key `dev_dependencies` in the `foo` package
+[WARNING] `dev_dependencies` is redundant with `dev-dependencies`, preferring `dev-dependencies` in the `foo` package
 ",
         )
         .run();
@@ -948,7 +948,7 @@ fn build_dependencies2_conflict() {
     p.cargo("check")
         .with_stderr_contains(
             "\
-[WARNING] unused manifest key `build_dependencies` in the `foo` package
+[WARNING] `build_dependencies` is redundant with `build-dependencies`, preferring `build-dependencies` in the `foo` package
 ",
         )
         .run();
@@ -1006,7 +1006,7 @@ fn lib_crate_type2_conflict() {
     p.cargo("check")
         .with_stderr_contains(
             "\
-[WARNING] unused manifest key `crate_type` in the `foo` library target
+[WARNING] `crate_type` is redundant with `crate-type`, preferring `crate-type` in the `foo` library target
 ",
         )
         .run();
@@ -1101,8 +1101,8 @@ fn examples_crate_type2_conflict() {
     p.cargo("check")
         .with_stderr_contains(
             "\
-[WARNING] unused manifest key `crate_type` in the `ex` example target
-[WARNING] unused manifest key `crate_type` in the `goodbye` example target
+[WARNING] `crate_type` is redundant with `crate-type`, preferring `crate-type` in the `ex` example target
+[WARNING] `crate_type` is redundant with `crate-type`, preferring `crate-type` in the `goodbye` example target
 ",
         )
         .run();
@@ -1183,7 +1183,7 @@ fn cargo_platform_build_dependencies2_conflict() {
     p.cargo("check")
         .with_stderr_contains(format!(
             "\
-[WARNING] unused manifest key `build_dependencies` in the `{host}` platform target
+[WARNING] `build_dependencies` is redundant with `build-dependencies`, preferring `build-dependencies` in the `{host}` platform target
 "
         ))
         .run();
@@ -1262,7 +1262,7 @@ fn cargo_platform_dev_dependencies2_conflict() {
     p.cargo("check")
         .with_stderr_contains(format!(
             "\
-[WARNING] unused manifest key `dev_dependencies` in the `{host}` platform target
+[WARNING] `dev_dependencies` is redundant with `dev-dependencies`, preferring `dev-dependencies` in the `{host}` platform target
 "
         ))
         .run();
@@ -1349,7 +1349,7 @@ fn default_features2_conflict() {
     p.cargo("check")
         .with_stderr_contains(
             "\
-[WARNING] unused manifest key `default_features` in the `a` dependency
+[WARNING] `default_features` is redundant with `default-features`, preferring `default-features` in the `a` dependency
 ",
         )
         .run();
@@ -1403,7 +1403,7 @@ fn proc_macro2_conflict() {
     foo.cargo("check")
         .with_stderr_contains(
             "\
-[WARNING] unused manifest key `proc_macro` in the `foo` library target
+[WARNING] `proc_macro` is redundant with `proc-macro`, preferring `proc-macro` in the `foo` library target
 ",
         )
         .run();
