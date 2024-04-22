@@ -5,7 +5,7 @@ use crate::core::compiler::UnitInterner;
 use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
-use crate::core::resolver::HasDevUnits;
+use crate::core::resolver::{EncodableResolve, HasDevUnits};
 use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::errors::CargoResult;
@@ -125,9 +125,12 @@ pub fn resolve_std<'gctx>(
     // now. Perhaps in the future features will be decoupled from the resolver
     // and it will be easier to control feature selection.
     let current_manifest = src_path.join("library/sysroot/Cargo.toml");
-    // TODO: Consider doing something to enforce --locked? Or to prevent the
-    // lock file from being written, such as setting ephemeral.
-    let mut std_ws = Workspace::new_virtual(src_path, current_manifest, virtual_manifest, gctx)?;
+    let mut std_ws =
+        Workspace::new_virtual(src_path.clone(), current_manifest, virtual_manifest, gctx)?;
+
+    // The source checkout isn't managed by us, so setting ephemeral here
+    // ensures the lockfile isn't updated.
+    std_ws.set_ephemeral(true);
     // Don't require optional dependencies in this workspace, aka std's own
     // `[dev-dependencies]`. No need for us to generate a `Resolve` which has
     // those included because we'll never use them anyway.
@@ -158,6 +161,47 @@ pub fn resolve_std<'gctx>(
         HasDevUnits::No,
         crate::core::resolver::features::ForceAllTargets::No,
     )?;
+
+    // Verify that we have resolved to a subset of the lockfile
+    let lockfile = std::fs::read_to_string(&src_path.join("Cargo.lock"))
+        .expect("Couldn't read the Rust source's lockfile");
+
+    let encoded_lockfile: EncodableResolve = toml::from_str(&lockfile).unwrap();
+    let lockfile_packages = encoded_lockfile.package().expect("libstd has no packages!");
+
+    for resolved_pkg in resolve.targeted_resolve.iter() {
+        let pkg_name = resolved_pkg.name().to_string();
+        let pkg_ver = resolved_pkg.version().to_string();
+        let lockfile_pkg = lockfile_packages.binary_search_by_key(
+                &(pkg_name.as_str(), pkg_ver.as_str()),
+                |p| (p.name(), p.version())
+            )
+            .and_then(|idx| Ok(&lockfile_packages[idx]))
+            .unwrap_or_else(|_|
+                panic!("Standard library's package graph changed during resolution:
+                       Package '{}' ({}) was present in the resolve but not in the original lockfile",
+                       resolved_pkg.name(), resolved_pkg.version())
+            );
+        // If the lockfile wasn't sorted then the binary search result can be nonsensical
+        assert!(lockfile_pkg.name() == pkg_name);
+
+        for (dep, _) in resolve.targeted_resolve.deps(resolved_pkg) {
+            lockfile_pkg.dependencies()
+                .and_then(|deps| {
+                    deps.iter().find(|pkg| {
+                        pkg.name() == dep.name().as_str()
+                        && (pkg.version() == None
+                            || pkg.version() == Some(dep.version().to_string().as_str()))
+                    })
+                })
+                .unwrap_or_else(||
+                    panic!("Standard library's package graph changed during resolution:
+                           Package '{}' ({}) was present as a dependency of '{} ({}) in the resolve but not in the lockfile",
+                           dep.name(), dep.version(), resolved_pkg.name(), resolved_pkg.version())
+                );
+        }
+    }
+
     Ok((
         resolve.pkg_set,
         resolve.targeted_resolve,

@@ -622,6 +622,11 @@ impl<'gctx> Workspace<'gctx> {
         self.is_ephemeral
     }
 
+    pub fn set_ephemeral(&mut self, is_ephemeral: bool) -> &mut Workspace<'gctx> {
+        self.is_ephemeral = is_ephemeral;
+        self
+    }
+
     pub fn require_optional_deps(&self) -> bool {
         self.require_optional_deps
     }

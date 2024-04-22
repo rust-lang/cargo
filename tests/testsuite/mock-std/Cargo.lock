@@ -1,0 +1,97 @@
+# This file was handwritten.
+version = 3
+
+[[package]]
+name = "alloc"
+version = "0.1.0"
+dependencies = [
+ "core",
+ "registry-dep-using-core"
+]
+
+[[package]]
+name = "compiler_builtins"
+version = "0.1.0"
+
+[[package]]
+name = "core"
+version = "0.1.0"
+
+[[package]]
+name = "panic_unwind"
+version = "0.1.0"
+
+[[package]]
+name = "proc_macro"
+version = "0.1.0"
+
+[[package]]
+name = "registry-dep-using-alloc"
+version = "1.0.0"
+dependencies = [
+ "rustc-std-workspace-alloc",
+ "rustc-std-workspace-core"
+]
+
+[[package]]
+name = "registry-dep-using-core"
+version = "1.0.0"
+dependencies = [
+ "rustc-std-workspace-core"
+]
+
+[[package]]
+name = "registry-dep-using-std"
+version = "1.0.0"
+dependencies = [
+ "rustc-std-workspace-std",
+]
+
+[[package]]
+name = "rustc-std-workspace-alloc"
+version = "1.9.0"
+dependencies = [
+ "alloc"
+]
+
+[[package]]
+name = "rustc-std-workspace-core"
+version = "1.9.0"
+dependencies = [
+ "core"
+]
+
+[[package]]
+name = "rustc-std-workspace-std"
+version = "1.9.0"
+dependencies = [
+ "std"
+]
+
+[[package]]
+name = "std"
+version = "0.1.0"
+dependencies = [
+ "alloc",
+ "registry-dep-using-alloc"
+]
+
+[[package]]
+name = "sysroot"
+version = "0.1.0"
+dependencies = [
+  "proc_macro",
+  "std",
+  "test"
+]
+
+[[package]]
+name = "test"
+version = "0.1.0"
+dependencies = [
+ "compiler_builtins",
+ "panic_unwind",
+ "std",
+ "registry-dep-using-std"
+]
+

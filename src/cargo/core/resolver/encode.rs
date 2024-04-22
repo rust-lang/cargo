@@ -406,6 +406,10 @@ impl EncodableResolve {
             HashMap::new(),
         ))
     }
+
+    pub fn package(&self) -> Option<&Vec<EncodableDependency>> {
+        self.package.as_ref()
+    }
 }
 
 fn build_path_deps(ws: &Workspace<'_>) -> CargoResult<HashMap<String, SourceId>> {
@@ -487,6 +491,20 @@ pub struct EncodableDependency {
     checksum: Option<String>,
     dependencies: Option<Vec<EncodablePackageId>>,
     replace: Option<EncodablePackageId>,
+}
+
+impl EncodableDependency {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn version(&self) -> &str {
+        &self.version
+    }
+
+    pub fn dependencies(&self) -> Option<&Vec<EncodablePackageId>> {
+        self.dependencies.as_ref()
+    }
 }
 
 /// Pretty much equivalent to [`SourceId`] with a different serialization method.
@@ -572,6 +590,16 @@ pub struct EncodablePackageId {
     name: String,
     version: Option<String>,
     source: Option<EncodableSourceId>,
+}
+
+impl EncodablePackageId {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn version(&self) -> Option<&str> {
+        self.version.as_ref().map(String::as_str)
+    }
 }
 
 impl fmt::Display for EncodablePackageId {
