@@ -51,7 +51,7 @@ pub struct TomlManifest {
     pub replace: Option<BTreeMap<String, TomlDependency>>,
     pub patch: Option<BTreeMap<String, BTreeMap<PackageName, TomlDependency>>>,
     pub workspace: Option<TomlWorkspace>,
-    pub badges: Option<InheritableBtreeMap>,
+    pub badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
     pub lints: Option<InheritableLints>,
 
     /// Report unused keys (see also nested `_unused_keys`)
@@ -104,12 +104,6 @@ impl TomlManifest {
 
     pub fn features(&self) -> Option<&BTreeMap<FeatureName, Vec<String>>> {
         self.features.as_ref()
-    }
-
-    pub fn resolved_badges(
-        &self,
-    ) -> Result<Option<&BTreeMap<String, BTreeMap<String, String>>>, UnresolvedError> {
-        self.badges.as_ref().map(|l| l.resolved()).transpose()
     }
 
     pub fn resolved_lints(&self) -> Result<Option<&TomlLints>, UnresolvedError> {
