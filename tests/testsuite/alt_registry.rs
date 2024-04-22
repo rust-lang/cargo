@@ -1572,7 +1572,11 @@ or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN",
         )
         .run();
 
+    let crates_io = registry::RegistryBuilder::new()
+        .no_configure_token()
+        .build();
     p.cargo("publish --registry crates-io")
+        .replace_crates_io(crates_io.index_url())
         .with_status(101)
         .with_stderr(
             "\
