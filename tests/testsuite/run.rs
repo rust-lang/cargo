@@ -443,7 +443,7 @@ fn run_library_example() {
                 authors = []
                 [[example]]
                 name = "bar"
-                crate_type = ["lib"]
+                crate-type = ["lib"]
             "#,
         )
         .file("src/lib.rs", "")
@@ -468,7 +468,7 @@ fn run_bin_example() {
                 edition = "2015"
                 [[example]]
                 name = "bar"
-                crate_type = ["bin"]
+                crate-type = ["bin"]
             "#,
         )
         .file("src/lib.rs", "")

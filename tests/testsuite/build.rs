@@ -1496,7 +1496,7 @@ fn cargo_default_env_metadata_env_var() {
 
                 [lib]
                 name = "bar"
-                crate_type = ["dylib"]
+                crate-type = ["dylib"]
             "#,
         )
         .file("bar/src/lib.rs", "// hello")
@@ -2089,7 +2089,7 @@ fn many_crate_types_old_style_lib_location() {
                 [lib]
 
                 name = "foo"
-                crate_type = ["rlib", "dylib"]
+                crate-type = ["rlib", "dylib"]
             "#,
         )
         .file("src/foo.rs", "pub fn foo() {}")
@@ -2123,7 +2123,7 @@ fn many_crate_types_correct() {
                 [lib]
 
                 name = "foo"
-                crate_type = ["rlib", "dylib"]
+                crate-type = ["rlib", "dylib"]
             "#,
         )
         .file("src/lib.rs", "pub fn foo() {}")
@@ -2151,7 +2151,7 @@ fn set_both_dylib_and_cdylib_crate_types() {
                 [lib]
 
                 name = "foo"
-                crate_type = ["cdylib", "dylib"]
+                crate-type = ["cdylib", "dylib"]
             "#,
         )
         .file("src/lib.rs", "pub fn foo() {}")
@@ -2165,157 +2165,6 @@ error: failed to parse manifest at `[..]`
 Caused by:
   library `foo` cannot set the crate type of both `dylib` and `cdylib`
 ",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn dev_dependencies_conflicting_warning() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-                edition = "2018"
-
-                [dev-dependencies]
-                a = {path = "a"}
-                [dev_dependencies]
-                a = {path = "a"}
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .file(
-            "a/Cargo.toml",
-            r#"
-                [package]
-                name = "a"
-                version = "0.0.1"
-                edition = "2015"
-            "#,
-        )
-        .file("a/src/lib.rs", "")
-        .build();
-    p.cargo("build")
-        .with_stderr_contains(
-"[WARNING] conflicting between `dev-dependencies` and `dev_dependencies` in the `foo` package.\n
-        `dev_dependencies` is ignored and not recommended for use in the future"
-        )
-        .run();
-}
-
-#[cargo_test]
-fn build_dependencies_conflicting_warning() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.1.0"
-                edition = "2018"
-
-                [build-dependencies]
-                a = {path = "a"}
-                [build_dependencies]
-                a = {path = "a"}
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .file(
-            "a/Cargo.toml",
-            r#"
-                [package]
-                name = "a"
-                version = "0.0.1"
-                edition = "2015"
-            "#,
-        )
-        .file("a/src/lib.rs", "")
-        .build();
-    p.cargo("build")
-        .with_stderr_contains(
-"[WARNING] conflicting between `build-dependencies` and `build_dependencies` in the `foo` package.\n
-        `build_dependencies` is ignored and not recommended for use in the future"
-        )
-        .run();
-}
-
-#[cargo_test]
-fn lib_crate_types_conflicting_warning() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.5.0"
-                edition = "2015"
-                authors = ["wycats@example.com"]
-
-                [lib]
-                name = "foo"
-                crate-type = ["rlib", "dylib"]
-                crate_type = ["staticlib", "dylib"]
-            "#,
-        )
-        .file("src/lib.rs", "pub fn foo() {}")
-        .build();
-    p.cargo("build")
-        .with_stderr_contains(
-"[WARNING] conflicting between `crate-type` and `crate_type` in the `foo` library target.\n
-        `crate_type` is ignored and not recommended for use in the future",
-        )
-        .run();
-}
-
-#[cargo_test]
-fn examples_crate_types_conflicting_warning() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.5.0"
-                edition = "2015"
-                authors = ["wycats@example.com"]
-
-                [[example]]
-                name = "ex"
-                path = "examples/ex.rs"
-                crate-type = ["rlib", "dylib"]
-                crate_type = ["proc_macro"]
-                [[example]]
-                name = "goodbye"
-                path = "examples/ex-goodbye.rs"
-                crate-type = ["rlib", "dylib"]
-                crate_type = ["rlib", "staticlib"]
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .file(
-            "examples/ex.rs",
-            r#"
-                fn main() { println!("ex"); }
-            "#,
-        )
-        .file(
-            "examples/ex-goodbye.rs",
-            r#"
-                fn main() { println!("goodbye"); }
-            "#,
-        )
-        .build();
-    p.cargo("build")
-        .with_stderr_contains(
-            "\
-[WARNING] conflicting between `crate-type` and `crate_type` in the `ex` example target.\n
-        `crate_type` is ignored and not recommended for use in the future
-[WARNING] conflicting between `crate-type` and `crate_type` in the `goodbye` example target.\n
-        `crate_type` is ignored and not recommended for use in the future",
         )
         .run();
 }
@@ -2521,7 +2370,7 @@ fn verbose_release_build_deps() {
 
                 [lib]
                 name = "foo"
-                crate_type = ["dylib", "rlib"]
+                crate-type = ["dylib", "rlib"]
             "#,
         )
         .file("foo/src/lib.rs", "")
@@ -3501,90 +3350,6 @@ fn cargo_platform_specific_dependency() {
         .build();
 
     p.cargo("build").run();
-
-    assert!(p.bin("foo").is_file());
-    p.cargo("test").run();
-}
-
-#[cargo_test]
-fn cargo_platform_specific_dependency_build_dependencies_conflicting_warning() {
-    let host = rustc_host();
-    let p = project()
-        .file(
-            "Cargo.toml",
-            &format!(
-                r#"
-                    [package]
-                    name = "foo"
-                    version = "0.5.0"
-                    edition = "2015"
-                    authors = ["wycats@example.com"]
-                    build = "build.rs"
-
-                    [target.{host}.build-dependencies]
-                    build = {{ path = "build" }}
-                    [target.{host}.build_dependencies]
-                    build = {{ path = "build" }}
-                "#,
-                host = host
-            ),
-        )
-        .file("src/main.rs", "fn main() { }")
-        .file(
-            "build.rs",
-            "extern crate build; fn main() { build::build(); }",
-        )
-        .file("build/Cargo.toml", &basic_manifest("build", "0.5.0"))
-        .file("build/src/lib.rs", "pub fn build() {}")
-        .build();
-
-    p.cargo("build")
-        .with_stderr_contains(
-        format!("[WARNING] conflicting between `build-dependencies` and `build_dependencies` in the `{}` platform target.\n
-        `build_dependencies` is ignored and not recommended for use in the future", host)
-        )
-        .run();
-
-    assert!(p.bin("foo").is_file());
-}
-
-#[cargo_test]
-fn cargo_platform_specific_dependency_dev_dependencies_conflicting_warning() {
-    let host = rustc_host();
-    let p = project()
-        .file(
-            "Cargo.toml",
-            &format!(
-                r#"
-                    [package]
-                    name = "foo"
-                    version = "0.5.0"
-                    edition = "2015"
-                    authors = ["wycats@example.com"]
-
-                    [target.{host}.dev-dependencies]
-                    dev = {{ path = "dev" }}
-                    [target.{host}.dev_dependencies]
-                    dev = {{ path = "dev" }}
-                "#,
-                host = host
-            ),
-        )
-        .file("src/main.rs", "fn main() { }")
-        .file(
-            "tests/foo.rs",
-            "extern crate dev; #[test] fn foo() { dev::dev() }",
-        )
-        .file("dev/Cargo.toml", &basic_manifest("dev", "0.5.0"))
-        .file("dev/src/lib.rs", "pub fn dev() {}")
-        .build();
-
-    p.cargo("build")
-        .with_stderr_contains(
-        format!("[WARNING] conflicting between `dev-dependencies` and `dev_dependencies` in the `{}` platform target.\n
-        `dev_dependencies` is ignored and not recommended for use in the future", host)
-        )
-        .run();
 
     assert!(p.bin("foo").is_file());
     p.cargo("test").run();

@@ -25,7 +25,7 @@ use crate::core::compiler::CrateType;
 use crate::core::{Edition, Feature, Features, Target};
 use crate::util::errors::CargoResult;
 use crate::util::restricted_names;
-use crate::util::toml::warn_on_deprecated;
+use crate::util::toml::deprecated_underscore;
 
 const DEFAULT_TEST_DIR_NAME: &'static str = "tests";
 const DEFAULT_BENCH_DIR_NAME: &'static str = "benches";
@@ -1102,23 +1102,23 @@ fn name_or_panic(target: &TomlTarget) -> &str {
 }
 
 fn validate_proc_macro(target: &TomlTarget, kind: &str, warnings: &mut Vec<String>) {
-    if target.proc_macro.is_some() && target.proc_macro2.is_some() {
-        warn_on_deprecated(
-            "proc-macro",
-            name_or_panic(target),
-            format!("{kind} target").as_str(),
-            warnings,
-        );
-    }
+    deprecated_underscore(
+        &target.proc_macro2,
+        &target.proc_macro,
+        "proc-macro",
+        name_or_panic(target),
+        format!("{kind} target").as_str(),
+        warnings,
+    );
 }
 
 fn validate_crate_types(target: &TomlTarget, kind: &str, warnings: &mut Vec<String>) {
-    if target.crate_type.is_some() && target.crate_type2.is_some() {
-        warn_on_deprecated(
-            "crate-type",
-            name_or_panic(target),
-            format!("{kind} target").as_str(),
-            warnings,
-        );
-    }
+    deprecated_underscore(
+        &target.crate_type2,
+        &target.crate_type,
+        "crate-type",
+        name_or_panic(target),
+        format!("{kind} target").as_str(),
+        warnings,
+    );
 }

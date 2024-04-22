@@ -203,7 +203,7 @@ fn top_level_overrides_deps() {
 
                 [lib]
                 name = "foo"
-                crate_type = ["dylib", "rlib"]
+                crate-type = ["dylib", "rlib"]
             "#,
         )
         .file("foo/src/lib.rs", "")
