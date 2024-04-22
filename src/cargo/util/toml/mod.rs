@@ -256,6 +256,7 @@ fn to_workspace_root_config(
     ws_root_config
 }
 
+/// See [`Manifest::resolved_toml`] for more details
 #[tracing::instrument(skip_all)]
 fn resolve_toml(
     original_toml: &manifest::TomlManifest,
