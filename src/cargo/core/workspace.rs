@@ -104,7 +104,6 @@ pub struct Workspace<'gctx> {
     /// The resolver behavior specified with the `resolver` field.
     resolve_behavior: ResolveBehavior,
     resolve_honors_rust_version: bool,
-    honor_rust_version: Option<bool>,
 
     /// Workspace-level custom metadata
     custom_metadata: Option<toml::Value>,
@@ -235,7 +234,6 @@ impl<'gctx> Workspace<'gctx> {
             ignore_lock: false,
             resolve_behavior: ResolveBehavior::V1,
             resolve_honors_rust_version: false,
-            honor_rust_version: None,
             custom_metadata: None,
         }
     }
@@ -649,18 +647,14 @@ impl<'gctx> Workspace<'gctx> {
         self.members().filter_map(|pkg| pkg.rust_version()).min()
     }
 
-    pub fn set_honor_rust_version(&mut self, honor_rust_version: Option<bool>) {
-        self.honor_rust_version = honor_rust_version;
-    }
-
-    pub fn honor_rust_version(&self) -> Option<bool> {
-        self.honor_rust_version
+    pub fn set_resolve_honors_rust_version(&mut self, honor_rust_version: Option<bool>) {
+        if let Some(honor_rust_version) = honor_rust_version {
+            self.resolve_honors_rust_version = honor_rust_version;
+        }
     }
 
     pub fn resolve_honors_rust_version(&self) -> bool {
-        // Give CLI precedence
-        self.honor_rust_version
-            .unwrap_or(self.resolve_honors_rust_version)
+        self.resolve_honors_rust_version
     }
 
     pub fn custom_metadata(&self) -> Option<&toml::Value> {

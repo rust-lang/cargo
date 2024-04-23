@@ -505,7 +505,7 @@ pub trait ArgMatchesExt {
     fn workspace<'a>(&self, gctx: &'a GlobalContext) -> CargoResult<Workspace<'a>> {
         let root = self.root_manifest(gctx)?;
         let mut ws = Workspace::new(&root, gctx)?;
-        ws.set_honor_rust_version(self.honor_rust_version());
+        ws.set_resolve_honors_rust_version(self.honor_rust_version());
         if gctx.cli_unstable().avoid_dev_deps {
             ws.set_require_optional_deps(false);
         }
