@@ -310,9 +310,6 @@ impl<'gctx> Workspace<'gctx> {
             ResolveBehavior::V1 | ResolveBehavior::V2 => {}
             ResolveBehavior::V3 => {
                 if self.resolve_behavior == ResolveBehavior::V3 {
-                    if !self.gctx().cli_unstable().msrv_policy {
-                        anyhow::bail!("`resolver=\"3\"` requires `-Zmsrv-policy`");
-                    }
                     self.resolve_honors_rust_version = true;
                 }
             }
