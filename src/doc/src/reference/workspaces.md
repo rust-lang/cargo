@@ -80,10 +80,14 @@ edition = "2021"     # the edition, will have no effect on a resolver used in th
 authors = ["Alice <a@example.com>", "Bob <b@example.com>"]
 ```
 
-Note that in a virtual manifest the [`resolver = "2"`](resolver.md#resolver-versions)
-should be specified manually. It is usually deduced from the [`package.edition`][package-edition]
-field which is absent in virtual manifests and the edition field of a member
-won't affect the resolver used by the workspace.
+By having a workspace without a root package,
+
+- [`resolver`](resolver.md#resolver-versions) must be
+  set explicitly in virtual workspaces as they have no
+  [`package.edition`][package-edition] to infer it from
+  [resolver version](resolver.md#resolver-versions).
+- Commands run in the workspace root will run against all workspace
+  members by default, see [`default-members`](#the-default-members-field).
 
 ## The `members` and `exclude` fields 
 
