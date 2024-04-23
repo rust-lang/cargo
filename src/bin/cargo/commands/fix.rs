@@ -72,7 +72,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     // code as we can.
     let root_manifest = args.root_manifest(gctx)?;
     let mut ws = Workspace::new(&root_manifest, gctx)?;
-    ws.set_honor_rust_version(args.honor_rust_version());
+    ws.set_resolve_honors_rust_version(args.honor_rust_version());
     let mut opts = args.compile_options(gctx, mode, Some(&ws), ProfileChecking::LegacyTestOnly)?;
 
     if !opts.filter.is_specific() {

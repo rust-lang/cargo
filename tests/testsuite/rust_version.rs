@@ -1146,11 +1146,10 @@ fn cargo_install_ignores_msrv_config() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry [..])
 [INSTALLING] foo v0.0.1
-[LOCKING] 2 packages to latest Rust 1.60 compatible versions
-[ADDING] dep v1.0.0 (latest: v1.1.0)
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.0.0 (registry [..])
-[COMPILING] dep v1.0.0
+[DOWNLOADED] dep v1.1.0 (registry [..])
+[COMPILING] dep v1.1.0
 [COMPILING] foo v0.0.1
 [FINISHED] `release` profile [optimized] target(s) in [..]
 [INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]

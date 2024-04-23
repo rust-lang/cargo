@@ -108,7 +108,7 @@ pub fn fix(
         check_resolver_change(&original_ws, opts)?;
     }
     let mut ws = Workspace::new(&root_manifest, gctx)?;
-    ws.set_honor_rust_version(original_ws.honor_rust_version());
+    ws.set_resolve_honors_rust_version(Some(original_ws.resolve_honors_rust_version()));
 
     // Spin up our lock server, which our subprocesses will use to synchronize fixes.
     let lock_server = LockServer::new()?;
