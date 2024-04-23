@@ -68,7 +68,7 @@ miow = "0.6.0"
 opener = "0.7.0"
 openssl = "0.10.57"
 openssl-sys = "=0.9.92" # See rust-lang/cargo#13546 and openssl/openssl#23376 for pinning
-os_info = "3.8.2"
+os_info = { version = "3.8.2", default-features = false }
 pasetors = { version = "0.6.8", features = ["v3", "paserk", "std", "serde"] }
 pathdiff = "0.2"
 percent-encoding = "2.3"
@@ -173,7 +173,6 @@ indexmap.workspace = true
 itertools.workspace = true
 jobserver.workspace = true
 lazycell.workspace = true
-libc.workspace = true
 libgit2-sys.workspace = true
 memchr.workspace = true
 opener.workspace = true
@@ -207,6 +206,9 @@ supports-unicode = "3.0.0"
 
 [target.'cfg(target_has_atomic = "64")'.dependencies]
 tracing-chrome.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
 cargo-credential-libsecret.workspace = true
