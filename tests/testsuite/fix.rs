@@ -1906,6 +1906,380 @@ warning: `foo` (lib) generated 1 warning (run `cargo fix --lib -p foo` to apply 
         .run();
 }
 
+#[cargo_test]
+fn fix_in_rust_src() {
+    // Tests what happens if rustc emits a suggestion to modify the standard
+    // library in rust source. This should never happen, and indicates a bug in
+    // rustc. However, there are several known bugs in rustc where it does this
+    // (often involving macros), so `cargo fix` has a guard that says if the
+    // suggestion points to rust source under sysroot to not apply it.
+    //
+    // See https://github.com/rust-lang/cargo/issues/9857 for some other
+    // examples.
+    //
+    // This test uses a simulated rustc which replays a suggestion via a JSON
+    // message that points into rust-src. This does not use the real rustc
+    // because as the bugs are fixed in the real rustc, that would cause this
+    // test to stop working.
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2021"
+            "#,
+        )
+        .file(
+            "src/lib.rs",
+            r#"
+                pub fn bug_report<W: std::fmt::Write>(w: &mut W) -> std::fmt::Result {
+                    if true {
+                        writeln!(w, "`;?` here ->")?;
+                    } else {
+                        writeln!(w, "but not here")
+                    }
+                    Ok(())
+                }
+            "#,
+        )
+        .build();
+    p.cargo("fetch").run();
+
+    // Since this is a substitution into a Rust string (representing a JSON
+    // string), deal with backslashes like on Windows.
+    let sysroot = paths::sysroot().replace("\\", "/");
+
+    // This is a fake rustc that will emit a JSON message when the `foo` crate
+    // builds that tells cargo to modify a file it shouldn't.
+    let rustc = project()
+        .at("rustc-replay")
+        .file("Cargo.toml", &basic_manifest("rustc-replay", "1.0.0"))
+        .file("src/main.rs",
+            &r##"
+                fn main() {
+                    let pkg_name = match std::env::var("CARGO_PKG_NAME") {
+                        Ok(pkg_name) => pkg_name,
+                        Err(_) => {
+                            let r = std::process::Command::new("rustc")
+                                .args(std::env::args_os().skip(1))
+                                .status();
+                            std::process::exit(r.unwrap().code().unwrap_or(2));
+                        }
+                    };
+                    if pkg_name == "foo" {
+                        eprintln!("{}", r#"{
+    "$message_type": "diagnostic",
+    "message": "mismatched types",
+    "code":
+    {
+        "code": "E0308",
+        "explanation": "Expected type did not match the received type.\n\nErroneous code examples:\n\n```compile_fail,E0308\nfn plus_one(x: i32) -> i32 {\n    x + 1\n}\n\nplus_one(\"Not a number\");\n//       ^^^^^^^^^^^^^^ expected `i32`, found `&str`\n\nif \"Not a bool\" {\n// ^^^^^^^^^^^^ expected `bool`, found `&str`\n}\n\nlet x: f32 = \"Not a float\";\n//     ---   ^^^^^^^^^^^^^ expected `f32`, found `&str`\n//     |\n//     expected due to this\n```\n\nThis error occurs when an expression was used in a place where the compiler\nexpected an expression of a different type. It can occur in several cases, the\nmost common being when calling a function and passing an argument which has a\ndifferent type than the matching type in the function declaration.\n"
+    },
+    "level": "error",
+    "spans":
+    [
+        {
+            "file_name": "__SYSROOT__/lib/rustlib/src/rust/library/core/src/macros/mod.rs",
+            "byte_start": 23568,
+            "byte_end": 23617,
+            "line_start": 670,
+            "line_end": 670,
+            "column_start": 9,
+            "column_end": 58,
+            "is_primary": true,
+            "text":
+            [
+                {
+                    "text": "        $dst.write_fmt($crate::format_args_nl!($($arg)*))",
+                    "highlight_start": 9,
+                    "highlight_end": 58
+                }
+            ],
+            "label": "expected `()`, found `Result<(), Error>`",
+            "suggested_replacement": null,
+            "suggestion_applicability": null,
+            "expansion":
+            {
+                "span":
+                {
+                    "file_name": "lib.rs",
+                    "byte_start": 144,
+                    "byte_end": 171,
+                    "line_start": 5,
+                    "line_end": 5,
+                    "column_start": 9,
+                    "column_end": 36,
+                    "is_primary": false,
+                    "text":
+                    [
+                        {
+                            "text": "        writeln!(w, \"but not here\")",
+                            "highlight_start": 9,
+                            "highlight_end": 36
+                        }
+                    ],
+                    "label": null,
+                    "suggested_replacement": null,
+                    "suggestion_applicability": null,
+                    "expansion": null
+                },
+                "macro_decl_name": "writeln!",
+                "def_site_span":
+                {
+                    "file_name": "__SYSROOT__/lib/rustlib/src/rust/library/core/src/macros/mod.rs",
+                    "byte_start": 23434,
+                    "byte_end": 23454,
+                    "line_start": 665,
+                    "line_end": 665,
+                    "column_start": 1,
+                    "column_end": 21,
+                    "is_primary": false,
+                    "text":
+                    [
+                        {
+                            "text": "macro_rules! writeln {",
+                            "highlight_start": 1,
+                            "highlight_end": 21
+                        }
+                    ],
+                    "label": null,
+                    "suggested_replacement": null,
+                    "suggestion_applicability": null,
+                    "expansion": null
+                }
+            }
+        },
+        {
+            "file_name": "lib.rs",
+            "byte_start": 75,
+            "byte_end": 177,
+            "line_start": 2,
+            "line_end": 6,
+            "column_start": 5,
+            "column_end": 6,
+            "is_primary": false,
+            "text":
+            [
+                {
+                    "text": "    if true {",
+                    "highlight_start": 5,
+                    "highlight_end": 14
+                },
+                {
+                    "text": "        writeln!(w, \"`;?` here ->\")?;",
+                    "highlight_start": 1,
+                    "highlight_end": 38
+                },
+                {
+                    "text": "    } else {",
+                    "highlight_start": 1,
+                    "highlight_end": 13
+                },
+                {
+                    "text": "        writeln!(w, \"but not here\")",
+                    "highlight_start": 1,
+                    "highlight_end": 36
+                },
+                {
+                    "text": "    }",
+                    "highlight_start": 1,
+                    "highlight_end": 6
+                }
+            ],
+            "label": "expected this to be `()`",
+            "suggested_replacement": null,
+            "suggestion_applicability": null,
+            "expansion": null
+        }
+    ],
+    "children":
+    [
+        {
+            "message": "use the `?` operator to extract the `Result<(), std::fmt::Error>` value, propagating a `Result::Err` value to the caller",
+            "code": null,
+            "level": "help",
+            "spans":
+            [
+                {
+                    "file_name": "__SYSROOT__/lib/rustlib/src/rust/library/core/src/macros/mod.rs",
+                    "byte_start": 23617,
+                    "byte_end": 23617,
+                    "line_start": 670,
+                    "line_end": 670,
+                    "column_start": 58,
+                    "column_end": 58,
+                    "is_primary": true,
+                    "text":
+                    [
+                        {
+                            "text": "        $dst.write_fmt($crate::format_args_nl!($($arg)*))",
+                            "highlight_start": 58,
+                            "highlight_end": 58
+                        }
+                    ],
+                    "label": null,
+                    "suggested_replacement": "?",
+                    "suggestion_applicability": "HasPlaceholders",
+                    "expansion":
+                    {
+                        "span":
+                        {
+                            "file_name": "lib.rs",
+                            "byte_start": 144,
+                            "byte_end": 171,
+                            "line_start": 5,
+                            "line_end": 5,
+                            "column_start": 9,
+                            "column_end": 36,
+                            "is_primary": false,
+                            "text":
+                            [
+                                {
+                                    "text": "        writeln!(w, \"but not here\")",
+                                    "highlight_start": 9,
+                                    "highlight_end": 36
+                                }
+                            ],
+                            "label": null,
+                            "suggested_replacement": null,
+                            "suggestion_applicability": null,
+                            "expansion": null
+                        },
+                        "macro_decl_name": "writeln!",
+                        "def_site_span":
+                        {
+                            "file_name": "__SYSROOT__/lib/rustlib/src/rust/library/core/src/macros/mod.rs",
+                            "byte_start": 23434,
+                            "byte_end": 23454,
+                            "line_start": 665,
+                            "line_end": 665,
+                            "column_start": 1,
+                            "column_end": 21,
+                            "is_primary": false,
+                            "text":
+                            [
+                                {
+                                    "text": "macro_rules! writeln {",
+                                    "highlight_start": 1,
+                                    "highlight_end": 21
+                                }
+                            ],
+                            "label": null,
+                            "suggested_replacement": null,
+                            "suggestion_applicability": null,
+                            "expansion": null
+                        }
+                    }
+                }
+            ],
+            "children":
+            [],
+            "rendered": null
+        }
+    ],
+    "rendered": "error[E0308]: mismatched types\n --> lib.rs:5:9\n  |\n2 | /     if true {\n3 | |         writeln!(w, \"`;?` here ->\")?;\n4 | |     } else {\n5 | |         writeln!(w, \"but not here\")\n  | |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `()`, found `Result<(), Error>`\n6 | |     }\n  | |_____- expected this to be `()`\n  |\n  = note: expected unit type `()`\n                  found enum `Result<(), std::fmt::Error>`\n  = note: this error originates in the macro `writeln` (in Nightly builds, run with -Z macro-backtrace for more info)\nhelp: consider using a semicolon here\n  |\n6 |     };\n  |      +\nhelp: you might have meant to return this value\n  |\n5 |         return writeln!(w, \"but not here\");\n  |         ++++++                            +\nhelp: use the `?` operator to extract the `Result<(), std::fmt::Error>` value, propagating a `Result::Err` value to the caller\n --> __SYSROOT__/lib/rustlib/src/rust/library/core/src/macros/mod.rs:670:58\n  |\n67|         $dst.write_fmt($crate::format_args_nl!($($arg)*))?\n  |                                                          +\n\n"
+}"#.replace("\n", ""));
+
+                        std::process::exit(2);
+                    }
+                }
+            "##.replace("__SYSROOT__", &sysroot))
+        .build();
+    rustc.cargo("build").run();
+    let rustc_bin = rustc.bin("rustc-replay");
+
+    // The output here should not say `Fixed`.
+    //
+    // It is OK to compare the full diagnostic output here because the text is
+    // hard-coded in rustc-replay. Normally tests should not be checking the
+    // compiler output.
+    p.cargo("fix --lib --allow-no-vcs --broken-code")
+        .env("__CARGO_FIX_YOLO", "1")
+        .env("RUSTC", &rustc_bin)
+        .with_status(101)
+        .with_stderr(r#"[CHECKING] foo v0.0.0 ([..])
+[WARNING] failed to automatically apply fixes suggested by rustc to crate `foo`
+
+after fixes were automatically applied the compiler reported errors within these files:
+
+  * [..]/lib/rustlib/src/rust/library/core/src/macros/mod.rs
+  * lib.rs
+
+This likely indicates a bug in either rustc or cargo itself,
+and we would appreciate a bug report! You're likely to see
+a number of compiler warnings after this message which cargo
+attempted to fix but failed. If you could open an issue at
+https://github.com/rust-lang/rust/issues
+quoting the full output of this command we'd be very appreciative!
+Note that you may be able to make some more progress in the near-term
+fixing code with the `--broken-code` flag
+
+The following errors were reported:
+error[E0308]: mismatched types
+ --> lib.rs:5:9
+  |
+2 | /     if true {
+3 | |         writeln!(w, "`;?` here ->")?;
+4 | |     } else {
+5 | |         writeln!(w, "but not here")
+  | |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `()`, found `Result<(), Error>`
+6 | |     }
+  | |_____- expected this to be `()`
+  |
+  = note: expected unit type `()`
+                  found enum `Result<(), std::fmt::Error>`
+  = note: this error originates in the macro `writeln` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: consider using a semicolon here
+  |
+6 |     };
+  |      +
+help: you might have meant to return this value
+  |
+5 |         return writeln!(w, "but not here");
+  |         ++++++                            +
+help: use the `?` operator to extract the `Result<(), std::fmt::Error>` value, propagating a `Result::Err` value to the caller
+ --> [..]/lib/rustlib/src/rust/library/core/src/macros/mod.rs:670:58
+  |
+67|         $dst.write_fmt($crate::format_args_nl!($($arg)*))?
+  |                                                          +
+
+Original diagnostics will follow.
+
+error[E0308]: mismatched types
+ --> lib.rs:5:9
+  |
+2 | /     if true {
+3 | |         writeln!(w, "`;?` here ->")?;
+4 | |     } else {
+5 | |         writeln!(w, "but not here")
+  | |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `()`, found `Result<(), Error>`
+6 | |     }
+  | |_____- expected this to be `()`
+  |
+  = note: expected unit type `()`
+                  found enum `Result<(), std::fmt::Error>`
+  = note: this error originates in the macro `writeln` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: consider using a semicolon here
+  |
+6 |     };
+  |      +
+help: you might have meant to return this value
+  |
+5 |         return writeln!(w, "but not here");
+  |         ++++++                            +
+help: use the `?` operator to extract the `Result<(), std::fmt::Error>` value, propagating a `Result::Err` value to the caller
+ --> [..]/lib/rustlib/src/rust/library/core/src/macros/mod.rs:670:58
+  |
+67|         $dst.write_fmt($crate::format_args_nl!($($arg)*))?
+  |                                                          +
+
+[ERROR] could not compile `foo` (lib) due to 1 previous error
+"#)
+        .run();
+}
+
 // This fixes rust-lang/rust#123304.
 // If that lint stops emitting duplicate suggestions,
 // we might need to find a substitution.
