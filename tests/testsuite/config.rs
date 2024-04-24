@@ -190,6 +190,11 @@ fn make_config_symlink_to_config_toml_absolute() {
     t!(symlink_file(&toml_path, &symlink_path));
 }
 
+fn make_config_symlink_to_config_toml_relative() {
+    let symlink_path = paths::root().join(".cargo/config");
+    t!(symlink_file(Path::new("config.toml"), &symlink_path));
+}
+
 #[track_caller]
 pub fn assert_error<E: Borrow<anyhow::Error>>(error: E, msgs: &str) {
     let causes = error
@@ -307,6 +312,36 @@ f1 = 1
     // It should NOT have warned for the symlink.
     let output = read_output(gctx);
     assert_match("", &output);
+}
+
+#[cargo_test]
+fn config_ambiguous_filename_symlink_doesnt_warn_relative() {
+    // Windows requires special permissions to create symlinks.
+    // If we don't have permission, just skip this test.
+    if !symlink_supported() {
+        return;
+    };
+
+    write_config_toml(
+        "\
+[foo]
+f1 = 1
+",
+    );
+
+    make_config_symlink_to_config_toml_relative();
+
+    let gctx = new_gctx();
+
+    assert_eq!(gctx.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
+
+    // It should NOT have warned for the symlink.
+    // But, currently it does!
+    let output = read_output(gctx);
+    let expected = "\
+[WARNING] both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
+";
+    assert_match(expected, &output);
 }
 
 #[cargo_test]
