@@ -86,39 +86,27 @@ pub struct Lint {
 
 impl Lint {
     pub fn level(&self, lints: &TomlToolLints, edition: Edition) -> LintLevel {
-        let edition_level = self
-            .edition_lint_opts
-            .filter(|(e, _)| edition >= *e)
-            .map(|(_, l)| l);
-
-        if self.default_level == LintLevel::Forbid || edition_level == Some(LintLevel::Forbid) {
-            return LintLevel::Forbid;
-        }
-
-        let level = self
-            .groups
+        self.groups
             .iter()
-            .map(|g| g.name)
-            .chain(std::iter::once(self.name))
-            .filter_map(|n| lints.get(n).map(|l| (n, l)))
-            .max_by_key(|(n, l)| {
+            .map(|g| {
                 (
-                    l.level() == TomlLintLevel::Forbid,
-                    l.priority(),
-                    std::cmp::Reverse(*n),
+                    g.name,
+                    level_priority(g.name, g.default_level, g.edition_lint_opts, lints, edition),
                 )
-            });
-
-        match level {
-            Some((_, toml_lint)) => toml_lint.level().into(),
-            None => {
-                if let Some(level) = edition_level {
-                    level
-                } else {
-                    self.default_level
-                }
-            }
-        }
+            })
+            .chain(std::iter::once((
+                self.name,
+                level_priority(
+                    self.name,
+                    self.default_level,
+                    self.edition_lint_opts,
+                    lints,
+                    edition,
+                ),
+            )))
+            .max_by_key(|(n, (l, p))| (l == &LintLevel::Forbid, *p, std::cmp::Reverse(*n)))
+            .map(|(_, (l, _))| l)
+            .unwrap()
     }
 }
 
@@ -160,6 +148,34 @@ impl From<TomlLintLevel> for LintLevel {
             TomlLintLevel::Deny => LintLevel::Deny,
             TomlLintLevel::Forbid => LintLevel::Forbid,
         }
+    }
+}
+
+fn level_priority(
+    name: &str,
+    default_level: LintLevel,
+    edition_lint_opts: Option<(Edition, LintLevel)>,
+    lints: &TomlToolLints,
+    edition: Edition,
+) -> (LintLevel, i8) {
+    let unspecified_level = if let Some(level) = edition_lint_opts
+        .filter(|(e, _)| edition >= *e)
+        .map(|(_, l)| l)
+    {
+        level
+    } else {
+        default_level
+    };
+
+    // Don't allow the group to be overridden if the level is `Forbid`
+    if unspecified_level == LintLevel::Forbid {
+        return (unspecified_level, 0);
+    }
+
+    if let Some(defined_level) = lints.get(name) {
+        (defined_level.level().into(), defined_level.priority())
+    } else {
+        (unspecified_level, 0)
     }
 }
 
