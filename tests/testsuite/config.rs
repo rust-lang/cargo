@@ -184,7 +184,7 @@ fn symlink_file(target: &Path, link: &Path) -> io::Result<()> {
     os::windows::fs::symlink_file(target, link)
 }
 
-fn symlink_config_to_config_toml() {
+fn make_config_symlink_to_config_toml_absolute() {
     let toml_path = paths::root().join(".cargo/config.toml");
     let symlink_path = paths::root().join(".cargo/config");
     t!(symlink_file(&toml_path, &symlink_path));
@@ -298,7 +298,7 @@ f1 = 1
 ",
     );
 
-    symlink_config_to_config_toml();
+    make_config_symlink_to_config_toml_absolute();
 
     let gctx = new_gctx();
 
