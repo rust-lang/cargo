@@ -184,6 +184,7 @@ rand.workspace = true
 regex.workspace = true
 rusqlite.workspace = true
 rustfix.workspace = true
+same-file.workspace = true
 semver.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde-untagged.workspace = true

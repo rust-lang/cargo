@@ -348,12 +348,8 @@ f1 = 1
     assert_eq!(gctx.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
 
     // It should NOT have warned for the symlink.
-    // But, currently it does!
     let output = read_output(gctx);
-    let expected = "\
-[WARNING] both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
-";
-    assert_match(expected, &output);
+    assert_match("", &output);
 }
 
 #[cargo_test]
@@ -378,12 +374,8 @@ f1 = 1
     assert_eq!(gctx.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
 
     // It should NOT have warned for this situation.
-    // But, currently it does!
     let output = read_output(gctx);
-    let expected = "\
-[WARNING] both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
-";
-    assert_match(expected, &output);
+    assert_match("", &output);
 }
 
 #[cargo_test]
