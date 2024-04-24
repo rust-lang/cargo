@@ -1426,8 +1426,6 @@ fn workspace_default_features2() {
             "\
 warning: [CWD]/workspace_only/Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
 (in the `dep_workspace_only` dependency)
-warning: [CWD]/package_only/Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
-(in the `dep_package_only` dependency)
      Locking 4 packages to latest compatible versions
     Checking dep_package_only v0.1.0 ([CWD]/dep_package_only)
     Checking dep_workspace_only v0.1.0 ([CWD]/dep_workspace_only)
