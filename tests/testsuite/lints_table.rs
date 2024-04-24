@@ -852,7 +852,7 @@ warning: `im_a_teapot` is specified
 9 | im-a-teapot = true
   | ------------------
   |
-  = note: `cargo::im_a_teapot` is set to `warn`
+  = note: `cargo::im_a_teapot` is set to `warn` in `[lints]`
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] [..]
 ",
@@ -892,7 +892,7 @@ warning: `im_a_teapot` is specified
 9 | im-a-teapot = true
   | ------------------
   |
-  = note: `cargo::im_a_teapot` is set to `warn`
+  = note: `cargo::im_a_teapot` is set to `warn` in `[lints]`
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] [..]
 ",
@@ -934,7 +934,7 @@ error: `im_a_teapot` is specified
 9 | im-a-teapot = true
   | ^^^^^^^^^^^^^^^^^^
   |
-  = note: `cargo::im_a_teapot` is set to `forbid`
+  = note: `cargo::im_a_teapot` is set to `forbid` in `[lints]`
 ",
         )
         .run();
@@ -977,7 +977,7 @@ error: `im_a_teapot` is specified
 13 | im-a-teapot = true
    | ^^^^^^^^^^^^^^^^^^
    |
-   = note: `cargo::im_a_teapot` is set to `forbid`
+   = note: `cargo::im_a_teapot` is set to `forbid` in `[workspace.lints]`
 ",
         )
         .run();
