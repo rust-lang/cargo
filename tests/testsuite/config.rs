@@ -184,10 +184,27 @@ fn symlink_file(target: &Path, link: &Path) -> io::Result<()> {
     os::windows::fs::symlink_file(target, link)
 }
 
-fn symlink_config_to_config_toml() {
+fn make_config_symlink_to_config_toml_absolute() {
     let toml_path = paths::root().join(".cargo/config.toml");
     let symlink_path = paths::root().join(".cargo/config");
     t!(symlink_file(&toml_path, &symlink_path));
+}
+
+fn make_config_symlink_to_config_toml_relative() {
+    let symlink_path = paths::root().join(".cargo/config");
+    t!(symlink_file(Path::new("config.toml"), &symlink_path));
+}
+
+fn rename_config_toml_to_config_replacing_with_symlink() {
+    let root = paths::root();
+    t!(fs::rename(
+        root.join(".cargo/config.toml"),
+        root.join(".cargo/config")
+    ));
+    t!(symlink_file(
+        Path::new("config"),
+        &root.join(".cargo/config.toml")
+    ));
 }
 
 #[track_caller]
@@ -298,13 +315,65 @@ f1 = 1
 ",
     );
 
-    symlink_config_to_config_toml();
+    make_config_symlink_to_config_toml_absolute();
 
     let gctx = new_gctx();
 
     assert_eq!(gctx.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
 
     // It should NOT have warned for the symlink.
+    let output = read_output(gctx);
+    assert_match("", &output);
+}
+
+#[cargo_test]
+fn config_ambiguous_filename_symlink_doesnt_warn_relative() {
+    // Windows requires special permissions to create symlinks.
+    // If we don't have permission, just skip this test.
+    if !symlink_supported() {
+        return;
+    };
+
+    write_config_toml(
+        "\
+[foo]
+f1 = 1
+",
+    );
+
+    make_config_symlink_to_config_toml_relative();
+
+    let gctx = new_gctx();
+
+    assert_eq!(gctx.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
+
+    // It should NOT have warned for the symlink.
+    let output = read_output(gctx);
+    assert_match("", &output);
+}
+
+#[cargo_test]
+fn config_ambiguous_filename_symlink_doesnt_warn_backward() {
+    // Windows requires special permissions to create symlinks.
+    // If we don't have permission, just skip this test.
+    if !symlink_supported() {
+        return;
+    };
+
+    write_config_toml(
+        "\
+[foo]
+f1 = 1
+",
+    );
+
+    rename_config_toml_to_config_replacing_with_symlink();
+
+    let gctx = new_gctx();
+
+    assert_eq!(gctx.get::<Option<i32>>("foo.f1").unwrap(), Some(1));
+
+    // It should NOT have warned for this situation.
     let output = read_output(gctx);
     assert_match("", &output);
 }

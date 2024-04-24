@@ -1537,36 +1537,32 @@ impl GlobalContext {
         let possible = dir.join(filename_without_extension);
         let possible_with_extension = dir.join(format!("{}.toml", filename_without_extension));
 
-        if possible.exists() {
+        if let Ok(possible_handle) = same_file::Handle::from_path(&possible) {
             if warn {
-                // We don't want to print a warning if the version
-                // without the extension is just a symlink to the version
-                // WITH an extension, which people may want to do to
-                // support multiple Cargo versions at once and not
-                // get a warning.
-                let skip_warning = if let Ok(target_path) = fs::read_link(&possible) {
-                    target_path == possible_with_extension
-                } else {
-                    false
-                };
-
-                if !skip_warning {
-                    if possible_with_extension.exists() {
+                if let Ok(possible_with_extension_handle) =
+                    same_file::Handle::from_path(&possible_with_extension)
+                {
+                    // We don't want to print a warning if the version
+                    // without the extension is just a symlink to the version
+                    // WITH an extension, which people may want to do to
+                    // support multiple Cargo versions at once and not
+                    // get a warning.
+                    if possible_handle != possible_with_extension_handle {
                         self.shell().warn(format!(
                             "both `{}` and `{}` exist. Using `{}`",
                             possible.display(),
                             possible_with_extension.display(),
                             possible.display()
                         ))?;
-                    } else {
-                        self.shell().warn(format!(
-                            "`{}` is deprecated in favor of `{filename_without_extension}.toml`",
-                            possible.display(),
-                        ))?;
-                        self.shell().note(
-                            format!("if you need to support cargo 1.38 or earlier, you can symlink `{filename_without_extension}` to `{filename_without_extension}.toml`"),
-                        )?;
                     }
+                } else {
+                    self.shell().warn(format!(
+                        "`{}` is deprecated in favor of `{filename_without_extension}.toml`",
+                        possible.display(),
+                    ))?;
+                    self.shell().note(
+                        format!("if you need to support cargo 1.38 or earlier, you can symlink `{filename_without_extension}` to `{filename_without_extension}.toml`"),
+                    )?;
                 }
             }
 
