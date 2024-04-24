@@ -904,14 +904,6 @@ fn inner_dependency_inherit_with<'a>(
                 this could become a hard error in the future"
         ))
     }
-    deprecated_underscore(
-        &dependency.default_features2,
-        &dependency.default_features,
-        "default-features",
-        name,
-        "dependency",
-        warnings,
-    );
     inherit()?.get_dependency(name, package_root).map(|d| {
         match d {
             manifest::TomlDependency::Simple(s) => {

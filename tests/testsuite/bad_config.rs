@@ -1356,6 +1356,88 @@ fn default_features2_conflict() {
 }
 
 #[cargo_test]
+fn workspace_default_features2() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["workspace_only", "dep_workspace_only", "package_only", "dep_package_only"]
+
+                [workspace.dependencies]
+                dep_workspace_only = { path = "dep_workspace_only", default_features = true }
+                dep_package_only = { path = "dep_package_only" }
+            "#,
+        )
+        .file(
+            "workspace_only/Cargo.toml",
+            r#"
+                [package]
+                name = "workspace_only"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                dep_workspace_only.workspace = true
+            "#,
+        )
+        .file("workspace_only/src/lib.rs", "")
+        .file(
+            "dep_workspace_only/Cargo.toml",
+            r#"
+                [package]
+                name = "dep_workspace_only"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+            "#,
+        )
+        .file("dep_workspace_only/src/lib.rs", "")
+        .file(
+            "package_only/Cargo.toml",
+            r#"
+                [package]
+                name = "package_only"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                dep_package_only = { workspace = true, default_features = true }
+            "#,
+        )
+        .file("package_only/src/lib.rs", "")
+        .file(
+            "dep_package_only/Cargo.toml",
+            r#"
+                [package]
+                name = "dep_package_only"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+            "#,
+        )
+        .file("dep_package_only/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_unordered(
+            "\
+warning: [CWD]/workspace_only/Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `dep_workspace_only` dependency)
+     Locking 4 packages to latest compatible versions
+    Checking dep_package_only v0.1.0 ([CWD]/dep_package_only)
+    Checking dep_workspace_only v0.1.0 ([CWD]/dep_workspace_only)
+    Checking package_only v0.1.0 ([CWD]/package_only)
+    Checking workspace_only v0.1.0 ([CWD]/workspace_only)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+"
+        )
+        .run();
+}
+
+#[cargo_test]
 fn proc_macro2() {
     let foo = project()
         .file(
