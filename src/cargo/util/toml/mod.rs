@@ -2340,7 +2340,7 @@ fn deprecated_underscore<T>(
     if old.is_some() && new.is_some() {
         let old_path = new_path.replace("-", "_");
         warnings.push(format!(
-            "unused manifest key `{old_path}` in the `{name}` {kind}"
+            "`{old_path}` is redundant with `{new_path}`, preferring `{new_path}` in the `{name}` {kind}"
         ))
     } else if old.is_some() {
         let old_path = new_path.replace("-", "_");
