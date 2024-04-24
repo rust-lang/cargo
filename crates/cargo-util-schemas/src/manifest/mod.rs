@@ -1506,7 +1506,7 @@ pub struct TomlLintConfig {
     pub priority: i8,
 }
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum TomlLintLevel {
     Forbid,

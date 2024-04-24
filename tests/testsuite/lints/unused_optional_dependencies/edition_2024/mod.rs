@@ -33,9 +33,10 @@ target-dep = { version = "0.1.0", optional = true }
         .build();
 
     snapbox::cmd::Command::cargo_ui()
-        .masquerade_as_nightly_cargo(&["edition2024"])
+        .masquerade_as_nightly_cargo(&["cargo-lints", "edition2024"])
         .current_dir(p.root())
         .arg("check")
+        .arg("-Zcargo-lints")
         .assert()
         .success()
         .stdout_matches(str![""])

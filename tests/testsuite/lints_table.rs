@@ -756,14 +756,14 @@ fn cargo_lints_nightly_required() {
         .file(
             "Cargo.toml",
             r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                edition = "2015"
-                authors = []
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+authors = []
 
-                [lints.cargo]
-                "unused-features" = "deny"
+[lints.cargo]
+im-a-teapot = "warn"
             "#,
         )
         .file("src/lib.rs", "")
@@ -790,21 +790,24 @@ fn cargo_lints_no_z_flag() {
         .file(
             "Cargo.toml",
             r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                edition = "2015"
-                authors = []
+cargo-features = ["test-dummy-unstable"]
 
-                [lints.cargo]
-                "unused-features" = "deny"
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+authors = []
+im-a-teapot = true
+
+[lints.cargo]
+im-a-teapot = "warn"
             "#,
         )
         .file("src/lib.rs", "")
         .build();
 
     foo.cargo("check")
-        .masquerade_as_nightly_cargo(&["-Zcargo-lints"])
+        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
         .with_stderr(
             "\
 [WARNING] unused manifest key `lints.cargo` (may be supported in a future version)
@@ -819,27 +822,37 @@ consider passing `-Zcargo-lints` to enable this feature.
 
 #[cargo_test]
 fn cargo_lints_success() {
-    let foo = project()
+    let p = project()
         .file(
             "Cargo.toml",
             r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                edition = "2015"
-                authors = []
+cargo-features = ["test-dummy-unstable"]
 
-                [lints.cargo]
-                "unused-features" = "deny"
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+authors = []
+im-a-teapot = true
+
+[lints.cargo]
+im-a-teapot = "warn"
             "#,
         )
         .file("src/lib.rs", "")
         .build();
 
-    foo.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["-Zcargo-lints"])
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
         .with_stderr(
             "\
+warning: `im_a_teapot` is specified
+ --> Cargo.toml:9:1
+  |
+9 | im-a-teapot = true
+  | ------------------
+  |
+  = note: `cargo::im_a_teapot` is set to `warn`
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] [..]
 ",
@@ -849,42 +862,79 @@ fn cargo_lints_success() {
 
 #[cargo_test]
 fn cargo_lints_underscore_supported() {
-    Package::new("bar", "0.1.0").publish();
     let foo = project()
         .file(
             "Cargo.toml",
             r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                edition = "2021"
-                authors = []
+cargo-features = ["test-dummy-unstable"]
 
-                [lints.cargo]
-                "implicit_features" = "warn"
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+authors = []
+im-a-teapot = true
 
-                [dependencies]
-                bar = { version = "0.1.0", optional = true }
+[lints.cargo]
+im_a_teapot = "warn"
             "#,
         )
         .file("src/lib.rs", "")
         .build();
 
     foo.cargo("check -Zcargo-lints")
-        .masquerade_as_nightly_cargo(&["-Zcargo-lints"])
+        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
         .with_stderr(
             "\
-warning: implicit features for optional dependencies is deprecated and will be unavailable in the 2024 edition
-  --> Cargo.toml:12:17
-   |
-12 |                 bar = { version = \"0.1.0\", optional = true }
-   |                 ---
-   |
-   = note: `cargo::implicit_features` is set to `warn`
-[UPDATING] `dummy-registry` index
-[LOCKING] [..]
+warning: `im_a_teapot` is specified
+ --> Cargo.toml:9:1
+  |
+9 | im-a-teapot = true
+  | ------------------
+  |
+  = note: `cargo::im_a_teapot` is set to `warn`
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn forbid_not_overridden() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+cargo-features = ["test-dummy-unstable"]
+
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+authors = []
+im-a-teapot = true
+
+[lints.cargo]
+im-a-teapot = { level = "warn", priority = 10 }
+test-dummy-unstable = { level = "forbid", priority = -1 }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+        .with_status(101)
+        .with_stderr(
+            "\
+error: `im_a_teapot` is specified
+ --> Cargo.toml:9:1
+  |
+9 | im-a-teapot = true
+  | ^^^^^^^^^^^^^^^^^^
+  |
+  = note: `cargo::im_a_teapot` is set to `forbid`
 ",
         )
         .run();
