@@ -1802,90 +1802,7 @@ fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
         }
     }
 
-    let new_source_id = match (
-        orig.git.as_ref(),
-        orig.path.as_ref(),
-        orig.registry.as_ref(),
-        orig.registry_index.as_ref(),
-    ) {
-        (Some(_), _, Some(_), _) | (Some(_), _, _, Some(_)) => bail!(
-            "dependency ({}) specification is ambiguous. \
-                 Only one of `git` or `registry` is allowed.",
-            name_in_toml
-        ),
-        (_, _, Some(_), Some(_)) => bail!(
-            "dependency ({}) specification is ambiguous. \
-                 Only one of `registry` or `registry-index` is allowed.",
-            name_in_toml
-        ),
-        (Some(git), maybe_path, _, _) => {
-            if maybe_path.is_some() {
-                bail!(
-                    "dependency ({}) specification is ambiguous. \
-                         Only one of `git` or `path` is allowed.",
-                    name_in_toml
-                );
-            }
-
-            let n_details = [&orig.branch, &orig.tag, &orig.rev]
-                .iter()
-                .filter(|d| d.is_some())
-                .count();
-
-            if n_details > 1 {
-                bail!(
-                    "dependency ({}) specification is ambiguous. \
-                         Only one of `branch`, `tag` or `rev` is allowed.",
-                    name_in_toml
-                );
-            }
-
-            let reference = orig
-                .branch
-                .clone()
-                .map(GitReference::Branch)
-                .or_else(|| orig.tag.clone().map(GitReference::Tag))
-                .or_else(|| orig.rev.clone().map(GitReference::Rev))
-                .unwrap_or(GitReference::DefaultBranch);
-            let loc = git.into_url()?;
-
-            if let Some(fragment) = loc.fragment() {
-                let msg = format!(
-                    "URL fragment `#{}` in git URL is ignored for dependency ({}). \
-                        If you were trying to specify a specific git revision, \
-                        use `rev = \"{}\"` in the dependency declaration.",
-                    fragment, name_in_toml, fragment
-                );
-                manifest_ctx.warnings.push(msg)
-            }
-
-            SourceId::for_git(&loc, reference)?
-        }
-        (None, Some(path), _, _) => {
-            let path = path.resolve(manifest_ctx.gctx);
-            // If the source ID for the package we're parsing is a path
-            // source, then we normalize the path here to get rid of
-            // components like `..`.
-            //
-            // The purpose of this is to get a canonical ID for the package
-            // that we're depending on to ensure that builds of this package
-            // always end up hashing to the same value no matter where it's
-            // built from.
-            if manifest_ctx.source_id.is_path() {
-                let path = manifest_ctx.root.join(path);
-                let path = paths::normalize_path(&path);
-                SourceId::for_path(&path)?
-            } else {
-                manifest_ctx.source_id
-            }
-        }
-        (None, None, Some(registry), None) => SourceId::alt_registry(manifest_ctx.gctx, registry)?,
-        (None, None, None, Some(registry_index)) => {
-            let url = registry_index.into_url()?;
-            SourceId::for_registry(&url)?
-        }
-        (None, None, None, None) => SourceId::crates_io(manifest_ctx.gctx)?,
-    };
+    let new_source_id = to_dependency_source_id(orig, name_in_toml, manifest_ctx)?;
 
     let (pkg_name, explicit_name_in_toml) = match orig.package {
         Some(ref s) => (&s[..], Some(name_in_toml)),
@@ -1962,6 +1879,91 @@ fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
         }
     }
     Ok(dep)
+}
+
+fn to_dependency_source_id<P: ResolveToPath + Clone>(
+    orig: &manifest::TomlDetailedDependency<P>,
+    name_in_toml: &str,
+    manifest_ctx: &mut ManifestContext<'_, '_>,
+) -> CargoResult<SourceId> {
+    match (
+        orig.git.as_ref(),
+        orig.path.as_ref(),
+        orig.registry.as_deref(),
+        orig.registry_index.as_ref(),
+    ) {
+        (Some(_git), _, Some(_registry), _) | (Some(_git), _, _, Some(_registry)) => bail!(
+            "dependency ({name_in_toml}) specification is ambiguous. \
+                 Only one of `git` or `registry` is allowed.",
+        ),
+        (_, _, Some(_registry), Some(_registry_index)) => bail!(
+            "dependency ({name_in_toml}) specification is ambiguous. \
+                 Only one of `registry` or `registry-index` is allowed.",
+        ),
+        (Some(_git), Some(_path), None, None) => {
+            bail!(
+                "dependency ({name_in_toml}) specification is ambiguous. \
+                     Only one of `git` or `path` is allowed.",
+            );
+        }
+        (Some(git), None, None, None) => {
+            let n_details = [&orig.branch, &orig.tag, &orig.rev]
+                .iter()
+                .filter(|d| d.is_some())
+                .count();
+
+            if n_details > 1 {
+                bail!(
+                    "dependency ({name_in_toml}) specification is ambiguous. \
+                         Only one of `branch`, `tag` or `rev` is allowed.",
+                );
+            }
+
+            let reference = orig
+                .branch
+                .clone()
+                .map(GitReference::Branch)
+                .or_else(|| orig.tag.clone().map(GitReference::Tag))
+                .or_else(|| orig.rev.clone().map(GitReference::Rev))
+                .unwrap_or(GitReference::DefaultBranch);
+            let loc = git.into_url()?;
+
+            if let Some(fragment) = loc.fragment() {
+                let msg = format!(
+                    "URL fragment `#{fragment}` in git URL is ignored for dependency ({name_in_toml}). \
+                        If you were trying to specify a specific git revision, \
+                        use `rev = \"{fragment}\"` in the dependency declaration.",
+                );
+                manifest_ctx.warnings.push(msg);
+            }
+
+            SourceId::for_git(&loc, reference)
+        }
+        (None, Some(path), _, _) => {
+            let path = path.resolve(manifest_ctx.gctx);
+            // If the source ID for the package we're parsing is a path
+            // source, then we normalize the path here to get rid of
+            // components like `..`.
+            //
+            // The purpose of this is to get a canonical ID for the package
+            // that we're depending on to ensure that builds of this package
+            // always end up hashing to the same value no matter where it's
+            // built from.
+            if manifest_ctx.source_id.is_path() {
+                let path = manifest_ctx.root.join(path);
+                let path = paths::normalize_path(&path);
+                SourceId::for_path(&path)
+            } else {
+                Ok(manifest_ctx.source_id)
+            }
+        }
+        (None, None, Some(registry), None) => SourceId::alt_registry(manifest_ctx.gctx, registry),
+        (None, None, None, Some(registry_index)) => {
+            let url = registry_index.into_url()?;
+            SourceId::for_registry(&url)
+        }
+        (None, None, None, None) => SourceId::crates_io(manifest_ctx.gctx),
+    }
 }
 
 pub trait ResolveToPath {
