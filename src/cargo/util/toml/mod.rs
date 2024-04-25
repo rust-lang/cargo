@@ -1894,7 +1894,7 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
     name_in_toml: &str,
     manifest_ctx: &mut ManifestContext<'_, '_>,
 ) -> CargoResult<SourceId> {
-    let new_source_id = match (
+    match (
         orig.git.as_ref(),
         orig.path.as_ref(),
         orig.registry.as_deref(),
@@ -1945,7 +1945,7 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
                 manifest_ctx.warnings.push(msg);
             }
 
-            SourceId::for_git(&loc, reference)?
+            SourceId::for_git(&loc, reference)
         }
         (None, Some(path), _, _) => {
             let path = path.resolve(manifest_ctx.gctx);
@@ -1960,20 +1960,18 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
             if manifest_ctx.source_id.is_path() {
                 let path = manifest_ctx.root.join(path);
                 let path = paths::normalize_path(&path);
-                SourceId::for_path(&path)?
+                SourceId::for_path(&path)
             } else {
-                manifest_ctx.source_id
+                Ok(manifest_ctx.source_id)
             }
         }
-        (None, None, Some(registry), None) => SourceId::alt_registry(manifest_ctx.gctx, registry)?,
+        (None, None, Some(registry), None) => SourceId::alt_registry(manifest_ctx.gctx, registry),
         (None, None, None, Some(registry_index)) => {
             let url = registry_index.into_url()?;
-            SourceId::for_registry(&url)?
+            SourceId::for_registry(&url)
         }
-        (None, None, None, None) => SourceId::crates_io(manifest_ctx.gctx)?,
-    };
-
-    Ok(new_source_id)
+        (None, None, None, None) => SourceId::crates_io(manifest_ctx.gctx),
+    }
 }
 
 pub trait ResolveToPath {
