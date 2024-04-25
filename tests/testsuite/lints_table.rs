@@ -852,7 +852,7 @@ warning: `im_a_teapot` is specified
 9 | im-a-teapot = true
   | ------------------
   |
-  = note: `cargo::im_a_teapot` is set to `warn`
+  = note: `cargo::im_a_teapot` is set to `warn` in `[lints]`
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] [..]
 ",
@@ -892,7 +892,7 @@ warning: `im_a_teapot` is specified
 9 | im-a-teapot = true
   | ------------------
   |
-  = note: `cargo::im_a_teapot` is set to `warn`
+  = note: `cargo::im_a_teapot` is set to `warn` in `[lints]`
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] [..]
 ",
@@ -934,7 +934,50 @@ error: `im_a_teapot` is specified
 9 | im-a-teapot = true
   | ^^^^^^^^^^^^^^^^^^
   |
-  = note: `cargo::im_a_teapot` is set to `forbid`
+  = note: `cargo::im_a_teapot` is set to `forbid` in `[lints]`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn workspace_cargo_lints() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+cargo-features = ["test-dummy-unstable"]
+
+[workspace.lints.cargo]
+im-a-teapot = { level = "warn", priority = 10 }
+test-dummy-unstable = { level = "forbid", priority = -1 }
+
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+authors = []
+im-a-teapot = true
+
+[lints]
+workspace = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
+        .with_status(101)
+        .with_stderr(
+            "\
+error: `im_a_teapot` is specified
+  --> Cargo.toml:13:1
+   |
+13 | im-a-teapot = true
+   | ^^^^^^^^^^^^^^^^^^
+   |
+   = note: `cargo::im_a_teapot` is set to `forbid` in `[workspace.lints]`
 ",
         )
         .run();

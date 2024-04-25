@@ -411,15 +411,7 @@ fn resolve_toml(
         }
         resolved_toml.target = (!resolved_target.is_empty()).then_some(resolved_target);
 
-        let resolved_lints = original_toml
-            .lints
-            .clone()
-            .map(|value| lints_inherit_with(value, || inherit()?.lints()))
-            .transpose()?;
-        resolved_toml.lints = resolved_lints.map(|lints| manifest::InheritableLints {
-            workspace: false,
-            lints,
-        });
+        resolved_toml.lints = original_toml.lints.clone();
 
         let resolved_badges = original_toml
             .badges
@@ -803,7 +795,7 @@ impl InheritableFields {
     }
 
     /// Gets the field `workspace.lint`.
-    fn lints(&self) -> CargoResult<manifest::TomlLints> {
+    pub fn lints(&self) -> CargoResult<manifest::TomlLints> {
         let Some(val) = &self.lints else {
             bail!("`workspace.lints` was not defined");
         };
@@ -1276,18 +1268,18 @@ fn to_real_manifest(
         }
     }
 
-    verify_lints(
-        resolved_toml.resolved_lints().expect("previously resolved"),
-        gctx,
-        warnings,
-    )?;
-    let default = manifest::TomlLints::default();
-    let rustflags = lints_to_rustflags(
-        resolved_toml
-            .resolved_lints()
-            .expect("previously resolved")
-            .unwrap_or(&default),
-    );
+    let resolved_lints = resolved_toml
+        .lints
+        .clone()
+        .map(|value| {
+            lints_inherit_with(value, || {
+                load_inheritable_fields(gctx, manifest_file, &workspace_config)?.lints()
+            })
+        })
+        .transpose()?;
+
+    verify_lints(resolved_lints.as_ref(), gctx, warnings)?;
+    let rustflags = lints_to_rustflags(&resolved_lints.unwrap_or_default());
 
     let metadata = ManifestMetadata {
         description: resolved_package
