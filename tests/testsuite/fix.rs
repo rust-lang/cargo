@@ -2129,26 +2129,7 @@ a = {path = "a", default_features = false}
         .with_stderr(
             "\
 [MIGRATING] Cargo.toml from 2021 edition to 2024
-[WARNING] [CWD]/Cargo.toml: `dev_dependencies` is deprecated in favor of `dev-dependencies` and will not work in the 2024 edition
-(in the `foo` package)
-[WARNING] [CWD]/Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
-(in the `a` dependency)
-[WARNING] [CWD]/Cargo.toml: `build_dependencies` is deprecated in favor of `build-dependencies` and will not work in the 2024 edition
-(in the `foo` package)
-[WARNING] [CWD]/Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
-(in the `a` dependency)
-[WARNING] [CWD]/Cargo.toml: `dev_dependencies` is deprecated in favor of `dev-dependencies` and will not work in the 2024 edition
-(in the `cfg(any())` platform target)
-[WARNING] [CWD]/Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
-(in the `a` dependency)
-[WARNING] [CWD]/Cargo.toml: `build_dependencies` is deprecated in favor of `build-dependencies` and will not work in the 2024 edition
-(in the `cfg(any())` platform target)
-[WARNING] [CWD]/Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
-(in the `a` dependency)
-[WARNING] [CWD]/Cargo.toml: `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
-(in the `foo` library target)
-[WARNING] [CWD]/Cargo.toml: `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
-(in the `ex` example target)
+[FIXED] Cargo.toml (11 fixes)
      Locking 2 packages to latest compatible versions
     Checking a v0.0.1 ([CWD]/a)
 [CHECKING] foo v0.0.0 ([CWD])
@@ -2165,7 +2146,7 @@ cargo-features = ["edition2024"]
 
 [workspace.dependencies]
 # Before default_features
-a = {path = "a", default_features = false}  # After default_features value
+a = {path = "a", default-features = false}  # After default_features value
 # After default_features line
 
 [package]
@@ -2175,40 +2156,40 @@ edition = "2021"
 [lib]
 name = "foo"
 # Before crate_type
-crate_type = ["staticlib", "dylib"]  # After crate_type value
+crate-type = ["staticlib", "dylib"]  # After crate_type value
 # After crate_type line
 
 [[example]]
 name = "ex"
 path = "examples/ex.rs"
 # Before crate_type
-crate_type = ["proc-macro"]  # After crate_type value
+crate-type = ["proc-macro"]  # After crate_type value
 # After crate_type line
 
 # Before dev_dependencies
-[ dev_dependencies ] # After dev_dependencies header
+[ dev-dependencies ] # After dev_dependencies header
 # After dev_dependencies line
-a = {path = "a", default_features = false}
+a = {path = "a", default-features = false}
 # After dev_dependencies table
 
 # Before build_dependencies
-[ build_dependencies ] # After build_dependencies header
+[ build-dependencies ] # After build_dependencies header
 # After build_dependencies line
-a = {path = "a", default_features = false}
+a = {path = "a", default-features = false}
 # After build_dependencies table
 
 # Before dev_dependencies
-[ target.'cfg(any())'.dev_dependencies ] # After dev_dependencies header
+[ target.'cfg(any())'.dev-dependencies ] # After dev_dependencies header
 # After dev_dependencies line
-a = {path = "a", default_features = false}
+a = {path = "a", default-features = false}
 # After dev_dependencies table
 
 # Before build_dependencies
-[ target.'cfg(any())'.build_dependencies ] # After build_dependencies header
+[ target.'cfg(any())'.build-dependencies ] # After build_dependencies header
 # After build_dependencies line
-a = {path = "a", default_features = false}
+a = {path = "a", default-features = false}
 # After build_dependencies table
-"#
+"#,
     );
 }
 
