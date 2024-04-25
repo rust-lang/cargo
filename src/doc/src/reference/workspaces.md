@@ -120,10 +120,8 @@ is not inside a subdirectory of the workspace root.
 In a workspace, package-related Cargo commands like [`cargo build`] can use
 the `-p` / `--package` or `--workspace` command-line flags to determine which
 packages to operate on. If neither of those flags are specified, Cargo will
-use the package in the current working directory. If the current directory is
-a [virtual workspace](#virtual-workspace), it will apply to all members (as if
-`--workspace` were specified on the command-line).  See also
-[`default-members`](#the-default-members-field).
+use the package in the current working directory. However, if the current directory is
+a workspace root, the [`default-members`](#the-default-members-field) will be used.
 
 ## The `default-members` field
 
@@ -136,6 +134,10 @@ used:
 members = ["path/to/member1", "path/to/member2", "path/to/member3/*"]
 default-members = ["path/to/member2", "path/to/member3/foo"]
 ```
+
+When unspecified, the [root package](#root-package) will be used.
+In the case of a [virtual workspace](#virtual-workspace), all members will be used
+(as if `--workspace` were specified on the command-line).
 
 ## The `package` table
 
