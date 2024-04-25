@@ -1897,15 +1897,15 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
     let new_source_id = match (
         orig.git.as_ref(),
         orig.path.as_ref(),
-        orig.registry.as_ref(),
+        orig.registry.as_deref(),
         orig.registry_index.as_ref(),
     ) {
-        (Some(_), _, Some(_), _) | (Some(_), _, _, Some(_)) => bail!(
+        (Some(_git), _, Some(_registry), _) | (Some(_git), _, _, Some(_registry)) => bail!(
             "dependency ({}) specification is ambiguous. \
                  Only one of `git` or `registry` is allowed.",
             name_in_toml
         ),
-        (_, _, Some(_), Some(_)) => bail!(
+        (_, _, Some(_registry), Some(_registry_index)) => bail!(
             "dependency ({}) specification is ambiguous. \
                  Only one of `registry` or `registry-index` is allowed.",
             name_in_toml
