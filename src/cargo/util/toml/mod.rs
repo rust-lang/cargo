@@ -1810,6 +1810,90 @@ fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
         }
     }
 
+    let new_source_id = to_dependency_source_id(orig, name_in_toml, manifest_ctx)?;
+
+    let (pkg_name, explicit_name_in_toml) = match orig.package {
+        Some(ref s) => (&s[..], Some(name_in_toml)),
+        None => (name_in_toml, None),
+    };
+
+    let version = orig.version.as_deref();
+    let mut dep = Dependency::parse(pkg_name, version, new_source_id)?;
+    deprecated_underscore(
+        &orig.default_features2,
+        &orig.default_features,
+        "default-features",
+        name_in_toml,
+        "dependency",
+        manifest_ctx.warnings,
+    );
+    dep.set_features(orig.features.iter().flatten())
+        .set_default_features(orig.default_features().unwrap_or(true))
+        .set_optional(orig.optional.unwrap_or(false))
+        .set_platform(manifest_ctx.platform.clone());
+    if let Some(registry) = &orig.registry {
+        let registry_id = SourceId::alt_registry(manifest_ctx.gctx, registry)?;
+        dep.set_registry_id(registry_id);
+    }
+    if let Some(registry_index) = &orig.registry_index {
+        let url = registry_index.into_url()?;
+        let registry_id = SourceId::for_registry(&url)?;
+        dep.set_registry_id(registry_id);
+    }
+
+    if let Some(kind) = kind {
+        dep.set_kind(kind);
+    }
+    if let Some(name_in_toml) = explicit_name_in_toml {
+        dep.set_explicit_name_in_toml(name_in_toml);
+    }
+
+    if let Some(p) = orig.public {
+        dep.set_public(p);
+    }
+
+    if let (Some(artifact), is_lib, target) = (
+        orig.artifact.as_ref(),
+        orig.lib.unwrap_or(false),
+        orig.target.as_deref(),
+    ) {
+        if manifest_ctx.gctx.cli_unstable().bindeps {
+            let artifact = Artifact::parse(&artifact.0, is_lib, target)?;
+            if dep.kind() != DepKind::Build
+                && artifact.target() == Some(ArtifactTarget::BuildDependencyAssumeTarget)
+            {
+                bail!(
+                    r#"`target = "target"` in normal- or dev-dependencies has no effect ({})"#,
+                    name_in_toml
+                );
+            }
+            dep.set_artifact(artifact)
+        } else {
+            bail!("`artifact = …` requires `-Z bindeps` ({})", name_in_toml);
+        }
+    } else if orig.lib.is_some() || orig.target.is_some() {
+        for (is_set, specifier) in [
+            (orig.lib.is_some(), "lib"),
+            (orig.target.is_some(), "target"),
+        ] {
+            if !is_set {
+                continue;
+            }
+            bail!(
+                "'{}' specifier cannot be used without an 'artifact = …' value ({})",
+                specifier,
+                name_in_toml
+            )
+        }
+    }
+    Ok(dep)
+}
+
+fn to_dependency_source_id<P: ResolveToPath + Clone>(
+    orig: &manifest::TomlDetailedDependency<P>,
+    name_in_toml: &str,
+    manifest_ctx: &mut ManifestContext<'_, '_>,
+) -> CargoResult<SourceId> {
     let new_source_id = match (
         orig.git.as_ref(),
         orig.path.as_ref(),
@@ -1895,81 +1979,7 @@ fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
         (None, None, None, None) => SourceId::crates_io(manifest_ctx.gctx)?,
     };
 
-    let (pkg_name, explicit_name_in_toml) = match orig.package {
-        Some(ref s) => (&s[..], Some(name_in_toml)),
-        None => (name_in_toml, None),
-    };
-
-    let version = orig.version.as_deref();
-    let mut dep = Dependency::parse(pkg_name, version, new_source_id)?;
-    deprecated_underscore(
-        &orig.default_features2,
-        &orig.default_features,
-        "default-features",
-        name_in_toml,
-        "dependency",
-        manifest_ctx.warnings,
-    );
-    dep.set_features(orig.features.iter().flatten())
-        .set_default_features(orig.default_features().unwrap_or(true))
-        .set_optional(orig.optional.unwrap_or(false))
-        .set_platform(manifest_ctx.platform.clone());
-    if let Some(registry) = &orig.registry {
-        let registry_id = SourceId::alt_registry(manifest_ctx.gctx, registry)?;
-        dep.set_registry_id(registry_id);
-    }
-    if let Some(registry_index) = &orig.registry_index {
-        let url = registry_index.into_url()?;
-        let registry_id = SourceId::for_registry(&url)?;
-        dep.set_registry_id(registry_id);
-    }
-
-    if let Some(kind) = kind {
-        dep.set_kind(kind);
-    }
-    if let Some(name_in_toml) = explicit_name_in_toml {
-        dep.set_explicit_name_in_toml(name_in_toml);
-    }
-
-    if let Some(p) = orig.public {
-        dep.set_public(p);
-    }
-
-    if let (Some(artifact), is_lib, target) = (
-        orig.artifact.as_ref(),
-        orig.lib.unwrap_or(false),
-        orig.target.as_deref(),
-    ) {
-        if manifest_ctx.gctx.cli_unstable().bindeps {
-            let artifact = Artifact::parse(&artifact.0, is_lib, target)?;
-            if dep.kind() != DepKind::Build
-                && artifact.target() == Some(ArtifactTarget::BuildDependencyAssumeTarget)
-            {
-                bail!(
-                    r#"`target = "target"` in normal- or dev-dependencies has no effect ({})"#,
-                    name_in_toml
-                );
-            }
-            dep.set_artifact(artifact)
-        } else {
-            bail!("`artifact = …` requires `-Z bindeps` ({})", name_in_toml);
-        }
-    } else if orig.lib.is_some() || orig.target.is_some() {
-        for (is_set, specifier) in [
-            (orig.lib.is_some(), "lib"),
-            (orig.target.is_some(), "target"),
-        ] {
-            if !is_set {
-                continue;
-            }
-            bail!(
-                "'{}' specifier cannot be used without an 'artifact = …' value ({})",
-                specifier,
-                name_in_toml
-            )
-        }
-    }
-    Ok(dep)
+    Ok(new_source_id)
 }
 
 pub trait ResolveToPath {
