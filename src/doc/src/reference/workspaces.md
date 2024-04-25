@@ -127,7 +127,7 @@ a [virtual workspace](#virtual-workspace), it will apply to all members (as if
 
 ## The `default-members` field
 
-The optional `default-members` key can be specified to set the members to
+The `default-members` key can be specified to set the members to
 operate on when in the workspace root and the package selection flags are not
 used:
 
