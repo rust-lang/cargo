@@ -80,10 +80,14 @@ edition = "2021"     # the edition, will have no effect on a resolver used in th
 authors = ["Alice <a@example.com>", "Bob <b@example.com>"]
 ```
 
-Note that in a virtual manifest the [`resolver = "2"`](resolver.md#resolver-versions)
-should be specified manually. It is usually deduced from the [`package.edition`][package-edition]
-field which is absent in virtual manifests and the edition field of a member
-won't affect the resolver used by the workspace.
+By having a workspace without a root package,
+
+- [`resolver`](resolver.md#resolver-versions) must be
+  set explicitly in virtual workspaces as they have no
+  [`package.edition`][package-edition] to infer it from
+  [resolver version](resolver.md#resolver-versions).
+- Commands run in the workspace root will run against all workspace
+  members by default, see [`default-members`](#the-default-members-field).
 
 ## The `members` and `exclude` fields 
 
@@ -120,14 +124,12 @@ is not inside a subdirectory of the workspace root.
 In a workspace, package-related Cargo commands like [`cargo build`] can use
 the `-p` / `--package` or `--workspace` command-line flags to determine which
 packages to operate on. If neither of those flags are specified, Cargo will
-use the package in the current working directory. If the current directory is
-a [virtual workspace](#virtual-workspace), it will apply to all members (as if
-`--workspace` were specified on the command-line).  See also
-[`default-members`](#the-default-members-field).
+use the package in the current working directory. However, if the current directory is
+a workspace root, the [`default-members`](#the-default-members-field) will be used.
 
 ## The `default-members` field
 
-The optional `default-members` key can be specified to set the members to
+The `default-members` field specifies paths of [members](#the-members-and-exclude-fields) to
 operate on when in the workspace root and the package selection flags are not
 used:
 
@@ -137,7 +139,12 @@ members = ["path/to/member1", "path/to/member2", "path/to/member3/*"]
 default-members = ["path/to/member2", "path/to/member3/foo"]
 ```
 
-When specified, `default-members` must expand to a subset of `members`.
+> Note: when a [root package](#root-package) is present,
+> you can only operate on it using `--package` and `--workspace` flags.
+
+When unspecified, the [root package](#root-package) will be used.
+In the case of a [virtual workspace](#virtual-workspace), all members will be used
+(as if `--workspace` were specified on the command-line).
 
 ## The `package` table
 
