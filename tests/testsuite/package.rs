@@ -3748,13 +3748,6 @@ im-a-teapot = "warn"
             "\
 [PACKAGING] foo v0.0.1 ([CWD])
 [VERIFYING] foo v0.0.1 ([CWD])
-warning: `im_a_teapot` is specified
-  --> target/package/foo-0.0.1/Cargo.toml:19:1
-   |
-19 | im-a-teapot = true
-   | ------------------
-   |
-   = note: `cargo::im_a_teapot` is set to `warn` in `[lints]`
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
 [PACKAGED] 3 files, [..] ([..] compressed)
@@ -3791,9 +3784,6 @@ im-a-teapot = true
 description = "foo"
 documentation = "docs.rs/foo"
 license = "MIT"
-
-[lints.cargo]
-im-a-teapot = "warn"
 "#,
         )],
     );

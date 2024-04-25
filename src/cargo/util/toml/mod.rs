@@ -2510,7 +2510,14 @@ fn prepare_toml_for_publish(
     let example = prepare_targets_for_publish(me.example.as_ref(), "example")?;
     let test = prepare_targets_for_publish(me.test.as_ref(), "test")?;
     let bench = prepare_targets_for_publish(me.bench.as_ref(), "benchmark")?;
-
+    let lints = me.lints.clone().and_then(|mut lints| {
+        lints.lints.remove("cargo");
+        if lints.lints.is_empty() {
+            None
+        } else {
+            Some(lints)
+        }
+    });
     let all = |_d: &manifest::TomlDependency| true;
     let mut manifest = manifest::TomlManifest {
         package: Some(package),
@@ -2561,7 +2568,7 @@ fn prepare_toml_for_publish(
         workspace: None,
         badges: me.badges.clone(),
         cargo_features: me.cargo_features.clone(),
-        lints: me.lints.clone(),
+        lints,
         _unused_keys: Default::default(),
     };
     strip_features(&mut manifest);
