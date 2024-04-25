@@ -179,8 +179,8 @@ fn resolve_lib(
     validate_lib_name(&lib, warnings)?;
 
     // Checking the original lib
-    validate_proc_macro(&lib, "library", warnings);
-    validate_crate_types(&lib, "library", warnings);
+    validate_proc_macro(&lib, "library", edition, warnings)?;
+    validate_crate_types(&lib, "library", edition, warnings)?;
 
     if lib.path.is_none() {
         if let Some(inferred) = inferred {
@@ -632,8 +632,8 @@ fn resolve_targets_with_legacy_path(
 
     for target in &toml_targets {
         validate_target_name(target, target_kind_human, target_kind, warnings)?;
-        validate_proc_macro(target, target_kind_human, warnings);
-        validate_crate_types(target, target_kind_human, warnings);
+        validate_proc_macro(target, target_kind_human, edition, warnings)?;
+        validate_crate_types(target, target_kind_human, edition, warnings)?;
     }
 
     let mut result = Vec::new();
@@ -1098,24 +1098,36 @@ fn name_or_panic(target: &TomlTarget) -> &str {
         .unwrap_or_else(|| panic!("target name is required"))
 }
 
-fn validate_proc_macro(target: &TomlTarget, kind: &str, warnings: &mut Vec<String>) {
+fn validate_proc_macro(
+    target: &TomlTarget,
+    kind: &str,
+    edition: Edition,
+    warnings: &mut Vec<String>,
+) -> CargoResult<()> {
     deprecated_underscore(
         &target.proc_macro2,
         &target.proc_macro,
         "proc-macro",
         name_or_panic(target),
         format!("{kind} target").as_str(),
+        edition,
         warnings,
-    );
+    )
 }
 
-fn validate_crate_types(target: &TomlTarget, kind: &str, warnings: &mut Vec<String>) {
+fn validate_crate_types(
+    target: &TomlTarget,
+    kind: &str,
+    edition: Edition,
+    warnings: &mut Vec<String>,
+) -> CargoResult<()> {
     deprecated_underscore(
         &target.crate_type2,
         &target.crate_type,
         "crate-type",
         name_or_panic(target),
         format!("{kind} target").as_str(),
+        edition,
         warnings,
-    );
+    )
 }

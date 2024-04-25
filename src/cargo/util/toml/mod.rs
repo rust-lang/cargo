@@ -349,8 +349,9 @@ fn resolve_toml(
             "dev-dependencies",
             package_name,
             "package",
+            edition,
             warnings,
-        );
+        )?;
         resolved_toml.dev_dependencies = resolve_dependencies(
             gctx,
             edition,
@@ -368,8 +369,9 @@ fn resolve_toml(
             "build-dependencies",
             package_name,
             "package",
+            edition,
             warnings,
-        );
+        )?;
         resolved_toml.build_dependencies = resolve_dependencies(
             gctx,
             edition,
@@ -400,8 +402,9 @@ fn resolve_toml(
                 "dev-dependencies",
                 name,
                 "platform target",
+                edition,
                 warnings,
-            );
+            )?;
             let resolved_dev_dependencies = resolve_dependencies(
                 gctx,
                 edition,
@@ -419,8 +422,9 @@ fn resolve_toml(
                 "build-dependencies",
                 name,
                 "platform target",
+                edition,
                 warnings,
-            );
+            )?;
             let resolved_build_dependencies = resolve_dependencies(
                 gctx,
                 edition,
@@ -657,8 +661,9 @@ fn resolve_dependencies<'a>(
                 "default-features",
                 name_in_toml,
                 "dependency",
+                edition,
                 warnings,
-            );
+            )?;
             if d.public.is_some() {
                 let public_feature = features.require(Feature::public_dependency());
                 let with_public_feature = public_feature.is_ok();
@@ -2323,9 +2328,13 @@ fn deprecated_underscore<T>(
     new_path: &str,
     name: &str,
     kind: &str,
+    edition: Edition,
     warnings: &mut Vec<String>,
-) {
-    if old.is_some() && new.is_some() {
+) -> CargoResult<()> {
+    if old.is_some() && Edition::Edition2024 <= edition {
+        let old_path = new_path.replace("-", "_");
+        anyhow::bail!("`{old_path}` is unsupported as of the 2024 edition; instead use `{new_path}`\n(in the `{name}` {kind})");
+    } else if old.is_some() && new.is_some() {
         let old_path = new_path.replace("-", "_");
         warnings.push(format!(
             "`{old_path}` is redundant with `{new_path}`, preferring `{new_path}` in the `{name}` {kind}"
@@ -2336,6 +2345,7 @@ fn deprecated_underscore<T>(
             "`{old_path}` is deprecated in favor of `{new_path}` and will not work in the 2024 edition\n(in the `{name}` {kind})"
         ))
     }
+    Ok(())
 }
 
 fn warn_on_unused(unused: &BTreeSet<String>, warnings: &mut Vec<String>) {
