@@ -2051,6 +2051,168 @@ edition = "2021"
 }
 
 #[cargo_test]
+fn migrate_rename_underscore_fields() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+cargo-features = ["edition2024"]
+
+[workspace.dependencies]
+# Before default_features
+a = {path = "a", default_features = false}  # After default_features value
+# After default_features line
+
+[package]
+name = "foo"
+edition = "2021"
+
+[lib]
+name = "foo"
+# Before crate_type
+crate_type = ["staticlib", "dylib"]  # After crate_type value
+# After crate_type line
+
+[[example]]
+name = "ex"
+path = "examples/ex.rs"
+# Before crate_type
+crate_type = ["proc-macro"]  # After crate_type value
+# After crate_type line
+
+# Before dev_dependencies
+[ dev_dependencies ] # After dev_dependencies header
+# After dev_dependencies line
+a = {path = "a", default_features = false}
+# After dev_dependencies table
+
+# Before build_dependencies
+[ build_dependencies ] # After build_dependencies header
+# After build_dependencies line
+a = {path = "a", default_features = false}
+# After build_dependencies table
+
+# Before dev_dependencies
+[ target.'cfg(any())'.dev_dependencies ] # After dev_dependencies header
+# After dev_dependencies line
+a = {path = "a", default_features = false}
+# After dev_dependencies table
+
+# Before build_dependencies
+[ target.'cfg(any())'.build_dependencies ] # After build_dependencies header
+# After build_dependencies line
+a = {path = "a", default_features = false}
+# After build_dependencies table
+"#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "examples/ex.rs",
+            r#"
+                fn main() { println!("ex"); }
+            "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --edition --allow-no-vcs")
+        .masquerade_as_nightly_cargo(&["edition2024"])
+        .with_stderr(
+            "\
+[MIGRATING] Cargo.toml from 2021 edition to 2024
+[WARNING] [CWD]/Cargo.toml: `dev_dependencies` is deprecated in favor of `dev-dependencies` and will not work in the 2024 edition
+(in the `foo` package)
+[WARNING] [CWD]/Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `a` dependency)
+[WARNING] [CWD]/Cargo.toml: `build_dependencies` is deprecated in favor of `build-dependencies` and will not work in the 2024 edition
+(in the `foo` package)
+[WARNING] [CWD]/Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `a` dependency)
+[WARNING] [CWD]/Cargo.toml: `dev_dependencies` is deprecated in favor of `dev-dependencies` and will not work in the 2024 edition
+(in the `cfg(any())` platform target)
+[WARNING] [CWD]/Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `a` dependency)
+[WARNING] [CWD]/Cargo.toml: `build_dependencies` is deprecated in favor of `build-dependencies` and will not work in the 2024 edition
+(in the `cfg(any())` platform target)
+[WARNING] [CWD]/Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `a` dependency)
+[WARNING] [CWD]/Cargo.toml: `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
+(in the `foo` library target)
+[WARNING] [CWD]/Cargo.toml: `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
+(in the `ex` example target)
+     Locking 2 packages to latest compatible versions
+    Checking a v0.0.1 ([CWD]/a)
+[CHECKING] foo v0.0.0 ([CWD])
+[MIGRATING] src/lib.rs from 2021 edition to 2024
+[MIGRATING] examples/ex.rs from 2021 edition to 2024
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+    assert_eq!(
+        p.read_file("Cargo.toml"),
+        r#"
+cargo-features = ["edition2024"]
+
+[workspace.dependencies]
+# Before default_features
+a = {path = "a", default_features = false}  # After default_features value
+# After default_features line
+
+[package]
+name = "foo"
+edition = "2021"
+
+[lib]
+name = "foo"
+# Before crate_type
+crate_type = ["staticlib", "dylib"]  # After crate_type value
+# After crate_type line
+
+[[example]]
+name = "ex"
+path = "examples/ex.rs"
+# Before crate_type
+crate_type = ["proc-macro"]  # After crate_type value
+# After crate_type line
+
+# Before dev_dependencies
+[ dev_dependencies ] # After dev_dependencies header
+# After dev_dependencies line
+a = {path = "a", default_features = false}
+# After dev_dependencies table
+
+# Before build_dependencies
+[ build_dependencies ] # After build_dependencies header
+# After build_dependencies line
+a = {path = "a", default_features = false}
+# After build_dependencies table
+
+# Before dev_dependencies
+[ target.'cfg(any())'.dev_dependencies ] # After dev_dependencies header
+# After dev_dependencies line
+a = {path = "a", default_features = false}
+# After dev_dependencies table
+
+# Before build_dependencies
+[ target.'cfg(any())'.build_dependencies ] # After build_dependencies header
+# After build_dependencies line
+a = {path = "a", default_features = false}
+# After build_dependencies table
+"#
+    );
+}
+
+#[cargo_test]
 fn add_feature_for_unused_dep() {
     Package::new("bar", "0.1.0").publish();
     Package::new("baz", "0.1.0").publish();
