@@ -1901,20 +1901,17 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
         orig.registry_index.as_ref(),
     ) {
         (Some(_git), _, Some(_registry), _) | (Some(_git), _, _, Some(_registry)) => bail!(
-            "dependency ({}) specification is ambiguous. \
+            "dependency ({name_in_toml}) specification is ambiguous. \
                  Only one of `git` or `registry` is allowed.",
-            name_in_toml
         ),
         (_, _, Some(_registry), Some(_registry_index)) => bail!(
-            "dependency ({}) specification is ambiguous. \
+            "dependency ({name_in_toml}) specification is ambiguous. \
                  Only one of `registry` or `registry-index` is allowed.",
-            name_in_toml
         ),
         (Some(_git), Some(_path), None, None) => {
             bail!(
-                "dependency ({}) specification is ambiguous. \
+                "dependency ({name_in_toml}) specification is ambiguous. \
                      Only one of `git` or `path` is allowed.",
-                name_in_toml
             );
         }
         (Some(git), None, None, None) => {
@@ -1925,9 +1922,8 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
 
             if n_details > 1 {
                 bail!(
-                    "dependency ({}) specification is ambiguous. \
+                    "dependency ({name_in_toml}) specification is ambiguous. \
                          Only one of `branch`, `tag` or `rev` is allowed.",
-                    name_in_toml
                 );
             }
 
@@ -1942,12 +1938,11 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
 
             if let Some(fragment) = loc.fragment() {
                 let msg = format!(
-                    "URL fragment `#{}` in git URL is ignored for dependency ({}). \
+                    "URL fragment `#{fragment}` in git URL is ignored for dependency ({name_in_toml}). \
                         If you were trying to specify a specific git revision, \
-                        use `rev = \"{}\"` in the dependency declaration.",
-                    fragment, name_in_toml, fragment
+                        use `rev = \"{fragment}\"` in the dependency declaration.",
                 );
-                manifest_ctx.warnings.push(msg)
+                manifest_ctx.warnings.push(msg);
             }
 
             SourceId::for_git(&loc, reference)?
