@@ -135,6 +135,9 @@ members = ["path/to/member1", "path/to/member2", "path/to/member3/*"]
 default-members = ["path/to/member2", "path/to/member3/foo"]
 ```
 
+> Note: when a [root package](#root-package) is present,
+> you can only operate on it using `--package` and `--workspace` flags.
+
 When unspecified, the [root package](#root-package) will be used.
 In the case of a [virtual workspace](#virtual-workspace), all members will be used
 (as if `--workspace` were specified on the command-line).
