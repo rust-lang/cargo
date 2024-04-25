@@ -1,6 +1,6 @@
 use crate::core::dependency::DepKind;
 use crate::core::FeatureValue::Dep;
-use crate::core::{Edition, FeatureValue, Package};
+use crate::core::{Edition, Feature, FeatureValue, Features, Package};
 use crate::util::interning::InternedString;
 use crate::{CargoResult, GlobalContext};
 use annotate_snippets::{Level, Snippet};
@@ -13,10 +13,10 @@ use std::path::Path;
 use toml_edit::ImDocument;
 
 fn get_span(document: &ImDocument<String>, path: &[&str], get_value: bool) -> Option<Range<usize>> {
-    let mut table = document.as_item().as_table_like().unwrap();
+    let mut table = document.as_item().as_table_like()?;
     let mut iter = path.into_iter().peekable();
     while let Some(key) = iter.next() {
-        let (key, item) = table.get_key_value(key).unwrap();
+        let (key, item) = table.get_key_value(key)?;
         if iter.peek().is_none() {
             return if get_value {
                 item.span()
@@ -82,6 +82,7 @@ pub struct Lint {
     pub groups: &'static [LintGroup],
     pub default_level: LintLevel,
     pub edition_lint_opts: Option<(Edition, LintLevel)>,
+    pub feature_gate: Option<&'static Feature>,
 }
 
 impl Lint {
@@ -90,7 +91,17 @@ impl Lint {
         pkg_lints: &TomlToolLints,
         ws_lints: Option<&TomlToolLints>,
         edition: Edition,
+        unstable_features: &Features,
     ) -> (LintLevel, LintLevelReason) {
+        // We should return `Allow` if a lint is behind a feature, but it is
+        // not enabled, that way the lint does not run.
+        if self
+            .feature_gate
+            .is_some_and(|f| !unstable_features.is_enabled(f))
+        {
+            return (LintLevel::Allow, LintLevelReason::Default);
+        }
+
         self.groups
             .iter()
             .map(|g| {
@@ -164,7 +175,7 @@ impl From<TomlLintLevel> for LintLevel {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum LintLevelReason {
     Default,
     Edition(Edition),
@@ -228,6 +239,7 @@ const IM_A_TEAPOT: Lint = Lint {
     groups: &[TEST_DUMMY_UNSTABLE],
     default_level: LintLevel::Allow,
     edition_lint_opts: None,
+    feature_gate: Some(Feature::test_dummy_unstable()),
 };
 
 pub fn check_im_a_teapot(
@@ -239,7 +251,13 @@ pub fn check_im_a_teapot(
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
-    let (lint_level, reason) = IM_A_TEAPOT.level(pkg_lints, ws_lints, manifest.edition());
+    let (lint_level, reason) = IM_A_TEAPOT.level(
+        pkg_lints,
+        ws_lints,
+        manifest.edition(),
+        manifest.unstable_features(),
+    );
+
     if lint_level == LintLevel::Allow {
         return Ok(());
     }
@@ -295,6 +313,7 @@ const IMPLICIT_FEATURES: Lint = Lint {
     groups: &[],
     default_level: LintLevel::Allow,
     edition_lint_opts: None,
+    feature_gate: None,
 };
 
 pub fn check_implicit_features(
@@ -305,19 +324,20 @@ pub fn check_implicit_features(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let edition = pkg.manifest().edition();
+    let manifest = pkg.manifest();
+    let edition = manifest.edition();
     // In Edition 2024+, instead of creating optional features, the dependencies are unused.
     // See `UNUSED_OPTIONAL_DEPENDENCY`
     if edition >= Edition::Edition2024 {
         return Ok(());
     }
 
-    let (lint_level, reason) = IMPLICIT_FEATURES.level(pkg_lints, ws_lints, edition);
+    let (lint_level, reason) =
+        IMPLICIT_FEATURES.level(pkg_lints, ws_lints, edition, manifest.unstable_features());
     if lint_level == LintLevel::Allow {
         return Ok(());
     }
 
-    let manifest = pkg.manifest();
     let activated_opt_deps = manifest
         .resolved_toml()
         .features()
@@ -373,6 +393,7 @@ const UNUSED_OPTIONAL_DEPENDENCY: Lint = Lint {
     groups: &[],
     default_level: LintLevel::Warn,
     edition_lint_opts: None,
+    feature_gate: None,
 };
 
 pub fn unused_dependencies(
@@ -383,18 +404,23 @@ pub fn unused_dependencies(
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    let edition = pkg.manifest().edition();
+    let manifest = pkg.manifest();
+    let edition = manifest.edition();
     // Unused optional dependencies can only exist on edition 2024+
     if edition < Edition::Edition2024 {
         return Ok(());
     }
 
-    let (lint_level, reason) = UNUSED_OPTIONAL_DEPENDENCY.level(pkg_lints, ws_lints, edition);
+    let (lint_level, reason) = UNUSED_OPTIONAL_DEPENDENCY.level(
+        pkg_lints,
+        ws_lints,
+        edition,
+        manifest.unstable_features(),
+    );
     if lint_level == LintLevel::Allow {
         return Ok(());
     }
     let mut emitted_source = None;
-    let manifest = pkg.manifest();
     let original_toml = manifest.original_toml();
     // Unused dependencies were stripped from the manifest, leaving only the used ones
     let used_dependencies = manifest

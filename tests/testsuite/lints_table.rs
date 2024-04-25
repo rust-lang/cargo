@@ -1078,3 +1078,33 @@ implicit-features = "warn"
         )
         .run();
 }
+
+#[cargo_test]
+fn check_feature_gated() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+authors = []
+
+[lints.cargo]
+im-a-teapot = "warn"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_stderr(
+            "\
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] [..]
+",
+        )
+        .run();
+}
