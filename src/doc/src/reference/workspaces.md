@@ -127,7 +127,7 @@ a [virtual workspace](#virtual-workspace), it will apply to all members (as if
 
 ## The `default-members` field
 
-The `default-members` field specifies the members to
+The `default-members` field specifies paths of [members](#the-members-and-exclude-fields) to
 operate on when in the workspace root and the package selection flags are not
 used:
 
@@ -136,8 +136,6 @@ used:
 members = ["path/to/member1", "path/to/member2", "path/to/member3/*"]
 default-members = ["path/to/member2", "path/to/member3/foo"]
 ```
-
-When specified, `default-members` must expand to a subset of `members`.
 
 ## The `package` table
 
