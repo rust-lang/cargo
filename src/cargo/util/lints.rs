@@ -12,6 +12,7 @@ use std::ops::Range;
 use std::path::Path;
 use toml_edit::ImDocument;
 
+const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
 const LINTS: &[Lint] = &[IM_A_TEAPOT, IMPLICIT_FEATURES, UNUSED_OPTIONAL_DEPENDENCY];
 
 pub fn analyze_cargo_lints_table(
@@ -33,11 +34,13 @@ pub fn analyze_cargo_lints_table(
         .keys()
         .chain(ws_lints.map(|l| l.keys()).unwrap_or_default())
     {
-        if let Some(lint) = LINTS.iter().find(|l| l.name == lint_name) {
+        if let Some((name, default_level, edition_lint_opts, feature_gate)) =
+            find_lint_or_group(lint_name)
+        {
             let (_, reason, _) = level_priority(
-                lint.name,
-                lint.default_level,
-                lint.edition_lint_opts,
+                name,
+                *default_level,
+                *edition_lint_opts,
                 pkg_lints,
                 ws_lints,
                 manifest.edition(),
@@ -49,9 +52,9 @@ pub fn analyze_cargo_lints_table(
             }
 
             // Only run this on lints that are gated by a feature
-            if let Some(feature_gate) = lint.feature_gate {
+            if let Some(feature_gate) = feature_gate {
                 verify_feature_enabled(
-                    lint.name,
+                    name,
                     feature_gate,
                     reason,
                     manifest,
@@ -71,6 +74,33 @@ pub fn analyze_cargo_lints_table(
         ))
     } else {
         Ok(())
+    }
+}
+
+fn find_lint_or_group<'a>(
+    name: &str,
+) -> Option<(
+    &'static str,
+    &LintLevel,
+    &Option<(Edition, LintLevel)>,
+    &Option<&'static Feature>,
+)> {
+    if let Some(lint) = LINTS.iter().find(|l| l.name == name) {
+        Some((
+            lint.name,
+            &lint.default_level,
+            &lint.edition_lint_opts,
+            &lint.feature_gate,
+        ))
+    } else if let Some(group) = LINT_GROUPS.iter().find(|g| g.name == name) {
+        Some((
+            group.name,
+            &group.default_level,
+            &group.edition_lint_opts,
+            &group.feature_gate,
+        ))
+    } else {
+        None
     }
 }
 
@@ -224,6 +254,7 @@ pub struct LintGroup {
     pub default_level: LintLevel,
     pub desc: &'static str,
     pub edition_lint_opts: Option<(Edition, LintLevel)>,
+    pub feature_gate: Option<&'static Feature>,
 }
 
 const TEST_DUMMY_UNSTABLE: LintGroup = LintGroup {
@@ -231,6 +262,7 @@ const TEST_DUMMY_UNSTABLE: LintGroup = LintGroup {
     desc: "test_dummy_unstable is meant to only be used in tests",
     default_level: LintLevel::Allow,
     edition_lint_opts: None,
+    feature_gate: Some(Feature::test_dummy_unstable()),
 };
 
 #[derive(Copy, Clone, Debug)]

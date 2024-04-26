@@ -1164,7 +1164,20 @@ note: `cargo::im-a-teapot` was inherited
   | ----------------
   |
   = help: consider adding `cargo-features = [\"test-dummy-unstable\"]` to the top of the manifest
-error: encountered 1 errors(s) while verifying lints
+error: use of unstable lint `test-dummy-unstable`
+ --> Cargo.toml:7:1
+  |
+7 | test-dummy-unstable = { level = \"forbid\", priority = -1 }
+  | ^^^^^^^^^^^^^^^^^^^ this is behind `test-dummy-unstable`, which is not enabled
+  |
+note: `cargo::test-dummy-unstable` was inherited
+ --> foo/Cargo.toml:9:1
+  |
+9 | workspace = true
+  | ----------------
+  |
+  = help: consider adding `cargo-features = [\"test-dummy-unstable\"]` to the top of the manifest
+error: encountered 2 errors(s) while verifying lints
 ",
         )
         .run();
