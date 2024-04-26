@@ -97,12 +97,7 @@ pub(super) fn to_targets(
         warnings,
         errors,
     )?;
-    targets.extend(to_example_targets(
-        &toml_examples,
-        package_root,
-        edition,
-        warnings,
-    )?);
+    targets.extend(to_example_targets(&toml_examples, package_root, edition)?);
 
     let toml_tests = resolve_tests(
         resolved_toml.test.as_ref(),
@@ -183,6 +178,10 @@ fn resolve_lib(
     // Check early to improve error messages
     validate_lib_name(&lib, warnings)?;
 
+    // Checking the original lib
+    validate_proc_macro(&lib, "library", edition, warnings)?;
+    validate_crate_types(&lib, "library", edition, warnings)?;
+
     if lib.path.is_none() {
         if let Some(inferred) = inferred {
             lib.path = Some(PathValue(inferred));
@@ -218,8 +217,6 @@ fn to_lib_target(
     let Some(lib) = resolved_lib else {
         return Ok(None);
     };
-    validate_proc_macro(lib, "library", warnings);
-    validate_crate_types(lib, "library", warnings);
 
     let path = lib.path.as_ref().expect("previously resolved");
     let path = package_root.join(&path.0);
@@ -442,14 +439,12 @@ fn to_example_targets(
     targets: &[TomlExampleTarget],
     package_root: &Path,
     edition: Edition,
-    warnings: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
     validate_unique_names(&targets, "example")?;
 
     let mut result = Vec::new();
     for toml in targets {
         let path = package_root.join(&toml.path.as_ref().expect("previously resolved").0);
-        validate_crate_types(&toml, "example", warnings);
         let crate_types = match toml.crate_types() {
             Some(kinds) => kinds.iter().map(|s| s.into()).collect(),
             None => Vec::new(),
@@ -637,6 +632,8 @@ fn resolve_targets_with_legacy_path(
 
     for target in &toml_targets {
         validate_target_name(target, target_kind_human, target_kind, warnings)?;
+        validate_proc_macro(target, target_kind_human, edition, warnings)?;
+        validate_crate_types(target, target_kind_human, edition, warnings)?;
     }
 
     let mut result = Vec::new();
@@ -1101,24 +1098,36 @@ fn name_or_panic(target: &TomlTarget) -> &str {
         .unwrap_or_else(|| panic!("target name is required"))
 }
 
-fn validate_proc_macro(target: &TomlTarget, kind: &str, warnings: &mut Vec<String>) {
+fn validate_proc_macro(
+    target: &TomlTarget,
+    kind: &str,
+    edition: Edition,
+    warnings: &mut Vec<String>,
+) -> CargoResult<()> {
     deprecated_underscore(
         &target.proc_macro2,
         &target.proc_macro,
         "proc-macro",
         name_or_panic(target),
         format!("{kind} target").as_str(),
+        edition,
         warnings,
-    );
+    )
 }
 
-fn validate_crate_types(target: &TomlTarget, kind: &str, warnings: &mut Vec<String>) {
+fn validate_crate_types(
+    target: &TomlTarget,
+    kind: &str,
+    edition: Edition,
+    warnings: &mut Vec<String>,
+) -> CargoResult<()> {
     deprecated_underscore(
         &target.crate_type2,
         &target.crate_type,
         "crate-type",
         name_or_panic(target),
         format!("{kind} target").as_str(),
+        edition,
         warnings,
-    );
+    )
 }

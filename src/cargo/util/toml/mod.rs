@@ -306,6 +306,8 @@ fn resolve_toml(
     };
 
     if let Some(original_package) = original_toml.package() {
+        let package_name = &original_package.name;
+
         let resolved_package =
             resolve_package_toml(original_package, features, package_root, &inherit)?;
         let edition = resolved_package
@@ -341,6 +343,15 @@ fn resolve_toml(
             package_root,
             warnings,
         )?;
+        deprecated_underscore(
+            &original_toml.dev_dependencies2,
+            &original_toml.dev_dependencies,
+            "dev-dependencies",
+            package_name,
+            "package",
+            edition,
+            warnings,
+        )?;
         resolved_toml.dev_dependencies = resolve_dependencies(
             gctx,
             edition,
@@ -350,6 +361,15 @@ fn resolve_toml(
             Some(DepKind::Development),
             &inherit,
             package_root,
+            warnings,
+        )?;
+        deprecated_underscore(
+            &original_toml.build_dependencies2,
+            &original_toml.build_dependencies,
+            "build-dependencies",
+            package_name,
+            "package",
+            edition,
             warnings,
         )?;
         resolved_toml.build_dependencies = resolve_dependencies(
@@ -376,6 +396,15 @@ fn resolve_toml(
                 package_root,
                 warnings,
             )?;
+            deprecated_underscore(
+                &platform.dev_dependencies2,
+                &platform.dev_dependencies,
+                "dev-dependencies",
+                name,
+                "platform target",
+                edition,
+                warnings,
+            )?;
             let resolved_dev_dependencies = resolve_dependencies(
                 gctx,
                 edition,
@@ -385,6 +414,15 @@ fn resolve_toml(
                 Some(DepKind::Development),
                 &inherit,
                 package_root,
+                warnings,
+            )?;
+            deprecated_underscore(
+                &platform.build_dependencies2,
+                &platform.build_dependencies,
+                "build-dependencies",
+                name,
+                "platform target",
+                edition,
                 warnings,
             )?;
             let resolved_build_dependencies = resolve_dependencies(
@@ -617,6 +655,15 @@ fn resolve_dependencies<'a>(
         let mut resolved =
             dependency_inherit_with(v.clone(), name_in_toml, inherit, package_root, warnings)?;
         if let manifest::TomlDependency::Detailed(ref mut d) = resolved {
+            deprecated_underscore(
+                &d.default_features2,
+                &d.default_features,
+                "default-features",
+                name_in_toml,
+                "dependency",
+                edition,
+                warnings,
+            )?;
             if d.public.is_some() {
                 let public_feature = features.require(Feature::public_dependency());
                 let with_public_feature = public_feature.is_ok();
@@ -1146,28 +1193,12 @@ fn to_real_manifest(
     }
 
     validate_dependencies(original_toml.dependencies.as_ref(), None, None, warnings)?;
-    deprecated_underscore(
-        &original_toml.dev_dependencies2,
-        &original_toml.dev_dependencies,
-        "dev-dependencies",
-        package_name,
-        "package",
-        warnings,
-    );
     validate_dependencies(
         original_toml.dev_dependencies(),
         None,
         Some(DepKind::Development),
         warnings,
     )?;
-    deprecated_underscore(
-        &original_toml.build_dependencies2,
-        &original_toml.build_dependencies,
-        "build-dependencies",
-        package_name,
-        "package",
-        warnings,
-    );
     validate_dependencies(
         original_toml.build_dependencies(),
         None,
@@ -1184,28 +1215,12 @@ fn to_real_manifest(
             None,
             warnings,
         )?;
-        deprecated_underscore(
-            &platform.build_dependencies2,
-            &platform.build_dependencies,
-            "build-dependencies",
-            name,
-            "platform target",
-            warnings,
-        );
         validate_dependencies(
             platform.build_dependencies(),
             platform_kind.as_ref(),
             Some(DepKind::Build),
             warnings,
         )?;
-        deprecated_underscore(
-            &platform.dev_dependencies2,
-            &platform.dev_dependencies,
-            "dev-dependencies",
-            name,
-            "platform target",
-            warnings,
-        );
         validate_dependencies(
             platform.dev_dependencies(),
             platform_kind.as_ref(),
@@ -1811,14 +1826,6 @@ fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
 
     let version = orig.version.as_deref();
     let mut dep = Dependency::parse(pkg_name, version, new_source_id)?;
-    deprecated_underscore(
-        &orig.default_features2,
-        &orig.default_features,
-        "default-features",
-        name_in_toml,
-        "dependency",
-        manifest_ctx.warnings,
-    );
     dep.set_features(orig.features.iter().flatten())
         .set_default_features(orig.default_features().unwrap_or(true))
         .set_optional(orig.optional.unwrap_or(false))
@@ -2321,19 +2328,22 @@ fn deprecated_underscore<T>(
     new_path: &str,
     name: &str,
     kind: &str,
+    edition: Edition,
     warnings: &mut Vec<String>,
-) {
-    if old.is_some() && new.is_some() {
-        let old_path = new_path.replace("-", "_");
+) -> CargoResult<()> {
+    let old_path = new_path.replace("-", "_");
+    if old.is_some() && Edition::Edition2024 <= edition {
+        anyhow::bail!("`{old_path}` is unsupported as of the 2024 edition; instead use `{new_path}`\n(in the `{name}` {kind})");
+    } else if old.is_some() && new.is_some() {
         warnings.push(format!(
             "`{old_path}` is redundant with `{new_path}`, preferring `{new_path}` in the `{name}` {kind}"
         ))
     } else if old.is_some() {
-        let old_path = new_path.replace("-", "_");
         warnings.push(format!(
             "`{old_path}` is deprecated in favor of `{new_path}` and will not work in the 2024 edition\n(in the `{name}` {kind})"
         ))
     }
+    Ok(())
 }
 
 fn warn_on_unused(unused: &BTreeSet<String>, warnings: &mut Vec<String>) {
