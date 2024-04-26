@@ -1147,11 +1147,26 @@ impl<'gctx> Workspace<'gctx> {
     }
 
     pub fn emit_warnings(&self) -> CargoResult<()> {
+        let ws_lints = self
+            .root_maybe()
+            .workspace_config()
+            .inheritable()
+            .and_then(|i| i.lints().ok())
+            .unwrap_or_default();
+
+        let ws_cargo_lints = ws_lints
+            .get("cargo")
+            .cloned()
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(k, v)| (k.replace('-', "_"), v))
+            .collect();
+
         for (path, maybe_pkg) in &self.packages.packages {
             let path = path.join("Cargo.toml");
             if let MaybePackage::Package(pkg) = maybe_pkg {
                 if self.gctx.cli_unstable().cargo_lints {
-                    self.emit_lints(pkg, &path)?
+                    self.emit_lints(pkg, &path, &ws_cargo_lints)?
                 }
             }
             let warnings = match maybe_pkg {
@@ -1179,22 +1194,12 @@ impl<'gctx> Workspace<'gctx> {
         Ok(())
     }
 
-    pub fn emit_lints(&self, pkg: &Package, path: &Path) -> CargoResult<()> {
-        let ws_lints = self
-            .root_maybe()
-            .workspace_config()
-            .inheritable()
-            .and_then(|i| i.lints().ok())
-            .unwrap_or_default();
-
-        let ws_cargo_lints = ws_lints
-            .get("cargo")
-            .cloned()
-            .unwrap_or_default()
-            .into_iter()
-            .map(|(k, v)| (k.replace('-', "_"), v))
-            .collect();
-
+    pub fn emit_lints(
+        &self,
+        pkg: &Package,
+        path: &Path,
+        ws_cargo_lints: &manifest::TomlToolLints,
+    ) -> CargoResult<()> {
         let mut error_count = 0;
         let toml_lints = pkg
             .manifest()
@@ -1212,11 +1217,21 @@ impl<'gctx> Workspace<'gctx> {
             .map(|(name, lint)| (name.replace('-', "_"), lint))
             .collect();
 
+        // We should only be using workspace lints if the `[lints]` table is
+        // present in the manifest, and `workspace` is set to `true`
+        let ws_cargo_lints = pkg
+            .manifest()
+            .resolved_toml()
+            .lints
+            .as_ref()
+            .is_some_and(|l| l.workspace)
+            .then(|| ws_cargo_lints);
+
         check_im_a_teapot(
             pkg,
             &path,
             &normalized_lints,
-            &ws_cargo_lints,
+            ws_cargo_lints,
             &mut error_count,
             self.gctx,
         )?;
@@ -1224,7 +1239,7 @@ impl<'gctx> Workspace<'gctx> {
             pkg,
             &path,
             &normalized_lints,
-            &ws_cargo_lints,
+            ws_cargo_lints,
             &mut error_count,
             self.gctx,
         )?;
@@ -1232,7 +1247,7 @@ impl<'gctx> Workspace<'gctx> {
             pkg,
             &path,
             &normalized_lints,
-            &ws_cargo_lints,
+            ws_cargo_lints,
             &mut error_count,
             self.gctx,
         )?;

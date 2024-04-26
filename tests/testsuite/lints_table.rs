@@ -1016,13 +1016,6 @@ im-a-teapot = true
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_stderr(
             "\
-warning: `im_a_teapot` is specified
- --> foo/Cargo.toml:9:1
-  |
-9 | im-a-teapot = true
-  | ------------------
-  |
-  = note: `cargo::im_a_teapot` is set to `warn` in `[workspace.lints]`
 [CHECKING] foo v0.0.1 ([CWD]/foo)
 [FINISHED] [..]
 ",

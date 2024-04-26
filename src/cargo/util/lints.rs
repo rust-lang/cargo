@@ -88,7 +88,7 @@ impl Lint {
     pub fn level(
         &self,
         pkg_lints: &TomlToolLints,
-        ws_lints: &TomlToolLints,
+        ws_lints: Option<&TomlToolLints>,
         edition: Edition,
     ) -> (LintLevel, LintLevelReason) {
         self.groups
@@ -188,7 +188,7 @@ fn level_priority(
     default_level: LintLevel,
     edition_lint_opts: Option<(Edition, LintLevel)>,
     pkg_lints: &TomlToolLints,
-    ws_lints: &TomlToolLints,
+    ws_lints: Option<&TomlToolLints>,
     edition: Edition,
 ) -> (LintLevel, LintLevelReason, i8) {
     let (unspecified_level, reason) = if let Some(level) = edition_lint_opts
@@ -211,7 +211,7 @@ fn level_priority(
             LintLevelReason::Package,
             defined_level.priority(),
         )
-    } else if let Some(defined_level) = ws_lints.get(name) {
+    } else if let Some(defined_level) = ws_lints.and_then(|l| l.get(name)) {
         (
             defined_level.level().into(),
             LintLevelReason::Workspace,
@@ -234,7 +234,7 @@ pub fn check_im_a_teapot(
     pkg: &Package,
     path: &Path,
     pkg_lints: &TomlToolLints,
-    ws_lints: &TomlToolLints,
+    ws_lints: Option<&TomlToolLints>,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
@@ -306,7 +306,7 @@ pub fn check_implicit_features(
     pkg: &Package,
     path: &Path,
     pkg_lints: &TomlToolLints,
-    ws_lints: &TomlToolLints,
+    ws_lints: Option<&TomlToolLints>,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
@@ -390,7 +390,7 @@ pub fn unused_dependencies(
     pkg: &Package,
     path: &Path,
     pkg_lints: &TomlToolLints,
-    ws_lints: &TomlToolLints,
+    ws_lints: Option<&TomlToolLints>,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
