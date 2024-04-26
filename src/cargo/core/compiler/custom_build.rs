@@ -724,10 +724,9 @@ impl BuildOutput {
             pkg_descr: &str,
             msrv: &Option<RustVersion>,
         ) -> CargoResult<()> {
-            let new_syntax_added_in = &RustVersion::from_str("1.77.0")?;
-
             if let Some(msrv) = msrv {
-                if msrv < new_syntax_added_in {
+                let new_syntax_added_in = RustVersion::from_str("1.77.0")?;
+                if !new_syntax_added_in.is_compatible_with(msrv.as_partial()) {
                     bail!(
                         "the `cargo::` syntax for build script output instructions was added in \
                         Rust 1.77.0, but the minimum supported Rust version of `{pkg_descr}` is {msrv}.\n\

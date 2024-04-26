@@ -5503,6 +5503,39 @@ for more information about build script outputs.
 }
 
 #[cargo_test]
+fn test_new_syntax_with_compatible_partial_msrv() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2015"
+                build = "build.rs"
+                rust-version = "1.77"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo::metadata=foo=bar");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr_contains(
+            "\
+[COMPILING] foo [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn test_old_syntax_with_old_msrv() {
     let p = project()
         .file(
