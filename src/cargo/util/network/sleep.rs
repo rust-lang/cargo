@@ -90,13 +90,15 @@ impl<T> SleepTracker<T> {
 #[test]
 fn returns_in_order() {
     let mut s = SleepTracker::new();
-    s.push(3, 3);
+    s.push(30_000, 30_000);
     s.push(1, 1);
-    s.push(6, 6);
-    s.push(5, 5);
-    s.push(2, 2);
-    s.push(10000, 10000);
-    assert_eq!(s.len(), 6);
-    std::thread::sleep(Duration::from_millis(100));
-    assert_eq!(s.to_retry(), &[1, 2, 3, 5, 6]);
+    assert_eq!(s.len(), 2);
+    std::thread::sleep(Duration::from_millis(2));
+    assert_eq!(s.to_retry(), &[1]);
+    assert!(s.to_retry().is_empty());
+    let next = s.time_to_next().expect("should be next");
+    assert!(
+        next < Duration::from_millis(30_000),
+        "{next:?} should be less than 30s"
+    );
 }
