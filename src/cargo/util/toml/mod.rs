@@ -2331,16 +2331,14 @@ fn deprecated_underscore<T>(
     edition: Edition,
     warnings: &mut Vec<String>,
 ) -> CargoResult<()> {
+    let old_path = new_path.replace("-", "_");
     if old.is_some() && Edition::Edition2024 <= edition {
-        let old_path = new_path.replace("-", "_");
         anyhow::bail!("`{old_path}` is unsupported as of the 2024 edition; instead use `{new_path}`\n(in the `{name}` {kind})");
     } else if old.is_some() && new.is_some() {
-        let old_path = new_path.replace("-", "_");
         warnings.push(format!(
             "`{old_path}` is redundant with `{new_path}`, preferring `{new_path}` in the `{name}` {kind}"
         ))
     } else if old.is_some() {
-        let old_path = new_path.replace("-", "_");
         warnings.push(format!(
             "`{old_path}` is deprecated in favor of `{new_path}` and will not work in the 2024 edition\n(in the `{name}` {kind})"
         ))
