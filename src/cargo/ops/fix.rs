@@ -265,9 +265,7 @@ fn migrate_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
             }
 
             fixes += add_feature_for_unused_deps(pkg, root);
-            if rename_table(root, "project", "package") {
-                fixes += 1;
-            }
+            fixes += rename_table(root, "project", "package");
             if let Some(target) = root.get_mut("lib").and_then(|t| t.as_table_like_mut()) {
                 fixes += rename_target_fields_2024(target);
             }
@@ -276,13 +274,9 @@ fn migrate_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
             fixes += rename_array_of_target_fields_2024(root, "test");
             fixes += rename_array_of_target_fields_2024(root, "bench");
             fixes += rename_dep_fields_2024(root, "dependencies");
-            if rename_table(root, "dev_dependencies", "dev-dependencies") {
-                fixes += 1;
-            }
+            fixes += rename_table(root, "dev_dependencies", "dev-dependencies");
             fixes += rename_dep_fields_2024(root, "dev-dependencies");
-            if rename_table(root, "build_dependencies", "build-dependencies") {
-                fixes += 1;
-            }
+            fixes += rename_table(root, "build_dependencies", "build-dependencies");
             fixes += rename_dep_fields_2024(root, "build-dependencies");
             for target in root
                 .get_mut("target")
@@ -292,13 +286,9 @@ fn migrate_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
                 .filter_map(|(_k, t)| t.as_table_like_mut())
             {
                 fixes += rename_dep_fields_2024(target, "dependencies");
-                if rename_table(target, "dev_dependencies", "dev-dependencies") {
-                    fixes += 1;
-                }
+                fixes += rename_table(target, "dev_dependencies", "dev-dependencies");
                 fixes += rename_dep_fields_2024(target, "dev-dependencies");
-                if rename_table(target, "build_dependencies", "build-dependencies") {
-                    fixes += 1;
-                }
+                fixes += rename_table(target, "build_dependencies", "build-dependencies");
                 fixes += rename_dep_fields_2024(target, "build-dependencies");
             }
 
@@ -326,9 +316,7 @@ fn rename_dep_fields_2024(parent: &mut dyn toml_edit::TableLike, dep_kind: &str)
         .flat_map(|t| t.iter_mut())
         .filter_map(|(_k, t)| t.as_table_like_mut())
     {
-        if rename_table(target, "default_features", "default-features") {
-            fixes += 1;
-        }
+        fixes += rename_table(target, "default_features", "default-features");
     }
     fixes
 }
@@ -348,18 +336,14 @@ fn rename_array_of_target_fields_2024(root: &mut dyn toml_edit::TableLike, kind:
 
 fn rename_target_fields_2024(target: &mut dyn toml_edit::TableLike) -> usize {
     let mut fixes = 0;
-    if rename_table(target, "crate_type", "crate-type") {
-        fixes += 1;
-    }
-    if rename_table(target, "proc_macro", "proc-macro") {
-        fixes += 1;
-    }
+    fixes += rename_table(target, "crate_type", "crate-type");
+    fixes += rename_table(target, "proc_macro", "proc-macro");
     fixes
 }
 
-fn rename_table(parent: &mut dyn toml_edit::TableLike, old: &str, new: &str) -> bool {
+fn rename_table(parent: &mut dyn toml_edit::TableLike, old: &str, new: &str) -> usize {
     let Some(old_key) = parent.key(old).cloned() else {
-        return false;
+        return 0;
     };
 
     let project = parent.remove(old).expect("returned early");
@@ -369,7 +353,7 @@ fn rename_table(parent: &mut dyn toml_edit::TableLike, old: &str, new: &str) -> 
         *new_key.dotted_decor_mut() = old_key.dotted_decor().clone();
         *new_key.leaf_decor_mut() = old_key.leaf_decor().clone();
     }
-    true
+    1
 }
 
 fn add_feature_for_unused_deps(pkg: &Package, parent: &mut dyn toml_edit::TableLike) -> usize {
