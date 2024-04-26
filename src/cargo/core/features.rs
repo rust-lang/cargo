@@ -406,6 +406,10 @@ macro_rules! features {
             fn is_enabled(&self, features: &Features) -> bool {
                 (self.get)(features)
             }
+
+            pub(crate) fn name(&self) -> &str {
+                self.name
+            }
         }
 
         impl Features {

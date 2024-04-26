@@ -1,6 +1,6 @@
 use crate::core::dependency::DepKind;
 use crate::core::FeatureValue::Dep;
-use crate::core::{Edition, Feature, FeatureValue, Features, Package};
+use crate::core::{Edition, Feature, FeatureValue, Features, Manifest, Package};
 use crate::util::interning::InternedString;
 use crate::{CargoResult, GlobalContext};
 use annotate_snippets::{Level, Snippet};
@@ -11,6 +11,164 @@ use std::fmt::Display;
 use std::ops::Range;
 use std::path::Path;
 use toml_edit::ImDocument;
+
+const LINTS: &[Lint] = &[IM_A_TEAPOT, IMPLICIT_FEATURES, UNUSED_OPTIONAL_DEPENDENCY];
+
+pub fn analyze_cargo_lints_table(
+    pkg: &Package,
+    path: &Path,
+    pkg_lints: &TomlToolLints,
+    ws_lints: Option<&TomlToolLints>,
+    ws_contents: &str,
+    ws_document: &ImDocument<String>,
+    ws_path: &Path,
+    gctx: &GlobalContext,
+) -> CargoResult<()> {
+    let mut error_count = 0;
+    let manifest = pkg.manifest();
+    let manifest_path = rel_cwd_manifest_path(path, gctx);
+    let ws_path = rel_cwd_manifest_path(ws_path, gctx);
+
+    for lint_name in pkg_lints
+        .keys()
+        .chain(ws_lints.map(|l| l.keys()).unwrap_or_default())
+    {
+        if let Some(lint) = LINTS.iter().find(|l| l.name == lint_name) {
+            let (_, reason, _) = level_priority(
+                lint.name,
+                lint.default_level,
+                lint.edition_lint_opts,
+                pkg_lints,
+                ws_lints,
+                manifest.edition(),
+            );
+
+            // Only run analysis on user-specified lints
+            if !reason.is_user_specified() {
+                continue;
+            }
+
+            // Only run this on lints that are gated by a feature
+            if let Some(feature_gate) = lint.feature_gate {
+                verify_feature_enabled(
+                    lint.name,
+                    feature_gate,
+                    reason,
+                    manifest,
+                    &manifest_path,
+                    ws_contents,
+                    ws_document,
+                    &ws_path,
+                    &mut error_count,
+                    gctx,
+                )?;
+            }
+        }
+    }
+    if error_count > 0 {
+        Err(anyhow::anyhow!(
+            "encountered {error_count} errors(s) while verifying lints",
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+fn verify_feature_enabled(
+    lint_name: &str,
+    feature_gate: &Feature,
+    reason: LintLevelReason,
+    manifest: &Manifest,
+    manifest_path: &str,
+    ws_contents: &str,
+    ws_document: &ImDocument<String>,
+    ws_path: &str,
+    error_count: &mut usize,
+    gctx: &GlobalContext,
+) -> CargoResult<()> {
+    if !manifest.unstable_features().is_enabled(feature_gate) {
+        let dash_name = lint_name.replace("_", "-");
+        let dash_feature_name = feature_gate.name().replace("_", "-");
+        let title = format!("use of unstable lint `{}`", dash_name);
+        let label = format!(
+            "this is behind `{}`, which is not enabled",
+            dash_feature_name
+        );
+        let second_title = format!("`cargo::{}` was inherited", dash_name);
+        let help = format!(
+            "consider adding `cargo-features = [\"{}\"]` to the top of the manifest",
+            dash_feature_name
+        );
+        let message = match reason {
+            LintLevelReason::Package => {
+                let span = get_span(
+                    manifest.document(),
+                    &["lints", "cargo", dash_name.as_str()],
+                    false,
+                )
+                .or(get_span(
+                    manifest.document(),
+                    &["lints", "cargo", lint_name],
+                    false,
+                ))
+                .unwrap();
+
+                Level::Error
+                    .title(&title)
+                    .snippet(
+                        Snippet::source(manifest.contents())
+                            .origin(&manifest_path)
+                            .annotation(Level::Error.span(span).label(&label))
+                            .fold(true),
+                    )
+                    .footer(Level::Help.title(&help))
+            }
+            LintLevelReason::Workspace => {
+                let lint_span = get_span(
+                    ws_document,
+                    &["workspace", "lints", "cargo", dash_name.as_str()],
+                    false,
+                )
+                .or(get_span(
+                    ws_document,
+                    &["workspace", "lints", "cargo", lint_name],
+                    false,
+                ))
+                .unwrap();
+                let inherit_span_key =
+                    get_span(manifest.document(), &["lints", "workspace"], false).unwrap();
+                let inherit_span_value =
+                    get_span(manifest.document(), &["lints", "workspace"], true).unwrap();
+
+                Level::Error
+                    .title(&title)
+                    .snippet(
+                        Snippet::source(ws_contents)
+                            .origin(&ws_path)
+                            .annotation(Level::Error.span(lint_span).label(&label))
+                            .fold(true),
+                    )
+                    .footer(
+                        Level::Note.title(&second_title).snippet(
+                            Snippet::source(manifest.contents())
+                                .origin(&manifest_path)
+                                .annotation(
+                                    Level::Note
+                                        .span(inherit_span_key.start..inherit_span_value.end),
+                                )
+                                .fold(true),
+                        ),
+                    )
+                    .footer(Level::Help.title(&help))
+            }
+            _ => unreachable!("LintLevelReason should be one that is user specified"),
+        };
+
+        *error_count += 1;
+        gctx.shell().print_message(message)?;
+    }
+    Ok(())
+}
 
 fn get_span(document: &ImDocument<String>, path: &[&str], get_value: bool) -> Option<Range<usize>> {
     let mut table = document.as_item().as_table_like()?;
@@ -190,6 +348,17 @@ impl Display for LintLevelReason {
             LintLevelReason::Edition(edition) => write!(f, "in edition {}", edition),
             LintLevelReason::Package => write!(f, "in `[lints]`"),
             LintLevelReason::Workspace => write!(f, "in `[workspace.lints]`"),
+        }
+    }
+}
+
+impl LintLevelReason {
+    fn is_user_specified(&self) -> bool {
+        match self {
+            LintLevelReason::Default => false,
+            LintLevelReason::Edition(_) => false,
+            LintLevelReason::Package => true,
+            LintLevelReason::Workspace => true,
         }
     }
 }
