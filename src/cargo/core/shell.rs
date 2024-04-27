@@ -2,6 +2,7 @@ use std::fmt;
 use std::io::prelude::*;
 use std::io::IsTerminal;
 
+use annotate_snippets::{Message, Renderer};
 use anstream::AutoStream;
 use anstyle::Style;
 
@@ -390,6 +391,19 @@ impl Shell {
         // ... but don't fail due to a closed pipe.
         drop(writeln!(self.out(), "{}", encoded));
         Ok(())
+    }
+
+    /// Prints the passed in [Message] to stderr
+    pub fn print_message(&mut self, message: Message<'_>) -> std::io::Result<()> {
+        let term_width = self
+            .err_width()
+            .diagnostic_terminal_width()
+            .unwrap_or(annotate_snippets::renderer::DEFAULT_TERM_WIDTH);
+        writeln!(
+            self.err(),
+            "{}",
+            Renderer::styled().term_width(term_width).render(message)
+        )
     }
 }
 
