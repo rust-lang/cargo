@@ -982,3 +982,43 @@ error: `im_a_teapot` is specified
         )
         .run();
 }
+
+#[cargo_test]
+fn dont_always_inherit_workspace_lints() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[workspace]
+members = ["foo"]
+
+[workspace.lints.cargo]
+im-a-teapot = "warn"
+"#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+cargo-features = ["test-dummy-unstable"]
+
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+authors = []
+im-a-teapot = true
+"#,
+        )
+        .file("foo/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_stderr(
+            "\
+[CHECKING] foo v0.0.1 ([CWD]/foo)
+[FINISHED] [..]
+",
+        )
+        .run();
+}
