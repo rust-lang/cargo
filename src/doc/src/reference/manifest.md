@@ -654,7 +654,7 @@ more detail.
 <script>
 (function() {
     var fragments = {
-        "#the-project-layout": "../guide/project-layout.html",
+        "#the-package-layout": "../guide/package-layout.html",
         "#examples": "cargo-targets.html#examples",
         "#tests": "cargo-targets.html#tests",
         "#integration-tests": "cargo-targets.html#integration-tests",

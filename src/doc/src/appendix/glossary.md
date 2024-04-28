@@ -254,7 +254,7 @@ manifest is located. (Compare with [*package root*](#package).)
 [cargo-unstable]: ../reference/unstable.md
 [config option]: ../reference/config.md
 [crates.io]: https://crates.io/
-[directory layout]: ../guide/project-layout.md
+[directory layout]: ../guide/package-layout.md
 [edition guide]: ../../edition-guide/index.html
 [edition-field]: ../reference/manifest.md#the-edition-field
 [environment variable]: ../reference/environment-variables.md

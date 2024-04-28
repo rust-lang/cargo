@@ -382,7 +382,7 @@ autobins = false
 [documentation examples]: ../../rustdoc/documentation-tests.html
 [features]: features.md
 [nightly channel]: ../../book/appendix-07-nightly-rust.html
-[package layout]: ../guide/project-layout.md
+[package layout]: ../guide/package-layout.md
 [package-edition]: manifest.md#the-edition-field
 [proc-macro-reference]: ../../reference/procedural-macros.html
 [procedural macro]: ../../book/ch19-06-macros.html
