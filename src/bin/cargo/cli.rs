@@ -356,7 +356,13 @@ For more information, see issue #12207 <https://github.com/rust-lang/cargo/issue
                 let global_args = GlobalArgs::new(sub_args);
                 let new_args = cli(gctx).no_binary_name(true).try_get_matches_from(alias)?;
 
-                let new_cmd = new_args.subcommand_name().expect("subcommand is required");
+                let Some(new_cmd) = new_args.subcommand_name() else {
+                    return Err(anyhow!(
+                        "subcommand is required, add a subcommand to the command alias `alias.{cmd}`"
+                    )
+                        .into());
+                };
+
                 already_expanded.push(cmd.to_string());
                 if already_expanded.contains(&new_cmd.to_string()) {
                     // Crash if the aliases are corecursive / unresolvable

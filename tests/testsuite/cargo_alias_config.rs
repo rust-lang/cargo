@@ -463,3 +463,27 @@ fn empty_alias() {
         )
         .run();
 }
+
+#[cargo_test]
+fn alias_no_subcommand() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config.toml",
+            r#"
+               [alias]
+               a = "--locked"
+            "#,
+        )
+        .build();
+
+    p.cargo("a")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] subcommand is required, add a subcommand to the command alias `alias.a`
+",
+        )
+        .run();
+}
