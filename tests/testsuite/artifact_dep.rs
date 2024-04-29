@@ -3241,7 +3241,7 @@ fn build_only_specified_artifact_library() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .run();
     match_exact(
-        "cdylib present: true\nstaticlib present: true",
+        "cdylib present: true\nstaticlib present: false",
         &build_script_output_string(&cdylib, "foo"),
         "build script output",
         "",
@@ -3255,7 +3255,7 @@ fn build_only_specified_artifact_library() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .run();
     match_exact(
-        "cdylib present: true\nstaticlib present: true",
+        "cdylib present: false\nstaticlib present: true",
         &build_script_output_string(&staticlib, "foo"),
         "build script output",
         "",
