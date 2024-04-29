@@ -141,10 +141,10 @@ pub fn resolve_lib(
     let Some(mut lib) = lib else { return Ok(None) };
     lib.name
         .get_or_insert_with(|| package_name.replace("-", "_"));
+
     // Check early to improve error messages
     validate_lib_name(&lib, warnings)?;
 
-    // Checking the original lib
     validate_proc_macro(&lib, "library", edition, warnings)?;
     validate_crate_types(&lib, "library", edition, warnings)?;
 
@@ -276,7 +276,9 @@ pub fn resolve_bins(
     );
 
     for bin in &mut bins {
+        // Check early to improve error messages
         validate_bin_name(bin, warnings)?;
+
         validate_bin_crate_types(bin, edition, warnings, errors)?;
         validate_bin_proc_macro(bin, edition, warnings, errors)?;
 
@@ -587,7 +589,9 @@ fn resolve_targets_with_legacy_path(
     );
 
     for target in &toml_targets {
+        // Check early to improve error messages
         validate_target_name(target, target_kind_human, target_kind, warnings)?;
+
         validate_proc_macro(target, target_kind_human, edition, warnings)?;
         validate_crate_types(target, target_kind_human, edition, warnings)?;
     }
