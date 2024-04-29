@@ -118,10 +118,19 @@ fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> Car
     let changed_members = changed(&ws, &repo, &base_commit, &head_commit)?;
     let status = |msg: &str| gctx.shell().status(STATUS, msg);
 
-    // Don't check against beta and stable branches,
-    // as the publish of these crates are not tied with Rust release process.
-    // See `TO_PUBLISH` in publish.py.
-    let crates_not_check_against_channels = ["home"];
+    let crates_not_check_against_channels = [
+        // High false positive rate between beta branch and requisite version bump soon after
+        //
+        // Low risk because we always bump the "major" version after beta branch; we are
+        // only losing out on checks for patch releases.
+        //
+        // Note: this is already skipped in `changed`
+        "cargo",
+        // Don't check against beta and stable branches,
+        // as the publish of these crates are not tied with Rust release process.
+        // See `TO_PUBLISH` in publish.py.
+        "home",
+    ];
 
     status(&format!("base commit `{}`", base_commit.id()))?;
     status(&format!("head commit `{}`", head_commit.id()))?;
