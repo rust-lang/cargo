@@ -689,7 +689,11 @@ fn tar(
 
     let base_name = format!("{}-{}", pkg.name(), pkg.version());
     let base_path = Path::new(&base_name);
-    let publish_pkg = prepare_for_publish(pkg, ws)?;
+    let included = ar_files
+        .iter()
+        .map(|ar_file| ar_file.rel_path.clone())
+        .collect::<Vec<_>>();
+    let publish_pkg = prepare_for_publish(pkg, ws, &included)?;
 
     let mut uncompressed_size = 0;
     for ar_file in ar_files {

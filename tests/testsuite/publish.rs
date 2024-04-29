@@ -1560,8 +1560,18 @@ You may press ctrl-c [..]
                      name = \"foo\"\n\
                      version = \"0.1.0\"\n\
                      authors = []\n\
+                     build = false\n\
+                     autobins = false\n\
+                     autoexamples = false\n\
+                     autotests = false\n\
+                     autobenches = false\n\
                      description = \"foo\"\n\
+                     readme = false\n\
                      license = \"MIT\"\n\
+                     \n\
+                     [[bin]]\n\
+                     name = \"foo\"\n\
+                     path = \"src/main.rs\"\n\
                      \n\
                      [dependencies.dep1]\n\
                      version = \"1.0\"\n\
@@ -1672,11 +1682,21 @@ edition = "2015"
 name = "foo"
 version = "0.1.0"
 authors = []
+build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 homepage = "foo"
 documentation = "foo"
+readme = false
 license = "MIT"
 repository = "foo"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
 
 [dev-dependencies]
 "#,
@@ -1931,11 +1951,21 @@ edition = "2015"
 name = "foo"
 version = "0.1.0"
 authors = []
+build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 homepage = "foo"
 documentation = "foo"
+readme = false
 license = "MIT"
 repository = "foo"
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
 
 [dependencies.normal-and-dev]
 version = "1.0"

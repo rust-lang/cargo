@@ -256,6 +256,7 @@ fn to_workspace_root_config(
     ws_root_config
 }
 
+/// See [`Manifest::resolved_toml`] for more details
 #[tracing::instrument(skip_all)]
 fn resolve_toml(
     original_toml: &manifest::TomlManifest,
@@ -264,7 +265,7 @@ fn resolve_toml(
     manifest_file: &Path,
     gctx: &GlobalContext,
     warnings: &mut Vec<String>,
-    _errors: &mut Vec<String>,
+    errors: &mut Vec<String>,
 ) -> CargoResult<manifest::TomlManifest> {
     if let Some(workspace) = &original_toml.workspace {
         if workspace.resolver.as_deref() == Some("3") {
@@ -277,11 +278,11 @@ fn resolve_toml(
         package: None,
         project: None,
         profile: original_toml.profile.clone(),
-        lib: original_toml.lib.clone(),
-        bin: original_toml.bin.clone(),
-        example: original_toml.example.clone(),
-        test: original_toml.test.clone(),
-        bench: original_toml.bench.clone(),
+        lib: None,
+        bin: None,
+        example: None,
+        test: None,
+        bench: None,
         dependencies: None,
         dev_dependencies: None,
         dev_dependencies2: None,
@@ -317,6 +318,47 @@ fn resolve_toml(
                 Edition::from_str(&e).unwrap_or_default()
             });
         resolved_toml.package = Some(resolved_package);
+
+        resolved_toml.lib = targets::resolve_lib(
+            original_toml.lib.as_ref(),
+            package_root,
+            &original_package.name,
+            edition,
+            warnings,
+        )?;
+        resolved_toml.bin = Some(targets::resolve_bins(
+            original_toml.bin.as_ref(),
+            package_root,
+            &original_package.name,
+            edition,
+            original_package.autobins,
+            warnings,
+            resolved_toml.lib.is_some(),
+        )?);
+        resolved_toml.example = Some(targets::resolve_examples(
+            original_toml.example.as_ref(),
+            package_root,
+            edition,
+            original_package.autoexamples,
+            warnings,
+            errors,
+        )?);
+        resolved_toml.test = Some(targets::resolve_tests(
+            original_toml.test.as_ref(),
+            package_root,
+            edition,
+            original_package.autotests,
+            warnings,
+            errors,
+        )?);
+        resolved_toml.bench = Some(targets::resolve_benches(
+            original_toml.bench.as_ref(),
+            package_root,
+            edition,
+            original_package.autobenches,
+            warnings,
+            errors,
+        )?);
 
         let activated_opt_deps = resolved_toml
             .features
@@ -494,7 +536,7 @@ fn resolve_package_toml<'a>(
             .map(|value| field_inherit_with(value, "authors", || inherit()?.authors()))
             .transpose()?
             .map(manifest::InheritableField::Value),
-        build: original_package.build.clone(),
+        build: targets::resolve_build(original_package.build.as_ref(), package_root),
         metabuild: original_package.metabuild.clone(),
         default_target: original_package.default_target.clone(),
         forced_target: original_package.forced_target.clone(),
@@ -519,10 +561,10 @@ fn resolve_package_toml<'a>(
             .map(manifest::InheritableField::Value),
         workspace: original_package.workspace.clone(),
         im_a_teapot: original_package.im_a_teapot.clone(),
-        autobins: original_package.autobins.clone(),
-        autoexamples: original_package.autoexamples.clone(),
-        autotests: original_package.autotests.clone(),
-        autobenches: original_package.autobenches.clone(),
+        autobins: Some(false),
+        autoexamples: Some(false),
+        autotests: Some(false),
+        autobenches: Some(false),
         default_run: original_package.default_run.clone(),
         description: original_package
             .description
@@ -553,7 +595,10 @@ fn resolve_package_toml<'a>(
                 .transpose()?
                 .as_ref(),
         )
-        .map(|s| manifest::InheritableField::Value(StringOrBool::String(s))),
+        .map(|s| manifest::InheritableField::Value(StringOrBool::String(s)))
+        .or(Some(manifest::InheritableField::Value(StringOrBool::Bool(
+            false,
+        )))),
         keywords: original_package
             .keywords
             .clone()
@@ -1146,11 +1191,10 @@ fn to_real_manifest(
     // If we have a lib with no path, use the inferred lib or else the package name.
     let targets = to_targets(
         &features,
+        &original_toml,
         &resolved_toml,
-        package_name,
         package_root,
         edition,
-        &resolved_package.build,
         &resolved_package.metabuild,
         warnings,
         errors,
@@ -2357,10 +2401,15 @@ fn unused_dep_keys(
     }
 }
 
-pub fn prepare_for_publish(me: &Package, ws: &Workspace<'_>) -> CargoResult<Package> {
+pub fn prepare_for_publish(
+    me: &Package,
+    ws: &Workspace<'_>,
+    included: &[PathBuf],
+) -> CargoResult<Package> {
     let contents = me.manifest().contents();
     let document = me.manifest().document();
-    let original_toml = prepare_toml_for_publish(me.manifest().resolved_toml(), ws, me.root())?;
+    let original_toml =
+        prepare_toml_for_publish(me.manifest().resolved_toml(), ws, me.root(), included)?;
     let resolved_toml = original_toml.clone();
     let features = me.manifest().unstable_features().clone();
     let workspace_config = me.manifest().workspace_config().clone();
@@ -2392,6 +2441,7 @@ fn prepare_toml_for_publish(
     me: &manifest::TomlManifest,
     ws: &Workspace<'_>,
     package_root: &Path,
+    included: &[PathBuf],
 ) -> CargoResult<manifest::TomlManifest> {
     let gctx = ws.gctx();
 
@@ -2408,11 +2458,21 @@ fn prepare_toml_for_publish(
     package.workspace = None;
     if let Some(StringOrBool::String(path)) = &package.build {
         let path = paths::normalize_path(Path::new(path));
-        let path = path
-            .into_os_string()
-            .into_string()
-            .map_err(|_err| anyhow::format_err!("non-UTF8 `package.build`"))?;
-        package.build = Some(StringOrBool::String(normalize_path_string_sep(path)));
+        let build = if included.contains(&path) {
+            let path = path
+                .into_os_string()
+                .into_string()
+                .map_err(|_err| anyhow::format_err!("non-UTF8 `package.build`"))?;
+            let path = normalize_path_string_sep(path);
+            StringOrBool::String(path)
+        } else {
+            ws.gctx().shell().warn(format!(
+                "ignoring `package.build` as `{}` is not included in the published package",
+                path.display()
+            ))?;
+            StringOrBool::Bool(false)
+        };
+        package.build = Some(build);
     }
     let current_resolver = package
         .resolver
@@ -2502,14 +2562,14 @@ fn prepare_toml_for_publish(
     }
 
     let lib = if let Some(target) = &me.lib {
-        Some(prepare_target_for_publish(target, "library")?)
+        prepare_target_for_publish(target, included, "library", ws.gctx())?
     } else {
         None
     };
-    let bin = prepare_targets_for_publish(me.bin.as_ref(), "binary")?;
-    let example = prepare_targets_for_publish(me.example.as_ref(), "example")?;
-    let test = prepare_targets_for_publish(me.test.as_ref(), "test")?;
-    let bench = prepare_targets_for_publish(me.bench.as_ref(), "benchmark")?;
+    let bin = prepare_targets_for_publish(me.bin.as_ref(), included, "binary", ws.gctx())?;
+    let example = prepare_targets_for_publish(me.example.as_ref(), included, "example", ws.gctx())?;
+    let test = prepare_targets_for_publish(me.test.as_ref(), included, "test", ws.gctx())?;
+    let bench = prepare_targets_for_publish(me.bench.as_ref(), included, "benchmark", ws.gctx())?;
 
     let all = |_d: &manifest::TomlDependency| true;
     let mut manifest = manifest::TomlManifest {
@@ -2667,7 +2727,9 @@ fn prepare_toml_for_publish(
 
 fn prepare_targets_for_publish(
     targets: Option<&Vec<manifest::TomlTarget>>,
+    included: &[PathBuf],
     context: &str,
+    gctx: &GlobalContext,
 ) -> CargoResult<Option<Vec<manifest::TomlTarget>>> {
     let Some(targets) = targets else {
         return Ok(None);
@@ -2675,23 +2737,41 @@ fn prepare_targets_for_publish(
 
     let mut prepared = Vec::with_capacity(targets.len());
     for target in targets {
-        let target = prepare_target_for_publish(target, context)?;
+        let Some(target) = prepare_target_for_publish(target, included, context, gctx)? else {
+            continue;
+        };
         prepared.push(target);
     }
 
-    Ok(Some(prepared))
+    if prepared.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(prepared))
+    }
 }
 
 fn prepare_target_for_publish(
     target: &manifest::TomlTarget,
+    included: &[PathBuf],
     context: &str,
-) -> CargoResult<manifest::TomlTarget> {
-    let mut target = target.clone();
-    if let Some(path) = target.path {
-        let path = normalize_path(&path.0);
-        target.path = Some(manifest::PathValue(normalize_path_sep(path, context)?));
+    gctx: &GlobalContext,
+) -> CargoResult<Option<manifest::TomlTarget>> {
+    let path = target.path.as_ref().expect("previously resolved");
+    let path = normalize_path(&path.0);
+    if !included.contains(&path) {
+        let name = target.name.as_ref().expect("previously resolved");
+        gctx.shell().warn(format!(
+            "ignoring {context} `{name}` as `{}` is not included in the published package",
+            path.display()
+        ))?;
+        return Ok(None);
     }
-    Ok(target)
+
+    let mut target = target.clone();
+    let path = normalize_path_sep(path, context)?;
+    target.path = Some(manifest::PathValue(path.into()));
+
+    Ok(Some(target))
 }
 
 fn normalize_path_sep(path: PathBuf, context: &str) -> CargoResult<PathBuf> {

@@ -483,6 +483,7 @@ impl Manifest {
     pub fn contents(&self) -> &str {
         self.contents.as_str()
     }
+    /// See [`Manifest::resolved_toml`] for what "resolved" means
     pub fn to_resolved_contents(&self) -> CargoResult<String> {
         let toml = toml::to_string_pretty(self.resolved_toml())?;
         Ok(format!("{}\n{}", MANIFEST_PREAMBLE, toml))
@@ -496,6 +497,11 @@ impl Manifest {
         &self.original_toml
     }
     /// The [`TomlManifest`] with all fields expanded
+    ///
+    /// This is the intersection of what fields need resolving for cargo-publish that also are
+    /// useful for the operation of cargo, including
+    /// - workspace inheritance
+    /// - target discovery
     pub fn resolved_toml(&self) -> &TomlManifest {
         &self.resolved_toml
     }

@@ -1217,12 +1217,22 @@ edition = "2015"
 name = "foo"
 version = "0.0.1"
 authors = []
+build = false
 exclude = ["*.txt"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
+readme = false
 license = "MIT"
 
 [package.metadata]
 foo = "bar"
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
 
 [dependencies.abc]
 version = "1.0"
@@ -1293,6 +1303,16 @@ edition = "2015"
 name = "bar"
 version = "0.1.0"
 authors = []
+build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+readme = false
+
+[lib]
+name = "bar"
+path = "src/lib.rs"
 "#,
         cargo::core::manifest::MANIFEST_PREAMBLE
     );
@@ -1360,6 +1380,16 @@ fn package_public_dep() {
 edition = "2015"
 name = "foo"
 version = "0.0.1"
+build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+readme = false
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
 
 [dependencies.bar]
 version = "1.0.0"
@@ -1378,6 +1408,16 @@ version = "1.0.0"
 edition = "2015"
 name = "foo"
 version = "0.0.1"
+build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+readme = false
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
 
 [dependencies.bar]
 version = "1.0.0"
@@ -2855,7 +2895,17 @@ fn workspace_overrides_resolver() {
 edition = "2021"
 name = "bar"
 version = "0.1.0"
+build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+readme = false
 resolver = "1"
+
+[lib]
+name = "bar"
+path = "src/lib.rs"
 "#,
         cargo::core::manifest::MANIFEST_PREAMBLE
     );
@@ -2874,6 +2924,16 @@ resolver = "1"
 edition = "2015"
 name = "baz"
 version = "0.1.0"
+build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+readme = false
+
+[lib]
+name = "baz"
+path = "src/lib.rs"
 "#,
         cargo::core::manifest::MANIFEST_PREAMBLE
     );
@@ -2935,10 +2995,20 @@ edition = "2015"
 name = "foo"
 version = "0.0.1"
 authors = []
+build = false
 exclude = ["*.txt"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 homepage = "https://example.com/"
+readme = false
 license = "MIT"
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
 "#,
         cargo::core::manifest::MANIFEST_PREAMBLE
     );
@@ -3030,9 +3100,19 @@ edition = "2015"
 name = "foo"
 version = "0.0.1"
 authors = []
+build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 documentation = "https://example.com/"
+readme = false
 license = "MIT"
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
 "#,
         cargo::core::manifest::MANIFEST_PREAMBLE
     );
@@ -3137,9 +3217,19 @@ edition = "2015"
 name = "foo"
 version = "0.0.1"
 authors = []
+build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 homepage = "https://example.com/"
+readme = false
 license = "MIT"
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
 "#,
         cargo::core::manifest::MANIFEST_PREAMBLE
     );
@@ -3224,8 +3314,12 @@ src/main.rs.bak
 #[cfg(windows)] // windows is the platform that is most consistently configured for case insensitive filesystems
 fn normalize_case() {
     let p = project()
-        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file("Build.rs", r#"fn main() { println!("hello"); }"#)
+        .file("src/Main.rs", r#"fn main() { println!("hello"); }"#)
+        .file("src/lib.rs", "")
         .file("src/bar.txt", "") // should be ignored when packaging
+        .file("Examples/ExampleFoo.rs", "")
+        .file("Tests/ExplicitPath.rs", "")
         .build();
     // Workaround `project()` making a `Cargo.toml` on our behalf
     std::fs::remove_file(p.root().join("Cargo.toml")).unwrap();
@@ -3235,11 +3329,15 @@ fn normalize_case() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
-                edition = "2015"
+                edition = "2018"
                 authors = []
                 exclude = ["*.txt"]
                 license = "MIT"
                 description = "foo"
+
+                [[test]]
+                name = "explicitpath"
+                path = "tests/explicitpath.rs"
             "#,
     )
     .unwrap();
@@ -3250,10 +3348,15 @@ fn normalize_case() {
 [WARNING] manifest has no documentation[..]
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
+[WARNING] ignoring `package.build` as `build.rs` is not included in the published package
+[WARNING] ignoring binary `foo` as `src/main.rs` is not included in the published package
+[WARNING] ignoring example `ExampleFoo` as `examples/ExampleFoo.rs` is not included in the published package
+[WARNING] ignoring test `explicitpath` as `tests/explicitpath.rs` is not included in the published package
+[WARNING] ignoring test `ExplicitPath` as `tests/ExplicitPath.rs` is not included in the published package
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[PACKAGED] 4 files, [..] ([..] compressed)
+[PACKAGED] 8 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -3261,10 +3364,14 @@ See [..]
     p.cargo("package -l")
         .with_stdout(
             "\
+Build.rs
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
-src/main.rs
+Examples/ExampleFoo.rs
+Tests/ExplicitPath.rs
+src/Main.rs
+src/lib.rs
 ",
         )
         .run();
@@ -3274,10 +3381,15 @@ src/main.rs
 [WARNING] manifest has no documentation[..]
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
+[WARNING] ignoring `package.build` as `build.rs` is not included in the published package
+[WARNING] ignoring binary `foo` as `src/main.rs` is not included in the published package
+[WARNING] ignoring example `ExampleFoo` as `examples/ExampleFoo.rs` is not included in the published package
+[WARNING] ignoring test `explicitpath` as `tests/explicitpath.rs` is not included in the published package
+[WARNING] ignoring test `ExplicitPath` as `tests/ExplicitPath.rs` is not included in the published package
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[PACKAGED] 4 files, [..] ([..] compressed)
+[PACKAGED] 8 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -3286,8 +3398,42 @@ See [..]
     validate_crate_contents(
         f,
         "foo-0.0.1.crate",
-        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
-        &[],
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "Build.rs",
+            "src/Main.rs",
+            "src/lib.rs",
+            "Examples/ExampleFoo.rs",
+            "Tests/ExplicitPath.rs",
+        ],
+        &[(
+            "Cargo.toml",
+            &format!(
+                r#"{}
+[package]
+edition = "2018"
+name = "foo"
+version = "0.0.1"
+authors = []
+build = false
+exclude = ["*.txt"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "foo"
+readme = false
+license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
+"#,
+                cargo::core::manifest::MANIFEST_PREAMBLE
+            ),
+        )],
     );
 }
 
@@ -3688,12 +3834,17 @@ name = "foo"
 version = "0.0.1"
 authors = []
 build = "src/build.rs"
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "foo"
 documentation = "docs.rs/foo"
 readme = "docs/README.md"
 license-file = "docs/LICENSE"
 
 [lib]
+name = "foo"
 path = "src/lib.rs"
 
 [[bin]]
@@ -3711,6 +3862,1068 @@ path = "tests/test_foo.rs"
 [[bench]]
 name = "bench_foo"
 path = "benches/bench_foo.rs"
+"#,
+        )],
+    );
+}
+
+#[cargo_test]
+fn discovery_inferred_build_rs_included() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+    [package]
+    name = "foo"
+    version = "0.0.1"
+    edition = "2015"
+    license = "MIT"
+    description = "foo"
+    documentation = "docs.rs/foo"
+    authors = []
+    include = ["src/lib.rs", "build.rs"]
+    "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package")
+        .with_stdout("")
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
+",
+        )
+        .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs", "build.rs"],
+        &[(
+            "Cargo.toml",
+            r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
+#
+# When uploading crates to the registry Cargo will automatically
+# "normalize" Cargo.toml files for maximal compatibility
+# with all versions of Cargo and also rewrite `path` dependencies
+# to registry (e.g., crates.io) dependencies.
+#
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
+
+[package]
+edition = "2015"
+name = "foo"
+version = "0.0.1"
+authors = []
+build = "build.rs"
+include = [
+    "src/lib.rs",
+    "build.rs",
+]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "foo"
+documentation = "docs.rs/foo"
+readme = false
+license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
+"#,
+        )],
+    );
+}
+
+#[cargo_test]
+fn discovery_inferred_build_rs_excluded() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+    [package]
+    name = "foo"
+    version = "0.0.1"
+    edition = "2015"
+    license = "MIT"
+    description = "foo"
+    documentation = "docs.rs/foo"
+    authors = []
+    include = ["src/lib.rs"]
+    "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package")
+        .with_stdout("")
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.0.1 ([CWD])
+[WARNING] ignoring `package.build` as `build.rs` is not included in the published package
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 3 files, [..] ([..] compressed)
+",
+        )
+        .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[(
+            "Cargo.toml",
+            r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
+#
+# When uploading crates to the registry Cargo will automatically
+# "normalize" Cargo.toml files for maximal compatibility
+# with all versions of Cargo and also rewrite `path` dependencies
+# to registry (e.g., crates.io) dependencies.
+#
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
+
+[package]
+edition = "2015"
+name = "foo"
+version = "0.0.1"
+authors = []
+build = false
+include = ["src/lib.rs"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "foo"
+documentation = "docs.rs/foo"
+readme = false
+license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
+"#,
+        )],
+    );
+}
+
+#[cargo_test]
+fn discovery_explicit_build_rs_included() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+    [package]
+    name = "foo"
+    version = "0.0.1"
+    edition = "2015"
+    license = "MIT"
+    description = "foo"
+    documentation = "docs.rs/foo"
+    authors = []
+    include = ["src/lib.rs", "build.rs"]
+    build = "build.rs"
+    "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package")
+        .with_stdout("")
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
+",
+        )
+        .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs", "build.rs"],
+        &[(
+            "Cargo.toml",
+            r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
+#
+# When uploading crates to the registry Cargo will automatically
+# "normalize" Cargo.toml files for maximal compatibility
+# with all versions of Cargo and also rewrite `path` dependencies
+# to registry (e.g., crates.io) dependencies.
+#
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
+
+[package]
+edition = "2015"
+name = "foo"
+version = "0.0.1"
+authors = []
+build = "build.rs"
+include = [
+    "src/lib.rs",
+    "build.rs",
+]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "foo"
+documentation = "docs.rs/foo"
+readme = false
+license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
+"#,
+        )],
+    );
+}
+
+#[cargo_test]
+fn discovery_explicit_build_rs_excluded() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+    [package]
+    name = "foo"
+    version = "0.0.1"
+    edition = "2015"
+    license = "MIT"
+    description = "foo"
+    documentation = "docs.rs/foo"
+    authors = []
+    include = ["src/lib.rs"]
+    build = "build.rs"
+    "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package")
+        .with_stdout("")
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.0.1 ([CWD])
+[WARNING] ignoring `package.build` as `build.rs` is not included in the published package
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 3 files, [..] ([..] compressed)
+",
+        )
+        .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[(
+            "Cargo.toml",
+            r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
+#
+# When uploading crates to the registry Cargo will automatically
+# "normalize" Cargo.toml files for maximal compatibility
+# with all versions of Cargo and also rewrite `path` dependencies
+# to registry (e.g., crates.io) dependencies.
+#
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
+
+[package]
+edition = "2015"
+name = "foo"
+version = "0.0.1"
+authors = []
+build = false
+include = ["src/lib.rs"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "foo"
+documentation = "docs.rs/foo"
+readme = false
+license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
+"#,
+        )],
+    );
+}
+
+#[cargo_test]
+fn discovery_inferred_lib_included() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+    [package]
+    name = "foo"
+    version = "0.0.1"
+    edition = "2015"
+    license = "MIT"
+    description = "foo"
+    documentation = "docs.rs/foo"
+    authors = []
+    include = ["src/main.rs", "src/lib.rs"]
+    "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package")
+        .with_stdout("")
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 5 files, [..] ([..] compressed)
+",
+        )
+        .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            "src/lib.rs",
+        ],
+        &[(
+            "Cargo.toml",
+            r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
+#
+# When uploading crates to the registry Cargo will automatically
+# "normalize" Cargo.toml files for maximal compatibility
+# with all versions of Cargo and also rewrite `path` dependencies
+# to registry (e.g., crates.io) dependencies.
+#
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
+
+[package]
+edition = "2015"
+name = "foo"
+version = "0.0.1"
+authors = []
+build = false
+include = [
+    "src/main.rs",
+    "src/lib.rs",
+]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "foo"
+documentation = "docs.rs/foo"
+readme = false
+license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
+"#,
+        )],
+    );
+}
+
+#[cargo_test]
+fn discovery_inferred_lib_excluded() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+    [package]
+    name = "foo"
+    version = "0.0.1"
+    edition = "2015"
+    license = "MIT"
+    description = "foo"
+    documentation = "docs.rs/foo"
+    authors = []
+    include = ["src/main.rs"]
+    "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package")
+        .with_stdout("")
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.0.1 ([CWD])
+[WARNING] ignoring library `foo` as `src/lib.rs` is not included in the published package
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
+",
+        )
+        .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[(
+            "Cargo.toml",
+            r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
+#
+# When uploading crates to the registry Cargo will automatically
+# "normalize" Cargo.toml files for maximal compatibility
+# with all versions of Cargo and also rewrite `path` dependencies
+# to registry (e.g., crates.io) dependencies.
+#
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
+
+[package]
+edition = "2015"
+name = "foo"
+version = "0.0.1"
+authors = []
+build = false
+include = ["src/main.rs"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "foo"
+documentation = "docs.rs/foo"
+readme = false
+license = "MIT"
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
+"#,
+        )],
+    );
+}
+
+#[cargo_test]
+fn discovery_explicit_lib_included() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+    [package]
+    name = "foo"
+    version = "0.0.1"
+    edition = "2015"
+    license = "MIT"
+    description = "foo"
+    documentation = "docs.rs/foo"
+    authors = []
+    include = ["src/main.rs", "src/lib.rs"]
+
+    [lib]
+    path = "src/lib.rs"
+    "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package")
+        .with_stdout("")
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 5 files, [..] ([..] compressed)
+",
+        )
+        .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            "src/lib.rs",
+        ],
+        &[(
+            "Cargo.toml",
+            r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
+#
+# When uploading crates to the registry Cargo will automatically
+# "normalize" Cargo.toml files for maximal compatibility
+# with all versions of Cargo and also rewrite `path` dependencies
+# to registry (e.g., crates.io) dependencies.
+#
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
+
+[package]
+edition = "2015"
+name = "foo"
+version = "0.0.1"
+authors = []
+build = false
+include = [
+    "src/main.rs",
+    "src/lib.rs",
+]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "foo"
+documentation = "docs.rs/foo"
+readme = false
+license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
+"#,
+        )],
+    );
+}
+
+#[cargo_test]
+fn discovery_explicit_lib_excluded() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+    [package]
+    name = "foo"
+    version = "0.0.1"
+    edition = "2015"
+    license = "MIT"
+    description = "foo"
+    documentation = "docs.rs/foo"
+    authors = []
+    include = ["src/main.rs"]
+
+    [lib]
+    path = "src/lib.rs"
+    "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("package")
+        .with_stdout("")
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.0.1 ([CWD])
+[WARNING] ignoring library `foo` as `src/lib.rs` is not included in the published package
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
+",
+        )
+        .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[(
+            "Cargo.toml",
+            r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
+#
+# When uploading crates to the registry Cargo will automatically
+# "normalize" Cargo.toml files for maximal compatibility
+# with all versions of Cargo and also rewrite `path` dependencies
+# to registry (e.g., crates.io) dependencies.
+#
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
+
+[package]
+edition = "2015"
+name = "foo"
+version = "0.0.1"
+authors = []
+build = false
+include = ["src/main.rs"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "foo"
+documentation = "docs.rs/foo"
+readme = false
+license = "MIT"
+
+[[bin]]
+name = "foo"
+path = "src/main.rs"
+"#,
+        )],
+    );
+}
+
+#[cargo_test]
+fn discovery_inferred_other_included() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+    [package]
+    name = "foo"
+    version = "0.0.1"
+    edition = "2015"
+    license = "MIT"
+    description = "foo"
+    documentation = "docs.rs/foo"
+    authors = []
+    include = ["src/lib.rs", "src/bin/foo/main.rs", "examples/example_foo.rs", "tests/test_foo.rs", "benches/bench_foo.rs"]
+    "#,
+        )
+        .file("src/lib.rs", "")
+        .file("src/bin/foo/main.rs", "fn main() {}")
+        .file("examples/example_foo.rs", "fn main() {}")
+        .file("tests/test_foo.rs", "fn main() {}")
+        .file("benches/bench_foo.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package")
+        .with_stdout("")
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 8 files, [..] ([..] compressed)
+",
+        )
+        .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+            "src/bin/foo/main.rs",
+            "examples/example_foo.rs",
+            "tests/test_foo.rs",
+            "benches/bench_foo.rs",
+        ],
+        &[(
+            "Cargo.toml",
+            r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
+#
+# When uploading crates to the registry Cargo will automatically
+# "normalize" Cargo.toml files for maximal compatibility
+# with all versions of Cargo and also rewrite `path` dependencies
+# to registry (e.g., crates.io) dependencies.
+#
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
+
+[package]
+edition = "2015"
+name = "foo"
+version = "0.0.1"
+authors = []
+build = false
+include = [
+    "src/lib.rs",
+    "src/bin/foo/main.rs",
+    "examples/example_foo.rs",
+    "tests/test_foo.rs",
+    "benches/bench_foo.rs",
+]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "foo"
+documentation = "docs.rs/foo"
+readme = false
+license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
+
+[[bin]]
+name = "foo"
+path = "src/bin/foo/main.rs"
+
+[[example]]
+name = "example_foo"
+path = "examples/example_foo.rs"
+
+[[test]]
+name = "test_foo"
+path = "tests/test_foo.rs"
+
+[[bench]]
+name = "bench_foo"
+path = "benches/bench_foo.rs"
+"#,
+        )],
+    );
+}
+
+#[cargo_test]
+fn discovery_inferred_other_excluded() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+    [package]
+    name = "foo"
+    version = "0.0.1"
+    edition = "2015"
+    license = "MIT"
+    description = "foo"
+    documentation = "docs.rs/foo"
+    authors = []
+    include = ["src/lib.rs"]
+    "#,
+        )
+        .file("src/lib.rs", "")
+        .file("src/bin/foo/main.rs", "fn main() {}")
+        .file("examples/example_foo.rs", "fn main() {}")
+        .file("tests/test_foo.rs", "fn main() {}")
+        .file("benches/bench_foo.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package")
+        .with_stdout("")
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.0.1 ([CWD])
+[WARNING] ignoring binary `foo` as `src/bin/foo/main.rs` is not included in the published package
+[WARNING] ignoring example `example_foo` as `examples/example_foo.rs` is not included in the published package
+[WARNING] ignoring test `test_foo` as `tests/test_foo.rs` is not included in the published package
+[WARNING] ignoring benchmark `bench_foo` as `benches/bench_foo.rs` is not included in the published package
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
+",
+        )
+        .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[(
+            "Cargo.toml",
+            r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
+#
+# When uploading crates to the registry Cargo will automatically
+# "normalize" Cargo.toml files for maximal compatibility
+# with all versions of Cargo and also rewrite `path` dependencies
+# to registry (e.g., crates.io) dependencies.
+#
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
+
+[package]
+edition = "2015"
+name = "foo"
+version = "0.0.1"
+authors = []
+build = false
+include = ["src/lib.rs"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "foo"
+documentation = "docs.rs/foo"
+readme = false
+license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
+"#,
+        )],
+    );
+}
+
+#[cargo_test]
+fn discovery_explicit_other_included() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+    [package]
+    name = "foo"
+    version = "0.0.1"
+    edition = "2015"
+    license = "MIT"
+    description = "foo"
+    documentation = "docs.rs/foo"
+    authors = []
+    include = ["src/lib.rs", "src/bin/foo/main.rs", "examples/example_foo.rs", "tests/test_foo.rs", "benches/bench_foo.rs"]
+
+    [[bin]]
+    name = "foo"
+
+    [[example]]
+    name = "example_foo"
+
+    [[test]]
+    name = "test_foo"
+
+    [[bench]]
+    name = "bench_foo"
+    "#,
+        )
+        .file("src/lib.rs", "")
+        .file("src/bin/foo/main.rs", "fn main() {}")
+        .file("examples/example_foo.rs", "fn main() {}")
+        .file("tests/test_foo.rs", "fn main() {}")
+        .file("benches/bench_foo.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package")
+        .with_stdout("")
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.0.1 ([CWD])
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 8 files, [..] ([..] compressed)
+",
+        )
+        .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+            "src/bin/foo/main.rs",
+            "examples/example_foo.rs",
+            "tests/test_foo.rs",
+            "benches/bench_foo.rs",
+        ],
+        &[(
+            "Cargo.toml",
+            r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
+#
+# When uploading crates to the registry Cargo will automatically
+# "normalize" Cargo.toml files for maximal compatibility
+# with all versions of Cargo and also rewrite `path` dependencies
+# to registry (e.g., crates.io) dependencies.
+#
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
+
+[package]
+edition = "2015"
+name = "foo"
+version = "0.0.1"
+authors = []
+build = false
+include = [
+    "src/lib.rs",
+    "src/bin/foo/main.rs",
+    "examples/example_foo.rs",
+    "tests/test_foo.rs",
+    "benches/bench_foo.rs",
+]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "foo"
+documentation = "docs.rs/foo"
+readme = false
+license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
+
+[[bin]]
+name = "foo"
+path = "src/bin/foo/main.rs"
+
+[[example]]
+name = "example_foo"
+path = "examples/example_foo.rs"
+
+[[test]]
+name = "test_foo"
+path = "tests/test_foo.rs"
+
+[[bench]]
+name = "bench_foo"
+path = "benches/bench_foo.rs"
+"#,
+        )],
+    );
+}
+
+#[cargo_test]
+fn discovery_explicit_other_excluded() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+    [package]
+    name = "foo"
+    version = "0.0.1"
+    edition = "2015"
+    license = "MIT"
+    description = "foo"
+    documentation = "docs.rs/foo"
+    authors = []
+    include = ["src/lib.rs"]
+
+    [[main]]
+    name = "foo"
+
+    [[example]]
+    name = "example_foo"
+
+    [[test]]
+    name = "test_foo"
+
+    [[bench]]
+    name = "bench_foo"
+    "#,
+        )
+        .file("src/lib.rs", "")
+        .file("src/bin/foo/main.rs", "fn main() {}")
+        .file("examples/example_foo.rs", "fn main() {}")
+        .file("tests/test_foo.rs", "fn main() {}")
+        .file("benches/bench_foo.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package")
+        .with_stdout("")
+        .with_stderr(
+            "\
+[PACKAGING] foo v0.0.1 ([CWD])
+[WARNING] ignoring binary `foo` as `src/bin/foo/main.rs` is not included in the published package
+[WARNING] ignoring example `example_foo` as `examples/example_foo.rs` is not included in the published package
+[WARNING] ignoring test `test_foo` as `tests/test_foo.rs` is not included in the published package
+[WARNING] ignoring benchmark `bench_foo` as `benches/bench_foo.rs` is not included in the published package
+[VERIFYING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([CWD][..])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[PACKAGED] 4 files, [..] ([..] compressed)
+",
+        )
+        .run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[(
+            "Cargo.toml",
+            r#"# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
+#
+# When uploading crates to the registry Cargo will automatically
+# "normalize" Cargo.toml files for maximal compatibility
+# with all versions of Cargo and also rewrite `path` dependencies
+# to registry (e.g., crates.io) dependencies.
+#
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
+
+[package]
+edition = "2015"
+name = "foo"
+version = "0.0.1"
+authors = []
+build = false
+include = ["src/lib.rs"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "foo"
+documentation = "docs.rs/foo"
+readme = false
+license = "MIT"
+
+[lib]
+name = "foo"
+path = "src/lib.rs"
 "#,
         )],
     );
