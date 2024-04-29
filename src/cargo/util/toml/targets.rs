@@ -370,13 +370,13 @@ pub fn resolve_examples(
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) -> CargoResult<Vec<TomlExampleTarget>> {
-    let inferred = infer_from_directory(&package_root, Path::new(DEFAULT_EXAMPLE_DIR_NAME));
+    let mut inferred = || infer_from_directory(&package_root, Path::new(DEFAULT_EXAMPLE_DIR_NAME));
 
     let targets = resolve_targets(
         "example",
         "example",
         toml_examples,
-        &inferred,
+        &mut inferred,
         package_root,
         edition,
         autodiscover,
@@ -427,13 +427,13 @@ pub fn resolve_tests(
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) -> CargoResult<Vec<TomlTestTarget>> {
-    let inferred = infer_from_directory(&package_root, Path::new(DEFAULT_TEST_DIR_NAME));
+    let mut inferred = || infer_from_directory(&package_root, Path::new(DEFAULT_TEST_DIR_NAME));
 
     let targets = resolve_targets(
         "test",
         "test",
         toml_tests,
-        &inferred,
+        &mut inferred,
         package_root,
         edition,
         autodiscover,
@@ -492,13 +492,13 @@ pub fn resolve_benches(
         Some(legacy_path)
     };
 
-    let inferred = infer_from_directory(&package_root, Path::new(DEFAULT_BENCH_DIR_NAME));
+    let mut inferred = || infer_from_directory(&package_root, Path::new(DEFAULT_BENCH_DIR_NAME));
 
     let targets = resolve_targets_with_legacy_path(
         "benchmark",
         "bench",
         toml_benches,
-        &inferred,
+        &mut inferred,
         package_root,
         edition,
         autodiscover,
@@ -540,7 +540,7 @@ fn resolve_targets(
     target_kind_human: &str,
     target_kind: &str,
     toml_targets: Option<&Vec<TomlTarget>>,
-    inferred: &[(String, PathBuf)],
+    inferred: &mut dyn FnMut() -> Vec<(String, PathBuf)>,
     package_root: &Path,
     edition: Edition,
     autodiscover: Option<bool>,
@@ -567,7 +567,7 @@ fn resolve_targets_with_legacy_path(
     target_kind_human: &str,
     target_kind: &str,
     toml_targets: Option<&Vec<TomlTarget>>,
-    inferred: &[(String, PathBuf)],
+    inferred: &mut dyn FnMut() -> Vec<(String, PathBuf)>,
     package_root: &Path,
     edition: Edition,
     autodiscover: Option<bool>,
@@ -576,9 +576,10 @@ fn resolve_targets_with_legacy_path(
     legacy_path: &mut dyn FnMut(&TomlTarget) -> Option<PathBuf>,
     autodiscover_flag_name: &str,
 ) -> CargoResult<Vec<TomlTarget>> {
+    let inferred = inferred();
     let toml_targets = toml_targets_and_inferred(
         toml_targets,
-        inferred,
+        &inferred,
         package_root,
         autodiscover,
         edition,
@@ -600,7 +601,7 @@ fn resolve_targets_with_legacy_path(
     for mut target in toml_targets {
         let path = target_path(
             &target,
-            inferred,
+            &inferred,
             target_kind,
             package_root,
             edition,
