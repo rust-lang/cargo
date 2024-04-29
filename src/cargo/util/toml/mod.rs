@@ -451,12 +451,7 @@ fn resolve_toml(
 
         resolved_toml.lints = original_toml.lints.clone();
 
-        let resolved_badges = original_toml
-            .badges
-            .clone()
-            .map(|mw| field_inherit_with(mw, "badges", || inherit()?.badges()))
-            .transpose()?;
-        resolved_toml.badges = resolved_badges.map(manifest::InheritableField::Value);
+        resolved_toml.badges = original_toml.badges.clone();
     } else {
         for field in original_toml.requires_package() {
             bail!("this virtual manifest specifies a `{field}` section, which is not allowed");
@@ -799,7 +794,6 @@ impl InheritableFields {
     package_field_getter! {
         // Please keep this list lexicographically ordered.
         ("authors",       authors       -> Vec<String>),
-        ("badges",        badges        -> BTreeMap<String, BTreeMap<String, String>>),
         ("categories",    categories    -> Vec<String>),
         ("description",   description   -> String),
         ("documentation", documentation -> String),
@@ -1340,11 +1334,7 @@ fn to_real_manifest(
             .expect("previously resolved")
             .cloned()
             .unwrap_or_default(),
-        badges: resolved_toml
-            .resolved_badges()
-            .expect("previously resolved")
-            .cloned()
-            .unwrap_or_default(),
+        badges: resolved_toml.badges.clone().unwrap_or_default(),
         links: resolved_package.links.clone(),
         rust_version: rust_version.clone(),
     };

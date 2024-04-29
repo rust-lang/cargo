@@ -30,9 +30,6 @@ fn permit_additional_workspace_fields() {
             exclude = ["foo.txt"]
             include = ["bar.txt", "**/*.rs", "Cargo.toml", "LICENSE", "README.md"]
 
-            [workspace.package.badges]
-            gitlab = { repository = "https://gitlab.com/rust-lang/rust", branch = "master" }
-
             [workspace.dependencies]
             dep = "0.1"
         "#,
@@ -117,8 +114,6 @@ fn inherit_own_workspace_fields() {
         .file(
             "Cargo.toml",
             r#"
-            badges.workspace = true
-
             [package]
             name = "foo"
             version.workspace = true
@@ -153,8 +148,6 @@ fn inherit_own_workspace_fields() {
             rust-version = "1.60"
             exclude = ["foo.txt"]
             include = ["bar.txt", "**/*.rs", "Cargo.toml"]
-            [workspace.package.badges]
-            gitlab = { repository = "https://gitlab.com/rust-lang/rust", branch = "master" }
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -186,9 +179,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
         r#"
         {
           "authors": ["Rustaceans"],
-          "badges": {
-            "gitlab": { "branch": "master", "repository": "https://gitlab.com/rust-lang/rust" }
-          },
+          "badges": {},
           "categories": ["development-tools"],
           "deps": [],
           "description": "This is a crate",
@@ -240,10 +231,6 @@ keywords = ["cli"]
 categories = ["development-tools"]
 license = "MIT"
 repository = "https://github.com/example/example"
-
-[badges.gitlab]
-branch = "master"
-repository = "https://gitlab.com/rust-lang/rust"
 "#,
                 cargo::core::manifest::MANIFEST_PREAMBLE
             ),
@@ -665,15 +652,12 @@ fn inherit_workspace_fields() {
             rust-version = "1.60"
             exclude = ["foo.txt"]
             include = ["bar.txt", "**/*.rs", "Cargo.toml", "LICENSE", "README.md"]
-            [workspace.package.badges]
-            gitlab = { repository = "https://gitlab.com/rust-lang/rust", branch = "master" }
             "#,
         )
         .file("src/main.rs", "fn main() {}")
         .file(
             "bar/Cargo.toml",
             r#"
-            badges.workspace = true
             [package]
             name = "bar"
             workspace = ".."
@@ -731,9 +715,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
         r#"
         {
           "authors": ["Rustaceans"],
-          "badges": {
-            "gitlab": { "branch": "master", "repository": "https://gitlab.com/rust-lang/rust" }
-          },
+          "badges": {},
           "categories": ["development-tools"],
           "deps": [],
           "description": "This is a crate",
@@ -791,10 +773,6 @@ categories = ["development-tools"]
 license = "MIT"
 license-file = "LICENSE"
 repository = "https://github.com/example/example"
-
-[badges.gitlab]
-branch = "master"
-repository = "https://gitlab.com/rust-lang/rust"
 "#,
                 cargo::core::manifest::MANIFEST_PREAMBLE
             ),
@@ -1715,8 +1693,6 @@ fn warn_inherit_unused_manifest_key_package() {
         .file(
             "Cargo.toml",
             r#"
-            badges = { workspace = true, xyz = "abc"}
-
             [workspace]
             members = []
             [workspace.package]
@@ -1734,8 +1710,6 @@ fn warn_inherit_unused_manifest_key_package() {
             rust-version = "1.60"
             exclude = ["foo.txt"]
             include = ["bar.txt", "**/*.rs", "Cargo.toml"]
-            [workspace.package.badges]
-            gitlab = { repository = "https://gitlab.com/rust-lang/rust", branch = "master" }
 
             [package]
             name = "bar"
