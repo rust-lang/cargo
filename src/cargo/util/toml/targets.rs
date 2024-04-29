@@ -321,15 +321,7 @@ fn to_bin_targets(
         }
 
         validate_bin_crate_types(bin, warnings, errors)?;
-
-        if bin.proc_macro() == Some(true) {
-            let name = name_or_panic(bin);
-            errors.push(format!(
-                "the target `{}` is a binary and can't have `proc-macro` \
-                 set `true`",
-                name
-            ));
-        }
+        validate_bin_proc_macro(bin, warnings, errors)?;
     }
 
     validate_unique_names(&bins, "binary")?;
@@ -1066,6 +1058,22 @@ fn name_or_panic(target: &TomlTarget) -> &str {
         .name
         .as_deref()
         .unwrap_or_else(|| panic!("target name is required"))
+}
+
+fn validate_bin_proc_macro(
+    target: &TomlTarget,
+    _warnings: &mut Vec<String>,
+    errors: &mut Vec<String>,
+) -> CargoResult<()> {
+    if target.proc_macro() == Some(true) {
+        let name = name_or_panic(target);
+        errors.push(format!(
+            "the target `{}` is a binary and can't have `proc-macro` \
+                 set `true`",
+            name
+        ));
+    }
+    Ok(())
 }
 
 fn validate_proc_macro(
