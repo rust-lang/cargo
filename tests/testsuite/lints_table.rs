@@ -1022,3 +1022,59 @@ im-a-teapot = true
         )
         .run();
 }
+
+#[cargo_test]
+fn cargo_lints_cap_lints() {
+    Package::new("baz", "0.1.0").publish();
+    Package::new("bar", "0.1.0")
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "bar"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+baz = { version = "0.1.0", optional = true }
+
+[lints.cargo]
+implicit-features = "warn"
+"#,
+        )
+        .file("src/lib.rs", "")
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bar = "0.1.0"
+
+[lints.cargo]
+implicit-features = "warn"
+"#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_stderr(
+            "\
+[UPDATING] [..]
+[LOCKING] 2 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.1.0 ([..])
+[CHECKING] bar v0.1.0
+[CHECKING] foo v0.1.0 ([CWD])
+[FINISHED] [..]
+",
+        )
+        .run();
+}
