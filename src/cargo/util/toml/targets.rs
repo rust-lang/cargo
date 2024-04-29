@@ -791,58 +791,6 @@ fn inferred_to_toml_targets(inferred: &[(String, PathBuf)]) -> Vec<TomlTarget> {
         .collect()
 }
 
-fn validate_lib_name(target: &TomlTarget, warnings: &mut Vec<String>) -> CargoResult<()> {
-    validate_target_name(target, "library", "lib", warnings)?;
-    let name = name_or_panic(target);
-    if name.contains('-') {
-        anyhow::bail!("library target names cannot contain hyphens: {}", name)
-    }
-
-    Ok(())
-}
-
-fn validate_bin_name(bin: &TomlTarget, warnings: &mut Vec<String>) -> CargoResult<()> {
-    validate_target_name(bin, "binary", "bin", warnings)?;
-    let name = name_or_panic(bin).to_owned();
-    if restricted_names::is_conflicting_artifact_name(&name) {
-        anyhow::bail!(
-            "the binary target name `{name}` is forbidden, \
-                 it conflicts with cargo's build directory names",
-        )
-    }
-
-    Ok(())
-}
-
-fn validate_target_name(
-    target: &TomlTarget,
-    target_kind_human: &str,
-    target_kind: &str,
-    warnings: &mut Vec<String>,
-) -> CargoResult<()> {
-    match target.name {
-        Some(ref name) => {
-            if name.trim().is_empty() {
-                anyhow::bail!("{} target names cannot be empty", target_kind_human)
-            }
-            if cfg!(windows) && restricted_names::is_windows_reserved(name) {
-                warnings.push(format!(
-                    "{} target `{}` is a reserved Windows filename, \
-                        this target will not work on Windows platforms",
-                    target_kind_human, name
-                ));
-            }
-        }
-        None => anyhow::bail!(
-            "{} target {}.name is required",
-            target_kind_human,
-            target_kind
-        ),
-    }
-
-    Ok(())
-}
-
 /// Will check a list of toml targets, and make sure the target names are unique within a vector.
 fn validate_unique_names(targets: &[TomlTarget], target_kind: &str) -> CargoResult<()> {
     let mut seen = HashSet::new();
@@ -1053,6 +1001,58 @@ fn name_or_panic(target: &TomlTarget) -> &str {
         .name
         .as_deref()
         .unwrap_or_else(|| panic!("target name is required"))
+}
+
+fn validate_lib_name(target: &TomlTarget, warnings: &mut Vec<String>) -> CargoResult<()> {
+    validate_target_name(target, "library", "lib", warnings)?;
+    let name = name_or_panic(target);
+    if name.contains('-') {
+        anyhow::bail!("library target names cannot contain hyphens: {}", name)
+    }
+
+    Ok(())
+}
+
+fn validate_bin_name(bin: &TomlTarget, warnings: &mut Vec<String>) -> CargoResult<()> {
+    validate_target_name(bin, "binary", "bin", warnings)?;
+    let name = name_or_panic(bin).to_owned();
+    if restricted_names::is_conflicting_artifact_name(&name) {
+        anyhow::bail!(
+            "the binary target name `{name}` is forbidden, \
+                 it conflicts with cargo's build directory names",
+        )
+    }
+
+    Ok(())
+}
+
+fn validate_target_name(
+    target: &TomlTarget,
+    target_kind_human: &str,
+    target_kind: &str,
+    warnings: &mut Vec<String>,
+) -> CargoResult<()> {
+    match target.name {
+        Some(ref name) => {
+            if name.trim().is_empty() {
+                anyhow::bail!("{} target names cannot be empty", target_kind_human)
+            }
+            if cfg!(windows) && restricted_names::is_windows_reserved(name) {
+                warnings.push(format!(
+                    "{} target `{}` is a reserved Windows filename, \
+                        this target will not work on Windows platforms",
+                    target_kind_human, name
+                ));
+            }
+        }
+        None => anyhow::bail!(
+            "{} target {}.name is required",
+            target_kind_human,
+            target_kind
+        ),
+    }
+
+    Ok(())
 }
 
 fn validate_bin_proc_macro(
