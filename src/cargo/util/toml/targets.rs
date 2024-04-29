@@ -64,6 +64,7 @@ pub(super) fn to_targets(
         resolved_toml.bin.as_deref().unwrap_or_default(),
         package_root,
         edition,
+        warnings,
         errors,
     )?);
 
@@ -308,6 +309,7 @@ fn to_bin_targets(
     bins: &[TomlBinTarget],
     package_root: &Path,
     edition: Edition,
+    warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
     // This loop performs basic checks on each of the TomlTarget in `bins`.
@@ -318,17 +320,7 @@ fn to_bin_targets(
             features.require(Feature::different_binary_name())?;
         }
 
-        if let Some(crate_types) = bin.crate_types() {
-            if !crate_types.is_empty() {
-                let name = name_or_panic(bin);
-                errors.push(format!(
-                    "the target `{}` is a binary and can't have any \
-                     crate-types set (currently \"{}\")",
-                    name,
-                    crate_types.join(", ")
-                ));
-            }
-        }
+        validate_bin_crate_types(bin, warnings, errors)?;
 
         if bin.proc_macro() == Some(true) {
             let name = name_or_panic(bin);
@@ -1091,6 +1083,25 @@ fn validate_proc_macro(
         edition,
         warnings,
     )
+}
+
+fn validate_bin_crate_types(
+    target: &TomlTarget,
+    _warnings: &mut Vec<String>,
+    errors: &mut Vec<String>,
+) -> CargoResult<()> {
+    if let Some(crate_types) = target.crate_types() {
+        if !crate_types.is_empty() {
+            let name = name_or_panic(target);
+            errors.push(format!(
+                "the target `{}` is a binary and can't have any \
+                     crate-types set (currently \"{}\")",
+                name,
+                crate_types.join(", ")
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn validate_crate_types(
