@@ -125,6 +125,7 @@ pub(super) fn to_targets(
     Ok(targets)
 }
 
+#[tracing::instrument(skip_all)]
 pub fn resolve_lib(
     original_lib: Option<&TomlLibTarget>,
     package_root: &Path,
@@ -174,6 +175,7 @@ pub fn resolve_lib(
     Ok(Some(lib))
 }
 
+#[tracing::instrument(skip_all)]
 fn to_lib_target(
     original_lib: Option<&TomlLibTarget>,
     resolved_lib: Option<&TomlLibTarget>,
@@ -250,6 +252,7 @@ fn to_lib_target(
     Ok(Some(target))
 }
 
+#[tracing::instrument(skip_all)]
 pub fn resolve_bins(
     toml_bins: Option<&Vec<TomlBinTarget>>,
     package_root: &Path,
@@ -299,6 +302,7 @@ pub fn resolve_bins(
     Ok(bins)
 }
 
+#[tracing::instrument(skip_all)]
 fn to_bin_targets(
     features: &Features,
     bins: &[TomlBinTarget],
@@ -376,6 +380,7 @@ fn legacy_bin_path(package_root: &Path, name: &str, has_lib: bool) -> Option<Pat
     None
 }
 
+#[tracing::instrument(skip_all)]
 pub fn resolve_examples(
     toml_examples: Option<&Vec<TomlExampleTarget>>,
     package_root: &Path,
@@ -402,6 +407,7 @@ pub fn resolve_examples(
     Ok(targets)
 }
 
+#[tracing::instrument(skip_all)]
 fn to_example_targets(
     targets: &[TomlExampleTarget],
     package_root: &Path,
@@ -431,6 +437,7 @@ fn to_example_targets(
     Ok(result)
 }
 
+#[tracing::instrument(skip_all)]
 pub fn resolve_tests(
     toml_tests: Option<&Vec<TomlTestTarget>>,
     package_root: &Path,
@@ -457,6 +464,7 @@ pub fn resolve_tests(
     Ok(targets)
 }
 
+#[tracing::instrument(skip_all)]
 fn to_test_targets(
     targets: &[TomlTestTarget],
     package_root: &Path,
@@ -479,6 +487,7 @@ fn to_test_targets(
     Ok(result)
 }
 
+#[tracing::instrument(skip_all)]
 pub fn resolve_benches(
     toml_benches: Option<&Vec<TomlBenchTarget>>,
     package_root: &Path,
@@ -522,6 +531,7 @@ pub fn resolve_benches(
     Ok(targets)
 }
 
+#[tracing::instrument(skip_all)]
 fn to_bench_targets(
     targets: &[TomlBenchTarget],
     package_root: &Path,
@@ -1039,6 +1049,7 @@ Cargo doesn't know which to use because multiple target files found at `{}` and 
 }
 
 /// Returns the path to the build script if one exists for this crate.
+#[tracing::instrument(skip_all)]
 pub fn resolve_build(build: Option<&StringOrBool>, package_root: &Path) -> Option<StringOrBool> {
     const BUILD_RS: &str = "build.rs";
     match build {
