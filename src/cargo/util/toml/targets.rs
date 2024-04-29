@@ -40,7 +40,6 @@ pub(super) fn to_targets(
     edition: Edition,
     metabuild: &Option<StringOrVec>,
     warnings: &mut Vec<String>,
-    errors: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
     let mut targets = Vec::new();
 
@@ -64,8 +63,6 @@ pub(super) fn to_targets(
         resolved_toml.bin.as_deref().unwrap_or_default(),
         package_root,
         edition,
-        warnings,
-        errors,
     )?);
 
     targets.extend(to_example_targets(
@@ -261,6 +258,7 @@ pub fn resolve_bins(
     edition: Edition,
     autodiscover: Option<bool>,
     warnings: &mut Vec<String>,
+    errors: &mut Vec<String>,
     has_lib: bool,
 ) -> CargoResult<Vec<TomlBinTarget>> {
     let inferred = inferred_bins(package_root, package_name);
@@ -279,6 +277,8 @@ pub fn resolve_bins(
 
     for bin in &mut bins {
         validate_bin_name(bin, warnings)?;
+        validate_bin_crate_types(bin, warnings, errors)?;
+        validate_bin_proc_macro(bin, warnings, errors)?;
 
         let path = target_path(bin, &inferred, "bin", package_root, edition, &mut |_| {
             if let Some(legacy_path) = legacy_bin_path(package_root, name_or_panic(bin), has_lib) {
@@ -309,8 +309,6 @@ fn to_bin_targets(
     bins: &[TomlBinTarget],
     package_root: &Path,
     edition: Edition,
-    warnings: &mut Vec<String>,
-    errors: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
     // This loop performs basic checks on each of the TomlTarget in `bins`.
     for bin in bins {
@@ -319,9 +317,6 @@ fn to_bin_targets(
         if bin.filename.is_some() {
             features.require(Feature::different_binary_name())?;
         }
-
-        validate_bin_crate_types(bin, warnings, errors)?;
-        validate_bin_proc_macro(bin, warnings, errors)?;
     }
 
     validate_unique_names(&bins, "binary")?;
