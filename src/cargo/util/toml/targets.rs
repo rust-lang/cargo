@@ -277,8 +277,8 @@ pub fn resolve_bins(
 
     for bin in &mut bins {
         validate_bin_name(bin, warnings)?;
-        validate_bin_crate_types(bin, warnings, errors)?;
-        validate_bin_proc_macro(bin, warnings, errors)?;
+        validate_bin_crate_types(bin, edition, warnings, errors)?;
+        validate_bin_proc_macro(bin, edition, warnings, errors)?;
 
         let path = target_path(bin, &inferred, "bin", package_root, edition, &mut |_| {
             if let Some(legacy_path) = legacy_bin_path(package_root, name_or_panic(bin), has_lib) {
@@ -1057,7 +1057,8 @@ fn validate_target_name(
 
 fn validate_bin_proc_macro(
     target: &TomlTarget,
-    _warnings: &mut Vec<String>,
+    edition: Edition,
+    warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) -> CargoResult<()> {
     if target.proc_macro() == Some(true) {
@@ -1067,6 +1068,8 @@ fn validate_bin_proc_macro(
                  set `true`",
             name
         ));
+    } else {
+        validate_proc_macro(target, "binary", edition, warnings)?;
     }
     Ok(())
 }
@@ -1090,7 +1093,8 @@ fn validate_proc_macro(
 
 fn validate_bin_crate_types(
     target: &TomlTarget,
-    _warnings: &mut Vec<String>,
+    edition: Edition,
+    warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) -> CargoResult<()> {
     if let Some(crate_types) = target.crate_types() {
@@ -1102,6 +1106,8 @@ fn validate_bin_crate_types(
                 name,
                 crate_types.join(", ")
             ));
+        } else {
+            validate_crate_types(target, "binary", edition, warnings)?;
         }
     }
     Ok(())

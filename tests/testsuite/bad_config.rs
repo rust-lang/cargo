@@ -1159,6 +1159,8 @@ fn bin_crate_type2() {
     p.cargo("check")
         .with_stderr(
             "\
+[WARNING] `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
+(in the `foo` binary target)
 [CHECKING] foo v0.5.0 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
@@ -1190,10 +1192,14 @@ fn bin_crate_type2_2024() {
         .build();
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["edition2024"])
+        .with_status(101)
         .with_stderr(
             "\
-[CHECKING] foo v0.5.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  `crate_type` is unsupported as of the 2024 edition; instead use `crate-type`
+  (in the `foo` binary target)
 ",
         )
         .run();
@@ -1223,6 +1229,7 @@ fn bin_crate_type2_conflict() {
     p.cargo("check")
         .with_stderr(
             "\
+[WARNING] `crate_type` is redundant with `crate-type`, preferring `crate-type` in the `foo` binary target
 [CHECKING] foo v0.5.0 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
@@ -2057,6 +2064,8 @@ fn bin_proc_macro2() {
     foo.cargo("check")
         .with_stderr(
             "\
+[WARNING] `proc_macro` is deprecated in favor of `proc-macro` and will not work in the 2024 edition
+(in the `foo` binary target)
 [CHECKING] foo v0.5.0 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
@@ -2075,7 +2084,7 @@ fn bin_proc_macro2_2024() {
                 [package]
                 name = "foo"
                 version = "0.5.0"
-                edition = "2015"
+                edition = "2024"
                 authors = ["wycats@example.com"]
 
                 [[bin]]
@@ -2089,10 +2098,14 @@ fn bin_proc_macro2_2024() {
 
     foo.cargo("check")
         .masquerade_as_nightly_cargo(&["edition2024"])
+        .with_status(101)
         .with_stderr(
             "\
-[CHECKING] foo v0.5.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  `proc_macro` is unsupported as of the 2024 edition; instead use `proc-macro`
+  (in the `foo` binary target)
 ",
         )
         .run();
@@ -2123,6 +2136,7 @@ fn bin_proc_macro2_conflict() {
     foo.cargo("check")
         .with_stderr(
             "\
+[WARNING] `proc_macro` is redundant with `proc-macro`, preferring `proc-macro` in the `foo` binary target
 [CHECKING] foo v0.5.0 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
