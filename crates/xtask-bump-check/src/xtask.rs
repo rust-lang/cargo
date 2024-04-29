@@ -178,6 +178,8 @@ fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> Car
         let mut cmd = ProcessBuilder::new("cargo");
         cmd.arg("semver-checks")
             .arg("--workspace")
+            // We don't want to confuse contributors when a new beta just branched off
+            .args(&["--exclude", "cargo"])
             .args(&["--exclude", "cargo-test-macro"]) // FIXME: Remove once 1.79 is stable.
             .args(&["--exclude", "cargo-test-support"]) // FIXME: Remove once 1.79 is stable.
             .arg("--baseline-rev")
