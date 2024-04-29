@@ -1,5 +1,23 @@
 # Changelog
 
+## Cargo 1.80 (2024-07-25)
+[b60a1555...HEAD](https://github.com/rust-lang/cargo/compare/b60a1555...HEAD)
+
+### Added
+
+### Changed
+
+### Fixed
+
+### Nightly only
+
+- `-Zcargo-lints`: Don't always inherit workspace lints.
+  [#13812](https://github.com/rust-lang/cargo/pull/13812)
+
+### Documentation
+
+### Internal
+
 ## Cargo 1.79 (2024-06-13)
 [2fe739fc...rust-1.79.0](https://github.com/rust-lang/cargo/compare/2fe739fc...rust-1.79.0)
 
