@@ -50,6 +50,7 @@ use rustfix::CodeFix;
 use semver::Version;
 use tracing::{debug, trace, warn};
 
+use crate::core::compiler::CompileKind;
 use crate::core::compiler::RustcTargetData;
 use crate::core::resolver::features::{DiffMap, FeatureOpts, FeatureResolver, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve, ResolveBehavior};
@@ -78,6 +79,14 @@ const EDITION_ENV_INTERNAL: &str = "__CARGO_FIX_EDITION";
 /// **Internal only.**
 /// For passing [`FixOptions::idioms`] through to cargo running in proxy mode.
 const IDIOMS_ENV_INTERNAL: &str = "__CARGO_FIX_IDIOMS";
+/// **Internal only.**
+/// The sysroot path.
+///
+/// This is for preventing `cargo fix` from fixing rust std/core libs. See
+///
+/// * <https://github.com/rust-lang/cargo/issues/9857>
+/// * <https://github.com/rust-lang/rust/issues/88514#issuecomment-2043469384>
+const SYSROOT_INTERNAL: &str = "__CARGO_FIX_RUST_SRC";
 
 pub struct FixOptions {
     pub edition: bool,
@@ -97,6 +106,8 @@ pub fn fix(
 ) -> CargoResult<()> {
     check_version_control(gctx, opts)?;
 
+    let mut target_data =
+        RustcTargetData::new(original_ws, &opts.compile_opts.build_config.requested_kinds)?;
     if opts.edition {
         let specs = opts.compile_opts.spec.to_package_id_specs(&original_ws)?;
         let members: Vec<&Package> = original_ws
@@ -105,7 +116,7 @@ pub fn fix(
             .collect();
         migrate_manifests(original_ws, &members)?;
 
-        check_resolver_change(&original_ws, opts)?;
+        check_resolver_change(&original_ws, &mut target_data, opts)?;
     }
     let mut ws = Workspace::new(&root_manifest, gctx)?;
     ws.set_resolve_honors_rust_version(Some(original_ws.resolve_honors_rust_version()));
@@ -127,6 +138,11 @@ pub fn fix(
     }
     if opts.idioms {
         wrapper.env(IDIOMS_ENV_INTERNAL, "1");
+    }
+
+    let sysroot = &target_data.info(CompileKind::Host).sysroot;
+    if sysroot.is_dir() {
+        wrapper.env(SYSROOT_INTERNAL, sysroot);
     }
 
     *opts
@@ -395,7 +411,11 @@ fn add_feature_for_unused_deps(pkg: &Package, parent: &mut dyn toml_edit::TableL
     fixes
 }
 
-fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<()> {
+fn check_resolver_change<'gctx>(
+    ws: &Workspace<'gctx>,
+    target_data: &mut RustcTargetData<'gctx>,
+    opts: &FixOptions,
+) -> CargoResult<()> {
     let root = ws.root_maybe();
     match root {
         MaybePackage::Package(root_pkg) => {
@@ -422,12 +442,10 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
     // 2018 without `resolver` set must be V1
     assert_eq!(ws.resolve_behavior(), ResolveBehavior::V1);
     let specs = opts.compile_opts.spec.to_package_id_specs(ws)?;
-    let mut target_data =
-        RustcTargetData::new(ws, &opts.compile_opts.build_config.requested_kinds)?;
     let mut resolve_differences = |has_dev_units| -> CargoResult<(WorkspaceResolve<'_>, DiffMap)> {
         let ws_resolve = ops::resolve_ws_with_opts(
             ws,
-            &mut target_data,
+            target_data,
             &opts.compile_opts.build_config.requested_kinds,
             &opts.compile_opts.cli_features,
             &specs,
@@ -438,7 +456,7 @@ fn check_resolver_change(ws: &Workspace<'_>, opts: &FixOptions) -> CargoResult<(
         let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, has_dev_units);
         let v2_features = FeatureResolver::resolve(
             ws,
-            &mut target_data,
+            target_data,
             &ws_resolve.targeted_resolve,
             &ws_resolve.pkg_set,
             &opts.compile_opts.cli_features,
@@ -744,7 +762,8 @@ fn rustfix_crate(
             // We'll generate new errors below.
             file.errors_applying_fixes.clear();
         }
-        (last_output, last_made_changes) = rustfix_and_fix(&mut files, rustc, filename, gctx)?;
+        (last_output, last_made_changes) =
+            rustfix_and_fix(&mut files, rustc, filename, args, gctx)?;
         if current_iteration == 0 {
             first_output = Some(last_output.clone());
         }
@@ -801,6 +820,7 @@ fn rustfix_and_fix(
     files: &mut HashMap<String, FixedFile>,
     rustc: &ProcessBuilder,
     filename: &Path,
+    args: &FixArgs,
     gctx: &GlobalContext,
 ) -> CargoResult<(Output, bool)> {
     // If not empty, filter by these lints.
@@ -865,9 +885,16 @@ fn rustfix_and_fix(
             continue;
         };
 
+        let file_path = Path::new(&file_name);
         // Do not write into registry cache. See rust-lang/cargo#9857.
-        if Path::new(&file_name).starts_with(home_path) {
+        if file_path.starts_with(home_path) {
             continue;
+        }
+        // Do not write into standard library source. See rust-lang/cargo#9857.
+        if let Some(sysroot) = args.sysroot.as_deref() {
+            if file_path.starts_with(sysroot) {
+                continue;
+            }
         }
 
         if !file_names.clone().all(|f| f == &file_name) {
@@ -1025,6 +1052,8 @@ struct FixArgs {
     other: Vec<OsString>,
     /// Path to the `rustc` executable.
     rustc: PathBuf,
+    /// Path to host sysroot.
+    sysroot: Option<PathBuf>,
 }
 
 impl FixArgs {
@@ -1096,6 +1125,11 @@ impl FixArgs {
                 .saturating_next()
         });
 
+        // ALLOWED: For the internal mechanism of `cargo fix` only.
+        // Shouldn't be set directly by anyone.
+        #[allow(clippy::disallowed_methods)]
+        let sysroot = env::var_os(SYSROOT_INTERNAL).map(PathBuf::from);
+
         Ok(FixArgs {
             file,
             prepare_for_edition,
@@ -1103,6 +1137,7 @@ impl FixArgs {
             enabled_edition,
             other,
             rustc,
+            sysroot,
         })
     }
 
