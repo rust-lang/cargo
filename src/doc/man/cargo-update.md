@@ -47,7 +47,7 @@ While not recommended, you can specify a yanked version of a package (nightly on
 When possible, try other non-yanked SemVer-compatible versions or seek help
 from the maintainers of the package.
 
-A compatible `pre-release` version can also be specified even when the version requirement in `Cargo.toml` doesn't contain any pre-release identifer (nightly only).
+A compatible `pre-release` version can also be specified even when the version requirement in `Cargo.toml` doesn't contain any pre-release identifier (nightly only).
 {{/option}}
 
 {{#option "`-w`" "`--workspace`" }}
