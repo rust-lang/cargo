@@ -42,7 +42,7 @@ OPTIONS
 
            A compatible pre-release version can also be specified even when the
            version requirement in Cargo.toml doesn’t contain any pre-release
-           identifer (nightly only).
+           identifier (nightly only).
 
        -w, --workspace
            Attempt to update only packages defined in the workspace. Other

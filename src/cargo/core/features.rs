@@ -27,7 +27,7 @@
 //!   * Good for: `.cargo/config.toml`, `config.json` index file (gate: `-Z`)
 //!
 //! For features that touch multiple parts of Cargo, multiple feature gating strategies (error,
-//! warn, ignore) and mechnisms (`-Z`, `cargo-features`) may be used.
+//! warn, ignore) and mechanisms (`-Z`, `cargo-features`) may be used.
 //!
 //! When adding new tests for your feature, usually the tests should go into a
 //! new module of the testsuite named after the feature. See
@@ -513,7 +513,7 @@ features! {
 
 /// Status and metadata for a single unstable feature.
 pub struct Feature {
-    /// Feature name. This is valid Rust identifer so no dash only underscore.
+    /// Feature name. This is valid Rust identifier so no dash only underscore.
     name: &'static str,
     stability: Status,
     /// Version that this feature was stabilized or removed.
