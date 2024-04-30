@@ -1,4 +1,4 @@
-use annotate_snippets::{Level, Renderer, Snippet};
+use annotate_snippets::{Level, Snippet};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
@@ -2343,13 +2343,7 @@ fn emit_diagnostic(
             .fold(true)
             .annotation(Level::Error.span(span)),
     );
-    let renderer = Renderer::styled().term_width(
-        gctx.shell()
-            .err_width()
-            .diagnostic_terminal_width()
-            .unwrap_or(annotate_snippets::renderer::DEFAULT_TERM_WIDTH),
-    );
-    if let Err(err) = writeln!(gctx.shell().err(), "{}", renderer.render(message)) {
+    if let Err(err) = gctx.shell().print_message(message) {
         return err.into();
     }
     return AlreadyPrintedError::new(e.into()).into();

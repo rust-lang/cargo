@@ -3,7 +3,7 @@ use crate::core::FeatureValue::Dep;
 use crate::core::{Edition, FeatureValue, Package};
 use crate::util::interning::InternedString;
 use crate::{CargoResult, GlobalContext};
-use annotate_snippets::{Level, Renderer, Snippet};
+use annotate_snippets::{Level, Snippet};
 use cargo_util_schemas::manifest::{TomlLintLevel, TomlToolLints};
 use pathdiff::diff_paths;
 use std::collections::HashSet;
@@ -270,13 +270,8 @@ pub fn check_im_a_teapot(
                     .fold(true),
             )
             .footer(Level::Note.title(&emitted_reason));
-        let renderer = Renderer::styled().term_width(
-            gctx.shell()
-                .err_width()
-                .diagnostic_terminal_width()
-                .unwrap_or(annotate_snippets::renderer::DEFAULT_TERM_WIDTH),
-        );
-        writeln!(gctx.shell().err(), "{}", renderer.render(message))?;
+
+        gctx.shell().print_message(message)?;
     }
     Ok(())
 }
@@ -367,13 +362,7 @@ pub fn check_implicit_features(
             ));
             message = message.footer(Level::Note.title(emitted_source.as_ref().unwrap()));
         }
-        let renderer = Renderer::styled().term_width(
-            gctx.shell()
-                .err_width()
-                .diagnostic_terminal_width()
-                .unwrap_or(annotate_snippets::renderer::DEFAULT_TERM_WIDTH),
-        );
-        writeln!(gctx.shell().err(), "{}", renderer.render(message))?;
+        gctx.shell().print_message(message)?;
     }
     Ok(())
 }
@@ -476,13 +465,8 @@ pub fn unused_dependencies(
                         "remove the dependency or activate it in a feature with `dep:{name}`"
                     );
                     message = message.footer(Level::Help.title(&help));
-                    let renderer = Renderer::styled().term_width(
-                        gctx.shell()
-                            .err_width()
-                            .diagnostic_terminal_width()
-                            .unwrap_or(annotate_snippets::renderer::DEFAULT_TERM_WIDTH),
-                    );
-                    writeln!(gctx.shell().err(), "{}", renderer.render(message))?;
+
+                    gctx.shell().print_message(message)?;
                 }
             }
         }
