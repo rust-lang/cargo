@@ -47,16 +47,15 @@ fn compress_man() {
     encoder.finish().unwrap();
 }
 
-fn commit_info() {
-    if !Path::new(".git").exists() {
-        return;
-    }
+struct CommitInfo {
+    hash: String,
+    short_hash: String,
+    date: String,
+}
 
-    // Var set by bootstrap whenever omit-git-hash is enabled in rust-lang/rust's config.toml.
-    println!("cargo:rerun-if-env-changed=CFG_OMIT_GIT_HASH");
-    #[allow(clippy::disallowed_methods)]
-    if std::env::var_os("CFG_OMIT_GIT_HASH").is_some() {
-        return;
+fn commit_info_from_git() -> Option<CommitInfo> {
+    if !Path::new(".git").exists() {
+        return None;
     }
 
     let output = match Command::new("git")
@@ -68,14 +67,35 @@ fn commit_info() {
         .output()
     {
         Ok(output) if output.status.success() => output,
-        _ => return,
+        _ => return None,
     };
+
     let stdout = String::from_utf8(output.stdout).unwrap();
-    let mut parts = stdout.split_whitespace();
-    let mut next = || parts.next().unwrap();
-    println!("cargo:rustc-env=CARGO_COMMIT_HASH={}", next());
-    println!("cargo:rustc-env=CARGO_COMMIT_SHORT_HASH={}", next());
-    println!("cargo:rustc-env=CARGO_COMMIT_DATE={}", next())
+    let mut parts = stdout.split_whitespace().map(|s| s.to_string());
+
+    Some(CommitInfo {
+        hash: parts.next()?,
+        short_hash: parts.next()?,
+        date: parts.next()?,
+    })
+}
+
+fn commit_info() {
+    // Var set by bootstrap whenever omit-git-hash is enabled in rust-lang/rust's config.toml.
+    println!("cargo:rerun-if-env-changed=CFG_OMIT_GIT_HASH");
+    // ALLOWED: Accessing environment during build time shouldn't be prohibited.
+    #[allow(clippy::disallowed_methods)]
+    if std::env::var_os("CFG_OMIT_GIT_HASH").is_some() {
+        return;
+    }
+
+    let Some(git) = commit_info_from_git() else {
+        return;
+    };
+
+    println!("cargo:rustc-env=CARGO_COMMIT_HASH={}", git.hash);
+    println!("cargo:rustc-env=CARGO_COMMIT_SHORT_HASH={}", git.short_hash);
+    println!("cargo:rustc-env=CARGO_COMMIT_DATE={}", git.date);
 }
 
 #[allow(clippy::disallowed_methods)]
