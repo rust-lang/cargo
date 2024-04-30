@@ -513,7 +513,7 @@ impl CacheLocker {
     ///
     /// Note that `Shared` will return true if a `MutateExclusive` lock is
     /// held, since `MutateExclusive` is just an upgraded `Shared`. Likewise,
-    /// `DownlaodExclusive` will return true if a `MutateExclusive` lock is
+    /// `DownloadExclusive` will return true if a `MutateExclusive` lock is
     /// held since they overlap.
     pub fn is_locked(&self, mode: CacheLockMode) -> bool {
         let state = self.state.borrow();

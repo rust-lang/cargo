@@ -967,7 +967,7 @@ impl RegistryConfig {
     const NAME: &'static str = "config.json";
 }
 
-/// Get the maximum upack size that Cargo permits
+/// Get the maximum unpack size that Cargo permits
 /// based on a given `size` of your compressed file.
 ///
 /// Returns the larger one between `size * max compression ratio`
