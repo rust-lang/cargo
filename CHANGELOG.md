@@ -64,7 +64,7 @@
   [#13664](https://github.com/rust-lang/cargo/pull/13664)
 - cargo-init: don't assign `target.name` in Cargo.toml if the value can be inferred.
   [#13606](https://github.com/rust-lang/cargo/pull/13606)
-- carog-package: normalize paths in `Cargo.toml`, including replacing `\` with `/`.
+- cargo-package: normalize paths in `Cargo.toml`, including replacing `\` with `/`.
   [#13729](https://github.com/rust-lang/cargo/pull/13729)
 - cargo-test: recategorize cargo test's `--doc` flag under “Target Selection”.
   [#13756](https://github.com/rust-lang/cargo/pull/13756)
@@ -1178,7 +1178,7 @@
   [#12332](https://github.com/rust-lang/cargo/pull/12332)
 - ❗️ `cargo login` no longer accept any token after the `--` syntax.
   Arguments after `--` are now reserved in the preparation of the new credential provider feature.
-  This introduces a regression that overlooks the `cargo login -- <token>` support in preivous versions.
+  This introduces a regression that overlooks the `cargo login -- <token>` support in previous versions.
   [#12499](https://github.com/rust-lang/cargo/pull/12499)
 - Make Cargo `--help` easier to browse.
   [#11905](https://github.com/rust-lang/cargo/pull/11905)
