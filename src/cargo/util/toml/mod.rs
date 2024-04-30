@@ -2231,8 +2231,13 @@ fn verify_lints(
     for (tool, lints) in lints {
         let supported = ["cargo", "clippy", "rust", "rustdoc"];
         if !supported.contains(&tool.as_str()) {
-            let supported = supported.join(", ");
-            anyhow::bail!("unsupported `{tool}` in `[lints]`, must be one of {supported}")
+            let message = format!(
+                "unrecognized lint tool `lints.{tool}`, specifying unrecognized tools may break in the future.
+supported tools: {}",
+                supported.join(", "),
+            );
+            warnings.push(message);
+            continue;
         }
         if tool == "cargo" && !gctx.cli_unstable().cargo_lints {
             warn_for_cargo_lint_feature(gctx, warnings);
