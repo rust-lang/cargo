@@ -2654,3 +2654,155 @@ baz = ["dep:baz"]
 "#
     );
 }
+
+#[cargo_test]
+fn remove_ignored_default_features() {
+    Package::new("dep_simple", "0.1.0").publish();
+    Package::new("dep_df_true", "0.1.0").publish();
+    Package::new("dep_df_false", "0.1.0").publish();
+
+    let pkg_default = r#"
+[package]
+name = "pkg_default"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dep_simple = { workspace = true }
+dep_df_true = { workspace = true }
+dep_df_false = { workspace = true }
+
+[build-dependencies]
+dep_simple = { workspace = true }
+dep_df_true = { workspace = true }
+dep_df_false = { workspace = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+dep_simple = { workspace = true }
+dep_df_true = { workspace = true }
+dep_df_false = { workspace = true }
+"#;
+    let pkg_df_true = r#"
+[package]
+name = "pkg_df_true"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dep_simple = { workspace = true, default-features = true }
+dep_df_true = { workspace = true, default-features = true }
+dep_df_false = { workspace = true, default-features = true }
+
+[build-dependencies]
+dep_simple = { workspace = true, default-features = true }
+dep_df_true = { workspace = true, default-features = true }
+dep_df_false = { workspace = true, default-features = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+dep_simple = { workspace = true, default-features = true }
+dep_df_true = { workspace = true, default-features = true }
+dep_df_false = { workspace = true, default-features = true }
+"#;
+    let pkg_df_false = r#"
+[package]
+name = "pkg_df_false"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dep_simple = { workspace = true, default-features = false }
+dep_df_true = { workspace = true, default-features = false }
+dep_df_false = { workspace = true, default-features = false }
+
+[build-dependencies]
+dep_simple = { workspace = true, default-features = false }
+dep_df_true = { workspace = true, default-features = false }
+dep_df_false = { workspace = true, default-features = false }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+dep_simple = { workspace = true, default-features = false }
+dep_df_true = { workspace = true, default-features = false }
+dep_df_false = { workspace = true, default-features = false }
+"#;
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[workspace]
+members = ["pkg_default", "pkg_df_true", "pkg_df_false"]
+resolver = "2"
+
+[workspace.dependencies]
+dep_simple = "0.1.0"
+dep_df_true = { version = "0.1.0", default-features = true }
+dep_df_false = { version = "0.1.0", default-features = false }
+"#,
+        )
+        .file("pkg_default/Cargo.toml", pkg_default)
+        .file("pkg_default/src/lib.rs", "")
+        .file("pkg_df_true/Cargo.toml", pkg_df_true)
+        .file("pkg_df_true/src/lib.rs", "")
+        .file("pkg_df_false/Cargo.toml", pkg_df_false)
+        .file("pkg_df_false/src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --all --edition --allow-no-vcs")
+        .masquerade_as_nightly_cargo(&["edition2024"])
+        .with_stderr_unordered(
+            "\
+[MIGRATING] pkg_default/Cargo.toml from 2021 edition to 2024
+[MIGRATING] pkg_df_true/Cargo.toml from 2021 edition to 2024
+[MIGRATING] pkg_df_false/Cargo.toml from 2021 edition to 2024
+[WARNING] [CWD]/pkg_df_false/Cargo.toml: `default-features` is ignored for dep_df_true, since `default-features` was true for `workspace.dependencies.dep_df_true`, this could become a hard error in the future
+[WARNING] [CWD]/pkg_df_false/Cargo.toml: `default-features` is ignored for dep_simple, since `default-features` was not specified for `workspace.dependencies.dep_simple`, this could become a hard error in the future
+[WARNING] [CWD]/pkg_df_false/Cargo.toml: `default-features` is ignored for dep_df_true, since `default-features` was true for `workspace.dependencies.dep_df_true`, this could become a hard error in the future
+[WARNING] [CWD]/pkg_df_false/Cargo.toml: `default-features` is ignored for dep_simple, since `default-features` was not specified for `workspace.dependencies.dep_simple`, this could become a hard error in the future
+[WARNING] [CWD]/pkg_df_false/Cargo.toml: `default-features` is ignored for dep_df_true, since `default-features` was true for `workspace.dependencies.dep_df_true`, this could become a hard error in the future
+[WARNING] [CWD]/pkg_df_false/Cargo.toml: `default-features` is ignored for dep_simple, since `default-features` was not specified for `workspace.dependencies.dep_simple`, this could become a hard error in the future
+[UPDATING] `dummy-registry` index
+[LOCKING] 6 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep_simple v0.1.0 (registry `dummy-registry`)
+[DOWNLOADED] dep_df_true v0.1.0 (registry `dummy-registry`)
+[DOWNLOADED] dep_df_false v0.1.0 (registry `dummy-registry`)
+[CHECKING] dep_df_true v0.1.0
+[CHECKING] dep_df_false v0.1.0
+[CHECKING] dep_simple v0.1.0
+[CHECKING] pkg_df_true v0.1.0 ([CWD]/pkg_df_true)
+[CHECKING] pkg_df_false v0.1.0 ([CWD]/pkg_df_false)
+[CHECKING] pkg_default v0.1.0 ([CWD]/pkg_default)
+[MIGRATING] pkg_df_false/src/lib.rs from 2021 edition to 2024
+[MIGRATING] pkg_df_true/src/lib.rs from 2021 edition to 2024
+[MIGRATING] pkg_default/src/lib.rs from 2021 edition to 2024
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+
+    assert_eq!(p.read_file("pkg_default/Cargo.toml"), pkg_default);
+    assert_eq!(p.read_file("pkg_df_true/Cargo.toml"), pkg_df_true);
+    assert_eq!(
+        p.read_file("pkg_df_false/Cargo.toml"),
+        r#"
+[package]
+name = "pkg_df_false"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dep_simple = { workspace = true, default-features = false }
+dep_df_true = { workspace = true, default-features = false }
+dep_df_false = { workspace = true, default-features = false }
+
+[build-dependencies]
+dep_simple = { workspace = true, default-features = false }
+dep_df_true = { workspace = true, default-features = false }
+dep_df_false = { workspace = true, default-features = false }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+dep_simple = { workspace = true, default-features = false }
+dep_df_true = { workspace = true, default-features = false }
+dep_df_false = { workspace = true, default-features = false }
+"#
+    );
+}
