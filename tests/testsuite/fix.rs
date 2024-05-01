@@ -2753,12 +2753,7 @@ dep_df_false = { version = "0.1.0", default-features = false }
 [MIGRATING] pkg_default/Cargo.toml from 2021 edition to 2024
 [MIGRATING] pkg_df_true/Cargo.toml from 2021 edition to 2024
 [MIGRATING] pkg_df_false/Cargo.toml from 2021 edition to 2024
-[WARNING] [CWD]/pkg_df_false/Cargo.toml: `default-features` is ignored for dep_df_true, since `default-features` was true for `workspace.dependencies.dep_df_true`, this could become a hard error in the future
-[WARNING] [CWD]/pkg_df_false/Cargo.toml: `default-features` is ignored for dep_simple, since `default-features` was not specified for `workspace.dependencies.dep_simple`, this could become a hard error in the future
-[WARNING] [CWD]/pkg_df_false/Cargo.toml: `default-features` is ignored for dep_df_true, since `default-features` was true for `workspace.dependencies.dep_df_true`, this could become a hard error in the future
-[WARNING] [CWD]/pkg_df_false/Cargo.toml: `default-features` is ignored for dep_simple, since `default-features` was not specified for `workspace.dependencies.dep_simple`, this could become a hard error in the future
-[WARNING] [CWD]/pkg_df_false/Cargo.toml: `default-features` is ignored for dep_df_true, since `default-features` was true for `workspace.dependencies.dep_df_true`, this could become a hard error in the future
-[WARNING] [CWD]/pkg_df_false/Cargo.toml: `default-features` is ignored for dep_simple, since `default-features` was not specified for `workspace.dependencies.dep_simple`, this could become a hard error in the future
+[FIXED] pkg_df_false/Cargo.toml (6 fixes)
 [UPDATING] `dummy-registry` index
 [LOCKING] 6 packages to latest compatible versions
 [DOWNLOADING] crates ...
@@ -2790,18 +2785,18 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-dep_simple = { workspace = true, default-features = false }
-dep_df_true = { workspace = true, default-features = false }
+dep_simple = { workspace = true}
+dep_df_true = { workspace = true}
 dep_df_false = { workspace = true, default-features = false }
 
 [build-dependencies]
-dep_simple = { workspace = true, default-features = false }
-dep_df_true = { workspace = true, default-features = false }
+dep_simple = { workspace = true}
+dep_df_true = { workspace = true}
 dep_df_false = { workspace = true, default-features = false }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-dep_simple = { workspace = true, default-features = false }
-dep_df_true = { workspace = true, default-features = false }
+dep_simple = { workspace = true}
+dep_df_true = { workspace = true}
 dep_df_false = { workspace = true, default-features = false }
 "#
     );
