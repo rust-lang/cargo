@@ -4,6 +4,7 @@ mod add_no_vendored_package_with_alter_registry;
 mod add_no_vendored_package_with_vendor;
 mod add_normalized_name_external;
 mod add_toolchain;
+mod add_workspace_non_fuzzy;
 mod build;
 mod build_prefer_existing_version;
 mod change_rename_target;
