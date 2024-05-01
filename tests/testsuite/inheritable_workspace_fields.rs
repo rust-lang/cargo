@@ -1518,6 +1518,56 @@ true for `workspace.dependencies.dep`, this could become a hard error in the fut
         .run();
 }
 
+#[cargo_test(nightly, reason = "edition2024 is not stable")]
+fn warn_inherit_def_feat_true_member_def_feat_false_2024_edition() {
+    Package::new("dep", "0.1.0")
+        .feature("default", &["fancy_dep"])
+        .add_dep(Dependency::new("fancy_dep", "0.2").optional(true))
+        .file("src/lib.rs", "")
+        .publish();
+
+    Package::new("fancy_dep", "0.2.4").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["edition2024"]
+
+            [package]
+            name = "bar"
+            version = "0.2.0"
+            edition = "2024"
+            authors = []
+            [dependencies]
+            dep = { workspace = true, default-features = false }
+
+            [workspace]
+            members = []
+            [workspace.dependencies]
+            dep = { version = "0.1.0", default-features = true }
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["edition2024"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  error inheriting `dep` from workspace root manifest's `workspace.dependencies.dep`
+
+Caused by:
+  `default-features = false` cannot override workspace's `default-features`
+",
+        )
+        .run();
+}
+
 #[cargo_test]
 fn warn_inherit_simple_member_def_feat_false() {
     Package::new("dep", "0.1.0")
@@ -1563,6 +1613,56 @@ not specified for `workspace.dependencies.dep`, this could become a hard error i
 [CHECKING] dep v0.1.0
 [CHECKING] bar v0.2.0 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test(nightly, reason = "edition2024 is not stable")]
+fn warn_inherit_simple_member_def_feat_false_2024_edition() {
+    Package::new("dep", "0.1.0")
+        .feature("default", &["fancy_dep"])
+        .add_dep(Dependency::new("fancy_dep", "0.2").optional(true))
+        .file("src/lib.rs", "")
+        .publish();
+
+    Package::new("fancy_dep", "0.2.4").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["edition2024"]
+
+            [package]
+            name = "bar"
+            version = "0.2.0"
+            edition = "2024"
+            authors = []
+            [dependencies]
+            dep = { workspace = true, default-features = false }
+
+            [workspace]
+            members = []
+            [workspace.dependencies]
+            dep = "0.1.0"
+        "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["edition2024"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  error inheriting `dep` from workspace root manifest's `workspace.dependencies.dep`
+
+Caused by:
+  `default-features = false` cannot override workspace's `default-features`
 ",
         )
         .run();

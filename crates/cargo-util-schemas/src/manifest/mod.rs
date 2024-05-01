@@ -683,6 +683,13 @@ impl TomlDependency {
         }
     }
 
+    pub fn default_features(&self) -> Option<bool> {
+        match self {
+            TomlDependency::Detailed(d) => d.default_features(),
+            TomlDependency::Simple(..) => None,
+        }
+    }
+
     pub fn unused_keys(&self) -> Vec<String> {
         match self {
             TomlDependency::Simple(_) => vec![],
