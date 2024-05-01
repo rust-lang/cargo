@@ -988,20 +988,13 @@ fn inner_dependency_inherit_with<'a>(
                 if let Some(false) = pkg_dep.default_features() {
                     default_features_msg(name, None, warnings);
                 }
-                if pkg_dep.optional.is_some()
-                    || pkg_dep.features.is_some()
-                    || pkg_dep.public.is_some()
-                {
-                    manifest::TomlDependency::Detailed(manifest::TomlDetailedDependency {
-                        version: Some(ws_version),
-                        optional: pkg_dep.optional,
-                        features: pkg_dep.features.clone(),
-                        public: pkg_dep.public,
-                        ..Default::default()
-                    })
-                } else {
-                    manifest::TomlDependency::Simple(ws_version)
-                }
+                manifest::TomlDependency::Detailed(manifest::TomlDetailedDependency {
+                    version: Some(ws_version),
+                    optional: pkg_dep.optional,
+                    features: pkg_dep.features.clone(),
+                    public: pkg_dep.public,
+                    ..Default::default()
+                })
             }
             manifest::TomlDependency::Detailed(ws_dep) => {
                 let mut merged_dep = ws_dep.clone();
