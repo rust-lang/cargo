@@ -343,7 +343,7 @@ impl FromStr for Edition {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 enum Status {
     Stable,
     Unstable,
@@ -387,11 +387,11 @@ macro_rules! features {
             $(
                 $(#[$attr])*
                 #[doc = concat!("\n\n\nSee <https://doc.rust-lang.org/nightly/cargo/", $docs, ">.")]
-                pub fn $feature() -> &'static Feature {
+                pub const fn $feature() -> &'static Feature {
                     fn get(features: &Features) -> bool {
                         stab!($stab) == Status::Stable || features.$feature
                     }
-                    static FEAT: Feature = Feature {
+                    const FEAT: Feature = Feature {
                         name: stringify!($feature),
                         stability: stab!($stab),
                         version: $version,
@@ -405,6 +405,10 @@ macro_rules! features {
             /// Whether this feature is allowed to use in the given [`Features`] context.
             fn is_enabled(&self, features: &Features) -> bool {
                 (self.get)(features)
+            }
+
+            pub(crate) fn name(&self) -> &str {
+                self.name
             }
         }
 
@@ -512,6 +516,7 @@ features! {
 }
 
 /// Status and metadata for a single unstable feature.
+#[derive(Debug)]
 pub struct Feature {
     /// Feature name. This is valid Rust identifier so no dash only underscore.
     name: &'static str,

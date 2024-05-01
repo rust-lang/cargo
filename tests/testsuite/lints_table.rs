@@ -1077,3 +1077,107 @@ implicit-features = "warn"
         )
         .run();
 }
+
+#[cargo_test]
+fn check_feature_gated() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+authors = []
+
+[lints.cargo]
+im-a-teapot = "warn"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_status(101)
+        .with_stderr(
+            "\
+error: use of unstable lint `im-a-teapot`
+ --> Cargo.toml:9:1
+  |
+9 | im-a-teapot = \"warn\"
+  | ^^^^^^^^^^^ this is behind `test-dummy-unstable`, which is not enabled
+  |
+  = help: consider adding `cargo-features = [\"test-dummy-unstable\"]` to the top of the manifest
+error: encountered 1 errors(s) while verifying lints
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn check_feature_gated_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[workspace]
+members = ["foo"]
+
+[workspace.lints.cargo]
+im-a-teapot = { level = "warn", priority = 10 }
+test-dummy-unstable = { level = "forbid", priority = -1 }
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.0.1"
+edition = "2015"
+authors = []
+
+[lints]
+workspace = true
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .with_status(101)
+        .with_stderr(
+            "\
+error: use of unstable lint `im-a-teapot`
+ --> Cargo.toml:6:1
+  |
+6 | im-a-teapot = { level = \"warn\", priority = 10 }
+  | ^^^^^^^^^^^ this is behind `test-dummy-unstable`, which is not enabled
+  |
+note: `cargo::im-a-teapot` was inherited
+ --> foo/Cargo.toml:9:1
+  |
+9 | workspace = true
+  | ----------------
+  |
+  = help: consider adding `cargo-features = [\"test-dummy-unstable\"]` to the top of the manifest
+error: use of unstable lint `test-dummy-unstable`
+ --> Cargo.toml:7:1
+  |
+7 | test-dummy-unstable = { level = \"forbid\", priority = -1 }
+  | ^^^^^^^^^^^^^^^^^^^ this is behind `test-dummy-unstable`, which is not enabled
+  |
+note: `cargo::test-dummy-unstable` was inherited
+ --> foo/Cargo.toml:9:1
+  |
+9 | workspace = true
+  | ----------------
+  |
+  = help: consider adding `cargo-features = [\"test-dummy-unstable\"]` to the top of the manifest
+error: encountered 2 errors(s) while verifying lints
+",
+        )
+        .run();
+}
