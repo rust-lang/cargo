@@ -964,7 +964,7 @@ fn dependency_inherit_with<'a>(
 }
 
 fn inner_dependency_inherit_with<'a>(
-    dependency: manifest::TomlInheritedDependency,
+    pkg_dep: manifest::TomlInheritedDependency,
     name: &str,
     inherit: &dyn Fn() -> CargoResult<&'a InheritableFields>,
     package_root: &Path,
@@ -982,64 +982,61 @@ fn inner_dependency_inherit_with<'a>(
                 this could become a hard error in the future"
         ))
     }
-    inherit()?.get_dependency(name, package_root).map(|d| {
-        match d {
-            manifest::TomlDependency::Simple(s) => {
-                if let Some(false) = dependency.default_features() {
-                    default_features_msg(name, None, warnings);
-                }
-                if dependency.optional.is_some()
-                    || dependency.features.is_some()
-                    || dependency.public.is_some()
-                {
-                    manifest::TomlDependency::Detailed(manifest::TomlDetailedDependency {
-                        version: Some(s),
-                        optional: dependency.optional,
-                        features: dependency.features.clone(),
-                        public: dependency.public,
-                        ..Default::default()
-                    })
-                } else {
-                    manifest::TomlDependency::Simple(s)
-                }
+    inherit()?.get_dependency(name, package_root).map(|ws_dep| {
+        let mut merged_dep = match ws_dep {
+            manifest::TomlDependency::Simple(ws_version) => manifest::TomlDetailedDependency {
+                version: Some(ws_version),
+                ..Default::default()
+            },
+            manifest::TomlDependency::Detailed(ws_dep) => ws_dep.clone(),
+        };
+        let manifest::TomlInheritedDependency {
+            workspace: _,
+
+            features,
+            optional,
+            default_features,
+            default_features2,
+            public,
+
+            _unused_keys: _,
+        } = &pkg_dep;
+        let default_features = default_features.or(*default_features2);
+
+        match (default_features, merged_dep.default_features()) {
+            // member: default-features = true and
+            // workspace: default-features = false should turn on
+            // default-features
+            (Some(true), Some(false)) => {
+                merged_dep.default_features = Some(true);
             }
-            manifest::TomlDependency::Detailed(d) => {
-                let mut d = d.clone();
-                match (dependency.default_features(), d.default_features()) {
-                    // member: default-features = true and
-                    // workspace: default-features = false should turn on
-                    // default-features
-                    (Some(true), Some(false)) => {
-                        d.default_features = Some(true);
-                    }
-                    // member: default-features = false and
-                    // workspace: default-features = true should ignore member
-                    // default-features
-                    (Some(false), Some(true)) => {
-                        default_features_msg(name, Some(true), warnings);
-                    }
-                    // member: default-features = false and
-                    // workspace: dep = "1.0" should ignore member default-features
-                    (Some(false), None) => {
-                        default_features_msg(name, None, warnings);
-                    }
-                    _ => {}
-                }
-                d.features = match (d.features.clone(), dependency.features.clone()) {
-                    (Some(dep_feat), Some(inherit_feat)) => Some(
-                        dep_feat
-                            .into_iter()
-                            .chain(inherit_feat)
-                            .collect::<Vec<String>>(),
-                    ),
-                    (Some(dep_fet), None) => Some(dep_fet),
-                    (None, Some(inherit_feat)) => Some(inherit_feat),
-                    (None, None) => None,
-                };
-                d.optional = dependency.optional;
-                manifest::TomlDependency::Detailed(d)
+            // member: default-features = false and
+            // workspace: default-features = true should ignore member
+            // default-features
+            (Some(false), Some(true)) => {
+                default_features_msg(name, Some(true), warnings);
             }
+            // member: default-features = false and
+            // workspace: dep = "1.0" should ignore member default-features
+            (Some(false), None) => {
+                default_features_msg(name, None, warnings);
+            }
+            _ => {}
         }
+        merged_dep.features = match (merged_dep.features.clone(), features.clone()) {
+            (Some(dep_feat), Some(inherit_feat)) => Some(
+                dep_feat
+                    .into_iter()
+                    .chain(inherit_feat)
+                    .collect::<Vec<String>>(),
+            ),
+            (Some(dep_fet), None) => Some(dep_fet),
+            (None, Some(inherit_feat)) => Some(inherit_feat),
+            (None, None) => None,
+        };
+        merged_dep.optional = *optional;
+        merged_dep.public = *public;
+        manifest::TomlDependency::Detailed(merged_dep)
     })
 }
 
