@@ -990,7 +990,20 @@ fn inner_dependency_inherit_with<'a>(
             },
             manifest::TomlDependency::Detailed(ws_dep) => ws_dep.clone(),
         };
-        match (pkg_dep.default_features(), merged_dep.default_features()) {
+        let manifest::TomlInheritedDependency {
+            workspace: _,
+
+            features,
+            optional,
+            default_features,
+            default_features2,
+            public,
+
+            _unused_keys: _,
+        } = &pkg_dep;
+        let default_features = default_features.or(*default_features2);
+
+        match (default_features, merged_dep.default_features()) {
             // member: default-features = true and
             // workspace: default-features = false should turn on
             // default-features
@@ -1010,7 +1023,7 @@ fn inner_dependency_inherit_with<'a>(
             }
             _ => {}
         }
-        merged_dep.features = match (merged_dep.features.clone(), pkg_dep.features.clone()) {
+        merged_dep.features = match (merged_dep.features.clone(), features.clone()) {
             (Some(dep_feat), Some(inherit_feat)) => Some(
                 dep_feat
                     .into_iter()
@@ -1021,8 +1034,8 @@ fn inner_dependency_inherit_with<'a>(
             (None, Some(inherit_feat)) => Some(inherit_feat),
             (None, None) => None,
         };
-        merged_dep.optional = pkg_dep.optional;
-        merged_dep.public = pkg_dep.public;
+        merged_dep.optional = *optional;
+        merged_dep.public = *public;
         manifest::TomlDependency::Detailed(merged_dep)
     })
 }
