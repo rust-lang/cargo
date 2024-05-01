@@ -25,7 +25,7 @@ baz = { version = "0.1.0", optional = true }
 baz = ["dep:baz"]
 
 [lints.cargo]
-unused-optional-dependency = "allow"
+unused_optional_dependency = "allow"
 "#,
         )
         .file("src/lib.rs", "")

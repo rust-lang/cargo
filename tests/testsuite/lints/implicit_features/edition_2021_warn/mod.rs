@@ -27,7 +27,7 @@ baz = { version = "0.1.0", optional = true }
 target-dep = { version = "0.1.0", optional = true }
 
 [lints.cargo]
-implicit-features = "warn"
+implicit_features = "warn"
 "#,
         )
         .file("src/lib.rs", "")

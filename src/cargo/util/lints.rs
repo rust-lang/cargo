@@ -117,31 +117,21 @@ fn verify_feature_enabled(
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     if !manifest.unstable_features().is_enabled(feature_gate) {
-        let dash_name = lint_name.replace("_", "-");
         let dash_feature_name = feature_gate.name().replace("_", "-");
-        let title = format!("use of unstable lint `{}`", dash_name);
+        let title = format!("use of unstable lint `{}`", lint_name);
         let label = format!(
             "this is behind `{}`, which is not enabled",
             dash_feature_name
         );
-        let second_title = format!("`cargo::{}` was inherited", dash_name);
+        let second_title = format!("`cargo::{}` was inherited", lint_name);
         let help = format!(
             "consider adding `cargo-features = [\"{}\"]` to the top of the manifest",
             dash_feature_name
         );
         let message = match reason {
             LintLevelReason::Package => {
-                let span = get_span(
-                    manifest.document(),
-                    &["lints", "cargo", dash_name.as_str()],
-                    false,
-                )
-                .or(get_span(
-                    manifest.document(),
-                    &["lints", "cargo", lint_name],
-                    false,
-                ))
-                .unwrap();
+                let span =
+                    get_span(manifest.document(), &["lints", "cargo", lint_name], false).unwrap();
 
                 Level::Error
                     .title(&title)
@@ -156,14 +146,9 @@ fn verify_feature_enabled(
             LintLevelReason::Workspace => {
                 let lint_span = get_span(
                     ws_document,
-                    &["workspace", "lints", "cargo", dash_name.as_str()],
-                    false,
-                )
-                .or(get_span(
-                    ws_document,
                     &["workspace", "lints", "cargo", lint_name],
                     false,
-                ))
+                )
                 .unwrap();
                 let inherit_span_key =
                     get_span(manifest.document(), &["lints", "workspace"], false).unwrap();

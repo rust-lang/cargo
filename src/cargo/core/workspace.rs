@@ -1161,7 +1161,6 @@ impl<'gctx> Workspace<'gctx> {
             .cloned()
             .unwrap_or_default()
             .into_iter()
-            .map(|(k, v)| (k.replace('-', "_"), v))
             .collect();
 
         for (path, maybe_pkg) in &self.packages.packages {
@@ -1214,10 +1213,6 @@ impl<'gctx> Workspace<'gctx> {
             .get("cargo")
             .cloned()
             .unwrap_or(manifest::TomlToolLints::default());
-        let normalized_lints = cargo_lints
-            .into_iter()
-            .map(|(name, lint)| (name.replace('-', "_"), lint))
-            .collect();
 
         // We should only be using workspace lints if the `[lints]` table is
         // present in the manifest, and `workspace` is set to `true`
@@ -1242,7 +1237,7 @@ impl<'gctx> Workspace<'gctx> {
         analyze_cargo_lints_table(
             pkg,
             &path,
-            &normalized_lints,
+            &cargo_lints,
             ws_cargo_lints,
             ws_contents,
             ws_document,
@@ -1252,7 +1247,7 @@ impl<'gctx> Workspace<'gctx> {
         check_im_a_teapot(
             pkg,
             &path,
-            &normalized_lints,
+            &cargo_lints,
             ws_cargo_lints,
             &mut error_count,
             self.gctx,
@@ -1260,7 +1255,7 @@ impl<'gctx> Workspace<'gctx> {
         check_implicit_features(
             pkg,
             &path,
-            &normalized_lints,
+            &cargo_lints,
             ws_cargo_lints,
             &mut error_count,
             self.gctx,
@@ -1268,7 +1263,7 @@ impl<'gctx> Workspace<'gctx> {
         unused_dependencies(
             pkg,
             &path,
-            &normalized_lints,
+            &cargo_lints,
             ws_cargo_lints,
             &mut error_count,
             self.gctx,
