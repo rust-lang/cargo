@@ -86,36 +86,19 @@ impl VersionPreferences {
             }
 
             if let Some(max_rust_version) = &self.max_rust_version {
-                match (a.rust_version(), b.rust_version()) {
-                    // Fallback
-                    (None, None) => {}
-                    (Some(a), Some(b)) if a == b => {}
-                    // Primary comparison
-                    (Some(a), Some(b)) => {
-                        let a_is_compat = a.is_compatible_with(max_rust_version);
-                        let b_is_compat = b.is_compatible_with(max_rust_version);
-                        match (a_is_compat, b_is_compat) {
-                            (true, true) => {}   // fallback
-                            (false, false) => {} // fallback
-                            (true, false) => return Ordering::Less,
-                            (false, true) => return Ordering::Greater,
-                        }
-                    }
-                    // Prioritize `None` over incompatible
-                    (None, Some(b)) => {
-                        if b.is_compatible_with(max_rust_version) {
-                            return Ordering::Greater;
-                        } else {
-                            return Ordering::Less;
-                        }
-                    }
-                    (Some(a), None) => {
-                        if a.is_compatible_with(max_rust_version) {
-                            return Ordering::Less;
-                        } else {
-                            return Ordering::Greater;
-                        }
-                    }
+                let a_is_compat = a
+                    .rust_version()
+                    .map(|a| a.is_compatible_with(max_rust_version))
+                    .unwrap_or(true);
+                let b_is_compat = b
+                    .rust_version()
+                    .map(|b| b.is_compatible_with(max_rust_version))
+                    .unwrap_or(true);
+                match (a_is_compat, b_is_compat) {
+                    (true, true) => {}   // fallback
+                    (false, false) => {} // fallback
+                    (true, false) => return Ordering::Less,
+                    (false, true) => return Ordering::Greater,
                 }
             }
 
@@ -271,7 +254,7 @@ mod test {
         vp.sort_summaries(&mut summaries, None);
         assert_eq!(
             describe(&summaries),
-            "foo/1.2.1, foo/1.1.0, foo/1.2.4, foo/1.2.2, foo/1.2.0, foo/1.0.9, foo/1.2.3"
+            "foo/1.2.4, foo/1.2.2, foo/1.2.1, foo/1.2.0, foo/1.1.0, foo/1.0.9, foo/1.2.3"
                 .to_string()
         );
 
@@ -279,7 +262,7 @@ mod test {
         vp.sort_summaries(&mut summaries, None);
         assert_eq!(
             describe(&summaries),
-            "foo/1.1.0, foo/1.2.1, foo/1.0.9, foo/1.2.0, foo/1.2.2, foo/1.2.4, foo/1.2.3"
+            "foo/1.0.9, foo/1.1.0, foo/1.2.0, foo/1.2.1, foo/1.2.2, foo/1.2.4, foo/1.2.3"
                 .to_string()
         );
     }
