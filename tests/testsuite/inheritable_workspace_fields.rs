@@ -1553,19 +1553,16 @@ fn warn_inherit_def_feat_true_member_def_feat_false_2024_edition() {
 
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["edition2024"])
+        .with_status(101)
         .with_stderr(
             "\
-[WARNING] [CWD]/Cargo.toml: `default-features` is ignored for dep, since `default-features` was \
-true for `workspace.dependencies.dep`, this could become a hard error in the future
-[UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest Rust [..] compatible versions
-[DOWNLOADING] crates ...
-[DOWNLOADED] fancy_dep v0.2.4 ([..])
-[DOWNLOADED] dep v0.1.0 ([..])
-[CHECKING] fancy_dep v0.2.4
-[CHECKING] dep v0.1.0
-[CHECKING] bar v0.2.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  error inheriting `dep` from workspace root manifest's `workspace.dependencies.dep`
+
+Caused by:
+  `default-features = false` cannot override workspace's `default-features`
 ",
         )
         .run();
@@ -1656,19 +1653,16 @@ fn warn_inherit_simple_member_def_feat_false_2024_edition() {
 
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["edition2024"])
+        .with_status(101)
         .with_stderr(
             "\
-[WARNING] [CWD]/Cargo.toml: `default-features` is ignored for dep, since `default-features` was \
-not specified for `workspace.dependencies.dep`, this could become a hard error in the future
-[UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
-[DOWNLOADING] crates ...
-[DOWNLOADED] fancy_dep v0.2.4 ([..])
-[DOWNLOADED] dep v0.1.0 ([..])
-[CHECKING] fancy_dep v0.2.4
-[CHECKING] dep v0.1.0
-[CHECKING] bar v0.2.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  error inheriting `dep` from workspace root manifest's `workspace.dependencies.dep`
+
+Caused by:
+  `default-features = false` cannot override workspace's `default-features`
 ",
         )
         .run();

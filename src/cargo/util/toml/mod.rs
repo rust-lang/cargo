@@ -692,8 +692,14 @@ fn resolve_dependencies<'a>(
 
     let mut deps = BTreeMap::new();
     for (name_in_toml, v) in dependencies.iter() {
-        let mut resolved =
-            dependency_inherit_with(v.clone(), name_in_toml, inherit, package_root, warnings)?;
+        let mut resolved = dependency_inherit_with(
+            v.clone(),
+            name_in_toml,
+            inherit,
+            package_root,
+            edition,
+            warnings,
+        )?;
         if let manifest::TomlDependency::Detailed(ref mut d) = resolved {
             deprecated_underscore(
                 &d.default_features2,
@@ -949,12 +955,13 @@ fn dependency_inherit_with<'a>(
     name: &str,
     inherit: &dyn Fn() -> CargoResult<&'a InheritableFields>,
     package_root: &Path,
+    edition: Edition,
     warnings: &mut Vec<String>,
 ) -> CargoResult<manifest::TomlDependency> {
     match dependency {
         manifest::InheritableDependency::Value(value) => Ok(value),
         manifest::InheritableDependency::Inherit(w) => {
-            inner_dependency_inherit_with(w, name, inherit, package_root, warnings).with_context(|| {
+            inner_dependency_inherit_with(w, name, inherit, package_root, edition, warnings).with_context(|| {
                 format!(
                     "error inheriting `{name}` from workspace root manifest's `workspace.dependencies.{name}`",
                 )
@@ -968,6 +975,7 @@ fn inner_dependency_inherit_with<'a>(
     name: &str,
     inherit: &dyn Fn() -> CargoResult<&'a InheritableFields>,
     package_root: &Path,
+    edition: Edition,
     warnings: &mut Vec<String>,
 ) -> CargoResult<manifest::TomlDependency> {
     let ws_dep = inherit()?.get_dependency(name, package_root)?;
@@ -1002,12 +1010,12 @@ fn inner_dependency_inherit_with<'a>(
         // workspace: default-features = true should ignore member
         // default-features
         (Some(false), Some(true)) => {
-            deprecated_ws_default_features(name, Some(true), warnings);
+            deprecated_ws_default_features(name, Some(true), edition, warnings)?;
         }
         // member: default-features = false and
         // workspace: dep = "1.0" should ignore member default-features
         (Some(false), None) => {
-            deprecated_ws_default_features(name, None, warnings);
+            deprecated_ws_default_features(name, None, edition, warnings)?;
         }
         _ => {}
     }
@@ -1030,18 +1038,24 @@ fn inner_dependency_inherit_with<'a>(
 fn deprecated_ws_default_features(
     label: &str,
     ws_def_feat: Option<bool>,
+    edition: Edition,
     warnings: &mut Vec<String>,
-) {
+) -> CargoResult<()> {
     let ws_def_feat = match ws_def_feat {
         Some(true) => "true",
         Some(false) => "false",
         None => "not specified",
     };
-    warnings.push(format!(
-        "`default-features` is ignored for {label}, since `default-features` was \
+    if Edition::Edition2024 <= edition {
+        anyhow::bail!("`default-features = false` cannot override workspace's `default-features`");
+    } else {
+        warnings.push(format!(
+            "`default-features` is ignored for {label}, since `default-features` was \
                 {ws_def_feat} for `workspace.dependencies.{label}`, \
                 this could become a hard error in the future"
-    ))
+        ));
+    }
+    Ok(())
 }
 
 #[tracing::instrument(skip_all)]
