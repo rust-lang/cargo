@@ -970,22 +970,6 @@ fn inner_dependency_inherit_with<'a>(
     package_root: &Path,
     warnings: &mut Vec<String>,
 ) -> CargoResult<manifest::TomlDependency> {
-    fn deprecated_ws_default_features(
-        label: &str,
-        ws_def_feat: Option<bool>,
-        warnings: &mut Vec<String>,
-    ) {
-        let ws_def_feat = match ws_def_feat {
-            Some(true) => "true",
-            Some(false) => "false",
-            None => "not specified",
-        };
-        warnings.push(format!(
-            "`default-features` is ignored for {label}, since `default-features` was \
-                {ws_def_feat} for `workspace.dependencies.{label}`, \
-                this could become a hard error in the future"
-        ))
-    }
     inherit()?.get_dependency(name, package_root).map(|ws_dep| {
         let mut merged_dep = match ws_dep {
             manifest::TomlDependency::Simple(ws_version) => manifest::TomlDetailedDependency {
@@ -1042,6 +1026,23 @@ fn inner_dependency_inherit_with<'a>(
         merged_dep.public = *public;
         manifest::TomlDependency::Detailed(merged_dep)
     })
+}
+
+fn deprecated_ws_default_features(
+    label: &str,
+    ws_def_feat: Option<bool>,
+    warnings: &mut Vec<String>,
+) {
+    let ws_def_feat = match ws_def_feat {
+        Some(true) => "true",
+        Some(false) => "false",
+        None => "not specified",
+    };
+    warnings.push(format!(
+        "`default-features` is ignored for {label}, since `default-features` was \
+                {ws_def_feat} for `workspace.dependencies.{label}`, \
+                this could become a hard error in the future"
+    ))
 }
 
 #[tracing::instrument(skip_all)]
