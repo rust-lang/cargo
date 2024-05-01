@@ -970,62 +970,61 @@ fn inner_dependency_inherit_with<'a>(
     package_root: &Path,
     warnings: &mut Vec<String>,
 ) -> CargoResult<manifest::TomlDependency> {
-    inherit()?.get_dependency(name, package_root).map(|ws_dep| {
-        let mut merged_dep = match ws_dep {
-            manifest::TomlDependency::Simple(ws_version) => manifest::TomlDetailedDependency {
-                version: Some(ws_version),
-                ..Default::default()
-            },
-            manifest::TomlDependency::Detailed(ws_dep) => ws_dep.clone(),
-        };
-        let manifest::TomlInheritedDependency {
-            workspace: _,
+    let ws_dep = inherit()?.get_dependency(name, package_root)?;
+    let mut merged_dep = match ws_dep {
+        manifest::TomlDependency::Simple(ws_version) => manifest::TomlDetailedDependency {
+            version: Some(ws_version),
+            ..Default::default()
+        },
+        manifest::TomlDependency::Detailed(ws_dep) => ws_dep.clone(),
+    };
+    let manifest::TomlInheritedDependency {
+        workspace: _,
 
-            features,
-            optional,
-            default_features,
-            default_features2,
-            public,
+        features,
+        optional,
+        default_features,
+        default_features2,
+        public,
 
-            _unused_keys: _,
-        } = &pkg_dep;
-        let default_features = default_features.or(*default_features2);
+        _unused_keys: _,
+    } = &pkg_dep;
+    let default_features = default_features.or(*default_features2);
 
-        match (default_features, merged_dep.default_features()) {
-            // member: default-features = true and
-            // workspace: default-features = false should turn on
-            // default-features
-            (Some(true), Some(false)) => {
-                merged_dep.default_features = Some(true);
-            }
-            // member: default-features = false and
-            // workspace: default-features = true should ignore member
-            // default-features
-            (Some(false), Some(true)) => {
-                deprecated_ws_default_features(name, Some(true), warnings);
-            }
-            // member: default-features = false and
-            // workspace: dep = "1.0" should ignore member default-features
-            (Some(false), None) => {
-                deprecated_ws_default_features(name, None, warnings);
-            }
-            _ => {}
+    match (default_features, merged_dep.default_features()) {
+        // member: default-features = true and
+        // workspace: default-features = false should turn on
+        // default-features
+        (Some(true), Some(false)) => {
+            merged_dep.default_features = Some(true);
         }
-        merged_dep.features = match (merged_dep.features.clone(), features.clone()) {
-            (Some(dep_feat), Some(inherit_feat)) => Some(
-                dep_feat
-                    .into_iter()
-                    .chain(inherit_feat)
-                    .collect::<Vec<String>>(),
-            ),
-            (Some(dep_fet), None) => Some(dep_fet),
-            (None, Some(inherit_feat)) => Some(inherit_feat),
-            (None, None) => None,
-        };
-        merged_dep.optional = *optional;
-        merged_dep.public = *public;
-        manifest::TomlDependency::Detailed(merged_dep)
-    })
+        // member: default-features = false and
+        // workspace: default-features = true should ignore member
+        // default-features
+        (Some(false), Some(true)) => {
+            deprecated_ws_default_features(name, Some(true), warnings);
+        }
+        // member: default-features = false and
+        // workspace: dep = "1.0" should ignore member default-features
+        (Some(false), None) => {
+            deprecated_ws_default_features(name, None, warnings);
+        }
+        _ => {}
+    }
+    merged_dep.features = match (merged_dep.features.clone(), features.clone()) {
+        (Some(dep_feat), Some(inherit_feat)) => Some(
+            dep_feat
+                .into_iter()
+                .chain(inherit_feat)
+                .collect::<Vec<String>>(),
+        ),
+        (Some(dep_fet), None) => Some(dep_fet),
+        (None, Some(inherit_feat)) => Some(inherit_feat),
+        (None, None) => None,
+    };
+    merged_dep.optional = *optional;
+    merged_dep.public = *public;
+    Ok(manifest::TomlDependency::Detailed(merged_dep))
 }
 
 fn deprecated_ws_default_features(
