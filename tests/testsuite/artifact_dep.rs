@@ -3189,3 +3189,77 @@ fn check_transitive_artifact_dependency_with_different_target() {
         .with_status(101)
         .run();
 }
+
+#[cargo_test]
+fn build_only_specified_artifact_library() {
+    // Create a project with:
+    // - A crate `bar` with both `staticlib` and `cdylib` as crate-types.
+    // - A crate `foo` which depends on either the `staticlib` or `cdylib` artifact of bar,
+    //   whose build-script simply checks which library artifacts are present.
+    let create_project = |artifact_lib| {
+        project()
+            .file(
+                "bar/Cargo.toml",
+                r#"
+                [package]
+                name = "bar"
+                version = "1.0.0"
+
+                [lib]
+                crate-type = ["staticlib", "cdylib"]
+                "#,
+            )
+            .file("bar/src/lib.rs", "")
+            .file(
+                "Cargo.toml",
+                &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+
+                [build-dependencies]
+                bar = {{ path = "bar", artifact = "{artifact_lib}" }}
+            "#),
+            )
+            .file("src/lib.rs", "")
+            .file(
+                "build.rs",
+                r#"
+                fn main() {
+                    println!("cdylib present: {}", std::env::var_os("CARGO_CDYLIB_FILE_BAR").is_some());
+                    println!("staticlib present: {}", std::env::var_os("CARGO_STATICLIB_FILE_BAR").is_some());
+                }
+            "#,
+            )
+            .build()
+    };
+
+    let cdylib = create_project("cdylib");
+    cdylib
+        .cargo("build -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .run();
+    match_exact(
+        "cdylib present: true\nstaticlib present: true",
+        &build_script_output_string(&cdylib, "foo"),
+        "build script output",
+        "",
+        None,
+    )
+    .unwrap();
+
+    let staticlib = create_project("staticlib");
+    staticlib
+        .cargo("build -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .run();
+    match_exact(
+        "cdylib present: true\nstaticlib present: true",
+        &build_script_output_string(&staticlib, "foo"),
+        "build script output",
+        "",
+        None,
+    )
+    .unwrap();
+}
