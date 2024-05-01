@@ -883,6 +883,14 @@ im-a-teapot = "warn"
         .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
         .with_stderr(
             "\
+warning: unknown lint: `im-a-teapot`
+  --> Cargo.toml:12:1
+   |
+12 | im-a-teapot = \"warn\"
+   | ^^^^^^^^^^^
+   |
+   = note: `cargo::unknown_lints` is set to `warn` by default
+   = help: there is a lint with a similar name: `im_a_teapot`
 [CHECKING] foo v0.0.1 ([CWD])
 [FINISHED] [..]
 ",
