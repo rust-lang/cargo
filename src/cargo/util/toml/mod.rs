@@ -983,57 +983,47 @@ fn inner_dependency_inherit_with<'a>(
         ))
     }
     inherit()?.get_dependency(name, package_root).map(|ws_dep| {
-        match ws_dep {
-            manifest::TomlDependency::Simple(ws_version) => {
-                if let Some(false) = pkg_dep.default_features() {
-                    default_features_msg(name, None, warnings);
-                }
-                manifest::TomlDependency::Detailed(manifest::TomlDetailedDependency {
-                    version: Some(ws_version),
-                    optional: pkg_dep.optional,
-                    features: pkg_dep.features.clone(),
-                    public: pkg_dep.public,
-                    ..Default::default()
-                })
+        let mut merged_dep = match ws_dep {
+            manifest::TomlDependency::Simple(ws_version) => manifest::TomlDetailedDependency {
+                version: Some(ws_version),
+                ..Default::default()
+            },
+            manifest::TomlDependency::Detailed(ws_dep) => ws_dep.clone(),
+        };
+        match (pkg_dep.default_features(), merged_dep.default_features()) {
+            // member: default-features = true and
+            // workspace: default-features = false should turn on
+            // default-features
+            (Some(true), Some(false)) => {
+                merged_dep.default_features = Some(true);
             }
-            manifest::TomlDependency::Detailed(ws_dep) => {
-                let mut merged_dep = ws_dep.clone();
-                match (pkg_dep.default_features(), merged_dep.default_features()) {
-                    // member: default-features = true and
-                    // workspace: default-features = false should turn on
-                    // default-features
-                    (Some(true), Some(false)) => {
-                        merged_dep.default_features = Some(true);
-                    }
-                    // member: default-features = false and
-                    // workspace: default-features = true should ignore member
-                    // default-features
-                    (Some(false), Some(true)) => {
-                        default_features_msg(name, Some(true), warnings);
-                    }
-                    // member: default-features = false and
-                    // workspace: dep = "1.0" should ignore member default-features
-                    (Some(false), None) => {
-                        default_features_msg(name, None, warnings);
-                    }
-                    _ => {}
-                }
-                merged_dep.features = match (merged_dep.features.clone(), pkg_dep.features.clone())
-                {
-                    (Some(dep_feat), Some(inherit_feat)) => Some(
-                        dep_feat
-                            .into_iter()
-                            .chain(inherit_feat)
-                            .collect::<Vec<String>>(),
-                    ),
-                    (Some(dep_fet), None) => Some(dep_fet),
-                    (None, Some(inherit_feat)) => Some(inherit_feat),
-                    (None, None) => None,
-                };
-                merged_dep.optional = pkg_dep.optional;
-                manifest::TomlDependency::Detailed(merged_dep)
+            // member: default-features = false and
+            // workspace: default-features = true should ignore member
+            // default-features
+            (Some(false), Some(true)) => {
+                default_features_msg(name, Some(true), warnings);
             }
+            // member: default-features = false and
+            // workspace: dep = "1.0" should ignore member default-features
+            (Some(false), None) => {
+                default_features_msg(name, None, warnings);
+            }
+            _ => {}
         }
+        merged_dep.features = match (merged_dep.features.clone(), pkg_dep.features.clone()) {
+            (Some(dep_feat), Some(inherit_feat)) => Some(
+                dep_feat
+                    .into_iter()
+                    .chain(inherit_feat)
+                    .collect::<Vec<String>>(),
+            ),
+            (Some(dep_fet), None) => Some(dep_fet),
+            (None, Some(inherit_feat)) => Some(inherit_feat),
+            (None, None) => None,
+        };
+        merged_dep.optional = pkg_dep.optional;
+        merged_dep.public = pkg_dep.public;
+        manifest::TomlDependency::Detailed(merged_dep)
     })
 }
 
