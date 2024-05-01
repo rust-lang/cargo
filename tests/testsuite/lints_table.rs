@@ -105,13 +105,12 @@ fn fail_on_invalid_tool() {
         .build();
 
     foo.cargo("check")
-        .with_status(101)
         .with_stderr(
             "\
-[..]
-
-Caused by:
-  unsupported `super-awesome-linter` in `[lints]`, must be one of cargo, clippy, rust, rustdoc
+[WARNING] [CWD]/Cargo.toml: unrecognized lint tool `lints.super-awesome-linter`, specifying unrecognized tools may break in the future.
+supported tools: cargo, clippy, rust, rustdoc
+[CHECKING] foo v0.0.1 ([CWD])
+[FINISHED] [..]
 ",
         )
         .run();
