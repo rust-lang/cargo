@@ -1,33 +1,21 @@
 use cargo_test_support::prelude::*;
-use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 use cargo_test_support::{file, project};
 
 #[cargo_test]
 fn case() {
-    Package::new("bar", "0.1.0").publish();
-    Package::new("baz", "0.1.0").publish();
-    Package::new("target-dep", "0.1.0").publish();
     let p = project()
         .file(
             "Cargo.toml",
             r#"
 [package]
 name = "foo"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-bar = { version = "0.1.0", optional = true }
-
-[build-dependencies]
-baz = { version = "0.1.0", optional = true }
-
-[target.'cfg(target_os = "linux")'.dependencies]
-target-dep = { version = "0.1.0", optional = true }
+version = "0.0.1"
+edition = "2015"
+authors = []
 
 [lints.cargo]
-implicit_features = "warn"
+this-lint-does-not-exist = "warn"
 "#,
         )
         .file("src/lib.rs", "")

@@ -19,7 +19,7 @@ edition = "2021"
 bar = { version = "0.1.0", optional = true }
 
 [lints.cargo]
-implicit-features = "allow"
+implicit_features = "allow"
 "#,
         )
         .file("src/lib.rs", "")
