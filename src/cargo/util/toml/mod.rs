@@ -970,7 +970,11 @@ fn inner_dependency_inherit_with<'a>(
     package_root: &Path,
     warnings: &mut Vec<String>,
 ) -> CargoResult<manifest::TomlDependency> {
-    fn default_features_msg(label: &str, ws_def_feat: Option<bool>, warnings: &mut Vec<String>) {
+    fn deprecated_ws_default_features(
+        label: &str,
+        ws_def_feat: Option<bool>,
+        warnings: &mut Vec<String>,
+    ) {
         let ws_def_feat = match ws_def_feat {
             Some(true) => "true",
             Some(false) => "false",
@@ -1014,12 +1018,12 @@ fn inner_dependency_inherit_with<'a>(
             // workspace: default-features = true should ignore member
             // default-features
             (Some(false), Some(true)) => {
-                default_features_msg(name, Some(true), warnings);
+                deprecated_ws_default_features(name, Some(true), warnings);
             }
             // member: default-features = false and
             // workspace: dep = "1.0" should ignore member default-features
             (Some(false), None) => {
-                default_features_msg(name, None, warnings);
+                deprecated_ws_default_features(name, None, warnings);
             }
             _ => {}
         }
