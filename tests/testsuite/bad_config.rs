@@ -1852,7 +1852,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn proc_macro2() {
+fn lib_proc_macro2() {
     let foo = project()
         .file(
             "Cargo.toml",
@@ -1879,7 +1879,7 @@ fn proc_macro2() {
 }
 
 #[cargo_test(nightly, reason = "edition2024 is not stable")]
-fn proc_macro2_2024() {
+fn lib_proc_macro2_2024() {
     let foo = project()
         .file(
             "Cargo.toml",
@@ -1913,7 +1913,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn proc_macro2_conflict() {
+fn lib_proc_macro2_conflict() {
     let foo = project()
         .file(
             "Cargo.toml",
