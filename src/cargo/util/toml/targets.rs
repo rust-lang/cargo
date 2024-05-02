@@ -261,48 +261,60 @@ pub fn resolve_bins(
     errors: &mut Vec<String>,
     has_lib: bool,
 ) -> CargoResult<Vec<TomlBinTarget>> {
-    let inferred = inferred_bins(package_root, package_name);
+    if is_resolved(toml_bins, autodiscover) {
+        let toml_bins = toml_bins.cloned().unwrap_or_default();
+        for bin in &toml_bins {
+            validate_bin_name(bin, warnings)?;
+            validate_bin_crate_types(bin, edition, warnings, errors)?;
+            validate_bin_proc_macro(bin, edition, warnings, errors)?;
+        }
+        Ok(toml_bins)
+    } else {
+        let inferred = inferred_bins(package_root, package_name);
 
-    let mut bins = toml_targets_and_inferred(
-        toml_bins,
-        &inferred,
-        package_root,
-        autodiscover,
-        edition,
-        warnings,
-        "binary",
-        "bin",
-        "autobins",
-    );
+        let mut bins = toml_targets_and_inferred(
+            toml_bins,
+            &inferred,
+            package_root,
+            autodiscover,
+            edition,
+            warnings,
+            "binary",
+            "bin",
+            "autobins",
+        );
 
-    for bin in &mut bins {
-        // Check early to improve error messages
-        validate_bin_name(bin, warnings)?;
+        for bin in &mut bins {
+            // Check early to improve error messages
+            validate_bin_name(bin, warnings)?;
 
-        validate_bin_crate_types(bin, edition, warnings, errors)?;
-        validate_bin_proc_macro(bin, edition, warnings, errors)?;
+            validate_bin_crate_types(bin, edition, warnings, errors)?;
+            validate_bin_proc_macro(bin, edition, warnings, errors)?;
 
-        let path = target_path(bin, &inferred, "bin", package_root, edition, &mut |_| {
-            if let Some(legacy_path) = legacy_bin_path(package_root, name_or_panic(bin), has_lib) {
-                warnings.push(format!(
-                    "path `{}` was erroneously implicitly accepted for binary `{}`,\n\
+            let path = target_path(bin, &inferred, "bin", package_root, edition, &mut |_| {
+                if let Some(legacy_path) =
+                    legacy_bin_path(package_root, name_or_panic(bin), has_lib)
+                {
+                    warnings.push(format!(
+                        "path `{}` was erroneously implicitly accepted for binary `{}`,\n\
                      please set bin.path in Cargo.toml",
-                    legacy_path.display(),
-                    name_or_panic(bin)
-                ));
-                Some(legacy_path)
-            } else {
-                None
-            }
-        });
-        let path = match path {
-            Ok(path) => path,
-            Err(e) => anyhow::bail!("{}", e),
-        };
-        bin.path = Some(PathValue(path));
-    }
+                        legacy_path.display(),
+                        name_or_panic(bin)
+                    ));
+                    Some(legacy_path)
+                } else {
+                    None
+                }
+            });
+            let path = match path {
+                Ok(path) => path,
+                Err(e) => anyhow::bail!("{}", e),
+            };
+            bin.path = Some(PathValue(path));
+        }
 
-    Ok(bins)
+        Ok(bins)
+    }
 }
 
 #[tracing::instrument(skip_all)]
@@ -370,13 +382,13 @@ pub fn resolve_examples(
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) -> CargoResult<Vec<TomlExampleTarget>> {
-    let inferred = infer_from_directory(&package_root, Path::new(DEFAULT_EXAMPLE_DIR_NAME));
+    let mut inferred = || infer_from_directory(&package_root, Path::new(DEFAULT_EXAMPLE_DIR_NAME));
 
     let targets = resolve_targets(
         "example",
         "example",
         toml_examples,
-        &inferred,
+        &mut inferred,
         package_root,
         edition,
         autodiscover,
@@ -427,13 +439,13 @@ pub fn resolve_tests(
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) -> CargoResult<Vec<TomlTestTarget>> {
-    let inferred = infer_from_directory(&package_root, Path::new(DEFAULT_TEST_DIR_NAME));
+    let mut inferred = || infer_from_directory(&package_root, Path::new(DEFAULT_TEST_DIR_NAME));
 
     let targets = resolve_targets(
         "test",
         "test",
         toml_tests,
-        &inferred,
+        &mut inferred,
         package_root,
         edition,
         autodiscover,
@@ -492,13 +504,13 @@ pub fn resolve_benches(
         Some(legacy_path)
     };
 
-    let inferred = infer_from_directory(&package_root, Path::new(DEFAULT_BENCH_DIR_NAME));
+    let mut inferred = || infer_from_directory(&package_root, Path::new(DEFAULT_BENCH_DIR_NAME));
 
     let targets = resolve_targets_with_legacy_path(
         "benchmark",
         "bench",
         toml_benches,
-        &inferred,
+        &mut inferred,
         package_root,
         edition,
         autodiscover,
@@ -536,11 +548,24 @@ fn to_bench_targets(
     Ok(result)
 }
 
+fn is_resolved(toml_targets: Option<&Vec<TomlTarget>>, autodiscover: Option<bool>) -> bool {
+    if autodiscover != Some(false) {
+        return false;
+    }
+
+    let Some(toml_targets) = toml_targets else {
+        return true;
+    };
+    toml_targets
+        .iter()
+        .all(|t| t.name.is_some() && t.path.is_some())
+}
+
 fn resolve_targets(
     target_kind_human: &str,
     target_kind: &str,
     toml_targets: Option<&Vec<TomlTarget>>,
-    inferred: &[(String, PathBuf)],
+    inferred: &mut dyn FnMut() -> Vec<(String, PathBuf)>,
     package_root: &Path,
     edition: Edition,
     autodiscover: Option<bool>,
@@ -567,7 +592,7 @@ fn resolve_targets_with_legacy_path(
     target_kind_human: &str,
     target_kind: &str,
     toml_targets: Option<&Vec<TomlTarget>>,
-    inferred: &[(String, PathBuf)],
+    inferred: &mut dyn FnMut() -> Vec<(String, PathBuf)>,
     package_root: &Path,
     edition: Edition,
     autodiscover: Option<bool>,
@@ -576,47 +601,60 @@ fn resolve_targets_with_legacy_path(
     legacy_path: &mut dyn FnMut(&TomlTarget) -> Option<PathBuf>,
     autodiscover_flag_name: &str,
 ) -> CargoResult<Vec<TomlTarget>> {
-    let toml_targets = toml_targets_and_inferred(
-        toml_targets,
-        inferred,
-        package_root,
-        autodiscover,
-        edition,
-        warnings,
-        target_kind_human,
-        target_kind,
-        autodiscover_flag_name,
-    );
+    if is_resolved(toml_targets, autodiscover) {
+        let toml_targets = toml_targets.cloned().unwrap_or_default();
+        for target in &toml_targets {
+            // Check early to improve error messages
+            validate_target_name(target, target_kind_human, target_kind, warnings)?;
 
-    for target in &toml_targets {
-        // Check early to improve error messages
-        validate_target_name(target, target_kind_human, target_kind, warnings)?;
-
-        validate_proc_macro(target, target_kind_human, edition, warnings)?;
-        validate_crate_types(target, target_kind_human, edition, warnings)?;
-    }
-
-    let mut result = Vec::new();
-    for mut target in toml_targets {
-        let path = target_path(
-            &target,
-            inferred,
-            target_kind,
+            validate_proc_macro(target, target_kind_human, edition, warnings)?;
+            validate_crate_types(target, target_kind_human, edition, warnings)?;
+        }
+        Ok(toml_targets)
+    } else {
+        let inferred = inferred();
+        let toml_targets = toml_targets_and_inferred(
+            toml_targets,
+            &inferred,
             package_root,
+            autodiscover,
             edition,
-            legacy_path,
+            warnings,
+            target_kind_human,
+            target_kind,
+            autodiscover_flag_name,
         );
-        let path = match path {
-            Ok(path) => path,
-            Err(e) => {
-                errors.push(e);
-                continue;
-            }
-        };
-        target.path = Some(PathValue(path));
-        result.push(target);
+
+        for target in &toml_targets {
+            // Check early to improve error messages
+            validate_target_name(target, target_kind_human, target_kind, warnings)?;
+
+            validate_proc_macro(target, target_kind_human, edition, warnings)?;
+            validate_crate_types(target, target_kind_human, edition, warnings)?;
+        }
+
+        let mut result = Vec::new();
+        for mut target in toml_targets {
+            let path = target_path(
+                &target,
+                &inferred,
+                target_kind,
+                package_root,
+                edition,
+                legacy_path,
+            );
+            let path = match path {
+                Ok(path) => path,
+                Err(e) => {
+                    errors.push(e);
+                    continue;
+                }
+            };
+            target.path = Some(PathValue(path));
+            result.push(target);
+        }
+        Ok(result)
     }
-    Ok(result)
 }
 
 fn inferred_lib(package_root: &Path) -> Option<PathBuf> {
