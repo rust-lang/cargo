@@ -105,6 +105,25 @@ channel, but any breakage in nightly will not fail your overall build. Please
 see the [builds.sr.ht documentation](https://man.sr.ht/builds.sr.ht/) for more
 information.
 
+
+### CircleCI
+
+To test your package on CircleCI, here is a sample `.circleci/config.yml` file:
+
+```yaml
+version: 2.1
+jobs:
+  build:
+    docker:
+      # check https://circleci.com/developer/images/image/cimg/rust#image-tags for latest
+      - image: cimg/rust:1.77.2
+    steps:
+      - checkout
+      - run: cargo test
+```
+
+To run more complex pipelines, including flaky test detection, caching, and artifact management, please see [CircleCI Configuration Reference](https://circleci.com/docs/configuration-reference/).
+
 ## Verifying Latest Dependencies
 
 When [specifying dependencies](../reference/specifying-dependencies.md) in
