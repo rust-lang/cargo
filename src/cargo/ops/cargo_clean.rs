@@ -198,8 +198,8 @@ fn clean_specs(
                 continue;
             }
             let crate_name: Rc<str> = target.crate_name().into();
-            let path_dot: Rc<str> = format!("{crate_name}.").into();
-            let path_dash: Rc<str> = format!("{crate_name}-").into();
+            let path_dot: &str = &format!("{crate_name}.");
+            let path_dash: &str = &format!("{crate_name}-");
             for &mode in &[
                 CompileMode::Build,
                 CompileMode::Test,
