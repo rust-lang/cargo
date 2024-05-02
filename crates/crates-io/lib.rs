@@ -128,6 +128,11 @@ struct Users {
     users: Vec<User>,
 }
 #[derive(Deserialize)]
+struct CrateInfo {
+    #[serde(alias = "crate")]
+    crate_info: Crate,
+}
+#[derive(Deserialize)]
 struct TotalCrates {
     total: u32,
 }
@@ -262,6 +267,22 @@ impl Registry {
         Ok(serde_json::from_str::<Users>(&body)?.users)
     }
 
+    pub fn description(&mut self, krate: &str) -> Result<Option<String>> {
+        // Looks like this isn't a standalized method for getting packages' descriptions
+        // so it will only be used if the current registry host is crates.io
+        if self.host_is_crates_io() {
+            self.handle.get(true)?;
+            let body = self
+                .req(&format!("/crates/{}", krate), None, Auth::Unauthorized)
+                .unwrap();
+            Ok(serde_json::from_str::<CrateInfo>(&body)?
+                .crate_info
+                .description)
+        } else {
+            Ok(None)
+        }
+    }
+
     pub fn publish(&mut self, krate: &NewCrate, mut tarball: &File) -> Result<Warnings> {
         let json = serde_json::to_string(krate)?;
         // Prepare the body. The format of the upload request is:
@@ -392,6 +413,8 @@ impl Registry {
         if body.is_some() {
             headers.append("Content-Type: application/json")?;
         }
+
+        headers.append(&format!("User-Agent: cargo-cli"))?;
 
         if self.auth_required || authorized == Auth::Authorized {
             headers.append(&format!("Authorization: {}", self.token()?))?;

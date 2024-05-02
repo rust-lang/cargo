@@ -13,8 +13,13 @@ use super::commands;
 use super::list_commands;
 use crate::command_prelude::*;
 use crate::util::is_rustup;
+use crate::util::Filesystem;
 use cargo::core::shell::ColorChoice;
+use cargo::ops::common_for_install_and_uninstall::*;
 use cargo::util::style;
+
+use crates_io::Registry;
+use curl::easy::Easy;
 
 #[tracing::instrument(skip_all)]
 pub fn main(gctx: &mut GlobalContext) -> CliResult {
@@ -164,6 +169,31 @@ fn print_list(gctx: &GlobalContext, is_verbose: bool) {
         gctx,
         color_print::cstr!("<green,bold>Installed Commands:</>")
     );
+
+    // Obtain all user-install cargo-* subcommands by reading CARGO_HOME/.crates2.json
+    let mut user_installed: HashMap<String, String> = HashMap::new();
+
+    if let Ok(cargo_home) = home::cargo_home() {
+        if let Ok(tracker) = InstallTracker::load(gctx, &Filesystem::new(cargo_home)) {
+            for (package_id, installed_bins) in tracker.all_installed_bins() {
+                for installed_bin in installed_bins {
+                    // We are fetching the description of crates.io packages ONLY,
+                    // since non-crates.io registries probably don't return package descriptions
+                    // Note: we are ignoring all non-cargo-* user-installed commands
+                    if package_id.source_id().is_crates_io()
+                        && package_id.name().starts_with("cargo-")
+                    {
+                        user_installed
+                            .insert(installed_bin.to_string(), package_id.name().to_string());
+                    }
+                }
+            }
+        }
+    };
+
+    let mut registry =
+        Registry::new_handle(String::from("https://crates.io"), None, Easy::new(), false);
+
     for (name, command) in list_commands(gctx) {
         let known_external_desc = known_external_command_descriptions.get(name.as_str());
         let literal = style::LITERAL;
@@ -180,14 +210,27 @@ fn print_list(gctx: &GlobalContext, is_verbose: bool) {
             CommandInfo::External { path } => {
                 if let Some(desc) = known_external_desc {
                     drop_println!(gctx, "    {literal}{name:<20}{literal:#} {desc}");
-                } else if is_verbose {
-                    drop_println!(
-                        gctx,
-                        "    {literal}{name:<20}{literal:#} {}",
-                        path.display()
-                    );
                 } else {
-                    drop_println!(gctx, "    {literal}{name}{literal:#}");
+                    drop_print!(gctx, "    {literal}{name:<20}{literal:#}");
+
+                    // The .unwrap() in the path below will probably never panic, since we are dealing with files here
+                    let installed_by = user_installed
+                        .get(&path.file_name().unwrap().to_string_lossy().to_string())
+                        .cloned();
+
+                    if let Some(installed_by) = installed_by {
+                        let desc = registry.description(&installed_by).ok().flatten();
+
+                        if let Some(desc) = desc {
+                            drop_print!(gctx, " {desc}");
+                        }
+                    }
+
+                    if is_verbose {
+                        drop_print!(gctx, " {}", path.display());
+                    }
+
+                    drop_println!(gctx, "");
                 }
             }
             CommandInfo::Alias { target } => {

@@ -55,7 +55,7 @@ pub mod cargo_remove;
 mod cargo_run;
 mod cargo_test;
 mod cargo_uninstall;
-mod common_for_install_and_uninstall;
+pub mod common_for_install_and_uninstall;
 mod fix;
 pub(crate) mod lockfile;
 pub(crate) mod registry;
