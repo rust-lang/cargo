@@ -977,7 +977,7 @@ error: `im_a_teapot` is specified
 13 | im-a-teapot = true
    | ^^^^^^^^^^^^^^^^^^
    |
-   = note: `cargo::im_a_teapot` is set to `forbid` in `[workspace.lints]`
+   = note: `cargo::im_a_teapot` is set to `forbid` in `[lints]`
 ",
         )
         .run();
