@@ -341,9 +341,12 @@ impl<'gctx> CleanContext<'gctx> {
         Ok(())
     }
 
-    /// Iterates over files matching a glob (`pattern`), removing any files whose filenames start and end with provided prefix/suffix pair.
-    /// Compared to multiple separate calls to [`Self::rm_rf_glob`], this method iterates over the directory just once, which is why
-    /// it may be preferable for working with multiple prefix/suffix pairs.
+    /// Removes files matching a glob and any of the provided filename patterns (prefix/suffix pairs).
+    ///
+    /// This function iterates over files matching a glob (`pattern`) and removes those whose
+    /// filenames start and end with specific prefix/suffix pairs. It should be more efficient for
+    /// operations involving multiple prefix/suffix pairs, as it iterates over the directory
+    /// only once, unlike making multiple calls to [`Self::rm_rf_glob`].
     fn rm_rf_prefix_list(
         &mut self,
         pattern: &str,
