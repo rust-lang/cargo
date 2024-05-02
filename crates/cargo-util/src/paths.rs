@@ -585,7 +585,23 @@ fn _link_or_copy(src: &Path, dst: &Path) -> Result<()> {
             // Note that: fs::copy on macos is using CopyOnWrite (syscall fclonefileat) which should be
             // as fast as hardlinking.
             // See https://github.com/rust-lang/cargo/issues/10060 for the details
-            fs::copy(src, dst).map(|_| ())
+            fs::copy(src, dst).map_or_else(
+                |e| {
+                    if e.raw_os_error()
+                        .map_or(false, |os_err| os_err == 35 /* libc::EAGAIN */)
+                    {
+                        tracing::info!("copy failed {e:?}. falling back to fs::hard_link");
+
+                        // Working around an issue copying too fast with zfs (probably related to
+                        // https://github.com/openzfsonosx/zfs/issues/809)
+                        // See https://github.com/rust-lang/cargo/issues/13838
+                        fs::hard_link(src, dst)
+                    } else {
+                        Err(e)
+                    }
+                },
+                |_| Ok(()),
+            )
         } else {
             fs::hard_link(src, dst)
         }
