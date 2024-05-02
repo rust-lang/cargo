@@ -40,7 +40,6 @@ pub(super) fn to_targets(
     edition: Edition,
     metabuild: &Option<StringOrVec>,
     warnings: &mut Vec<String>,
-    errors: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
     let mut targets = Vec::new();
 
@@ -64,7 +63,6 @@ pub(super) fn to_targets(
         resolved_toml.bin.as_deref().unwrap_or_default(),
         package_root,
         edition,
-        errors,
     )?);
 
     targets.extend(to_example_targets(
@@ -143,10 +141,10 @@ pub fn resolve_lib(
     let Some(mut lib) = lib else { return Ok(None) };
     lib.name
         .get_or_insert_with(|| package_name.replace("-", "_"));
+
     // Check early to improve error messages
     validate_lib_name(&lib, warnings)?;
 
-    // Checking the original lib
     validate_proc_macro(&lib, "library", edition, warnings)?;
     validate_crate_types(&lib, "library", edition, warnings)?;
 
@@ -260,6 +258,7 @@ pub fn resolve_bins(
     edition: Edition,
     autodiscover: Option<bool>,
     warnings: &mut Vec<String>,
+    errors: &mut Vec<String>,
     has_lib: bool,
 ) -> CargoResult<Vec<TomlBinTarget>> {
     let inferred = inferred_bins(package_root, package_name);
@@ -277,7 +276,11 @@ pub fn resolve_bins(
     );
 
     for bin in &mut bins {
+        // Check early to improve error messages
         validate_bin_name(bin, warnings)?;
+
+        validate_bin_crate_types(bin, edition, warnings, errors)?;
+        validate_bin_proc_macro(bin, edition, warnings, errors)?;
 
         let path = target_path(bin, &inferred, "bin", package_root, edition, &mut |_| {
             if let Some(legacy_path) = legacy_bin_path(package_root, name_or_panic(bin), has_lib) {
@@ -308,7 +311,6 @@ fn to_bin_targets(
     bins: &[TomlBinTarget],
     package_root: &Path,
     edition: Edition,
-    errors: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
     // This loop performs basic checks on each of the TomlTarget in `bins`.
     for bin in bins {
@@ -316,27 +318,6 @@ fn to_bin_targets(
         // check if the corresponding cargo feature has been activated.
         if bin.filename.is_some() {
             features.require(Feature::different_binary_name())?;
-        }
-
-        if let Some(crate_types) = bin.crate_types() {
-            if !crate_types.is_empty() {
-                let name = name_or_panic(bin);
-                errors.push(format!(
-                    "the target `{}` is a binary and can't have any \
-                     crate-types set (currently \"{}\")",
-                    name,
-                    crate_types.join(", ")
-                ));
-            }
-        }
-
-        if bin.proc_macro() == Some(true) {
-            let name = name_or_panic(bin);
-            errors.push(format!(
-                "the target `{}` is a binary and can't have `proc-macro` \
-                 set `true`",
-                name
-            ));
         }
     }
 
@@ -608,7 +589,9 @@ fn resolve_targets_with_legacy_path(
     );
 
     for target in &toml_targets {
+        // Check early to improve error messages
         validate_target_name(target, target_kind_human, target_kind, warnings)?;
+
         validate_proc_macro(target, target_kind_human, edition, warnings)?;
         validate_crate_types(target, target_kind_human, edition, warnings)?;
     }
@@ -810,58 +793,6 @@ fn inferred_to_toml_targets(inferred: &[(String, PathBuf)]) -> Vec<TomlTarget> {
             ..TomlTarget::new()
         })
         .collect()
-}
-
-fn validate_lib_name(target: &TomlTarget, warnings: &mut Vec<String>) -> CargoResult<()> {
-    validate_target_name(target, "library", "lib", warnings)?;
-    let name = name_or_panic(target);
-    if name.contains('-') {
-        anyhow::bail!("library target names cannot contain hyphens: {}", name)
-    }
-
-    Ok(())
-}
-
-fn validate_bin_name(bin: &TomlTarget, warnings: &mut Vec<String>) -> CargoResult<()> {
-    validate_target_name(bin, "binary", "bin", warnings)?;
-    let name = name_or_panic(bin).to_owned();
-    if restricted_names::is_conflicting_artifact_name(&name) {
-        anyhow::bail!(
-            "the binary target name `{name}` is forbidden, \
-                 it conflicts with cargo's build directory names",
-        )
-    }
-
-    Ok(())
-}
-
-fn validate_target_name(
-    target: &TomlTarget,
-    target_kind_human: &str,
-    target_kind: &str,
-    warnings: &mut Vec<String>,
-) -> CargoResult<()> {
-    match target.name {
-        Some(ref name) => {
-            if name.trim().is_empty() {
-                anyhow::bail!("{} target names cannot be empty", target_kind_human)
-            }
-            if cfg!(windows) && restricted_names::is_windows_reserved(name) {
-                warnings.push(format!(
-                    "{} target `{}` is a reserved Windows filename, \
-                        this target will not work on Windows platforms",
-                    target_kind_human, name
-                ));
-            }
-        }
-        None => anyhow::bail!(
-            "{} target {}.name is required",
-            target_kind_human,
-            target_kind
-        ),
-    }
-
-    Ok(())
 }
 
 /// Will check a list of toml targets, and make sure the target names are unique within a vector.
@@ -1076,6 +1007,77 @@ fn name_or_panic(target: &TomlTarget) -> &str {
         .unwrap_or_else(|| panic!("target name is required"))
 }
 
+fn validate_lib_name(target: &TomlTarget, warnings: &mut Vec<String>) -> CargoResult<()> {
+    validate_target_name(target, "library", "lib", warnings)?;
+    let name = name_or_panic(target);
+    if name.contains('-') {
+        anyhow::bail!("library target names cannot contain hyphens: {}", name)
+    }
+
+    Ok(())
+}
+
+fn validate_bin_name(bin: &TomlTarget, warnings: &mut Vec<String>) -> CargoResult<()> {
+    validate_target_name(bin, "binary", "bin", warnings)?;
+    let name = name_or_panic(bin).to_owned();
+    if restricted_names::is_conflicting_artifact_name(&name) {
+        anyhow::bail!(
+            "the binary target name `{name}` is forbidden, \
+                 it conflicts with cargo's build directory names",
+        )
+    }
+
+    Ok(())
+}
+
+fn validate_target_name(
+    target: &TomlTarget,
+    target_kind_human: &str,
+    target_kind: &str,
+    warnings: &mut Vec<String>,
+) -> CargoResult<()> {
+    match target.name {
+        Some(ref name) => {
+            if name.trim().is_empty() {
+                anyhow::bail!("{} target names cannot be empty", target_kind_human)
+            }
+            if cfg!(windows) && restricted_names::is_windows_reserved(name) {
+                warnings.push(format!(
+                    "{} target `{}` is a reserved Windows filename, \
+                        this target will not work on Windows platforms",
+                    target_kind_human, name
+                ));
+            }
+        }
+        None => anyhow::bail!(
+            "{} target {}.name is required",
+            target_kind_human,
+            target_kind
+        ),
+    }
+
+    Ok(())
+}
+
+fn validate_bin_proc_macro(
+    target: &TomlTarget,
+    edition: Edition,
+    warnings: &mut Vec<String>,
+    errors: &mut Vec<String>,
+) -> CargoResult<()> {
+    if target.proc_macro() == Some(true) {
+        let name = name_or_panic(target);
+        errors.push(format!(
+            "the target `{}` is a binary and can't have `proc-macro` \
+                 set `true`",
+            name
+        ));
+    } else {
+        validate_proc_macro(target, "binary", edition, warnings)?;
+    }
+    Ok(())
+}
+
 fn validate_proc_macro(
     target: &TomlTarget,
     kind: &str,
@@ -1091,6 +1093,28 @@ fn validate_proc_macro(
         edition,
         warnings,
     )
+}
+
+fn validate_bin_crate_types(
+    target: &TomlTarget,
+    edition: Edition,
+    warnings: &mut Vec<String>,
+    errors: &mut Vec<String>,
+) -> CargoResult<()> {
+    if let Some(crate_types) = target.crate_types() {
+        if !crate_types.is_empty() {
+            let name = name_or_panic(target);
+            errors.push(format!(
+                "the target `{}` is a binary and can't have any \
+                     crate-types set (currently \"{}\")",
+                name,
+                crate_types.join(", ")
+            ));
+        } else {
+            validate_crate_types(target, "binary", edition, warnings)?;
+        }
+    }
+    Ok(())
 }
 
 fn validate_crate_types(

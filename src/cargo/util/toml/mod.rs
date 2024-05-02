@@ -333,6 +333,7 @@ fn resolve_toml(
             edition,
             original_package.autobins,
             warnings,
+            errors,
             resolved_toml.lib.is_some(),
         )?);
         resolved_toml.example = Some(targets::resolve_examples(
@@ -1070,7 +1071,7 @@ fn to_real_manifest(
     manifest_file: &Path,
     gctx: &GlobalContext,
     warnings: &mut Vec<String>,
-    errors: &mut Vec<String>,
+    _errors: &mut Vec<String>,
 ) -> CargoResult<Manifest> {
     let embedded = is_embedded(manifest_file);
     let package_root = manifest_file.parent().unwrap();
@@ -1212,7 +1213,6 @@ fn to_real_manifest(
         edition,
         &resolved_package.metabuild,
         warnings,
-        errors,
     )?;
 
     if targets.iter().all(|t| t.is_custom_build()) {

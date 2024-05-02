@@ -1137,6 +1137,107 @@ fn lib_crate_type2_conflict() {
 }
 
 #[cargo_test]
+fn bin_crate_type2() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                edition = "2015"
+                authors = ["wycats@example.com"]
+
+                [[bin]]
+                name = "foo"
+                path = "src/main.rs"
+                crate_type = []
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("check")
+        .with_stderr(
+            "\
+[WARNING] `crate_type` is deprecated in favor of `crate-type` and will not work in the 2024 edition
+(in the `foo` binary target)
+[CHECKING] foo v0.5.0 ([CWD])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+}
+
+#[cargo_test(nightly, reason = "edition2024 is not stable")]
+fn bin_crate_type2_2024() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["edition2024"]
+
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                edition = "2024"
+                authors = ["wycats@example.com"]
+
+                [[bin]]
+                name = "foo"
+                path = "src/main.rs"
+                crate_type = []
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["edition2024"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  `crate_type` is unsupported as of the 2024 edition; instead use `crate-type`
+  (in the `foo` binary target)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bin_crate_type2_conflict() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                edition = "2015"
+                authors = ["wycats@example.com"]
+
+                [[bin]]
+                name = "foo"
+                path = "src/main.rs"
+                crate_type = []
+                crate-type = []
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+    p.cargo("check")
+        .with_stderr(
+            "\
+[WARNING] `crate_type` is redundant with `crate-type`, preferring `crate-type` in the `foo` binary target
+[CHECKING] foo v0.5.0 ([CWD])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn examples_crate_type2() {
     let p = project()
         .file(
@@ -1852,7 +1953,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn proc_macro2() {
+fn lib_proc_macro2() {
     let foo = project()
         .file(
             "Cargo.toml",
@@ -1879,7 +1980,7 @@ fn proc_macro2() {
 }
 
 #[cargo_test(nightly, reason = "edition2024 is not stable")]
-fn proc_macro2_2024() {
+fn lib_proc_macro2_2024() {
     let foo = project()
         .file(
             "Cargo.toml",
@@ -1913,7 +2014,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn proc_macro2_conflict() {
+fn lib_proc_macro2_conflict() {
     let foo = project()
         .file(
             "Cargo.toml",
@@ -1934,6 +2035,110 @@ fn proc_macro2_conflict() {
         .with_stderr_contains(
             "\
 [WARNING] `proc_macro` is redundant with `proc-macro`, preferring `proc-macro` in the `foo` library target
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bin_proc_macro2() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                edition = "2015"
+                authors = ["wycats@example.com"]
+
+                [[bin]]
+                name = "foo"
+                path = "src/main.rs"
+                proc_macro = false
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    foo.cargo("check")
+        .with_stderr(
+            "\
+[WARNING] `proc_macro` is deprecated in favor of `proc-macro` and will not work in the 2024 edition
+(in the `foo` binary target)
+[CHECKING] foo v0.5.0 ([CWD])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+}
+
+#[cargo_test(nightly, reason = "edition2024 is not stable")]
+fn bin_proc_macro2_2024() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["edition2024"]
+
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                edition = "2024"
+                authors = ["wycats@example.com"]
+
+                [[bin]]
+                name = "foo"
+                path = "src/main.rs"
+                proc_macro = false
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    foo.cargo("check")
+        .masquerade_as_nightly_cargo(&["edition2024"])
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+
+Caused by:
+  `proc_macro` is unsupported as of the 2024 edition; instead use `proc-macro`
+  (in the `foo` binary target)
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn bin_proc_macro2_conflict() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                edition = "2015"
+                authors = ["wycats@example.com"]
+
+                [[bin]]
+                name = "foo"
+                path = "src/main.rs"
+                proc-macro = false
+                proc_macro = false
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    foo.cargo("check")
+        .with_stderr(
+            "\
+[WARNING] `proc_macro` is redundant with `proc-macro`, preferring `proc-macro` in the `foo` binary target
+[CHECKING] foo v0.5.0 ([CWD])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
