@@ -565,26 +565,18 @@ fn _link_or_copy(src: &Path, dst: &Path) -> Result<()> {
             src
         };
         symlink(src, dst)
-    } else if env::var_os("__CARGO_COPY_DONT_LINK_DO_NOT_USE_THIS").is_some() {
-        // This is a work-around for a bug in macOS 10.15. When running on
-        // APFS, there seems to be a strange race condition with
-        // Gatekeeper where it will forcefully kill a process launched via
-        // `cargo run` with SIGKILL. Copying seems to avoid the problem.
-        // This shouldn't affect anyone except Cargo's test suite because
-        // it is very rare, and only seems to happen under heavy load and
-        // rapidly creating lots of executables and running them.
-        // See https://github.com/rust-lang/cargo/issues/7821 for the
-        // gory details.
-        fs::copy(src, dst).map(|_| ())
     } else {
         if cfg!(target_os = "macos") {
-            // This is a work-around for a bug on macos. There seems to be a race condition
-            // with APFS when hard-linking binaries. Gatekeeper does not have signing or
-            // hash information stored in kernel when running the process. Therefore killing it.
-            // This problem does not appear when copying files as kernel has time to process it.
-            // Note that: fs::copy on macos is using CopyOnWrite (syscall fclonefileat) which should be
-            // as fast as hardlinking.
-            // See https://github.com/rust-lang/cargo/issues/10060 for the details
+            // There seems to be a race condition with APFS when hard-linking
+            // binaries. Gatekeeper does not have signing or hash information
+            // stored in kernel when running the process. Therefore killing it.
+            // This problem does not appear when copying files as kernel has
+            // time to process it. Note that: fs::copy on macos is using
+            // CopyOnWrite (syscall fclonefileat) which should be as fast as
+            // hardlinking. See these issues for the details:
+            //
+            // * https://github.com/rust-lang/cargo/issues/7821
+            // * https://github.com/rust-lang/cargo/issues/10060
             fs::copy(src, dst).map_or_else(
                 |e| {
                     if e.raw_os_error()
