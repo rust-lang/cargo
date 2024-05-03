@@ -1180,21 +1180,6 @@ impl<'gctx> Workspace<'gctx> {
     }
 
     pub fn emit_lints(&self, pkg: &Package, path: &Path) -> CargoResult<()> {
-        let ws_lints = self
-            .root_maybe()
-            .workspace_config()
-            .inheritable()
-            .and_then(|i| i.lints().ok())
-            .unwrap_or_default();
-
-        let ws_cargo_lints = ws_lints
-            .get("cargo")
-            .cloned()
-            .unwrap_or_default()
-            .into_iter()
-            .map(|(k, v)| (k.replace('-', "_"), v))
-            .collect();
-
         let mut error_count = 0;
         let toml_lints = pkg
             .manifest()
@@ -1212,30 +1197,9 @@ impl<'gctx> Workspace<'gctx> {
             .map(|(name, lint)| (name.replace('-', "_"), lint))
             .collect();
 
-        check_im_a_teapot(
-            pkg,
-            &path,
-            &normalized_lints,
-            &ws_cargo_lints,
-            &mut error_count,
-            self.gctx,
-        )?;
-        check_implicit_features(
-            pkg,
-            &path,
-            &normalized_lints,
-            &ws_cargo_lints,
-            &mut error_count,
-            self.gctx,
-        )?;
-        unused_dependencies(
-            pkg,
-            &path,
-            &normalized_lints,
-            &ws_cargo_lints,
-            &mut error_count,
-            self.gctx,
-        )?;
+        check_im_a_teapot(pkg, &path, &normalized_lints, &mut error_count, self.gctx)?;
+        check_implicit_features(pkg, &path, &normalized_lints, &mut error_count, self.gctx)?;
+        unused_dependencies(pkg, &path, &normalized_lints, &mut error_count, self.gctx)?;
         if error_count > 0 {
             Err(crate::util::errors::AlreadyPrintedError::new(anyhow!(
                 "encountered {error_count} errors(s) while running lints"

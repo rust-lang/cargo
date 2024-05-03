@@ -88,7 +88,6 @@ impl Lint {
     pub fn level(
         &self,
         pkg_lints: &TomlToolLints,
-        ws_lints: &TomlToolLints,
         edition: Edition,
     ) -> (LintLevel, LintLevelReason) {
         self.groups
@@ -101,7 +100,6 @@ impl Lint {
                         g.default_level,
                         g.edition_lint_opts,
                         pkg_lints,
-                        ws_lints,
                         edition,
                     ),
                 )
@@ -113,7 +111,6 @@ impl Lint {
                     self.default_level,
                     self.edition_lint_opts,
                     pkg_lints,
-                    ws_lints,
                     edition,
                 ),
             )))
@@ -169,7 +166,6 @@ pub enum LintLevelReason {
     Default,
     Edition(Edition),
     Package,
-    Workspace,
 }
 
 impl Display for LintLevelReason {
@@ -178,7 +174,6 @@ impl Display for LintLevelReason {
             LintLevelReason::Default => write!(f, "by default"),
             LintLevelReason::Edition(edition) => write!(f, "in edition {}", edition),
             LintLevelReason::Package => write!(f, "in `[lints]`"),
-            LintLevelReason::Workspace => write!(f, "in `[workspace.lints]`"),
         }
     }
 }
@@ -188,7 +183,6 @@ fn level_priority(
     default_level: LintLevel,
     edition_lint_opts: Option<(Edition, LintLevel)>,
     pkg_lints: &TomlToolLints,
-    ws_lints: &TomlToolLints,
     edition: Edition,
 ) -> (LintLevel, LintLevelReason, i8) {
     let (unspecified_level, reason) = if let Some(level) = edition_lint_opts
@@ -211,12 +205,6 @@ fn level_priority(
             LintLevelReason::Package,
             defined_level.priority(),
         )
-    } else if let Some(defined_level) = ws_lints.get(name) {
-        (
-            defined_level.level().into(),
-            LintLevelReason::Workspace,
-            defined_level.priority(),
-        )
     } else {
         (unspecified_level, reason, 0)
     }
@@ -234,12 +222,11 @@ pub fn check_im_a_teapot(
     pkg: &Package,
     path: &Path,
     pkg_lints: &TomlToolLints,
-    ws_lints: &TomlToolLints,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
-    let (lint_level, reason) = IM_A_TEAPOT.level(pkg_lints, ws_lints, manifest.edition());
+    let (lint_level, reason) = IM_A_TEAPOT.level(pkg_lints, manifest.edition());
     if lint_level == LintLevel::Allow {
         return Ok(());
     }
@@ -306,7 +293,6 @@ pub fn check_implicit_features(
     pkg: &Package,
     path: &Path,
     pkg_lints: &TomlToolLints,
-    ws_lints: &TomlToolLints,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
@@ -317,7 +303,7 @@ pub fn check_implicit_features(
         return Ok(());
     }
 
-    let (lint_level, reason) = IMPLICIT_FEATURES.level(pkg_lints, ws_lints, edition);
+    let (lint_level, reason) = IMPLICIT_FEATURES.level(pkg_lints, edition);
     if lint_level == LintLevel::Allow {
         return Ok(());
     }
@@ -390,7 +376,6 @@ pub fn unused_dependencies(
     pkg: &Package,
     path: &Path,
     pkg_lints: &TomlToolLints,
-    ws_lints: &TomlToolLints,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
@@ -400,7 +385,7 @@ pub fn unused_dependencies(
         return Ok(());
     }
 
-    let (lint_level, reason) = UNUSED_OPTIONAL_DEPENDENCY.level(pkg_lints, ws_lints, edition);
+    let (lint_level, reason) = UNUSED_OPTIONAL_DEPENDENCY.level(pkg_lints, edition);
     if lint_level == LintLevel::Allow {
         return Ok(());
     }

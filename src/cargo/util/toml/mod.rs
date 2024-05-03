@@ -449,7 +449,15 @@ fn resolve_toml(
         }
         resolved_toml.target = (!resolved_target.is_empty()).then_some(resolved_target);
 
-        resolved_toml.lints = original_toml.lints.clone();
+        let resolved_lints = original_toml
+            .lints
+            .clone()
+            .map(|value| lints_inherit_with(value, || inherit()?.lints()))
+            .transpose()?;
+        resolved_toml.lints = resolved_lints.map(|lints| manifest::InheritableLints {
+            workspace: false,
+            lints,
+        });
 
         let resolved_badges = original_toml
             .badges
@@ -1283,18 +1291,18 @@ fn to_real_manifest(
         }
     }
 
-    let resolved_lints = resolved_toml
-        .lints
-        .clone()
-        .map(|value| {
-            lints_inherit_with(value, || {
-                load_inheritable_fields(gctx, manifest_file, &workspace_config)?.lints()
-            })
-        })
-        .transpose()?;
-
-    verify_lints(resolved_lints.as_ref(), gctx, warnings)?;
-    let rustflags = lints_to_rustflags(&resolved_lints.unwrap_or_default());
+    verify_lints(
+        resolved_toml.resolved_lints().expect("previously resolved"),
+        gctx,
+        warnings,
+    )?;
+    let default = manifest::TomlLints::default();
+    let rustflags = lints_to_rustflags(
+        resolved_toml
+            .resolved_lints()
+            .expect("previously resolved")
+            .unwrap_or(&default),
+    );
 
     let metadata = ManifestMetadata {
         description: resolved_package
