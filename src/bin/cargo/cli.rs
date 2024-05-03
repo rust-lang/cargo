@@ -18,8 +18,8 @@ use cargo::core::shell::ColorChoice;
 use cargo::ops::common_for_install_and_uninstall::*;
 use cargo::util::style;
 
+use cargo::util::network::http;
 use crates_io::Registry;
-use curl::easy::Easy;
 
 #[tracing::instrument(skip_all)]
 pub fn main(gctx: &mut GlobalContext) -> CliResult {
@@ -170,7 +170,7 @@ fn print_list(gctx: &GlobalContext, is_verbose: bool) {
         color_print::cstr!("<green,bold>Installed Commands:</>")
     );
 
-    // Obtain all user-install cargo-* subcommands by reading CARGO_HOME/.crates2.json
+    // Obtain all user-installed cargo-* subcommands by reading CARGO_HOME/.crates2.json
     let mut user_installed: HashMap<String, String> = HashMap::new();
 
     if let Ok(cargo_home) = home::cargo_home() {
@@ -191,8 +191,9 @@ fn print_list(gctx: &GlobalContext, is_verbose: bool) {
         }
     };
 
-    let mut registry =
-        Registry::new_handle(String::from("https://crates.io"), None, Easy::new(), false);
+    let handle = http::http_handle(&gctx).ok();
+    let mut registry = handle
+        .map(|handle| Registry::new_handle(String::from("https://crates.io"), None, handle, false));
 
     for (name, command) in list_commands(gctx) {
         let known_external_desc = known_external_command_descriptions.get(name.as_str());
@@ -213,16 +214,18 @@ fn print_list(gctx: &GlobalContext, is_verbose: bool) {
                 } else {
                     drop_print!(gctx, "    {literal}{name:<20}{literal:#}");
 
-                    // The .unwrap() in the path below will probably never panic, since we are dealing with files here
-                    let installed_by = user_installed
-                        .get(&path.file_name().unwrap().to_string_lossy().to_string())
-                        .cloned();
+                    if let Some(ref mut registry) = &mut registry {
+                        // The .unwrap() in the path below will probably never panic, since we are dealing with files here
+                        let installed_by = user_installed
+                            .get(&path.file_name().unwrap().to_string_lossy().to_string())
+                            .cloned();
 
-                    if let Some(installed_by) = installed_by {
-                        let desc = registry.description(&installed_by).ok().flatten();
+                        if let Some(installed_by) = installed_by {
+                            let desc = registry.description(&installed_by).ok().flatten();
 
-                        if let Some(desc) = desc {
-                            drop_print!(gctx, " {desc}");
+                            if let Some(desc) = desc {
+                                drop_print!(gctx, " {desc}");
+                            }
                         }
                     }
 

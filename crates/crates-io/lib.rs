@@ -272,9 +272,7 @@ impl Registry {
         // so it will only be used if the current registry host is crates.io
         if self.host_is_crates_io() {
             self.handle.get(true)?;
-            let body = self
-                .req(&format!("/crates/{}", krate), None, Auth::Unauthorized)
-                .unwrap();
+            let body = self.req(&format!("/crates/{}", krate), None, Auth::Unauthorized)?;
             Ok(serde_json::from_str::<CrateInfo>(&body)?
                 .crate_info
                 .description)
@@ -413,8 +411,6 @@ impl Registry {
         if body.is_some() {
             headers.append("Content-Type: application/json")?;
         }
-
-        headers.append(&format!("User-Agent: cargo-cli"))?;
 
         if self.auth_required || authorized == Auth::Authorized {
             headers.append(&format!("Authorization: {}", self.token()?))?;
