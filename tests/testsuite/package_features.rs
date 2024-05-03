@@ -189,9 +189,9 @@ fn virtual_with_specific() {
         .file(
             "a/src/lib.rs",
             r#"
-            #[cfg(not_feature = "f1")]
+            #[cfg(not(feature = "f1"))]
             compile_error!{"f1 is missing"}
-            #[cfg(not_feature = "f2")]
+            #[cfg(not(feature = "f2"))]
             compile_error!{"f2 is missing"}
             "#,
         )
@@ -211,9 +211,9 @@ fn virtual_with_specific() {
         .file(
             "b/src/lib.rs",
             r#"
-            #[cfg(not_feature = "f2")]
+            #[cfg(not(feature = "f2"))]
             compile_error!{"f2 is missing"}
-            #[cfg(not_feature = "f3")]
+            #[cfg(not(feature = "f3"))]
             compile_error!{"f3 is missing"}
             "#,
         )

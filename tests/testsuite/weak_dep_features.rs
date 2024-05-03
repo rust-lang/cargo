@@ -9,6 +9,7 @@ use std::fmt::Write;
 // Helper to create lib.rs files that check features.
 fn require(enabled_features: &[&str], disabled_features: &[&str]) -> String {
     let mut s = String::new();
+    writeln!(s, "#![allow(unexpected_cfgs)]").unwrap();
     for feature in enabled_features {
         writeln!(s, "#[cfg(not(feature=\"{feature}\"))] compile_error!(\"expected feature {feature} to be enabled\");",
             feature=feature).unwrap();

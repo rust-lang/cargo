@@ -32,7 +32,7 @@ fn profile_overrides() {
 [RUNNING] `rustc --crate-name test --edition=2015 src/lib.rs [..]--crate-type lib \
         --emit=[..]link[..]\
         -C opt-level=1[..]\
-        -C debug-assertions=on \
+        -C debug-assertions=on[..] \
         -C metadata=[..] \
         -C rpath \
         --out-dir [..] \
@@ -141,7 +141,7 @@ fn check_opt_level_override(profile_level: &str, rustc_level: &str) {
         --emit=[..]link \
         -C opt-level={level}[..]\
         -C debuginfo=2 [..]\
-        -C debug-assertions=on \
+        -C debug-assertions=on[..] \
         -C metadata=[..] \
         --out-dir [..] \
         -L dependency=[CWD]/target/debug/deps`
