@@ -2914,3 +2914,123 @@ Caused by:
         )
         .run();
 }
+
+#[cargo_test]
+fn patch_on_same_package_with_different_version() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "cargo-bug-repo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                foo = { path = "vendor/foo" }
+                bar = { path = "vendor/bar" }
+
+                [patch.crates-io]
+                once_cell_0_1 = { package = "once_cell", path = "vendor/once_cell_0_1" }
+                once_cell_1_19 = { package = "once_cell", path = "vendor/once_cell_1_19" }
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                extern crate foo;
+                extern crate bar;
+                fn main() {
+                    foo::print_version();
+                    bar::print_version();
+                }
+            "#,
+        )
+        .file(
+            "vendor/bar/src/lib.rs",
+            r#"
+                extern crate once_cell;
+                pub fn print_version() {
+                    dbg!(once_cell::version());
+                }
+            "#,
+        )
+        .file(
+            "vendor/bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                once_cell = "1.19"
+            "#,
+        )
+        .file(
+            "vendor/foo/src/lib.rs",
+            r#"
+                extern crate once_cell;
+                pub fn print_version() {
+                    dbg!(once_cell::version());
+                }
+            "#,
+        )
+        .file(
+            "vendor/foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                once_cell = "0.1"
+            "#,
+        )
+        .file(
+            "vendor/once_cell_0_1/src/lib.rs",
+            r#"
+                pub fn version() -> &'static str {
+                    "0.1.0"
+                }
+            "#,
+        )
+        .file(
+            "vendor/once_cell_0_1/Cargo.toml",
+            &basic_manifest("once_cell", "0.1.0"),
+        )
+        .file(
+            "vendor/once_cell_1_19/src/lib.rs",
+            r#"
+                pub fn version() -> &'static str {
+                    "1.19.0"
+                }
+            "#,
+        )
+        .file(
+            "vendor/once_cell_1_19/Cargo.toml",
+            &basic_manifest("once_cell", "1.19.0"),
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[UPDATING] crates.io index
+[LOCKING] 5 packages to latest compatible versions
+[CHECKING] once_cell [..] ([CWD]/vendor/once_cell_[..])
+[CHECKING] once_cell [..] ([CWD]/vendor/once_cell_[..])
+[CHECKING] [..] v0.1.0 ([CWD]/vendor/[..])
+[CHECKING] [..] v0.1.0 ([CWD]/vendor/[..])
+[CHECKING] cargo-bug-repo v0.1.0 ([CWD])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+",
+        )
+        .run();
+
+    p.cargo("check").with_stderr("\
+[UPDATING] crates.io index
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+").run();
+}
