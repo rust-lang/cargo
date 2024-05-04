@@ -154,7 +154,7 @@ impl EncodableResolve {
     /// primary uses is to be used with `resolve_with_previous` to guide the
     /// resolver to create a complete Resolve.
     pub fn into_resolve(self, original: &str, ws: &Workspace<'_>) -> CargoResult<Resolve> {
-        let path_deps = build_path_deps(ws)?;
+        let path_deps = PathDeps::from_workspace(ws)?;
         let mut checksums = HashMap::new();
 
         let mut version = match self.version {
@@ -202,14 +202,18 @@ impl EncodableResolve {
                 if !all_pkgs.insert(enc_id.clone()) {
                     anyhow::bail!("package `{}` is specified twice in the lockfile", pkg.name);
                 }
-                let id = match pkg.source.as_deref().or_else(|| path_deps.get(&pkg.name)) {
+                let id = match pkg.source.as_deref().copied().or_else(|| {
+                    path_deps
+                        .get_path_dep(&pkg.name, &pkg.version)
+                        .map(|package_id| package_id.source_id())
+                }) {
                     // We failed to find a local package in the workspace.
                     // It must have been removed and should be ignored.
                     None => {
                         debug!("path dependency now missing {} v{}", pkg.name, pkg.version);
                         continue;
                     }
-                    Some(&source) => PackageId::try_new(&pkg.name, &pkg.version, source)?,
+                    Some(source) => PackageId::try_new(&pkg.name, &pkg.version, source)?,
                 };
 
                 // If a package has a checksum listed directly on it then record
@@ -364,8 +368,12 @@ impl EncodableResolve {
 
         let mut unused_patches = Vec::new();
         for pkg in self.patch.unused {
-            let id = match pkg.source.as_deref().or_else(|| path_deps.get(&pkg.name)) {
-                Some(&src) => PackageId::try_new(&pkg.name, &pkg.version, src)?,
+            let id = match pkg.source.as_deref().copied().or_else(|| {
+                path_deps
+                    .get_path_dep(&pkg.name, &pkg.version)
+                    .map(|package_id| package_id.source_id())
+            }) {
+                Some(src) => PackageId::try_new(&pkg.name, &pkg.version, src)?,
                 None => continue,
             };
             unused_patches.push(id);
@@ -408,68 +416,98 @@ impl EncodableResolve {
     }
 }
 
-fn build_path_deps(ws: &Workspace<'_>) -> CargoResult<HashMap<String, SourceId>> {
-    // If a crate is **not** a path source, then we're probably in a situation
-    // such as `cargo install` with a lock file from a remote dependency. In
-    // that case we don't need to fixup any path dependencies (as they're not
-    // actually path dependencies any more), so we ignore them.
-    let members = ws
-        .members()
-        .filter(|p| p.package_id().source_id().is_path())
-        .collect::<Vec<_>>();
+struct PathDeps {
+    path_deps: HashMap<String, Vec<PackageId>>,
+}
 
-    let mut ret = HashMap::new();
-    let mut visited = HashSet::new();
-    for member in members.iter() {
-        ret.insert(
-            member.package_id().name().to_string(),
-            member.package_id().source_id(),
-        );
-        visited.insert(member.package_id().source_id());
+impl PathDeps {
+    /// Get a best-effort path dependency with given constraints.
+    ///
+    /// If no exact version match, pickup a random version for patch updating trial
+    fn get_path_dep(&self, name: &str, version: &str) -> Option<&PackageId> {
+        let pkg_version = semver::Version::parse(version).ok()?;
+        self.path_deps.get(name).and_then(|versions| {
+            versions
+                .iter()
+                .find(|package_id| {
+                    package_id.version().cmp_precedence(&pkg_version) == std::cmp::Ordering::Equal
+                })
+                .or_else(|| versions.last())
+        })
     }
-    for member in members.iter() {
-        build_pkg(member, ws, &mut ret, &mut visited);
-    }
-    for deps in ws.root_patch()?.values() {
-        for dep in deps {
+
+    /// Return all path dependencies recursively in given workspace
+    fn from_workspace(ws: &Workspace<'_>) -> CargoResult<Self> {
+        // If a crate is **not** a path source, then we're probably in a situation
+        // such as `cargo install` with a lock file from a remote dependency. In
+        // that case we don't need to fixup any path dependencies (as they're not
+        // actually path dependencies any more), so we ignore them.
+        let members = ws
+            .members()
+            .filter(|p| p.package_id().source_id().is_path())
+            .collect::<Vec<_>>();
+
+        let mut ret = HashSet::new();
+        let mut visited = HashSet::new();
+        for member in members.iter() {
+            ret.insert(member.package_id());
+            visited.insert(member.package_id().source_id());
+        }
+        for member in members.iter() {
+            build_pkg(member, ws, &mut ret, &mut visited);
+        }
+        for deps in ws.root_patch()?.values() {
+            for dep in deps {
+                build_dep(dep, ws, &mut ret, &mut visited);
+            }
+        }
+        for (_, dep) in ws.root_replace() {
             build_dep(dep, ws, &mut ret, &mut visited);
         }
-    }
-    for (_, dep) in ws.root_replace() {
-        build_dep(dep, ws, &mut ret, &mut visited);
-    }
 
-    return Ok(ret);
-
-    fn build_pkg(
-        pkg: &Package,
-        ws: &Workspace<'_>,
-        ret: &mut HashMap<String, SourceId>,
-        visited: &mut HashSet<SourceId>,
-    ) {
-        for dep in pkg.dependencies() {
-            build_dep(dep, ws, ret, visited);
-        }
-    }
-
-    fn build_dep(
-        dep: &Dependency,
-        ws: &Workspace<'_>,
-        ret: &mut HashMap<String, SourceId>,
-        visited: &mut HashSet<SourceId>,
-    ) {
-        let id = dep.source_id();
-        if visited.contains(&id) || !id.is_path() {
-            return;
-        }
-        let path = match id.url().to_file_path() {
-            Ok(p) => p.join("Cargo.toml"),
-            Err(_) => return,
+        let path_deps = {
+            // Mapping from package name to package ids
+            let mut deps: HashMap<String, Vec<PackageId>> = HashMap::new();
+            for package_id in ret {
+                deps.entry(package_id.name().to_string())
+                    .or_default()
+                    .push(package_id);
+            }
+            deps
         };
-        let Ok(pkg) = ws.load(&path) else { return };
-        ret.insert(pkg.name().to_string(), pkg.package_id().source_id());
-        visited.insert(pkg.package_id().source_id());
-        build_pkg(&pkg, ws, ret, visited);
+
+        return Ok(Self { path_deps });
+
+        fn build_pkg(
+            pkg: &Package,
+            ws: &Workspace<'_>,
+            ret: &mut HashSet<PackageId>,
+            visited: &mut HashSet<SourceId>,
+        ) {
+            for dep in pkg.dependencies() {
+                build_dep(dep, ws, ret, visited);
+            }
+        }
+
+        fn build_dep(
+            dep: &Dependency,
+            ws: &Workspace<'_>,
+            ret: &mut HashSet<PackageId>,
+            visited: &mut HashSet<SourceId>,
+        ) {
+            let id = dep.source_id();
+            if visited.contains(&id) || !id.is_path() {
+                return;
+            }
+            let path = match id.url().to_file_path() {
+                Ok(p) => p.join("Cargo.toml"),
+                Err(_) => return,
+            };
+            let Ok(pkg) = ws.load(&path) else { return };
+            ret.insert(pkg.package_id());
+            visited.insert(pkg.package_id().source_id());
+            build_pkg(&pkg, ws, ret, visited);
+        }
     }
 }
 
