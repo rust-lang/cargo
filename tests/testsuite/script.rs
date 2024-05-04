@@ -210,10 +210,10 @@ fn requires_z_flag() {
 #[cargo_test]
 fn clean_output_with_edition() {
     let script = r#"#!/usr/bin/env cargo
-```cargo
+---
 [package]
 edition = "2018"
-```
+---
 
 fn main() {
     println!("Hello world!");
@@ -241,9 +241,9 @@ fn main() {
 #[cargo_test]
 fn warning_without_edition() {
     let script = r#"#!/usr/bin/env cargo
-```cargo
+---
 [package]
-```
+---
 
 fn main() {
     println!("Hello world!");
@@ -714,10 +714,10 @@ fn did_you_mean_command_stable() {
 fn test_name_same_as_dependency() {
     Package::new("script", "1.0.0").publish();
     let script = r#"#!/usr/bin/env cargo
-```cargo
+---
 [dependencies]
 script = "1.0.0"
-```
+---
 
 fn main() {
     println!("Hello world!");
@@ -751,10 +751,10 @@ fn main() {
 #[cargo_test]
 fn test_path_dep() {
     let script = r#"#!/usr/bin/env cargo
-```cargo
+---
 [dependencies]
 bar.path = "./bar"
-```
+---
 
 fn main() {
     println!("Hello world!");

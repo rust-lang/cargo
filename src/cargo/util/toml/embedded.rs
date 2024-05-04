@@ -218,12 +218,7 @@ fn split_source(input: &str) -> CargoResult<Source<'_>> {
     }
 
     // Experiment: let us try which char works better
-    let tick_char = source
-        .content
-        .chars()
-        .filter(|c| ['`', '#', '-'].contains(c))
-        .next()
-        .unwrap_or('`');
+    let tick_char = '-';
 
     let tick_end = source
         .content
@@ -235,10 +230,6 @@ fn split_source(input: &str) -> CargoResult<Source<'_>> {
             return Ok(source);
         }
         1 | 2 => {
-            if tick_char == '#' {
-                // Attribute
-                return Ok(source);
-            }
             anyhow::bail!("found {tick_end} `{tick_char}` in rust frontmatter, expected at least 3")
         }
         _ => source.content.split_at(tick_end),
@@ -332,10 +323,10 @@ strip = true
 
 [workspace]
 "#,
-            si!(r#"```cargo
+            si!(r#"---cargo
 [dependencies]
 time="0.1.25"
-```
+---
 fn main() {}
 "#),
         );
@@ -365,76 +356,10 @@ strip = true
 
 [workspace]
 "#,
-            si!(r#"```
-[dependencies]
-time="0.1.25"
-```
-fn main() {}
-"#),
-        );
-    }
-
-    #[test]
-    fn test_dash() {
-        snapbox::assert_matches(
-            r#"[[bin]]
-name = "test-"
-path = [..]
-
-[dependencies]
-time = "0.1.25"
-
-[package]
-autobenches = false
-autobins = false
-autoexamples = false
-autotests = false
-build = false
-edition = "2021"
-name = "test-"
-
-[profile.release]
-strip = true
-
-[workspace]
-"#,
             si!(r#"---
 [dependencies]
 time="0.1.25"
 ---
-fn main() {}
-"#),
-        );
-    }
-
-    #[test]
-    fn test_hash() {
-        snapbox::assert_matches(
-            r#"[[bin]]
-name = "test-"
-path = [..]
-
-[dependencies]
-time = "0.1.25"
-
-[package]
-autobenches = false
-autobins = false
-autoexamples = false
-autotests = false
-build = false
-edition = "2021"
-name = "test-"
-
-[profile.release]
-strip = true
-
-[workspace]
-"#,
-            si!(r#"###
-[dependencies]
-time="0.1.25"
-###
 fn main() {}
 "#),
         );
