@@ -1,11 +1,9 @@
 //! cargo-sbom precursor files for external tools to create SBOM files from.
 //! See [`output_sbom`] for more.
 
-use std::{
-    collections::BTreeSet,
-    io::{BufWriter, Write},
-    path::PathBuf,
-};
+use std::collections::BTreeSet;
+use std::io::{BufWriter, Write};
+use std::path::PathBuf;
 
 use cargo_util::paths::{self};
 use cargo_util_schemas::core::PackageIdSpec;
