@@ -416,5 +416,8 @@ Cargo exposes this environment variable to 3rd party subcommands
 (ie. programs named `cargo-foobar` placed in `$PATH`):
 
 * `CARGO` --- Path to the `cargo` binary performing the build.
+* `CARGO_MAKEFLAGS` --- Contains parameters needed for Cargo's [jobserver]
+  implementation to parallelize subprocesses.
+  This is set only when Cargo detects the existence of a jobserver.
 
 For extended information about your environment you may run `cargo metadata`.
