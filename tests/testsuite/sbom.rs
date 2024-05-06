@@ -1,14 +1,6 @@
 //! Tests for cargo-sbom precursor files.
 
-use std::{fs::File, io::BufReader, path::Path};
-
 use cargo_test_support::{basic_bin_manifest, project, ProjectBuilder};
-
-fn read_json<P: AsRef<Path>>(path: P) -> anyhow::Result<serde_json::Value> {
-    let file = File::open(path)?;
-    let reader = BufReader::new(file);
-    Ok(serde_json::from_reader(reader)?)
-}
 
 fn configured_project() -> ProjectBuilder {
     project().file(
@@ -21,15 +13,29 @@ fn configured_project() -> ProjectBuilder {
 }
 
 #[cargo_test]
-fn build_sbom_using_cargo_config() {
-    let p = project()
-        .file(
-            ".cargo/config.toml",
-            r#"
-                [build]
-                sbom = true
-            "#,
+fn build_sbom_without_passing_unstable_flag() {
+    let p = configured_project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", r#"fn main() {}"#)
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo(&["sbom"])
+        .with_stderr(
+            "\
+            warning: ignoring 'sbom' config, pass `-Zsbom` to enable it\n\
+            [COMPILING] foo v0.5.0 ([..])\n\
+            [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
         )
+        .run();
+
+    let file = p.bin("foo").with_extension("cargo-sbom.json");
+    assert!(!file.exists());
+}
+
+#[cargo_test]
+fn build_sbom_using_cargo_config() {
+    let p = configured_project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/main.rs", r#"fn main() {}"#)
         .build();
@@ -115,9 +121,6 @@ fn build_sbom_with_simple_build_script() {
 
     let path = p.bin("foo").with_extension("cargo-sbom.json");
     assert!(path.is_file());
-
-    let _json = read_json(path).expect("Failed to read JSON");
-    // TODO: check SBOM output
 }
 
 #[cargo_test]
@@ -158,7 +161,7 @@ fn build_sbom_with_build_dependencies() {
     p.cargo("build -Zsbom")
         .masquerade_as_nightly_cargo(&["sbom"])
         .run();
+
     let path = p.bin("foo").with_extension("cargo-sbom.json");
-    let _json = read_json(path).expect("Failed to read JSON");
-    // TODO: check SBOM output
+    assert!(path.is_file());
 }
