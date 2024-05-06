@@ -185,7 +185,7 @@ fn sanitize_name(name: &str) -> String {
 struct Source<'s> {
     shebang: Option<&'s str>,
     info: Option<&'s str>,
-    frontmatter: Option<String>,
+    frontmatter: Option<&'s str>,
     content: &'s str,
 }
 
@@ -218,12 +218,7 @@ fn split_source(input: &str) -> CargoResult<Source<'_>> {
     }
 
     // Experiment: let us try which char works better
-    let tick_char = source
-        .content
-        .chars()
-        .filter(|c| ['`', '#', '-'].contains(c))
-        .next()
-        .unwrap_or('`');
+    let tick_char = '-';
 
     let tick_end = source
         .content
@@ -233,13 +228,6 @@ fn split_source(input: &str) -> CargoResult<Source<'_>> {
     let (fence_pattern, rest) = match tick_end {
         0 => {
             return Ok(source);
-        }
-        1 if tick_char == '#' => {
-            // Attribute
-            return Ok(source);
-        }
-        2 if tick_char == '#' => {
-            return split_prefix_source(source, "##");
         }
         1 | 2 => {
             anyhow::bail!("found {tick_end} `{tick_char}` in rust frontmatter, expected at least 3")
@@ -255,7 +243,7 @@ fn split_source(input: &str) -> CargoResult<Source<'_>> {
     let Some((frontmatter, content)) = source.content.split_once(fence_pattern) else {
         anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
     };
-    source.frontmatter = Some(frontmatter.to_owned());
+    source.frontmatter = Some(frontmatter);
     source.content = content;
 
     let (line, content) = source
@@ -268,22 +256,6 @@ fn split_source(input: &str) -> CargoResult<Source<'_>> {
     }
     source.content = content;
 
-    Ok(source)
-}
-
-fn split_prefix_source<'s>(mut source: Source<'s>, prefix: &str) -> CargoResult<Source<'s>> {
-    let mut frontmatter = String::new();
-    while let Some(rest) = source.content.strip_prefix(prefix) {
-        if !rest.is_empty() && !rest.starts_with(' ') {
-            anyhow::bail!("frontmatter must have a space between `##` and the content");
-        }
-        let (line, rest) = rest.split_once('\n').unwrap_or((rest, ""));
-        frontmatter.push_str("  ");
-        frontmatter.push_str(line);
-        frontmatter.push('\n');
-        source.content = rest;
-    }
-    source.frontmatter = Some(frontmatter);
     Ok(source)
 }
 
@@ -351,10 +323,10 @@ strip = true
 
 [workspace]
 "#,
-            si!(r#"```cargo
+            si!(r#"---cargo
 [dependencies]
 time="0.1.25"
-```
+---
 fn main() {}
 "#),
         );
@@ -384,107 +356,10 @@ strip = true
 
 [workspace]
 "#,
-            si!(r#"```
-[dependencies]
-time="0.1.25"
-```
-fn main() {}
-"#),
-        );
-    }
-
-    #[test]
-    fn test_dash_fence() {
-        snapbox::assert_matches(
-            r#"[[bin]]
-name = "test-"
-path = [..]
-
-[dependencies]
-time = "0.1.25"
-
-[package]
-autobenches = false
-autobins = false
-autoexamples = false
-autotests = false
-build = false
-edition = "2021"
-name = "test-"
-
-[profile.release]
-strip = true
-
-[workspace]
-"#,
             si!(r#"---
 [dependencies]
 time="0.1.25"
 ---
-fn main() {}
-"#),
-        );
-    }
-
-    #[test]
-    fn test_hash_fence() {
-        snapbox::assert_matches(
-            r#"[[bin]]
-name = "test-"
-path = [..]
-
-[dependencies]
-time = "0.1.25"
-
-[package]
-autobenches = false
-autobins = false
-autoexamples = false
-autotests = false
-build = false
-edition = "2021"
-name = "test-"
-
-[profile.release]
-strip = true
-
-[workspace]
-"#,
-            si!(r#"###
-[dependencies]
-time="0.1.25"
-###
-fn main() {}
-"#),
-        );
-    }
-
-    #[test]
-    fn test_hash_prefix() {
-        snapbox::assert_matches(
-            r#"[[bin]]
-name = "test-"
-path = [..]
-
-[dependencies]
-time = "0.1.25"
-
-[package]
-autobenches = false
-autobins = false
-autoexamples = false
-autotests = false
-build = false
-edition = "2021"
-name = "test-"
-
-[profile.release]
-strip = true
-
-[workspace]
-"#,
-            si!(r#"## [dependencies]
-## time="0.1.25"
 fn main() {}
 "#),
         );
