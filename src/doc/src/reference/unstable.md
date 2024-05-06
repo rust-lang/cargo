@@ -73,6 +73,7 @@ For the latest nightly, see the [nightly version] of this page.
     * [public-dependency](#public-dependency) --- Allows dependencies to be classified as either public or private.
     * [msrv-policy](#msrv-policy) --- MSRV-aware resolver and version selection
     * [precise-pre-release](#precise-pre-release) --- Allows pre-release versions to be selected with `update --precise`
+    * [sbom](#sbom) --- Generates SBOM pre-cursor files for compiled artifacts
     * [update-breaking](#update-breaking) --- Allows upgrading to breaking versions with `update --breaking`
 * Output behavior
     * [artifact-dir](#artifact-dir) --- Adds a directory where artifacts are copied to.
@@ -378,6 +379,29 @@ my-dependency = "0.1.1"
 It's possible to update `my-dependency` to a pre-release with `update -Zunstable-options my-dependency --precise 0.1.2-pre.0`.
 This is because `0.1.2-pre.0` is considered compatible with `0.1.1`.
 It would not be possible to upgrade to `0.2.0-pre.0` from `0.1.1` in the same way.
+
+## sbom
+* Tracking Issue: [#13709](https://github.com/rust-lang/cargo/pull/13709)
+* RFC: [#3553](https://github.com/rust-lang/rfcs/pull/3553)
+
+The `sbom` build config allows to generate so-called SBOM pre-cursor files
+alongside each compiled artifact. A Software Bill Of Material (SBOM) tool can
+incorporate these generated files to collect important information from the cargo
+build process that are difficult or impossible to obtain in another way.
+
+To enable this feature either set the `sbom` field in the `.cargo/config.toml`
+
+```toml
+[build]
+sbom = true
+```
+
+or set the `CARGO_BUILD_SBOM` environment variable to `true`. The functionality
+is available behind the flag `-Z sbom`.
+
+The generated output files are in JSON format and follow the naming scheme
+`<artifact>.cargo-sbom.json`. The JSON file contains information about dependencies,
+target, features and the used `rustc` compiler.
 
 ## update-breaking
 
