@@ -264,6 +264,8 @@ the _reachable_ cfg expressions.
 For details on the syntax of `CHECK_CFG`, see `rustc` [`--check-cfg` flag][option-check-cfg].
 See also the [`unexpected_cfgs`][unexpected-cfgs] lint.
 
+> Note: `cargo:rustc-check-cfg` (single-colon) can be used if your MSRV is below Rust 1.77
+
 The instruction can be used like this:
 
 ```rust,no_run
