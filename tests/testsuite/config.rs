@@ -6,7 +6,7 @@ use cargo::util::context::{
 };
 use cargo::CargoResult;
 use cargo_test_support::compare;
-use cargo_test_support::{panic_error, paths, project, symlink_supported, t};
+use cargo_test_support::{paths, project, symlink_supported, t};
 use cargo_util_schemas::manifest::TomlTrimPaths;
 use cargo_util_schemas::manifest::TomlTrimPathsValue;
 use cargo_util_schemas::manifest::{self as cargo_toml, TomlDebugInfo, VecStringOrBool as VSOB};
@@ -222,14 +222,7 @@ pub fn assert_error<E: Borrow<anyhow::Error>>(error: E, msgs: &str) {
         })
         .collect::<Vec<_>>()
         .join("\n\n");
-    assert_match(msgs, &causes);
-}
-
-#[track_caller]
-pub fn assert_match(expected: &str, actual: &str) {
-    if let Err(e) = compare::match_exact(expected, actual, "output", "", None) {
-        panic_error("", e);
-    }
+    compare::assert_match_exact(msgs, &causes);
 }
 
 #[cargo_test]
@@ -297,7 +290,7 @@ f1 = 1
     let expected = "\
 [WARNING] `[ROOT]/.cargo/config` is deprecated in favor of `config.toml`
 [NOTE] if you need to support cargo 1.38 or earlier, you can symlink `config` to `config.toml`";
-    assert_match(expected, &output);
+    compare::assert_match_exact(expected, &output);
 }
 
 #[cargo_test]
@@ -323,7 +316,7 @@ f1 = 1
 
     // It should NOT have warned for the symlink.
     let output = read_output(gctx);
-    assert_match("", &output);
+    compare::assert_match_exact("", &output);
 }
 
 #[cargo_test]
@@ -349,7 +342,7 @@ f1 = 1
 
     // It should NOT have warned for the symlink.
     let output = read_output(gctx);
-    assert_match("", &output);
+    compare::assert_match_exact("", &output);
 }
 
 #[cargo_test]
@@ -375,7 +368,7 @@ f1 = 1
 
     // It should NOT have warned for this situation.
     let output = read_output(gctx);
-    assert_match("", &output);
+    compare::assert_match_exact("", &output);
 }
 
 #[cargo_test]
@@ -405,7 +398,7 @@ f1 = 2
     let expected = "\
 [WARNING] both `[..]/.cargo/config` and `[..]/.cargo/config.toml` exist. Using `[..]/.cargo/config`
 ";
-    assert_match(expected, &output);
+    compare::assert_match_exact(expected, &output);
 }
 
 #[cargo_test]
@@ -439,7 +432,7 @@ unused = 456
     let expected = "\
 warning: unused config key `S.unused` in `[..]/.cargo/config.toml`
 ";
-    assert_match(expected, &output);
+    compare::assert_match_exact(expected, &output);
 }
 
 #[cargo_test]
