@@ -58,7 +58,7 @@ fn dont_include() {
             "\
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] a v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -103,7 +103,7 @@ fn works_through_the_registry() {
 [CHECKING] baz v0.1.0
 [CHECKING] bar v0.1.0
 [CHECKING] foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -152,7 +152,7 @@ fn ignore_version_from_other_platform() {
 [DOWNLOADED] [..]
 [CHECKING] bar v0.1.0
 [CHECKING] foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();

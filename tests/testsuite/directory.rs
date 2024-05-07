@@ -151,7 +151,7 @@ fn simple_install() {
 [LOCKING] 2 packages to latest compatible versions
 [COMPILING] foo v0.0.1
 [COMPILING] bar v0.1.0
-[FINISHED] `release` profile [optimized] target(s) in [..]s
+[FINISHED] release [optimized] target(s) in [..]s
 [INSTALLING] [..]bar[..]
 [INSTALLED] package `bar v0.1.0` (executable `bar[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
@@ -247,7 +247,7 @@ fn install_without_feature_dep() {
 [LOCKING] 2 packages to latest compatible versions
 [COMPILING] foo v0.0.1
 [COMPILING] bar v0.1.0
-[FINISHED] `release` profile [optimized] target(s) in [..]s
+[FINISHED] release [optimized] target(s) in [..]s
 [INSTALLING] [..]bar[..]
 [INSTALLED] package `bar v0.1.0` (executable `bar[EXE]`)
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries

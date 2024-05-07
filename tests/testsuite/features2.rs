@@ -1124,7 +1124,7 @@ fn proc_macro_ws() {
             "\
 [FRESH] foo v0.1.0 [..]
 [FRESH] pm v0.1.0 [..]
-[FINISHED] `dev` profile [..]
+[FINISHED] dev [..]
 ",
         )
         .run();
@@ -2647,7 +2647,7 @@ fn dep_with_optional_host_deps_activated() {
 [COMPILING] serde_derive v0.1.0 ([CWD]/serde_derive)
 [COMPILING] serde v0.1.0 ([CWD]/serde)
 [CHECKING] foo v0.1.0 ([CWD])
-[FINISHED] `dev` profile [..]
+[FINISHED] dev [..]
 ",
         )
         .run();

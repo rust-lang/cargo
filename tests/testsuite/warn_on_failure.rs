@@ -71,7 +71,7 @@ fn no_warning_on_success() {
 [DOWNLOADED] bar v0.0.1 ([..])
 [COMPILING] bar v0.0.1
 [COMPILING] foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();

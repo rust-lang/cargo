@@ -686,7 +686,7 @@ fn unused_keys() {
             "\
 warning: unused manifest key: target.foo.bar
 [CHECKING] foo v0.1.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -711,7 +711,7 @@ warning: unused manifest key: target.foo.bar
             "\
 warning: unused manifest key: package.bulid
 [CHECKING] foo [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -739,7 +739,7 @@ warning: unused manifest key: package.bulid
             "\
 warning: unused manifest key: lib.build
 [CHECKING] foo [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -764,7 +764,7 @@ fn unused_keys_in_virtual_manifest() {
             "\
 [WARNING] [..]/foo/Cargo.toml: unused manifest key: workspace.bulid
 [CHECKING] bar [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();

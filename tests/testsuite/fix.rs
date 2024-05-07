@@ -919,7 +919,7 @@ fn fix_overlapping() {
 [CHECKING] foo [..]
 [MIGRATING] src/lib.rs from 2015 edition to 2018
 [FIXED] src/lib.rs (2 fixes)
-[FINISHED] `dev` profile [..]
+[FINISHED] dev [..]
 ",
         )
         .run();
@@ -1105,7 +1105,7 @@ fn doesnt_rebuild_dependencies() {
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([..])
 [CHECKING] foo v0.1.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1116,7 +1116,7 @@ fn doesnt_rebuild_dependencies() {
         .with_stderr(
             "\
 [CHECKING] foo v0.1.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1212,7 +1212,7 @@ fn only_warn_for_relevant_crates() {
 [CHECKING] a v0.1.0 ([..])
 [CHECKING] foo v0.1.0 ([..])
 [MIGRATING] src/lib.rs from 2015 edition to 2018
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();

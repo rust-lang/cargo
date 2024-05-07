@@ -1060,7 +1060,7 @@ dependencies = [
 [ADDING] foo v0.0.1 ([CWD])
 [CHECKING] dep1 v0.5.0 ({url}?{ref_kind}={git_ref}#[..])
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [..]
+[FINISHED] dev [..]
 "
         ))
         .run();
@@ -1075,7 +1075,7 @@ dependencies = [
         .with_stderr(format!(
             "\
 [UPDATING] git repository `{url}`
-[FINISHED] `dev` profile [..]
+[FINISHED] dev [..]
 "
         ))
         .run();
@@ -1156,7 +1156,7 @@ dependencies = [
 [ADDING] foo v0.0.1 ([CWD])
 [CHECKING] dep1 v0.5.0 ({url}?{ref_kind}={git_ref}#[..])
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [..]
+[FINISHED] dev [..]
 "
         ))
         .run();
@@ -1166,9 +1166,7 @@ dependencies = [
 
     // Unlike v3_and_git_url_encoded, v4 encodes URL parameters so no git
     // repository re-clone happen.
-    p.cargo("check")
-        .with_stderr("[FINISHED] `dev` profile [..]")
-        .run();
+    p.cargo("check").with_stderr("[FINISHED] dev [..]").run();
 }
 
 #[cargo_test]

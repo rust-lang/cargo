@@ -241,7 +241,7 @@ fn clean_release() {
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([..])
-[FINISHED] `release` profile [optimized] target(s) in [..]
+[FINISHED] release [optimized] target(s) in [..]
 ",
         )
         .run();
@@ -330,7 +330,7 @@ fn build_script() {
 [RUNNING] `rustc [..] build.rs [..]`
 [RUNNING] `[..]build-script-build`
 [RUNNING] `rustc [..] src/main.rs [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();

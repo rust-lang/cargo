@@ -175,7 +175,7 @@ fn warn_on_unused_key() {
 [WARNING] [CWD]/Cargo.toml: unused manifest key: lints.rust.rust-2018-idioms.unused
 [WARNING] [CWD]/Cargo.toml: unused manifest key: workspace.lints.rust.rust-2018-idioms.unused
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -733,7 +733,7 @@ pub const Ĕ: i32 = 2;
         .with_stderr(
             "\
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -742,7 +742,7 @@ pub const Ĕ: i32 = 2;
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]s
 [DOCTEST] foo
 ",
         )

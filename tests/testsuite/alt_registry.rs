@@ -38,7 +38,7 @@ fn depend_on_alt_registry() {
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
 [CHECKING] bar v0.0.1 (registry `alternative`)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -51,7 +51,7 @@ fn depend_on_alt_registry() {
             "\
 [CHECKING] bar v0.0.1 (registry `alternative`)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -95,7 +95,7 @@ fn depend_on_alt_registry_depends_on_same_registry_no_index() {
 [CHECKING] baz v0.0.1 (registry `alternative`)
 [CHECKING] bar v0.0.1 (registry `alternative`)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -139,7 +139,7 @@ fn depend_on_alt_registry_depends_on_same_registry() {
 [CHECKING] baz v0.0.1 (registry `alternative`)
 [CHECKING] bar v0.0.1 (registry `alternative`)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -184,7 +184,7 @@ fn depend_on_alt_registry_depends_on_crates_io() {
 [CHECKING] baz v0.0.1
 [CHECKING] bar v0.0.1 (registry `alternative`)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -220,7 +220,7 @@ fn registry_and_path_dep_works() {
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.0.1 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -428,7 +428,7 @@ fn alt_registry_and_crates_io_deps() {
 [CHECKING] alt_reg_dep v0.1.0 (registry `alternative`)
 [CHECKING] crates_io_dep v0.0.1
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -701,7 +701,7 @@ fn patch_alt_reg() {
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([CWD]/bar)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -796,7 +796,7 @@ fn no_api() {
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
 [CHECKING] bar v0.0.1 (registry `alternative`)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -1359,7 +1359,7 @@ fn registries_index_relative_url() {
 [DOWNLOADED] bar v0.0.1 (registry `relative`)
 [CHECKING] bar v0.0.1 (registry `relative`)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();

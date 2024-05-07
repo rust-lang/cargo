@@ -826,12 +826,8 @@ impl<'gctx> DrainState<'gctx> {
             // `display_error` inside `handle_error`.
             Some(anyhow::Error::new(AlreadyPrintedError::new(error)))
         } else if self.queue.is_empty() && self.pending_queue.is_empty() {
-            let profile_link = build_runner.bcx.gctx.shell().err_hyperlink(
-                "https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles",
-            );
-            let message = format!(
-                "{profile_link}`{profile_name}` profile [{opt_type}]{profile_link:#} target(s) in {time_elapsed}",
-            );
+            let message =
+                format!("`{profile_name}` profile [{opt_type}] target(s) in {time_elapsed}",);
             if !build_runner.bcx.build_config.build_plan {
                 // It doesn't really matter if this fails.
                 let _ = build_runner.bcx.gctx.shell().status("Finished", message);

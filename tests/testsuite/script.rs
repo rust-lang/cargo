@@ -37,7 +37,7 @@ args: []
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] echo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/echo[EXE]`
 ",
         )
@@ -61,7 +61,7 @@ args: []
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] echo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/echo[EXE]`
 ",
         )
@@ -84,7 +84,7 @@ args: []
         .with_stderr(
             "\
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `target/debug/foo[EXE]`
 ",
         )
@@ -140,7 +140,7 @@ args: []
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] echo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/echo[EXE]`
 ",
         )
@@ -231,7 +231,7 @@ fn main() {
         .with_stderr(
             "\
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE]`
 ",
         )
@@ -262,7 +262,7 @@ fn main() {
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE]`
 ",
         )
@@ -291,7 +291,7 @@ fn main() {
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE]`
 ",
         )
@@ -307,7 +307,7 @@ fn main() {
         .with_stderr(
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE]`
 ",
         )
@@ -325,7 +325,7 @@ fn main() {
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE]`
 ",
         )
@@ -437,7 +437,7 @@ fn main() {
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE]`
 ",
         )
@@ -462,7 +462,7 @@ args: ["-NotAnArg"]
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE] -NotAnArg`
 ",
         )
@@ -487,7 +487,7 @@ args: ["-NotAnArg"]
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE] -NotAnArg`
 ",
         )
@@ -512,7 +512,7 @@ args: ["--help"]
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE] --help`
 ",
         )
@@ -536,7 +536,7 @@ args: []
         .with_stderr(
             r#"[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] s-h-w-c- v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/s-h-w-c-[EXE]`
 "#,
         )
@@ -560,7 +560,7 @@ args: []
         .with_stderr(
             r#"[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] answer v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/answer[EXE]`
 "#,
         )
@@ -582,7 +582,7 @@ args: []
         .with_stderr(
             r#"[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] package v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/package[EXE]`
 "#,
         )
@@ -741,7 +741,7 @@ fn main() {
 [DOWNLOADED] script v1.0.0 (registry `dummy-registry`)
 [COMPILING] script v1.0.0
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE] --help`
 ",
         )
@@ -778,7 +778,7 @@ fn main() {
 [LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE] --help`
 ",
         )
@@ -807,7 +807,7 @@ fn main() {
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE] --help`
 ",
         )
@@ -836,7 +836,7 @@ fn main() {
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE] --help`
 ",
         )
@@ -861,7 +861,7 @@ args: []
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[ROOT]/home/.cargo/target/[..]/debug/script[EXE]`
 ",
         )
@@ -889,7 +889,7 @@ args: []
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[ROOT]/home/.cargo/target/[..]/debug/script[EXE]`
 ",
         )
@@ -952,7 +952,7 @@ fn cmd_check_with_embedded() {
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [CHECKING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -1013,7 +1013,7 @@ fn cmd_build_with_embedded() {
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
@@ -1041,7 +1041,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] unittests script.rs ([..])
 ",
         )
@@ -1254,7 +1254,7 @@ args: []
             "\
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]s
 [RUNNING] `[..]/debug/script[EXE]`
 ",
         )

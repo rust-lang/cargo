@@ -26,7 +26,7 @@ fn pathless_tools() {
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc [..] -C linker=nonexistent-linker [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -52,7 +52,7 @@ fn custom_linker_cfg() {
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc [..] -C linker=nonexistent-linker [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -85,7 +85,7 @@ fn custom_linker_cfg_precedence() {
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc [..] -C linker=nonexistent-linker [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -151,7 +151,7 @@ fn absolute_tools() {
             "\
 [COMPILING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc [..] -C linker=[..]bogus/nonexistent-linker [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -195,7 +195,7 @@ fn relative_tools() {
             "\
 [COMPILING] bar v0.5.0 ([CWD])
 [RUNNING] `rustc [..] -C linker={prefix}/./tools/nonexistent-linker [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
             prefix = prefix,
         ))
@@ -227,7 +227,7 @@ fn custom_runner() {
         .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
         )
@@ -239,7 +239,7 @@ fn custom_runner() {
             "\
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] test [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r [..]/target/debug/deps/test-[..][EXE] --param`
 ",
         )
@@ -252,7 +252,7 @@ fn custom_runner() {
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
-[FINISHED] `bench` profile [optimized] target(s) in [..]
+[FINISHED] bench [optimized] target(s) in [..]
 [RUNNING] `nonexistent-runner -r [..]/target/release/deps/bench-[..][EXE] --param --bench`
 ",
         )
@@ -278,7 +278,7 @@ fn custom_runner_cfg() {
         .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
         )
@@ -312,7 +312,7 @@ fn custom_runner_cfg_precedence() {
         .with_stderr_contains(
             "\
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 [RUNNING] `nonexistent-runner -r target/debug/foo[EXE] --param`
 ",
         )
@@ -362,7 +362,7 @@ fn custom_runner_env() {
         .with_stderr(&format!(
             "\
 [COMPILING] foo [..]
-[FINISHED] `dev` profile [..]
+[FINISHED] dev [..]
 [RUNNING] `nonexistent-runner --foo target/debug/foo[EXE]`
 [ERROR] could not execute process `nonexistent-runner --foo target/debug/foo[EXE]` (never executed)
 

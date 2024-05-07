@@ -529,7 +529,7 @@ fn no_feature_doesnt_build() {
             "\
 [LOCKING] 2 packages to latest compatible versions
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -543,7 +543,7 @@ fn no_feature_doesnt_build() {
 [DIRTY-MSVC] foo v0.0.1 ([CWD]): the list of features changed
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -591,7 +591,7 @@ fn default_feature_pulled_in() {
 [LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.0.1 ([CWD]/bar)
 [COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -603,7 +603,7 @@ fn default_feature_pulled_in() {
 [DIRTY-MSVC] foo v0.0.1 ([CWD]): the list of features changed
 [COMPILING] foo v0.0.1 ([CWD])
 [RUNNING] `rustc --crate-name foo [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -719,7 +719,7 @@ fn groups_on_groups_on_groups() {
 [CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
 [CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -770,7 +770,7 @@ fn many_cli_features() {
 [CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
 [CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -857,7 +857,7 @@ fn union_features() {
 [CHECKING] d2 v0.0.1 ([CWD]/d2)
 [CHECKING] d1 v0.0.1 ([CWD]/d1)
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -905,7 +905,7 @@ fn many_features_no_rebuilds() {
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] a v0.1.0 ([CWD]/a)
 [CHECKING] b v0.1.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -916,7 +916,7 @@ fn many_features_no_rebuilds() {
             "\
 [FRESH] a v0.1.0 ([..]/a)
 [FRESH] b v0.1.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1187,7 +1187,7 @@ fn optional_and_dev_dep() {
             "\
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] test v0.1.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1467,7 +1467,7 @@ fn many_cli_features_comma_delimited() {
 [CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
 [CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1536,7 +1536,7 @@ fn many_cli_features_comma_and_space_delimited() {
 [CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
 [CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
 ",
         )
         .run();
@@ -1704,7 +1704,7 @@ fn warn_if_default_features() {
 [WARNING] `default-features = [".."]` was found in [features]. Did you mean to use `default = [".."]`?
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [..]
             "#.trim(),
         ).run();
 }
