@@ -397,6 +397,67 @@ fn profile_panic_test_bench() {
 }
 
 #[cargo_test]
+fn profile_panic_test_with_custom_harness() {
+    // Custom harness can have `-C panic="…"` passed in.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                [[test]]
+                name = "custom"
+                harness = false
+                [[test]]
+                name = "libtest"
+                [[bench]]
+                name = "custom"
+                harness = false
+                [[bench]]
+                name = "libtest"
+                [profile.test]
+                panic = "abort"
+                [profile.bench]
+                panic = "abort"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("tests/custom.rs", r#"fn main() { panic!("abort!"); }"#)
+        .file("tests/libtest.rs", "")
+        .file("benches/custom.rs", r#"fn main() { panic!("abort!"); }"#)
+        .file("benches/libtest.rs", "")
+        .build();
+
+    // panic abort on custom harness
+    p.cargo("test --test custom --verbose")
+        .with_stderr_does_not_contain("[..]panic=abort[..]")
+        .with_stderr_contains("[..]thread '[..]' panicked at [..]")
+        .with_stderr_does_not_contain(
+            "[..]process didn't exit successfully: `[..]/target/debug/deps/custom-[..]",
+        )
+        .with_status(101)
+        .run();
+    p.cargo("bench --bench custom --verbose")
+        .with_stderr_does_not_contain("[..]panic=abort[..]")
+        .with_stderr_contains("[..]thread '[..]' panicked at [..]")
+        .with_stderr_does_not_contain(
+            "[..]process didn't exit successfully: `[..]/target/release/deps/custom-[..]",
+        )
+        .with_status(101)
+        .run();
+
+    // panic behaviour of libtest cannot be set as `abort` as of now.
+    p.cargo("test --test libtest --verbose")
+        .with_stderr_does_not_contain("panic=abort")
+        .with_stdout_contains("running 0 tests")
+        .run();
+    p.cargo("bench --bench libtest --verbose")
+        .with_stderr_does_not_contain("panic=abort")
+        .with_stdout_contains("running 0 tests")
+        .run();
+}
+
+#[cargo_test]
 fn profile_doc_deprecated() {
     let p = project()
         .file(
