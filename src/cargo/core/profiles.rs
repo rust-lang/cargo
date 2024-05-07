@@ -1109,19 +1109,28 @@ impl UnitFor {
     /// whether `panic=abort` is supported for tests. Historical versions of
     /// rustc did not support this, but newer versions do with an unstable
     /// compiler flag.
-    pub fn new_test(gctx: &GlobalContext, root_compile_kind: CompileKind) -> UnitFor {
+    ///
+    /// Moreover, `target` is taken here for determining whether the test is
+    /// driven by libtest harness. Cargo relaxes the panic behaviour if it is
+    /// a custom harness, which is not required to be always unwound.
+    pub fn new_test(
+        gctx: &GlobalContext,
+        target: &Target,
+        root_compile_kind: CompileKind,
+    ) -> UnitFor {
+        // We're testing out an unstable feature (`-Zpanic-abort-tests`)
+        // which inherits the panic setting from the dev/release profile
+        // (basically avoid recompiles) but historical defaults required
+        // that we always unwound.
+        let panic_setting = if gctx.cli_unstable().panic_abort_tests || !target.harness() {
+            PanicSetting::ReadProfile
+        } else {
+            PanicSetting::AlwaysUnwind
+        };
         UnitFor {
             host: false,
             host_features: false,
-            // We're testing out an unstable feature (`-Zpanic-abort-tests`)
-            // which inherits the panic setting from the dev/release profile
-            // (basically avoid recompiles) but historical defaults required
-            // that we always unwound.
-            panic_setting: if gctx.cli_unstable().panic_abort_tests {
-                PanicSetting::ReadProfile
-            } else {
-                PanicSetting::AlwaysUnwind
-            },
+            panic_setting,
             root_compile_kind,
             artifact_target_for_features: None,
         }
@@ -1130,8 +1139,14 @@ impl UnitFor {
     /// This is a special case for unit tests of a proc-macro.
     ///
     /// Proc-macro unit tests are forced to be run on the host.
-    pub fn new_host_test(gctx: &GlobalContext, root_compile_kind: CompileKind) -> UnitFor {
-        let mut unit_for = UnitFor::new_test(gctx, root_compile_kind);
+    ///
+    /// See [`UnitFor::new_test`] for more.
+    pub fn new_host_test(
+        gctx: &GlobalContext,
+        target: &Target,
+        root_compile_kind: CompileKind,
+    ) -> UnitFor {
+        let mut unit_for = UnitFor::new_test(gctx, target, root_compile_kind);
         unit_for.host = true;
         unit_for.host_features = true;
         unit_for

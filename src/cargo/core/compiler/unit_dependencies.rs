@@ -213,9 +213,9 @@ fn deps_of_roots(roots: &[Unit], state: &mut State<'_, '_>) -> CargoResult<()> {
             if unit.target.proc_macro() {
                 // Special-case for proc-macros, which are forced to for-host
                 // since they need to link with the proc_macro crate.
-                UnitFor::new_host_test(state.gctx, root_compile_kind)
+                UnitFor::new_host_test(state.gctx, &unit.target, root_compile_kind)
             } else {
-                UnitFor::new_test(state.gctx, root_compile_kind)
+                UnitFor::new_test(state.gctx, &unit.target, root_compile_kind)
             }
         } else if unit.target.is_custom_build() {
             // This normally doesn't happen, except `clean` aggressively

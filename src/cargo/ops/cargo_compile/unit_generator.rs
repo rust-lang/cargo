@@ -148,7 +148,7 @@ impl<'a> UnitGenerator<'a, '_> {
                     //
                     // Forcing the lib to be compiled three times during `cargo
                     // test` is probably also not desirable.
-                    UnitFor::new_test(self.ws.gctx(), kind)
+                    UnitFor::new_test(self.ws.gctx(), target, kind)
                 } else if target.for_host() {
                     // Proc macro / plugin should not have `panic` set.
                     UnitFor::new_compiler(kind)

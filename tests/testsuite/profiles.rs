@@ -428,22 +428,29 @@ fn profile_panic_test_with_custom_harness() {
         .file("benches/libtest.rs", "")
         .build();
 
+    #[cfg(not(windows))]
+    let exit_code = 101;
+    #[cfg(windows)]
+    let exit_code = windows_sys::Win32::Foundation::STATUS_STACK_BUFFER_OVERRUN;
+
     // panic abort on custom harness
     p.cargo("test --test custom --verbose")
-        .with_stderr_does_not_contain("[..]panic=abort[..]")
+        .with_stderr_contains("[RUNNING] `rustc --crate-name custom [..]-C panic=abort [..]")
         .with_stderr_contains("[..]thread '[..]' panicked at [..]")
-        .with_stderr_does_not_contain(
+        .with_stderr_contains("[..]abort![..]")
+        .with_stderr_contains(
             "[..]process didn't exit successfully: `[..]/target/debug/deps/custom-[..]",
         )
-        .with_status(101)
+        .with_status(exit_code)
         .run();
     p.cargo("bench --bench custom --verbose")
-        .with_stderr_does_not_contain("[..]panic=abort[..]")
+        .with_stderr_contains("[RUNNING] `rustc --crate-name custom [..]-C panic=abort [..]")
         .with_stderr_contains("[..]thread '[..]' panicked at [..]")
-        .with_stderr_does_not_contain(
+        .with_stderr_contains("[..]abort![..]")
+        .with_stderr_contains(
             "[..]process didn't exit successfully: `[..]/target/release/deps/custom-[..]",
         )
-        .with_status(101)
+        .with_status(exit_code)
         .run();
 
     // panic behaviour of libtest cannot be set as `abort` as of now.
