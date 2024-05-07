@@ -725,13 +725,26 @@ impl BuildOutput {
         fn check_minimum_supported_rust_version_for_new_syntax(
             pkg_descr: &str,
             msrv: &Option<RustVersion>,
+            key: &str,
         ) -> CargoResult<()> {
             if let Some(msrv) = msrv {
                 let new_syntax_added_in = RustVersion::from_str("1.77.0")?;
                 if !new_syntax_added_in.is_compatible_with(msrv.as_partial()) {
+                    let prefix = format!("{key}=");
+
+                    let old_syntax_suggestion = RESERVED_PREFIXES
+                        .contains(&&*prefix)
+                        .then(|| {
+                            format!(
+                                "Consider using the old `cargo:` syntax in front of `{prefix}`.\n"
+                            )
+                        })
+                        .unwrap_or_default();
+
                     bail!(
                         "the `cargo::` syntax for build script output instructions was added in \
                         Rust 1.77.0, but the minimum supported Rust version of `{pkg_descr}` is {msrv}.\n\
+                        {old_syntax_suggestion}\
                         {DOCS_LINK_SUGGESTION}"
                     );
                 }
@@ -793,9 +806,10 @@ impl BuildOutput {
             };
             let mut old_syntax = false;
             let (key, value) = if let Some(data) = line.strip_prefix("cargo::") {
-                check_minimum_supported_rust_version_for_new_syntax(pkg_descr, msrv)?;
                 // For instance, `cargo::rustc-flags=foo` or `cargo::metadata=foo=bar`.
-                parse_directive(whence.as_str(), line, data, old_syntax)?
+                let (key, value) = parse_directive(whence.as_str(), line, data, old_syntax)?;
+                check_minimum_supported_rust_version_for_new_syntax(pkg_descr, msrv, key)?;
+                (key, value)
             } else if let Some(data) = line.strip_prefix("cargo:") {
                 old_syntax = true;
                 // For instance, `cargo:rustc-flags=foo`.
