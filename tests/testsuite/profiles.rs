@@ -366,37 +366,6 @@ must be a boolean (`true`/`false`) or a string (`\"thin\"`/`\"fat\"`/`\"off\"`) 
 }
 
 #[cargo_test]
-fn profile_panic_test_bench() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                edition = "2015"
-
-                [profile.test]
-                panic = "abort"
-
-                [profile.bench]
-                panic = "abort"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("build")
-        .with_stderr_contains(
-            "\
-[WARNING] `panic` setting is ignored for `bench` profile
-[WARNING] `panic` setting is ignored for `test` profile
-",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn profile_panic_test_with_custom_harness() {
     // Custom harness can have `-C panic="…"` passed in.
     let p = project()

@@ -4690,7 +4690,7 @@ fn panic_abort_only_test() {
         .build();
 
     p.cargo("test -Z panic-abort-tests -v")
-        .with_stderr_contains("warning: `panic` setting is ignored for `test` profile")
+        .with_stderr_contains("[..]--crate-name foo [..]-C panic=abort[..]")
         .masquerade_as_nightly_cargo(&["panic-abort-tests"])
         .run();
 }

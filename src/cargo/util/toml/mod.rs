@@ -2144,11 +2144,6 @@ pub fn validate_profile(
         "doc" => {
             warnings.push("profile `doc` is deprecated and has no effect".to_string());
         }
-        "test" | "bench" => {
-            if root.panic.is_some() {
-                warnings.push(format!("`panic` setting is ignored for `{}` profile", name))
-            }
-        }
         _ => {}
     }
 
