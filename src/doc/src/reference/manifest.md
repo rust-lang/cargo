@@ -544,7 +544,7 @@ both `src/bin/a.rs` and `src/bin/b.rs`:
 default-run = "a"
 ```
 
-#### The `lints` section
+## The `[lints]` section
 
 Override the default level of lints from different tools by assigning them to a new level in a
 table, for example:
