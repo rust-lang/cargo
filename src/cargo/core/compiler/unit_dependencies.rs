@@ -24,7 +24,7 @@ use crate::core::compiler::unit_graph::{UnitDep, UnitGraph};
 use crate::core::compiler::{
     CompileKind, CompileMode, CrateType, RustcTargetData, Unit, UnitInterner,
 };
-use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
+use crate::core::dependency::{Artifact, ArtifactKind, ArtifactTarget, DepKind};
 use crate::core::profiles::{Profile, Profiles, UnitFor};
 use crate::core::resolver::features::{FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::Resolve;
@@ -555,17 +555,20 @@ fn artifact_targets_to_unit_deps(
     let ret =
         match_artifacts_kind_with_targets(dep, artifact_pkg.targets(), parent.pkg.name().as_str())?
             .into_iter()
-            .map(|(_artifact_kind, target)| target)
-            .flat_map(|target| {
+            .flat_map(|(artifact_kind, target)| {
                 // We split target libraries into individual units, even though rustc is able
-                // to produce multiple kinds in an single invocation for the sole reason that
+                // to produce multiple kinds in a single invocation for the sole reason that
                 // each artifact kind has its own output directory, something we can't easily
                 // teach rustc for now.
                 match target.kind() {
                     TargetKind::Lib(kinds) => Box::new(
                         kinds
                             .iter()
-                            .filter(|tk| matches!(tk, CrateType::Cdylib | CrateType::Staticlib))
+                            .filter(move |tk| match (tk, artifact_kind) {
+                                (CrateType::Cdylib, ArtifactKind::Cdylib) => true,
+                                (CrateType::Staticlib, ArtifactKind::Staticlib) => true,
+                                _ => false,
+                            })
                             .map(|target_kind| {
                                 new_unit_dep(
                                     state,
