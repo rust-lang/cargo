@@ -722,24 +722,28 @@ impl BuildOutput {
         const DOCS_LINK_SUGGESTION: &str = "See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
                 for more information about build script outputs.";
 
+        fn has_reserved_prefix(flag: &str) -> bool {
+            RESERVED_PREFIXES
+                .iter()
+                .any(|reserved_prefix| flag.starts_with(reserved_prefix))
+        }
+
         fn check_minimum_supported_rust_version_for_new_syntax(
             pkg_descr: &str,
             msrv: &Option<RustVersion>,
-            key: &str,
+            flag: &str,
         ) -> CargoResult<()> {
             if let Some(msrv) = msrv {
                 let new_syntax_added_in = RustVersion::from_str("1.77.0")?;
                 if !new_syntax_added_in.is_compatible_with(msrv.as_partial()) {
-                    let prefix = format!("{key}=");
-
-                    let old_syntax_suggestion = RESERVED_PREFIXES
-                        .contains(&&*prefix)
-                        .then(|| {
-                            format!(
-                                "Consider using the old `cargo:` syntax in front of `{prefix}`.\n"
-                            )
-                        })
-                        .unwrap_or_default();
+                    let old_syntax_suggestion = if has_reserved_prefix(flag) {
+                        format!("Consider using the old `cargo:` syntax in front of `{flag}`.\n")
+                    } else if flag.starts_with("metadata=") {
+                        let old_format_flag = flag.strip_prefix("metadata=").unwrap();
+                        format!("Consider using the old `cargo:{old_format_flag}` syntax instead of `cargo::{flag}` (note the single colon).\n")
+                    } else {
+                        String::new()
+                    };
 
                     bail!(
                         "the `cargo::` syntax for build script output instructions was added in \
@@ -806,17 +810,13 @@ impl BuildOutput {
             };
             let mut old_syntax = false;
             let (key, value) = if let Some(data) = line.strip_prefix("cargo::") {
+                check_minimum_supported_rust_version_for_new_syntax(pkg_descr, msrv, data)?;
                 // For instance, `cargo::rustc-flags=foo` or `cargo::metadata=foo=bar`.
-                let (key, value) = parse_directive(whence.as_str(), line, data, old_syntax)?;
-                check_minimum_supported_rust_version_for_new_syntax(pkg_descr, msrv, key)?;
-                (key, value)
+                parse_directive(whence.as_str(), line, data, old_syntax)?
             } else if let Some(data) = line.strip_prefix("cargo:") {
                 old_syntax = true;
                 // For instance, `cargo:rustc-flags=foo`.
-                if RESERVED_PREFIXES
-                    .iter()
-                    .any(|prefix| data.starts_with(prefix))
-                {
+                if has_reserved_prefix(data) {
                     parse_directive(whence.as_str(), line, data, old_syntax)?
                 } else {
                     // For instance, `cargo:foo=bar`.

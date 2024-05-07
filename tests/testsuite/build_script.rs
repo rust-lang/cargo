@@ -5541,7 +5541,7 @@ fn test_new_syntax_with_old_msrv_and_reserved_prefix() {
 [COMPILING] foo [..]
 error: the `cargo::` syntax for build script output instructions was added in Rust 1.77.0, \
 but the minimum supported Rust version of `foo v0.5.0 ([ROOT]/foo)` is 1.60.0.
-Consider using the old `cargo:` syntax in front of `rustc-check-cfg=`.
+Consider using the old `cargo:` syntax in front of `rustc-check-cfg=cfg(foo)`.
 See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
 for more information about build script outputs.
 ",
