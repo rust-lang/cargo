@@ -197,7 +197,7 @@ pub fn output_sbom(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> Cargo
         let sbom = Sbom::new(unit, packages.clone(), rustc.clone());
 
         let mut outfile = BufWriter::new(paths::create(sbom_output_file)?);
-        let output = serde_json::to_string_pretty(&sbom)?;
+        let output = serde_json::to_string(&sbom)?;
         write!(outfile, "{}", output)?;
     }
 

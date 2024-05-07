@@ -12,12 +12,7 @@ use cargo_test_support::ProjectBuilder;
 #[track_caller]
 fn assert_json_output(actual_json_file: PathBuf, expected_json: &str) {
     assert!(actual_json_file.is_file());
-
     let actual_json = std::fs::read_to_string(actual_json_file).expect("Failed to read file");
-    let actual_json: serde_json::Value =
-        serde_json::from_str(actual_json.as_str()).expect("Failed to parse JSON");
-    let actual_json = serde_json::to_string(&actual_json).expect("Failed to convert JSON");
-
     if let Err(error) = compare::match_json(expected_json, &actual_json, None) {
         panic!("{}", error.to_string());
     }
