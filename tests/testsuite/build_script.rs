@@ -5509,6 +5509,47 @@ for more information about build script outputs.
 }
 
 #[cargo_test]
+fn test_new_syntax_with_old_msrv_and_reserved_prefix() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                edition = "2015"
+                authors = []
+                build = "build.rs"
+                rust-version = "1.60.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo::rustc-check-cfg=cfg(foo)");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+[COMPILING] foo [..]
+error: the `cargo::` syntax for build script output instructions was added in Rust 1.77.0, \
+but the minimum supported Rust version of `foo v0.5.0 ([ROOT]/foo)` is 1.60.0.
+Consider using the old `cargo:` syntax in front of `rustc-check-cfg=`.
+See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
+for more information about build script outputs.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn test_new_syntax_with_compatible_partial_msrv() {
     let p = project()
         .file(
