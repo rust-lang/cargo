@@ -1,10 +1,10 @@
 //! Tests for the --config CLI option.
 
 use super::config::{
-    assert_error, assert_match, read_output, write_config_at, write_config_toml,
-    GlobalContextBuilder,
+    assert_error, read_output, write_config_at, write_config_toml, GlobalContextBuilder,
 };
 use cargo::util::context::Definition;
+use cargo_test_support::compare;
 use cargo_test_support::paths;
 use std::{collections::HashMap, fs};
 
@@ -344,7 +344,7 @@ fn unused_key() {
     let expected = "\
 warning: unused config key `build.unused` in `--config cli option`
 ";
-    assert_match(expected, &output);
+    compare::assert_match_exact(expected, &output);
 }
 
 #[cargo_test]
