@@ -625,7 +625,7 @@ fn custom_build_invalid_host_config_feature_flag() {
         .with_status(101)
         .with_stderr_contains(
             "\
-error: the -Zhost-config flag requires the -Ztarget-applies-to-host flag to be set
+[ERROR] the -Zhost-config flag requires the -Ztarget-applies-to-host flag to be set
 ",
         )
         .run();
@@ -1038,7 +1038,7 @@ fn links_duplicates() {
 
     p.cargo("build").with_status(101)
                        .with_stderr("\
-error: failed to select a version for `a-sys`.
+[ERROR] failed to select a version for `a-sys`.
     ... required by package `foo v0.5.0 ([..])`
 versions that meet the requirements `*` are: 0.5.0
 
@@ -1163,7 +1163,7 @@ fn links_duplicates_deep_dependency() {
 
     p.cargo("build").with_status(101)
                        .with_stderr("\
-error: failed to select a version for `a-sys`.
+[ERROR] failed to select a version for `a-sys`.
     ... required by package `a v0.5.0 ([..])`
     ... which satisfies path dependency `a` of package `foo v0.5.0 ([..])`
 versions that meet the requirements `*` are: 0.5.0
@@ -4508,7 +4508,7 @@ fn links_duplicates_with_cycle() {
 
     p.cargo("build").with_status(101)
                        .with_stderr("\
-error: failed to select a version for `a`.
+[ERROR] failed to select a version for `a`.
     ... required by package `foo v0.5.0 ([..])`
 versions that meet the requirements `*` are: 0.5.0
 
@@ -5315,7 +5315,7 @@ fn wrong_output() {
         .with_stderr(
             "\
 [COMPILING] foo [..]
-error: invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo::example`
+[ERROR] invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo::example`
 Expected a line with `cargo::KEY=VALUE` with an `=` character, but none was found.
 See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
 for more information about build script outputs.
@@ -5405,7 +5405,7 @@ fn test_invalid_old_syntax() {
         .with_stderr(
             "\
 [COMPILING] foo [..]
-error: invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo:foo`
+[ERROR] invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo:foo`
 Expected a line with `cargo:KEY=VALUE` with an `=` character, but none was found.
 See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
 for more information about build script outputs.
@@ -5434,7 +5434,7 @@ fn test_invalid_new_syntax() {
         .with_stderr(
             "\
 [COMPILING] foo [..]
-error: invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo::metadata=foo`
+[ERROR] invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo::metadata=foo`
 Expected a line with `cargo::metadata=KEY=VALUE` with an `=` character, but none was found.
 See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
 for more information about build script outputs.
@@ -5459,7 +5459,7 @@ for more information about build script outputs.
         .with_stderr(
             "\
 [COMPILING] foo [..]
-error: invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo::foo=bar`
+[ERROR] invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo::foo=bar`
 Unknown key: `foo`.
 See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
 for more information about build script outputs.
@@ -5499,7 +5499,89 @@ fn test_new_syntax_with_old_msrv() {
         .with_stderr_contains(
             "\
 [COMPILING] foo [..]
-error: the `cargo::` syntax for build script output instructions was added in Rust 1.77.0, \
+[ERROR] the `cargo::` syntax for build script output instructions was added in Rust 1.77.0, \
+but the minimum supported Rust version of `foo v0.5.0 ([ROOT]/foo)` is 1.60.0.
+Switch to the old `cargo:foo=bar` syntax instead of `cargo::metadata=foo=bar` (note the single colon).
+See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
+for more information about build script outputs.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn test_new_syntax_with_old_msrv_and_reserved_prefix() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                edition = "2015"
+                authors = []
+                build = "build.rs"
+                rust-version = "1.60.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo::rustc-check-cfg=cfg(foo)");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+[COMPILING] foo [..]
+[ERROR] the `cargo::` syntax for build script output instructions was added in Rust 1.77.0, \
+but the minimum supported Rust version of `foo v0.5.0 ([ROOT]/foo)` is 1.60.0.
+Switch to the old `cargo:rustc-check-cfg=cfg(foo)` syntax (note the single colon).
+See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
+for more information about build script outputs.
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn test_new_syntax_with_old_msrv_and_unknown_prefix() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                edition = "2015"
+                authors = []
+                build = "build.rs"
+                rust-version = "1.60.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo::foo=bar");
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_contains(
+            "\
+[COMPILING] foo [..]
+[ERROR] the `cargo::` syntax for build script output instructions was added in Rust 1.77.0, \
 but the minimum supported Rust version of `foo v0.5.0 ([ROOT]/foo)` is 1.60.0.
 See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
 for more information about build script outputs.
