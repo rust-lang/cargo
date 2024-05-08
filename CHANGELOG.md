@@ -63,14 +63,14 @@
   [#13632](https://github.com/rust-lang/cargo/pull/13632)
 - Warn on unused `workspace.dependencies` keys on virtual workspaces.
   [#13664](https://github.com/rust-lang/cargo/pull/13664)
+- Emit 1.77 build script syntax error only when msrv is incompatible.
+  [#13808](https://github.com/rust-lang/cargo/pull/13808)
 - cargo-init: don't assign `target.name` in Cargo.toml if the value can be inferred.
   [#13606](https://github.com/rust-lang/cargo/pull/13606)
 - cargo-package: normalize paths in `Cargo.toml`, including replacing `\` with `/`.
   [#13729](https://github.com/rust-lang/cargo/pull/13729)
 - cargo-test: recategorize cargo test's `--doc` flag under “Target Selection”.
   [#13756](https://github.com/rust-lang/cargo/pull/13756)
-- Emit 1.77 build script syntax error only when msrv is incompatible.
-  [#13808](https://github.com/rust-lang/cargo/pull/13808)
 
 ### Fixed
 
@@ -81,16 +81,6 @@
   [#13618](https://github.com/rust-lang/cargo/pull/13618)
 - Don't crash on Cargo.toml parse errors that point to multi-byte character
   [#13780](https://github.com/rust-lang/cargo/pull/13780)
-- cargo-add: Maintain sorting of dependency features.
-  [#13682](https://github.com/rust-lang/cargo/pull/13682)
-- cargo-add: Preserve comments when updating simple deps
-  [#13655](https://github.com/rust-lang/cargo/pull/13655)
-- cargo-fix: dont apply same suggestion twice.
-  [#13728](https://github.com/rust-lang/cargo/pull/13728)
-- cargo-package: error when the package specified via `--package` cannot be found
-  [#13735](https://github.com/rust-lang/cargo/pull/13735)
-- credential-provider: trim newlines in tokens from stdin.
-  [#13770](https://github.com/rust-lang/cargo/pull/13770)
 - Don't emit deprecation warning if one of `.cargo/{config,config.toml}` is
   a symlink to the other.
   [#13793](https://github.com/rust-lang/cargo/pull/13793)
@@ -102,6 +92,16 @@
   [#13560](https://github.com/rust-lang/cargo/pull/13560)
 - Fix doc collision for lib/bin with a dash in the inferred name.
   [#13640](https://github.com/rust-lang/cargo/pull/13640)
+- cargo-add: Maintain sorting of dependency features.
+  [#13682](https://github.com/rust-lang/cargo/pull/13682)
+- cargo-add: Preserve comments when updating simple deps
+  [#13655](https://github.com/rust-lang/cargo/pull/13655)
+- cargo-fix: dont apply same suggestion twice.
+  [#13728](https://github.com/rust-lang/cargo/pull/13728)
+- cargo-package: error when the package specified via `--package` cannot be found
+  [#13735](https://github.com/rust-lang/cargo/pull/13735)
+- credential-provider: trim newlines in tokens from stdin.
+  [#13770](https://github.com/rust-lang/cargo/pull/13770)
 
 ### Nightly only
 
