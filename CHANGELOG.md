@@ -48,8 +48,9 @@
   This behavior has been considered a bug from the beginning.
   [#13775](https://github.com/rust-lang/cargo/pull/13775)
 - ❗️ Replace dashes with underscores also if `lib.name` is inferred from `package.name`.
-  This change aligns to the documented behavior. One caveat is that
-  `cargo metadata` starts reporting underscore lib names.
+  This change aligns to the documented behavior. One caveat is that JSON messages
+  emitted by Cargo, like via `cargo metadata` or `--message-format=json`,
+  will start reporting underscore lib names.
   [#12783](https://github.com/rust-lang/cargo/pull/12783)
 - Switch to `gitoxide` for listing files. This improves the performance of
   build script and `cargo doc` for computing cache freshness,
