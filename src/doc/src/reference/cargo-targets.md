@@ -14,9 +14,9 @@ configuring the settings for a target.
 
 The library target defines a "library" that can be used and linked by other
 libraries and executables. The filename defaults to `src/lib.rs`, and the name
-of the library defaults to the name of the package. A package can have only
-one library. The settings for the library can be [customized] in the `[lib]`
-table in `Cargo.toml`.
+of the library defaults to the name of the package, with any dashes replaced
+with underscores. A package can have only one library. The settings for the
+library can be [customized] in the `[lib]` table in `Cargo.toml`.
 
 ```toml
 # Example of customizing the library in Cargo.toml.
@@ -198,9 +198,10 @@ The `name` field specifies the name of the target, which corresponds to the
 filename of the artifact that will be generated. For a library, this is the
 crate name that dependencies will use to reference it.
 
-For the `[lib]` and the default binary (`src/main.rs`), this defaults to the
-name of the package, with any dashes replaced with underscores. For other
-[auto discovered](#target-auto-discovery) targets, it defaults to the
+For the library target, this defaults to the name of the package , with any
+dashes replaced with underscores. For the default binary (`src/main.rs`),
+it also defaults to the name of the package, with no replacement for dashes.
+For [auto discovered](#target-auto-discovery) targets, it defaults to the
 directory or file name.
 
 This is required for all targets except `[lib]`.
