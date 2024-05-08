@@ -737,10 +737,12 @@ impl BuildOutput {
                 let new_syntax_added_in = RustVersion::from_str("1.77.0")?;
                 if !new_syntax_added_in.is_compatible_with(msrv.as_partial()) {
                     let old_syntax_suggestion = if has_reserved_prefix(flag) {
-                        format!("Consider using the old `cargo:` syntax in front of `{flag}`.\n")
+                        format!(
+                            "Switch to the old `cargo:{flag}` syntax (note the single colon).\n"
+                        )
                     } else if flag.starts_with("metadata=") {
                         let old_format_flag = flag.strip_prefix("metadata=").unwrap();
-                        format!("Consider using the old `cargo:{old_format_flag}` syntax instead of `cargo::{flag}` (note the single colon).\n")
+                        format!("Switch to the old `cargo:{old_format_flag}` syntax instead of `cargo::{flag}` (note the single colon).\n")
                     } else {
                         String::new()
                     };
