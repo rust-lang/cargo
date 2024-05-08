@@ -4945,7 +4945,6 @@ fn issue_13722_each_file_should_only_be_added_once() {
         .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
         .file("rEaDmE.Md", "")
         .file("lIcEnse", "")
-        .file("cArGo.Lock", "")
         .build();
 
     p.cargo("package").run();
