@@ -97,8 +97,10 @@ structure:
         "crate_types": [
             "lib"
         ],
-        /* The name of the target. */
-        "name": "my-package",
+        /* The name of the target.
+           For lib targets, dashes will be replaced with underscores.
+        */
+        "name": "my_package",
         /* Absolute path to the root source file of the target. */
         "src_path": "/path/to/my-package/src/lib.rs",
         /* The Rust edition of the target.
@@ -152,7 +154,7 @@ following structure:
         "crate_types": [
             "lib"
         ],
-        "name": "my-package",
+        "name": "my_package",
         "src_path": "/path/to/my-package/src/lib.rs",
         "edition": "2018",
         "doc": true,

@@ -151,7 +151,9 @@ The JSON output has the following format:
                     "crate_types": [
                         "bin"
                     ],
-                    /* The name of the target. */
+                    /* The name of the target.
+                       For lib targets, dashes will be replaced with underscores.
+                    */
                     "name": "my-package",
                     /* Absolute path to the root source file of the target. */
                     "src_path": "/path/to/my-package/src/main.rs",
