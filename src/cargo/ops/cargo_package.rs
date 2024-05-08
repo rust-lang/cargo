@@ -366,23 +366,31 @@ fn check_for_file_and_add(
     result: &mut Vec<ArchiveFile>,
     ws: &Workspace<'_>,
 ) -> CargoResult<()> {
+    fn compare_file_names_case_insensitive(result: &Vec<ArchiveFile>, rel_str: &str) -> bool {
+        result
+            .iter()
+            .any(|ar| ar.rel_path.to_string_lossy().to_lowercase() == rel_str.to_lowercase())
+    }
+
     match abs_file_path.strip_prefix(&pkg.root()) {
         Ok(rel_file_path) => {
-            if !result.iter().any(|ar| ar.rel_path == rel_file_path) {
+            let rel_str = rel_file_path
+                .to_str()
+                .expect("everything was utf8")
+                .to_string();
+
+            if !compare_file_names_case_insensitive(result, &rel_str) {
                 result.push(ArchiveFile {
                     rel_path: rel_file_path.to_path_buf(),
-                    rel_str: rel_file_path
-                        .to_str()
-                        .expect("everything was utf8")
-                        .to_string(),
+                    rel_str,
                     contents: FileContents::OnDisk(abs_file_path),
                 })
             }
         }
         Err(_) => {
             // The file exists somewhere outside of the package.
-            let file_name = file_path.file_name().unwrap();
-            if result.iter().any(|ar| ar.rel_path == file_name) {
+            let file_name = file_path.file_name().unwrap().to_str().unwrap();
+            if compare_file_names_case_insensitive(result, file_name) {
                 ws.gctx().shell().warn(&format!(
                     "{} `{}` appears to be a path outside of the package, \
                             but there is already a file named `{}` in the root of the package. \
@@ -391,13 +399,13 @@ fn check_for_file_and_add(
                             to the root of the package to remove this warning.",
                     label,
                     file_path.display(),
-                    file_name.to_str().unwrap(),
+                    file_name,
                     label,
                 ))?;
             } else {
                 result.push(ArchiveFile {
                     rel_path: PathBuf::from(file_name),
-                    rel_str: file_name.to_str().unwrap().to_string(),
+                    rel_str: file_name.to_string(),
                     contents: FileContents::OnDisk(abs_file_path),
                 })
             }
