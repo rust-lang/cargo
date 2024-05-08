@@ -98,6 +98,7 @@ For the latest nightly, see the [nightly version] of this page.
     * [artifact dependencies](#artifact-dependencies) --- Allow build artifacts to be included into other build artifacts and build them for different targets.
     * [Edition 2024](#edition-2024) — Adds support for the 2024 Edition.
     * [Profile `trim-paths` option](#profile-trim-paths-option) --- Control the sanitization of file paths in build outputs.
+    * [`[lints.cargo]`](#lintscargo) --- Allows configuring lints for Cargo.
 * Information and metadata
     * [Build-plan](#build-plan) --- Emits JSON information on which commands will be run.
     * [unit-graph](#unit-graph) --- Emits JSON for Cargo's internal graph structure.
@@ -1519,6 +1520,27 @@ cargo-features = ["open-namespaces"]
 
 [package]
 # ...
+```
+
+## `[lints.cargo]`
+
+* Tracking Issue: [#12235](https://github.com/rust-lang/cargo/issues/12235)
+
+A new `lints` tool table for `cargo` that can be used to configure lints emitted
+by `cargo` itself when `-Zcargo-lints` is used
+```toml
+[lints.cargo]
+implicit-features = "warn"
+```
+
+This will work with
+[RFC 2906 `workspace-deduplicate`](https://rust-lang.github.io/rfcs/2906-cargo-workspace-deduplicate.html):
+```toml
+[workspace.lints.cargo]
+implicit-features = "warn"
+
+[lints]
+workspace = true
 ```
 
 # Stabilized and removed features
