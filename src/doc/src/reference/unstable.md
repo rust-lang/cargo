@@ -645,7 +645,7 @@ The following is a description of the JSON structure:
       "target": {
         "kind": ["lib"],
         "crate_types": ["lib"],
-        "name": "my-package",
+        "name": "my_package",
         "src_path": "/path/to/my-package/src/lib.rs",
         "edition": "2018",
         "test": true,
