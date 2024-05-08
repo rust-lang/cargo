@@ -68,10 +68,8 @@ pub enum DirtyReason {
         new: InternedString,
     },
     UnitDependencyInfoChanged {
-        old_name: InternedString,
+        name: InternedString,
         old_fingerprint: u64,
-
-        new_name: InternedString,
         new_fingerprint: u64,
     },
     FsStatusOutdated(FsStatus),
@@ -209,8 +207,8 @@ impl DirtyReason {
                 unit,
                 format_args!("name of dependency changed ({old} => {new})"),
             ),
-            DirtyReason::UnitDependencyInfoChanged { .. } => {
-                s.dirty_because(unit, "dependency info changed")
+            DirtyReason::UnitDependencyInfoChanged { name, .. } => {
+                s.dirty_because(unit, format_args!("dependency info changed ({name})"))
             }
             DirtyReason::FsStatusOutdated(status) => match status {
                 FsStatus::Stale => s.dirty_because(unit, "stale, unknown reason"),

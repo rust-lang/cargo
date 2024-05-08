@@ -1046,9 +1046,8 @@ impl Fingerprint {
 
             if a.fingerprint.hash_u64() != b.fingerprint.hash_u64() {
                 return DirtyReason::UnitDependencyInfoChanged {
-                    new_name: a.name,
+                    name: a.name,
                     new_fingerprint: a.fingerprint.hash_u64(),
-                    old_name: b.name,
                     old_fingerprint: b.fingerprint.hash_u64(),
                 };
             }
