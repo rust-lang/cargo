@@ -4928,3 +4928,38 @@ path = "src/lib.rs"
         )],
     );
 }
+
+#[cargo_test]
+fn issue_13722_each_file_should_only_be_added_once() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                readme = "READme.MD"
+                license-file = "LICense"
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { println!("hello"); }"#)
+        .file("rEaDmE.Md", "")
+        .file("lIcEnse", "")
+        .file("cArGo.Lock", "")
+        .build();
+
+    p.cargo("package").run();
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    p.cargo("package -l")
+        .with_stdout(
+            "\
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+lIcEnse
+rEaDmE.Md
+src/main.rs
+",
+        )
+        .run();
+}
