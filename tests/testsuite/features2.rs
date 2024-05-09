@@ -2652,3 +2652,43 @@ fn dep_with_optional_host_deps_activated() {
         )
         .run();
 }
+
+#[cargo_test]
+fn dont_unify_proc_macro_example_from_dependency() {
+    // See https://github.com/rust-lang/cargo/issues/13726
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2021"
+
+                [dependencies]
+                pm_helper = { path = "pm_helper" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "pm_helper/Cargo.toml",
+            r#"
+                [package]
+                name = "pm_helper"
+
+                [[example]]
+                name = "pm"
+                proc-macro = true
+                crate-type = ["proc-macro"]
+            "#,
+        )
+        .file("pm_helper/src/lib.rs", "")
+        .file("pm_helper/examples/pm.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_contains(
+            "[..]activated_features for invalid package: features did not find PackageId [..]pm_helper[..]NormalOrDev[..]"
+        )
+        .run();
+}
