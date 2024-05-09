@@ -45,6 +45,26 @@ mod settings {
     pub const BLESS: &str = "RUSTFIX_TEST_BLESS";
 }
 
+static mut VERSION: (u32, bool) = (0, false);
+
+// Temporarily copy from `cargo_test_macro::version`.
+fn version() -> (u32, bool) {
+    static INIT: std::sync::Once = std::sync::Once::new();
+    INIT.call_once(|| {
+        let output = Command::new("rustc")
+            .arg("-V")
+            .output()
+            .expect("cargo should run");
+        let stdout = std::str::from_utf8(&output.stdout).expect("utf8");
+        let vers = stdout.split_whitespace().skip(1).next().unwrap();
+        let is_nightly = option_env!("CARGO_TEST_DISABLE_NIGHTLY").is_none()
+            && (vers.contains("-nightly") || vers.contains("-dev"));
+        let minor = vers.split('.').skip(1).next().unwrap().parse().unwrap();
+        unsafe { VERSION = (minor, is_nightly) }
+    });
+    unsafe { VERSION }
+}
+
 fn compile(file: &Path) -> Result<Output, Error> {
     let tmp = tempdir()?;
 
@@ -220,7 +240,20 @@ fn assert_fixtures(dir: &str, mode: &str) {
         .unwrap();
     let mut failures = 0;
 
+    let is_not_nightly = !version().1;
+
     for file in &files {
+        if file
+            .file_stem()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .ends_with(".nightly")
+            && is_not_nightly
+        {
+            info!("skipped: {file:?}");
+            continue;
+        }
         if let Err(err) = test_rustfix_with_file(file, mode) {
             println!("failed: {}", file.display());
             warn!("{:?}", err);
