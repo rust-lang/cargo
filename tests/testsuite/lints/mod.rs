@@ -1,9 +1,12 @@
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
 
+mod error;
 mod implicit_features;
+mod inherited;
 mod unknown_lints;
 mod unused_optional_dependencies;
+mod warning;
 
 #[cargo_test]
 fn dashes_dont_get_rewritten() {
