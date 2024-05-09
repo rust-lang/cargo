@@ -8,31 +8,24 @@ fn case() {
         .file(
             "Cargo.toml",
             r#"
-[workspace]
-members = ["foo"]
+cargo-features = ["test-dummy-unstable"]
 
-[workspace.lints.cargo]
-this-lint-does-not-exist = "warn"
-"#,
-        )
-        .file(
-            "foo/Cargo.toml",
-            r#"
 [package]
 name = "foo"
 version = "0.0.1"
 edition = "2015"
 authors = []
+im-a-teapot = true
 
-[lints]
-workspace = true
+[lints.cargo]
+im_a_teapot = "warn"
             "#,
         )
-        .file("foo/src/lib.rs", "")
+        .file("src/lib.rs", "")
         .build();
 
     snapbox::cmd::Command::cargo_ui()
-        .masquerade_as_nightly_cargo(&["cargo-lints"])
+        .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
         .current_dir(p.root())
         .arg("check")
         .arg("-Zcargo-lints")
