@@ -854,7 +854,7 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
                         // for various targets which are either specified in the manifest
                         // or on the cargo command-line.
                         let lib_fk = if fk == FeaturesFor::default() {
-                            (self.track_for_host && (dep.is_build() || self.has_any_proc_macro(dep_id)))
+                            (self.track_for_host && (dep.is_build() || self.has_proc_macro_lib(dep_id)))
                                 .then(|| FeaturesFor::HostDep)
                                 .unwrap_or_default()
                         } else {
@@ -965,5 +965,18 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
             .get_one(package_id)
             .expect("packages downloaded")
             .proc_macro()
+    }
+
+    /// Whether the given package is a proc macro lib target.
+    ///
+    /// This is useful for checking if a dependency is a proc macro,
+    /// as it is not possible to depend on a non-lib target as a proc-macro.
+    fn has_proc_macro_lib(&self, package_id: PackageId) -> bool {
+        self.package_set
+            .get_one(package_id)
+            .expect("packages downloaded")
+            .library()
+            .map(|lib| lib.proc_macro())
+            .unwrap_or_default()
     }
 }

@@ -2686,9 +2686,13 @@ fn dont_unify_proc_macro_example_from_dependency() {
         .build();
 
     p.cargo("check")
-        .with_status(101)
-        .with_stderr_contains(
-            "[..]activated_features for invalid package: features did not find PackageId [..]pm_helper[..]NormalOrDev[..]"
+        .with_stderr(
+            "\
+[LOCKING] 2 packages to latest compatible versions
+[CHECKING] pm_helper v0.0.0 ([CWD]/pm_helper)
+[CHECKING] foo v0.0.0 ([CWD])
+[FINISHED] `dev` [..]
+",
         )
         .run();
 }
