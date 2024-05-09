@@ -146,6 +146,8 @@ pub trait Source {
     fn describe(&self) -> String;
 
     /// Returns whether a source is being replaced by another here.
+    ///
+    /// Builtin replacement of `crates.io` doesn't count as replacement here.
     fn is_replaced(&self) -> bool {
         false
     }
