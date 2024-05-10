@@ -1599,14 +1599,18 @@ fn target_applies_to_host_rustflags_works() {
         )
         .build();
 
-    // Use RUSTFLAGS to pass an argument that would generate an error
-    // but it is ignored.
+    // Use RUSTFLAGS to pass an argument that will generate an error.
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .arg("-Ztarget-applies-to-host")
         .env("CARGO_TARGET_APPLIES_TO_HOST", "false")
         .env("RUSTFLAGS", r#"--cfg feature="flag""#)
-        .with_status(0)
+        .with_status(101)
+        .with_stderr_data(
+            "[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] flag passed
+...",
+        )
         .run();
 }
 

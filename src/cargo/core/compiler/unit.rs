@@ -14,6 +14,7 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::rc::Rc;
+use std::sync::Arc;
 
 /// All information needed to define a unit.
 ///
@@ -59,6 +60,17 @@ pub struct UnitInner {
     /// The `cfg` features to enable for this unit.
     /// This must be sorted.
     pub features: Vec<InternedString>,
+    /// Extra compiler flags to pass to `rustc` for a given unit.
+    ///
+    /// Although it depends on the caller, in the current Cargo implementation,
+    /// these flags take precedence over those from [`BuildContext::extra_args_for`].
+    ///
+    /// As of now, these flags come from environment variables and configurations.
+    /// See [`TargetInfo.rustflags`] for more on how Cargo collects them.
+    ///
+    /// [`BuildContext::extra_args_for`]: crate::core::compiler::build_context::BuildContext::extra_args_for
+    /// [`TargetInfo.rustflags`]: crate::core::compiler::build_context::TargetInfo::rustflags
+    pub rustflags: Arc<[String]>,
     // if `true`, the dependency is an artifact dependency, requiring special handling when
     // calculating output directories, linkage and environment variables provided to builds.
     pub artifact: IsArtifact,
@@ -151,6 +163,7 @@ impl fmt::Debug for Unit {
             .field("kind", &self.kind)
             .field("mode", &self.mode)
             .field("features", &self.features)
+            .field("rustflags", &self.rustflags)
             .field("artifact", &self.artifact.is_true())
             .field(
                 "artifact_target_for_features",
@@ -198,6 +211,7 @@ impl UnitInterner {
         kind: CompileKind,
         mode: CompileMode,
         features: Vec<InternedString>,
+        rustflags: Arc<[String]>,
         is_std: bool,
         dep_hash: u64,
         artifact: IsArtifact,
@@ -231,6 +245,7 @@ impl UnitInterner {
             kind,
             mode,
             features,
+            rustflags,
             is_std,
             dep_hash,
             artifact,

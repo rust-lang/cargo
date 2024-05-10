@@ -352,10 +352,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
             cmd.env("RUSTC_WORKSPACE_WRAPPER", wrapper);
         }
     }
-    cmd.env(
-        "CARGO_ENCODED_RUSTFLAGS",
-        bcx.rustflags_args(unit).join("\x1f"),
-    );
+    cmd.env("CARGO_ENCODED_RUSTFLAGS", unit.rustflags.join("\x1f"));
     cmd.env_remove("RUSTFLAGS");
 
     if build_runner.bcx.ws.gctx().extra_verbose() {
