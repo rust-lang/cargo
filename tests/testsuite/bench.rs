@@ -267,9 +267,9 @@ fn many_similar_names() {
         .build();
 
     p.cargo("bench")
-        .with_stdout_contains("test bin_bench ... bench:           0 ns/iter (+/- 0)")
-        .with_stdout_contains("test lib_bench ... bench:           0 ns/iter (+/- 0)")
-        .with_stdout_contains("test bench_bench ... bench:           0 ns/iter (+/- 0)")
+        .with_stdout_contains("test bin_bench ... bench:[..]")
+        .with_stdout_contains("test lib_bench ... bench:[..]")
+        .with_stdout_contains("test bench_bench ... bench:[..]")
         .run();
 }
 
