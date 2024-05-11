@@ -1415,7 +1415,7 @@ fn calculate_normal(
     // hashed to take up less space on disk as we just need to know when things
     // change.
     let extra_flags = if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
-        build_runner.bcx.rustdocflags_args(unit)
+        &unit.rustdocflags
     } else {
         &unit.rustflags
     }

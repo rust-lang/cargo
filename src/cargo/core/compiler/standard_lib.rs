@@ -218,6 +218,7 @@ pub fn generate_std_roots(
                 mode,
                 features.clone(),
                 target_data.info(*kind).rustflags.clone(),
+                target_data.info(*kind).rustdocflags.clone(),
                 /*is_std*/ true,
                 /*dep_hash*/ 0,
                 IsArtifact::No,

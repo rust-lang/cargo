@@ -55,7 +55,7 @@ pub struct TargetInfo {
     /// Extra flags to pass to `rustc`, see [`extra_args`].
     pub rustflags: Arc<[String]>,
     /// Extra flags to pass to `rustdoc`, see [`extra_args`].
-    pub rustdocflags: Vec<String>,
+    pub rustdocflags: Arc<[String]>,
     /// Whether or not rustc (stably) supports the `--check-cfg` flag.
     ///
     /// Can be removed once the minimum supported rustc version of Cargo is
@@ -321,7 +321,8 @@ impl TargetInfo {
                     Some(&cfg),
                     kind,
                     Flags::Rustdoc,
-                )?,
+                )?
+                .into(),
                 cfg,
                 support_split_debuginfo,
                 support_check_cfg,

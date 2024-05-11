@@ -1632,6 +1632,11 @@ fn target_applies_to_host_rustdocflags_works() {
         .arg("-Ztarget-applies-to-host")
         .env("CARGO_TARGET_APPLIES_TO_HOST", "false")
         .env("RUSTDOCFLAGS", r#"--cfg feature="flag""#)
-        .with_status(0)
+        .with_status(101)
+        .with_stderr_data(
+            "[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] flag passed
+...",
+        )
         .run();
 }

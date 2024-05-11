@@ -780,7 +780,7 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
 
     rustdoc::add_output_format(build_runner, unit, &mut rustdoc)?;
 
-    rustdoc.args(bcx.rustdocflags_args(unit));
+    rustdoc.args(&unit.rustdocflags);
 
     if !crate_version_flag_already_present(&rustdoc) {
         append_crate_version_flag(unit, &mut rustdoc);

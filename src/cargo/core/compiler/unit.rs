@@ -71,6 +71,17 @@ pub struct UnitInner {
     /// [`BuildContext::extra_args_for`]: crate::core::compiler::build_context::BuildContext::extra_args_for
     /// [`TargetInfo.rustflags`]: crate::core::compiler::build_context::TargetInfo::rustflags
     pub rustflags: Arc<[String]>,
+    /// Extra compiler flags to pass to `rustdoc` for a given unit.
+    ///
+    /// Although it depends on the caller, in the current Cargo implementation,
+    /// these flags take precedence over those from [`BuildContext::extra_args_for`].
+    ///
+    /// As of now, these flags come from environment variables and configurations.
+    /// See [`TargetInfo.rustdocflags`] for more on how Cargo collects them.
+    ///
+    /// [`BuildContext::extra_args_for`]: crate::core::compiler::build_context::BuildContext::extra_args_for
+    /// [`TargetInfo.rustdocflags`]: crate::core::compiler::build_context::TargetInfo::rustdocflags
+    pub rustdocflags: Arc<[String]>,
     // if `true`, the dependency is an artifact dependency, requiring special handling when
     // calculating output directories, linkage and environment variables provided to builds.
     pub artifact: IsArtifact,
@@ -212,6 +223,7 @@ impl UnitInterner {
         mode: CompileMode,
         features: Vec<InternedString>,
         rustflags: Arc<[String]>,
+        rustdocflags: Arc<[String]>,
         is_std: bool,
         dep_hash: u64,
         artifact: IsArtifact,
@@ -246,6 +258,7 @@ impl UnitInterner {
             mode,
             features,
             rustflags,
+            rustdocflags,
             is_std,
             dep_hash,
             artifact,
