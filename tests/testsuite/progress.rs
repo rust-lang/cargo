@@ -53,27 +53,42 @@ fn bad_progress_config_missing_width() {
 }
 
 #[cargo_test]
-fn bad_progress_config_missing_when() {
+fn default_shows_progress() {
+    const N: usize = 3;
+    let mut deps = String::new();
+    for i in 1..=N {
+        Package::new(&format!("dep_progress_report{}", i), "1.0.0").publish();
+        deps.push_str(&format!("dep_progress_report{} = \"1.0\"\n", i));
+    }
+
     let p = project()
         .file(
             ".cargo/config.toml",
             r#"
             [term]
-            progress = { width = 1000 }
+            progress = { width = 60 }
             "#,
+        )
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+
+                [dependencies]
+                {}
+                "#,
+                deps
+            ),
         )
         .file("src/lib.rs", "")
         .build();
 
     p.cargo("check")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] error in [ROOT]/foo/.cargo/config.toml: could not load config key `term.progress`
-
-Caused by:
-  missing field `when`
-
-"#]])
+        .without_status()
+        .with_stderr_contains("[BUILDING] [====================>        ] 3/4: foo     ")
         .run();
 }
 

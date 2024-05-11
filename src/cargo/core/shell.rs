@@ -56,6 +56,7 @@ impl Shell {
                 stderr_tty: std::io::stderr().is_terminal(),
                 stdout_unicode: supports_unicode(&std::io::stdout()),
                 stderr_unicode: supports_unicode(&std::io::stderr()),
+                progress_report: supports_progress_report(),
             },
             verbosity: Verbosity::Verbose,
             needs_clear: false,
@@ -286,6 +287,17 @@ impl Shell {
         }
     }
 
+    pub fn progress_report_available(&self) -> bool {
+        match &self.output {
+            ShellOut::Write(_) => false,
+            ShellOut::Stream {
+                progress_report,
+                stderr_tty,
+                ..
+            } => *progress_report && *stderr_tty,
+        }
+    }
+
     /// Gets the current color choice.
     ///
     /// If we are not using a color stream, this will always return `Never`, even if the color
@@ -426,6 +438,8 @@ enum ShellOut {
         hyperlinks: bool,
         stdout_unicode: bool,
         stderr_unicode: bool,
+        /// Whether the terminal supports progress notifications via OSC 9;4 sequences
+        progress_report: bool,
     },
 }
 
@@ -563,6 +577,21 @@ fn supports_color(choice: anstream::ColorChoice) -> bool {
 
 fn supports_unicode(stream: &dyn IsTerminal) -> bool {
     !stream.is_terminal() || supports_unicode::supports_unicode()
+}
+
+/// Detects if the terminal supports OSC 9;4 progress notifications.
+#[allow(clippy::disallowed_methods)] // ALLOWED: to read terminal app signature
+fn supports_progress_report() -> bool {
+    // Windows Terminal session
+    std::env::var("WT_SESSION").is_ok()
+    // Compatibility with ConEmu's ANSI support
+        || std::env::var("ConEmuANSI").ok() == Some("ON".into())
+    // WezTerm: check if TERM_PROGRAM is "WezTerm" and the version is recent enough
+    // https://github.com/rust-lang/cargo/pull/14615#issuecomment-2646738819
+    || (std::env::var("TERM_PROGRAM").ok() == Some("WezTerm".into())
+        && std::env::var("TERM_PROGRAM_VERSION")
+            .ok()
+            .map_or(false, |v| v.as_str() >= "20250209-182623-44866cc1"))
 }
 
 fn supports_hyperlinks() -> bool {

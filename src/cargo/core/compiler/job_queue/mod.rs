@@ -854,7 +854,7 @@ impl<'gctx> DrainState<'gctx> {
     }
 
     fn handle_error(
-        &self,
+        &mut self,
         shell: &mut Shell,
         err_state: &mut ErrorsDuringDrain,
         new_err: impl Into<ErrorToHandle>,
@@ -863,6 +863,7 @@ impl<'gctx> DrainState<'gctx> {
         if new_err.print_always || err_state.count == 0 {
             crate::display_error(&new_err.error, shell);
             if err_state.count == 0 && !self.active.is_empty() {
+                self.progress.indicate_error();
                 let _ = shell.warn("build failed, waiting for other jobs to finish...");
             }
             err_state.count += 1;
