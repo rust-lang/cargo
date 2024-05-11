@@ -172,6 +172,7 @@ impl<'a> UnitGenerator<'a, '_> {
                     target_mode,
                     features.clone(),
                     self.target_data.info(kind).rustflags.clone(),
+                    self.target_data.info(kind).rustdocflags.clone(),
                     /*is_std*/ false,
                     /*dep_hash*/ 0,
                     IsArtifact::No,
