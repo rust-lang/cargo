@@ -18,6 +18,14 @@ fn assert_json_output(actual_json_file: PathBuf, expected_json: &str) {
     }
 }
 
+const SBOM_FILE_EXTENSION: &str = ".cargo-sbom.json";
+
+fn with_sbom_suffix(link: &PathBuf) -> PathBuf {
+    let mut link_buf = link.clone().into_os_string();
+    link_buf.push(SBOM_FILE_EXTENSION);
+    PathBuf::from(link_buf)
+}
+
 fn configured_project() -> ProjectBuilder {
     project().file(
         ".cargo/config.toml",
@@ -39,13 +47,13 @@ fn build_sbom_without_passing_unstable_flag() {
         .masquerade_as_nightly_cargo(&["sbom"])
         .with_stderr(
             "\
-            warning: ignoring 'sbom' config, pass `-Zsbom` to enable it\n\
+            [WARNING] ignoring 'sbom' config, pass `-Zsbom` to enable it\n\
             [COMPILING] foo v0.5.0 ([..])\n\
             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]\n",
         )
         .run();
 
-    let file = p.bin("foo").with_extension("cargo-sbom.json");
+    let file = with_sbom_suffix(&p.bin("foo"));
     assert!(!file.exists());
 }
 
@@ -60,7 +68,7 @@ fn build_sbom_using_cargo_config() {
         .masquerade_as_nightly_cargo(&["sbom"])
         .run();
 
-    let file = p.bin("foo").with_extension("cargo-sbom.json");
+    let file = with_sbom_suffix(&p.bin("foo"));
     assert_json_output(
         file,
         r#"
@@ -74,7 +82,9 @@ fn build_sbom_using_cargo_config() {
                 "kind": [
                     "bin"
                 ],
-                "crate_type": "bin",
+                "crate_types": [
+                    "bin"
+                ],
                 "name": "foo",
                 "edition": "2015"
             },
@@ -100,6 +110,7 @@ fn build_sbom_using_cargo_config() {
             "rustc": {
                 "version": "[..]",
                 "wrapper": null,
+                "workspace_wrapper": null,
                 "commit_hash": "[..]",
                 "host": "[..]"
             }
@@ -120,7 +131,7 @@ fn build_sbom_using_env_var() {
         .masquerade_as_nightly_cargo(&["sbom"])
         .run();
 
-    let file = p.bin("foo").with_extension("cargo-sbom.json");
+    let file = with_sbom_suffix(&p.bin("foo"));
     assert!(file.is_file());
 }
 
@@ -147,7 +158,7 @@ fn build_sbom_project_bin_and_lib() {
         .masquerade_as_nightly_cargo(&["sbom"])
         .run();
 
-    assert!(p.bin("foo").with_extension("cargo-sbom.json").is_file());
+    assert!(with_sbom_suffix(&p.bin("foo")).is_file());
     assert_eq!(
         2,
         p.glob(p.target_debug_dir().join("*.cargo-sbom.json"))
@@ -171,7 +182,10 @@ fn build_sbom_with_simple_build_script() {
         .file("src/main.rs", "#[cfg(foo)] fn main() {}")
         .file(
             "build.rs",
-            r#"fn main() { println!("cargo::rustc-cfg=foo"); }"#,
+            r#"fn main() {
+                println!("cargo::rustc-check-cfg=cfg(foo)");
+                println!("cargo::rustc-cfg=foo");
+            }"#,
         )
         .build();
 
@@ -179,7 +193,7 @@ fn build_sbom_with_simple_build_script() {
         .masquerade_as_nightly_cargo(&["sbom"])
         .run();
 
-    let path = p.bin("foo").with_extension("cargo-sbom.json");
+    let path = with_sbom_suffix(&p.bin("foo"));
     assert!(path.is_file());
 
     assert_json_output(
@@ -187,7 +201,7 @@ fn build_sbom_with_simple_build_script() {
         r#"
         {
             "format_version": 1,
-            "package_id": "path+file:///[..]/foo#0.0.1",
+            "package_id": "path+file://[..]/foo#0.0.1",
             "name": "foo",
             "version": "0.0.1",
             "source": "[ROOT]/foo",
@@ -195,7 +209,9 @@ fn build_sbom_with_simple_build_script() {
                 "kind": [
                     "bin"
                 ],
-                "crate_type": "bin",
+                "crate_types": [
+                    "bin"
+                ],
                 "name": "foo",
                 "edition": "2015"
             },
@@ -223,18 +239,18 @@ fn build_sbom_with_simple_build_script() {
                         {
                             "features": [],
                             "name": "foo",
-                            "package_id": "foo 0.0.1 (path+file:///[..]/foo)",
+                            "package_id": "path+file://[..]/foo#0.0.1",
                             "version": "0.0.1"
                         }
                     ],
                     "extern_crate_name": "build_script_build",
                     "features": [],
                     "package": "foo",
-                    "package_id": "foo 0.0.1 (path+file:///[..]/foo)",
+                    "package_id": "path+file://[..]/foo#0.0.1",
                     "version": "0.0.1"
                 },
                 {
-                    "package_id": "foo 0.0.1 (path+file:///[..]/foo)",
+                    "package_id": "path+file://[..]/foo#0.0.1",
                     "package": "foo",
                     "version": "0.0.1",
                     "features": [],
@@ -247,6 +263,7 @@ fn build_sbom_with_simple_build_script() {
             "rustc": {
                 "version": "[..]",
                 "wrapper": null,
+                "workspace_wrapper": null,
                 "commit_hash": "[..]",
                 "host": "[..]"
             }
@@ -274,7 +291,10 @@ fn build_sbom_with_build_dependencies() {
         .file("src/lib.rs", "pub fn bar() -> i32 { 2 }")
         .file(
             "build.rs",
-            r#"fn main() { println!("cargo::rustc-cfg=foo"); }"#,
+            r#"fn main() {
+                println!("cargo::rustc-check-cfg=cfg(foo)");
+                println!("cargo::rustc-cfg=foo");
+            }"#,
         )
         .publish();
 
@@ -298,7 +318,7 @@ fn build_sbom_with_build_dependencies() {
         .masquerade_as_nightly_cargo(&["sbom"])
         .run();
 
-    let path = p.bin("foo").with_extension("cargo-sbom.json");
+    let path = with_sbom_suffix(&p.bin("foo"));
     assert_json_output(
         path,
         r#"
@@ -312,7 +332,9 @@ fn build_sbom_with_build_dependencies() {
                 "kind": [
                     "bin"
                 ],
-                "crate_type": "bin",
+                "crate_types": [
+                    "bin"
+                ],
                 "name": "foo",
                 "edition": "2015"
             },
@@ -335,7 +357,7 @@ fn build_sbom_with_build_dependencies() {
             },
             "packages": [
                 {
-                    "package_id": "bar 0.1.0 (registry+[..])",
+                    "package_id": "registry+[..]#bar@0.1.0",
                     "package": "bar",
                     "version": "0.1.0",
                     "features": [],
@@ -344,14 +366,14 @@ fn build_sbom_with_build_dependencies() {
                     "dependencies": [
                         {
                             "name": "bar",
-                            "package_id": "bar 0.1.0 (registry+[..])",
+                            "package_id": "registry+[..]#bar@0.1.0",
                             "version": "0.1.0",
                             "features": []
                         }
                     ]
                 },
                 {
-                    "package_id": "bar 0.1.0 (registry+[..])",
+                    "package_id": "registry+[..]#bar@0.1.0",
                     "package": "bar",
                     "version": "0.1.0",
                     "features": [],
@@ -360,14 +382,14 @@ fn build_sbom_with_build_dependencies() {
                     "dependencies": [
                         {
                             "name": "bar",
-                            "package_id": "bar 0.1.0 (registry+[..])",
+                            "package_id": "registry+[..]#bar@0.1.0",
                             "version": "0.1.0",
                             "features": []
                         }
                     ]
                 },
                 {
-                    "package_id": "bar 0.1.0 (registry+[..])",
+                    "package_id": "registry+[..]#bar@0.1.0",
                     "package": "bar",
                     "version": "0.1.0",
                     "features": [],
@@ -376,14 +398,14 @@ fn build_sbom_with_build_dependencies() {
                     "dependencies": [
                         {
                             "name": "baz",
-                            "package_id": "baz 0.1.0 (registry+[..])",
+                            "package_id": "registry+[..]#baz@0.1.0",
                             "version": "0.1.0",
                             "features": []
                         }
                     ]
                 },
                 {
-                    "package_id": "baz 0.1.0 (registry+[..])",
+                    "package_id": "registry+[..]#baz@0.1.0",
                     "package": "baz",
                     "version": "0.1.0",
                     "features": [],
@@ -396,6 +418,7 @@ fn build_sbom_with_build_dependencies() {
             "rustc": {
                 "version": "[..]",
                 "wrapper": null,
+                "workspace_wrapper": null,
                 "commit_hash": "[..]",
                 "host": "[..]"
             }

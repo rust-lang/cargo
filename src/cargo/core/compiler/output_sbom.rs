@@ -2,16 +2,17 @@
 //! See [`output_sbom`] for more.
 
 use std::collections::BTreeSet;
-use std::io::{BufWriter, Write};
+use std::io::BufWriter;
 use std::path::PathBuf;
 
 use cargo_util::paths::{self};
 use cargo_util_schemas::core::PackageIdSpec;
 use itertools::Itertools;
+use semver::Version;
 use serde::Serialize;
 
 use crate::{
-    core::{profiles::Profile, PackageId, Target, TargetKind},
+    core::{profiles::Profile, Target, TargetKind},
     util::Rustc,
     CargoResult,
 };
@@ -43,16 +44,16 @@ impl<const V: u32> Serialize for SbomFormatVersion<V> {
 #[derive(Serialize, Clone, Debug)]
 struct SbomDependency {
     name: String,
-    package_id: PackageId,
-    version: String,
+    package_id: PackageIdSpec,
+    version: Option<Version>,
     features: Vec<String>,
 }
 
 impl From<&UnitDep> for SbomDependency {
     fn from(dep: &UnitDep) -> Self {
-        let package_id = dep.unit.pkg.package_id();
+        let package_id = dep.unit.pkg.package_id().to_spec();
         let name = package_id.name().to_string();
-        let version = package_id.version().to_string();
+        let version = package_id.version();
         let features = dep
             .unit
             .features
@@ -71,9 +72,9 @@ impl From<&UnitDep> for SbomDependency {
 
 #[derive(Serialize, Clone, Debug)]
 struct SbomPackage {
-    package_id: PackageId,
+    package_id: PackageIdSpec,
     package: String,
-    version: String,
+    version: Option<Version>,
     features: Vec<String>,
     build_type: SbomBuildType,
     extern_crate_name: String,
@@ -86,9 +87,9 @@ impl SbomPackage {
         dependencies: Vec<SbomDependency>,
         build_type: SbomBuildType,
     ) -> Self {
-        let package_id = dep.unit.pkg.package_id();
+        let package_id = dep.unit.pkg.package_id().to_spec();
         let package = package_id.name().to_string();
-        let version = package_id.version().to_string();
+        let version = package_id.version();
         let features = dep
             .unit
             .features
@@ -111,7 +112,7 @@ impl SbomPackage {
 #[derive(Serialize)]
 struct SbomTarget {
     kind: TargetKind,
-    crate_type: Option<CrateType>,
+    crate_types: Vec<CrateType>,
     name: String,
     edition: String,
 }
@@ -120,7 +121,7 @@ impl From<&Target> for SbomTarget {
     fn from(target: &Target) -> Self {
         SbomTarget {
             kind: target.kind().clone(),
-            crate_type: target.kind().rustc_crate_types().first().cloned(),
+            crate_types: target.kind().rustc_crate_types().clone(),
             name: target.name().to_string(),
             edition: target.edition().to_string(),
         }
@@ -131,6 +132,7 @@ impl From<&Target> for SbomTarget {
 struct SbomRustc {
     version: String,
     wrapper: Option<PathBuf>,
+    workspace_wrapper: Option<PathBuf>,
     commit_hash: Option<String>,
     host: String,
 }
@@ -140,6 +142,7 @@ impl From<&Rustc> for SbomRustc {
         Self {
             version: rustc.version.to_string(),
             wrapper: rustc.wrapper.clone(),
+            workspace_wrapper: rustc.workspace_wrapper.clone(),
             commit_hash: rustc.commit_hash.clone(),
             host: rustc.host.to_string(),
         }
@@ -196,9 +199,8 @@ pub fn output_sbom(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> Cargo
     for sbom_output_file in build_runner.sbom_output_files(unit)? {
         let sbom = Sbom::new(unit, packages.clone(), rustc.clone());
 
-        let mut outfile = BufWriter::new(paths::create(sbom_output_file)?);
-        let output = serde_json::to_string(&sbom)?;
-        write!(outfile, "{}", output)?;
+        let outfile = BufWriter::new(paths::create(sbom_output_file)?);
+        serde_json::to_writer(outfile, &sbom)?;
     }
 
     Ok(())

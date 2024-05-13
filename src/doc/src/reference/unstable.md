@@ -392,6 +392,9 @@ build process that are difficult or impossible to obtain in another way.
 To enable this feature either set the `sbom` field in the `.cargo/config.toml`
 
 ```toml
+[unstable]
+sbom = true
+
 [build]
 sbom = true
 ```
