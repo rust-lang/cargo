@@ -181,6 +181,77 @@ fn build_sbom_with_simple_build_script() {
 
     let path = p.bin("foo").with_extension("cargo-sbom.json");
     assert!(path.is_file());
+
+    assert_json_output(
+        path,
+        r#"
+        {
+            "format_version": 1,
+            "package_id": "path+file:///[..]/foo#0.0.1",
+            "name": "foo",
+            "version": "0.0.1",
+            "source": "[ROOT]/foo",
+            "target": {
+                "kind": [
+                    "bin"
+                ],
+                "crate_type": "bin",
+                "name": "foo",
+                "edition": "2015"
+            },
+            "profile": {
+                "name": "dev",
+                "opt_level": "0",
+                "lto": "false",
+                "codegen_backend": null,
+                "codegen_units": null,
+                "debuginfo": 2,
+                "split_debuginfo": "{...}",
+                "debug_assertions": true,
+                "overflow_checks": true,
+                "rpath": false,
+                "incremental": false,
+                "panic": "unwind",
+                "strip": {
+                    "deferred": "None"
+                }
+            },
+            "packages": [
+                {
+                    "build_type": "build",
+                    "dependencies": [
+                        {
+                            "features": [],
+                            "name": "foo",
+                            "package_id": "foo 0.0.1 (path+file:///[..]/foo)",
+                            "version": "0.0.1"
+                        }
+                    ],
+                    "extern_crate_name": "build_script_build",
+                    "features": [],
+                    "package": "foo",
+                    "package_id": "foo 0.0.1 (path+file:///[..]/foo)",
+                    "version": "0.0.1"
+                },
+                {
+                    "package_id": "foo 0.0.1 (path+file:///[..]/foo)",
+                    "package": "foo",
+                    "version": "0.0.1",
+                    "features": [],
+                    "build_type": "normal",
+                    "extern_crate_name": "build_script_build",
+                    "dependencies": []
+                }
+            ],
+            "features": [],
+            "rustc": {
+                "version": "[..]",
+                "wrapper": null,
+                "commit_hash": "[..]",
+                "host": "[..]"
+            }
+        }"#,
+    );
 }
 
 #[cargo_test]

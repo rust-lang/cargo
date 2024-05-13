@@ -427,13 +427,21 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
     ///
     /// Only call this function when `sbom` is active.
     pub fn sbom_output_files(&self, unit: &Unit) -> CargoResult<Vec<PathBuf>> {
+        const SBOM_FILE_EXTENSION: &str = ".cargo-sbom.json";
+
+        fn append_sbom_suffix(link: &PathBuf, suffix: &str) -> PathBuf {
+            let mut link_buf = link.clone().into_os_string();
+            link_buf.push(suffix);
+            PathBuf::from(link_buf)
+        }
+
         assert!(self.bcx.build_config.sbom);
         let files = self
             .outputs(unit)?
             .iter()
             .filter(|o| matches!(o.flavor, FileFlavor::Normal | FileFlavor::Linkable))
             .filter_map(|output_file| output_file.hardlink.as_ref())
-            .map(|link_dst| link_dst.with_extension("cargo-sbom.json"))
+            .map(|link| append_sbom_suffix(link, SBOM_FILE_EXTENSION))
             .collect::<Vec<_>>();
         Ok(files)
     }

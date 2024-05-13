@@ -105,16 +105,15 @@ impl BuildConfig {
         }
 
         // If sbom flag is set, it requires the unstable feature
-        let mut sbom = match gctx.get_env_os("CARGO_BUILD_SBOM") {
-            Some(sbom) => sbom == "true",
-            None => cfg.sbom == Some(true),
+        let sbom = match (cfg.sbom, gctx.cli_unstable().sbom) {
+            (Some(sbom), true) => sbom,
+            (Some(_), false) => {
+                gctx.shell()
+                    .warn("ignoring 'sbom' config, pass `-Zsbom` to enable it")?;
+                false
+            }
+            (None, _) => false,
         };
-
-        if sbom && !gctx.cli_unstable().sbom {
-            gctx.shell()
-                .warn("ignoring 'sbom' config, pass `-Zsbom` to enable it")?;
-            sbom = false;
-        }
 
         Ok(BuildConfig {
             requested_kinds,
