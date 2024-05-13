@@ -1852,8 +1852,7 @@ dependencies = [
 [[package]]
 name = "glob"
 version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
+source = "git+https://github.com/rust-lang/glob.git?rev=47c0cf3d03c56608f4371a3a832ec752c1af328f#47c0cf3d03c56608f4371a3a832ec752c1af328f"
 
 [[package]]
 name = "globset"
