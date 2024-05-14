@@ -112,7 +112,8 @@ fn build_sbom_using_cargo_config() {
                 "wrapper": null,
                 "workspace_wrapper": null,
                 "commit_hash": "[..]",
-                "host": "[..]"
+                "host": "[..]",
+                "verbose_version": "{...}"
             }
         }
         "#,
@@ -247,6 +248,23 @@ fn build_sbom_with_simple_build_script() {
                     "features": [],
                     "package": "foo",
                     "package_id": "path+file://[..]/foo#0.0.1",
+                    "profile": {
+                        "codegen_backend": null,
+                        "codegen_units": null,
+                        "debug_assertions": false,
+                        "debuginfo": 2,
+                        "incremental": false,
+                        "lto": "false",
+                        "name": "dev",
+                        "opt_level": "0",
+                        "overflow_checks": false,
+                        "panic": "unwind",
+                        "rpath": false,
+                        "split_debuginfo": null,
+                        "strip": {
+                            "deferred": "None"
+                        }
+                    },
                     "version": "0.0.1"
                 },
                 {
@@ -256,7 +274,24 @@ fn build_sbom_with_simple_build_script() {
                     "features": [],
                     "build_type": "normal",
                     "extern_crate_name": "build_script_build",
-                    "dependencies": []
+                    "dependencies": [],
+                    "profile": {
+                        "codegen_backend": null,
+                        "codegen_units": null,
+                        "debug_assertions": true,
+                        "debuginfo": 0,
+                        "incremental": false,
+                        "lto": "false",
+                        "name": "dev",
+                        "opt_level": "0",
+                        "overflow_checks": true,
+                        "panic": "unwind",
+                        "rpath": false,
+                        "split_debuginfo": "{...}",
+                        "strip": {
+                            "deferred": "None"
+                        }
+                    }
                 }
             ],
             "features": [],
@@ -265,7 +300,8 @@ fn build_sbom_with_simple_build_script() {
                 "wrapper": null,
                 "workspace_wrapper": null,
                 "commit_hash": "[..]",
-                "host": "[..]"
+                "host": "[..]",
+                "verbose_version": "{...}"
             }
         }"#,
     );
@@ -370,7 +406,8 @@ fn build_sbom_with_build_dependencies() {
                             "version": "0.1.0",
                             "features": []
                         }
-                    ]
+                    ],
+                    "profile": null
                 },
                 {
                     "package_id": "registry+[..]#bar@0.1.0",
@@ -386,7 +423,24 @@ fn build_sbom_with_build_dependencies() {
                             "version": "0.1.0",
                             "features": []
                         }
-                    ]
+                    ],
+                    "profile": {
+                        "codegen_backend": null,
+                        "codegen_units": null,
+                        "debug_assertions": false,
+                        "debuginfo": 2,
+                        "incremental": false,
+                        "lto": "false",
+                        "name": "dev",
+                        "opt_level": "0",
+                        "overflow_checks": false,
+                        "panic": "unwind",
+                        "rpath": false,
+                        "split_debuginfo": "{...}",
+                        "strip": {
+                            "deferred": "None"
+                        }
+                    }
                 },
                 {
                     "package_id": "registry+[..]#bar@0.1.0",
@@ -402,7 +456,24 @@ fn build_sbom_with_build_dependencies() {
                             "version": "0.1.0",
                             "features": []
                         }
-                    ]
+                    ],
+                    "profile": {
+                        "codegen_backend": null,
+                        "codegen_units": null,
+                        "debug_assertions": true,
+                        "debuginfo": 0,
+                        "incremental": false,
+                        "lto": "false",
+                        "name": "dev",
+                        "opt_level": "0",
+                        "overflow_checks": true,
+                        "panic": "unwind",
+                        "rpath": false,
+                        "split_debuginfo": "{...}",
+                        "strip": {
+                            "deferred": "None"
+                        }
+                    }
                 },
                 {
                     "package_id": "registry+[..]#baz@0.1.0",
@@ -411,7 +482,24 @@ fn build_sbom_with_build_dependencies() {
                     "features": [],
                     "build_type": "normal",
                     "extern_crate_name": "baz",
-                    "dependencies": []
+                    "dependencies": [],
+                    "profile": {
+                        "codegen_backend": null,
+                        "codegen_units": null,
+                        "debug_assertions": true,
+                        "debuginfo": 0,
+                        "incremental": false,
+                        "lto": "false",
+                        "name": "dev",
+                        "opt_level": "0",
+                        "overflow_checks": true,
+                        "panic": "unwind",
+                        "rpath": false,
+                        "split_debuginfo": "{...}",
+                        "strip": {
+                            "deferred": "None"
+                        }
+                    }
                 }
             ],
             "features": [],
@@ -420,7 +508,8 @@ fn build_sbom_with_build_dependencies() {
                 "wrapper": null,
                 "workspace_wrapper": null,
                 "commit_hash": "[..]",
-                "host": "[..]"
+                "host": "[..]",
+                "verbose_version": "{...}"
             }
         }"#,
     );

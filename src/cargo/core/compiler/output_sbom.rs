@@ -74,6 +74,10 @@ impl From<&UnitDep> for SbomDependency {
 struct SbomPackage {
     package_id: PackageIdSpec,
     package: String,
+    /// A profile can be overriden for individual packages
+    ///
+    /// See <https://doc.rust-lang.org/nightly/cargo/reference/profiles.html#overrides>
+    profile: Option<Profile>,
     version: Option<Version>,
     features: Vec<String>,
     build_type: SbomBuildType,
@@ -86,9 +90,15 @@ impl SbomPackage {
         dep: &UnitDep,
         dependencies: Vec<SbomDependency>,
         build_type: SbomBuildType,
+        root_profile: &Profile,
     ) -> Self {
         let package_id = dep.unit.pkg.package_id().to_spec();
         let package = package_id.name().to_string();
+        let profile = if &dep.unit.profile != root_profile {
+            Some(dep.unit.profile.clone())
+        } else {
+            None
+        };
         let version = package_id.version();
         let features = dep
             .unit
@@ -100,6 +110,7 @@ impl SbomPackage {
         Self {
             package_id,
             package,
+            profile,
             version,
             features,
             build_type,
@@ -135,6 +146,7 @@ struct SbomRustc {
     workspace_wrapper: Option<PathBuf>,
     commit_hash: Option<String>,
     host: String,
+    verbose_version: String,
 }
 
 impl From<&Rustc> for SbomRustc {
@@ -145,6 +157,7 @@ impl From<&Rustc> for SbomRustc {
             workspace_wrapper: rustc.workspace_wrapper.clone(),
             commit_hash: rustc.commit_hash.clone(),
             host: rustc.host.to_string(),
+            verbose_version: rustc.verbose_version.clone(),
         }
     }
 }
@@ -194,7 +207,7 @@ pub fn output_sbom(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> Cargo
     let bcx = build_runner.bcx;
     let rustc: SbomRustc = bcx.rustc().into();
 
-    let packages = fetch_packages(build_runner, unit);
+    let packages = collect_packages(build_runner, unit);
 
     for sbom_output_file in build_runner.sbom_output_files(unit)? {
         let sbom = Sbom::new(unit, packages.clone(), rustc.clone());
@@ -208,9 +221,10 @@ pub fn output_sbom(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> Cargo
 
 /// Fetch all dependencies, including transitive ones. A dependency can also appear multiple times
 /// if it's included with different versions.
-fn fetch_packages(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> Vec<SbomPackage> {
+fn collect_packages(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> Vec<SbomPackage> {
     let unit_graph = &build_runner.bcx.unit_graph;
     let root_deps = build_runner.unit_deps(unit);
+    let root_profile = &unit.profile;
 
     let mut result = Vec::new();
     let mut queue: BTreeSet<&UnitDep> = root_deps.iter().collect();
@@ -230,7 +244,12 @@ fn fetch_packages(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> Vec<Sb
         let mut dependencies: BTreeSet<&UnitDep> = unit_graph[&package.unit].iter().collect();
         let sbom_dependencies = dependencies.iter().map(|dep| (*dep).into()).collect_vec();
 
-        result.push(SbomPackage::new(package, sbom_dependencies, build_type));
+        result.push(SbomPackage::new(
+            package,
+            sbom_dependencies,
+            build_type,
+            root_profile,
+        ));
 
         visited.insert(package);
 
