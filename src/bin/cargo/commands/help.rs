@@ -10,7 +10,11 @@ use std::io::Read;
 use std::io::Write;
 use std::path::Path;
 
+#[cfg(not(host_os = "windows"))]
 const COMPRESSED_MAN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/man.tgz"));
+
+#[cfg(host_os = "windows")]
+const COMPRESSED_MAN: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "\\man.tgz"));
 
 pub fn cli() -> Command {
     subcommand("help")

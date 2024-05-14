@@ -5,9 +5,12 @@ use std::path::Path;
 use std::process::Command;
 
 fn main() {
+    println!("cargo:rustc-check-cfg=cfg(host_os, values(\"windows\"))");
+
     commit_info();
     compress_man();
     windows_manifest();
+
     // ALLOWED: Accessing environment during build time shouldn't be prohibited.
     #[allow(clippy::disallowed_methods)]
     let target = std::env::var("TARGET").unwrap();
@@ -45,6 +48,13 @@ fn compress_man() {
     add_files(Path::new("src/doc/man/generated_txt"), OsStr::new("txt"));
     let encoder = ar.into_inner().unwrap();
     encoder.finish().unwrap();
+
+    // ALLOWED: Accessing environment during build time shouldn't be prohibited.
+    #[allow(clippy::disallowed_methods)]
+    let host = std::env::var("HOST").unwrap();
+    if let Some("windows") = host.split('-').nth(2) {
+        println!("cargo:rustc-cfg=host_os=\"windows\"");
+    }
 }
 
 struct CommitInfo {
