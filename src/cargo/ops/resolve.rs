@@ -64,9 +64,14 @@ use crate::core::resolver::{
     self, HasDevUnits, Resolve, ResolveOpts, ResolveVersion, VersionOrdering, VersionPreferences,
 };
 use crate::core::summary::Summary;
-use crate::core::{
-    GitReference, PackageId, PackageIdSpec, PackageIdSpecQuery, PackageSet, SourceId, Workspace,
-};
+use crate::core::Dependency;
+use crate::core::GitReference;
+use crate::core::PackageId;
+use crate::core::PackageIdSpec;
+use crate::core::PackageIdSpecQuery;
+use crate::core::PackageSet;
+use crate::core::SourceId;
+use crate::core::Workspace;
 use crate::ops;
 use crate::sources::PathSource;
 use crate::util::cache_lock::CacheLockMode;
@@ -75,6 +80,9 @@ use crate::util::CanonicalUrl;
 use anyhow::Context as _;
 use std::collections::{HashMap, HashSet};
 use tracing::{debug, trace};
+
+/// Filter for keep using Package ID from previous lockfile.
+type Keep<'a> = &'a dyn Fn(&PackageId) -> bool;
 
 /// Result for `resolve_ws_with_opts`.
 pub struct WorkspaceResolve<'gctx> {
@@ -312,7 +320,7 @@ pub fn resolve_with_previous<'gctx>(
     cli_features: &CliFeatures,
     has_dev_units: HasDevUnits,
     previous: Option<&Resolve>,
-    keep_previous: Option<&dyn Fn(&PackageId) -> bool>,
+    keep_previous: Option<Keep<'_>>,
     specs: &[PackageIdSpec],
     register_patches: bool,
 ) -> CargoResult<Resolve> {
@@ -321,6 +329,16 @@ pub fn resolve_with_previous<'gctx>(
     let _lock = ws
         .gctx()
         .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
+
+    // Some packages are already loaded when setting up a workspace. This
+    // makes it so anything that was already loaded will not be loaded again.
+    // Without this there were cases where members would be parsed multiple times
+    ws.preload(registry);
+
+    // In case any members were not already loaded or the Workspace is_ephemeral.
+    for member in ws.members() {
+        registry.add_sources(Some(member.package_id().source_id()))?;
+    }
 
     // Try to keep all from previous resolve if no instruction given.
     let keep_previous = keep_previous.unwrap_or(&|_| true);
@@ -372,16 +390,6 @@ pub fn resolve_with_previous<'gctx>(
         registry.lock_patches();
     }
 
-    // Some packages are already loaded when setting up a workspace. This
-    // makes it so anything that was already loaded will not be loaded again.
-    // Without this there were cases where members would be parsed multiple times
-    ws.preload(registry);
-
-    // In case any members were not already loaded or the Workspace is_ephemeral.
-    for member in ws.members() {
-        registry.add_sources(Some(member.package_id().source_id()))?;
-    }
-
     let summaries: Vec<(Summary, ResolveOpts)> = ws
         .members_with_features(specs, cli_features)?
         .into_iter()
@@ -397,26 +405,8 @@ pub fn resolve_with_previous<'gctx>(
         })
         .collect();
 
-    let root_replace = ws.root_replace();
+    let replace = lock_replacements(ws, previous, &keep);
 
-    let replace = match previous {
-        Some(r) => root_replace
-            .iter()
-            .map(|(spec, dep)| {
-                for (&key, &val) in r.replacements().iter() {
-                    if spec.matches(key) && dep.matches_id(val) && keep(&val) {
-                        let mut dep = dep.clone();
-                        dep.lock_to(val);
-                        return (spec.clone(), dep);
-                    }
-                }
-                (spec.clone(), dep.clone())
-            })
-            .collect::<Vec<_>>(),
-        None => root_replace.to_vec(),
-    };
-
-    ws.preload(registry);
     let mut resolved = resolver::resolve(
         &summaries,
         &replace,
@@ -425,12 +415,9 @@ pub fn resolve_with_previous<'gctx>(
         ResolveVersion::with_rust_version(ws.rust_version()),
         Some(ws.gctx()),
     )?;
-    let patches: Vec<_> = registry
-        .patches()
-        .values()
-        .flat_map(|v| v.iter().cloned())
-        .collect();
-    resolved.register_used_patches(&patches[..]);
+
+    let patches = registry.patches().values().flat_map(|v| v.iter());
+    resolved.register_used_patches(patches);
 
     if register_patches && !resolved.unused_patches().is_empty() {
         emit_warnings_of_unused_patches(ws, &resolved, registry)?;
@@ -508,7 +495,7 @@ fn register_previous_locks(
     ws: &Workspace<'_>,
     registry: &mut PackageRegistry<'_>,
     resolve: &Resolve,
-    keep: &dyn Fn(&PackageId) -> bool,
+    keep: Keep<'_>,
     dev_deps: bool,
 ) {
     let path_pkg = |id: SourceId| {
@@ -805,7 +792,7 @@ fn register_patch_entries(
     ws: &Workspace<'_>,
     previous: Option<&Resolve>,
     version_prefs: &mut VersionPreferences,
-    keep_previous: &dyn Fn(&PackageId) -> bool,
+    keep_previous: Keep<'_>,
 ) -> CargoResult<HashSet<PackageId>> {
     let mut avoid_patch_ids = HashSet::new();
     for (url, patches) in ws.root_patch()?.iter() {
@@ -909,4 +896,31 @@ fn register_patch_entries(
     }
 
     Ok(avoid_patch_ids)
+}
+
+/// Locks each `[replace]` entry to a specific Package ID
+/// if the lockfile contains any correspoding previous replacement.
+fn lock_replacements(
+    ws: &Workspace<'_>,
+    previous: Option<&Resolve>,
+    keep: Keep<'_>,
+) -> Vec<(PackageIdSpec, Dependency)> {
+    let root_replace = ws.root_replace();
+    let replace = match previous {
+        Some(r) => root_replace
+            .iter()
+            .map(|(spec, dep)| {
+                for (&key, &val) in r.replacements().iter() {
+                    if spec.matches(key) && dep.matches_id(val) && keep(&val) {
+                        let mut dep = dep.clone();
+                        dep.lock_to(val);
+                        return (spec.clone(), dep);
+                    }
+                }
+                (spec.clone(), dep.clone())
+            })
+            .collect::<Vec<_>>(),
+        None => root_replace.to_vec(),
+    };
+    replace
 }
