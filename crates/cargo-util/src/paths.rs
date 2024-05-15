@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use filetime::FileTime;
 use std::env;
 use std::ffi::{OsStr, OsString};
-use std::fs::{self, File, Metadata, OpenOptions};
+use std::fs::{self, File, Metadata, OpenOptions, Permissions};
 use std::io;
 use std::io::prelude::*;
 use std::iter;
@@ -185,10 +185,34 @@ pub fn write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()>
 /// write_atomic uses tempfile::persist to accomplish atomic writes.
 pub fn write_atomic<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()> {
     let path = path.as_ref();
+
+    // On unix platforms, get the permissions of the original file. Copy only the user/group/other
+    // read/write/execute permission bits. The tempfile lib defaults to an initial mode of 0o600,
+    // and we'll set the proper permissions after creating the file.
+    #[cfg(unix)]
+    let perms = path.metadata().ok().map(|meta| {
+        use std::os::unix::fs::PermissionsExt;
+
+        // these constants are u16 on macOS
+        let mask = u32::from(libc::S_IRWXU | libc::S_IRWXG | libc::S_IRWXO);
+        let mode = meta.permissions().mode() & mask;
+
+        Permissions::from_mode(mode)
+    });
+
     let mut tmp = TempFileBuilder::new()
         .prefix(path.file_name().unwrap())
         .tempfile_in(path.parent().unwrap())?;
     tmp.write_all(contents.as_ref())?;
+
+    // On unix platforms, set the permissions on the newly created file. We can use fchmod (called
+    // by the std lib; subject to change) which ignores the umask so that the new file has the same
+    // permissions as the old file.
+    #[cfg(unix)]
+    if let Some(perms) = perms {
+        tmp.as_file().set_permissions(perms)?;
+    }
+
     tmp.persist(path)?;
     Ok(())
 }
@@ -821,6 +845,32 @@ mod tests {
         write_atomic(&path, original_contents).unwrap();
         let contents = std::fs::read_to_string(&path).unwrap();
         assert_eq!(contents, original_contents);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn write_atomic_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let original_perms = std::fs::Permissions::from_mode(u32::from(
+            libc::S_IRWXU | libc::S_IRGRP | libc::S_IWGRP | libc::S_IROTH,
+        ));
+
+        let tmp = tempfile::Builder::new().tempfile().unwrap();
+
+        // need to set the permissions after creating the file to avoid umask
+        tmp.as_file()
+            .set_permissions(original_perms.clone())
+            .unwrap();
+
+        // after this call, the file at `tmp.path()` will not be the same as the file held by `tmp`
+        write_atomic(tmp.path(), "new").unwrap();
+        assert_eq!(std::fs::read_to_string(tmp.path()).unwrap(), "new");
+
+        let new_perms = std::fs::metadata(tmp.path()).unwrap().permissions();
+
+        let mask = u32::from(libc::S_IRWXU | libc::S_IRWXG | libc::S_IRWXO);
+        assert_eq!(original_perms.mode(), new_perms.mode() & mask);
     }
 
     #[test]
