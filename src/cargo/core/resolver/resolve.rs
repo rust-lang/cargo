@@ -205,7 +205,7 @@ impl Resolve {
         self.graph.path_to_top(pkg)
     }
 
-    pub fn register_used_patches(&mut self, patches: &[Summary]) {
+    pub fn register_used_patches<'a>(&mut self, patches: impl Iterator<Item = &'a Summary>) {
         for summary in patches {
             if !self.graph.contains(&summary.package_id()) {
                 self.unused_patches.push(summary.package_id())

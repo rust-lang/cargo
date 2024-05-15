@@ -412,12 +412,9 @@ pub fn resolve_with_previous<'gctx>(
         ResolveVersion::with_rust_version(ws.rust_version()),
         Some(ws.gctx()),
     )?;
-    let patches: Vec<_> = registry
-        .patches()
-        .values()
-        .flat_map(|v| v.iter().cloned())
-        .collect();
-    resolved.register_used_patches(&patches[..]);
+
+    let patches = registry.patches().values().flat_map(|v| v.iter());
+    resolved.register_used_patches(patches);
 
     if register_patches && !resolved.unused_patches().is_empty() {
         emit_warnings_of_unused_patches(ws, &resolved, registry)?;
