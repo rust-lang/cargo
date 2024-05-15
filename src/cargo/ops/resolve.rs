@@ -416,7 +416,6 @@ pub fn resolve_with_previous<'gctx>(
         None => root_replace.to_vec(),
     };
 
-    ws.preload(registry);
     let mut resolved = resolver::resolve(
         &summaries,
         &replace,
