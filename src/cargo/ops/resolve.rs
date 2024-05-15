@@ -81,6 +81,9 @@ use anyhow::Context as _;
 use std::collections::{HashMap, HashSet};
 use tracing::{debug, trace};
 
+/// Filter for keep using Package ID from previous lockfile.
+type Keep<'a> = &'a dyn Fn(&PackageId) -> bool;
+
 /// Result for `resolve_ws_with_opts`.
 pub struct WorkspaceResolve<'gctx> {
     /// Packages to be downloaded.
@@ -317,7 +320,7 @@ pub fn resolve_with_previous<'gctx>(
     cli_features: &CliFeatures,
     has_dev_units: HasDevUnits,
     previous: Option<&Resolve>,
-    keep_previous: Option<&dyn Fn(&PackageId) -> bool>,
+    keep_previous: Option<Keep<'_>>,
     specs: &[PackageIdSpec],
     register_patches: bool,
 ) -> CargoResult<Resolve> {
@@ -492,7 +495,7 @@ fn register_previous_locks(
     ws: &Workspace<'_>,
     registry: &mut PackageRegistry<'_>,
     resolve: &Resolve,
-    keep: &dyn Fn(&PackageId) -> bool,
+    keep: Keep<'_>,
     dev_deps: bool,
 ) {
     let path_pkg = |id: SourceId| {
@@ -789,7 +792,7 @@ fn register_patch_entries(
     ws: &Workspace<'_>,
     previous: Option<&Resolve>,
     version_prefs: &mut VersionPreferences,
-    keep_previous: &dyn Fn(&PackageId) -> bool,
+    keep_previous: Keep<'_>,
 ) -> CargoResult<HashSet<PackageId>> {
     let mut avoid_patch_ids = HashSet::new();
     for (url, patches) in ws.root_patch()?.iter() {
@@ -900,7 +903,7 @@ fn register_patch_entries(
 fn lock_replacements(
     ws: &Workspace<'_>,
     previous: Option<&Resolve>,
-    keep: &dyn Fn(&PackageId) -> bool,
+    keep: Keep<'_>,
 ) -> Vec<(PackageIdSpec, Dependency)> {
     let root_replace = ws.root_replace();
     let replace = match previous {
