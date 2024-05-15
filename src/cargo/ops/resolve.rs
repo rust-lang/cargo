@@ -327,6 +327,16 @@ pub fn resolve_with_previous<'gctx>(
         .gctx()
         .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
+    // Some packages are already loaded when setting up a workspace. This
+    // makes it so anything that was already loaded will not be loaded again.
+    // Without this there were cases where members would be parsed multiple times
+    ws.preload(registry);
+
+    // In case any members were not already loaded or the Workspace is_ephemeral.
+    for member in ws.members() {
+        registry.add_sources(Some(member.package_id().source_id()))?;
+    }
+
     // Try to keep all from previous resolve if no instruction given.
     let keep_previous = keep_previous.unwrap_or(&|_| true);
 
@@ -375,16 +385,6 @@ pub fn resolve_with_previous<'gctx>(
 
     if register_patches {
         registry.lock_patches();
-    }
-
-    // Some packages are already loaded when setting up a workspace. This
-    // makes it so anything that was already loaded will not be loaded again.
-    // Without this there were cases where members would be parsed multiple times
-    ws.preload(registry);
-
-    // In case any members were not already loaded or the Workspace is_ephemeral.
-    for member in ws.members() {
-        registry.add_sources(Some(member.package_id().source_id()))?;
     }
 
     let summaries: Vec<(Summary, ResolveOpts)> = ws
