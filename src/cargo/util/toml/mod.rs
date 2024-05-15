@@ -2282,9 +2282,14 @@ supported tools: {}",
                 for config_name in config.keys() {
                     // manually report unused manifest key warning since we collect all the "extra"
                     // keys and values inside the config table
-                    let message =
-                        format!("unused manifest key: `lints.{tool}.{name}.{config_name}`");
-                    warnings.push(message);
+                    //
+                    // except for `rust.unexpected_cfgs.check-cfg` which is used by rustc/rustdoc
+                    if !(tool == "rust" && name == "unexpected_cfgs" && config_name == "check-cfg")
+                    {
+                        let message =
+                            format!("unused manifest key: `lints.{tool}.{name}.{config_name}`");
+                        warnings.push(message);
+                    }
                 }
             }
         }

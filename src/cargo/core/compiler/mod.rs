@@ -1353,12 +1353,37 @@ fn check_cfg_args(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Vec<OsStri
         // Cargo and docs.rs than rustc and docs.rs. In particular, all users of docs.rs use
         // Cargo, but not all users of rustc (like Rust-for-Linux) use docs.rs.
 
-        vec![
+        let mut args = vec![
             OsString::from("--check-cfg"),
             OsString::from("cfg(docsrs)"),
             OsString::from("--check-cfg"),
             arg_feature,
-        ]
+        ];
+
+        // Also include the custom arguments specified in `[lints.rust.unexpected_cfgs.check_cfg]`
+        if let Ok(Some(lints)) = unit.pkg.manifest().resolved_toml().resolved_lints() {
+            if let Some(rust_lints) = lints.get("rust") {
+                if let Some(unexpected_cfgs) = rust_lints.get("unexpected_cfgs") {
+                    if let Some(config) = unexpected_cfgs.config() {
+                        if let Some(check_cfg) = config.get("check-cfg") {
+                            if let Ok(check_cfgs) =
+                                toml::Value::try_into::<Vec<String>>(check_cfg.clone())
+                            {
+                                for check_cfg in check_cfgs {
+                                    args.push(OsString::from("--check-cfg"));
+                                    args.push(OsString::from(check_cfg));
+                                }
+                            // warn (if wise) about `check-cfg` not being a list-of-string
+                            } else if unit.show_warnings(&build_runner.bcx.gctx) {
+                                let _ = build_runner.bcx.gctx.shell().warn("`lints.rust.unexpected_cfgs.check-cfg` must be a list of string");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        args
     } else {
         Vec::new()
     }

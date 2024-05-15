@@ -496,3 +496,28 @@ fn build_script_test() {
         .with_stdout_contains_n("test [..] ... ok", 3)
         .run();
 }
+
+#[cargo_test(>=1.79, reason = "--check-cfg was stabilized in Rust 1.79")]
+fn config_simple() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [lints.rust]
+                unexpected_cfgs = { level = "warn", check-cfg = ["cfg(has_foo)", "cfg(has_bar, values(\"yes\", \"no\"))"] }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_contains(x!("rustc" => "cfg" of "has_foo"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "has_bar" with "yes" "no"))
+        .with_stderr_does_not_contain("[..]unused manifest key[..]")
+        .run();
+}
