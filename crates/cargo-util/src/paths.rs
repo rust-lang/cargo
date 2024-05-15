@@ -824,6 +824,32 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
+    fn write_atomic_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let original_perms = std::fs::Permissions::from_mode(u32::from(
+            libc::S_IRWXU | libc::S_IRGRP | libc::S_IWGRP | libc::S_IROTH,
+        ));
+
+        let tmp = tempfile::Builder::new().tempfile().unwrap();
+
+        // need to set the permissions after creating the file to avoid umask
+        tmp.as_file()
+            .set_permissions(original_perms.clone())
+            .unwrap();
+
+        // after this call, the file at `tmp.path()` will not be the same as the file held by `tmp`
+        write_atomic(tmp.path(), "new").unwrap();
+        assert_eq!(std::fs::read_to_string(tmp.path()).unwrap(), "new");
+
+        let new_perms = std::fs::metadata(tmp.path()).unwrap().permissions();
+
+        let mask = u32::from(libc::S_IRWXU | libc::S_IRWXG | libc::S_IRWXO);
+        assert_eq!(0o600, new_perms.mode() & mask);
+    }
+
+    #[test]
     fn join_paths_lists_paths_on_error() {
         let valid_paths = vec!["/testing/one", "/testing/two"];
         // does not fail on valid input
