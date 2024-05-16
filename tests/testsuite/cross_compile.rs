@@ -884,47 +884,6 @@ fn build_script_only_host() {
 }
 
 #[cargo_test]
-fn plugin_build_script_right_arch() {
-    if cross_compile::disabled() {
-        return;
-    }
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                edition = "2015"
-                authors = []
-                build = "build.rs"
-
-                [lib]
-                name = "foo"
-                plugin = true
-            "#,
-        )
-        .file("build.rs", "fn main() {}")
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("build -v --target")
-        .arg(cross_compile::alternate())
-        .with_stderr(
-            "\
-[WARNING] support for rustc plugins has been removed from rustc. library `foo` should not specify `plugin = true`
-[WARNING] support for `plugin = true` will be removed from cargo in the future
-[COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] build.rs [..]`
-[RUNNING] `[..]/build-script-build`
-[RUNNING] `rustc [..] src/lib.rs [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
-}
-
-#[cargo_test]
 fn build_script_with_platform_specific_dependencies() {
     if cross_compile::disabled() {
         return;
