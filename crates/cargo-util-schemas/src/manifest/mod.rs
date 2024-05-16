@@ -1503,6 +1503,13 @@ impl TomlLint {
             Self::Config(config) => config.priority,
         }
     }
+
+    pub fn config(&self) -> Option<&toml::Table> {
+        match self {
+            Self::Level(_) => None,
+            Self::Config(config) => Some(&config.config),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1511,6 +1518,8 @@ pub struct TomlLintConfig {
     pub level: TomlLintLevel,
     #[serde(default)]
     pub priority: i8,
+    #[serde(flatten)]
+    pub config: toml::Table,
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
