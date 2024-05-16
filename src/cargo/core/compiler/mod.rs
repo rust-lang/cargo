@@ -63,7 +63,7 @@ use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::{Context as _, Error};
+use anyhow::{bail, Context as _, Error};
 use lazycell::LazyCell;
 use tracing::{debug, trace};
 
@@ -732,7 +732,7 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
     let doc_dir = build_runner.files().out_dir(unit);
     rustdoc.arg("-o").arg(&doc_dir);
     rustdoc.args(&features_args(unit));
-    rustdoc.args(&check_cfg_args(build_runner, unit));
+    rustdoc.args(&check_cfg_args(build_runner, unit)?);
 
     add_error_format_and_color(build_runner, &mut rustdoc);
     add_allow_features(build_runner, &mut rustdoc);
@@ -1125,7 +1125,7 @@ fn build_base_args(
     }
 
     cmd.args(&features_args(unit));
-    cmd.args(&check_cfg_args(build_runner, unit));
+    cmd.args(&check_cfg_args(build_runner, unit)?);
 
     let meta = build_runner.files().metadata(unit);
     cmd.arg("-C").arg(&format!("metadata={}", meta));
@@ -1310,7 +1310,7 @@ fn trim_paths_args(
 }
 
 /// Generates the `--check-cfg` arguments for the `unit`.
-fn check_cfg_args(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Vec<OsString> {
+fn check_cfg_args(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<Vec<OsString>> {
     if build_runner
         .bcx
         .target_data
@@ -1373,9 +1373,9 @@ fn check_cfg_args(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Vec<OsStri
                                     args.push(OsString::from("--check-cfg"));
                                     args.push(OsString::from(check_cfg));
                                 }
-                            // warn (if wise) about `check-cfg` not being a list-of-string
-                            } else if unit.show_warnings(&build_runner.bcx.gctx) {
-                                let _ = build_runner.bcx.gctx.shell().warn("`lints.rust.unexpected_cfgs.check-cfg` must be a list of string");
+                            // error about `check-cfg` not being a list-of-string
+                            } else {
+                                bail!("`lints.rust.unexpected_cfgs.check-cfg` must be a list of string");
                             }
                         }
                     }
@@ -1383,9 +1383,9 @@ fn check_cfg_args(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> Vec<OsStri
             }
         }
 
-        args
+        Ok(args)
     } else {
-        Vec::new()
+        Ok(Vec::new())
     }
 }
 

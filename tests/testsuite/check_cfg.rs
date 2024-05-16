@@ -653,8 +653,9 @@ fn config_invalid_not_list() {
         .build();
 
     p.cargo("check")
+        .with_status(101)
         .with_stderr_contains(
-            "[..]`lints.rust.unexpected_cfgs.check-cfg` must be a list of string[..]",
+            "[ERROR] `lints.rust.unexpected_cfgs.check-cfg` must be a list of string",
         )
         .run();
 }
@@ -678,8 +679,9 @@ fn config_invalid_not_list_string() {
         .build();
 
     p.cargo("check")
+        .with_status(101)
         .with_stderr_contains(
-            "[..]`lints.rust.unexpected_cfgs.check-cfg` must be a list of string[..]",
+            "[ERROR] `lints.rust.unexpected_cfgs.check-cfg` must be a list of string",
         )
         .run();
 }
