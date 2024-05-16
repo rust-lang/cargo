@@ -299,7 +299,7 @@ Cargo includes the following paths:
   Cargo to properly set the environment if additional libraries on the system
   are needed in the search path.
 * The base output directory, such as `target/debug`, and the "deps" directory.
-  This is mostly for legacy support of `rustc` compiler plugins.
+  This is mostly for support of proc-macros.
 * The rustc sysroot library path. This generally is not important to most
   users.
 
