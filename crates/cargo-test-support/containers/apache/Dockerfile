@@ -10,10 +10,9 @@ RUN git config --global user.email "testuser@example.com" &&\
     git init -b master . &&\
     git add Cargo.toml src &&\
     git commit -m "Initial commit" &&\
-    mv .git ../bar.git &&\
-    cd ../bar.git &&\
-    git config --bool core.bare true &&\
-    rm -rf ../bar
+    cd .. &&\
+    git clone --bare bar bar.git &&\
+    rm -rf bar
 WORKDIR /
 
 EXPOSE 443
