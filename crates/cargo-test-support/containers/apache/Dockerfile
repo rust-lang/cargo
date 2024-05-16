@@ -6,6 +6,7 @@ COPY bar /repos/bar
 WORKDIR /repos/bar
 RUN git config --global user.email "testuser@example.com" &&\
     git config --global user.name "Test User" &&\
+    git config --system --add safe.directory '*' &&\
     git init -b master . &&\
     git add Cargo.toml src &&\
     git commit -m "Initial commit" &&\
