@@ -292,32 +292,6 @@ if foo_bar_condition {
 }
 ```
 
-##### Example of local-only `build.rs`/build script
-
-Build scripts can impose costs on downstream users, and crate authors who wish to avoid
-this can use "local-only" build scripts, which are active locally but not packaged in the
-distributed package. Completly removing the cost from downstream users. 
-
-The way to achieved this, is by excluding the `build.rs` in the `Cargo.toml` with the
-`exclude` key:
-
-```diff
-  [package]
-  name = "foo"
-  version = "0.1.0"
-+ exclude = ["build.rs"]
-```
-
-*`build.rs`:*
-```rust
-fn main() {
-    // Warning: build.rs is not published to crates.io.
-
-    println!("cargo::rerun-if-changed=build.rs");
-    println!("cargo::rustc-check-cfg=cfg(foo)");
-}
-```
-
 For a more complete example see in the [build script examples][build-script-examples] page
 the [conditional compilation][conditional-compilation-example] example.
 
