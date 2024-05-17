@@ -157,6 +157,15 @@ enum Kind {
     Normal,
 }
 
+/// This tuple is an argument to [`PackageRegistry::patch`].
+///
+/// * The first element is the patch definition straight from the manifest.
+/// * The second element is an optional variant where the patch has been locked.
+///   It is the patch locked to a specific version found in Cargo.lock.
+///   This will be `None` if `Cargo.lock` doesn't exist,
+///   or the patch did not match any existing entries in `Cargo.lock`.
+pub type PatchDependency<'a> = (&'a Dependency, Option<LockedPatchDependency>);
+
 /// Argument to [`PackageRegistry::patch`] which is information about a `[patch]`
 /// directive that we found in a lockfile, if present.
 pub struct LockedPatchDependency {
@@ -303,14 +312,8 @@ impl<'gctx> PackageRegistry<'gctx> {
     /// The `deps` is an array of all the entries in the `[patch]` section of
     /// the manifest.
     ///
-    /// Here the `deps` will be resolved to a precise version and stored
-    /// internally for future calls to `query` below. `deps` should be a tuple
-    /// where the first element is the patch definition straight from the
-    /// manifest, and the second element is an optional variant where the
-    /// patch has been locked. This locked patch is the patch locked to
-    /// a specific version found in Cargo.lock. This will be `None` if
-    /// `Cargo.lock` doesn't exist, or the patch did not match any existing
-    /// entries in `Cargo.lock`.
+    /// Here the `patch_deps` will be resolved to a precise version and stored
+    /// internally for future calls to `query` below.
     ///
     /// Note that the patch list specified here *will not* be available to
     /// [`Registry::query`] until [`PackageRegistry::lock_patches`] is called
@@ -322,7 +325,7 @@ impl<'gctx> PackageRegistry<'gctx> {
     pub fn patch(
         &mut self,
         url: &Url,
-        deps: &[(&Dependency, Option<LockedPatchDependency>)],
+        patch_deps: &[PatchDependency<'_>],
     ) -> CargoResult<Vec<(Dependency, PackageId)>> {
         // NOTE: None of this code is aware of required features. If a patch
         // is missing a required feature, you end up with an "unused patch"
@@ -333,9 +336,9 @@ impl<'gctx> PackageRegistry<'gctx> {
         // Return value of patches that shouldn't be locked.
         let mut unlock_patches = Vec::new();
 
-        // First up we need to actually resolve each `deps` specification to
-        // precisely one summary. We're not using the `query` method below as it
-        // internally uses maps we're building up as part of this method
+        // First up we need to actually resolve each `patch_deps` specification
+        // to precisely one summary. We're not using the `query` method below
+        // as it internally uses maps we're building up as part of this method
         // (`patches_available` and `patches`). Instead we're going straight to
         // the source to load information from it.
         //
@@ -343,12 +346,12 @@ impl<'gctx> PackageRegistry<'gctx> {
         // precisely one package, so that's why we're just creating a flat list
         // of summaries which should be the same length as `deps` above.
 
-        let mut deps_remaining: Vec<_> = deps.iter().collect();
+        let mut patch_deps_remaining: Vec<_> = patch_deps.iter().collect();
         let mut unlocked_summaries = Vec::new();
-        while !deps_remaining.is_empty() {
-            let mut deps_pending = Vec::new();
-            for dep_remaining in deps_remaining {
-                let (orig_patch, locked) = dep_remaining;
+        while !patch_deps_remaining.is_empty() {
+            let mut patch_deps_pending = Vec::new();
+            for patch_dep_remaining in patch_deps_remaining {
+                let (orig_patch, locked) = patch_dep_remaining;
 
                 // Use the locked patch if it exists, otherwise use the original.
                 let dep = match locked {
@@ -388,7 +391,7 @@ impl<'gctx> PackageRegistry<'gctx> {
                 let summaries = match source.query_vec(dep, QueryKind::Exact)? {
                     Poll::Ready(deps) => deps,
                     Poll::Pending => {
-                        deps_pending.push(dep_remaining);
+                        patch_deps_pending.push(patch_dep_remaining);
                         continue;
                     }
                 };
@@ -399,7 +402,7 @@ impl<'gctx> PackageRegistry<'gctx> {
                     match summary_for_patch(orig_patch, &locked, summaries, source) {
                         Poll::Ready(x) => x,
                         Poll::Pending => {
-                            deps_pending.push(dep_remaining);
+                            patch_deps_pending.push(patch_dep_remaining);
                             continue;
                         }
                     }
@@ -432,7 +435,7 @@ impl<'gctx> PackageRegistry<'gctx> {
                 unlocked_summaries.push(summary);
             }
 
-            deps_remaining = deps_pending;
+            patch_deps_remaining = patch_deps_pending;
             self.block_until_ready()?;
         }
 
@@ -467,7 +470,7 @@ impl<'gctx> PackageRegistry<'gctx> {
         // in the future, but for now it hopefully doesn't cause too much
         // harm...
         let mut ids = Vec::new();
-        for (summary, (_, lock)) in unlocked_summaries.iter().zip(deps) {
+        for (summary, (_, lock)) in unlocked_summaries.iter().zip(patch_deps) {
             ids.push(summary.package_id());
             if let Some(lock) = lock {
                 ids.extend(lock.alt_package_id);
