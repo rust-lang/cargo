@@ -595,7 +595,6 @@ fn config_simple() {
     p.cargo("check")
         .with_stderr(
             "\
-[WARNING] unused manifest key: lints.rust.unexpected_cfgs.check-cfg
 [CHECKING] foo v0.1.0 ([CWD])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",

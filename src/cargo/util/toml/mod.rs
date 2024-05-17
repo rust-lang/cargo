@@ -2356,6 +2356,11 @@ fn deprecated_underscore<T>(
 
 fn warn_on_unused(unused: &BTreeSet<String>, warnings: &mut Vec<String>) {
     for key in unused {
+        if key == "lints.rust.unexpected_cfgs.check-cfg" {
+            // This key is recognized in the following version and wanting to reduce warning noise
+            // for those users
+            continue;
+        }
         warnings.push(format!("unused manifest key: {}", key));
         if key == "profiles.debug" {
             warnings.push("use `[profile.dev]` to configure debug builds".to_string());
