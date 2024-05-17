@@ -113,11 +113,23 @@ pub struct PackageRegistry<'gctx> {
     yanked_whitelist: HashSet<PackageId>,
     source_config: SourceConfigMap<'gctx>,
 
+    /// Patches registered during calls to [`PackageRegistry::patch`].
+    ///
+    /// These are available for `query` after calling [`PackageRegistry::lock_patches`],
+    /// which `lock`s them all to specific versions.
     patches: HashMap<CanonicalUrl, Vec<Summary>>,
     /// Whether patches are locked. That is, they are available to resolution.
     ///
     /// See [`PackageRegistry::lock_patches`] and [`PackageRegistry::patch`] for more.
     patches_locked: bool,
+    /// Patches available for each source.
+    ///
+    /// This is for determining whether a dependency entry from a lockfile
+    /// happened through `[patch]`, during calls to [`lock`] to rewrite
+    /// summaries to point directly at these patched entries.
+    ///
+    /// This is constructed during calls to [`PackageRegistry::patch`],
+    /// along with the `patches` field, thoough these entries never get locked.
     patches_available: HashMap<CanonicalUrl, Vec<PackageId>>,
 }
 
@@ -453,25 +465,18 @@ impl<'gctx> PackageRegistry<'gctx> {
             }
         }
 
-        // Calculate a list of all patches available for this source which is
-        // then used later during calls to `lock` to rewrite summaries to point
-        // directly at these patched entries.
-        //
-        // Note that this is somewhat subtle where the list of `ids` for a
-        // canonical URL is extend with possibly two ids per summary. This is done
-        // to handle the transition from the v2->v3 lock file format where in
-        // v2 DefaultBranch was either DefaultBranch or Branch("master") for
-        // git dependencies. In this case if `summary.package_id()` is
-        // Branch("master") then alt_package_id will be DefaultBranch. This
-        // signifies that there's a patch available for either of those
-        // dependency directives if we see them in the dependency graph.
-        //
-        // This is a bit complicated and hopefully an edge case we can remove
-        // in the future, but for now it hopefully doesn't cause too much
-        // harm...
+        // Calculate a list of all patches available for this source.
         let mut ids = Vec::new();
         for (summary, (_, lock)) in unlocked_summaries.iter().zip(patch_deps) {
             ids.push(summary.package_id());
+            // This is subtle where the list of `ids` for a canonical URL is
+            // extend with possibly two ids per summary. This is done to handle
+            // the transition from the v2->v3 lock file format where in v2
+            // DefaultBranch was either DefaultBranch or Branch("master") for
+            // git dependencies. In this case if `summary.package_id()` is
+            // Branch("master") then alt_package_id will be DefaultBranch. This
+            // signifies that there's a patch available for either of those
+            // dependency directives if we see them in the dependency graph.
             if let Some(lock) = lock {
                 ids.extend(lock.alt_package_id);
             }
