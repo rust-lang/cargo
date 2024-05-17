@@ -496,3 +496,331 @@ fn build_script_test() {
         .with_stdout_contains_n("test [..] ... ok", 3)
         .run();
 }
+
+#[cargo_test(>=1.79, reason = "--check-cfg was stabilized in Rust 1.79")]
+fn config_simple() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [lints.rust]
+                unexpected_cfgs = { level = "warn", check-cfg = ["cfg(has_foo)", "cfg(has_bar, values(\"yes\", \"no\"))"] }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_contains(x!("rustc" => "cfg" of "has_foo"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "has_bar" with "yes" "no"))
+        .with_stderr_does_not_contain("[..]unused manifest key[..]")
+        .run();
+}
+
+#[cargo_test(>=1.79, reason = "--check-cfg was stabilized in Rust 1.79")]
+fn config_workspace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo/"]
+
+                [workspace.lints.rust]
+                unexpected_cfgs = { level = "warn", check-cfg = ["cfg(has_foo)"] }
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [lints]
+                workspace = true
+            "#,
+        )
+        .file("foo/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_contains(x!("rustc" => "cfg" of "has_foo"))
+        .with_stderr_does_not_contain("unexpected_cfgs")
+        .run();
+}
+
+#[cargo_test(>=1.79, reason = "--check-cfg was stabilized in Rust 1.79")]
+fn config_workspace_not_inherited() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo/"]
+
+                [workspace.lints.rust]
+                unexpected_cfgs = { level = "warn", check-cfg = ["cfg(has_foo)"] }
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+            "#,
+        )
+        .file("foo/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_does_not_contain(x!("rustc" => "cfg" of "has_foo"))
+        .with_stderr_does_not_contain("unexpected_cfgs")
+        .run();
+}
+
+#[cargo_test(>=1.79, reason = "--check-cfg was stabilized in Rust 1.79")]
+fn config_invalid_position() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [lints.rust]
+                use_bracket = { level = "warn", check-cfg = ["cfg(has_foo)"] }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_contains("[..]unused manifest key: `lints.rust.use_bracket.check-cfg`[..]")
+        .with_stderr_does_not_contain(x!("rustc" => "cfg" of "has_foo"))
+        .run();
+}
+
+#[cargo_test(>=1.79, reason = "--check-cfg was stabilized in Rust 1.79")]
+fn config_invalid_empty() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [lints.rust]
+                unexpected_cfgs = { }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_contains("[..]missing field `level`[..]")
+        .run_expect_error();
+}
+
+#[cargo_test(>=1.79, reason = "--check-cfg was stabilized in Rust 1.79")]
+fn config_invalid_not_list() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [lints.rust]
+                unexpected_cfgs = { level = "warn", check-cfg = "cfg()" }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_contains(
+            "[ERROR] `lints.rust.unexpected_cfgs.check-cfg` must be a list of string",
+        )
+        .run();
+}
+
+#[cargo_test(>=1.79, reason = "--check-cfg was stabilized in Rust 1.79")]
+fn config_invalid_not_list_string() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [lints.rust]
+                unexpected_cfgs = { level = "warn", check-cfg = [12] }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_contains(
+            "[ERROR] `lints.rust.unexpected_cfgs.check-cfg` must be a list of string",
+        )
+        .run();
+}
+
+#[cargo_test(>=1.79, reason = "--check-cfg was stabilized in Rust 1.79")]
+fn config_and_features() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [features]
+                my_feature = []
+                alloc = []
+
+                [lints.rust]
+                unexpected_cfgs = { level = "warn", check-cfg = ["cfg(has_foo)", "cfg(has_bar, values(\"yes\", \"no\"))"] }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_contains(x!("rustc" => "cfg" of "has_foo"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "has_bar" with "yes" "no"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "feature" with "alloc" "my_feature"))
+        .run();
+}
+
+#[cargo_test(>=1.79, reason = "--check-cfg was stabilized in Rust 1.79")]
+fn config_with_cargo_doc() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [lints.rust]
+                unexpected_cfgs = { level = "warn", check-cfg = ["cfg(has_foo)"] }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("doc -v")
+        .with_stderr_contains(x!("rustdoc" => "cfg" of "has_foo"))
+        .run();
+}
+
+#[cargo_test(>=1.79, reason = "--check-cfg was stabilized in Rust 1.79")]
+fn config_with_cargo_test() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [lints.rust]
+                unexpected_cfgs = { level = "warn", check-cfg = ["cfg(has_foo)"] }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("test -v")
+        .with_stderr_contains(x!("rustc" => "cfg" of "has_foo"))
+        .run();
+}
+
+#[cargo_test(>=1.79, reason = "--check-cfg was stabilized in Rust 1.79")]
+fn config_and_build_script() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+                build = "build.rs"
+
+                [lints.rust]
+                unexpected_cfgs = { level = "warn", check-cfg = ["cfg(bar)"] }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            r#"fn main() { println!("cargo::rustc-check-cfg=cfg(foo)"); }"#,
+        )
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_contains(x!("rustc" => "cfg" of "foo")) // from build.rs
+        .with_stderr_contains(x!("rustc" => "cfg" of "bar")) // from config
+        .run();
+}
+
+#[cargo_test(>=1.79, reason = "--check-cfg was stabilized in Rust 1.79")]
+fn config_features_and_build_script() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+                build = "build.rs"
+
+                [features]
+                serde = []
+                json = []
+
+                [lints.rust]
+                unexpected_cfgs = { level = "warn", check-cfg = ["cfg(bar)"] }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            r#"fn main() { println!("cargo::rustc-check-cfg=cfg(foo)"); }"#,
+        )
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_contains(x!("rustc" => "cfg" of "foo")) // from build.rs
+        .with_stderr_contains(x!("rustc" => "cfg" of "bar")) // from config
+        .with_stderr_contains(x!("rustc" => "cfg" of "feature" with "json" "serde")) // features
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs")) // Cargo well known
+        .run();
+}
