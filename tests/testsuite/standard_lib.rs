@@ -96,8 +96,19 @@ fn setup() -> Setup {
                         args.push(env::var("REAL_SYSROOT").unwrap());
                     } else if args.iter().any(|arg| arg == "--target") {
                         // build-std target unit
-                        args.push("--sysroot".to_string());
-                        args.push("/path/to/nowhere".to_string());
+                        //
+                        // This `--sysroot` is here to disable the sysroot lookup,
+                        // to ensure nothing is required.
+                        // See https://github.com/rust-lang/wg-cargo-std-aware/issues/31
+                        // for more information on this.
+                        //
+                        // FIXME: this is broken on x86_64-unknown-linux-gnu
+                        // due to https://github.com/rust-lang/rust/pull/124129,
+                        // because it requires lld in the sysroot. See
+                        // https://github.com/rust-lang/rust/issues/125246 for
+                        // more information.
+                        // args.push("--sysroot".to_string());
+                        // args.push("/path/to/nowhere".to_string());
                     } else {
                         // host unit, do not use sysroot
                     }
