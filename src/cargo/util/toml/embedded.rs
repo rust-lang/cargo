@@ -265,12 +265,12 @@ mod test_expand {
 
     macro_rules! si {
         ($i:expr) => {{
-            expand_manifest(
-                $i,
-                std::path::Path::new("/home/me/test.rs"),
-                &GlobalContext::default().unwrap(),
-            )
-            .unwrap_or_else(|err| panic!("{}", err))
+            let shell = crate::Shell::from_write(Box::new(Vec::new()));
+            let cwd = std::env::current_dir().unwrap();
+            let home = home::cargo_home_with_cwd(&cwd).unwrap();
+            let gctx = GlobalContext::new(shell, cwd, home);
+            expand_manifest($i, std::path::Path::new("/home/me/test.rs"), &gctx)
+                .unwrap_or_else(|err| panic!("{}", err))
         }};
     }
 
