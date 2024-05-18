@@ -138,10 +138,12 @@ impl<'gctx> PatchedSource<'gctx> {
 
     /// Downloads the package source if needed.
     fn download_pkg(&mut self) -> CargoResult<Package> {
-        let patch_info = self.patch_info();
-        let exact_req = &format!("={}", patch_info.version());
+        let PatchInfo::Resolved { name, version, .. } = self.patch_info() else {
+            panic!("patched source `{}` must be resolved", self.describe());
+        };
+        let exact_req = &format!("={version}");
         let original_id = self.original_source.source_id();
-        let dep = Dependency::parse(patch_info.name(), Some(exact_req), original_id)?;
+        let dep = Dependency::parse(name, Some(exact_req), original_id)?;
         let pkg_id = loop {
             match self.original_source.query_vec(&dep, QueryKind::Exact) {
                 Poll::Ready(deps) => break deps?.remove(0).as_summary().package_id(),
