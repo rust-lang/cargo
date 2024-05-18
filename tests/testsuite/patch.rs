@@ -2914,3 +2914,91 @@ Caused by:
         )
         .run();
 }
+
+#[cargo_test]
+fn patched_reexport_stays_locked() {
+    // Patch example where you emulate a semver-incompatible patch via a re-export.
+    // Testing an issue where the lockfile does not stay locked after a new version is published.
+    Package::new("bar", "1.0.0").publish();
+    Package::new("bar", "2.0.0").publish();
+    Package::new("bar", "3.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+
+
+                [package]
+                name = "foo"
+
+                [dependencies]
+                bar1 = {package="bar", version="1.0.0"}
+                bar2 = {package="bar", version="2.0.0"}
+
+                [patch.crates-io]
+                bar1 = { package = "bar", path = "bar-1-as-3" }
+                bar2 = { package = "bar", path = "bar-2-as-3" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar-1-as-3/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "1.0.999"
+
+                [dependencies]
+                bar = "3.0.0"
+            "#,
+        )
+        .file("bar-1-as-3/src/lib.rs", "")
+        .file(
+            "bar-2-as-3/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "2.0.999"
+
+                [dependencies]
+                bar = "3.0.0"
+            "#,
+        )
+        .file("bar-2-as-3/src/lib.rs", "")
+        .build();
+
+    p.cargo("tree")
+        .with_stdout(
+            "\
+foo v0.0.0 ([ROOT]/foo)
+├── bar v1.0.999 ([ROOT]/foo/bar-1-as-3)
+│   └── bar v3.0.0
+└── bar v2.0.999 ([ROOT]/foo/bar-2-as-3)
+    └── bar v3.0.0
+",
+        )
+        .run();
+
+    std::fs::copy(
+        p.root().join("Cargo.lock"),
+        p.root().join("Cargo.lock.orig"),
+    )
+    .unwrap();
+
+    Package::new("bar", "3.0.1").publish();
+    p.cargo("tree")
+        .with_stdout(
+            "\
+foo v0.0.0 ([ROOT]/foo)
+├── bar v1.0.999 ([ROOT]/foo/bar-1-as-3)
+│   └── bar v3.0.0
+└── bar v2.0.999 ([ROOT]/foo/bar-2-as-3)
+    └── bar v3.0.0
+",
+        )
+        .run();
+
+    assert_eq!(p.read_file("Cargo.lock"), p.read_file("Cargo.lock.orig"));
+}

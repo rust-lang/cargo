@@ -1204,3 +1204,68 @@ fn catch_tricky_cycle() {
         .with_status(101)
         .run();
 }
+
+#[cargo_test]
+fn same_name_version_changed() {
+    // Illustrates having two path packages with the same name, but different versions.
+    // Verifies it works correctly when one of the versions is changed.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.0.0"
+                edition = "2021"
+
+                [dependencies]
+                foo2 = { path = "foo2", package = "foo" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "foo2/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "2.0.0"
+                edition = "2021"
+            "#,
+        )
+        .file("foo2/src/lib.rs", "")
+        .build();
+
+    p.cargo("tree")
+        .with_stderr("[LOCKING] 2 packages to latest compatible versions")
+        .with_stdout(
+            "\
+foo v1.0.0 ([ROOT]/foo)
+└── foo v2.0.0 ([ROOT]/foo/foo2)
+",
+        )
+        .run();
+
+    p.change_file(
+        "foo2/Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "2.0.1"
+            edition = "2021"
+        "#,
+    );
+    p.cargo("tree")
+        .with_stderr(
+            "\
+[LOCKING] 1 package to latest compatible version
+[ADDING] foo v2.0.1 ([ROOT]/foo/foo2)
+",
+        )
+        .with_stdout(
+            "\
+foo v1.0.0 ([ROOT]/foo)
+└── foo v2.0.1 ([ROOT]/foo/foo2)
+",
+        )
+        .run();
+}
