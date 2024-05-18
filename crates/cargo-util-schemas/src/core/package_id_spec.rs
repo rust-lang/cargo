@@ -625,7 +625,11 @@ mod tests {
                 name: String::from("bar"),
                 version: Some("1.2.0".parse().unwrap()),
                 url: Some(Url::parse("patched+https://crates.io/foo").unwrap()),
-                kind: Some(SourceKind::Patched(PatchInfo::new("bar".into(), "1.2.0".into(), vec!["/to/a.patch".into(), "/b.patch".into()]))),
+                kind: Some(SourceKind::Patched(PatchInfo::Resolved {
+                    name: "bar".into(),
+                    version: "1.2.0".into(),
+                    patches: vec!["/to/a.patch".into(), "/b.patch".into()],
+                })),
             },
             "patched+https://crates.io/foo?name=bar&version=1.2.0&patch=%2Fto%2Fa.patch&patch=%2Fb.patch#bar@1.2.0",
         );

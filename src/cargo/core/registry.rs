@@ -517,6 +517,13 @@ impl<'gctx> PackageRegistry<'gctx> {
         &self.patches
     }
 
+    /// Removes all residual state of patches.
+    pub fn clear_patch(&mut self) {
+        self.patches = Default::default();
+        self.patches_locked = false;
+        self.patches_available = Default::default();
+    }
+
     /// Loads the [`Source`] for a given [`SourceId`] to this registry, making
     /// them available to resolution.
     fn load(&mut self, source_id: SourceId, kind: Kind) -> CargoResult<()> {

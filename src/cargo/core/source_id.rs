@@ -396,6 +396,11 @@ impl SourceId {
         matches!(self.inner.kind, SourceKind::Git(_))
     }
 
+    /// Returns `true` if this source is patched by patch files.
+    pub fn is_patched(self) -> bool {
+        matches!(self.inner.kind, SourceKind::Patched(_))
+    }
+
     /// Creates an implementation of `Source` corresponding to this ID.
     ///
     /// * `yanked_whitelist` --- Packages allowed to be used, even if they are yanked.
@@ -447,6 +452,14 @@ impl SourceId {
     pub fn git_reference(self) -> Option<&'static GitReference> {
         match self.inner.kind {
             SourceKind::Git(ref s) => Some(s),
+            _ => None,
+        }
+    }
+
+    /// Gets the patch information if this is a patched source, otherwise `None`.
+    pub fn patch_info(self) -> Option<&'static PatchInfo> {
+        match &self.inner.kind {
+            SourceKind::Patched(i) => Some(i),
             _ => None,
         }
     }
@@ -689,9 +702,10 @@ impl fmt::Display for SourceId {
             SourceKind::Patched(ref patch_info) => {
                 let n = patch_info.patches().len();
                 let plural = if n == 1 { "" } else { "s" };
-                let name = patch_info.name();
-                let version = patch_info.version();
-                write!(f, "{name}@{version} with {n} patch file{plural}")
+                if let PatchInfo::Resolved { name, version, .. } = &patch_info {
+                    write!(f, "{name}@{version} ")?;
+                }
+                write!(f, "with {n} patch file{plural}")
             }
         }
     }
@@ -889,11 +903,15 @@ mod tests {
         assert_eq!(gen_hash(source_id), 17459999773908528552);
         assert_eq!(crate::util::hex::short_hash(&source_id), "6568fe2c2fab5bfe");
 
-        let patch_info = PatchInfo::new("foo".into(), "1.0.0".into(), vec![path.into()]);
+        let patch_info = PatchInfo::Resolved {
+            name: "foo".into(),
+            version: "1.0.0".into(),
+            patches: vec![path.into()],
+        };
         let registry_source_id = SourceId::for_registry(&url).unwrap();
         let source_id = SourceId::for_patches(registry_source_id, patch_info).unwrap();
-        assert_eq!(gen_hash(source_id), 10476212805277277232);
-        assert_eq!(crate::util::hex::short_hash(&source_id), "45f3b913ab447282");
+        assert_eq!(gen_hash(source_id), 15459318675065232737);
+        assert_eq!(crate::util::hex::short_hash(&source_id), "87ca345b36470e4d");
     }
 
     #[test]

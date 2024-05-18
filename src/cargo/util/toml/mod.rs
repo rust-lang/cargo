@@ -1935,7 +1935,9 @@ fn detailed_dep_to_dependency<P: ResolveToPath + Clone>(
     kind: Option<DepKind>,
     patch_source_url: Option<(&Url, bool)>,
 ) -> CargoResult<Dependency> {
-    if orig.version.is_none() && orig.path.is_none() && orig.git.is_none() {
+    let no_source_specified = orig.version.is_none() && orig.path.is_none() && orig.git.is_none();
+    let contains_file_patches = patch_source_url.is_some() && orig.patches.is_some();
+    if no_source_specified && !contains_file_patches {
         anyhow::bail!(
             "dependency ({name_in_toml}) specified without \
                  providing a local path, Git repository, version, or \
@@ -2203,23 +2205,6 @@ fn patched_source_id<P: ResolveToPath + Clone>(
                     when patching with patch files"
                 )
             }
-            let version = match dep.version_req().locked_version() {
-                Some(v) => Some(v.to_owned()),
-                None if dep.version_req().is_exact() => {
-                    // Remove the `=` exact operator.
-                    orig.version
-                        .as_deref()
-                        .map(|v| v[1..].trim().parse().ok())
-                        .flatten()
-                }
-                None => None,
-            };
-            let Some(version) = version else {
-                bail!(
-                    "patch for `{name_in_toml}` in `{url}` requires an exact version \
-                    when patching with patch files"
-                );
-            };
             let patches: Vec<_> = patches
                 .iter()
                 .map(|path| {
@@ -2237,8 +2222,7 @@ fn patched_source_id<P: ResolveToPath + Clone>(
                     when patching with patch files"
                 );
             }
-            let pkg_name = dep.package_name().to_string();
-            let patch_info = PatchInfo::new(pkg_name, version.to_string(), patches);
+            let patch_info = PatchInfo::Deferred { patches };
             SourceId::for_patches(source_id, patch_info).map(Some)
         }
     }

@@ -211,26 +211,29 @@ impl<'a> std::fmt::Display for PrettyRef<'a> {
 
 /// Information to find the source package and patch files.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct PatchInfo {
-    /// Name of the package to be patched.
-    name: String,
-    /// Verision of the package to be patched.
-    version: String,
-    /// Absolute paths to patch files.
-    ///
-    /// These are absolute to ensure Cargo can locate them in the patching phase.
-    patches: Vec<PathBuf>,
+pub enum PatchInfo {
+    /// The package to be patched is known and finalized.
+    Resolved {
+        /// Name and version of the package to be patched.
+        name: String,
+        /// Version of the package to be patched.
+        version: String,
+        /// Absolute paths to patch files.
+        ///
+        /// These are absolute to ensure Cargo can locate them in the patching phase.
+        patches: Vec<PathBuf>,
+    },
+    /// The package to be patched hasn't yet be resolved. Usually after a few
+    /// times of dependecy resolution, this will become [`PatchInfo::Resolved`].
+    Deferred {
+        /// Absolute paths to patch files.
+        ///
+        /// These are absolute to ensure Cargo can locate them in the patching phase.
+        patches: Vec<PathBuf>,
+    },
 }
 
 impl PatchInfo {
-    pub fn new(name: String, version: String, patches: Vec<PathBuf>) -> PatchInfo {
-        PatchInfo {
-            name,
-            version,
-            patches,
-        }
-    }
-
     /// Collects patch information from query string.
     ///
     /// * `name` --- Package name
@@ -256,7 +259,11 @@ impl PatchInfo {
         if patches.is_empty() {
             return Err(PatchInfoError("path"));
         }
-        Ok(PatchInfo::new(name, version, patches))
+        Ok(PatchInfo::Resolved {
+            name,
+            version,
+            patches,
+        })
     }
 
     /// As a URL query string.
@@ -264,16 +271,22 @@ impl PatchInfo {
         PatchInfoQuery(self)
     }
 
-    pub fn name(&self) -> &str {
-        self.name.as_str()
-    }
-
-    pub fn version(&self) -> &str {
-        self.version.as_str()
+    pub fn finalize(self, name: String, version: String) -> Self {
+        match self {
+            PatchInfo::Deferred { patches } => PatchInfo::Resolved {
+                name,
+                version,
+                patches,
+            },
+            _ => panic!("patch info has already finalized: {self:?}"),
+        }
     }
 
     pub fn patches(&self) -> &[PathBuf] {
-        self.patches.as_slice()
+        match self {
+            PatchInfo::Resolved { patches, .. } => patches.as_slice(),
+            PatchInfo::Deferred { patches } => patches.as_slice(),
+        }
     }
 }
 
@@ -282,22 +295,38 @@ pub struct PatchInfoQuery<'a>(&'a PatchInfo);
 
 impl<'a> std::fmt::Display for PatchInfoQuery<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "name=")?;
-        for value in url::form_urlencoded::byte_serialize(self.0.name.as_bytes()) {
-            write!(f, "{value}")?;
+        match self.0 {
+            PatchInfo::Resolved {
+                name,
+                version,
+                patches,
+            } => {
+                f.write_str("name=")?;
+                for value in url::form_urlencoded::byte_serialize(name.as_bytes()) {
+                    write!(f, "{value}")?;
+                }
+                f.write_str("&version=")?;
+                for value in url::form_urlencoded::byte_serialize(version.as_bytes()) {
+                    write!(f, "{value}")?;
+                }
+                if !patches.is_empty() {
+                    f.write_str("&")?;
+                }
+            }
+            _ => {}
         }
-        write!(f, "&version=")?;
-        for value in url::form_urlencoded::byte_serialize(self.0.version.as_bytes()) {
-            write!(f, "{value}")?;
-        }
-        for path in &self.0.patches {
-            write!(f, "&patch=")?;
+
+        let mut patches = self.0.patches().iter().peekable();
+        while let Some(path) = patches.next() {
+            f.write_str("patch=")?;
             let path = path.to_str().expect("utf8 patch").replace("\\", "/");
             for value in url::form_urlencoded::byte_serialize(path.as_bytes()) {
                 write!(f, "{value}")?;
             }
+            if patches.peek().is_some() {
+                f.write_str("&")?
+            }
         }
-
         Ok(())
     }
 }
