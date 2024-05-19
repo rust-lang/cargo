@@ -630,8 +630,9 @@ fn config_invalid_empty() {
         .build();
 
     p.cargo("check")
+        .with_status(101)
         .with_stderr_contains("[..]missing field `level`[..]")
-        .run_expect_error();
+        .run();
 }
 
 #[cargo_test(>=1.79, reason = "--check-cfg was stabilized in Rust 1.79")]
