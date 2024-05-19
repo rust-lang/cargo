@@ -856,3 +856,65 @@ warning: `im_a_teapot` is specified
         )
         .run();
 }
+
+#[cargo_test]
+fn missing_field_level() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [lints.rust]
+                unsafe_code = { }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  `lints.rust.unsafe_code` missing field `level`
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn missing_field_level_only_priority() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [lints.rust]
+                unsafe_code = { priority = 1 }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[..]`
+
+Caused by:
+  `lints.rust.unsafe_code` missing field `level`
+",
+        )
+        .run();
+}

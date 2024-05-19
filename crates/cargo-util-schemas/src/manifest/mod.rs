@@ -1490,9 +1490,9 @@ impl<'de> Deserialize<'de> for TomlLint {
 }
 
 impl TomlLint {
-    pub fn level(&self) -> TomlLintLevel {
+    pub fn level(&self) -> Option<TomlLintLevel> {
         match self {
-            Self::Level(level) => *level,
+            Self::Level(level) => Some(*level),
             Self::Config(config) => config.level,
         }
     }
@@ -1515,7 +1515,7 @@ impl TomlLint {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlLintConfig {
-    pub level: TomlLintLevel,
+    pub level: Option<TomlLintLevel>,
     #[serde(default)]
     pub priority: i8,
     #[serde(flatten)]

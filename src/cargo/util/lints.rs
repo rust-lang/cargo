@@ -405,11 +405,15 @@ fn level_priority(
     }
 
     if let Some(defined_level) = pkg_lints.get(name) {
-        (
-            defined_level.level().into(),
-            LintLevelReason::Package,
-            defined_level.priority(),
-        )
+        if let Some(level) = defined_level.level() {
+            (
+                level.into(),
+                LintLevelReason::Package,
+                defined_level.priority(),
+            )
+        } else {
+            (unspecified_level, reason, 0)
+        }
     } else {
         (unspecified_level, reason, 0)
     }

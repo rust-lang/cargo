@@ -2292,6 +2292,9 @@ supported tools: {}",
                     }
                 }
             }
+            if config.level().is_none() && config.config().map(|c| c.is_empty()).unwrap_or(true) {
+                anyhow::bail!("`lints.{tool}.{name}` missing field `level`");
+            }
         }
     }
 
@@ -2336,8 +2339,8 @@ fn lints_to_rustflags(lints: &manifest::TomlLints) -> Vec<String> {
         // We don't want to pass any of the `cargo` lints to `rustc`
         .filter(|(tool, _)| tool != &"cargo")
         .flat_map(|(tool, lints)| {
-            lints.iter().map(move |(name, config)| {
-                let flag = match config.level() {
+            lints.iter().filter_map(move |(name, config)| {
+                let flag = match config.level()? {
                     manifest::TomlLintLevel::Forbid => "--forbid",
                     manifest::TomlLintLevel::Deny => "--deny",
                     manifest::TomlLintLevel::Warn => "--warn",
@@ -2349,13 +2352,13 @@ fn lints_to_rustflags(lints: &manifest::TomlLints) -> Vec<String> {
                 } else {
                     format!("{flag}={tool}::{name}")
                 };
-                (
+                Some((
                     config.priority(),
                     // Since the most common group will be `all`, put it last so people are more
                     // likely to notice that they need to use `priority`.
                     std::cmp::Reverse(name),
                     option,
-                )
+                ))
             })
         })
         .collect::<Vec<_>>();

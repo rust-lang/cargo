@@ -509,7 +509,7 @@ fn config_simple() {
                 edition = "2015"
 
                 [lints.rust]
-                unexpected_cfgs = { level = "warn", check-cfg = ["cfg(has_foo)", "cfg(has_bar, values(\"yes\", \"no\"))"] }
+                unexpected_cfgs = { check-cfg = ['cfg(has_foo)', 'cfg(has_bar, values("yes", "no"))'] }
             "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -519,6 +519,8 @@ fn config_simple() {
         .with_stderr_contains(x!("rustc" => "cfg" of "has_foo"))
         .with_stderr_contains(x!("rustc" => "cfg" of "has_bar" with "yes" "no"))
         .with_stderr_does_not_contain("[..]unused manifest key[..]")
+        .with_stderr_does_not_contain("[..]missing field `level`[..]")
+        .with_stderr_does_not_contain("[..]unexpected_cfgs[..]")
         .run();
 }
 
@@ -532,7 +534,7 @@ fn config_workspace() {
                 members = ["foo/"]
 
                 [workspace.lints.rust]
-                unexpected_cfgs = { level = "warn", check-cfg = ["cfg(has_foo)"] }
+                unexpected_cfgs = { check-cfg = ["cfg(has_foo)"] }
             "#,
         )
         .file(
@@ -552,7 +554,7 @@ fn config_workspace() {
 
     p.cargo("check -v")
         .with_stderr_contains(x!("rustc" => "cfg" of "has_foo"))
-        .with_stderr_does_not_contain("unexpected_cfgs")
+        .with_stderr_does_not_contain("[..]unexpected_cfgs[..]")
         .run();
 }
 
@@ -583,7 +585,7 @@ fn config_workspace_not_inherited() {
 
     p.cargo("check -v")
         .with_stderr_does_not_contain(x!("rustc" => "cfg" of "has_foo"))
-        .with_stderr_does_not_contain("unexpected_cfgs")
+        .with_stderr_does_not_contain("[..]unexpected_cfgs[..]")
         .run();
 }
 
