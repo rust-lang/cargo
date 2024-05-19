@@ -9,11 +9,10 @@ use cargo::{
 use cargo_test_support::paths::{root, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, git, is_nightly, main_file,
-    paths, process, project, rustc_host, sleep_ms, symlink_supported, t, Execs, ProjectBuilder,
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, cargo_process, compare, git,
+    is_nightly, main_file, paths, process, project, rustc_host, sleep_ms, symlink_supported, t,
+    tools, Execs, ProjectBuilder,
 };
-use cargo_test_support::{cargo_process, compare};
-use cargo_test_support::{git_process, tools};
 use cargo_util::paths::dylib_path_envvar;
 use std::env;
 use std::fs;
@@ -72,16 +71,8 @@ fn build_with_symlink_to_path_dependency_with_build_script_in_git() {
         .build();
 
     // It is necessary to have a sub-repository and to add files so there is an index.
-    git_process("init")
-        .cwd(root.join("original"))
-        .build_command()
-        .status()
-        .unwrap();
-    git_process("add .")
-        .cwd(root.join("original"))
-        .build_command()
-        .status()
-        .unwrap();
+    let repo = git::init(&root.join("original"));
+    git::add(&repo);
     cargo_process("build").run()
 }
 
