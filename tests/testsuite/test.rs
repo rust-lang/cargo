@@ -5085,7 +5085,7 @@ fn cargo_test_set_out_dir_env_var() {
         .file(
             "src/lib.rs",
             r#"
-                pub fn add(left: usize, right: usize) -> usize {
+                pub fn add(left: u64, right: u64) -> u64 {
                     left + right
                 }
             "#,
