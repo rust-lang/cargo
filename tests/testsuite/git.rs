@@ -2831,7 +2831,11 @@ From [..]
 [FINISHED] [..]
 ";
 
-    project.cargo("check -v").with_stderr(stderr).run();
+    project
+        .cargo("check -v")
+        .env("LC_ALL", "C")
+        .with_stderr(stderr)
+        .run();
     assert!(paths::home().join(".cargo/git/CACHEDIR.TAG").is_file());
 }
 
