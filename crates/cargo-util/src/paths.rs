@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use filetime::FileTime;
 use std::env;
 use std::ffi::{OsStr, OsString};
-use std::fs::{self, File, Metadata, OpenOptions, Permissions};
+use std::fs::{self, File, Metadata, OpenOptions};
 use std::io;
 use std::io::prelude::*;
 use std::iter;
@@ -197,7 +197,7 @@ pub fn write_atomic<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Res
         let mask = u32::from(libc::S_IRWXU | libc::S_IRWXG | libc::S_IRWXO);
         let mode = meta.permissions().mode() & mask;
 
-        Permissions::from_mode(mode)
+        std::fs::Permissions::from_mode(mode)
     });
 
     let mut tmp = TempFileBuilder::new()
