@@ -278,7 +278,7 @@ currently enabled. This includes all possible values of a given cfg name.
 
 It is recommended to group the `cargo::rustc-check-cfg` and
 [`cargo::rustc-cfg`][option-cfg] instructions as closely as possible in order to
-avoid typos, missing check-cfg, stalled cfgs...
+avoid typos, missing check-cfg, stale cfgs...
 
 #### Example of using `cargo::rustc-check-cfg` and `cargo::rustc-cfg` together
 
