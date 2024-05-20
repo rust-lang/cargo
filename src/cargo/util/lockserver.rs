@@ -20,6 +20,8 @@ use std::thread::{self, JoinHandle};
 
 use anyhow::{Context, Error};
 
+use crate::util::network::LOCALHOST;
+
 pub struct LockServer {
     listener: TcpListener,
     addr: SocketAddr,
@@ -44,7 +46,7 @@ struct ServerClient {
 
 impl LockServer {
     pub fn new() -> Result<LockServer, Error> {
-        let listener = TcpListener::bind("127.0.0.1:0")
+        let listener = TcpListener::bind(&LOCALHOST[..])
             .with_context(|| "failed to bind TCP listener to manage locking")?;
         let addr = listener.local_addr()?;
         Ok(LockServer {

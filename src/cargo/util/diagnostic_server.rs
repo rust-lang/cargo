@@ -16,6 +16,7 @@ use tracing::warn;
 
 use crate::core::Edition;
 use crate::util::errors::CargoResult;
+use crate::util::network::LOCALHOST;
 use crate::util::GlobalContext;
 
 const DIAGNOSTICS_SERVER_VAR: &str = "__CARGO_FIX_DIAGNOSTICS_SERVER";
@@ -266,7 +267,7 @@ pub struct StartedServer {
 
 impl RustfixDiagnosticServer {
     pub fn new() -> Result<Self, Error> {
-        let listener = TcpListener::bind("127.0.0.1:0")
+        let listener = TcpListener::bind(&LOCALHOST[..])
             .with_context(|| "failed to bind TCP listener to manage locking")?;
         let addr = listener.local_addr()?;
 
