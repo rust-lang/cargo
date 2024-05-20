@@ -115,7 +115,7 @@ mod linux {
             let secret_password_store_sync: Symbol<'_, SecretPasswordStoreSync>;
             let secret_password_clear_sync: Symbol<'_, SecretPasswordClearSync>;
             unsafe {
-                lib = Library::new("libsecret-1.so").context(
+                lib = Library::new("libsecret-1.so.0").context(
                     "failed to load libsecret: try installing the `libsecret` \
                     or `libsecret-1-0` package with the system package manager",
                 )?;
