@@ -271,6 +271,9 @@ The instruction can be used like this:
 ```rust,no_run
 // build.rs
 println!("cargo::rustc-check-cfg=cfg(foo, values(\"bar\"))");
+if foo_bar_condition {
+    println!("cargo::rustc-cfg=foo=\"bar\"");
+}
 ```
 
 Note that all possible cfgs should be defined, regardless of which cfgs are
@@ -280,17 +283,7 @@ It is recommended to group the `cargo::rustc-check-cfg` and
 [`cargo::rustc-cfg`][option-cfg] instructions as closely as possible in order to
 avoid typos, missing check-cfg, stale cfgs...
 
-#### Example of using `cargo::rustc-check-cfg` and `cargo::rustc-cfg` together
-
-```rust,no_run
-// build.rs
-println!("cargo::rustc-check-cfg=cfg(foo, values(\"bar\"))");
-if foo_bar_condition {
-    println!("cargo::rustc-cfg=foo=\"bar\"");
-}
-```
-
-For a more complete example see the
+See also the
 [conditional compilation][conditional-compilation-example] example.
 
 [option-check-cfg]: ../../rustc/command-line-arguments.md#option-check-cfg
