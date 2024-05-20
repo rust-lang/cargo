@@ -258,8 +258,6 @@ identifier, the value should be a string.
 
 ### `cargo::rustc-check-cfg=CHECK_CFG` {#rustc-check-cfg}
 
-*See the announcement [blog post][check-cfg-blog-post] for more a global view of the feature.*
-
 Add to the list of expected config names and values that is used when checking
 the _reachable_ cfg expressions.
 
@@ -295,7 +293,6 @@ if foo_bar_condition {
 For a more complete example see in the [build script examples][build-script-examples] page
 the [conditional compilation][conditional-compilation-example] example.
 
-[check-cfg-blog-post]: https://blog.rust-lang.org/2024/05/06/check-cfg.html
 [option-check-cfg]: ../../rustc/command-line-arguments.md#option-check-cfg
 [build-script-examples]: build-script-examples.md
 [conditional-compilation-example]: build-script-examples.md#conditional-compilation
