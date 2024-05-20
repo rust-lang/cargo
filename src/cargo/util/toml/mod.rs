@@ -2292,7 +2292,21 @@ supported tools: {}",
                     }
                 }
             }
-            if config.level().is_none() && config.config().map(|c| c.is_empty()).unwrap_or(true) {
+            if matches!(
+                config,
+                manifest::TomlLint::Config(manifest::TomlLintConfig {
+                    priority: Some(_),
+                    level: None,
+                    ..
+                })
+            ) || matches!(
+                config,
+                manifest::TomlLint::Config(manifest::TomlLintConfig {
+                    priority: None,
+                    level: None,
+                    config,
+                }) if config.is_empty())
+            {
                 anyhow::bail!("`lints.{tool}.{name}` missing field `level`");
             }
         }

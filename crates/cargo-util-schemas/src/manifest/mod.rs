@@ -1500,7 +1500,7 @@ impl TomlLint {
     pub fn priority(&self) -> i8 {
         match self {
             Self::Level(_) => 0,
-            Self::Config(config) => config.priority,
+            Self::Config(config) => config.priority.unwrap_or(0),
         }
     }
 
@@ -1516,8 +1516,7 @@ impl TomlLint {
 #[serde(rename_all = "kebab-case")]
 pub struct TomlLintConfig {
     pub level: Option<TomlLintLevel>,
-    #[serde(default)]
-    pub priority: i8,
+    pub priority: Option<i8>,
     #[serde(flatten)]
     pub config: toml::Table,
 }
