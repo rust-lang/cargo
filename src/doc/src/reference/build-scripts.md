@@ -261,7 +261,8 @@ identifier, the value should be a string.
 Add to the list of expected config names and values that is used when checking
 the _reachable_ cfg expressions with the [`unexpected_cfgs`][unexpected-cfgs] lint.
 
-For details on the syntax of `CHECK_CFG`, see `rustc` [`--check-cfg` flag][option-check-cfg].
+The syntax of `CHECK_CFG` mirrors the `rustc` [`--check-cfg` flag][option-check-cfg], see
+[Checking conditional configurations][checking-conditional-configurations] for more details.
 
 > Note: `cargo:rustc-check-cfg` (single-colon) can be used if your MSRV is below Rust 1.77
 
@@ -285,6 +286,7 @@ avoid typos, missing check-cfg, stale cfgs...
 See also the
 [conditional compilation][conditional-compilation-example] example.
 
+[checking-conditional-configurations]: ../../rustc/check-cfg.html
 [option-check-cfg]: ../../rustc/command-line-arguments.md#option-check-cfg
 [conditional-compilation-example]: build-script-examples.md#conditional-compilation
 
