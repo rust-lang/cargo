@@ -290,11 +290,10 @@ if foo_bar_condition {
 }
 ```
 
-For a more complete example see in the [build script examples][build-script-examples] page
-the [conditional compilation][conditional-compilation-example] example.
+For a more complete example see the
+[conditional compilation][conditional-compilation-example] example.
 
 [option-check-cfg]: ../../rustc/command-line-arguments.md#option-check-cfg
-[build-script-examples]: build-script-examples.md
 [conditional-compilation-example]: build-script-examples.md#conditional-compilation
 
 ### `cargo::rustc-env=VAR=VALUE` {#rustc-env}
