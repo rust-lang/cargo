@@ -931,4 +931,27 @@ mod tests {
         assert!(symlink_path.exists());
         assert!(dir_path.exists());
     }
+
+    #[test]
+    #[cfg(windows)]
+    fn test_remove_symlink_file() {
+        use super::*;
+        use std::fs;
+        use std::os::windows::fs::symlink_file;
+
+        let tmpdir = tempfile::tempdir().unwrap();
+        let file_path = tmpdir.path().join("testfile");
+        let symlink_path = tmpdir.path().join("symlink");
+
+        fs::write(&file_path, b"test").unwrap();
+
+        symlink_file(&file_path, &symlink_path).expect("failed to create symlink");
+
+        assert!(symlink_path.exists());
+
+        assert!(remove_file(symlink_path.clone()).is_ok());
+
+        assert!(!symlink_path.exists());
+        assert!(file_path.exists());
+    }
 }
