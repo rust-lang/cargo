@@ -517,24 +517,57 @@ fn _remove_dir(p: &Path) -> Result<()> {
 ///
 /// If the file is readonly, this will attempt to change the permissions to
 /// force the file to be deleted.
+/// On Windows, if the file is a symlink to a directory, this will attempt to remove
+/// the symlink itself.
 pub fn remove_file<P: AsRef<Path>>(p: P) -> Result<()> {
     _remove_file(p.as_ref())
 }
 
 fn _remove_file(p: &Path) -> Result<()> {
-    let mut err = match fs::remove_file(p) {
-        Ok(()) => return Ok(()),
-        Err(e) => e,
-    };
-
-    if err.kind() == io::ErrorKind::PermissionDenied && set_not_readonly(p).unwrap_or(false) {
-        match fs::remove_file(p) {
-            Ok(()) => return Ok(()),
-            Err(e) => err = e,
+    // For Windows, we need to check if the file is a symlink to a directory
+    // and remove the symlink itself by calling `remove_dir` instead of
+    // `remove_file`.
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::fs::FileTypeExt;
+        let metadata = symlink_metadata(p)?;
+        let file_type = metadata.file_type();
+        if file_type.is_symlink_dir() {
+            return remove_symlink_dir_with_permission_check(p);
         }
     }
 
-    Err(err).with_context(|| format!("failed to remove file `{}`", p.display()))
+    remove_file_with_permission_check(p)
+}
+
+#[cfg(target_os = "windows")]
+fn remove_symlink_dir_with_permission_check(p: &Path) -> Result<()> {
+    remove_with_permission_check(fs::remove_dir, p)
+        .with_context(|| format!("failed to remove symlink dir `{}`", p.display()))
+}
+
+fn remove_file_with_permission_check(p: &Path) -> Result<()> {
+    remove_with_permission_check(fs::remove_file, p)
+        .with_context(|| format!("failed to remove file `{}`", p.display()))
+}
+
+fn remove_with_permission_check<F, P>(remove_func: F, p: P) -> io::Result<()>
+where
+    F: Fn(P) -> io::Result<()>,
+    P: AsRef<Path> + Clone,
+{
+    match remove_func(p.clone()) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            if e.kind() == io::ErrorKind::PermissionDenied
+                && set_not_readonly(p.as_ref()).unwrap_or(false)
+            {
+                remove_func(p)
+            } else {
+                Err(e)
+            }
+        }
+    }
 }
 
 fn set_not_readonly(p: &Path) -> io::Result<bool> {
@@ -926,9 +959,9 @@ mod tests {
 
         assert!(symlink_path.exists());
 
-        assert!(remove_file(symlink_path.clone()).is_err());
+        assert!(remove_file(symlink_path.clone()).is_ok());
 
-        assert!(symlink_path.exists());
+        assert!(!symlink_path.exists());
         assert!(dir_path.exists());
     }
 
