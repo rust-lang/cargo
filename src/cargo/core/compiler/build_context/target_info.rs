@@ -152,6 +152,7 @@ impl TargetInfo {
     /// invocation is cached by [`Rustc::cached_output`].
     ///
     /// Search `Tricky` to learn why querying `rustc` several times is needed.
+    #[tracing::instrument(skip_all)]
     pub fn new(
         gctx: &GlobalContext,
         requested_kinds: &[CompileKind],
@@ -878,6 +879,7 @@ pub struct RustcTargetData<'gctx> {
 }
 
 impl<'gctx> RustcTargetData<'gctx> {
+    #[tracing::instrument(skip_all)]
     pub fn new(
         ws: &Workspace<'gctx>,
         requested_kinds: &[CompileKind],
