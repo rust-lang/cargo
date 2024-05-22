@@ -1417,6 +1417,14 @@ fn github_fast_path(
                         return Ok(FastPathRev::UpToDate);
                     }
                 }
+                // If `rev` is a full commit hash, the only thing it can resolve
+                // to is itself. Don't bother talking to GitHub in that case
+                // either. (This ensures that we always attempt to fetch the
+                // commit directly even if we can't reach the GitHub API.)
+                if let Ok(oid) = rev.parse() {
+                    debug!("github fast path is already a full commit hash {rev}");
+                    return Ok(FastPathRev::NeedsFetch(oid));
+                }
                 rev
             } else {
                 debug!("can't use github fast path with `rev = \"{}\"`", rev);
