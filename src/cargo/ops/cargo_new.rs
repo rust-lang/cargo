@@ -876,7 +876,7 @@ fn main() {
 "
         } else {
             b"\
-pub fn add(left: usize, right: usize) -> usize {
+pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }
 

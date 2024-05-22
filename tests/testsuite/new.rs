@@ -42,7 +42,7 @@ fn simple_lib() {
     let contents = fs::read_to_string(&lib).unwrap();
     assert_eq!(
         contents,
-        r#"pub fn add(left: usize, right: usize) -> usize {
+        r#"pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }
 
