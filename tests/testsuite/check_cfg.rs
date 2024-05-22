@@ -574,6 +574,34 @@ fn build_script_feature_gate() {
         .run();
 }
 
+#[cargo_test]
+fn config_simple() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [lints.rust]
+                unexpected_cfgs = { level = "warn", check-cfg = ["cfg(has_foo)", "cfg(has_bar, values(\"yes\", \"no\"))"] }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[CHECKING] foo v0.1.0 ([CWD])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+}
+
 #[cargo_test(nightly, reason = "--check-cfg is unstable")]
 fn config_valid() {
     let p = project()
