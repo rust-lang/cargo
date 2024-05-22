@@ -654,6 +654,7 @@ impl<'a, 'gctx> Downloads<'a, 'gctx> {
     /// Returns `None` if the package is queued up for download and will
     /// eventually be returned from `wait_for_download`. Returns `Some(pkg)` if
     /// the package is ready and doesn't need to be downloaded.
+    #[tracing::instrument(skip_all)]
     pub fn start(&mut self, id: PackageId) -> CargoResult<Option<&'a Package>> {
         self.start_inner(id)
             .with_context(|| format!("failed to download `{}`", id))
@@ -793,6 +794,7 @@ impl<'a, 'gctx> Downloads<'a, 'gctx> {
     /// # Panics
     ///
     /// This function will panic if there are no remaining downloads.
+    #[tracing::instrument(skip_all)]
     pub fn wait(&mut self) -> CargoResult<&'a Package> {
         let (dl, data) = loop {
             assert_eq!(self.pending.len(), self.pending_ids.len());
