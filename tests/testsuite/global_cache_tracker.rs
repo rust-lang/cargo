@@ -245,6 +245,10 @@ fn implies_source() {
         short_name: "f0a4ee0".into(),
         size: None,
     });
+    deferred.mark_workspace_src_used(global_cache_tracker::WorkspaceSrc {
+        target_dir_path: "/Users/foo/cargo/target".into(),
+        workspace_manifest_path: "/Users/foo/cargo/Cargo.toml".into(),
+    });
     deferred.save(&mut tracker).unwrap();
 
     let mut indexes = tracker.registry_index_all().unwrap();
@@ -262,6 +266,17 @@ fn implies_source() {
     let dbs = tracker.git_db_all().unwrap();
     assert_eq!(dbs.len(), 1);
     assert_eq!(dbs[0].0.encoded_git_name, "cargo-e7ff1db891893a9e");
+
+    let workspace_manifests = tracker.workspace_manifest_all().unwrap();
+    assert_eq!(workspace_manifests.len(), 1);
+    assert_eq!(
+        workspace_manifests[0].0.workspace_manifest_path,
+        "/Users/foo/cargo/Cargo.toml"
+    );
+
+    let target_dirs = tracker.target_dir_all().unwrap();
+    assert_eq!(target_dirs.len(), 1);
+    assert_eq!(target_dirs[0].0.target_dir_path, "/Users/foo/cargo/target");
 }
 
 #[cargo_test]
