@@ -558,6 +558,42 @@ impl GlobalCacheTracker {
         Ok(rows)
     }
 
+    // Return all workspace_manifest cache timestamps.
+    pub fn workspace_manifest_all(&self) -> CargoResult<Vec<(WorkspaceManifestIndex, Timestamp)>> {
+        let mut stmt = self
+            .conn
+            .prepare_cached("SELECT name, timestamp FROM workspace_manifest_index")?;
+        let rows = stmt
+            .query_map([], |row| {
+                let workspace_manifest_path = row.get_unwrap(0);
+                let timestamp = row.get_unwrap(1);
+                let kind = WorkspaceManifestIndex {
+                    workspace_manifest_path: workspace_manifest_path,
+                };
+                Ok((kind, timestamp))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    // Return all target dir cache timestamps.
+    pub fn target_dir_all(&self) -> CargoResult<Vec<(TargetDirIndex, Timestamp)>> {
+        let mut stmt = self
+            .conn
+            .prepare_cached("SELECT name, timestamp FROM target_dir_index")?;
+        let rows = stmt
+            .query_map([], |row| {
+                let target_dir_path = row.get_unwrap(0);
+                let timestamp = row.get_unwrap(1);
+                let kind = TargetDirIndex {
+                    target_dir_path: target_dir_path,
+                };
+                Ok((kind, timestamp))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
     /// Returns whether or not an auto GC should be performed, compared to the
     /// last time it was recorded in the database.
     pub fn should_run_auto_gc(&mut self, frequency: Duration) -> CargoResult<bool> {
