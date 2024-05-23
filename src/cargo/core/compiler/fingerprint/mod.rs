@@ -1931,7 +1931,8 @@ where
         // Additionally, the build can span different volumes, some which support high-precision
         // file timestamps and some that don't (e.g. mounted Docker volumes). This can make
         // one of the timestamps lose the nanosecond part and appear up to a second in the past.
-        let truncated_precision = path_mtime.nanoseconds() == 0 || reference_mtime.nanoseconds() == 0;
+        let truncated_precision =
+            path_mtime.nanoseconds() == 0 || reference_mtime.nanoseconds() == 0;
 
         let fresh = if truncated_precision {
             path_mtime.unix_seconds() <= reference_mtime.unix_seconds()
