@@ -170,7 +170,7 @@ rustflags = ["…", "…"]  # custom flags for `rustc`
 [target.<triple>.<links>] # `links` build script override
 rustc-link-lib = ["foo"]
 rustc-link-search = ["/path/to/foo"]
-rustc-flags = ["-L", "/some/path"]
+rustc-flags = "-L /some/path"
 rustc-cfg = ['key="value"']
 rustc-env = {key = "value"}
 rustc-cdylib-link-arg = ["…"]
