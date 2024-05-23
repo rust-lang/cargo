@@ -70,7 +70,10 @@ fn bad_progress_config_missing_when() {
         .with_status(101)
         .with_stderr(
             "\
-error: missing field `when`
+error: error in [..]: could not load config key `term.progress`
+
+Caused by:
+  missing field `when`
 ",
         )
         .run();

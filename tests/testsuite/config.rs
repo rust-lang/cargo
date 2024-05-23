@@ -1880,7 +1880,14 @@ fn missing_fields() {
     let gctx = GlobalContextBuilder::new()
         .env("CARGO_FOO_BAR_BAZ", "true")
         .build();
-    assert_error(gctx.get::<Foo>("foo").unwrap_err(), "missing field `bax`");
+    assert_error(
+        gctx.get::<Foo>("foo").unwrap_err(),
+        "\
+could not load config key `foo.bar`
+
+Caused by:
+  missing field `bax`",
+    );
     let gctx: GlobalContext = GlobalContextBuilder::new()
         .env("CARGO_FOO_BAR_BAZ", "true")
         .env("CARGO_FOO_BAR_BAX", "true")
@@ -1892,5 +1899,12 @@ fn missing_fields() {
     let gctx: GlobalContext = GlobalContextBuilder::new()
         .config_arg("foo.bar.baz=true")
         .build();
-    assert_error(gctx.get::<Foo>("foo").unwrap_err(), "missing field `bax`");
+    assert_error(
+        gctx.get::<Foo>("foo").unwrap_err(),
+        "\
+error in --config cli option: could not load config key `foo.bar`
+
+Caused by:
+  missing field `bax`",
+    );
 }
