@@ -9,6 +9,6 @@ fn case() {
         .arg("--help")
         .assert()
         .success()
-        .stdout_matches(file!["stdout.term.svg"])
-        .stderr_matches(str![""]);
+        .stdout_eq_(file!["stdout.term.svg"])
+        .stderr_eq_(str![""]);
 }

@@ -32,8 +32,8 @@ fn case() {
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .assert()
         .code(0)
-        .stdout_matches(str![""])
-        .stderr_matches(file!["stderr.term.svg"]);
+        .stdout_eq_(str![""])
+        .stderr_eq_(file!["stderr.term.svg"]);
 
     assert_ui().subset_matches(current_dir!().join("out"), &project_root);
 }

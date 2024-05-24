@@ -733,10 +733,9 @@ macro_rules! unstable_cli_options {
                 );
                 let mut expected = vec![$(stringify!($element)),*];
                 expected[2..].sort();
-                snapbox::assert_eq(
-                    format!("{:#?}", expected),
-                    format!("{:#?}", vec![$(stringify!($element)),*])
-                );
+                let expected = format!("{:#?}", expected);
+                let actual = format!("{:#?}", vec![$(stringify!($element)),*]);
+                snapbox::assert_data_eq!(actual, expected);
             }
         }
     }

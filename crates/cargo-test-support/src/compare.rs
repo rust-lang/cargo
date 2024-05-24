@@ -82,7 +82,7 @@ pub fn assert_ui() -> snapbox::Assert {
     let root_url = url::Url::from_file_path(&root).unwrap().to_string();
     let root = root.display().to_string();
 
-    let mut subs = snapbox::Substitutions::new();
+    let mut subs = snapbox::Redactions::new();
     subs.extend([
         (
             "[EXE]",
@@ -93,7 +93,7 @@ pub fn assert_ui() -> snapbox::Assert {
     ])
     .unwrap();
     snapbox::Assert::new()
-        .action_env(snapbox::DEFAULT_ACTION_ENV)
+        .action_env(snapbox::assert::DEFAULT_ACTION_ENV)
         .substitutions(subs)
 }
 

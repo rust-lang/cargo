@@ -40,8 +40,8 @@ macro_rules! t {
 }
 
 pub use snapbox::file;
-pub use snapbox::path::current_dir;
 pub use snapbox::str;
+pub use snapbox::utils::current_dir;
 
 #[track_caller]
 pub fn panic_error(what: &str, err: impl Into<anyhow::Error>) -> ! {
@@ -315,7 +315,7 @@ impl Project {
     pub fn from_template(template_path: impl AsRef<std::path::Path>) -> Self {
         let root = paths::root();
         let project_root = root.join("case");
-        snapbox::path::copy_template(template_path.as_ref(), &project_root).unwrap();
+        snapbox::dir::copy_template(template_path.as_ref(), &project_root).unwrap();
         Self { root: project_root }
     }
 
