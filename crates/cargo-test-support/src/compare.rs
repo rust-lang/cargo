@@ -40,7 +40,6 @@ use crate::diff;
 use crate::paths;
 use anyhow::{bail, Context, Result};
 use serde_json::Value;
-use std::env;
 use std::fmt;
 use std::path::Path;
 use std::str;
@@ -84,7 +83,7 @@ pub fn assert_ui() -> snapbox::Assert {
     let root_url = url::Url::from_file_path(&root).unwrap().to_string();
 
     let mut subs = snapbox::Redactions::new();
-    subs.extend([("[EXE]", std::env::consts::EXE_SUFFIX)])
+    subs.extend(MIN_LITERAL_REDACTIONS.into_iter().cloned())
         .unwrap();
     subs.insert("[ROOT]", root).unwrap();
     subs.insert("[ROOTURL]", root_url).unwrap();
@@ -97,6 +96,8 @@ pub fn assert_ui() -> snapbox::Assert {
         .action_env(snapbox::assert::DEFAULT_ACTION_ENV)
         .redact_with(subs)
 }
+
+static MIN_LITERAL_REDACTIONS: &[(&str, &str)] = &[("[EXE]", std::env::consts::EXE_SUFFIX)];
 
 /// Normalizes the output so that it can be compared against the expected value.
 fn normalize_actual(actual: &str, cwd: Option<&Path>) -> String {
@@ -226,7 +227,6 @@ fn substitute_macros(input: &str) -> String {
         ("[SUMMARY]", "     Summary"),
         ("[FIXED]", "       Fixed"),
         ("[FIXING]", "      Fixing"),
-        ("[EXE]", env::consts::EXE_SUFFIX),
         ("[IGNORED]", "     Ignored"),
         ("[INSTALLED]", "   Installed"),
         ("[REPLACED]", "    Replaced"),
@@ -244,6 +244,9 @@ fn substitute_macros(input: &str) -> String {
         ("[GENERATED]", "   Generated"),
     ];
     let mut result = input.to_owned();
+    for &(pat, subst) in MIN_LITERAL_REDACTIONS {
+        result = result.replace(pat, subst)
+    }
     for &(pat, subst) in &macros {
         result = result.replace(pat, subst)
     }
