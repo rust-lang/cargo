@@ -46,7 +46,9 @@ use std::path::Path;
 use std::str;
 use url::Url;
 
-/// Default `snapbox` Assertions
+/// Assertion policy for UI tests
+///
+/// This emphasizes showing as much content as possible at the cost of more brittleness
 ///
 /// # Snapshots
 ///
