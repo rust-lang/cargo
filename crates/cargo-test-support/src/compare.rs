@@ -86,6 +86,11 @@ pub fn assert_ui() -> snapbox::Assert {
         .unwrap();
     subs.insert("[ROOT]", root).unwrap();
     subs.insert("[ROOTURL]", root_url).unwrap();
+    subs.insert(
+        "[ELAPSED]",
+        regex::Regex::new("Finished.*in (?<redacted>[0-9]+(\\.[0-9]+))s").unwrap(),
+    )
+    .unwrap();
     snapbox::Assert::new()
         .action_env(snapbox::assert::DEFAULT_ACTION_ENV)
         .redact_with(subs)
