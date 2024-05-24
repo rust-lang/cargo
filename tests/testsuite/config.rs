@@ -1863,3 +1863,48 @@ fn trim_paths_parsing() {
     let trim_paths: TomlTrimPaths = gctx.get("profile.dev.trim-paths").unwrap();
     assert_eq!(trim_paths, expected, "failed to parse {val}");
 }
+
+#[cargo_test]
+fn missing_fields() {
+    #[derive(Deserialize, Default, Debug)]
+    struct Foo {
+        bar: Bar,
+    }
+
+    #[derive(Deserialize, Default, Debug)]
+    struct Bar {
+        bax: bool,
+        baz: bool,
+    }
+
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_FOO_BAR_BAZ", "true")
+        .build();
+    assert_error(
+        gctx.get::<Foo>("foo").unwrap_err(),
+        "\
+could not load config key `foo.bar`
+
+Caused by:
+  missing field `bax`",
+    );
+    let gctx: GlobalContext = GlobalContextBuilder::new()
+        .env("CARGO_FOO_BAR_BAZ", "true")
+        .env("CARGO_FOO_BAR_BAX", "true")
+        .build();
+    let foo = gctx.get::<Foo>("foo").unwrap();
+    assert_eq!(foo.bar.bax, true);
+    assert_eq!(foo.bar.baz, true);
+
+    let gctx: GlobalContext = GlobalContextBuilder::new()
+        .config_arg("foo.bar.baz=true")
+        .build();
+    assert_error(
+        gctx.get::<Foo>("foo").unwrap_err(),
+        "\
+error in --config cli option: could not load config key `foo.bar`
+
+Caused by:
+  missing field `bax`",
+    );
+}

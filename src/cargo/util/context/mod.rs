@@ -2030,6 +2030,10 @@ impl ConfigError {
         }
     }
 
+    fn is_missing_field(&self) -> bool {
+        self.error.downcast_ref::<MissingField>().is_some()
+    }
+
     fn missing(key: &ConfigKey) -> ConfigError {
         ConfigError {
             error: anyhow!("missing config key `{}`", key),
@@ -2037,11 +2041,11 @@ impl ConfigError {
         }
     }
 
-    fn with_key_context(self, key: &ConfigKey, definition: Definition) -> ConfigError {
+    fn with_key_context(self, key: &ConfigKey, definition: Option<Definition>) -> ConfigError {
         ConfigError {
             error: anyhow::Error::from(self)
                 .context(format!("could not load config key `{}`", key)),
-            definition: Some(definition),
+            definition: definition,
         }
     }
 }
@@ -2062,10 +2066,28 @@ impl fmt::Display for ConfigError {
     }
 }
 
+#[derive(Debug)]
+struct MissingField(String);
+
+impl fmt::Display for MissingField {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "missing field `{}`", self.0)
+    }
+}
+
+impl std::error::Error for MissingField {}
+
 impl serde::de::Error for ConfigError {
     fn custom<T: fmt::Display>(msg: T) -> Self {
         ConfigError {
             error: anyhow::Error::msg(msg.to_string()),
+            definition: None,
+        }
+    }
+
+    fn missing_field(field: &'static str) -> Self {
+        ConfigError {
+            error: anyhow::Error::new(MissingField(field.to_string())),
             definition: None,
         }
     }
@@ -2111,6 +2133,16 @@ impl fmt::Debug for ConfigValue {
 }
 
 impl ConfigValue {
+    fn get_definition(&self) -> &Definition {
+        match self {
+            CV::Boolean(_, def)
+            | CV::Integer(_, def)
+            | CV::String(_, def)
+            | CV::List(_, def)
+            | CV::Table(_, def) => def,
+        }
+    }
+
     fn from_toml(def: Definition, toml: toml::Value) -> CargoResult<ConfigValue> {
         match toml {
             toml::Value::String(val) => Ok(CV::String(val, def)),

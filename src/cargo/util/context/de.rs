@@ -35,7 +35,7 @@ macro_rules! deserialize_method {
                 .ok_or_else(|| ConfigError::missing(&self.key))?;
             let Value { val, definition } = v;
             let res: Result<V::Value, ConfigError> = visitor.$visit(val);
-            res.map_err(|e| e.with_key_context(&self.key, definition))
+            res.map_err(|e| e.with_key_context(&self.key, Some(definition)))
         }
     };
 }
@@ -60,7 +60,7 @@ impl<'de, 'gctx> de::Deserializer<'de> for Deserializer<'gctx> {
                 CV::Boolean(b, def) => (visitor.visit_bool(b), def),
             };
             let (res, def) = res;
-            return res.map_err(|e| e.with_key_context(&self.key, def));
+            return res.map_err(|e| e.with_key_context(&self.key, Some(def)));
         }
         Err(ConfigError::missing(&self.key))
     }
@@ -178,7 +178,7 @@ impl<'de, 'gctx> de::Deserializer<'de> for Deserializer<'gctx> {
         let Value { val, definition } = value;
         visitor
             .visit_enum(val.into_deserializer())
-            .map_err(|e: ConfigError| e.with_key_context(&self.key, definition))
+            .map_err(|e: ConfigError| e.with_key_context(&self.key, Some(definition)))
     }
 
     // These aren't really supported, yet.
@@ -345,11 +345,25 @@ impl<'de, 'gctx> de::MapAccess<'de> for ConfigMapAccess<'gctx> {
             field.replace('-', "_").starts_with(&env_prefix)
         });
 
-        let result = seed.deserialize(Deserializer {
-            gctx: self.de.gctx,
-            key: self.de.key.clone(),
-            env_prefix_ok,
-        });
+        let result = seed
+            .deserialize(Deserializer {
+                gctx: self.de.gctx,
+                key: self.de.key.clone(),
+                env_prefix_ok,
+            })
+            .map_err(|e| {
+                if !e.is_missing_field() {
+                    return e;
+                }
+                e.with_key_context(
+                    &self.de.key,
+                    self.de
+                        .gctx
+                        .get_cv_with_env(&self.de.key)
+                        .ok()
+                        .and_then(|cv| cv.map(|cv| cv.get_definition().clone())),
+                )
+            });
         self.de.key.pop();
         result
     }
@@ -486,7 +500,7 @@ impl<'de, 'gctx> de::MapAccess<'de> for ValueDeserializer<'gctx> {
             if let Some(de) = &self.de {
                 return seed
                     .deserialize(de.clone())
-                    .map_err(|e| e.with_key_context(&de.key, self.definition.clone()));
+                    .map_err(|e| e.with_key_context(&de.key, Some(self.definition.clone())));
             } else {
                 return seed
                     .deserialize(self.str_value.as_ref().unwrap().clone().into_deserializer());
