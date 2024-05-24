@@ -6,9 +6,11 @@ use std::path::Path;
 use std::thread;
 
 use cargo_test_support::compare;
+use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::cross_compile;
 use cargo_test_support::git;
 use cargo_test_support::registry::{self, registry_path, Package};
+use cargo_test_support::str;
 use cargo_test_support::{
     basic_manifest, cargo_process, no_such_file_err_msg, project, project_in, symlink_supported, t,
 };
@@ -2354,39 +2356,39 @@ fn sparse_install() {
     assert_has_installed_exe(cargo_home(), "foo");
     let assert_v1 = |expected| {
         let v1 = fs::read_to_string(paths::home().join(".cargo/.crates.toml")).unwrap();
-        compare::assert_match_exact(expected, &v1);
+        assert_e2e().eq(&v1, expected);
     };
-    assert_v1(
-        r#"[v1]
+    assert_v1(str![[r#"
+[v1]
 "foo 0.0.1 (sparse+http://127.0.0.1:[..]/index/)" = ["foo[EXE]"]
-"#,
-    );
+
+"#]]);
     cargo_process("install bar").run();
     assert_has_installed_exe(cargo_home(), "bar");
-    assert_v1(
-        r#"[v1]
+    assert_v1(str![[r#"
+[v1]
 "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = ["bar[EXE]"]
 "foo 0.0.1 (sparse+http://127.0.0.1:[..]/index/)" = ["foo[EXE]"]
-"#,
-    );
+
+"#]]);
 
     cargo_process("uninstall bar")
         .with_stderr("[REMOVING] [CWD]/home/.cargo/bin/bar[EXE]")
         .run();
     assert_has_not_installed_exe(cargo_home(), "bar");
-    assert_v1(
-        r#"[v1]
+    assert_v1(str![[r#"
+[v1]
 "foo 0.0.1 (sparse+http://127.0.0.1:[..]/index/)" = ["foo[EXE]"]
-"#,
-    );
+
+"#]]);
     cargo_process("uninstall foo")
         .with_stderr("[REMOVING] [CWD]/home/.cargo/bin/foo[EXE]")
         .run();
     assert_has_not_installed_exe(cargo_home(), "foo");
-    assert_v1(
-        r#"[v1]
-"#,
-    );
+    assert_v1(str![[r#"
+[v1]
+
+"#]]);
 }
 
 #[cargo_test]

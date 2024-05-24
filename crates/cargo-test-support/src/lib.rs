@@ -76,6 +76,7 @@ pub mod prelude {
     pub use crate::CargoCommand;
     pub use crate::ChannelChanger;
     pub use crate::TestEnv;
+    pub use snapbox::IntoData;
 }
 
 /*

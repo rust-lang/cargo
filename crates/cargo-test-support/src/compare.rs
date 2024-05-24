@@ -97,6 +97,60 @@ pub fn assert_ui() -> snapbox::Assert {
         .redact_with(subs)
 }
 
+/// Assertion policy for functional end-to-end tests
+///
+/// This emphasizes showing as much content as possible at the cost of more brittleness
+///
+/// # Snapshots
+///
+/// Updating of snapshots is controlled with the `SNAPSHOTS` environment variable:
+///
+/// - `skip`: do not run the tests
+/// - `ignore`: run the tests but ignore their failure
+/// - `verify`: run the tests
+/// - `overwrite`: update the snapshots based on the output of the tests
+///
+/// # Patterns
+///
+/// - `[..]` is a character wildcard, stopping at line breaks
+/// - `\n...\n` is a multi-line wildcard
+/// - `[EXE]` matches the exe suffix for the current platform
+/// - `[ROOT]` matches [`paths::root()`][crate::paths::root]
+/// - `[ROOTURL]` matches [`paths::root()`][crate::paths::root] as a URL
+///
+/// # Normalization
+///
+/// In addition to the patterns described above, text is normalized
+/// in such a way to avoid unwanted differences. The normalizations are:
+///
+/// - Backslashes are converted to forward slashes to deal with Windows paths.
+///   This helps so that all tests can be written assuming forward slashes.
+///   Other heuristics are applied to try to ensure Windows-style paths aren't
+///   a problem.
+/// - Carriage returns are removed, which can help when running on Windows.
+pub fn assert_e2e() -> snapbox::Assert {
+    let root = paths::root();
+    // Use `from_file_path` instead of `from_dir_path` so the trailing slash is
+    // put in the users output, rather than hidden in the variable
+    let root_url = url::Url::from_file_path(&root).unwrap().to_string();
+
+    let mut subs = snapbox::Redactions::new();
+    subs.extend(MIN_LITERAL_REDACTIONS.into_iter().cloned())
+        .unwrap();
+    subs.extend(E2E_LITERAL_REDACTIONS.into_iter().cloned())
+        .unwrap();
+    subs.insert("[ROOT]", root).unwrap();
+    subs.insert("[ROOTURL]", root_url).unwrap();
+    subs.insert(
+        "[ELAPSED]",
+        regex::Regex::new("[FINISHED].*in (?<redacted>[0-9]+(\\.[0-9]+))s").unwrap(),
+    )
+    .unwrap();
+    snapbox::Assert::new()
+        .action_env(snapbox::assert::DEFAULT_ACTION_ENV)
+        .redact_with(subs)
+}
+
 static MIN_LITERAL_REDACTIONS: &[(&str, &str)] = &[("[EXE]", std::env::consts::EXE_SUFFIX)];
 static E2E_LITERAL_REDACTIONS: &[(&str, &str)] = &[
     ("[RUNNING]", "     Running"),
@@ -287,7 +341,7 @@ pub(crate) fn match_exact(
 
 /// Convenience wrapper around [`match_exact`] which will panic on error.
 #[track_caller]
-pub fn assert_match_exact(expected: &str, actual: &str) {
+pub(crate) fn assert_match_exact(expected: &str, actual: &str) {
     if let Err(e) = match_exact(expected, actual, "", "", None) {
         crate::panic_error("", e);
     }

@@ -1,10 +1,11 @@
 //! Tests for the `cargo pkgid` command.
 
 use cargo_test_support::basic_lib_manifest;
-use cargo_test_support::compare;
+use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git;
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 
 #[cargo_test]
 fn local() {
@@ -305,7 +306,7 @@ fn pkgid_json_message_metadata_consistency() {
     let output = p.cargo("pkgid").arg("foo").exec_with_output().unwrap();
     let pkgid = String::from_utf8(output.stdout).unwrap();
     let pkgid = pkgid.trim();
-    compare::assert_match_exact("path+file://[..]/foo#0.5.0", &pkgid);
+    assert_e2e().eq(pkgid, str!["path+[ROOTURL]/foo#0.5.0"]);
 
     p.cargo("check --message-format=json")
         .with_json(

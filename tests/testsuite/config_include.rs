@@ -182,8 +182,7 @@ fn wrong_file_extension() {
 could not load Cargo configuration
 
 Caused by:
-  expected a config include path ending with `.toml`, but found `config.png` from `[..]/.cargo/config.toml`
-",
+  expected a config include path ending with `.toml`, but found `config.png` from `[ROOT]/.cargo/config.toml`",
     );
 }
 

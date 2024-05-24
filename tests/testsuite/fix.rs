@@ -1,10 +1,11 @@
 //! Tests for the `cargo fix` command.
 
 use cargo::core::Edition;
-use cargo_test_support::compare::assert_match_exact;
+use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git::{self, init};
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{Dependency, Package};
+use cargo_test_support::str;
 use cargo_test_support::tools;
 use cargo_test_support::{basic_manifest, is_nightly, project};
 
@@ -1537,9 +1538,9 @@ fn fix_shared_cross_workspace() {
         )
         .run();
 
-    assert_match_exact(
-        "pub fn fixme(_x: Box<&dyn Fn() -> ()>) {}",
+    assert_e2e().eq(
         &p.read_file("foo/src/shared.rs"),
+        str!["pub fn fixme(_x: Box<&dyn Fn() -> ()>) {}"],
     );
 }
 

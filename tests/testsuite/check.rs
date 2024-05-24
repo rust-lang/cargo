@@ -3,10 +3,11 @@
 use std::fmt::{self, Write};
 
 use crate::messages::raw_rustc_output;
-use cargo_test_support::compare;
+use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::install::exe;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 use cargo_test_support::tools;
 use cargo_test_support::{basic_bin_manifest, basic_manifest, git, project};
 
@@ -1553,7 +1554,10 @@ fn pkgid_querystring_works() {
     let output = p.cargo("pkgid").arg("gitdep").exec_with_output().unwrap();
     let gitdep_pkgid = String::from_utf8(output.stdout).unwrap();
     let gitdep_pkgid = gitdep_pkgid.trim();
-    compare::assert_match_exact("git+file://[..]/gitdep?branch=master#1.0.0", &gitdep_pkgid);
+    assert_e2e().eq(
+        gitdep_pkgid,
+        str!["git+[ROOTURL]/gitdep?branch=master#1.0.0"],
+    );
 
     p.cargo("build -p")
         .arg(gitdep_pkgid)

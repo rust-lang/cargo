@@ -1,9 +1,10 @@
 //! Tests for dep-info files. This includes the dep-info file Cargo creates in
 //! the output directory, and the ones stored in the fingerprint.
 
-use cargo_test_support::compare::assert_match_exact;
+use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 use cargo_test_support::{
     basic_bin_manifest, basic_manifest, main_file, project, rustc_host, Project,
 };
@@ -593,8 +594,11 @@ fn non_local_build_script() {
 
     p.cargo("build").run();
     let contents = p.read_file("target/debug/foo.d");
-    assert_match_exact(
-        "[ROOT]/foo/target/debug/foo[EXE]: [ROOT]/foo/src/main.rs",
+    assert_e2e().eq(
         &contents,
+        str![[r#"
+[ROOT]/foo/target/debug/foo[EXE]: [ROOT]/foo/src/main.rs
+
+"#]],
     );
 }
