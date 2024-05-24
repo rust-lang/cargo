@@ -254,7 +254,7 @@ fn substitute_macros(input: &str) -> String {
 ///
 /// - `description` explains where the output is from (usually "stdout" or "stderr").
 /// - `other_output` is other output to display in the error (usually stdout or stderr).
-pub fn match_exact(
+pub(crate) fn match_exact(
     expected: &str,
     actual: &str,
     description: &str,
@@ -369,7 +369,11 @@ pub fn match_contains(expected: &str, actual: &str, cwd: Option<&Path>) -> Resul
 /// anywhere.
 ///
 /// See [Patterns](index.html#patterns) for more information on pattern matching.
-pub fn match_does_not_contain(expected: &str, actual: &str, cwd: Option<&Path>) -> Result<()> {
+pub(crate) fn match_does_not_contain(
+    expected: &str,
+    actual: &str,
+    cwd: Option<&Path>,
+) -> Result<()> {
     if match_contains(expected, actual, cwd).is_ok() {
         bail!(
             "expected not to find:\n\
@@ -388,7 +392,7 @@ pub fn match_does_not_contain(expected: &str, actual: &str, cwd: Option<&Path>) 
 /// somewhere, and should be repeated `number` times.
 ///
 /// See [Patterns](index.html#patterns) for more information on pattern matching.
-pub fn match_contains_n(
+pub(crate) fn match_contains_n(
     expected: &str,
     number: usize,
     actual: &str,
@@ -425,7 +429,7 @@ pub fn match_contains_n(
 ///
 /// See [`crate::Execs::with_stderr_line_without`] for an example and cautions
 /// against using.
-pub fn match_with_without(
+pub(crate) fn match_with_without(
     actual: &str,
     with: &[String],
     without: &[String],
@@ -473,7 +477,7 @@ pub fn match_with_without(
 /// expected JSON objects.
 ///
 /// See [`crate::Execs::with_json`] for more details.
-pub fn match_json(expected: &str, actual: &str, cwd: Option<&Path>) -> Result<()> {
+pub(crate) fn match_json(expected: &str, actual: &str, cwd: Option<&Path>) -> Result<()> {
     let (exp_objs, act_objs) = collect_json_objects(expected, actual)?;
     if exp_objs.len() != act_objs.len() {
         bail!(
@@ -494,7 +498,7 @@ pub fn match_json(expected: &str, actual: &str, cwd: Option<&Path>) -> Result<()
 ///
 /// See [`crate::Execs::with_json_contains_unordered`] for more details and
 /// cautions when using.
-pub fn match_json_contains_unordered(
+pub(crate) fn match_json_contains_unordered(
     expected: &str,
     actual: &str,
     cwd: Option<&Path>,
@@ -552,7 +556,11 @@ fn collect_json_objects(
 /// as paths). You can use a `"{...}"` string literal as a wildcard for
 /// arbitrary nested JSON (useful for parts of object emitted by other programs
 /// (e.g., rustc) rather than Cargo itself).
-pub fn find_json_mismatch(expected: &Value, actual: &Value, cwd: Option<&Path>) -> Result<()> {
+pub(crate) fn find_json_mismatch(
+    expected: &Value,
+    actual: &Value,
+    cwd: Option<&Path>,
+) -> Result<()> {
     match find_json_mismatch_r(expected, actual, cwd) {
         Some((expected_part, actual_part)) => bail!(
             "JSON mismatch\nExpected:\n{}\nWas:\n{}\nExpected part:\n{}\nActual part:\n{}\n",
@@ -619,7 +627,7 @@ fn find_json_mismatch_r<'a>(
 }
 
 /// A single line string that supports `[..]` wildcard matching.
-pub struct WildStr<'a> {
+pub(crate) struct WildStr<'a> {
     has_meta: bool,
     line: &'a str,
 }
