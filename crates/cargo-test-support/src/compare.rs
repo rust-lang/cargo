@@ -80,18 +80,12 @@ pub fn assert_ui() -> snapbox::Assert {
     // Use `from_file_path` instead of `from_dir_path` so the trailing slash is
     // put in the users output, rather than hidden in the variable
     let root_url = url::Url::from_file_path(&root).unwrap().to_string();
-    let root = root.display().to_string();
 
     let mut subs = snapbox::Redactions::new();
-    subs.extend([(
-        "[EXE]",
-        std::borrow::Cow::Borrowed(std::env::consts::EXE_SUFFIX),
-    )])
-    .unwrap();
-    subs.insert("[ROOT]", std::borrow::Cow::Owned(root))
+    subs.extend([("[EXE]", std::env::consts::EXE_SUFFIX)])
         .unwrap();
-    subs.insert("[ROOTURL]", std::borrow::Cow::Owned(root_url))
-        .unwrap();
+    subs.insert("[ROOT]", root).unwrap();
+    subs.insert("[ROOTURL]", root_url).unwrap();
     snapbox::Assert::new()
         .action_env(snapbox::assert::DEFAULT_ACTION_ENV)
         .substitutions(subs)

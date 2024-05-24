@@ -281,24 +281,25 @@ mod test_expand {
         snapbox::assert_data_eq!(
             si!(r#"fn main() {}"#),
             str![[r#"
-            [[bin]]
-            name = "test-"
-            path = "/home/me/test.rs"
+[[bin]]
+name = "test-"
+path = "/home/me/test.rs"
 
-            [package]
-            autobenches = false
-            autobins = false
-            autoexamples = false
-            autotests = false
-            build = false
-            edition = "2021"
-            name = "test-"
+[package]
+autobenches = false
+autobins = false
+autoexamples = false
+autotests = false
+build = false
+edition = "2021"
+name = "test-"
 
-            [profile.release]
-            strip = true
+[profile.release]
+strip = true
 
-            [workspace]
-        "#]]
+[workspace]
+
+"#]]
         );
     }
 
@@ -312,27 +313,28 @@ time="0.1.25"
 fn main() {}
 "#),
             str![[r#"
-                [[bin]]
-                name = "test-"
-                path = [..]
+[[bin]]
+name = "test-"
+path = [..]
 
-                [dependencies]
-                time = "0.1.25"
+[dependencies]
+time = "0.1.25"
 
-                [package]
-                autobenches = false
-                autobins = false
-                autoexamples = false
-                autotests = false
-                build = false
-                edition = "2021"
-                name = "test-"
+[package]
+autobenches = false
+autobins = false
+autoexamples = false
+autotests = false
+build = false
+edition = "2021"
+name = "test-"
 
-                [profile.release]
-                strip = true
+[profile.release]
+strip = true
 
-                [workspace]
-            "#]]
+[workspace]
+
+"#]]
         );
     }
 
@@ -346,27 +348,28 @@ time="0.1.25"
 fn main() {}
 "#),
             str![[r#"
-                [[bin]]
-                name = "test-"
-                path = [..]
+[[bin]]
+name = "test-"
+path = [..]
 
-                [dependencies]
-                time = "0.1.25"
+[dependencies]
+time = "0.1.25"
 
-                [package]
-                autobenches = false
-                autobins = false
-                autoexamples = false
-                autotests = false
-                build = false
-                edition = "2021"
-                name = "test-"
+[package]
+autobenches = false
+autobins = false
+autoexamples = false
+autotests = false
+build = false
+edition = "2021"
+name = "test-"
 
-                [profile.release]
-                strip = true
+[profile.release]
+strip = true
 
-                [workspace]
-            "#]]
+[workspace]
+
+"#]]
         );
     }
 }
