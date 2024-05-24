@@ -14,8 +14,8 @@ fn case() {
         .current_dir(project_root)
         .assert()
         .code(101)
-        .stdout_eq_(str![""])
-        .stderr_eq_(file!["stderr.term.svg"]);
+        .stdout_eq(str![""])
+        .stderr_eq(file!["stderr.term.svg"]);
 
     assert!(!project_root.join("Cargo.toml").is_file());
 }

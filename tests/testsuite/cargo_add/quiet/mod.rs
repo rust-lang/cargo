@@ -24,8 +24,8 @@ fn case() {
         .current_dir(cwd)
         .assert()
         .success()
-        .stdout_eq_(str![""])
-        .stderr_eq_(str![""]);
+        .stdout_eq(str![""])
+        .stderr_eq(str![""]);
 
     assert_ui().subset_matches(current_dir!().join("out"), &project_root);
 }

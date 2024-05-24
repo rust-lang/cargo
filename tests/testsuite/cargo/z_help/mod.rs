@@ -9,6 +9,6 @@ fn case() {
         .args(["-Z", "help"])
         .assert()
         .success()
-        .stdout_eq_(file!["stdout.term.svg"])
-        .stderr_eq_(str![""]);
+        .stdout_eq(file!["stdout.term.svg"])
+        .stderr_eq(str![""]);
 }

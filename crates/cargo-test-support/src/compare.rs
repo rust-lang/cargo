@@ -88,7 +88,7 @@ pub fn assert_ui() -> snapbox::Assert {
     subs.insert("[ROOTURL]", root_url).unwrap();
     snapbox::Assert::new()
         .action_env(snapbox::assert::DEFAULT_ACTION_ENV)
-        .substitutions(subs)
+        .redact_with(subs)
 }
 
 /// Normalizes the output so that it can be compared against the expected value.

@@ -15,8 +15,8 @@ fn stdout_redirected() {
         .stdin(format!("{get_request}\n"))
         .arg("--cargo-plugin")
         .assert()
-        .stdout_eq_(format!("{hello}\n{err_not_supported}\n").raw())
-        .stderr_eq_("message on stderr should be sent to the parent process\n".raw())
+        .stdout_eq(format!("{hello}\n{err_not_supported}\n").raw())
+        .stderr_eq("message on stderr should be sent to the parent process\n".raw())
         .success();
 }
 
@@ -39,8 +39,8 @@ fn file_provider() {
         .stdin(format!("{login_request}\n{get_request}\n"))
         .arg("--cargo-plugin")
         .assert()
-        .stdout_eq_(format!("{hello}\n{login_response}\n{get_response}\n").raw())
-        .stderr_eq_("".raw())
+        .stdout_eq(format!("{hello}\n{login_response}\n{get_response}\n").raw())
+        .stderr_eq("".raw())
         .success();
     std::fs::remove_dir_all(&dir).unwrap();
 }
