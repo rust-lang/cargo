@@ -83,15 +83,15 @@ pub fn assert_ui() -> snapbox::Assert {
     let root = root.display().to_string();
 
     let mut subs = snapbox::Redactions::new();
-    subs.extend([
-        (
-            "[EXE]",
-            std::borrow::Cow::Borrowed(std::env::consts::EXE_SUFFIX),
-        ),
-        ("[ROOT]", std::borrow::Cow::Owned(root)),
-        ("[ROOTURL]", std::borrow::Cow::Owned(root_url)),
-    ])
+    subs.extend([(
+        "[EXE]",
+        std::borrow::Cow::Borrowed(std::env::consts::EXE_SUFFIX),
+    )])
     .unwrap();
+    subs.insert("[ROOT]", std::borrow::Cow::Owned(root))
+        .unwrap();
+    subs.insert("[ROOTURL]", std::borrow::Cow::Owned(root_url))
+        .unwrap();
     snapbox::Assert::new()
         .action_env(snapbox::assert::DEFAULT_ACTION_ENV)
         .substitutions(subs)
