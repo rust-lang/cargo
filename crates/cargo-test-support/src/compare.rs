@@ -151,7 +151,11 @@ pub fn assert_e2e() -> snapbox::Assert {
         .redact_with(subs)
 }
 
-static MIN_LITERAL_REDACTIONS: &[(&str, &str)] = &[("[EXE]", std::env::consts::EXE_SUFFIX)];
+static MIN_LITERAL_REDACTIONS: &[(&str, &str)] = &[
+    ("[EXE]", std::env::consts::EXE_SUFFIX),
+    ("[BROKEN_PIPE]", "Broken pipe (os error 32)"),
+    ("[BROKEN_PIPE]", "The pipe is being closed. (os error 232)"),
+];
 static E2E_LITERAL_REDACTIONS: &[(&str, &str)] = &[
     ("[RUNNING]", "     Running"),
     ("[COMPILING]", "   Compiling"),
@@ -351,7 +355,7 @@ pub(crate) fn assert_match_exact(expected: &str, actual: &str) {
 /// of the lines.
 ///
 /// See [Patterns](index.html#patterns) for more information on pattern matching.
-pub fn match_unordered(expected: &str, actual: &str, cwd: Option<&Path>) -> Result<()> {
+pub(crate) fn match_unordered(expected: &str, actual: &str, cwd: Option<&Path>) -> Result<()> {
     let expected = normalize_expected(expected, cwd);
     let actual = normalize_actual(actual, cwd);
     let e: Vec<_> = expected.lines().map(|line| WildStr::new(line)).collect();

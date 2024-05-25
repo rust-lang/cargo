@@ -6,10 +6,13 @@ use cargo::{
     ops::CompileOptions,
     GlobalContext,
 };
+use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::paths::{root, CargoPathExt};
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 use cargo_test_support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, cargo_process, compare, git,
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, cargo_process, git,
     is_nightly, main_file, paths, process, project, rustc_host, sleep_ms, symlink_supported, t,
     tools, Execs, ProjectBuilder,
 };
@@ -6448,17 +6451,17 @@ fn close_output() {
     };
 
     let stderr = spawn(false);
-    compare::match_unordered(
-        "\
-[COMPILING] foo [..]
-hello stderr!
-[ERROR] [..]
-[WARNING] build failed, waiting for other jobs to finish...
-",
+    assert_e2e().eq(
         &stderr,
-        None,
-    )
-    .unwrap();
+        str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+hello stderr!
+[ERROR] [BROKEN_PIPE]
+[WARNING] build failed, waiting for other jobs to finish...
+
+"#]]
+        .unordered(),
+    );
 
     // Try again with stderr.
     p.build_dir().rm_rf();
