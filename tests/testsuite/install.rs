@@ -5,7 +5,6 @@ use std::io::prelude::*;
 use std::path::Path;
 use std::thread;
 
-use cargo_test_support::compare;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::cross_compile;
 use cargo_test_support::git;
@@ -2298,26 +2297,23 @@ fn failed_install_retains_temp_directory() {
     let err = cargo_process("install foo").exec_with_output().unwrap_err();
     let err = err.downcast::<ProcessError>().unwrap();
     let stderr = String::from_utf8(err.stderr.unwrap()).unwrap();
-    compare::match_contains(
-        "\
+    assert_e2e().eq(&stderr, str![[r#"
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
 [COMPILING] foo v0.0.1
-",
-        &stderr,
-        None,
-    )
-    .unwrap();
-    compare::match_contains(
-        "error: failed to compile `foo v0.0.1`, intermediate artifacts can be found at \
-        `[..]`.\nTo reuse those artifacts with a future compilation, set the environment \
-        variable `CARGO_TARGET_DIR` to that path.",
-        &stderr,
-        None,
-    )
-    .unwrap();
+[ERROR] expected one of `!` or `::`, found `<eof>`
+ --> [ROOT]/home/.cargo/registry/src/-[..]/foo-0.0.1/src/main.rs:1:1
+  |
+1 | x
+  | ^ expected one of `!` or `::`
+
+[ERROR] could not compile `foo` (bin "foo") due to 1 previous error
+[ERROR] failed to compile `foo v0.0.1`, intermediate artifacts can be found at `[..]`.
+To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+
+"#]]);
 
     // Find the path in the output.
     let stderr = stderr.split_once("found at `").unwrap().1;

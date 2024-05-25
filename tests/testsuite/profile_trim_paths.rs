@@ -1,10 +1,12 @@
 //! Tests for `-Ztrim-paths`.
 
 use cargo_test_support::basic_manifest;
+use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git;
 use cargo_test_support::paths;
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 
 #[cargo_test]
 fn gated_manifest() {
@@ -711,7 +713,6 @@ fn custom_build_env_var_trim_paths() {
 #[cfg(unix)]
 #[cargo_test(requires_lldb, nightly, reason = "-Zremap-path-scope is unstable")]
 fn lldb_works_after_trimmed() {
-    use cargo_test_support::compare::match_contains;
     use cargo_util::is_ci;
 
     if !is_ci() {
@@ -770,14 +771,17 @@ fn lldb_works_after_trimmed() {
     let bin_path = p.bin("foo");
     assert!(bin_path.is_file());
     let stdout = String::from_utf8(run_lldb(bin_path).stdout).unwrap();
-    match_contains("[..]stopped[..]", &stdout, None).unwrap();
-    match_contains("[..]stop reason = breakpoint[..]", &stdout, None).unwrap();
-    match_contains(
-        "\
-(lldb) continue
-Hello, Ferris!",
+    assert_e2e().eq(
         &stdout,
-        None,
-    )
-    .unwrap();
+        str![[r#"
+...
+[..]stopped[..]
+[..]stop reason = breakpoint 1.1[..]
+...
+(lldb) continue
+Hello, Ferris!
+...
+
+"#]],
+    );
 }

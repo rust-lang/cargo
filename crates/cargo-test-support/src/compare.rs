@@ -405,7 +405,7 @@ pub(crate) fn match_unordered(expected: &str, actual: &str, cwd: Option<&Path>) 
 /// somewhere.
 ///
 /// See [Patterns](index.html#patterns) for more information on pattern matching.
-pub fn match_contains(expected: &str, actual: &str, cwd: Option<&Path>) -> Result<()> {
+pub(crate) fn match_contains(expected: &str, actual: &str, cwd: Option<&Path>) -> Result<()> {
     let expected = normalize_expected(expected, cwd);
     let actual = normalize_actual(actual, cwd);
     let e: Vec<_> = expected.lines().map(|line| WildStr::new(line)).collect();
