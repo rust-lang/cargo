@@ -1952,6 +1952,13 @@ where
         });
     }
 
+    // If a few files in many have a .0ns mtime then still regard them as changed files.
+    if total_checked > 1 && truncated_precision_count == 1 {
+        return first;
+    } else if truncated_precision_count > 0 {
+        debug!("ignoring files that look changed due to mtime precision differences");
+    }
+
     debug!(
         "all paths up-to-date relative to {:?} mtime={}",
         reference, reference_mtime
