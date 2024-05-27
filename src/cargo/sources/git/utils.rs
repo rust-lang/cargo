@@ -1421,7 +1421,7 @@ fn github_fast_path(
                 // to is itself. Don't bother talking to GitHub in that case
                 // either. (This ensures that we always attempt to fetch the
                 // commit directly even if we can't reach the GitHub API.)
-                if let Ok(oid) = rev.parse() {
+                if let Some(oid) = rev_to_oid(rev) {
                     debug!("github fast path is already a full commit hash {rev}");
                     return Ok(FastPathRev::NeedsFetch(oid));
                 }
@@ -1613,4 +1613,20 @@ mod tests {
             );
         }
     }
+}
+
+/// Turns a full commit hash revision into an oid.
+///
+/// Git object ID is supposed to be a hex string of 20 (SHA1) or 32 (SHA256) bytes.
+/// Its length must be double to the underlying bytes (40 or 64),
+/// otherwise libgit2 would happily zero-pad the returned oid.
+///
+/// See:
+///
+/// * <https://github.com/rust-lang/cargo/issues/13188>
+/// * <https://github.com/rust-lang/cargo/issues/13968>
+pub(super) fn rev_to_oid(rev: &str) -> Option<Oid> {
+    Oid::from_str(rev)
+        .ok()
+        .filter(|oid| oid.as_bytes().len() * 2 == rev.len())
 }

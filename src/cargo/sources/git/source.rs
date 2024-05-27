@@ -4,6 +4,7 @@ use crate::core::global_cache_tracker;
 use crate::core::GitReference;
 use crate::core::SourceId;
 use crate::core::{Dependency, Package, PackageId};
+use crate::sources::git::utils::rev_to_oid;
 use crate::sources::git::utils::GitRemote;
 use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
@@ -171,14 +172,9 @@ enum Revision {
 
 impl Revision {
     fn new(rev: &str) -> Revision {
-        let oid = git2::Oid::from_str(rev).ok();
-        match oid {
-            // Git object ID is supposed to be a hex string of 20 (SHA1) or 32 (SHA256) bytes.
-            // Its length must be double to the underlying bytes (40 or 64),
-            // otherwise libgit2 would happily zero-pad the returned oid.
-            // See rust-lang/cargo#13188
-            Some(oid) if oid.as_bytes().len() * 2 == rev.len() => Revision::Locked(oid),
-            _ => Revision::Deferred(GitReference::Rev(rev.to_string())),
+        match rev_to_oid(rev) {
+            Some(oid) => Revision::Locked(oid),
+            None => Revision::Deferred(GitReference::Rev(rev.to_string())),
         }
     }
 }
