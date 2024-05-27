@@ -1887,9 +1887,9 @@ where
         None
     };
 
-    let mut truncated_precision_count : u64 = 0;
+    let mut truncated_precision_count: u64 = 0;
     let mut total_checked: u64 = 0;
-    let mut first : Option<StaleItem> = None;
+    let mut first: Option<StaleItem> = None;
     for path in paths {
         let path = path.as_ref();
 
@@ -1941,12 +1941,12 @@ where
         let fresh = if truncated_precision {
             truncated_precision_count += 1;
             if first.is_none() {
-               first = Some(StaleItem::ChangedFile {
-                   reference: reference.to_path_buf(),
-                   reference_mtime,
-                   stale: path.to_path_buf(),
-                   stale_mtime: path_mtime,
-               }); 
+                first = Some(StaleItem::ChangedFile {
+                    reference: reference.to_path_buf(),
+                    reference_mtime,
+                    stale: path.to_path_buf(),
+                    stale_mtime: path_mtime,
+                });
             }
             path_mtime.unix_seconds() <= reference_mtime.unix_seconds()
         } else {
