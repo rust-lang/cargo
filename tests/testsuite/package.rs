@@ -703,6 +703,7 @@ fn no_duplicates_from_modified_tracked_files() {
     p.cargo("package --list --allow-dirty")
         .with_stdout(
             "\
+.cargo_vcs_info.json
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
@@ -1011,6 +1012,7 @@ src/main.rs
         .with_stderr("")
         .with_stdout(
             "\
+.cargo_vcs_info.json
 .gitignore
 Cargo.lock
 Cargo.toml
@@ -1209,14 +1211,19 @@ fn issue_13695_dirty_vcs_info() {
         )
         .run();
 
-    // Allowing a dirty worktree results in the vcs file not being included.
+    // Allowing a dirty worktree results in the vcs file being included.
     p.cargo("package --allow-dirty").run();
 
     let f = File::open(&p.root().join("target/package/foo-0.1.0.crate")).unwrap();
     validate_crate_contents(
         f,
         "foo-0.1.0.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[
+            ".cargo_vcs_info.json",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+        ],
         &[],
     );
 
@@ -1225,6 +1232,7 @@ fn issue_13695_dirty_vcs_info() {
         .with_stderr("")
         .with_stdout(
             "\
+.cargo_vcs_info.json
 Cargo.toml
 Cargo.toml.orig
 src/lib.rs
@@ -2395,6 +2403,7 @@ fn finds_git_in_parent() {
     p.cargo("package --list --allow-dirty")
         .with_stdout(
             "\
+.cargo_vcs_info.json
 Cargo.toml
 Cargo.toml.orig
 ignoreme
@@ -2408,6 +2417,7 @@ src/lib.rs
     p.cargo("package --list --allow-dirty")
         .with_stdout(
             "\
+.cargo_vcs_info.json
 .gitignore
 Cargo.toml
 Cargo.toml.orig
@@ -2421,6 +2431,7 @@ src/lib.rs
     p.cargo("package --list --allow-dirty")
         .with_stdout(
             "\
+.cargo_vcs_info.json
 .gitignore
 Cargo.toml
 Cargo.toml.orig
@@ -2683,6 +2694,7 @@ fn deleted_git_working_tree() {
     p.cargo("package --allow-dirty --list")
         .with_stdout(
             "\
+.cargo_vcs_info.json
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
@@ -2697,6 +2709,7 @@ src/main.rs
     p.cargo("package --allow-dirty --list")
         .with_stdout(
             "\
+.cargo_vcs_info.json
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
