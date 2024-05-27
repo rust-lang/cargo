@@ -176,6 +176,7 @@ static E2E_LITERAL_REDACTIONS: &[(&str, &str)] = &[
     ("[DIRTY]", "       Dirty"),
     ("[LOCKING]", "     Locking"),
     ("[UPDATING]", "    Updating"),
+    ("[UPGRADING]", "   Upgrading"),
     ("[ADDING]", "      Adding"),
     ("[REMOVING]", "    Removing"),
     ("[REMOVED]", "     Removed"),

@@ -1658,8 +1658,13 @@ fn update_breaking_unstable() {
 
     p.cargo("update --breaking")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_status(1)
-        .with_stderr_contains("[ERROR] unexpected argument '--breaking' found")
+        .with_status(101)
+        .with_stderr(
+            "\
+[ERROR] the `--breaking` flag is unstable, pass `-Z unstable-options` to enable it
+See https://github.com/rust-lang/cargo/issues/12425 for more information about the `--breaking` flag.
+",
+        )
         .run();
 }
 
@@ -1707,9 +1712,19 @@ fn update_breaking_dry_run() {
     Package::new("incompatible", "2.0.0").publish();
     Package::new("ws", "2.0.0").publish();
 
-    p.cargo("update --dry-run --breaking")
-        .with_status(1)
-        .with_stderr_contains("[ERROR] unexpected argument '--breaking' found")
+    p.cargo("update -Zunstable-options --dry-run --breaking")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr(
+            "\
+[UPDATING] `dummy-registry` index
+[UPGRADING] incompatible ^1.0 -> ^2.0
+[UPGRADING] ws ^1.0 -> ^2.0
+[LOCKING] 2 packages to latest compatible versions
+[UPDATING] incompatible v1.0.0 -> v2.0.0
+[UPDATING] ws v1.0.0 -> v2.0.0
+[WARNING] aborting update due to dry run
+",
+        )
         .run();
 
     let root_manifest_after = p.read_file("Cargo.toml");
@@ -1864,9 +1879,34 @@ fn update_breaking() {
         .publish();
     Package::new("multiple-source-types", "2.0.0").publish();
 
-    p.cargo("update --breaking")
-        .with_status(1)
-        .with_stderr_contains("[ERROR] unexpected argument '--breaking' found")
+    p.cargo("update -Zunstable-options --breaking")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr(
+            "\
+[UPDATING] `alternative` index
+[UPGRADING] multiple-registries ^2.0 -> ^3.0
+[UPDATING] `dummy-registry` index
+[UPGRADING] multiple-source-types ^1.0 -> ^2.0
+[UPGRADING] multiple-versions ^2.0 -> ^3.0
+[UPGRADING] shared ^1.0 -> ^2.0
+[UPGRADING] alternative-1 ^1.0 -> ^2.0
+[UPGRADING] alternative-2 ^1.0 -> ^2.0
+[UPGRADING] incompatible ^1.0 -> ^2.0
+[UPGRADING] multiple-registries ^1.0 -> ^2.0
+[UPGRADING] multiple-versions ^1.0 -> ^3.0
+[UPGRADING] ws ^1.0 -> ^2.0
+[LOCKING] 9 packages to latest compatible versions
+[UPDATING] alternative-1 v1.0.0 (registry `alternative`) -> v2.0.0
+[UPDATING] alternative-2 v1.0.0 (registry `alternative`) -> v2.0.0
+[UPDATING] incompatible v1.0.0 -> v2.0.0
+[UPDATING] multiple-registries v2.0.0 (registry `alternative`) -> v3.0.0
+[UPDATING] multiple-registries v1.0.0 -> v2.0.0
+[UPDATING] multiple-source-types v1.0.0 -> v2.0.0
+[ADDING] multiple-versions v3.0.0
+[UPDATING] shared v1.0.0 -> v2.0.0
+[UPDATING] ws v1.0.0 -> v2.0.0
+",
+        )
         .run();
 
     let root_manifest = p.read_file("Cargo.toml");
@@ -1880,8 +1920,9 @@ fn update_breaking() {
                 members  =  ["foo", "bar"]
 
                 [workspace.dependencies]
-                ws  =  "1.0"  # This line gets partially rewritten
-            "#]],
+                ws  =  "2.0"  # This line gets partially rewritten
+            
+"#]],
     );
 
     let foo_manifest = p.read_file("foo/Cargo.toml");
@@ -1900,22 +1941,22 @@ fn update_breaking() {
 
                 [dependencies]
                 compatible  =  "1.0"  # Comment
-                incompatible  =  "1.0"  # Comment
+                incompatible  =  "2.0"  # Comment
                 pinned  =  "=1.0"  # Comment
                 less-than  =  "<99.0"  # Comment
                 renamed-to  =  { package  =  "renamed-from", version  =  "1.0" }  # Comment
                 pre-release  =  "1.0"  # Comment
                 yanked  =  "1.0"  # Comment
                 ws.workspace  =  true  # Comment
-                shared  =  "1.0"  # Comment
-                multiple-versions  =  "1.0"  # Comment
-                alternative-1  =  { registry  =  "alternative", version  =  "1.0" }  # Comment
-                multiple-registries  =  "1.0"  # Comment
+                shared  =  "2.0"  # Comment
+                multiple-versions  =  "3.0"  # Comment
+                alternative-1  =  { registry  =  "alternative", version  =  "2.0" }  # Comment
+                multiple-registries  =  "2.0"  # Comment
                 bar  =  { path  =  "../bar", registry  =  "alternative", version  =  "1.0.0" }  # Comment
                 multiple-source-types  =  { path  =  "../multiple-source-types", version  =  "1.0.0" }  # Comment
 
                 [dependencies.alternative-2]  # Comment
-                version  =  "1.0"  # Comment
+                version  =  "2.0"  # Comment
                 registry  =  "alternative"  # Comment
             "#]],
     );
@@ -1933,10 +1974,10 @@ fn update_breaking() {
                 authors = []
 
                 [dependencies]
-                shared = "1.0"
-                multiple-versions = "2.0"
-                multiple-registries  =  { registry  =  "alternative", version  =  "2.0" }  # Comment
-                multiple-source-types  =  "1.0"  # Comment
+                shared = "2.0"
+                multiple-versions = "3.0"
+                multiple-registries  =  { registry  =  "alternative", version  =  "3.0" }  # Comment
+                multiple-source-types  =  "2.0"  # Comment
             "#]],
     );
 
@@ -1945,20 +1986,11 @@ fn update_breaking() {
             "\
 [UPDATING] `alternative` index
 [UPDATING] `dummy-registry` index
-[LOCKING] 10 packages to latest compatible versions
-[UPDATING] alternative-1 v1.0.0 (registry `alternative`) -> v1.0.1 (latest: v2.0.0)
-[UPDATING] alternative-2 v1.0.0 (registry `alternative`) -> v1.0.1 (latest: v2.0.0)
+[LOCKING] 4 packages to latest compatible versions
 [UPDATING] compatible v1.0.0 -> v1.0.1
-[UPDATING] incompatible v1.0.0 -> v1.0.1 (latest: v2.0.0)
 [UPDATING] less-than v1.0.0 -> v2.0.0
-[REMOVING] multiple-versions v1.0.0
-[REMOVING] multiple-versions v2.0.0
-[ADDING] multiple-versions v1.0.1 (latest: v3.0.0)
-[ADDING] multiple-versions v2.0.1 (latest: v3.0.0)
 [UPDATING] pinned v1.0.0 -> v1.0.1 (latest: v2.0.0)
 [UPDATING] renamed-from v1.0.0 -> v1.0.1 (latest: v2.0.0)
-[UPDATING] ws v1.0.0 -> v1.0.1 (latest: v2.0.0)
-[NOTE] pass `--verbose` to see 4 unchanged dependencies behind latest
 ",
         )
         .run();
@@ -2044,20 +2076,20 @@ fn update_breaking_specific_packages() {
     Package::new("ws", "2.0.0").publish();
     Package::new("transitive-incompatible", "2.0.0").publish();
 
-    p.cargo("update --breaking just-foo shared ws")
-        .with_status(1)
-        .with_stderr_contains("[ERROR] unexpected argument '--breaking' found")
-        .run();
-
-    p.cargo("update just-foo shared ws")
+    p.cargo("update -Zunstable-options --breaking just-foo shared ws")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_stderr(
             "\
 [UPDATING] `[..]` index
-[LOCKING] 3 packages to latest compatible versions
-[UPDATING] just-foo v1.0.0 -> v1.0.1 (latest: v2.0.0)
-[UPDATING] shared v1.0.0 -> v1.0.1 (latest: v2.0.0)
-[UPDATING] ws v1.0.0 -> v1.0.1 (latest: v2.0.0)
-[NOTE] pass `--verbose` to see 3 unchanged dependencies behind latest
+[UPGRADING] shared ^1.0 -> ^2.0
+[UPGRADING] ws ^1.0 -> ^2.0
+[UPGRADING] just-foo ^1.0 -> ^2.0
+[LOCKING] 5 packages to latest compatible versions
+[UPDATING] just-foo v1.0.0 -> v2.0.0
+[UPDATING] shared v1.0.0 -> v2.0.0
+[UPDATING] transitive-compatible v1.0.0 -> v1.0.1
+[UPDATING] transitive-incompatible v1.0.0 -> v2.0.0
+[UPDATING] ws v1.0.0 -> v2.0.0
 ",
         )
         .run();

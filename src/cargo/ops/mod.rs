@@ -19,6 +19,8 @@ pub use self::cargo_uninstall::uninstall;
 pub use self::cargo_update::generate_lockfile;
 pub use self::cargo_update::print_lockfile_changes;
 pub use self::cargo_update::update_lockfile;
+pub use self::cargo_update::upgrade_manifests;
+pub use self::cargo_update::write_manifest_upgrades;
 pub use self::cargo_update::UpdateOptions;
 pub use self::fix::{fix, fix_exec_rustc, fix_get_proxy_lock_addr, FixOptions};
 pub use self::lockfile::{load_pkg_lockfile, resolve_to_string, write_pkg_lockfile};
