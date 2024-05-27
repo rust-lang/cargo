@@ -1965,7 +1965,7 @@ where
         });
     }
 
-    // If a few files in many have a .0ns mtime then still regard them as changed files.
+    // If one file in many has a .0ns mtime then still regard it as a changed file.
     if total_checked > 1 && truncated_precision_count == 1 {
         return first;
     } else if truncated_precision_count > 0 {
