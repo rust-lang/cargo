@@ -1172,6 +1172,68 @@ src/lib.rs
 }
 
 #[cargo_test]
+fn issue_13695_dirty_vcs_info() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+            description = "foo"
+            license = "foo"
+            documentation = "foo"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let repo = git::init(&p.root());
+    // Initial commit, with no files added.
+    git::commit(&repo);
+
+    // Fail because worktree is dirty.
+    p.cargo("package")
+        .with_status(101)
+        .with_stderr_contains(
+            "[ERROR] 2 files in the working directory contain changes that were not yet committed into git:",
+        )
+        .run();
+
+    // Listing fails too.
+    p.cargo("package --list")
+        .with_status(101)
+        .with_stderr_contains(
+            "[ERROR] 2 files in the working directory contain changes that were not yet committed into git:",
+        )
+        .run();
+
+    // Allowing a dirty worktree results in the vcs file not being included.
+    p.cargo("package --allow-dirty").run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.1.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.1.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[],
+    );
+
+    // Listing provides a consistent result.
+    p.cargo("package --list --allow-dirty")
+        .with_stderr("")
+        .with_stdout(
+            "\
+Cargo.toml
+Cargo.toml.orig
+src/lib.rs
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn generated_manifest() {
     let registry = registry::alt_init();
     Package::new("abc", "1.0.0").publish();
