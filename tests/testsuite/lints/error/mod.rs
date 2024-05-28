@@ -31,6 +31,6 @@ im_a_teapot = "deny"
         .arg("-Zcargo-lints")
         .assert()
         .code(101)
-        .stdout_matches(str![""])
-        .stderr_matches(file!["stderr.term.svg"]);
+        .stdout_eq(str![""])
+        .stderr_eq(file!["stderr.term.svg"]);
 }

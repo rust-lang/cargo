@@ -143,7 +143,7 @@ mod test {
 
     #[test]
     fn stdin() {
-        let tempdir = snapbox::path::PathFixture::mutable_temp().unwrap();
+        let tempdir = snapbox::dir::DirRoot::mutable_temp().unwrap();
         let file = tempdir.path().unwrap().join("stdin");
         let mut file = OpenOptions::new()
             .read(true)

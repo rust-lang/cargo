@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use snapbox::cmd::Command;
+use snapbox::prelude::*;
 
 #[test]
 fn stdout_redirected() {
@@ -14,8 +15,8 @@ fn stdout_redirected() {
         .stdin(format!("{get_request}\n"))
         .arg("--cargo-plugin")
         .assert()
-        .stdout_eq(format!("{hello}\n{err_not_supported}\n"))
-        .stderr_eq("message on stderr should be sent to the parent process\n")
+        .stdout_eq(format!("{hello}\n{err_not_supported}\n").raw())
+        .stderr_eq("message on stderr should be sent to the parent process\n".raw())
         .success();
 }
 
@@ -38,8 +39,8 @@ fn file_provider() {
         .stdin(format!("{login_request}\n{get_request}\n"))
         .arg("--cargo-plugin")
         .assert()
-        .stdout_eq(format!("{hello}\n{login_response}\n{get_response}\n"))
-        .stderr_eq("")
+        .stdout_eq(format!("{hello}\n{login_response}\n{get_response}\n").raw())
+        .stderr_eq("".raw())
         .success();
     std::fs::remove_dir_all(&dir).unwrap();
 }

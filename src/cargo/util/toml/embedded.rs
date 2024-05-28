@@ -261,6 +261,8 @@ fn split_source(input: &str) -> CargoResult<Source<'_>> {
 
 #[cfg(test)]
 mod test_expand {
+    use snapbox::str;
+
     use super::*;
 
     macro_rules! si {
@@ -276,8 +278,10 @@ mod test_expand {
 
     #[test]
     fn test_default() {
-        snapbox::assert_eq(
-            r#"[[bin]]
+        snapbox::assert_data_eq!(
+            si!(r#"fn main() {}"#),
+            str![[r#"
+[[bin]]
 name = "test-"
 path = "/home/me/test.rs"
 
@@ -294,48 +298,22 @@ name = "test-"
 strip = true
 
 [workspace]
-"#,
-            si!(r#"fn main() {}"#),
+
+"#]]
         );
     }
 
     #[test]
     fn test_dependencies() {
-        snapbox::assert_matches(
-            r#"[[bin]]
-name = "test-"
-path = [..]
-
-[dependencies]
-time = "0.1.25"
-
-[package]
-autobenches = false
-autobins = false
-autoexamples = false
-autotests = false
-build = false
-edition = "2021"
-name = "test-"
-
-[profile.release]
-strip = true
-
-[workspace]
-"#,
+        snapbox::assert_data_eq!(
             si!(r#"---cargo
 [dependencies]
 time="0.1.25"
 ---
 fn main() {}
 "#),
-        );
-    }
-
-    #[test]
-    fn test_no_infostring() {
-        snapbox::assert_matches(
-            r#"[[bin]]
+            str![[r#"
+[[bin]]
 name = "test-"
 path = [..]
 
@@ -355,13 +333,43 @@ name = "test-"
 strip = true
 
 [workspace]
-"#,
+
+"#]]
+        );
+    }
+
+    #[test]
+    fn test_no_infostring() {
+        snapbox::assert_data_eq!(
             si!(r#"---
 [dependencies]
 time="0.1.25"
 ---
 fn main() {}
 "#),
+            str![[r#"
+[[bin]]
+name = "test-"
+path = [..]
+
+[dependencies]
+time = "0.1.25"
+
+[package]
+autobenches = false
+autobins = false
+autoexamples = false
+autotests = false
+build = false
+edition = "2021"
+name = "test-"
+
+[profile.release]
+strip = true
+
+[workspace]
+
+"#]]
         );
     }
 }

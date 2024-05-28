@@ -31,6 +31,6 @@ im_a_teapot = "warn"
         .arg("-Zcargo-lints")
         .assert()
         .success()
-        .stdout_matches(str![""])
-        .stderr_matches(file!["stderr.term.svg"]);
+        .stdout_eq(str![""])
+        .stderr_eq(file!["stderr.term.svg"]);
 }

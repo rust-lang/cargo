@@ -106,6 +106,7 @@ enum RustVersionErrorKind {
 #[cfg(test)]
 mod test {
     use super::*;
+    use snapbox::prelude::*;
     use snapbox::str;
 
     #[test]
@@ -212,7 +213,7 @@ mod test {
                 Ok(result) => format!("didn't fail: {result:?}"),
                 Err(err) => err.to_string(),
             };
-            snapbox::assert_eq(expected.clone(), actual);
+            snapbox::assert_data_eq!(actual, expected.clone().raw());
         }
     }
 }

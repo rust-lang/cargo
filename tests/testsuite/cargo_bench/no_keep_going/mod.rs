@@ -16,6 +16,6 @@ fn case() {
         .current_dir(cwd)
         .assert()
         .code(1)
-        .stdout_matches(str![""])
-        .stderr_matches(file!["stderr.term.svg"]);
+        .stdout_eq(str![""])
+        .stderr_eq(file!["stderr.term.svg"]);
 }
