@@ -103,6 +103,18 @@ pub struct Warnings {
 }
 
 #[derive(Deserialize)]
+pub struct VersionDownload {
+    pub version: i32,
+    pub downloads: i32,
+    pub date: String,
+}
+
+#[derive(Deserialize)]
+pub struct VersionDownloads {
+    pub version_downloads: Vec<VersionDownload>,
+}
+
+#[derive(Deserialize)]
 struct R {
     ok: bool,
 }
@@ -368,6 +380,11 @@ impl Registry {
         let body = self.put(&format!("/crates/{}/{}/unyank", krate, version), &[])?;
         assert!(serde_json::from_str::<R>(&body)?.ok);
         Ok(())
+    }
+
+    pub fn downloads(&mut self, krate: &str, version: &str) -> Result<VersionDownloads> {
+        let body = self.get(&format!("/crates/{}/{}/downloads", krate, version))?;
+        Ok(serde_json::from_str::<VersionDownloads>(&body)?)
     }
 
     fn put(&mut self, path: &str, b: &[u8]) -> Result<String> {
