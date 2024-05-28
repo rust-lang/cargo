@@ -824,3 +824,52 @@ fn config_features_and_build_script() {
         .with_stderr_contains(x!("rustc" => "cfg" of "docsrs")) // Cargo well known
         .run();
 }
+
+#[cargo_test(>=1.79, reason = "--check-cfg was stabilized in Rust 1.79")]
+fn config_fingerprint() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [lints.rust]
+                unexpected_cfgs = { level = "warn", check-cfg = ["cfg(bar)"] }
+            "#,
+        )
+        .file("src/lib.rs", "fn entry() {}")
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr_contains(x!("rustc" => "cfg" of "bar"))
+        .run();
+
+    p.cargo("check -v")
+        .with_stderr_does_not_contain("[..]rustc[..]")
+        .run();
+
+    // checking that changing the `check-cfg` config does invalid the fingerprint
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+
+            [lints.rust]
+            unexpected_cfgs = { level = "warn", check-cfg = ["cfg(bar)", "cfg(foo)"] }
+        "#,
+    );
+
+    p.cargo("check -v")
+        // we check that the fingerprint is indeed dirty
+        .with_stderr_contains("[..]Dirty[..]the profile configuration changed")
+        // that cause rustc to be called again with the new check-cfg args
+        .with_stderr_contains(x!("rustc" => "cfg" of "bar"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "foo"))
+        .run();
+}
