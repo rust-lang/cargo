@@ -168,6 +168,91 @@ fn build_sbom_project_bin_and_lib() {
 }
 
 #[cargo_test]
+fn build_sbom_with_multiple_crate_types() {
+    let p = configured_project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "1.2.3"
+                authors = []
+
+                [lib]
+                crate-type = ["dylib", "rlib"]
+            "#,
+        )
+        .file("src/main.rs", r#"fn main() { let _i = foo::give_five(); }"#)
+        .file("src/lib.rs", r#"pub fn give_five() -> i32 { 5 }"#)
+        .build();
+
+    p.cargo("build -Zsbom")
+        .masquerade_as_nightly_cargo(&["sbom"])
+        .run();
+
+    assert_eq!(
+        3,
+        p.glob(p.target_debug_dir().join("*.cargo-sbom.json"))
+            .count()
+    );
+
+    let sbom_path = with_sbom_suffix(&p.dylib("foo"));
+    assert!(sbom_path.is_file());
+
+    assert_json_output(
+        sbom_path,
+        r#"
+        {
+            "format_version": 1,
+            "package_id": "path+file://[..]/foo#1.2.3",
+            "name": "foo",
+            "version": "1.2.3",
+            "source": "[ROOT]/foo",
+            "target": {
+               "kind": [
+                    "dylib",
+                    "rlib"
+                ],
+                "crate_types": [
+                    "dylib",
+                    "rlib"
+                ],
+                "name": "foo",
+                "edition": "2015"
+            },
+            "profile": {
+                "name": "dev",
+                "opt_level": "0",
+                "lto": "false",
+                "codegen_backend": null,
+                "codegen_units": null,
+                "debuginfo": 2,
+                "split_debuginfo": "{...}",
+                "debug_assertions": true,
+                "overflow_checks": true,
+                "rpath": false,
+                "incremental": false,
+                "panic": "unwind",
+                "strip": {
+                    "deferred": "None"
+                }
+            },
+            "packages": [],
+            "features": [],
+            "rustc": {
+                "version": "[..]",
+                "wrapper": null,
+                "workspace_wrapper": null,
+                "commit_hash": "[..]",
+                "host": "[..]",
+                "verbose_version": "{...}"
+            }
+        }
+        "#,
+    )
+}
+
+#[cargo_test]
 fn build_sbom_with_simple_build_script() {
     let p = configured_project()
         .file(
