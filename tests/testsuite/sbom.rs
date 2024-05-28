@@ -168,6 +168,42 @@ fn build_sbom_project_bin_and_lib() {
 }
 
 #[cargo_test]
+fn build_sbom_with_artifact_name_conflict() {
+    Package::new("deps", "0.1.0")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "deps" # name conflict
+                version = "0.1.0"
+                authors = []
+            "#,
+        )
+        .file("src/lib.rs", "pub fn bar() -> i32 { 2 }")
+        .publish();
+
+    let p = configured_project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+
+                [dependencies]
+                deps = "0.1.0"
+            "#,
+        )
+        .file("src/main.rs", "fn main() { let _i = deps::bar(); }")
+        .build();
+
+    p.cargo("build -Zsbom")
+        .masquerade_as_nightly_cargo(&["sbom"])
+        .run();
+}
+
+#[cargo_test]
 fn build_sbom_with_multiple_crate_types() {
     let p = configured_project()
         .file(
