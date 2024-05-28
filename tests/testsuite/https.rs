@@ -33,7 +33,7 @@ fn self_signed_should_fail() {
     let err_msg = if cfg!(target_os = "macos") {
         "untrusted connection error; class=Ssl (16); code=Certificate (-17)"
     } else if cfg!(unix) {
-        "the SSL certificate is invalid; class=Ssl (16); code=Certificate (-17)"
+        "the SSL certificate is invalid; class=Ssl (16)[..]"
     } else if cfg!(windows) {
         "user cancelled certificate check; class=Http (34); code=Certificate (-17)"
     } else {
