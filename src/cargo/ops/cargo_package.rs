@@ -81,6 +81,8 @@ struct VcsInfo {
 #[derive(Serialize)]
 struct GitVcsInfo {
     sha1: String,
+    /// Indicate whether or not the Git worktree is dirty.
+    dirty: bool,
 }
 
 /// Packages a single package in a workspace, returning the resulting tar file.
@@ -634,10 +636,12 @@ fn check_repo_state(
                     .to_string()
             })
             .collect();
-        if dirty_src_files.is_empty() || opts.allow_dirty {
+        let dirty = !dirty_src_files.is_empty();
+        if !dirty || opts.allow_dirty {
             let rev_obj = repo.revparse_single("HEAD")?;
             Ok(GitVcsInfo {
                 sha1: rev_obj.id().to_string(),
+                dirty,
             })
         } else {
             anyhow::bail!(

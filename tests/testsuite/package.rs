@@ -189,7 +189,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
     let vcs_contents = format!(
         r#"{{
   "git": {{
-    "sha1": "{}"
+    "sha1": "{}",
+    "dirty": false
   }},
   "path_in_vcs": ""
 }}
@@ -230,7 +231,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
     let vcs_contents = format!(
         r#"{{
   "git": {{
-    "sha1": "{}"
+    "sha1": "{}",
+    "dirty": false
   }},
   "path_in_vcs": "a/a"
 }}
@@ -1174,7 +1176,7 @@ src/lib.rs
 }
 
 #[cargo_test]
-fn issue_13695_dirty_vcs_info() {
+fn issue_13695_allow_dirty_vcs_info() {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1195,23 +1197,7 @@ fn issue_13695_dirty_vcs_info() {
     // Initial commit, with no files added.
     git::commit(&repo);
 
-    // Fail because worktree is dirty.
-    p.cargo("package")
-        .with_status(101)
-        .with_stderr_contains(
-            "[ERROR] 2 files in the working directory contain changes that were not yet committed into git:",
-        )
-        .run();
-
-    // Listing fails too.
-    p.cargo("package --list")
-        .with_status(101)
-        .with_stderr_contains(
-            "[ERROR] 2 files in the working directory contain changes that were not yet committed into git:",
-        )
-        .run();
-
-    // Allowing a dirty worktree results in the vcs file being included.
+    // Allowing a dirty worktree results in the vcs file still being included.
     p.cargo("package --allow-dirty").run();
 
     let f = File::open(&p.root().join("target/package/foo-0.1.0.crate")).unwrap();
@@ -1224,7 +1210,16 @@ fn issue_13695_dirty_vcs_info() {
             "Cargo.toml.orig",
             "src/lib.rs",
         ],
-        &[],
+        &[(
+            ".cargo_vcs_info.json",
+            r#"{
+  "git": {
+    "sha1": "[..]",
+    "dirty": true
+  },
+  "path_in_vcs": ""
+}"#,
+        )],
     );
 
     // Listing provides a consistent result.
@@ -1239,6 +1234,51 @@ src/lib.rs
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn issue_13695_allowing_dirty_vcs_info_but_clean() {
+    let p = project().build();
+    let _ = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+            description = "foo"
+            license = "foo"
+            documentation = "foo"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // Allowing a dirty worktree despite it being clean.
+    p.cargo("package --allow-dirty").run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.1.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.1.0.crate",
+        &[
+            ".cargo_vcs_info.json",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+        ],
+        &[(
+            ".cargo_vcs_info.json",
+            r#"{
+  "git": {
+    "sha1": "[..]",
+    "dirty": false
+  },
+  "path_in_vcs": ""
+}"#,
+        )],
+    );
 }
 
 #[cargo_test]
