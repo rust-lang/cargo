@@ -31,6 +31,7 @@ pub fn resolve(deps: Vec<Dependency>, registry: &[Summary]) -> CargoResult<Vec<P
     resolve_with_global_context(deps, registry, &GlobalContext::default().unwrap())
 }
 
+// Verify that the resolution of cargo resolver can pass the verification of SAT
 pub fn resolve_and_validated(
     deps: Vec<Dependency>,
     registry: &[Summary],
@@ -198,6 +199,9 @@ fn log_bits(x: usize) -> usize {
     (num_bits::<usize>() as u32 - x.leading_zeros()) as usize
 }
 
+// At this point is possible to select every version of every package.
+// So we need to mark certain versions as incompatible with each other.
+// We could add a clause not A, not B for all A and B that are incompatible,
 fn sat_at_most_one(solver: &mut impl varisat::ExtendFormula, vars: &[varisat::Var]) {
     if vars.len() <= 1 {
         return;
@@ -210,6 +214,8 @@ fn sat_at_most_one(solver: &mut impl varisat::ExtendFormula, vars: &[varisat::Va
         solver.add_clause(&[vars[1].negative(), vars[2].negative()]);
         return;
     }
+    // There are more efficient ways to do it for large numbers of versions.
+    //
     // use the "Binary Encoding" from
     // https://www.it.uu.se/research/group/astra/ModRef10/papers/Alan%20M.%20Frisch%20and%20Paul%20A.%20Giannoros.%20SAT%20Encodings%20of%20the%20At-Most-k%20Constraint%20-%20ModRef%202010.pdf
     let bits: Vec<varisat::Var> = solver.new_var_iter(log_bits(vars.len())).collect();
@@ -257,6 +263,7 @@ struct SatResolveInner {
 impl SatResolve {
     pub fn new(registry: &[Summary]) -> Self {
         let mut cnf = varisat::CnfFormula::new();
+        // That represents each package version which is set to "true" if the packages in the lock file and "false" if it is unused.
         let var_for_is_packages_used: HashMap<PackageId, varisat::Var> = registry
             .iter()
             .map(|s| (s.package_id(), cnf.new_var()))
@@ -290,6 +297,10 @@ impl SatResolve {
 
         let empty_vec = vec![];
 
+        // Now different versions can conflict, but dependencies might not be selected.
+        // So we need to add clauses that ensure that if a package is selected for each dependency a version
+        // that satisfies that dependency is selected.
+        //
         // active packages need each of there `deps` to be satisfied
         for p in registry.iter() {
             for dep in p.dependencies() {
@@ -681,7 +692,7 @@ pub fn registry_strategy(
             vers
         });
 
-    // each version of each crate can depend on each crate smaller then it.
+    // each version of each crate can depend on each crate smaller than it.
     // In theory shrinkage should be 2, but in practice we get better trees with a larger value.
     let max_deps = max_versions * (max_crates * (max_crates - 1)) / shrinkage;
 
