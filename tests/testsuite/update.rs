@@ -1450,26 +1450,6 @@ fn precise_yanked() {
     assert!(lockfile.contains("\nname = \"bar\"\nversion = \"0.1.0\""));
 
     p.cargo("update --precise 0.1.1 bar")
-        .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] `dummy-registry` index
-[ERROR] failed to get `bar` as a dependency of package `foo v0.0.0 ([CWD])`
-
-Caused by:
-  failed to query replaced source registry `crates-io`
-
-Caused by:
-  the `--precise <yanked-version>` flag is unstable[..]
-  See [..]
-  See [..]
-",
-        )
-        .run();
-
-    p.cargo("update --precise 0.1.1 bar")
-        .masquerade_as_nightly_cargo(&["--precise <yanked-version>"])
-        .arg("-Zunstable-options")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index
@@ -1511,8 +1491,6 @@ fn precise_yanked_multiple_presence() {
     assert!(lockfile.contains("\nname = \"bar\"\nversion = \"0.1.0\""));
 
     p.cargo("update --precise 0.1.1 bar")
-        .masquerade_as_nightly_cargo(&["--precise <yanked-version>"])
-        .arg("-Zunstable-options")
         .with_stderr(
             "\
 [UPDATING] `dummy-registry` index

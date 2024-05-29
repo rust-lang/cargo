@@ -43,11 +43,12 @@ When used with _spec_, allows you to specify a specific version number to set
 the package to. If the package comes from a git repository, this can be a git
 revision (such as a SHA hash or tag).
 
-While not recommended, you can specify a yanked version of a package (nightly only).
+While not recommended, you can specify a yanked version of a package.
 When possible, try other non-yanked SemVer-compatible versions or seek help
 from the maintainers of the package.
 
-A compatible `pre-release` version can also be specified even when the version requirement in `Cargo.toml` doesn't contain any pre-release identifier (nightly only).
+A compatible `pre-release` version can also be specified even when the version
+requirement in `Cargo.toml` doesn't contain any pre-release identifier (nightly only).
 {{/option}}
 
 {{#option "`-w`" "`--workspace`" }}
