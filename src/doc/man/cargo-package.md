@@ -61,6 +61,13 @@ Will generate a `.cargo_vcs_info.json` in the following format
 `path_in_vcs` will be set to a repo-relative path for packages
 in subdirectories of the version control repository.
 
+The compatibility of this file is maintained under the same policy
+as the JSON output of {{man "cargo-metadata" 1}}.
+
+Note that this file provides a best-effort snapshot of the VCS information.
+However, the provenance of the package is not verified.
+There is no guarantee that the source code in the tarball matches the VCS information.
+
 ## OPTIONS
 
 ### Package Options
