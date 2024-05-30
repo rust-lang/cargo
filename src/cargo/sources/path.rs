@@ -20,12 +20,8 @@ use ignore::gitignore::GitignoreBuilder;
 use tracing::{debug, trace, warn};
 use walkdir::WalkDir;
 
-/// A source represents one or multiple packages gathering from a given root
+/// A source that represents a package gathered at the root
 /// path on the filesystem.
-///
-/// It's the cornerstone of every other source --- other implementations
-/// eventually need to call `PathSource` to read local packages somewhere on
-/// the filesystem.
 ///
 /// It also provides convenient methods like [`PathSource::list_files`] to
 /// list all files in a package, given its ability to walk the filesystem.
@@ -39,7 +35,6 @@ pub struct PathSource<'gctx> {
     /// Packages that this sources has discovered.
     packages: Vec<Package>,
     /// Whether this source should discover nested packages recursively.
-    /// See [`PathSource::new_recursive`] for more.
     recursive: bool,
     gctx: &'gctx GlobalContext,
 }
@@ -57,21 +52,6 @@ impl<'gctx> PathSource<'gctx> {
             packages: Vec::new(),
             gctx,
             recursive: false,
-        }
-    }
-
-    /// Creates a new source which is walked recursively to discover packages.
-    ///
-    /// This is similar to the [`PathSource::new`] method except that instead
-    /// of requiring a valid package to be present at `root` the folder is
-    /// walked entirely to crawl for packages.
-    ///
-    /// Note that this should be used with care and likely shouldn't be chosen
-    /// by default!
-    pub fn new_recursive(root: &Path, id: SourceId, gctx: &'gctx GlobalContext) -> Self {
-        Self {
-            recursive: true,
-            ..Self::new(root, id, gctx)
         }
     }
 
@@ -163,6 +143,210 @@ impl<'gctx> Debug for PathSource<'gctx> {
 }
 
 impl<'gctx> Source for PathSource<'gctx> {
+    fn query(
+        &mut self,
+        dep: &Dependency,
+        kind: QueryKind,
+        f: &mut dyn FnMut(IndexSummary),
+    ) -> Poll<CargoResult<()>> {
+        self.update()?;
+        for s in self.packages.iter().map(|p| p.summary()) {
+            let matched = match kind {
+                QueryKind::Exact => dep.matches(s),
+                QueryKind::Alternatives => true,
+                QueryKind::Normalized => dep.matches(s),
+            };
+            if matched {
+                f(IndexSummary::Candidate(s.clone()))
+            }
+        }
+        Poll::Ready(Ok(()))
+    }
+
+    fn supports_checksums(&self) -> bool {
+        false
+    }
+
+    fn requires_precise(&self) -> bool {
+        false
+    }
+
+    fn source_id(&self) -> SourceId {
+        self.source_id
+    }
+
+    fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
+        trace!("getting packages; id={}", id);
+        self.update()?;
+        let pkg = self.packages.iter().find(|pkg| pkg.package_id() == id);
+        pkg.cloned()
+            .map(MaybePackage::Ready)
+            .ok_or_else(|| internal(format!("failed to find {} in path source", id)))
+    }
+
+    fn finish_download(&mut self, _id: PackageId, _data: Vec<u8>) -> CargoResult<Package> {
+        panic!("no download should have started")
+    }
+
+    fn fingerprint(&self, pkg: &Package) -> CargoResult<String> {
+        let (max, max_path) = self.last_modified_file(pkg)?;
+        // Note that we try to strip the prefix of this package to get a
+        // relative path to ensure that the fingerprint remains consistent
+        // across entire project directory renames.
+        let max_path = max_path.strip_prefix(&self.path).unwrap_or(&max_path);
+        Ok(format!("{} ({})", max, max_path.display()))
+    }
+
+    fn describe(&self) -> String {
+        match self.source_id.url().to_file_path() {
+            Ok(path) => path.display().to_string(),
+            Err(_) => self.source_id.to_string(),
+        }
+    }
+
+    fn add_to_yanked_whitelist(&mut self, _pkgs: &[PackageId]) {}
+
+    fn is_yanked(&mut self, _pkg: PackageId) -> Poll<CargoResult<bool>> {
+        Poll::Ready(Ok(false))
+    }
+
+    fn block_until_ready(&mut self) -> CargoResult<()> {
+        self.update()
+    }
+
+    fn invalidate_cache(&mut self) {
+        // Path source has no local cache.
+    }
+
+    fn set_quiet(&mut self, _quiet: bool) {
+        // Path source does not display status
+    }
+}
+
+/// A source that represents one or multiple packages gathered from a given root
+/// path on the filesystem.
+pub struct RecursivePathSource<'gctx> {
+    /// The unique identifier of this source.
+    source_id: SourceId,
+    /// The root path of this source.
+    path: PathBuf,
+    /// Whether this source has updated all package information it may contain.
+    updated: bool,
+    /// Packages that this sources has discovered.
+    packages: Vec<Package>,
+    /// Whether this source should discover nested packages recursively.
+    recursive: bool,
+    gctx: &'gctx GlobalContext,
+}
+
+impl<'gctx> RecursivePathSource<'gctx> {
+    /// Creates a new source which is walked recursively to discover packages.
+    ///
+    /// This is similar to the [`PathSource::new`] method except that instead
+    /// of requiring a valid package to be present at `root` the folder is
+    /// walked entirely to crawl for packages.
+    ///
+    /// Note that this should be used with care and likely shouldn't be chosen
+    /// by default!
+    pub fn new(root: &Path, source_id: SourceId, gctx: &'gctx GlobalContext) -> Self {
+        Self {
+            source_id,
+            path: root.to_path_buf(),
+            updated: false,
+            packages: Vec::new(),
+            gctx,
+            recursive: true,
+        }
+    }
+
+    /// Preloads a package for this source. The source is assumed that it has
+    /// yet loaded any other packages.
+    pub fn preload_with(&mut self, pkg: Package) {
+        assert!(!self.updated);
+        assert!(!self.recursive);
+        assert!(self.packages.is_empty());
+        self.updated = true;
+        self.packages.push(pkg);
+    }
+
+    /// Gets the package on the root path.
+    pub fn root_package(&mut self) -> CargoResult<Package> {
+        trace!("root_package; source={:?}", self);
+
+        self.update()?;
+
+        match self.packages.iter().find(|p| p.root() == &*self.path) {
+            Some(pkg) => Ok(pkg.clone()),
+            None => Err(internal(format!(
+                "no package found in source {:?}",
+                self.path
+            ))),
+        }
+    }
+
+    /// Returns the packages discovered by this source. It may walk the
+    /// filesystem if package information haven't yet updated.
+    pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
+        if self.updated {
+            Ok(self.packages.clone())
+        } else if self.recursive {
+            ops::read_packages(&self.path, self.source_id, self.gctx)
+        } else {
+            let path = self.path.join("Cargo.toml");
+            let pkg = ops::read_package(&path, self.source_id, self.gctx)?;
+            Ok(vec![pkg])
+        }
+    }
+
+    /// List all files relevant to building this package inside this source.
+    ///
+    /// This function will use the appropriate methods to determine the
+    /// set of files underneath this source's directory which are relevant for
+    /// building `pkg`.
+    ///
+    /// The basic assumption of this method is that all files in the directory
+    /// are relevant for building this package, but it also contains logic to
+    /// use other methods like `.gitignore`, `package.include`, or
+    /// `package.exclude` to filter the list of files.
+    pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
+        list_files(pkg, self.gctx)
+    }
+
+    /// Gets the last modified file in a package.
+    pub fn last_modified_file(&self, pkg: &Package) -> CargoResult<(FileTime, PathBuf)> {
+        if !self.updated {
+            return Err(internal(format!(
+                "BUG: source `{:?}` was not updated",
+                self.path
+            )));
+        }
+        last_modified_file(&self.path, pkg, self.gctx)
+    }
+
+    /// Returns the root path of this source.
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    /// Discovers packages inside this source if it hasn't yet done.
+    pub fn update(&mut self) -> CargoResult<()> {
+        if !self.updated {
+            let packages = self.read_packages()?;
+            self.packages.extend(packages.into_iter());
+            self.updated = true;
+        }
+
+        Ok(())
+    }
+}
+
+impl<'gctx> Debug for RecursivePathSource<'gctx> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "the paths source")
+    }
+}
+
+impl<'gctx> Source for RecursivePathSource<'gctx> {
     fn query(
         &mut self,
         dep: &Dependency,

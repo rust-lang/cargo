@@ -10,7 +10,7 @@ use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::sources::IndexSummary;
-use crate::sources::PathSource;
+use crate::sources::RecursivePathSource;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::hex::short_hash;
@@ -24,7 +24,7 @@ use tracing::trace;
 use url::Url;
 
 /// `GitSource` contains one or more packages gathering from a Git repository.
-/// Under the hood it uses [`PathSource`] to discover packages inside the
+/// Under the hood it uses [`RecursivePathSource`] to discover packages inside the
 /// repository.
 ///
 /// ## Filesystem layout
@@ -79,7 +79,7 @@ pub struct GitSource<'gctx> {
     ///
     /// This gets set to `Some` after the git repo has been checked out
     /// (automatically handled via [`GitSource::block_until_ready`]).
-    path_source: Option<PathSource<'gctx>>,
+    path_source: Option<RecursivePathSource<'gctx>>,
     /// A short string that uniquely identifies the version of the checkout.
     ///
     /// This is typically a 7-character string of the OID hash, automatically
@@ -356,7 +356,7 @@ impl<'gctx> Source for GitSource<'gctx> {
         let source_id = self
             .source_id
             .with_git_precise(Some(actual_rev.to_string()));
-        let path_source = PathSource::new_recursive(&checkout_path, source_id, self.gctx);
+        let path_source = RecursivePathSource::new(&checkout_path, source_id, self.gctx);
 
         self.path_source = Some(path_source);
         self.short_id = Some(short_id.as_str().into());
