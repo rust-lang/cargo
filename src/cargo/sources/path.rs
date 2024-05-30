@@ -54,11 +54,16 @@ impl<'gctx> PathSource<'gctx> {
 
     /// Preloads a package for this source. The source is assumed that it has
     /// yet loaded any other packages.
-    pub fn preload_with(&mut self, pkg: Package) {
-        assert!(!self.updated);
-        assert!(self.packages.is_empty());
-        self.updated = true;
-        self.packages.push(pkg);
+    pub fn preload_with(pkg: Package, gctx: &'gctx GlobalContext) -> Self {
+        let source_id = pkg.package_id().source_id();
+        let path = pkg.root().to_owned();
+        Self {
+            source_id,
+            path,
+            updated: true,
+            packages: vec![pkg],
+            gctx,
+        }
     }
 
     /// Gets the package on the root path.
