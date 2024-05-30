@@ -49,8 +49,8 @@ impl<'gctx> PathSource<'gctx> {
     ///
     /// This source will only return the package at precisely the `path`
     /// specified, and it will be an error if there's not a package at `path`.
-    pub fn new(path: &Path, source_id: SourceId, gctx: &'gctx GlobalContext) -> PathSource<'gctx> {
-        PathSource {
+    pub fn new(path: &Path, source_id: SourceId, gctx: &'gctx GlobalContext) -> Self {
+        Self {
             source_id,
             path: path.to_path_buf(),
             updated: false,
@@ -68,14 +68,10 @@ impl<'gctx> PathSource<'gctx> {
     ///
     /// Note that this should be used with care and likely shouldn't be chosen
     /// by default!
-    pub fn new_recursive(
-        root: &Path,
-        id: SourceId,
-        gctx: &'gctx GlobalContext,
-    ) -> PathSource<'gctx> {
-        PathSource {
+    pub fn new_recursive(root: &Path, id: SourceId, gctx: &'gctx GlobalContext) -> Self {
+        Self {
             recursive: true,
-            ..PathSource::new(root, id, gctx)
+            ..Self::new(root, id, gctx)
         }
     }
 
