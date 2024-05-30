@@ -34,8 +34,6 @@ pub struct PathSource<'gctx> {
     updated: bool,
     /// Packages that this sources has discovered.
     packages: Vec<Package>,
-    /// Whether this source should discover nested packages recursively.
-    recursive: bool,
     gctx: &'gctx GlobalContext,
 }
 
@@ -51,7 +49,6 @@ impl<'gctx> PathSource<'gctx> {
             updated: false,
             packages: Vec::new(),
             gctx,
-            recursive: false,
         }
     }
 
@@ -59,7 +56,6 @@ impl<'gctx> PathSource<'gctx> {
     /// yet loaded any other packages.
     pub fn preload_with(&mut self, pkg: Package) {
         assert!(!self.updated);
-        assert!(!self.recursive);
         assert!(self.packages.is_empty());
         self.updated = true;
         self.packages.push(pkg);
@@ -85,8 +81,6 @@ impl<'gctx> PathSource<'gctx> {
     pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
         if self.updated {
             Ok(self.packages.clone())
-        } else if self.recursive {
-            ops::read_packages(&self.path, self.source_id, self.gctx)
         } else {
             let path = self.path.join("Cargo.toml");
             let pkg = ops::read_package(&path, self.source_id, self.gctx)?;
@@ -234,8 +228,6 @@ pub struct RecursivePathSource<'gctx> {
     updated: bool,
     /// Packages that this sources has discovered.
     packages: Vec<Package>,
-    /// Whether this source should discover nested packages recursively.
-    recursive: bool,
     gctx: &'gctx GlobalContext,
 }
 
@@ -255,18 +247,7 @@ impl<'gctx> RecursivePathSource<'gctx> {
             updated: false,
             packages: Vec::new(),
             gctx,
-            recursive: true,
         }
-    }
-
-    /// Preloads a package for this source. The source is assumed that it has
-    /// yet loaded any other packages.
-    pub fn preload_with(&mut self, pkg: Package) {
-        assert!(!self.updated);
-        assert!(!self.recursive);
-        assert!(self.packages.is_empty());
-        self.updated = true;
-        self.packages.push(pkg);
     }
 
     /// Gets the package on the root path.
@@ -289,12 +270,8 @@ impl<'gctx> RecursivePathSource<'gctx> {
     pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
         if self.updated {
             Ok(self.packages.clone())
-        } else if self.recursive {
-            ops::read_packages(&self.path, self.source_id, self.gctx)
         } else {
-            let path = self.path.join("Cargo.toml");
-            let pkg = ops::read_package(&path, self.source_id, self.gctx)?;
-            Ok(vec![pkg])
+            ops::read_packages(&self.path, self.source_id, self.gctx)
         }
     }
 
