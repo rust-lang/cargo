@@ -184,7 +184,7 @@ pub enum QueryKind {
     /// whereas an `Registry` source may return dependencies that have the same
     /// canonicalization.
     Alternatives,
-    /// Match a denpendency in all ways and will normalize the package name.
+    /// Match a dependency in all ways and will normalize the package name.
     /// Each source defines what normalizing means.
     Normalized,
 }
