@@ -1132,31 +1132,31 @@ fn ambiguous_published_deps() {
     let git_project = git::new("dep", |project| {
         project
             .file(
-                "aaa/Cargo.toml",
+                "duplicate1/Cargo.toml",
                 &format!(
                     r#"
                     [package]
-                    name = "bar"
+                    name = "duplicate"
                     version = "0.5.0"
                     edition = "2015"
                     publish = true
                 "#
                 ),
             )
-            .file("aaa/src/lib.rs", "")
+            .file("duplicate1/src/lib.rs", "")
             .file(
-                "bbb/Cargo.toml",
+                "duplicate2/Cargo.toml",
                 &format!(
                     r#"
                     [package]
-                    name = "bar"
+                    name = "duplicate"
                     version = "0.5.0"
                     edition = "2015"
                     publish = true
                 "#
                 ),
             )
-            .file("bbb/src/lib.rs", "")
+            .file("duplicate2/src/lib.rs", "")
     });
 
     let p = project
@@ -1171,7 +1171,7 @@ fn ambiguous_published_deps() {
                     edition = "2015"
                     authors = ["wycats@example.com"]
 
-                    [dependencies.bar]
+                    [dependencies.duplicate]
                     git = '{}'
                 "#,
                 git_project.url()
@@ -1183,7 +1183,106 @@ fn ambiguous_published_deps() {
     p.cargo("build").run();
     p.cargo("run")
         .with_stderr_data(str![[r#"
-[WARNING] skipping duplicate package `bar` found at `[ROOT]/home/.cargo/git/checkouts/dep-[HASH]/[..]`
+[WARNING] skipping duplicate package `duplicate` found at `[ROOT]/home/.cargo/git/checkouts/dep-[HASH]/e916fc8/duplicate2`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]],
+        )
+        .run();
+}
+
+#[cargo_test]
+fn unused_ambiguous_published_deps() {
+    let project = project();
+    let git_project = git::new("dep", |project| {
+        project
+            .file(
+                "unique/Cargo.toml",
+                &format!(
+                    r#"
+                    [package]
+                    name = "unique"
+                    version = "0.5.0"
+                    edition = "2015"
+                    publish = true
+                "#
+                ),
+            )
+            .file("unique/src/lib.rs", "")
+            .file(
+                "duplicate1/Cargo.toml",
+                &format!(
+                    r#"
+                    [package]
+                    name = "duplicate"
+                    version = "0.5.0"
+                    edition = "2015"
+                    publish = true
+                "#
+                ),
+            )
+            .file("duplicate1/src/lib.rs", "")
+            .file(
+                "duplicate2/Cargo.toml",
+                &format!(
+                    r#"
+                    [package]
+                    name = "duplicate"
+                    version = "0.5.0"
+                    edition = "2015"
+                    publish = true
+                "#
+                ),
+            )
+            .file("duplicate2/src/lib.rs", "")
+            .file(
+                "invalid/Cargo.toml",
+                &format!(
+                    r#"
+                    [package
+                    name = "bar"
+                    version = "0.5.0"
+                    edition = "2015"
+                    publish = true
+                "#
+                ),
+            )
+            .file("invalid/src/lib.rs", "")
+    });
+
+    let p = project
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+
+                    name = "foo"
+                    version = "0.5.0"
+                    edition = "2015"
+                    authors = ["wycats@example.com"]
+
+                    [dependencies.unique]
+                    git = '{}'
+                "#,
+                git_project.url()
+            ),
+        )
+        .file("src/main.rs", "fn main() {  }")
+        .build();
+
+    p.cargo("build").run();
+    p.cargo("run")
+        .with_stderr_data(str![[r#"
+[ERROR] invalid table header
+expected `.`, `]`
+ --> ../home/.cargo/git/checkouts/dep-[HASH]/caf7f52/invalid/Cargo.toml:2:29
+  |
+2 |                     [package
+  |                             ^
+  |
+[WARNING] skipping duplicate package `duplicate` found at `[ROOT]/home/.cargo/git/checkouts/dep-[HASH]/caf7f52/duplicate2`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 
