@@ -33,7 +33,7 @@ pub struct PathSource<'gctx> {
     /// Whether this source has updated all package information it may contain.
     updated: bool,
     /// Packages that this sources has discovered.
-    packages: Vec<Package>,
+    package: Option<Package>,
     gctx: &'gctx GlobalContext,
 }
 
@@ -47,7 +47,7 @@ impl<'gctx> PathSource<'gctx> {
             source_id,
             path: path.to_path_buf(),
             updated: false,
-            packages: Vec::new(),
+            package: None,
             gctx,
         }
     }
@@ -61,7 +61,7 @@ impl<'gctx> PathSource<'gctx> {
             source_id,
             path,
             updated: true,
-            packages: vec![pkg],
+            package: Some(pkg),
             gctx,
         }
     }
@@ -72,7 +72,7 @@ impl<'gctx> PathSource<'gctx> {
 
         self.update()?;
 
-        match self.packages.iter().find(|p| p.root() == &*self.path) {
+        match &self.package {
             Some(pkg) => Ok(pkg.clone()),
             None => Err(internal(format!(
                 "no package found in source {:?}",
@@ -85,12 +85,17 @@ impl<'gctx> PathSource<'gctx> {
     /// filesystem if package information haven't yet updated.
     pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
         if self.updated {
-            Ok(self.packages.clone())
+            Ok(self.package.clone().into_iter().collect())
         } else {
-            let path = self.path.join("Cargo.toml");
-            let pkg = ops::read_package(&path, self.source_id, self.gctx)?;
+            let pkg = self.read_package()?;
             Ok(vec![pkg])
         }
+    }
+
+    fn read_package(&self) -> CargoResult<Package> {
+        let path = self.path.join("Cargo.toml");
+        let pkg = ops::read_package(&path, self.source_id, self.gctx)?;
+        Ok(pkg)
     }
 
     /// List all files relevant to building this package inside this source.
@@ -126,8 +131,7 @@ impl<'gctx> PathSource<'gctx> {
     /// Discovers packages inside this source if it hasn't yet done.
     pub fn update(&mut self) -> CargoResult<()> {
         if !self.updated {
-            let packages = self.read_packages()?;
-            self.packages.extend(packages.into_iter());
+            self.package = Some(self.read_package()?);
             self.updated = true;
         }
 
@@ -149,7 +153,7 @@ impl<'gctx> Source for PathSource<'gctx> {
         f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
         self.update()?;
-        for s in self.packages.iter().map(|p| p.summary()) {
+        if let Some(s) = self.package.as_ref().map(|p| p.summary()) {
             let matched = match kind {
                 QueryKind::Exact => dep.matches(s),
                 QueryKind::Alternatives => true,
@@ -177,7 +181,7 @@ impl<'gctx> Source for PathSource<'gctx> {
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         trace!("getting packages; id={}", id);
         self.update()?;
-        let pkg = self.packages.iter().find(|pkg| pkg.package_id() == id);
+        let pkg = self.package.iter().find(|pkg| pkg.package_id() == id);
         pkg.cloned()
             .map(MaybePackage::Ready)
             .ok_or_else(|| internal(format!("failed to find {} in path source", id)))
