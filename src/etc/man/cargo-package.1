@@ -83,6 +83,13 @@ Will generate a \fB\&.cargo_vcs_info.json\fR in the following format
 .sp
 \fBpath_in_vcs\fR will be set to a repo\-relative path for packages
 in subdirectories of the version control repository.
+.sp
+The compatibility of this file is maintained under the same policy
+as the JSON output of \fBcargo\-metadata\fR(1).
+.sp
+Note that this file provides a best\-effort snapshot of the VCS information.
+However, the provenance of the package is not verified.
+There is no guarantee that the source code in the tarball matches the VCS information.
 .SH "OPTIONS"
 .SS "Package Options"
 .sp
