@@ -899,7 +899,7 @@ fn register_patch_entries(
 }
 
 /// Locks each `[replace]` entry to a specific Package ID
-/// if the lockfile contains any correspoding previous replacement.
+/// if the lockfile contains any corresponding previous replacement.
 fn lock_replacements(
     ws: &Workspace<'_>,
     previous: Option<&Resolve>,
