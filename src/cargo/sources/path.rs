@@ -250,21 +250,6 @@ impl<'gctx> RecursivePathSource<'gctx> {
         }
     }
 
-    /// Gets the package on the root path.
-    pub fn root_package(&mut self) -> CargoResult<Package> {
-        trace!("root_package; source={:?}", self);
-
-        self.update()?;
-
-        match self.packages.iter().find(|p| p.root() == &*self.path) {
-            Some(pkg) => Ok(pkg.clone()),
-            None => Err(internal(format!(
-                "no package found in source {:?}",
-                self.path
-            ))),
-        }
-    }
-
     /// Returns the packages discovered by this source. It may walk the
     /// filesystem if package information haven't yet updated.
     pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
