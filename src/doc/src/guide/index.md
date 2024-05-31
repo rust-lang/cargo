@@ -5,6 +5,7 @@ develop Rust packages.
 
 * [Why Cargo Exists](why-cargo-exists.md)
 * [Creating a New Package](creating-a-new-project.md)
+* [Creating a Workspace](creating-a-new-workspace.md)
 * [Working on an Existing Cargo Package](working-on-an-existing-project.md)
 * [Dependencies](dependencies.md)
 * [Package Layout](project-layout.md)
