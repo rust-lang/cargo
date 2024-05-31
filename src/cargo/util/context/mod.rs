@@ -1020,6 +1020,31 @@ impl GlobalContext {
         unstable_flags: &[String],
         cli_config: &[String],
     ) -> CargoResult<()> {
+        for warning in self
+            .unstable_flags
+            .parse(unstable_flags, self.nightly_features_allowed)?
+        {
+            self.shell().warn(warning)?;
+        }
+        if !unstable_flags.is_empty() {
+            // store a copy of the cli flags separately for `load_unstable_flags_from_config`
+            // (we might also need it again for `reload_rooted_at`)
+            self.unstable_flags_cli = Some(unstable_flags.to_vec());
+        }
+        if !cli_config.is_empty() {
+            self.cli_config = Some(cli_config.iter().map(|s| s.to_string()).collect());
+            self.merge_cli_args()?;
+        }
+        if self.unstable_flags.config_include {
+            // If the config was already loaded (like when fetching the
+            // `[alias]` table), it was loaded with includes disabled because
+            // the `unstable_flags` hadn't been set up, yet. Any values
+            // fetched before this step will not process includes, but that
+            // should be fine (`[alias]` is one of the only things loaded
+            // before configure). This can be removed when stabilized.
+            self.reload_rooted_at(self.cwd.clone())?;
+        }
+
         // Ignore errors in the configuration files. We don't want basic
         // commands like `cargo version` to error out due to config file
         // problems.
@@ -1065,31 +1090,6 @@ impl GlobalContext {
                 .unwrap_or(false);
         let cli_target_dir = target_dir.as_ref().map(|dir| Filesystem::new(dir.clone()));
         self.target_dir = cli_target_dir;
-
-        for warning in self
-            .unstable_flags
-            .parse(unstable_flags, self.nightly_features_allowed)?
-        {
-            self.shell().warn(warning)?;
-        }
-        if !unstable_flags.is_empty() {
-            // store a copy of the cli flags separately for `load_unstable_flags_from_config`
-            // (we might also need it again for `reload_rooted_at`)
-            self.unstable_flags_cli = Some(unstable_flags.to_vec());
-        }
-        if !cli_config.is_empty() {
-            self.cli_config = Some(cli_config.iter().map(|s| s.to_string()).collect());
-            self.merge_cli_args()?;
-        }
-        if self.unstable_flags.config_include {
-            // If the config was already loaded (like when fetching the
-            // `[alias]` table), it was loaded with includes disabled because
-            // the `unstable_flags` hadn't been set up, yet. Any values
-            // fetched before this step will not process includes, but that
-            // should be fine (`[alias]` is one of the only things loaded
-            // before configure). This can be removed when stabilized.
-            self.reload_rooted_at(self.cwd.clone())?;
-        }
 
         self.load_unstable_flags_from_config()?;
 

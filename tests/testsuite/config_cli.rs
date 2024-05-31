@@ -16,7 +16,7 @@ fn basic() {
         .config_arg("net.git-fetch-with-cli=true")
         .build();
     assert_eq!(gctx.get::<String>("foo").unwrap(), "bar");
-    assert_eq!(gctx.net_config().unwrap().git_fetch_with_cli, None);
+    assert_eq!(gctx.net_config().unwrap().git_fetch_with_cli, Some(true));
 }
 
 #[cargo_test]
@@ -52,7 +52,7 @@ fn cli_priority() {
     assert_eq!(gctx.get::<i32>("build.jobs").unwrap(), 1);
     assert_eq!(gctx.get::<String>("build.rustc").unwrap(), "cli");
     assert_eq!(gctx.get::<bool>("term.verbose").unwrap(), true);
-    assert_eq!(gctx.net_config().unwrap().git_fetch_with_cli, Some(false));
+    assert_eq!(gctx.net_config().unwrap().git_fetch_with_cli, Some(true));
 
     // Setting both term.verbose and term.quiet is invalid and is tested
     // in the run test suite.
