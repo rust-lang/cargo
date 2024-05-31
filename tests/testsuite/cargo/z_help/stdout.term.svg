@@ -2,13 +2,10 @@
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
-    .fg-cyan { fill: #00AAAA }
-    .fg-green { fill: #00AA00 }
     .container {
       padding: 0 10px;
       line-height: 18px;
     }
-    .bold { font-weight: bold; }
     tspan {
       font: 14px SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
       white-space: pre;
@@ -19,75 +16,75 @@
   <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
 
   <text xml:space="preserve" class="container fg">
-    <tspan x="10px" y="28px"><tspan class="fg-green bold">Available unstable (nightly-only) flags:</tspan>
+    <tspan x="10px" y="28px"><tspan>Available unstable (nightly-only) flags:</tspan>
 </tspan>
     <tspan x="10px" y="46px">
 </tspan>
-    <tspan x="10px" y="64px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z allow-features         </tspan><tspan>  Allow *only* the listed unstable features</tspan>
+    <tspan x="10px" y="64px"><tspan>    -Z allow-features           Allow *only* the listed unstable features</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z asymmetric-token       </tspan><tspan>  Allows authenticating with asymmetric tokens</tspan>
+    <tspan x="10px" y="82px"><tspan>    -Z asymmetric-token         Allows authenticating with asymmetric tokens</tspan>
 </tspan>
-    <tspan x="10px" y="100px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z avoid-dev-deps         </tspan><tspan>  Avoid installing dev-dependencies if possible</tspan>
+    <tspan x="10px" y="100px"><tspan>    -Z avoid-dev-deps           Avoid installing dev-dependencies if possible</tspan>
 </tspan>
-    <tspan x="10px" y="118px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z binary-dep-depinfo     </tspan><tspan>  Track changes to dependency artifacts</tspan>
+    <tspan x="10px" y="118px"><tspan>    -Z binary-dep-depinfo       Track changes to dependency artifacts</tspan>
 </tspan>
-    <tspan x="10px" y="136px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z bindeps                </tspan><tspan>  Allow Cargo packages to depend on bin, cdylib, and staticlib crates, and use the artifacts built by those crates</tspan>
+    <tspan x="10px" y="136px"><tspan>    -Z bindeps                  Allow Cargo packages to depend on bin, cdylib, and staticlib crates, and use the artifacts built by those crates</tspan>
 </tspan>
-    <tspan x="10px" y="154px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z build-std              </tspan><tspan>  Enable Cargo to compile the standard library itself as part of a crate graph compilation</tspan>
+    <tspan x="10px" y="154px"><tspan>    -Z build-std                Enable Cargo to compile the standard library itself as part of a crate graph compilation</tspan>
 </tspan>
-    <tspan x="10px" y="172px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z build-std-features     </tspan><tspan>  Configure features enabled for the standard library itself when building the standard library</tspan>
+    <tspan x="10px" y="172px"><tspan>    -Z build-std-features       Configure features enabled for the standard library itself when building the standard library</tspan>
 </tspan>
-    <tspan x="10px" y="190px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z cargo-lints            </tspan><tspan>  Enable the `[lints.cargo]` table</tspan>
+    <tspan x="10px" y="190px"><tspan>    -Z cargo-lints              Enable the `[lints.cargo]` table</tspan>
 </tspan>
-    <tspan x="10px" y="208px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z codegen-backend        </tspan><tspan>  Enable the `codegen-backend` option in profiles in .cargo/config.toml file</tspan>
+    <tspan x="10px" y="208px"><tspan>    -Z codegen-backend          Enable the `codegen-backend` option in profiles in .cargo/config.toml file</tspan>
 </tspan>
-    <tspan x="10px" y="226px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z config-include         </tspan><tspan>  Enable the `include` key in config files</tspan>
+    <tspan x="10px" y="226px"><tspan>    -Z config-include           Enable the `include` key in config files</tspan>
 </tspan>
-    <tspan x="10px" y="244px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z direct-minimal-versions</tspan><tspan>  Resolve minimal dependency versions instead of maximum (direct dependencies only)</tspan>
+    <tspan x="10px" y="244px"><tspan>    -Z direct-minimal-versions  Resolve minimal dependency versions instead of maximum (direct dependencies only)</tspan>
 </tspan>
-    <tspan x="10px" y="262px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z doctest-xcompile       </tspan><tspan>  Compile and run doctests for non-host target using runner config</tspan>
+    <tspan x="10px" y="262px"><tspan>    -Z doctest-xcompile         Compile and run doctests for non-host target using runner config</tspan>
 </tspan>
-    <tspan x="10px" y="280px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z dual-proc-macros       </tspan><tspan>  Build proc-macros for both the host and the target</tspan>
+    <tspan x="10px" y="280px"><tspan>    -Z dual-proc-macros         Build proc-macros for both the host and the target</tspan>
 </tspan>
-    <tspan x="10px" y="298px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z gc                     </tspan><tspan>  Track cache usage and "garbage collect" unused files</tspan>
+    <tspan x="10px" y="298px"><tspan>    -Z gc                       Track cache usage and "garbage collect" unused files</tspan>
 </tspan>
-    <tspan x="10px" y="316px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z git                    </tspan><tspan>  Enable support for shallow git fetch operations</tspan>
+    <tspan x="10px" y="316px"><tspan>    -Z git                      Enable support for shallow git fetch operations</tspan>
 </tspan>
-    <tspan x="10px" y="334px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z gitoxide               </tspan><tspan>  Use gitoxide for the given git interactions, or all of them if no argument is given</tspan>
+    <tspan x="10px" y="334px"><tspan>    -Z gitoxide                 Use gitoxide for the given git interactions, or all of them if no argument is given</tspan>
 </tspan>
-    <tspan x="10px" y="352px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z host-config            </tspan><tspan>  Enable the `[host]` section in the .cargo/config.toml file</tspan>
+    <tspan x="10px" y="352px"><tspan>    -Z host-config              Enable the `[host]` section in the .cargo/config.toml file</tspan>
 </tspan>
-    <tspan x="10px" y="370px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z minimal-versions       </tspan><tspan>  Resolve minimal dependency versions instead of maximum</tspan>
+    <tspan x="10px" y="370px"><tspan>    -Z minimal-versions         Resolve minimal dependency versions instead of maximum</tspan>
 </tspan>
-    <tspan x="10px" y="388px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z msrv-policy            </tspan><tspan>  Enable rust-version aware policy within cargo</tspan>
+    <tspan x="10px" y="388px"><tspan>    -Z msrv-policy              Enable rust-version aware policy within cargo</tspan>
 </tspan>
-    <tspan x="10px" y="406px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z mtime-on-use           </tspan><tspan>  Configure Cargo to update the mtime of used files</tspan>
+    <tspan x="10px" y="406px"><tspan>    -Z mtime-on-use             Configure Cargo to update the mtime of used files</tspan>
 </tspan>
-    <tspan x="10px" y="424px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z no-index-update        </tspan><tspan>  Do not update the registry index even if the cache is outdated</tspan>
+    <tspan x="10px" y="424px"><tspan>    -Z no-index-update          Do not update the registry index even if the cache is outdated</tspan>
 </tspan>
-    <tspan x="10px" y="442px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z panic-abort-tests      </tspan><tspan>  Enable support to run tests with -Cpanic=abort</tspan>
+    <tspan x="10px" y="442px"><tspan>    -Z panic-abort-tests        Enable support to run tests with -Cpanic=abort</tspan>
 </tspan>
-    <tspan x="10px" y="460px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z profile-rustflags      </tspan><tspan>  Enable the `rustflags` option in profiles in .cargo/config.toml file</tspan>
+    <tspan x="10px" y="460px"><tspan>    -Z profile-rustflags        Enable the `rustflags` option in profiles in .cargo/config.toml file</tspan>
 </tspan>
-    <tspan x="10px" y="478px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z public-dependency      </tspan><tspan>  Respect a dependency's `public` field in Cargo.toml to control public/private dependencies</tspan>
+    <tspan x="10px" y="478px"><tspan>    -Z public-dependency        Respect a dependency's `public` field in Cargo.toml to control public/private dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="496px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z publish-timeout        </tspan><tspan>  Enable the `publish.timeout` key in .cargo/config.toml file</tspan>
+    <tspan x="10px" y="496px"><tspan>    -Z publish-timeout          Enable the `publish.timeout` key in .cargo/config.toml file</tspan>
 </tspan>
-    <tspan x="10px" y="514px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z rustdoc-map            </tspan><tspan>  Allow passing external documentation mappings to rustdoc</tspan>
+    <tspan x="10px" y="514px"><tspan>    -Z rustdoc-map              Allow passing external documentation mappings to rustdoc</tspan>
 </tspan>
-    <tspan x="10px" y="532px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z rustdoc-scrape-examples</tspan><tspan>  Allows Rustdoc to scrape code examples from reverse-dependencies</tspan>
+    <tspan x="10px" y="532px"><tspan>    -Z rustdoc-scrape-examples  Allows Rustdoc to scrape code examples from reverse-dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="550px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z script                 </tspan><tspan>  Enable support for single-file, `.rs` packages</tspan>
+    <tspan x="10px" y="550px"><tspan>    -Z script                   Enable support for single-file, `.rs` packages</tspan>
 </tspan>
-    <tspan x="10px" y="568px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z target-applies-to-host </tspan><tspan>  Enable the `target-applies-to-host` key in the .cargo/config.toml file</tspan>
+    <tspan x="10px" y="568px"><tspan>    -Z target-applies-to-host   Enable the `target-applies-to-host` key in the .cargo/config.toml file</tspan>
 </tspan>
-    <tspan x="10px" y="586px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z trim-paths             </tspan><tspan>  Enable the `trim-paths` option in profiles</tspan>
+    <tspan x="10px" y="586px"><tspan>    -Z trim-paths               Enable the `trim-paths` option in profiles</tspan>
 </tspan>
-    <tspan x="10px" y="604px"><tspan>    </tspan><tspan class="fg-cyan bold">-Z unstable-options       </tspan><tspan>  Allow the usage of unstable options</tspan>
+    <tspan x="10px" y="604px"><tspan>    -Z unstable-options         Allow the usage of unstable options</tspan>
 </tspan>
     <tspan x="10px" y="622px">
 </tspan>
-    <tspan x="10px" y="640px"><tspan>Run with `</tspan><tspan class="fg-cyan bold">cargo -Z</tspan><tspan> </tspan><tspan class="fg-cyan">[FLAG] [COMMAND]</tspan><tspan>`</tspan>
+    <tspan x="10px" y="640px"><tspan>Run with `cargo -Z [FLAG] [COMMAND]`</tspan>
 </tspan>
     <tspan x="10px" y="658px">
 </tspan>

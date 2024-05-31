@@ -11,8 +11,12 @@ use std::{collections::HashMap, fs};
 #[cargo_test]
 fn basic() {
     // Simple example.
-    let gctx = GlobalContextBuilder::new().config_arg("foo='bar'").build();
+    let gctx = GlobalContextBuilder::new()
+        .config_arg("foo='bar'")
+        .config_arg("net.git-fetch-with-cli=true")
+        .build();
     assert_eq!(gctx.get::<String>("foo").unwrap(), "bar");
+    assert_eq!(gctx.net_config().unwrap().git_fetch_with_cli, Some(true));
 }
 
 #[cargo_test]
@@ -39,13 +43,16 @@ fn cli_priority() {
         .env("CARGO_BUILD_JOBS", "2")
         .env("CARGO_BUILD_RUSTC", "env")
         .env("CARGO_TERM_VERBOSE", "false")
+        .env("CARGO_NET_GIT_FETCH_WITH_CLI", "false")
         .config_arg("build.jobs=1")
         .config_arg("build.rustc='cli'")
         .config_arg("term.verbose=true")
+        .config_arg("net.git-fetch-with-cli=true")
         .build();
     assert_eq!(gctx.get::<i32>("build.jobs").unwrap(), 1);
     assert_eq!(gctx.get::<String>("build.rustc").unwrap(), "cli");
     assert_eq!(gctx.get::<bool>("term.verbose").unwrap(), true);
+    assert_eq!(gctx.net_config().unwrap().git_fetch_with_cli, Some(true));
 
     // Setting both term.verbose and term.quiet is invalid and is tested
     // in the run test suite.
