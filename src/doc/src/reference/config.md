@@ -1347,7 +1347,7 @@ Sets the width for progress bar.
 [toml]: https://toml.io/
 [incremental compilation]: profiles.md#incremental
 [program path with args]: #executable-paths-with-arguments
-[libcurl format]: https://everything.curl.dev/libcurl/proxies#proxy-types
+[libcurl format]: https://everything.curl.dev/transfers/conn/proxies#proxy-types
 [source replacement]: source-replacement.md
 [revision]: https://git-scm.com/docs/gitrevisions
 [registries]: registries.md
