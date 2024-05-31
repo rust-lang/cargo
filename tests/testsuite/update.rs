@@ -1,7 +1,9 @@
 //! Tests for the `cargo update` command.
 
-use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project};
+use cargo_test_support::compare::assert_e2e;
+use cargo_test_support::registry::{self};
+use cargo_test_support::registry::{Dependency, Package};
+use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project, str};
 
 #[cargo_test]
 fn minor_update_two_places() {
@@ -1633,6 +1635,429 @@ fn update_with_missing_feature() {
 [UPDATING] `[..]` index
 [LOCKING] 1 package to latest compatible version
 [UPDATING] bar v0.1.0 -> v0.1.2
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn update_breaking_unstable() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name  =  "foo"
+                version  =  "0.0.1"
+                edition  =  "2015"
+                authors  =  []
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("update --breaking")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_status(1)
+        .with_stderr_contains("[ERROR] unexpected argument '--breaking' found")
+        .run();
+}
+
+#[cargo_test]
+fn update_breaking_dry_run() {
+    Package::new("incompatible", "1.0.0").publish();
+    Package::new("ws", "1.0.0").publish();
+
+    let root_manifest = r#"
+        # Check if formatting is preserved. Nothing here should change, due to dry-run.
+
+        [workspace]
+        members  =  ["foo"]
+
+        [workspace.dependencies]
+        ws  =  "1.0"  # Preserve formatting
+    "#;
+
+    let crate_manifest = r#"
+        # Check if formatting is preserved. Nothing here should change, due to dry-run.
+
+        [package]
+        name  =  "foo"
+        version  =  "0.0.1"
+        edition  =  "2015"
+        authors  =  []
+
+        [dependencies]
+        incompatible  =  "1.0"  # Preserve formatting
+        ws.workspace  =  true  # Preserve formatting
+    "#;
+
+    let p = project()
+        .file("Cargo.toml", root_manifest)
+        .file("foo/Cargo.toml", crate_manifest)
+        .file("foo/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+    let lock_file = p.read_file("Cargo.lock");
+
+    Package::new("incompatible", "1.0.1").publish();
+    Package::new("ws", "1.0.1").publish();
+
+    Package::new("incompatible", "2.0.0").publish();
+    Package::new("ws", "2.0.0").publish();
+
+    p.cargo("update --dry-run --breaking")
+        .with_status(1)
+        .with_stderr_contains("[ERROR] unexpected argument '--breaking' found")
+        .run();
+
+    let root_manifest_after = p.read_file("Cargo.toml");
+    assert_e2e().eq(&root_manifest_after, root_manifest);
+
+    let crate_manifest_after = p.read_file("foo/Cargo.toml");
+    assert_e2e().eq(&crate_manifest_after, crate_manifest);
+
+    let lock_file_after = p.read_file("Cargo.lock");
+    assert_e2e().eq(&lock_file_after, lock_file);
+}
+
+#[cargo_test]
+fn update_breaking() {
+    registry::alt_init();
+    Package::new("compatible", "1.0.0").publish();
+    Package::new("incompatible", "1.0.0").publish();
+    Package::new("pinned", "1.0.0").publish();
+    Package::new("less-than", "1.0.0").publish();
+    Package::new("renamed-from", "1.0.0").publish();
+    Package::new("pre-release", "1.0.0").publish();
+    Package::new("yanked", "1.0.0").publish();
+    Package::new("ws", "1.0.0").publish();
+    Package::new("shared", "1.0.0").publish();
+    Package::new("multiple-versions", "1.0.0").publish();
+    Package::new("multiple-versions", "2.0.0").publish();
+    Package::new("alternative-1", "1.0.0")
+        .alternative(true)
+        .publish();
+    Package::new("alternative-2", "1.0.0")
+        .alternative(true)
+        .publish();
+    Package::new("bar", "1.0.0").alternative(true).publish();
+    Package::new("multiple-registries", "1.0.0").publish();
+    Package::new("multiple-registries", "2.0.0")
+        .alternative(true)
+        .publish();
+    Package::new("multiple-source-types", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                # Check if formatting is preserved
+
+                [workspace]
+                members  =  ["foo", "bar"]
+
+                [workspace.dependencies]
+                ws  =  "1.0"  # This line gets partially rewritten
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                # Check if formatting is preserved
+
+                [package]
+                name  =  "foo"
+                version  =  "0.0.1"
+                edition  =  "2015"
+                authors  =  []
+
+                [dependencies]
+                compatible  =  "1.0"  # Comment
+                incompatible  =  "1.0"  # Comment
+                pinned  =  "=1.0"  # Comment
+                less-than  =  "<99.0"  # Comment
+                renamed-to  =  { package  =  "renamed-from", version  =  "1.0" }  # Comment
+                pre-release  =  "1.0"  # Comment
+                yanked  =  "1.0"  # Comment
+                ws.workspace  =  true  # Comment
+                shared  =  "1.0"  # Comment
+                multiple-versions  =  "1.0"  # Comment
+                alternative-1  =  { registry  =  "alternative", version  =  "1.0" }  # Comment
+                multiple-registries  =  "1.0"  # Comment
+                bar  =  { path  =  "../bar", registry  =  "alternative", version  =  "1.0.0" }  # Comment
+                multiple-source-types  =  { path  =  "../multiple-source-types", version  =  "1.0.0" }  # Comment
+
+                [dependencies.alternative-2]  # Comment
+                version  =  "1.0"  # Comment
+                registry  =  "alternative"  # Comment
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "1.0.0"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                shared = "1.0"
+                multiple-versions = "2.0"
+                multiple-registries  =  { registry  =  "alternative", version  =  "2.0" }  # Comment
+                multiple-source-types  =  "1.0"  # Comment
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "multiple-source-types/Cargo.toml",
+            r#"
+                [package]
+                name = "multiple-source-types"
+                version = "1.0.0"
+                edition = "2015"
+                authors = []
+            "#,
+        )
+        .file("multiple-source-types/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    Package::new("compatible", "1.0.1").publish();
+    Package::new("incompatible", "1.0.1").publish();
+    Package::new("pinned", "1.0.1").publish();
+    Package::new("less-than", "1.0.1").publish();
+    Package::new("renamed-from", "1.0.1").publish();
+    Package::new("ws", "1.0.1").publish();
+    Package::new("multiple-versions", "1.0.1").publish();
+    Package::new("multiple-versions", "2.0.1").publish();
+    Package::new("alternative-1", "1.0.1")
+        .alternative(true)
+        .publish();
+    Package::new("alternative-2", "1.0.1")
+        .alternative(true)
+        .publish();
+
+    Package::new("incompatible", "2.0.0").publish();
+    Package::new("pinned", "2.0.0").publish();
+    Package::new("less-than", "2.0.0").publish();
+    Package::new("renamed-from", "2.0.0").publish();
+    Package::new("pre-release", "2.0.0-alpha").publish();
+    Package::new("yanked", "2.0.0").yanked(true).publish();
+    Package::new("ws", "2.0.0").publish();
+    Package::new("shared", "2.0.0").publish();
+    Package::new("multiple-versions", "3.0.0").publish();
+    Package::new("alternative-1", "2.0.0")
+        .alternative(true)
+        .publish();
+    Package::new("alternative-2", "2.0.0")
+        .alternative(true)
+        .publish();
+    Package::new("bar", "2.0.0").alternative(true).publish();
+    Package::new("multiple-registries", "2.0.0").publish();
+    Package::new("multiple-registries", "3.0.0")
+        .alternative(true)
+        .publish();
+    Package::new("multiple-source-types", "2.0.0").publish();
+
+    p.cargo("update --breaking")
+        .with_status(1)
+        .with_stderr_contains("[ERROR] unexpected argument '--breaking' found")
+        .run();
+
+    let root_manifest = p.read_file("Cargo.toml");
+    assert_e2e().eq(
+        &root_manifest,
+        str![[r#"
+
+                # Check if formatting is preserved
+
+                [workspace]
+                members  =  ["foo", "bar"]
+
+                [workspace.dependencies]
+                ws  =  "1.0"  # This line gets partially rewritten
+            "#]],
+    );
+
+    let foo_manifest = p.read_file("foo/Cargo.toml");
+
+    assert_e2e().eq(
+        &foo_manifest,
+        str![[r#"
+
+                # Check if formatting is preserved
+
+                [package]
+                name  =  "foo"
+                version  =  "0.0.1"
+                edition  =  "2015"
+                authors  =  []
+
+                [dependencies]
+                compatible  =  "1.0"  # Comment
+                incompatible  =  "1.0"  # Comment
+                pinned  =  "=1.0"  # Comment
+                less-than  =  "<99.0"  # Comment
+                renamed-to  =  { package  =  "renamed-from", version  =  "1.0" }  # Comment
+                pre-release  =  "1.0"  # Comment
+                yanked  =  "1.0"  # Comment
+                ws.workspace  =  true  # Comment
+                shared  =  "1.0"  # Comment
+                multiple-versions  =  "1.0"  # Comment
+                alternative-1  =  { registry  =  "alternative", version  =  "1.0" }  # Comment
+                multiple-registries  =  "1.0"  # Comment
+                bar  =  { path  =  "../bar", registry  =  "alternative", version  =  "1.0.0" }  # Comment
+                multiple-source-types  =  { path  =  "../multiple-source-types", version  =  "1.0.0" }  # Comment
+
+                [dependencies.alternative-2]  # Comment
+                version  =  "1.0"  # Comment
+                registry  =  "alternative"  # Comment
+            "#]],
+    );
+
+    let bar_manifest = p.read_file("bar/Cargo.toml");
+
+    assert_e2e().eq(
+        &bar_manifest,
+        str![[r#"
+
+                [package]
+                name = "bar"
+                version = "1.0.0"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                shared = "1.0"
+                multiple-versions = "2.0"
+                multiple-registries  =  { registry  =  "alternative", version  =  "2.0" }  # Comment
+                multiple-source-types  =  "1.0"  # Comment
+            "#]],
+    );
+
+    p.cargo("update")
+        .with_stderr(
+            "\
+[UPDATING] `alternative` index
+[UPDATING] `dummy-registry` index
+[LOCKING] 10 packages to latest compatible versions
+[UPDATING] alternative-1 v1.0.0 (registry `alternative`) -> v1.0.1 (latest: v2.0.0)
+[UPDATING] alternative-2 v1.0.0 (registry `alternative`) -> v1.0.1 (latest: v2.0.0)
+[UPDATING] compatible v1.0.0 -> v1.0.1
+[UPDATING] incompatible v1.0.0 -> v1.0.1 (latest: v2.0.0)
+[UPDATING] less-than v1.0.0 -> v2.0.0
+[REMOVING] multiple-versions v1.0.0
+[REMOVING] multiple-versions v2.0.0
+[ADDING] multiple-versions v1.0.1 (latest: v3.0.0)
+[ADDING] multiple-versions v2.0.1 (latest: v3.0.0)
+[UPDATING] pinned v1.0.0 -> v1.0.1 (latest: v2.0.0)
+[UPDATING] renamed-from v1.0.0 -> v1.0.1 (latest: v2.0.0)
+[UPDATING] ws v1.0.0 -> v1.0.1 (latest: v2.0.0)
+[NOTE] pass `--verbose` to see 4 unchanged dependencies behind latest
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn update_breaking_specific_packages() {
+    Package::new("just-foo", "1.0.0")
+        .add_dep(Dependency::new("transitive-compatible", "1.0.0").build())
+        .add_dep(Dependency::new("transitive-incompatible", "1.0.0").build())
+        .publish();
+    Package::new("just-bar", "1.0.0").publish();
+    Package::new("shared", "1.0.0").publish();
+    Package::new("ws", "1.0.0").publish();
+    Package::new("transitive-compatible", "1.0.0").publish();
+    Package::new("transitive-incompatible", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["foo", "bar"]
+
+            [workspace.dependencies]
+            ws = "1.0"
+        "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                just-foo = "1.0"
+                shared = "1.0"
+                ws.workspace = true
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                just-bar = "1.0"
+                shared = "1.0"
+                ws.workspace = true
+        "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    Package::new("just-foo", "1.0.1")
+        .add_dep(Dependency::new("transitive-compatible", "1.0.0").build())
+        .add_dep(Dependency::new("transitive-incompatible", "1.0.0").build())
+        .publish();
+    Package::new("just-bar", "1.0.1").publish();
+    Package::new("shared", "1.0.1").publish();
+    Package::new("ws", "1.0.1").publish();
+    Package::new("transitive-compatible", "1.0.1").publish();
+    Package::new("transitive-incompatible", "1.0.1").publish();
+
+    Package::new("just-foo", "2.0.0")
+        // Upgrading just-foo implies accepting an update of transitive-compatible.
+        .add_dep(Dependency::new("transitive-compatible", "1.0.1").build())
+        // Upgrading just-foo implies accepting a major update of transitive-incompatible.
+        .add_dep(Dependency::new("transitive-incompatible", "2.0.0").build())
+        .publish();
+    Package::new("just-bar", "2.0.0").publish();
+    Package::new("shared", "2.0.0").publish();
+    Package::new("ws", "2.0.0").publish();
+    Package::new("transitive-incompatible", "2.0.0").publish();
+
+    p.cargo("update --breaking just-foo shared ws")
+        .with_status(1)
+        .with_stderr_contains("[ERROR] unexpected argument '--breaking' found")
+        .run();
+
+    p.cargo("update just-foo shared ws")
+        .with_stderr(
+            "\
+[UPDATING] `[..]` index
+[LOCKING] 3 packages to latest compatible versions
+[UPDATING] just-foo v1.0.0 -> v1.0.1 (latest: v2.0.0)
+[UPDATING] shared v1.0.0 -> v1.0.1 (latest: v2.0.0)
+[UPDATING] ws v1.0.0 -> v1.0.1 (latest: v2.0.0)
+[NOTE] pass `--verbose` to see 3 unchanged dependencies behind latest
 ",
         )
         .run();
