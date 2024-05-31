@@ -63,7 +63,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         args.compile_options(gctx, CompileMode::Bench, Some(&ws), ProfileChecking::Custom)?;
 
     compile_opts.build_config.requested_profile =
-        args.get_profile_name(gctx, "bench", ProfileChecking::Custom)?;
+        args.get_profile_name("bench", ProfileChecking::Custom)?;
 
     let ops = TestOptions {
         no_run: args.flag("no-run"),

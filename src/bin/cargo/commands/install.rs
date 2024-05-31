@@ -196,7 +196,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     )?;
 
     compile_opts.build_config.requested_profile =
-        args.get_profile_name(gctx, "release", ProfileChecking::Custom)?;
+        args.get_profile_name("release", ProfileChecking::Custom)?;
 
     if args.flag("list") {
         ops::install_list(root, gctx)?;

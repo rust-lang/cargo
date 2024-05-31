@@ -558,11 +558,18 @@ Run `{cmd}` to see possible targets."
 
     fn get_profile_name(
         &self,
-        gctx: &GlobalContext,
         default: &str,
         profile_checking: ProfileChecking,
     ) -> CargoResult<InternedString> {
         let specified_profile = self._value_of("profile");
+
+        let err_message = |flag: &str| {
+            format!(
+                "\
+the `--{flag}` flag can not be specified with the `--profile` flag
+Please remove one of the flags."
+            )
+        };
 
         // Check for allowed legacy names.
         // This is an early exit, since it allows combination with `--release`.
@@ -572,28 +579,12 @@ Run `{cmd}` to see possible targets."
             // `cargo fix` and `cargo check` has legacy handling of this profile name
             | (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => {
                 if self.maybe_flag("release") {
-                    gctx.shell().warn(
-                        "the `--release` flag should not be specified with the `--profile` flag\n\
-                         The `--release` flag will be ignored.\n\
-                         This was historically accepted, but will become an error \
-                         in a future release."
-                    )?;
+                    bail!(err_message("release"));
                 }
                 return Ok(InternedString::new(name));
             }
             _ => {}
         }
-
-        let conflict = |flag: &str, equiv: &str, specified: &str| -> anyhow::Error {
-            anyhow::format_err!(
-                "conflicting usage of --profile={} and --{flag}\n\
-                 The `--{flag}` flag is the same as `--profile={equiv}`.\n\
-                 Remove one flag or the other to continue.",
-                specified,
-                flag = flag,
-                equiv = equiv
-            )
-        };
 
         let name = match (
             self.maybe_flag("release"),
@@ -601,10 +592,10 @@ Run `{cmd}` to see possible targets."
             specified_profile,
         ) {
             (false, false, None) => default,
-            (true, _, None | Some("release")) => "release",
-            (true, _, Some(name)) => return Err(conflict("release", "release", name)),
-            (_, true, None | Some("dev")) => "dev",
-            (_, true, Some(name)) => return Err(conflict("debug", "dev", name)),
+            (true, _, None) => "release",
+            (true, _, Some(_)) => bail!(err_message("release")),
+            (_, true, None) => "dev",
+            (_, true, Some(_)) => bail!(err_message("debug")),
             // `doc` is separate from all the other reservations because
             // [profile.doc] was historically allowed, but is deprecated and
             // has no effect. To avoid potentially breaking projects, it is a
@@ -710,7 +701,7 @@ Run `{cmd}` to see possible targets."
             mode,
         )?;
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
-        build_config.requested_profile = self.get_profile_name(gctx, "dev", profile_checking)?;
+        build_config.requested_profile = self.get_profile_name("dev", profile_checking)?;
         build_config.build_plan = self.flag("build-plan");
         build_config.unit_graph = self.flag("unit-graph");
         build_config.future_incompat_report = self.flag("future-incompat-report");
