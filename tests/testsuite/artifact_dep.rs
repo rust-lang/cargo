@@ -149,7 +149,7 @@ fn check_with_invalid_target_triple() {
 [ERROR] failed to run `rustc` to learn about target-specific information
 
 Caused by:
-  process didn't exit successfully: `rustc - --crate-name ___ --print=file-names --target unknown-target-triple [..]` ([EXIT_STATUS]: 1)
+  process didn't exit successfully: `rustc - --crate-name ___ -Zunstable-options --print=file-names --target unknown-target-triple [..]` ([EXIT_STATUS]: 1)
   --- stderr
   [ERROR] Error loading target specification: Could not find specification for target "unknown-target-triple". Run `rustc --print target-list` for a list of built-in targets
 

@@ -387,6 +387,17 @@ fn bad_cfg_discovery() {
                     }
                 };
 
+                if mode == "no-target-spec-json" {
+                    return;
+                }
+                loop {
+                    let line = lines.next().unwrap();
+                    println!("{line}");
+                    if line == "}" {
+                        break;
+                    }
+                }
+
                 if mode != "bad-cfg" {
                     panic!("unexpected");
                 }
@@ -471,9 +482,33 @@ command was: `[..]compiler[..]--crate-type [..]`
 
     p.cargo("check")
         .env("RUSTC", &funky_rustc)
-        .env("FUNKY_MODE", "bad-cfg")
+        .env("FUNKY_MODE", "no-target-spec-json")
         .with_status(101)
         .with_stderr(
+            "\
+[ERROR] output of --print=target-spec-json missing when learning about target-specific information from rustc
+command was: `[..]compiler[..]--crate-type [..]`
+
+--- stdout
+[..]___[..]
+[..]___[..]
+[..]___[..]
+[..]___[..]
+[..]___[..]
+[..]___[..]
+[..]
+[..]
+___
+
+",
+        )
+        .run();
+
+    p.cargo("check")
+        .env("RUSTC", &funky_rustc)
+        .env("FUNKY_MODE", "bad-cfg")
+        .with_status(101)
+        .with_stderr_contains(
             "\
 [ERROR] failed to parse the cfg from `rustc --print=cfg`, got:
 [..]___[..]
@@ -483,8 +518,13 @@ command was: `[..]compiler[..]--crate-type [..]`
 [..]___[..]
 [..]___[..]
 [..]
-[..],[..]
+[..]
 ___
+{
+",
+        )
+        .with_stderr_contains(
+            "\
 123
 
 
