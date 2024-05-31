@@ -23,6 +23,7 @@
 //! and revoked markers. See "FIXME" comments littered in this file.
 
 use crate::util::context::{Definition, GlobalContext, Value};
+use crate::CargoResult;
 use base64::engine::general_purpose::STANDARD;
 use base64::engine::general_purpose::STANDARD_NO_PAD;
 use base64::Engine as _;
@@ -137,7 +138,7 @@ pub fn certificate_check(
     port: Option<u16>,
     config_known_hosts: Option<&Vec<Value<String>>>,
     diagnostic_home_config: &str,
-) -> Result<CertificateCheckStatus, git2::Error> {
+) -> CargoResult<CertificateCheckStatus> {
     let Some(host_key) = cert.as_hostkey() else {
         // Return passthrough for TLS X509 certificates to use whatever validation
         // was done in git2.
@@ -150,13 +151,12 @@ pub fn certificate_check(
         _ => host.to_string(),
     };
     // The error message must be constructed as a string to pass through the libgit2 C API.
-    let err_msg = match check_ssh_known_hosts(gctx, host_key, &host_maybe_port, config_known_hosts)
-    {
+    match check_ssh_known_hosts(gctx, host_key, &host_maybe_port, config_known_hosts) {
         Ok(()) => {
             return Ok(CertificateCheckStatus::CertificateOk);
         }
         Err(KnownHostError::CheckError(e)) => {
-            format!("error: failed to validate host key:\n{:#}", e)
+            anyhow::bail!("error: failed to validate host key:\n{:#}", e)
         }
         Err(KnownHostError::HostKeyNotFound {
             hostname,
@@ -193,7 +193,7 @@ pub fn certificate_check(
                 }
                 msg
             };
-            format!("error: unknown SSH host key\n\
+            anyhow::bail!("error: unknown SSH host key\n\
                 The SSH host key for `{hostname}` is not known and cannot be validated.\n\
                 \n\
                 To resolve this issue, add the host key to {known_hosts_location}\n\
@@ -242,7 +242,7 @@ pub fn certificate_check(
                     )
                 }
             };
-            format!("error: SSH host key has changed for `{hostname}`\n\
+            anyhow::bail!("error: SSH host key has changed for `{hostname}`\n\
                 *********************************\n\
                 * WARNING: HOST KEY HAS CHANGED *\n\
                 *********************************\n\
@@ -274,7 +274,7 @@ pub fn certificate_check(
             location,
         }) => {
             let key_type_short_name = key_type.short_name();
-            format!(
+            anyhow::bail!(
                 "error: Key has been revoked for `{hostname}`\n\
                 **************************************\n\
                 * WARNING: REVOKED HOST KEY DETECTED *\n\
@@ -288,7 +288,7 @@ pub fn certificate_check(
             )
         }
         Err(KnownHostError::HostHasOnlyCertAuthority { hostname, location }) => {
-            format!("error: Found a `@cert-authority` marker for `{hostname}`\n\
+            anyhow::bail!("error: Found a `@cert-authority` marker for `{hostname}`\n\
                 \n\
                 Cargo doesn't support certificate authorities for host key verification. It is\n\
                 recommended that the command line Git client is used instead. This can be achieved\n\
@@ -300,12 +300,7 @@ pub fn certificate_check(
                 for more information.\n\
                 ")
         }
-    };
-    Err(git2::Error::new(
-        git2::ErrorCode::GenericError,
-        git2::ErrorClass::Callback,
-        err_msg,
-    ))
+    }
 }
 
 /// Checks if the given host/host key pair is known.

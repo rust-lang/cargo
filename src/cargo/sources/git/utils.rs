@@ -831,7 +831,10 @@ pub fn with_fetch_options(
     let config_known_hosts = ssh_config.and_then(|ssh| ssh.known_hosts.as_ref());
     let diagnostic_home_config = gctx.diagnostic_home_config();
     network::retry::with_retry(gctx, || {
-        with_authentication(gctx, url, git_config, |f| {
+        // Hack: libgit2 disallows overriding the error from check_cb since v1.8.0,
+        // so we store the error additionally and unwrap it later
+        let mut check_cb_result = Ok(());
+        let auth_result = with_authentication(gctx, url, git_config, |f| {
             let port = Url::parse(url).ok().and_then(|url| url.port());
             let mut last_update = Instant::now();
             let mut rcb = git2::RemoteCallbacks::new();
@@ -840,14 +843,24 @@ pub fn with_fetch_options(
             let mut counter = MetricsCounter::<10>::new(0, last_update);
             rcb.credentials(f);
             rcb.certificate_check(|cert, host| {
-                super::known_hosts::certificate_check(
+                match super::known_hosts::certificate_check(
                     gctx,
                     cert,
                     host,
                     port,
                     config_known_hosts,
                     &diagnostic_home_config,
-                )
+                ) {
+                    Ok(status) => Ok(status),
+                    Err(e) => {
+                        check_cb_result = Err(e);
+                        // This is not really used because it'll be overridden by libgit2
+                        // See https://github.com/libgit2/libgit2/commit/9a9f220119d9647a352867b24b0556195cb26548
+                        Err(git2::Error::from_str(
+                            "invalid or unknown remote ssh hostkey",
+                        ))
+                    }
+                }
             });
             rcb.transfer_progress(|stats| {
                 let indexed_deltas = stats.indexed_deltas();
@@ -889,7 +902,11 @@ pub fn with_fetch_options(
             let mut opts = git2::FetchOptions::new();
             opts.remote_callbacks(rcb);
             cb(opts)
-        })?;
+        });
+        if auth_result.is_err() {
+            check_cb_result?;
+        }
+        auth_result?;
         Ok(())
     })
 }
