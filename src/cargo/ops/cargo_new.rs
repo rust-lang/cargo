@@ -971,38 +971,40 @@ fn update_manifest_with_new_member(
     workspace_document: &mut toml_edit::DocumentMut,
     display_path: &str,
 ) -> CargoResult<bool> {
+    let Some(workspace) = workspace_document.get_mut("workspace") else {
+        return Ok(false);
+    };
+
     // If the members element already exist, check if one of the patterns
     // in the array already includes the new package's relative path.
     // - Add the relative path if the members don't match the new package's path.
     // - Create a new members array if there are no members element in the workspace yet.
-    if let Some(workspace) = workspace_document.get_mut("workspace") {
-        if let Some(members) = workspace
-            .get_mut("members")
-            .and_then(|members| members.as_array_mut())
-        {
-            for member in members.iter() {
-                let pat = member
-                    .as_str()
-                    .with_context(|| format!("invalid non-string member `{}`", member))?;
-                let pattern = glob::Pattern::new(pat)
-                    .with_context(|| format!("cannot build glob pattern from `{}`", pat))?;
+    if let Some(members) = workspace
+        .get_mut("members")
+        .and_then(|members| members.as_array_mut())
+    {
+        for member in members.iter() {
+            let pat = member
+                .as_str()
+                .with_context(|| format!("invalid non-string member `{}`", member))?;
+            let pattern = glob::Pattern::new(pat)
+                .with_context(|| format!("cannot build glob pattern from `{}`", pat))?;
 
-                if pattern.matches(&display_path) {
-                    return Ok(false);
-                }
+            if pattern.matches(&display_path) {
+                return Ok(false);
             }
-
-            let was_sorted = is_sorted(members.iter().map(Value::as_str));
-            members.push(display_path);
-            if was_sorted {
-                members.sort_by(|lhs, rhs| lhs.as_str().cmp(&rhs.as_str()));
-            }
-        } else {
-            let mut array = Array::new();
-            array.push(display_path);
-
-            workspace["members"] = toml_edit::value(array);
         }
+
+        let was_sorted = is_sorted(members.iter().map(Value::as_str));
+        members.push(display_path);
+        if was_sorted {
+            members.sort_by(|lhs, rhs| lhs.as_str().cmp(&rhs.as_str()));
+        }
+    } else {
+        let mut array = Array::new();
+        array.push(display_path);
+
+        workspace["members"] = toml_edit::value(array);
     }
 
     write_atomic(
