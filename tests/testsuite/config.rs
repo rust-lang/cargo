@@ -1454,7 +1454,6 @@ fn struct_with_overlapping_inner_struct_and_defaults() {
     // If, in the future, we can handle this more correctly, feel free to delete
     // this case.
     #[derive(Deserialize, Default)]
-    #[serde(default)]
     struct PrefixContainer {
         inn: bool,
         inner: Inner,
@@ -1466,7 +1465,7 @@ fn struct_with_overlapping_inner_struct_and_defaults() {
         .get::<PrefixContainer>("prefixcontainer")
         .err()
         .unwrap();
-    assert!(format!("{}", err).contains("missing config key `prefixcontainer.inn`"));
+    assert!(format!("{}", err).contains("missing field `inn`"));
     let gctx = GlobalContextBuilder::new()
         .env("CARGO_PREFIXCONTAINER_INNER_VALUE", "12")
         .env("CARGO_PREFIXCONTAINER_INN", "true")
@@ -1474,6 +1473,22 @@ fn struct_with_overlapping_inner_struct_and_defaults() {
     let f: PrefixContainer = gctx.get("prefixcontainer").unwrap();
     assert_eq!(f.inner.value, 12);
     assert_eq!(f.inn, true);
+
+    // Use default attribute of serde, then we can skip setting the inn field
+    #[derive(Deserialize, Default)]
+    #[serde(default)]
+    struct PrefixContainerFieldDefault {
+        inn: bool,
+        inner: Inner,
+    }
+    let gctx = GlobalContextBuilder::new()
+        .env("CARGO_PREFIXCONTAINER_INNER_VALUE", "12")
+        .build();
+    let f = gctx
+        .get::<PrefixContainerFieldDefault>("prefixcontainer")
+        .unwrap();
+    assert_eq!(f.inner.value, 12);
+    assert_eq!(f.inn, false);
 
     // Containing struct where the inner value's field is a prefix of another
     //
