@@ -265,7 +265,15 @@ impl<'gctx> ConfigMapAccess<'gctx> {
             let mut field_key = de.key.clone();
             field_key.push(field);
             for env_key in de.gctx.env_keys() {
-                if env_key.starts_with(field_key.as_env_key()) {
+                let Some(nested_field) = env_key.strip_prefix(field_key.as_env_key()) else {
+                    continue;
+                };
+                // This distinguishes fields that share the same prefix.
+                // For example, when env_key is UNSTABLE_GITOXIDE_FETCH
+                // and field_key is UNSTABLE_GIT, the field shouldn't be
+                // added because `unstable.gitoxide.fetch` doesn't
+                // belong to `unstable.git` struct.
+                if nested_field.is_empty() || nested_field.starts_with('_') {
                     fields.insert(KeyKind::Normal(field.to_string()));
                 }
             }
