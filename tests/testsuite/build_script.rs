@@ -1,9 +1,10 @@
 //! Tests for build.rs scripts.
 
-use cargo_test_support::compare::assert_match_exact;
+use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::install::cargo_home;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 use cargo_test_support::tools;
 use cargo_test_support::{
     basic_manifest, cargo_exe, cross_compile, is_coarse_mtime, project, project_in,
@@ -3398,9 +3399,12 @@ fn generate_good_d_files() {
 
     println!("*.d file content*: {}", &dot_d);
 
-    assert_match_exact(
-        "[..]/target/debug/meow[EXE]: [..]/awoo/barkbarkbark [..]/awoo/build.rs[..]",
+    assert_e2e().eq(
         &dot_d,
+        str![[r#"
+[ROOT]/foo/target/debug/meow[EXE]: [ROOT]/foo/awoo/barkbarkbark [ROOT]/foo/awoo/build.rs [ROOT]/foo/awoo/src/lib.rs [ROOT]/foo/src/main.rs
+
+"#]],
     );
 
     // paths relative to dependency roots should not be allowed
@@ -3421,9 +3425,12 @@ fn generate_good_d_files() {
 
     println!("*.d file content with dep-info-basedir*: {}", &dot_d);
 
-    assert_match_exact(
-        "target/debug/meow[EXE]: awoo/barkbarkbark awoo/build.rs[..]",
+    assert_e2e().eq(
         &dot_d,
+        str![[r#"
+target/debug/meow[EXE]: awoo/barkbarkbark awoo/build.rs awoo/src/lib.rs src/main.rs
+
+"#]],
     );
 
     // paths relative to dependency roots should not be allowed
@@ -3485,16 +3492,10 @@ fn generate_good_d_files_for_external_tools() {
 
     println!("*.d file content with dep-info-basedir*: {}", &dot_d);
 
-    assert_match_exact(
-        concat!(
-            "rust_things/foo/target/debug/meow[EXE]:",
-            " rust_things/foo/awoo/barkbarkbark",
-            " rust_things/foo/awoo/build.rs",
-            " rust_things/foo/awoo/src/lib.rs",
-            " rust_things/foo/src/main.rs",
-        ),
-        &dot_d,
-    );
+    assert_e2e().eq(&dot_d, str![[r#"
+rust_things/foo/target/debug/meow[EXE]: rust_things/foo/awoo/barkbarkbark rust_things/foo/awoo/build.rs rust_things/foo/awoo/src/lib.rs rust_things/foo/src/main.rs
+
+"#]]);
 }
 
 #[cargo_test]

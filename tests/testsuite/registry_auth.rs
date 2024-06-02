@@ -1,7 +1,8 @@
 //! Tests for registry authentication.
 
-use cargo_test_support::compare::match_contains;
+use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::registry::{Package, RegistryBuilder, Token};
+use cargo_test_support::str;
 use cargo_test_support::{project, Execs, Project};
 
 fn cargo(p: &Project, s: &str) -> Execs {
@@ -473,23 +474,14 @@ fn token_not_logged() {
         .exec_with_output()
         .unwrap();
     let log = String::from_utf8(output.stderr).unwrap();
-    let lines = "\
-[UPDATING] crates.io index
-[PACKAGING] foo v0.1.0 [..]
-[VERIFYING] foo v0.1.0 [..]
-[DOWNLOADING] crates ...
-[DOWNLOADED] bar v1.0.0
-[COMPILING] bar v1.0.0
-[COMPILING] foo v0.1.0 [..]
-[FINISHED] [..]
-[PACKAGED] 3 files[..]
-[UPLOADING] foo v0.1.0[..]
-[UPLOADED] foo v0.1.0 to registry `crates-io`
-[NOTE] waiting [..]
-";
-    for line in lines.lines() {
-        match_contains(line, &log, None).unwrap();
-    }
+    assert_e2e().eq(
+        &log,
+        str![[r#"
+...
+[PUBLISHED] foo v0.1.0 at registry `crates-io`
+
+"#]],
+    );
     let authorizations: Vec<_> = log
         .lines()
         .filter(|line| {
