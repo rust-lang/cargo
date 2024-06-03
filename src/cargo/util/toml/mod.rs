@@ -2777,11 +2777,6 @@ fn prepare_targets_for_publish(
         };
         prepared.push(target);
     }
-    // Ensure target order is deterministic, particularly for `cargo vendor` where re-vendoring
-    // shuld not cause changes.
-    //
-    // `unstable` should be deterministic because we enforce that `t.name` is unique
-    prepared.sort_unstable_by_key(|t| t.name.clone());
 
     if prepared.is_empty() {
         Ok(None)

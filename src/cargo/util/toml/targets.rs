@@ -744,7 +744,7 @@ fn toml_targets_and_inferred(
     autodiscover_flag_name: &str,
 ) -> Vec<TomlTarget> {
     let inferred_targets = inferred_to_toml_targets(inferred);
-    match toml_targets {
+    let mut toml_targets = match toml_targets {
         None => {
             if let Some(false) = autodiscover {
                 vec![]
@@ -819,7 +819,13 @@ https://github.com/rust-lang/cargo/issues/5330",
 
             targets
         }
-    }
+    };
+    // Ensure target order is deterministic, particularly for `cargo vendor` where re-vendoring
+    // should not cause changes.
+    //
+    // `unstable` should be deterministic because we enforce that `t.name` is unique
+    toml_targets.sort_unstable_by_key(|t| t.name.clone());
+    toml_targets
 }
 
 fn inferred_to_toml_targets(inferred: &[(String, PathBuf)]) -> Vec<TomlTarget> {

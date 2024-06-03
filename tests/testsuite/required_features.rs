@@ -1474,12 +1474,12 @@ fn truncated_install_warning_message() {
 [FINISHED] `release` profile [optimized] target(s) in [..]
 [WARNING] none of the package's binaries are available for install using the selected features
   bin \"foo1\" requires the features: `feature1`, `feature2`, `feature3`
+  bin \"foo10\" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
   bin \"foo2\" requires the features: `feature2`
   bin \"foo3\" requires the features: `feature3`
   bin \"foo4\" requires the features: `feature4`, `feature1`
   bin \"foo5\" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
   bin \"foo6\" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
-  bin \"foo7\" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
 4 more targets also requires features not enabled. See them in the Cargo.toml file.
 Consider enabling some of the needed features by passing, e.g., `--features=\"feature1 feature2 feature3\"`").run();
 }
