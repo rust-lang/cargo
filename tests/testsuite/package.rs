@@ -3351,8 +3351,8 @@ See [..]
 [WARNING] ignoring `package.build` as `build.rs` is not included in the published package
 [WARNING] ignoring binary `foo` as `src/main.rs` is not included in the published package
 [WARNING] ignoring example `ExampleFoo` as `examples/ExampleFoo.rs` is not included in the published package
-[WARNING] ignoring test `explicitpath` as `tests/explicitpath.rs` is not included in the published package
 [WARNING] ignoring test `ExplicitPath` as `tests/ExplicitPath.rs` is not included in the published package
+[WARNING] ignoring test `explicitpath` as `tests/explicitpath.rs` is not included in the published package
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
@@ -3384,8 +3384,8 @@ See [..]
 [WARNING] ignoring `package.build` as `build.rs` is not included in the published package
 [WARNING] ignoring binary `foo` as `src/main.rs` is not included in the published package
 [WARNING] ignoring example `ExampleFoo` as `examples/ExampleFoo.rs` is not included in the published package
-[WARNING] ignoring test `explicitpath` as `tests/explicitpath.rs` is not included in the published package
 [WARNING] ignoring test `ExplicitPath` as `tests/ExplicitPath.rs` is not included in the published package
+[WARNING] ignoring test `explicitpath` as `tests/explicitpath.rs` is not included in the published package
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]

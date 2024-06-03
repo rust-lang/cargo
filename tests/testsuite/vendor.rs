@@ -962,7 +962,7 @@ name = "git_dep"
 path = [..]
 
 [[example]]
-name = "c"
+name = "a"
 path = [..]
 
 [[example]]
@@ -970,11 +970,7 @@ name = "b"
 path = [..]
 
 [[example]]
-name = "a"
-path = [..]
-
-[[example]]
-name = "z"
+name = "c"
 path = [..]
 
 [[example]]
@@ -983,6 +979,10 @@ path = [..]
 
 [[example]]
 name = "y"
+path = [..]
+
+[[example]]
+name = "z"
 path = [..]
 
 "##]],
