@@ -305,8 +305,7 @@ impl<'gctx> RecursivePathSource<'gctx> {
     /// Discovers packages inside this source if it hasn't yet done.
     pub fn update(&mut self) -> CargoResult<()> {
         if !self.updated {
-            let packages = self.read_packages_inner()?;
-            self.packages.extend(packages.into_iter());
+            self.packages = self.read_packages_inner()?;
             self.updated = true;
         }
 
