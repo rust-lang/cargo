@@ -1142,8 +1142,7 @@ impl<'gctx> Workspace<'gctx> {
                 MaybePackage::Package(ref p) => p.clone(),
                 MaybePackage::Virtual(_) => continue,
             };
-            let mut src = PathSource::new(pkg.root(), pkg.package_id().source_id(), self.gctx);
-            src.preload_with(pkg);
+            let src = PathSource::preload_with(pkg, self.gctx);
             registry.add_preloaded(Box::new(src));
         }
     }

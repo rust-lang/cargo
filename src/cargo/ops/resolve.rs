@@ -73,7 +73,7 @@ use crate::core::PackageSet;
 use crate::core::SourceId;
 use crate::core::Workspace;
 use crate::ops;
-use crate::sources::PathSource;
+use crate::sources::RecursivePathSource;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::CanonicalUrl;
@@ -453,7 +453,7 @@ pub fn add_overrides<'a>(
 
     for (path, definition) in paths {
         let id = SourceId::for_path(&path)?;
-        let mut source = PathSource::new_recursive(&path, id, ws.gctx());
+        let mut source = RecursivePathSource::new(&path, id, ws.gctx());
         source.update().with_context(|| {
             format!(
                 "failed to update path override `{}` \
