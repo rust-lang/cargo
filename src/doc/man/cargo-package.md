@@ -31,7 +31,7 @@ steps:
       executable binary or example target. {{man "cargo-install" 1}} will use the
       packaged lock file if the `--locked` flag is used.
     - A `.cargo_vcs_info.json` file is included that contains information
-      about the current VCS checkout hash if available, and whether or not the
+      about the current VCS checkout hash if available, as well as a flag if the
       worktree is dirty.
 3. Extract the `.crate` file and build it to verify it can build.
     - This will rebuild your package from scratch to ensure that it can be
@@ -59,7 +59,7 @@ Will generate a `.cargo_vcs_info.json` in the following format
 }
 ```
 
-`dirty` indicates whether or not the Git worktree was dirty when the package
+`dirty` indicates that the Git worktree was dirty when the package
 was built.
 
 `path_in_vcs` will be set to a repo-relative path for packages

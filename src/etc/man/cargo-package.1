@@ -43,7 +43,7 @@ packaged lock file if the \fB\-\-locked\fR flag is used.
 .sp
 .RS 4
 \h'-04'\(bu\h'+02'A \fB\&.cargo_vcs_info.json\fR file is included that contains information
-about the current VCS checkout hash if available, and whether or not the
+about the current VCS checkout hash if available, as well as a flag if the
 worktree is dirty.
 .RE
 .RE
@@ -82,7 +82,7 @@ Will generate a \fB\&.cargo_vcs_info.json\fR in the following format
 .fi
 .RE
 .sp
-\fBdirty\fR indicates whether or not the Git worktree was dirty when the package
+\fBdirty\fR indicates that the Git worktree was dirty when the package
 was built.
 .sp
 \fBpath_in_vcs\fR will be set to a repo\-relative path for packages

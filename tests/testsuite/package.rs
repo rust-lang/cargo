@@ -189,8 +189,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
     let vcs_contents = format!(
         r#"{{
   "git": {{
-    "sha1": "{}",
-    "dirty": false
+    "sha1": "{}"
   }},
   "path_in_vcs": ""
 }}
@@ -231,8 +230,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
     let vcs_contents = format!(
         r#"{{
   "git": {{
-    "sha1": "{}",
-    "dirty": false
+    "sha1": "{}"
   }},
   "path_in_vcs": "a/a"
 }}
@@ -1272,8 +1270,7 @@ fn issue_13695_allowing_dirty_vcs_info_but_clean() {
             ".cargo_vcs_info.json",
             r#"{
   "git": {
-    "sha1": "[..]",
-    "dirty": false
+    "sha1": "[..]"
   },
   "path_in_vcs": ""
 }"#,

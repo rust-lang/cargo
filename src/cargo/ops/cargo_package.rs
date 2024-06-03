@@ -82,6 +82,7 @@ struct VcsInfo {
 struct GitVcsInfo {
     sha1: String,
     /// Indicate whether or not the Git worktree is dirty.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
     dirty: bool,
 }
 
