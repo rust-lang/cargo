@@ -264,8 +264,12 @@ impl<'gctx> RecursivePathSource<'gctx> {
         if self.updated {
             Ok(self.packages.clone())
         } else {
-            ops::read_packages(&self.path, self.source_id, self.gctx)
+            self.read_packages_inner()
         }
+    }
+
+    fn read_packages_inner(&self) -> CargoResult<Vec<Package>> {
+        ops::read_packages(&self.path, self.source_id, self.gctx)
     }
 
     /// List all files relevant to building this package inside this source.
@@ -301,7 +305,7 @@ impl<'gctx> RecursivePathSource<'gctx> {
     /// Discovers packages inside this source if it hasn't yet done.
     pub fn update(&mut self) -> CargoResult<()> {
         if !self.updated {
-            let packages = self.read_packages()?;
+            let packages = self.read_packages_inner()?;
             self.packages.extend(packages.into_iter());
             self.updated = true;
         }
