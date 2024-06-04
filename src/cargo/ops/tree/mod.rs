@@ -252,6 +252,7 @@ fn print(
             &mut visited_deps,
             &mut levels_continue,
             &mut print_stack,
+            DepKind::Normal,
         );
     }
 
@@ -272,6 +273,7 @@ fn print_node<'a>(
     visited_deps: &mut HashSet<usize>,
     levels_continue: &mut Vec<bool>,
     print_stack: &mut Vec<usize>,
+    inheritted_dep_kind: DepKind,
 ) {
     let new = no_dedupe || visited_deps.insert(node_index);
 
@@ -305,14 +307,19 @@ fn print_node<'a>(
     } else {
         " (*)"
     };
-    drop_println!(gctx, "{}{}", format.display(graph, node_index), star);
+    drop_println!(
+        gctx,
+        "{}{}",
+        format.display(graph, node_index, inheritted_dep_kind),
+        star
+    );
 
     if !new || in_cycle {
         return;
     }
     print_stack.push(node_index);
 
-    for kind in &[
+    for kind in [
         EdgeKind::Dep(DepKind::Normal),
         EdgeKind::Dep(DepKind::Build),
         EdgeKind::Dep(DepKind::Development),
@@ -331,10 +338,24 @@ fn print_node<'a>(
             visited_deps,
             levels_continue,
             print_stack,
-            kind,
+            kind.clone(),
+            transition_dep_kind(kind, inheritted_dep_kind),
         );
     }
     print_stack.pop();
+}
+
+/// This is useful for being able to tell whether a dependency is built for
+/// the host or target platform. Once we hit a `Build` edge, it's host architecture
+/// from there on out.
+fn transition_dep_kind(kind: EdgeKind, inheritted_dep_kind: DepKind) -> DepKind {
+    match (kind, inheritted_dep_kind) {
+        (EdgeKind::Dep(DepKind::Normal), DepKind::Normal) => DepKind::Normal,
+        (EdgeKind::Dep(DepKind::Build), _) => DepKind::Build,
+        (EdgeKind::Dep(DepKind::Development), _) => inheritted_dep_kind,
+        (EdgeKind::Dep(DepKind::Normal), _) => inheritted_dep_kind,
+        (EdgeKind::Feature, _) => inheritted_dep_kind,
+    }
 }
 
 /// Prints all the dependencies of a package for the given dependency kind.
@@ -351,9 +372,10 @@ fn print_dependencies<'a>(
     visited_deps: &mut HashSet<usize>,
     levels_continue: &mut Vec<bool>,
     print_stack: &mut Vec<usize>,
-    kind: &EdgeKind,
+    kind: EdgeKind,
+    inheritted_dep_kind: DepKind,
 ) {
-    let deps = graph.connected_nodes(node_index, kind);
+    let deps = graph.connected_nodes(node_index, &kind);
     if deps.is_empty() {
         return;
     }
@@ -409,6 +431,7 @@ fn print_dependencies<'a>(
             visited_deps,
             levels_continue,
             print_stack,
+            inheritted_dep_kind,
         );
         levels_continue.pop();
     }

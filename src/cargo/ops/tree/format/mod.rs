@@ -2,6 +2,8 @@ use std::fmt;
 
 use anyhow::{bail, Error};
 
+use crate::core::dependency::DepKind;
+
 use self::parse::{Parser, RawChunk};
 use super::{Graph, Node};
 
@@ -14,6 +16,7 @@ enum Chunk {
     Repository,
     Features,
     LibName,
+    Platform,
 }
 
 pub struct Pattern(Vec<Chunk>);
@@ -30,6 +33,7 @@ impl Pattern {
                 RawChunk::Argument("r") => Chunk::Repository,
                 RawChunk::Argument("f") => Chunk::Features,
                 RawChunk::Argument("lib") => Chunk::LibName,
+                RawChunk::Argument("platform") => Chunk::Platform,
                 RawChunk::Argument(a) => {
                     bail!("unsupported pattern `{}`", a);
                 }
@@ -41,11 +45,17 @@ impl Pattern {
         Ok(Pattern(chunks))
     }
 
-    pub fn display<'a>(&'a self, graph: &'a Graph<'a>, node_index: usize) -> Display<'a> {
+    pub fn display<'a>(
+        &'a self,
+        graph: &'a Graph<'a>,
+        node_index: usize,
+        dep_kind: DepKind,
+    ) -> Display<'a> {
         Display {
             pattern: self,
             graph,
             node_index,
+            dep_kind,
         }
     }
 }
@@ -54,6 +64,7 @@ pub struct Display<'a> {
     pattern: &'a Pattern,
     graph: &'a Graph<'a>,
     node_index: usize,
+    dep_kind: DepKind,
 }
 
 impl<'a> fmt::Display for Display<'a> {
@@ -110,6 +121,16 @@ impl<'a> fmt::Display for Display<'a> {
                             {
                                 write!(fmt, "{}", target.crate_name())?;
                             }
+                        }
+                        Chunk::Platform => {
+                            write!(
+                                fmt,
+                                "{}",
+                                match self.dep_kind {
+                                    DepKind::Normal | DepKind::Development => "target",
+                                    DepKind::Build => "host",
+                                }
+                            )?;
                         }
                     }
                 }
