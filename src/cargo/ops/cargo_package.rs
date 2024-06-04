@@ -310,6 +310,8 @@ fn build_ar_list(
             });
     }
 
+    let mut invalid_manifest_field: Vec<String> = vec![];
+
     let mut result = result.into_values().flatten().collect();
     if let Some(license_file) = &pkg.manifest().metadata().license_file {
         let license_path = Path::new(license_file);
@@ -324,7 +326,12 @@ fn build_ar_list(
                 ws,
             )?;
         } else {
-            warn_on_nonexistent_file(&pkg, &license_path, "license-file", &ws)?;
+            error_on_nonexistent_file(
+                &pkg,
+                &license_path,
+                "license-file",
+                &mut invalid_manifest_field,
+            );
         }
     }
     if let Some(readme) = &pkg.manifest().metadata().readme {
@@ -333,8 +340,12 @@ fn build_ar_list(
         if abs_file_path.is_file() {
             check_for_file_and_add("readme", readme_path, abs_file_path, pkg, &mut result, ws)?;
         } else {
-            warn_on_nonexistent_file(&pkg, &readme_path, "readme", &ws)?;
+            error_on_nonexistent_file(&pkg, &readme_path, "readme", &mut invalid_manifest_field);
         }
+    }
+
+    if !invalid_manifest_field.is_empty() {
+        return Err(anyhow::anyhow!(invalid_manifest_field.join("\n")));
     }
 
     for t in pkg
@@ -406,25 +417,27 @@ fn check_for_file_and_add(
     Ok(())
 }
 
-fn warn_on_nonexistent_file(
+fn error_on_nonexistent_file(
     pkg: &Package,
     path: &Path,
     manifest_key_name: &'static str,
-    ws: &Workspace<'_>,
-) -> CargoResult<()> {
+    invalid: &mut Vec<String>,
+) {
     let rel_msg = if path.is_absolute() {
         "".to_string()
     } else {
         format!(" (relative to `{}`)", pkg.root().display())
     };
-    ws.gctx().shell().warn(&format!(
+
+    let msg = format!(
         "{manifest_key_name} `{}` does not appear to exist{}.\n\
-                Please update the {manifest_key_name} setting in the manifest at `{}`\n\
-                This may become a hard error in the future.",
+                Please update the {manifest_key_name} setting in the manifest at `{}`.",
         path.display(),
         rel_msg,
         pkg.manifest_path().display()
-    ))
+    );
+
+    invalid.push(msg);
 }
 
 fn error_custom_build_file_not_in_package(

@@ -1146,7 +1146,7 @@ fn bad_license_file(registry: &TestRegistry) {
     p.cargo("publish -v")
         .replace_crates_io(registry.index_url())
         .with_status(101)
-        .with_stderr_contains("[ERROR] the license file `foo` does not exist")
+        .with_stderr_contains("[ERROR] license-file `foo` does not appear to exist ([..]).")
         .run();
 }
 
