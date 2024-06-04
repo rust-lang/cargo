@@ -3833,3 +3833,43 @@ fn builtin_source_replacement() {
         )
         .run();
 }
+
+#[cargo_test]
+fn builtin_source_replacement_no_vendor_error() {
+    // errors for builtin source replacement of crates.io
+    // should not mention outdated vendor dependencies
+    let server = RegistryBuilder::new().build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2021"
+
+                [dependencies]
+                dep = "0.2.0"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    let pkg = Package::new("dep", "0.1.0");
+    pkg.publish();
+
+    p.cargo("check -v")
+        .replace_crates_io(&server.index_url())
+        .with_status(101)
+        .with_stderr(
+            "\
+[UPDATING] [..] index
+[ERROR] failed to select a version for the requirement `dep = \"^0.2.0\"`
+candidate versions found which didn't match: 0.1.0
+location searched: crates.io index
+required by package `foo v0.0.1 ([..])`
+",
+        )
+        .run();
+}
