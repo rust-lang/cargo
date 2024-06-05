@@ -2534,8 +2534,8 @@ a = {path = "a", default-features = false}
 
 #[cargo_test]
 fn add_feature_for_unused_dep() {
-    Package::new("bar", "0.1.0").publish();
-    Package::new("baz", "0.1.0").publish();
+    Package::new("regular-dep", "0.1.0").publish();
+    Package::new("build-dep", "0.1.0").publish();
     Package::new("target-dep", "0.1.0").publish();
     let p = project()
         .file(
@@ -2547,10 +2547,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bar = { version = "0.1.0", optional = true }
+regular-dep = { version = "0.1.0", optional = true }
 
 [build-dependencies]
-baz = { version = "0.1.0", optional = true }
+build-dep = { version = "0.1.0", optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 target-dep = { version = "0.1.0", optional = true }
@@ -2583,17 +2583,17 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bar = { version = "0.1.0", optional = true }
+regular-dep = { version = "0.1.0", optional = true }
 
 [build-dependencies]
-baz = { version = "0.1.0", optional = true }
+build-dep = { version = "0.1.0", optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 target-dep = { version = "0.1.0", optional = true }
 
 [features]
-bar = ["dep:bar"]
-baz = ["dep:baz"]
+regular-dep = ["dep:regular-dep"]
+build-dep = ["dep:build-dep"]
 target-dep = ["dep:target-dep"]
 
 "#]],
