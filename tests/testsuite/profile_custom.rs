@@ -380,85 +380,38 @@ fn conflicting_usage() {
         .build();
 
     p.cargo("build --profile=dev --release")
-        .with_status(101)
+        .with_status(1)
         .with_stderr(
             "\
-error: the `--release` flag can not be specified with the `--profile` flag
-Please remove one of the flags.",
+[ERROR] the argument '--profile <PROFILE-NAME>' cannot be used with '--release'
+
+Usage: cargo[EXE] build --profile <PROFILE-NAME>
+
+For more information, try '--help'.",
         )
         .run();
 
     p.cargo("install --profile=release --debug")
-        .with_status(101)
+        .with_status(1)
         .with_stderr(
             "\
-error: the `--debug` flag can not be specified with the `--profile` flag
-Please remove one of the flags.",
-        )
-        .run();
+[ERROR] the argument '--profile <PROFILE-NAME>' cannot be used with '--debug'
 
-    p.cargo("rustc --profile=dev --release")
-        .with_status(101)
-        .with_stderr(
-            "\
-error: the `--release` flag can not be specified with the `--profile` flag
-Please remove one of the flags.
-",
+Usage: cargo[EXE] install --profile <PROFILE-NAME> [CRATE[@<VER>]]...
+
+For more information, try '--help'.",
         )
         .run();
 
     p.cargo("check --profile=dev --release")
-        .with_status(101)
+        .with_status(1)
         .with_stderr(
             "\
-error: the `--release` flag can not be specified with the `--profile` flag
-Please remove one of the flags.",
-        )
-        .run();
+[ERROR] the argument '--profile <PROFILE-NAME>' cannot be used with '--release'
 
-    p.cargo("check --profile=test --release")
-        .with_status(101)
-        .with_stderr(
-            "\
-error: the `--release` flag can not be specified with the `--profile` flag
-Please remove one of the flags.",
-        )
-        .run();
+Usage: cargo[EXE] check --profile <PROFILE-NAME>
 
-    // This is OK since the two are the same.
-    p.cargo("rustc --profile=release --release")
-        .with_status(101)
-        .with_stderr(
-            "\
-error: the `--release` flag can not be specified with the `--profile` flag
-Please remove one of the flags.",
-        )
-        .run();
-
-    p.cargo("build --profile=release --release")
-        .with_status(101)
-        .with_stderr(
-            "\
-error: the `--release` flag can not be specified with the `--profile` flag
-Please remove one of the flags.",
-        )
-        .run();
-
-    p.cargo("install --path . --profile=dev --debug")
-        .with_status(101)
-        .with_stderr(
-            "\
-error: the `--debug` flag can not be specified with the `--profile` flag
-Please remove one of the flags.",
-        )
-        .run();
-
-    p.cargo("install --path . --profile=release --debug")
-        .with_status(101)
-        .with_stderr(
-            "\
-error: the `--debug` flag can not be specified with the `--profile` flag
-Please remove one of the flags.",
+For more information, try '--help'.",
         )
         .run();
 }

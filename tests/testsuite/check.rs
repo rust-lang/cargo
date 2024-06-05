@@ -289,20 +289,26 @@ fn rustc_check() {
 
     // Verify compatible usage of --profile with --release, issue #7488
     foo.cargo("rustc --profile check --release -- --emit=metadata")
-        .with_status(101)
+        .with_status(1)
         .with_stderr(
             "\
-error: the `--release` flag can not be specified with the `--profile` flag
-Please remove one of the flags.",
+[ERROR] the argument '--profile <PROFILE-NAME>' cannot be used with '--release'
+
+Usage: cargo[EXE] rustc --profile <PROFILE-NAME> [ARGS]...
+
+For more information, try '--help'.",
         )
         .run();
 
     foo.cargo("rustc --profile test --release -- --emit=metadata")
-        .with_status(101)
+        .with_status(1)
         .with_stderr(
             "\
-error: the `--release` flag can not be specified with the `--profile` flag
-Please remove one of the flags.",
+[ERROR] the argument '--profile <PROFILE-NAME>' cannot be used with '--release'
+
+Usage: cargo[EXE] rustc --profile <PROFILE-NAME> [ARGS]...
+
+For more information, try '--help'.",
         )
         .run();
 }

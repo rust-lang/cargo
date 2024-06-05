@@ -131,7 +131,12 @@ pub trait CommandExt: Sized {
     ) -> Self {
         let msg = format!("`--{default_mode}` is the default for `cargo {command}`; instead `--{supported_mode}` is supported");
         let value_parser = UnknownArgumentValueParser::suggest(msg);
-        self._arg(flag(default_mode, "").value_parser(value_parser).hide(true))
+        self._arg(
+            flag(default_mode, "")
+                .conflicts_with("profile")
+                .value_parser(value_parser)
+                .hide(true),
+        )
     }
 
     fn arg_targets_all(
@@ -226,6 +231,7 @@ pub trait CommandExt: Sized {
         self._arg(
             flag("release", release)
                 .short('r')
+                .conflicts_with("profile")
                 .help_heading(heading::COMPILATION_OPTIONS),
         )
     }
@@ -563,14 +569,6 @@ Run `{cmd}` to see possible targets."
     ) -> CargoResult<InternedString> {
         let specified_profile = self._value_of("profile");
 
-        let err_message = |flag: &str| {
-            format!(
-                "\
-the `--{flag}` flag can not be specified with the `--profile` flag
-Please remove one of the flags."
-            )
-        };
-
         // Check for allowed legacy names.
         // This is an early exit, since it allows combination with `--release`.
         match (specified_profile, profile_checking) {
@@ -578,9 +576,6 @@ Please remove one of the flags."
             (Some(name @ ("dev" | "test" | "bench" | "check")), ProfileChecking::LegacyRustc)
             // `cargo fix` and `cargo check` has legacy handling of this profile name
             | (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => {
-                if self.maybe_flag("release") {
-                    bail!(err_message("release"));
-                }
                 return Ok(InternedString::new(name));
             }
             _ => {}
@@ -593,9 +588,7 @@ Please remove one of the flags."
         ) {
             (false, false, None) => default,
             (true, _, None) => "release",
-            (true, _, Some(_)) => bail!(err_message("release")),
             (_, true, None) => "dev",
-            (_, true, Some(_)) => bail!(err_message("debug")),
             // `doc` is separate from all the other reservations because
             // [profile.doc] was historically allowed, but is deprecated and
             // has no effect. To avoid potentially breaking projects, it is a
