@@ -2705,7 +2705,7 @@ unrelated-dep-feature = ["unrelated-feature/a", "unrelated-feature/b"]
         .with_stderr(
             "\
 [MIGRATING] Cargo.toml from 2021 edition to 2024
-[FIXED] Cargo.toml (1 fix)
+[FIXED] Cargo.toml (4 fixes)
 [UPDATING] `dummy-registry` index
 [LOCKING] 5 packages to latest compatible versions
 [CHECKING] foo v0.1.0 ([CWD])
@@ -2730,11 +2730,11 @@ renamed-feature = { version = "0.1.0", optional = true }
 unrelated-feature = { version = "0.1.0", optional = true }
 
 [features]
-dep-feature = ["dep-feature/a", "dep-feature/b"]
+dep-feature = [ "dep:dep-feature","dep-feature/a", "dep-feature/b"]
 dep-and-dep-feature = ["dep:dep-and-dep-feature", "dep-and-dep-feature/a", "dep-and-dep-feature/b"]
-renamed = ["renamed-feature/a", "renamed-feature/b"]
+renamed = [ "dep:renamed-feature","renamed-feature/a", "renamed-feature/b"]
 unrelated-feature = []
-unrelated-dep-feature = ["unrelated-feature/a", "unrelated-feature/b"]
+unrelated-dep-feature = [ "dep:unrelated-feature","unrelated-feature/a", "unrelated-feature/b"]
 renamed-feature = ["dep:renamed-feature"]
 
 "#]],
