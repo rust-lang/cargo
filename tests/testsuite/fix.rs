@@ -1297,9 +1297,9 @@ fn fix_to_broken_code() {
         .with_stderr_contains("[WARNING] failed to automatically apply fixes [..]")
         .run();
 
-    assert_eq!(
+    assert_e2e().eq(
         p.read_file("bar/src/lib.rs"),
-        "pub fn foo() { let x = 3; let _ = x; }"
+        str!["pub fn foo() { let x = 3; let _ = x; }"],
     );
 }
 
@@ -1320,7 +1320,10 @@ fn fix_with_common() {
 
     p.cargo("fix --edition --allow-no-vcs").run();
 
-    assert_eq!(p.read_file("tests/common/mod.rs"), "pub fn r#try() {}");
+    assert_e2e().eq(
+        p.read_file("tests/common/mod.rs"),
+        str!["pub fn r#try() {}"],
+    );
 }
 
 #[cargo_test]
@@ -2312,9 +2315,10 @@ edition = "2021"
 ",
         )
         .run();
-    assert_eq!(
+    assert_e2e().eq(
         p.read_file("Cargo.toml"),
-        r#"
+        str![[r#"
+
 cargo-features = ["edition2024"]
 
 # Before project
@@ -2323,7 +2327,8 @@ cargo-features = ["edition2024"]
 name = "foo"
 edition = "2021"
 # After project table
-"#
+
+"#]],
     );
 }
 
@@ -2365,9 +2370,10 @@ edition = "2021"
 ",
         )
         .run();
-    assert_eq!(
+    assert_e2e().eq(
         p.read_file("Cargo.toml"),
-        r#"
+        str![[r#"
+
 cargo-features = ["edition2024"]
 
 # Before package
@@ -2376,7 +2382,8 @@ cargo-features = ["edition2024"]
 name = "foo"
 edition = "2021"
 # After project table
-"#
+
+"#]],
     );
 }
 
@@ -2469,9 +2476,10 @@ a = {path = "a", default_features = false}
 ",
         )
         .run();
-    assert_eq!(
+    assert_e2e().eq(
         p.read_file("Cargo.toml"),
-        r#"
+        str![[r#"
+
 cargo-features = ["edition2024"]
 
 [workspace.dependencies]
@@ -2519,7 +2527,8 @@ a = {path = "a", default-features = false}
 # After build_dependencies line
 a = {path = "a", default-features = false}
 # After build_dependencies table
-"#,
+
+"#]],
     );
 }
 
@@ -2564,9 +2573,10 @@ target-dep = { version = "0.1.0", optional = true }
 ",
         )
         .run();
-    assert_eq!(
+    assert_e2e().eq(
         p.read_file("Cargo.toml"),
-        r#"
+        str![[r#"
+
 [package]
 name = "foo"
 version = "0.1.0"
@@ -2585,7 +2595,8 @@ target-dep = { version = "0.1.0", optional = true }
 bar = ["dep:bar"]
 baz = ["dep:baz"]
 target-dep = ["dep:target-dep"]
-"#
+
+"#]],
     );
 }
 
@@ -2633,9 +2644,10 @@ target-dep = ["dep:target-dep"]
 ",
         )
         .run();
-    assert_eq!(
+    assert_e2e().eq(
         p.read_file("Cargo.toml"),
-        r#"
+        str![[r#"
+
 [package]
 name = "foo"
 version = "0.1.0"
@@ -2654,7 +2666,8 @@ target-dep = { version = "0.1.0", optional = true }
 target-dep = ["dep:target-dep"]
 bar = ["dep:bar"]
 baz = ["dep:baz"]
-"#
+
+"#]],
     );
 }
 
@@ -2777,11 +2790,12 @@ dep_df_false = { version = "0.1.0", default-features = false }
         )
         .run();
 
-    assert_eq!(p.read_file("pkg_default/Cargo.toml"), pkg_default);
-    assert_eq!(p.read_file("pkg_df_true/Cargo.toml"), pkg_df_true);
-    assert_eq!(
+    assert_e2e().eq(p.read_file("pkg_default/Cargo.toml"), pkg_default);
+    assert_e2e().eq(p.read_file("pkg_df_true/Cargo.toml"), pkg_df_true);
+    assert_e2e().eq(
         p.read_file("pkg_df_false/Cargo.toml"),
-        r#"
+        str![[r#"
+
 [package]
 name = "pkg_df_false"
 version = "0.1.0"
@@ -2801,6 +2815,7 @@ dep_df_false = { workspace = true, default-features = false }
 dep_simple = { workspace = true}
 dep_df_true = { workspace = true}
 dep_df_false = { workspace = true, default-features = false }
-"#
+
+"#]],
     );
 }
