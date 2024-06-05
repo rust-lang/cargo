@@ -80,6 +80,7 @@ fn sync(
     workspaces: &[&Workspace<'_>],
     opts: &VendorOptions<'_>,
 ) -> CargoResult<VendorConfig> {
+    let dry_run = false;
     let canonical_destination = try_canonicalize(opts.destination);
     let canonical_destination = canonical_destination.as_deref().unwrap_or(opts.destination);
     let dest_dir_already_exists = canonical_destination.exists();
@@ -112,7 +113,7 @@ fn sync(
     // crate to work with.
     for ws in workspaces {
         let (packages, resolve) =
-            ops::resolve_ws(ws).with_context(|| "failed to load pkg lockfile")?;
+            ops::resolve_ws(ws, dry_run).with_context(|| "failed to load pkg lockfile")?;
 
         packages
             .get_many(resolve.iter())
@@ -144,7 +145,7 @@ fn sync(
     // tables about them.
     for ws in workspaces {
         let (packages, resolve) =
-            ops::resolve_ws(ws).with_context(|| "failed to load pkg lockfile")?;
+            ops::resolve_ws(ws, dry_run).with_context(|| "failed to load pkg lockfile")?;
 
         packages
             .get_many(resolve.iter())

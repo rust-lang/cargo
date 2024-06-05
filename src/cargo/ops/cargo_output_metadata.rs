@@ -142,6 +142,7 @@ fn build_resolve_graph(
 
     // Note that even with --filter-platform we end up downloading host dependencies as well,
     // as that is the behavior of download_accessible.
+    let dry_run = false;
     let ws_resolve = ops::resolve_ws_with_opts(
         ws,
         &mut target_data,
@@ -150,6 +151,7 @@ fn build_resolve_graph(
         &specs,
         HasDevUnits::Yes,
         force_all,
+        dry_run,
     )?;
 
     let package_map: BTreeMap<PackageId, Package> = ws_resolve
