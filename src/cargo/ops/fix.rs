@@ -456,18 +456,19 @@ fn add_feature_for_unused_deps(pkg: &Package, parent: &mut dyn toml_edit::TableL
     for dep in manifest.dependencies() {
         let dep_name_in_toml = dep.name_in_toml();
         if dep.is_optional() && !activated_opt_deps.contains(dep_name_in_toml.as_str()) {
-            fixes += 1;
             if let Some(features) = parent
                 .entry("features")
                 .or_insert(toml_edit::table())
                 .as_table_like_mut()
             {
-                features.insert(
-                    dep_name_in_toml.as_str(),
-                    toml_edit::Item::Value(toml_edit::Value::Array(toml_edit::Array::from_iter(
-                        &[format!("dep:{}", dep_name_in_toml)],
-                    ))),
-                );
+                features
+                    .entry(dep_name_in_toml.as_str())
+                    .or_insert_with(|| {
+                        fixes += 1;
+                        toml_edit::Item::Value(toml_edit::Value::Array(
+                            toml_edit::Array::from_iter(&[format!("dep:{}", dep_name_in_toml)]),
+                        ))
+                    });
             }
         }
     }
