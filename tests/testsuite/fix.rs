@@ -2657,6 +2657,91 @@ dep = ["dep:dep"]
 }
 
 #[cargo_test]
+fn activate_dep_for_dep_feature() {
+    Package::new("dep-feature", "0.1.0")
+        .feature("a", &[])
+        .feature("b", &[])
+        .publish();
+    Package::new("dep-and-dep-feature", "0.1.0")
+        .feature("a", &[])
+        .feature("b", &[])
+        .publish();
+    Package::new("renamed-feature", "0.1.0")
+        .feature("a", &[])
+        .feature("b", &[])
+        .publish();
+    Package::new("unrelated-feature", "0.1.0")
+        .feature("a", &[])
+        .feature("b", &[])
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dep-feature = { version = "0.1.0", optional = true }
+dep-and-dep-feature = { version = "0.1.0", optional = true }
+renamed-feature = { version = "0.1.0", optional = true }
+unrelated-feature = { version = "0.1.0", optional = true }
+
+[features]
+dep-feature = ["dep-feature/a", "dep-feature/b"]
+dep-and-dep-feature = ["dep:dep-and-dep-feature", "dep-and-dep-feature/a", "dep-and-dep-feature/b"]
+renamed = ["renamed-feature/a", "renamed-feature/b"]
+unrelated-feature = []
+unrelated-dep-feature = ["unrelated-feature/a", "unrelated-feature/b"]
+"#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --edition --allow-no-vcs")
+        .masquerade_as_nightly_cargo(&["edition2024"])
+        .with_stderr(
+            "\
+[MIGRATING] Cargo.toml from 2021 edition to 2024
+[FIXED] Cargo.toml (3 fixes)
+[UPDATING] `dummy-registry` index
+[LOCKING] 5 packages to latest compatible versions
+[CHECKING] foo v0.1.0 ([CWD])
+[MIGRATING] src/lib.rs from 2021 edition to 2024
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+    assert_e2e().eq(
+        p.read_file("Cargo.toml"),
+        str![[r#"
+
+[package]
+name = "foo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dep-feature = { version = "0.1.0", optional = true }
+dep-and-dep-feature = { version = "0.1.0", optional = true }
+renamed-feature = { version = "0.1.0", optional = true }
+unrelated-feature = { version = "0.1.0", optional = true }
+
+[features]
+dep-feature = ["dep:dep-feature"]
+dep-and-dep-feature = ["dep:dep-and-dep-feature", "dep-and-dep-feature/a", "dep-and-dep-feature/b"]
+renamed = ["renamed-feature/a", "renamed-feature/b"]
+unrelated-feature = ["dep:unrelated-feature"]
+unrelated-dep-feature = ["unrelated-feature/a", "unrelated-feature/b"]
+renamed-feature = ["dep:renamed-feature"]
+
+"#]],
+    );
+}
+
+#[cargo_test]
 fn remove_ignored_default_features() {
     Package::new("dep_simple", "0.1.0").publish();
     Package::new("dep_df_true", "0.1.0").publish();
