@@ -124,6 +124,21 @@ typically finish in under 30 minutes.
 The reviewer might point out changes deemed necessary. Large or tricky changes
 may require several passes of review and changes.
 
+> **tip:** Prefer atomic commits where each commit is a single, complete, and coherent unit of work.
+> For example, if your feature work leads to renaming a module, make the rename its own commit.
+> However, adding an internal function that is unused is not complete or coherent.
+>
+> As part of your atomic commits, prefer adding tests as their own commit *before* any functionality changes.
+> The tests should pass in each commit, demonstrating the behavior before your
+> change and how each commit affects behavior.
+> This makes it easier for reviewers and community members to understand the
+> precise details of the side effects of your change and gives you confidence
+> that your tests are verifying the right behavior.
+>
+> Examples:
+> - [#13910: fix: remove symlink dir on Windows](https://github.com/rust-lang/cargo/pull/13910)
+> - [#14006: fix(add): Avoid escaping double-quotes by using string literals](https://github.com/rust-lang/cargo/pull/14006)
+
 ### Status labeling
 
 PRs will get marked with [labels] like [`S-waiting-on-review`] or [`S-waiting-on-author`] to indicate their status.
