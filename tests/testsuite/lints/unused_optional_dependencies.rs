@@ -157,3 +157,72 @@ warning: unused optional dependency
         )
         .run();
 }
+
+#[cargo_test(nightly, reason = "edition2024 is not stable")]
+fn inactive_weak_optional_dep() {
+    Package::new("dep", "0.1.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["edition2024"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2024"
+
+            [dependencies]
+
+            [features]
+            feat = ["dep?/feat"]
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints", "edition2024"])
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `feat` includes `dep?/feat`, but `dep` is not a dependency
+",
+        )
+        .run();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["edition2024"]
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2024"
+
+                [dependencies]
+                dep = { version = "0.1.0", optional = true }
+
+                [features]
+                feat = ["dep?/feat"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints", "edition2024"])
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `feat` includes `dep?/feat`, but `dep` is not a dependency
+",
+        )
+        .run();
+}
