@@ -201,3 +201,105 @@ warning: unused optional dependency
         )
         .run();
 }
+
+#[cargo_test(nightly, reason = "edition2024 is not stable")]
+fn inactive_weak_optional_dep() {
+    Package::new("dep_name", "0.1.0")
+        .feature("dep_feature", &[])
+        .publish();
+
+    // `dep_name`` is included as a weak optional dependency throught speficying the `dep_name?/dep_feature` in feature table.
+    // In edition2024, `dep_name` need to be add `dep:dep_name` to feature table to speficying activate it.
+
+    // This test explain the conclusion mentioned above
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+        cargo-features = ["edition2024"]
+        [package]
+        name = "foo"
+        version = "0.1.0"
+        edition = "2024"
+
+        [dependencies]
+        dep_name = { version = "0.1.0", optional = true }
+
+        [features]
+        foo_feature = ["dep:dep_name", "dep_name?/dep_feature"]
+    "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints", "edition2024"])
+        .run();
+
+    // This test proves no regression when dep_name isn't included
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            cargo-features = ["edition2024"]
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2024"
+
+            [dependencies]
+
+            [features]
+            foo_feature = ["dep_name?/dep_feature"]
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints", "edition2024"])
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `foo_feature` includes `dep_name?/dep_feature`, but `dep_name` is not a dependency
+",
+        )
+        .run();
+
+    // This test is that we need to improve in edition2024, we need to tell that a weak optioanl dependency needs specify
+    // the `dep:` syntax, like `dep:dep_name`.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["edition2024"]
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2024"
+
+                [dependencies]
+                dep_name = { version = "0.1.0", optional = true }
+
+                [features]
+                foo_feature = ["dep_name?/dep_feature"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints", "edition2024"])
+        .with_status(101)
+        .with_stderr(
+            "\
+error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `foo_feature` includes `dep_name?/dep_feature`, but `dep_name` is not a dependency
+",
+        )
+        .run();
+}
