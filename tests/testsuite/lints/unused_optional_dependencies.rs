@@ -188,7 +188,7 @@ fn inactive_weak_optional_dep() {
 error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  feature `feat` includes `dep?/feat`, but `dep` is not a dependency
+  feature `feat` includes `dep?/feat`, activate it in a feature with `dep:dep` if `dep` is an enabled dependency
 ",
         )
         .run();
@@ -221,7 +221,7 @@ Caused by:
 error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  feature `feat` includes `dep?/feat`, but `dep` is not a dependency
+  feature `feat` includes `dep?/feat`, activate it in a feature with `dep:dep` if `dep` is an enabled dependency
 ",
         )
         .run();

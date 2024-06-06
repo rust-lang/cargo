@@ -304,6 +304,13 @@ fn build_feature_map(
 
                     // Validation of the feature name will be performed in the resolver.
                     if !is_any_dep {
+                        // editon2024 stops expose implicit features, which will strip weak optional dependencies from `dependencies`
+                        if *weak {
+                            bail!(
+                                "feature `{feature}` includes `{fv}`, activate it in a feature with `dep:{dep_name}` if `{dep_name}` is an enabled dependency"                               
+                            );
+                        }
+
                         bail!(
                             "feature `{}` includes `{}`, but `{}` is not a dependency",
                             feature,
