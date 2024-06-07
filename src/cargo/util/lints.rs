@@ -13,7 +13,12 @@ use std::path::Path;
 use toml_edit::ImDocument;
 
 const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
-const LINTS: &[Lint] = &[IM_A_TEAPOT, IMPLICIT_FEATURES, UNUSED_OPTIONAL_DEPENDENCY];
+const LINTS: &[Lint] = &[
+    IM_A_TEAPOT,
+    IMPLICIT_FEATURES,
+    UNKNOWN_LINTS,
+    UNUSED_OPTIONAL_DEPENDENCY,
+];
 
 pub fn analyze_cargo_lints_table(
     pkg: &Package,
