@@ -14,8 +14,8 @@ use toml_edit::ImDocument;
 
 const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
 pub const LINTS: &[Lint] = &[
-    IM_A_TEAPOT,
     IMPLICIT_FEATURES,
+    IM_A_TEAPOT,
     UNKNOWN_LINTS,
     UNUSED_OPTIONAL_DEPENDENCY,
 ];
@@ -874,4 +874,43 @@ pub fn unused_dependencies(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use snapbox::ToDebug;
+
+    #[test]
+    fn ensure_sorted_lints() {
+        // This will be printed out if the fields are not sorted.
+        let location = std::panic::Location::caller();
+        println!("\nTo fix this test, sort `LINTS` in {}\n", location.file(),);
+
+        let actual = super::LINTS
+            .iter()
+            .map(|l| l.name.to_uppercase())
+            .collect::<Vec<_>>();
+
+        let mut expected = actual.clone();
+        expected.sort();
+        snapbox::assert_data_eq!(actual.to_debug(), expected.to_debug());
+    }
+
+    #[test]
+    fn ensure_sorted_lint_groups() {
+        // This will be printed out if the fields are not sorted.
+        let location = std::panic::Location::caller();
+        println!(
+            "\nTo fix this test, sort `LINT_GROUPS` in {}\n",
+            location.file(),
+        );
+        let actual = super::LINT_GROUPS
+            .iter()
+            .map(|l| l.name.to_uppercase())
+            .collect::<Vec<_>>();
+
+        let mut expected = actual.clone();
+        expected.sort();
+        snapbox::assert_data_eq!(actual.to_debug(), expected.to_debug());
+    }
 }
