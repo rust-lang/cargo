@@ -1,7 +1,5 @@
 //! -Zadvanced-env tests
 
-#![allow(deprecated)]
-
 use cargo_test_support::{paths, project, registry::Package};
 
 #[cargo_test]
