@@ -25,6 +25,7 @@ use std::time::{self, Duration};
 
 use anyhow::{bail, Result};
 use cargo_util::{is_ci, ProcessBuilder, ProcessError};
+use snapbox::IntoData as _;
 use url::Url;
 
 use self::paths::CargoPathExt;
@@ -534,6 +535,8 @@ pub struct Execs {
     expect_stdin: Option<String>,
     expect_stderr: Option<String>,
     expect_exit_code: Option<i32>,
+    expect_stdout_data: Option<snapbox::Data>,
+    expect_stderr_data: Option<snapbox::Data>,
     expect_stdout_contains: Vec<String>,
     expect_stderr_contains: Vec<String>,
     expect_stdout_contains_n: Vec<(String, usize)>,
@@ -545,6 +548,7 @@ pub struct Execs {
     expect_json: Option<String>,
     expect_json_contains_unordered: Option<String>,
     stream_output: bool,
+    assert: snapbox::Assert,
 }
 
 impl Execs {
@@ -564,6 +568,22 @@ impl Execs {
     /// See [`compare`] for supported patterns.
     pub fn with_stderr<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr = Some(expected.to_string());
+        self
+    }
+
+    /// Verifies that stdout is equal to the given lines.
+    ///
+    /// See [`compare::assert_e2e`] for assertion details.
+    pub fn with_stdout_data(&mut self, expected: impl snapbox::IntoData) -> &mut Self {
+        self.expect_stdout_data = Some(expected.into_data());
+        self
+    }
+
+    /// Verifies that stderr is equal to the given lines.
+    ///
+    /// See [`compare::assert_e2e`] for assertion details.
+    pub fn with_stderr_data(&mut self, expected: impl snapbox::IntoData) -> &mut Self {
+        self.expect_stderr_data = Some(expected.into_data());
         self
     }
 
@@ -914,6 +934,8 @@ impl Execs {
             && self.expect_stdout.is_none()
             && self.expect_stdin.is_none()
             && self.expect_stderr.is_none()
+            && self.expect_stdout_data.is_none()
+            && self.expect_stderr_data.is_none()
             && self.expect_stdout_contains.is_empty()
             && self.expect_stderr_contains.is_empty()
             && self.expect_stdout_contains_n.is_empty()
@@ -1011,6 +1033,24 @@ impl Execs {
         if let Some(expect_stderr) = &self.expect_stderr {
             compare::match_exact(expect_stderr, stderr, "stderr", stdout, cwd)?;
         }
+        if let Some(expect_stdout_data) = &self.expect_stdout_data {
+            if let Err(err) = self.assert.try_eq(
+                Some(&"stdout"),
+                stdout.into_data(),
+                expect_stdout_data.clone(),
+            ) {
+                panic!("{err}")
+            }
+        }
+        if let Some(expect_stderr_data) = &self.expect_stderr_data {
+            if let Err(err) = self.assert.try_eq(
+                Some(&"stderr"),
+                stderr.into_data(),
+                expect_stderr_data.clone(),
+            ) {
+                panic!("{err}")
+            }
+        }
         for expect in self.expect_stdout_contains.iter() {
             compare::match_contains(expect, stdout, cwd)?;
         }
@@ -1063,6 +1103,8 @@ pub fn execs() -> Execs {
         expect_stderr: None,
         expect_stdin: None,
         expect_exit_code: Some(0),
+        expect_stdout_data: None,
+        expect_stderr_data: None,
         expect_stdout_contains: Vec::new(),
         expect_stderr_contains: Vec::new(),
         expect_stdout_contains_n: Vec::new(),
@@ -1074,6 +1116,7 @@ pub fn execs() -> Execs {
         expect_json: None,
         expect_json_contains_unordered: None,
         stream_output: false,
+        assert: compare::assert_e2e(),
     }
 }
 
