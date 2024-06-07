@@ -83,6 +83,13 @@ jobs:
       - run: rustup update stable && rustup default stable
       - run: cargo stale-label
 
+  lint-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup update stable && rustup default stable
+      - run: cargo lint-docs --check
+
   # Ensure Cargo.lock is up-to-date
   lockfile:
     runs-on: ubuntu-latest
