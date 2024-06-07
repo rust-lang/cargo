@@ -23,4 +23,5 @@ The reference covers the details of various areas of Cargo.
 * [SemVer Compatibility](semver.md)
 * [Future incompat report](future-incompat-report.md)
 * [Reporting build timings](timings.md)
+* [Lints](lints.md)
 * [Unstable Features](unstable.md)

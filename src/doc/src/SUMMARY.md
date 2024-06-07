@@ -45,6 +45,7 @@
     * [SemVer Compatibility](reference/semver.md)
     * [Future incompat report](reference/future-incompat-report.md)
     * [Reporting build timings](reference/timings.md)
+    * [Lints](reference/lints.md)
     * [Unstable Features](reference/unstable.md)
 
 * [Cargo Commands](commands/index.md)

@@ -13,7 +13,7 @@ use std::path::Path;
 use toml_edit::ImDocument;
 
 const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
-const LINTS: &[Lint] = &[
+pub const LINTS: &[Lint] = &[
     IM_A_TEAPOT,
     IMPLICIT_FEATURES,
     UNKNOWN_LINTS,

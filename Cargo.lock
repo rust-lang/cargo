@@ -4022,6 +4022,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "xtask-lint-docs"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cargo",
+ "clap",
+ "itertools 0.12.1",
+]
+
+[[package]]
 name = "xtask-stale-label"
 version = "0.0.0"
 dependencies = [
