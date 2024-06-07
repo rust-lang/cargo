@@ -14,8 +14,8 @@ use toml_edit::ImDocument;
 
 const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
 pub const LINTS: &[Lint] = &[
-    IM_A_TEAPOT,
     IMPLICIT_FEATURES,
+    IM_A_TEAPOT,
     UNKNOWN_LINTS,
     UNUSED_OPTIONAL_DEPENDENCY,
 ];
@@ -874,4 +874,123 @@ pub fn unused_dependencies(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use itertools::Itertools;
+    use snapbox::ToDebug;
+    use std::collections::HashSet;
+
+    #[test]
+    fn ensure_sorted_lints() {
+        // This will be printed out if the fields are not sorted.
+        let location = std::panic::Location::caller();
+        println!("\nTo fix this test, sort `LINTS` in {}\n", location.file(),);
+
+        let actual = super::LINTS
+            .iter()
+            .map(|l| l.name.to_uppercase())
+            .collect::<Vec<_>>();
+
+        let mut expected = actual.clone();
+        expected.sort();
+        snapbox::assert_data_eq!(actual.to_debug(), expected.to_debug());
+    }
+
+    #[test]
+    fn ensure_sorted_lint_groups() {
+        // This will be printed out if the fields are not sorted.
+        let location = std::panic::Location::caller();
+        println!(
+            "\nTo fix this test, sort `LINT_GROUPS` in {}\n",
+            location.file(),
+        );
+        let actual = super::LINT_GROUPS
+            .iter()
+            .map(|l| l.name.to_uppercase())
+            .collect::<Vec<_>>();
+
+        let mut expected = actual.clone();
+        expected.sort();
+        snapbox::assert_data_eq!(actual.to_debug(), expected.to_debug());
+    }
+
+    #[test]
+    fn ensure_updated_lints() {
+        let path = snapbox::utils::current_rs!();
+        let expected = std::fs::read_to_string(&path).unwrap();
+        let expected = expected
+            .lines()
+            .filter_map(|l| {
+                if l.ends_with(": Lint = Lint {") {
+                    Some(
+                        l.chars()
+                            .skip(6)
+                            .take_while(|c| *c != ':')
+                            .collect::<String>(),
+                    )
+                } else {
+                    None
+                }
+            })
+            .collect::<HashSet<_>>();
+        let actual = super::LINTS
+            .iter()
+            .map(|l| l.name.to_uppercase())
+            .collect::<HashSet<_>>();
+        let diff = expected.difference(&actual).sorted().collect::<Vec<_>>();
+
+        let mut need_added = String::new();
+        for name in &diff {
+            need_added.push_str(&format!("{}\n", name));
+        }
+        assert!(
+            diff.is_empty(),
+            "\n`LINTS` did not contain all `Lint`s found in {}\n\
+            Please add the following to `LINTS`:\n\
+            {}",
+            path.display(),
+            need_added
+        );
+    }
+
+    #[test]
+    fn ensure_updated_lint_groups() {
+        let path = snapbox::utils::current_rs!();
+        let expected = std::fs::read_to_string(&path).unwrap();
+        let expected = expected
+            .lines()
+            .filter_map(|l| {
+                if l.ends_with(": LintGroup = LintGroup {") {
+                    Some(
+                        l.chars()
+                            .skip(6)
+                            .take_while(|c| *c != ':')
+                            .collect::<String>(),
+                    )
+                } else {
+                    None
+                }
+            })
+            .collect::<HashSet<_>>();
+        let actual = super::LINT_GROUPS
+            .iter()
+            .map(|l| l.name.to_uppercase())
+            .collect::<HashSet<_>>();
+        let diff = expected.difference(&actual).sorted().collect::<Vec<_>>();
+
+        let mut need_added = String::new();
+        for name in &diff {
+            need_added.push_str(&format!("{}\n", name));
+        }
+        assert!(
+            diff.is_empty(),
+            "\n`LINT_GROUPS` did not contain all `LintGroup`s found in {}\n\
+            Please add the following to `LINT_GROUPS`:\n\
+            {}",
+            path.display(),
+            need_added
+        );
+    }
 }
