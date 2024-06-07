@@ -121,7 +121,7 @@ pub struct OutputFile {
     /// If it should be linked into `target`, and what it should be called
     /// (e.g., without metadata).
     pub hardlink: Option<PathBuf>,
-    /// If `--out-dir` is specified, the absolute path to the exported file.
+    /// If `--artifact-dir` is specified, the absolute path to the exported file.
     pub export_path: Option<PathBuf>,
     /// Type of the file (library / debug symbol / else).
     pub flavor: FileFlavor,
@@ -213,7 +213,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         }
     }
 
-    /// Additional export directory from `--out-dir`.
+    /// Additional export directory from `--artifact-dir`.
     pub fn export_dir(&self) -> Option<PathBuf> {
         self.export_dir.clone()
     }
