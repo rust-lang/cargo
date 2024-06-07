@@ -188,7 +188,7 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/config.html>. Defaults to
            target in the root of the workspace.
 
-       --out-dir directory
+       --artifact-dir directory
            Copy final artifacts to this directory.
 
            This option is unstable and available only on the nightly channel

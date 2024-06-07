@@ -2609,7 +2609,9 @@ pub struct CargoBuildConfig {
     pub rustc_workspace_wrapper: Option<ConfigRelativePath>,
     pub rustc: Option<ConfigRelativePath>,
     pub rustdoc: Option<ConfigRelativePath>,
+    // deprecated alias for artifact-dir
     pub out_dir: Option<ConfigRelativePath>,
+    pub artifact_dir: Option<ConfigRelativePath>,
 }
 
 /// Configuration for `build.target`.

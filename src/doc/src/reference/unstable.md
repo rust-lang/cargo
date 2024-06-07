@@ -28,9 +28,9 @@ how the feature works:
 
 * New command-line flags, options, and subcommands require the `-Z
   unstable-options` CLI option to also be included. For example, the new
-  `--out-dir` option is only available on nightly:
+  `--artifact-dir` option is only available on nightly:
 
-  ```cargo +nightly build --out-dir=out -Z unstable-options```
+  ```cargo +nightly build --artifact-dir=out -Z unstable-options```
 
 * `-Z` command-line flags are used to enable new functionality that may not
   have an interface, or the interface has not yet been designed, or for more
@@ -74,7 +74,7 @@ For the latest nightly, see the [nightly version] of this page.
     * [msrv-policy](#msrv-policy) --- MSRV-aware resolver and version selection
     * [precise-pre-release](#precise-pre-release) --- Allows pre-release versions to be selected with `update --precise`
 * Output behavior
-    * [out-dir](#out-dir) --- Adds a directory where artifacts are copied to.
+    * [artifact-dir](#artifact-dir) --- Adds a directory where artifacts are copied to.
     * [Different binary name](#different-binary-name) --- Assign a name to the built binary that is separate from the crate name.
 * Compile behavior
     * [mtime-on-use](#mtime-on-use) --- Updates the last-modified timestamp on every dependency every time it is used, to provide a mechanism to delete unused artifacts.
@@ -206,27 +206,27 @@ minimum versions that you are actually using. That is, if Cargo.toml says
 Indirect dependencies are resolved as normal so as not to be blocked on their
 minimal version validation.
 
-## out-dir
+## artifact-dir
 * Original Issue: [#4875](https://github.com/rust-lang/cargo/issues/4875)
 * Tracking Issue: [#6790](https://github.com/rust-lang/cargo/issues/6790)
 
-This feature allows you to specify the directory where artifacts will be
-copied to after they are built. Typically artifacts are only written to the
-`target/release` or `target/debug` directories. However, determining the
-exact filename can be tricky since you need to parse JSON output. The
-`--out-dir` flag makes it easier to predictably access the artifacts. Note
-that the artifacts are copied, so the originals are still in the `target`
-directory. Example:
+This feature allows you to specify the directory where artifacts will be copied
+to after they are built. Typically artifacts are only written to the
+`target/release` or `target/debug` directories. However, determining the exact
+filename can be tricky since you need to parse JSON output. The `--artifact-dir`
+flag makes it easier to predictably access the artifacts. Note that the
+artifacts are copied, so the originals are still in the `target` directory.
+Example:
 
 ```sh
-cargo +nightly build --out-dir=out -Z unstable-options
+cargo +nightly build --artifact-dir=out -Z unstable-options
 ```
 
 This can also be specified in `.cargo/config.toml` files.
 
 ```toml
 [build]
-out-dir = "out"
+artifact-dir = "out"
 ```
 
 ## doctest-xcompile

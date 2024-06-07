@@ -574,7 +574,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                 if let Some(ref export_path) = output.export_path {
                     if let Some(other_unit) = output_collisions.insert(export_path.clone(), unit) {
                         self.bcx.gctx.shell().warn(format!(
-                            "`--out-dir` filename collision.\n\
+                            "`--artifact-dir` filename collision.\n\
                              {}\
                              The exported filenames should be unique.\n\
                              {}",

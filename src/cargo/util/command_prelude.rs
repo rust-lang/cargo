@@ -393,25 +393,35 @@ pub trait CommandExt: Sized {
         )
     }
 
-    fn arg_out_dir(self) -> Self {
+    fn arg_artifact_dir(self) -> Self {
         let unsupported_short_arg = {
-            let value_parser = UnknownArgumentValueParser::suggest_arg("--out-dir");
-            Arg::new("unsupported-short-out-dir-flag")
+            let value_parser = UnknownArgumentValueParser::suggest_arg("--artifact-dir");
+            Arg::new("unsupported-short-artifact-dir-flag")
                 .help("")
                 .short('O')
                 .value_parser(value_parser)
                 .action(ArgAction::SetTrue)
                 .hide(true)
         };
+
         self._arg(
             opt(
-                "out-dir",
+                "artifact-dir",
                 "Copy final artifacts to this directory (unstable)",
             )
             .value_name("PATH")
             .help_heading(heading::COMPILATION_OPTIONS),
         )
         ._arg(unsupported_short_arg)
+        ._arg(
+            opt(
+                "out-dir",
+                "Copy final artifacts to this directory (deprecated; use --artifact-dir instead)",
+            )
+            .value_name("PATH")
+            .conflicts_with("artifact-dir")
+            .hide(true),
+        )
     }
 }
 
