@@ -3230,6 +3230,7 @@ dependencies = [
  "filetime",
  "normalize-line-endings",
  "regex",
+ "serde",
  "serde_json",
  "similar",
  "snapbox-macros",
