@@ -304,6 +304,55 @@ For more information, try '--help'.
         .run();
 }
 
+#[cargo_test]
+fn deprecated_out_dir() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .build();
+
+    p.cargo("build -Z unstable-options --out-dir out")
+        .masquerade_as_nightly_cargo(&["out-dir"])
+        .enable_mac_dsym()
+        .with_stderr_contains("[WARNING] the --out-dir flag has been changed to --artifact-dir")
+        .run();
+    check_dir_contents(
+        &p.root().join("out"),
+        &["foo"],
+        &["foo", "foo.dSYM"],
+        &["foo.exe", "foo.pdb"],
+        &["foo.exe"],
+    );
+}
+
+#[cargo_test]
+fn cargo_build_deprecated_out_dir() {
+    let p = project()
+        .file("src/main.rs", r#"fn main() { println!("Hello, World!") }"#)
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [build]
+            out-dir = "out"
+            "#,
+        )
+        .build();
+
+    p.cargo("build -Z unstable-options")
+        .masquerade_as_nightly_cargo(&["out-dir"])
+        .enable_mac_dsym()
+        .with_stderr_contains(
+            "[WARNING] the out-dir config option has been changed to artifact-dir",
+        )
+        .run();
+    check_dir_contents(
+        &p.root().join("out"),
+        &["foo"],
+        &["foo", "foo.dSYM"],
+        &["foo.exe", "foo.pdb"],
+        &["foo.exe"],
+    );
+}
+
 fn check_dir_contents(
     artifact_dir: &Path,
     expected_linux: &[&str],
