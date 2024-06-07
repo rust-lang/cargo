@@ -19,7 +19,8 @@ pub fn fetch<'a>(
     options: &FetchOptions<'a>,
 ) -> CargoResult<(Resolve, PackageSet<'a>)> {
     ws.emit_warnings()?;
-    let (mut packages, resolve) = ops::resolve_ws(ws)?;
+    let dry_run = false;
+    let (mut packages, resolve) = ops::resolve_ws(ws, dry_run)?;
 
     let jobs = Some(JobsConfig::Integer(1));
     let keep_going = false;

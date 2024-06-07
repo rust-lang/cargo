@@ -103,15 +103,25 @@ impl Summary {
         Rc::make_mut(&mut self.inner).checksum = Some(cksum);
     }
 
-    pub fn map_dependencies<F>(mut self, f: F) -> Summary
+    pub fn map_dependencies<F>(self, mut f: F) -> Summary
     where
         F: FnMut(Dependency) -> Dependency,
     {
+        self.try_map_dependencies(|dep| Ok(f(dep))).unwrap()
+    }
+
+    pub fn try_map_dependencies<F>(mut self, f: F) -> CargoResult<Summary>
+    where
+        F: FnMut(Dependency) -> CargoResult<Dependency>,
+    {
         {
             let slot = &mut Rc::make_mut(&mut self.inner).dependencies;
-            *slot = mem::take(slot).into_iter().map(f).collect();
+            *slot = mem::take(slot)
+                .into_iter()
+                .map(f)
+                .collect::<CargoResult<_>>()?;
         }
-        self
+        Ok(self)
     }
 
     pub fn map_source(self, to_replace: SourceId, replace_with: SourceId) -> Summary {

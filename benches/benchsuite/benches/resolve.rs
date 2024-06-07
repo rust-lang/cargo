@@ -33,6 +33,7 @@ fn do_resolve<'gctx>(gctx: &'gctx GlobalContext, ws_root: &Path) -> ResolveInfo<
     let force_all_targets = ForceAllTargets::No;
     // Do an initial run to download anything necessary so that it does
     // not confuse criterion's warmup.
+    let dry_run = false;
     let ws_resolve = cargo::ops::resolve_ws_with_opts(
         &ws,
         &mut target_data,
@@ -41,6 +42,7 @@ fn do_resolve<'gctx>(gctx: &'gctx GlobalContext, ws_root: &Path) -> ResolveInfo<
         &specs,
         has_dev_units,
         force_all_targets,
+        dry_run,
     )
     .unwrap();
     ResolveInfo {
@@ -71,6 +73,7 @@ fn resolve_ws(c: &mut Criterion) {
         // iterator once, and we don't want to call `do_resolve` in every
         // "step", since that would just be some useless work.
         let mut lazy_info = None;
+        let dry_run = false;
         group.bench_function(&ws_name, |b| {
             let ResolveInfo {
                 ws,
@@ -91,6 +94,7 @@ fn resolve_ws(c: &mut Criterion) {
                     specs,
                     *has_dev_units,
                     *force_all_targets,
+                    dry_run,
                 )
                 .unwrap();
             })

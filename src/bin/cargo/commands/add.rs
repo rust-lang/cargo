@@ -214,11 +214,9 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     };
     add(&ws, &options)?;
 
-    if !dry_run {
-        // Reload the workspace since we've changed dependencies
-        let ws = args.workspace(gctx)?;
-        resolve_ws(&ws)?;
-    }
+    // Reload the workspace since we've changed dependencies
+    let ws = args.workspace(gctx)?;
+    resolve_ws(&ws, dry_run)?;
 
     Ok(())
 }

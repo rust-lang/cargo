@@ -77,7 +77,14 @@ pub fn clean(ws: &Workspace<'_>, opts: &CleanOptions<'_>) -> CargoResult<()> {
         if opts.spec.is_empty() {
             clean_ctx.remove_paths(&[target_dir.into_path_unlocked()])?;
         } else {
-            clean_specs(&mut clean_ctx, &ws, &profiles, &opts.targets, &opts.spec)?;
+            clean_specs(
+                &mut clean_ctx,
+                &ws,
+                &profiles,
+                &opts.targets,
+                &opts.spec,
+                opts.dry_run,
+            )?;
         }
     }
 
@@ -91,11 +98,12 @@ fn clean_specs(
     profiles: &Profiles,
     targets: &[String],
     spec: &[String],
+    dry_run: bool,
 ) -> CargoResult<()> {
     // Clean specific packages.
     let requested_kinds = CompileKind::from_requested_targets(clean_ctx.gctx, targets)?;
     let target_data = RustcTargetData::new(ws, &requested_kinds)?;
-    let (pkg_set, resolve) = ops::resolve_ws(ws)?;
+    let (pkg_set, resolve) = ops::resolve_ws(ws, dry_run)?;
     let prof_dir_name = profiles.get_dir_name();
     let host_layout = Layout::new(ws, None, &prof_dir_name)?;
     // Convert requested kinds to a Vec of layouts.

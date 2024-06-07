@@ -561,7 +561,8 @@ impl<'gctx> InstallablePackage<'gctx> {
         // It would be best if `source` could be passed in here to avoid a
         // duplicate "Updating", but since `source` is taken by value, then it
         // wouldn't be available for `compile_ws`.
-        let (pkg_set, resolve) = ops::resolve_ws(&self.ws)?;
+        let dry_run = false;
+        let (pkg_set, resolve) = ops::resolve_ws(&self.ws, dry_run)?;
         ops::check_yanked(
             self.ws.gctx(),
             &pkg_set,

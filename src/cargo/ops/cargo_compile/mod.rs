@@ -264,6 +264,7 @@ pub fn create_bcx<'a, 'gctx>(
             HasDevUnits::No
         }
     };
+    let dry_run = false;
     let resolve = ops::resolve_ws_with_opts(
         ws,
         &mut target_data,
@@ -272,6 +273,7 @@ pub fn create_bcx<'a, 'gctx>(
         &specs,
         has_dev_units,
         crate::core::resolver::features::ForceAllTargets::No,
+        dry_run,
     )?;
     let WorkspaceResolve {
         mut pkg_set,

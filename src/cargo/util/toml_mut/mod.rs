@@ -11,6 +11,7 @@
 
 pub mod dependency;
 pub mod manifest;
+pub mod upgrade;
 
 // Based on Iterator::is_sorted from nightly std; remove in favor of that when stabilized.
 pub fn is_sorted(mut it: impl Iterator<Item = impl PartialOrd>) -> bool {

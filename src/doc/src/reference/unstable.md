@@ -73,6 +73,7 @@ For the latest nightly, see the [nightly version] of this page.
     * [public-dependency](#public-dependency) --- Allows dependencies to be classified as either public or private.
     * [msrv-policy](#msrv-policy) --- MSRV-aware resolver and version selection
     * [precise-pre-release](#precise-pre-release) --- Allows pre-release versions to be selected with `update --precise`
+    * [update-breaking](#update-breaking) --- Allows upgrading to breaking versions with `update --breaking`
 * Output behavior
     * [artifact-dir](#artifact-dir) --- Adds a directory where artifacts are copied to.
     * [Different binary name](#different-binary-name) --- Assign a name to the built binary that is separate from the crate name.
@@ -377,6 +378,25 @@ my-dependency = "0.1.1"
 It's possible to update `my-dependency` to a pre-release with `update -Zunstable-options my-dependency --precise 0.1.2-pre.0`.
 This is because `0.1.2-pre.0` is considered compatible with `0.1.1`.
 It would not be possible to upgrade to `0.2.0-pre.0` from `0.1.1` in the same way.
+
+## update-breaking
+
+* Tracking Issue: [#12425](https://github.com/rust-lang/cargo/issues/12425)
+
+This feature allows upgrading dependencies to breaking versions with
+`update --breaking`.
+
+This is essentially migrating `cargo upgrade` from `cargo-edit` into Cargo itself, 
+and involves making changes to the `Cargo.toml` manifests, not just the lock file.
+
+When doing a breaking update, Cargo will keep all non-breaking dependencies
+unchanged. It will also not change any dependencies that use a different version
+operator than the default caret. Also, it will not upgrade any renamed package
+dependencies. Example:
+
+```sh
+cargo +nightly update --breaking -Z unstable-options
+```
 
 ## build-std
 * Tracking Repository: <https://github.com/rust-lang/wg-cargo-std-aware>

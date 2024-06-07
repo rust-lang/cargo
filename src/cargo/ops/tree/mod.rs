@@ -131,6 +131,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
     } else {
         ForceAllTargets::No
     };
+    let dry_run = false;
     let ws_resolve = ops::resolve_ws_with_opts(
         ws,
         &mut target_data,
@@ -139,6 +140,7 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         &specs,
         has_dev,
         force_all,
+        dry_run,
     )?;
 
     let package_map: HashMap<PackageId, &Package> = ws_resolve

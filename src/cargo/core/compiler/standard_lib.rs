@@ -149,6 +149,7 @@ pub fn resolve_std<'gctx>(
     let cli_features = CliFeatures::from_command_line(
         &features, /*all_features*/ false, /*uses_default_features*/ false,
     )?;
+    let dry_run = false;
     let resolve = ops::resolve_ws_with_opts(
         &std_ws,
         target_data,
@@ -157,6 +158,7 @@ pub fn resolve_std<'gctx>(
         &specs,
         HasDevUnits::No,
         crate::core::resolver::features::ForceAllTargets::No,
+        dry_run,
     )?;
     Ok((
         resolve.pkg_set,

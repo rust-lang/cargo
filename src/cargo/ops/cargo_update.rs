@@ -1,3 +1,4 @@
+use crate::core::dependency::Dependency;
 use crate::core::registry::PackageRegistry;
 use crate::core::resolver::features::{CliFeatures, HasDevUnits};
 use crate::core::shell::Verbosity;
@@ -8,11 +9,18 @@ use crate::ops;
 use crate::sources::source::QueryKind;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::GlobalContext;
-use crate::util::style;
-use crate::util::CargoResult;
+use crate::util::toml_mut::dependency::{MaybeWorkspace, Source};
+use crate::util::toml_mut::manifest::LocalManifest;
+use crate::util::toml_mut::upgrade::upgrade_requirement;
+use crate::util::{style, OptVersionReq};
+use crate::util::{CargoResult, VersionExt};
+use itertools::Itertools;
+use semver::{Op, Version, VersionReq};
 use std::cmp::Ordering;
-use std::collections::{BTreeMap, HashSet};
-use tracing::debug;
+use std::collections::{BTreeMap, HashMap, HashSet};
+use tracing::{debug, trace};
+
+pub type UpgradeMap = HashMap<(String, SourceId), Version>;
 
 pub struct UpdateOptions<'a> {
     pub gctx: &'a GlobalContext,
@@ -205,6 +213,251 @@ pub fn print_lockfile_changes(
     } else {
         print_lockfile_generation(ws, resolve, registry)
     }
+}
+pub fn upgrade_manifests(
+    ws: &mut Workspace<'_>,
+    to_update: &Vec<String>,
+) -> CargoResult<UpgradeMap> {
+    let gctx = ws.gctx();
+    let mut upgrades = HashMap::new();
+    let mut upgrade_messages = HashSet::new();
+
+    // Updates often require a lot of modifications to the registry, so ensure
+    // that we're synchronized against other Cargos.
+    let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
+
+    let mut registry = PackageRegistry::new(gctx)?;
+    registry.lock_patches();
+
+    for member in ws.members_mut().sorted() {
+        debug!("upgrading manifest for `{}`", member.name());
+
+        *member.manifest_mut().summary_mut() = member
+            .manifest()
+            .summary()
+            .clone()
+            .try_map_dependencies(|d| {
+                upgrade_dependency(
+                    &gctx,
+                    to_update,
+                    &mut registry,
+                    &mut upgrades,
+                    &mut upgrade_messages,
+                    d,
+                )
+            })?;
+    }
+
+    Ok(upgrades)
+}
+
+fn upgrade_dependency(
+    gctx: &GlobalContext,
+    to_update: &Vec<String>,
+    registry: &mut PackageRegistry<'_>,
+    upgrades: &mut UpgradeMap,
+    upgrade_messages: &mut HashSet<String>,
+    dependency: Dependency,
+) -> CargoResult<Dependency> {
+    let name = dependency.package_name();
+    let renamed_to = dependency.name_in_toml();
+
+    if name != renamed_to {
+        trace!(
+            "skipping dependency renamed from `{}` to `{}`",
+            name,
+            renamed_to
+        );
+        return Ok(dependency);
+    }
+
+    if !to_update.is_empty() && !to_update.contains(&name.to_string()) {
+        trace!("skipping dependency `{}` not selected for upgrading", name);
+        return Ok(dependency);
+    }
+
+    if !dependency.source_id().is_registry() {
+        trace!("skipping non-registry dependency: {}", name);
+        return Ok(dependency);
+    }
+
+    let version_req = dependency.version_req();
+
+    let OptVersionReq::Req(current) = version_req else {
+        trace!(
+            "skipping dependency `{}` without a simple version requirement: {}",
+            name,
+            version_req
+        );
+        return Ok(dependency);
+    };
+
+    let [comparator] = &current.comparators[..] else {
+        trace!(
+            "skipping dependency `{}` with multiple version comparators: {:?}",
+            name,
+            &current.comparators
+        );
+        return Ok(dependency);
+    };
+
+    if comparator.op != Op::Caret {
+        trace!("skipping non-caret dependency `{}`: {}", name, comparator);
+        return Ok(dependency);
+    }
+
+    let query =
+        crate::core::dependency::Dependency::parse(name, None, dependency.source_id().clone())?;
+
+    let possibilities = {
+        loop {
+            match registry.query_vec(&query, QueryKind::Exact) {
+                std::task::Poll::Ready(res) => {
+                    break res?;
+                }
+                std::task::Poll::Pending => registry.block_until_ready()?,
+            }
+        }
+    };
+
+    let latest = if !possibilities.is_empty() {
+        possibilities
+            .iter()
+            .map(|s| s.as_summary())
+            .map(|s| s.version())
+            .filter(|v| !v.is_prerelease())
+            .max()
+    } else {
+        None
+    };
+
+    let Some(latest) = latest else {
+        trace!(
+            "skipping dependency `{}` without any published versions",
+            name
+        );
+        return Ok(dependency);
+    };
+
+    if current.matches(&latest) {
+        trace!(
+            "skipping dependency `{}` without a breaking update available",
+            name
+        );
+        return Ok(dependency);
+    }
+
+    let Some(new_req_string) = upgrade_requirement(&current.to_string(), latest)? else {
+        trace!(
+            "skipping dependency `{}` because the version requirement didn't change",
+            name
+        );
+        return Ok(dependency);
+    };
+
+    let upgrade_message = format!("{} {} -> {}", name, current, new_req_string);
+    trace!(upgrade_message);
+
+    if upgrade_messages.insert(upgrade_message.clone()) {
+        gctx.shell()
+            .status_with_color("Upgrading", &upgrade_message, &style::GOOD)?;
+    }
+
+    upgrades.insert((name.to_string(), dependency.source_id()), latest.clone());
+
+    let req = OptVersionReq::Req(VersionReq::parse(&latest.to_string())?);
+    let mut dep = dependency.clone();
+    dep.set_version_req(req);
+    Ok(dep)
+}
+
+/// Update manifests with upgraded versions, and write to disk. Based on cargo-edit.
+/// Returns true if any file has changed.
+pub fn write_manifest_upgrades(
+    ws: &Workspace<'_>,
+    upgrades: &UpgradeMap,
+    dry_run: bool,
+) -> CargoResult<bool> {
+    if upgrades.is_empty() {
+        return Ok(false);
+    }
+
+    let mut any_file_has_changed = false;
+
+    let manifest_paths = std::iter::once(ws.root_manifest())
+        .chain(ws.members().map(|member| member.manifest_path()))
+        .collect::<Vec<_>>();
+
+    for manifest_path in manifest_paths {
+        trace!(
+            "updating TOML manifest at `{:?}` with upgraded dependencies",
+            manifest_path
+        );
+
+        let crate_root = manifest_path
+            .parent()
+            .expect("manifest path is absolute")
+            .to_owned();
+
+        let mut local_manifest = LocalManifest::try_new(&manifest_path)?;
+        let mut manifest_has_changed = false;
+
+        for dep_table in local_manifest.get_dependency_tables_mut() {
+            for (mut dep_key, dep_item) in dep_table.iter_mut() {
+                let dep_key_str = dep_key.get();
+                let dependency = crate::util::toml_mut::dependency::Dependency::from_toml(
+                    &manifest_path,
+                    dep_key_str,
+                    dep_item,
+                )?;
+
+                let Some(current) = dependency.version() else {
+                    trace!("skipping dependency without a version: {}", dependency.name);
+                    continue;
+                };
+
+                let (MaybeWorkspace::Other(source_id), Some(Source::Registry(source))) =
+                    (dependency.source_id(ws.gctx())?, dependency.source())
+                else {
+                    trace!("skipping non-registry dependency: {}", dependency.name);
+                    continue;
+                };
+
+                let Some(latest) = upgrades.get(&(dependency.name.to_owned(), source_id)) else {
+                    trace!(
+                        "skipping dependency without an upgrade: {}",
+                        dependency.name
+                    );
+                    continue;
+                };
+
+                let Some(new_req_string) = upgrade_requirement(current, latest)? else {
+                    trace!(
+                        "skipping dependency `{}` because the version requirement didn't change",
+                        dependency.name
+                    );
+                    continue;
+                };
+
+                let mut dep = dependency.clone();
+                let mut source = source.clone();
+                source.version = new_req_string;
+                dep.source = Some(Source::Registry(source));
+
+                trace!("upgrading dependency {}", dependency.name);
+                dep.update_toml(&crate_root, &mut dep_key, dep_item);
+                manifest_has_changed = true;
+                any_file_has_changed = true;
+            }
+        }
+
+        if manifest_has_changed && !dry_run {
+            debug!("writing upgraded manifest to {}", manifest_path.display());
+            local_manifest.write()?;
+        }
+    }
+
+    Ok(any_file_has_changed)
 }
 
 fn print_lockfile_generation(
