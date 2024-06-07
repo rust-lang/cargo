@@ -908,6 +908,7 @@ impl Execs {
         }
     }
 
+    #[track_caller]
     fn verify_checks_output(&self, stdout: &[u8], stderr: &[u8]) {
         if self.expect_exit_code.unwrap_or(0) != 0
             && self.expect_stdout.is_none()
@@ -934,6 +935,7 @@ impl Execs {
         }
     }
 
+    #[track_caller]
     fn match_process(&self, process: &ProcessBuilder) -> Result<RawOutput> {
         println!("running {}", process);
         let res = if self.stream_output {
@@ -984,6 +986,7 @@ impl Execs {
         }
     }
 
+    #[track_caller]
     fn match_output(&self, code: Option<i32>, stdout: &[u8], stderr: &[u8]) -> Result<()> {
         self.verify_checks_output(stdout, stderr);
         let stdout = std::str::from_utf8(stdout).expect("stdout is not utf8");
