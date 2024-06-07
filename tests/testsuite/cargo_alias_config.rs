@@ -1,5 +1,7 @@
 //! Tests for `[alias]` config command aliases.
 
+#![allow(deprecated)]
+
 use std::env;
 
 use cargo_test_support::tools::echo_subcommand;

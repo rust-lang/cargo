@@ -1,5 +1,7 @@
 //! Tests for --message-format flag.
 
+#![allow(deprecated)]
+
 use cargo_test_support::{basic_lib_manifest, basic_manifest, project};
 
 #[cargo_test]

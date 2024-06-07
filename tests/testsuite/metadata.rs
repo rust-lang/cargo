@@ -1,5 +1,7 @@
 //! Tests for the `cargo metadata` command.
 
+#![allow(deprecated)]
+
 use cargo_test_support::install::cargo_home;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;

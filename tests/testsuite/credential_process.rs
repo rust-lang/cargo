@@ -1,5 +1,7 @@
 //! Tests for credential-process.
 
+#![allow(deprecated)]
+
 use cargo_test_support::registry::{Package, TestRegistry};
 use cargo_test_support::{basic_manifest, cargo_process, paths, project, registry, Project};
 

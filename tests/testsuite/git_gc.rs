@@ -1,5 +1,7 @@
 //! Tests for git garbage collection.
 
+#![allow(deprecated)]
+
 use std::env;
 use std::ffi::OsStr;
 use std::path::PathBuf;

@@ -1,5 +1,7 @@
 //! Tests for normal registry dependencies.
 
+#![allow(deprecated)]
+
 use cargo::core::SourceId;
 use cargo_test_support::cargo_process;
 use cargo_test_support::paths::{self, CargoPathExt};

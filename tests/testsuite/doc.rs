@@ -1,5 +1,7 @@
 //! Tests for the `cargo doc` command.
 
+#![allow(deprecated)]
+
 use cargo::core::compiler::RustDocFingerprint;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;

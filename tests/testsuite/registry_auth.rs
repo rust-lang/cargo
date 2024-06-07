@@ -1,5 +1,7 @@
 //! Tests for registry authentication.
 
+#![allow(deprecated)]
+
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::registry::{Package, RegistryBuilder, Token};
 use cargo_test_support::str;

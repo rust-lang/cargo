@@ -1,5 +1,7 @@
 //! Tests for whether or not warnings are displayed for build scripts.
 
+#![allow(deprecated)]
+
 use cargo_test_support::registry::Package;
 use cargo_test_support::{project, Project};
 

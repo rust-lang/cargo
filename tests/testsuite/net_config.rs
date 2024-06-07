@@ -1,5 +1,7 @@
 //! Tests for network configuration.
 
+#![allow(deprecated)]
+
 use cargo_test_support::project;
 
 #[cargo_test]

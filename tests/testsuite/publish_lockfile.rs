@@ -1,5 +1,7 @@
 //! Tests for including `Cargo.lock` when publishing/packaging.
 
+#![allow(deprecated)]
+
 use std::fs::File;
 
 use cargo_test_support::registry::Package;

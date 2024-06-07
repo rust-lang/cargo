@@ -1,5 +1,7 @@
 //! Tests for build.rs rerun-if-env-changed and rustc-env
 
+#![allow(deprecated)]
+
 use cargo_test_support::basic_manifest;
 use cargo_test_support::project;
 use cargo_test_support::sleep_ms;

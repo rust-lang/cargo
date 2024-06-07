@@ -1,5 +1,7 @@
 //! Tests for `CacheLock`.
 
+#![allow(deprecated)]
+
 use crate::config::GlobalContextBuilder;
 use cargo::util::cache_lock::{CacheLockMode, CacheLocker};
 use cargo_test_support::paths::{self, CargoPathExt};

@@ -1,5 +1,7 @@
 //! Tests for workspaces.
 
+#![allow(deprecated)]
+
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project, sleep_ms};
 use std::env;

@@ -1,5 +1,7 @@
 //! Tests for alternative registries.
 
+#![allow(deprecated)]
+
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::publish::validate_alt_upload;
 use cargo_test_support::registry::{self, Package, RegistryBuilder};

@@ -1,5 +1,7 @@
 //! Tests for the `cargo rustdoc` command.
 
+#![allow(deprecated)]
+
 use cargo_test_support::{basic_manifest, cross_compile, project};
 
 #[cargo_test]

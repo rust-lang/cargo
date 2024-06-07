@@ -1,5 +1,7 @@
 //! Tests for the `cargo install` command.
 
+#![allow(deprecated)]
+
 use std::fs::{self, OpenOptions};
 use std::io::prelude::*;
 use std::path::Path;

@@ -1,5 +1,7 @@
 //! Tests for named profiles.
 
+#![allow(deprecated)]
+
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::{basic_lib_manifest, project};
 

@@ -5,6 +5,8 @@
 //!
 //! NOTE: The container tests almost certainly won't work on Windows.
 
+#![allow(deprecated)]
+
 use cargo_test_support::containers::{Container, ContainerHandle, MkFile};
 use cargo_test_support::git::cargo_uses_gitoxide;
 use cargo_test_support::{paths, process, project, Project};

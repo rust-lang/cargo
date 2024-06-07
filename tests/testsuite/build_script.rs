@@ -1,5 +1,7 @@
 //! Tests for build.rs scripts.
 
+#![allow(deprecated)]
+
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::install::cargo_home;
 use cargo_test_support::paths::CargoPathExt;

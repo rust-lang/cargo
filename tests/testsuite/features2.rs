@@ -1,5 +1,7 @@
 //! Tests for the new feature resolver.
 
+#![allow(deprecated)]
+
 use cargo_test_support::cross_compile::{self, alternate};
 use cargo_test_support::install::cargo_home;
 use cargo_test_support::paths::CargoPathExt;

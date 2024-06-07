@@ -1,5 +1,7 @@
 //! Tests for cfg() expressions.
 
+#![allow(deprecated)]
+
 use cargo_test_support::registry::Package;
 use cargo_test_support::rustc_host;
 use cargo_test_support::{basic_manifest, project};

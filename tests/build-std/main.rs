@@ -19,6 +19,7 @@
 //! Otherwise the tests are skipped.
 
 #![allow(clippy::disallowed_methods)]
+#![allow(deprecated)]
 
 use cargo_test_support::*;
 use std::env;

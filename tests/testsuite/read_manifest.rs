@@ -1,5 +1,7 @@
 //! Tests for the `cargo read-manifest` command.
 
+#![allow(deprecated)]
+
 use cargo_test_support::{basic_bin_manifest, main_file, project};
 
 fn manifest_output(readme_value: &str) -> String {

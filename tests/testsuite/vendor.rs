@@ -4,6 +4,8 @@
 //! "fake" crates.io is used. Otherwise `vendor` would download the crates.io
 //! index from the network.
 
+#![allow(deprecated)]
+
 use std::fs;
 
 use cargo_test_support::compare::assert_e2e;

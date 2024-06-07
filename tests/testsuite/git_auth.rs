@@ -1,5 +1,7 @@
 //! Tests for git authentication.
 
+#![allow(deprecated)]
+
 use std::collections::HashSet;
 use std::io::prelude::*;
 use std::io::BufReader;

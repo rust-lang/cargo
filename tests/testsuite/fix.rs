@@ -1,5 +1,7 @@
 //! Tests for the `cargo fix` command.
 
+#![allow(deprecated)]
+
 use cargo::core::Edition;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git::{self, init};

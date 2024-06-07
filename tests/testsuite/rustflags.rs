@@ -1,5 +1,7 @@
 //! Tests for setting custom rustc flags.
 
+#![allow(deprecated)]
+
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, paths, project, project_in_home, rustc_host};
 use std::fs;

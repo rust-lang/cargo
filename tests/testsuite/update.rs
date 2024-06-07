@@ -1,5 +1,7 @@
 //! Tests for the `cargo update` command.
 
+#![allow(deprecated)]
+
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::registry::{self};
 use cargo_test_support::registry::{Dependency, Package};

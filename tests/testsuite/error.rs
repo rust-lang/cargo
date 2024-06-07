@@ -1,5 +1,7 @@
 //! General error tests that don't belong anywhere else.
 
+#![allow(deprecated)]
+
 use cargo_test_support::cargo_process;
 
 #[cargo_test]

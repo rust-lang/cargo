@@ -14,6 +14,8 @@
 //! The [`expect_fix_runs_rustc_n_times`] function handles setting everything
 //! up, and verifying the results.
 
+#![allow(deprecated)]
+
 use cargo_test_support::{basic_manifest, paths, project, tools, Execs};
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};

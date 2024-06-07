@@ -1,5 +1,7 @@
 //! Tests for setting custom rustdoc flags.
 
+#![allow(deprecated)]
+
 use cargo_test_support::project;
 use cargo_test_support::rustc_host;
 use cargo_test_support::rustc_host_env;

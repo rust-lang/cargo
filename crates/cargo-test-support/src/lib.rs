@@ -559,6 +559,7 @@ impl Execs {
 
     /// Verifies that stdout is equal to the given lines.
     /// See [`compare`] for supported patterns.
+    #[deprecated(note = "replaced with `Execs::with_stdout_data(expected)`")]
     pub fn with_stdout<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stdout = Some(expected.to_string());
         self
@@ -566,6 +567,7 @@ impl Execs {
 
     /// Verifies that stderr is equal to the given lines.
     /// See [`compare`] for supported patterns.
+    #[deprecated(note = "replaced with `Execs::with_stderr_data(expected)`")]
     pub fn with_stderr<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr = Some(expected.to_string());
         self
@@ -613,6 +615,7 @@ impl Execs {
     /// its output.
     ///
     /// See [`compare`] for supported patterns.
+    #[deprecated(note = "replaced with `Execs::with_stdout_data(expected)`")]
     pub fn with_stdout_contains<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stdout_contains.push(expected.to_string());
         self
@@ -622,6 +625,7 @@ impl Execs {
     /// its output.
     ///
     /// See [`compare`] for supported patterns.
+    #[deprecated(note = "replaced with `Execs::with_stderr_data(expected)`")]
     pub fn with_stderr_contains<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr_contains.push(expected.to_string());
         self
@@ -631,6 +635,7 @@ impl Execs {
     /// its output, and should be repeated `number` times.
     ///
     /// See [`compare`] for supported patterns.
+    #[deprecated(note = "replaced with `Execs::with_stdout_data(expected)`")]
     pub fn with_stdout_contains_n<S: ToString>(&mut self, expected: S, number: usize) -> &mut Self {
         self.expect_stdout_contains_n
             .push((expected.to_string(), number));
@@ -642,6 +647,7 @@ impl Execs {
     /// See [`compare`] for supported patterns.
     ///
     /// See note on [`Self::with_stderr_does_not_contain`].
+    #[deprecated]
     pub fn with_stdout_does_not_contain<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stdout_not_contains.push(expected.to_string());
         self
@@ -656,6 +662,7 @@ impl Execs {
     /// your test will pass without verifying the correct behavior. If
     /// possible, write the test first so that it fails, and then implement
     /// your fix/feature to make it pass.
+    #[deprecated]
     pub fn with_stderr_does_not_contain<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr_not_contains.push(expected.to_string());
         self
@@ -665,6 +672,7 @@ impl Execs {
     /// ignoring the order of the lines.
     ///
     /// See [`Execs::with_stderr_unordered`] for more details.
+    #[deprecated(note = "replaced with `Execs::with_stdout_data(expected.unordered())`")]
     pub fn with_stdout_unordered<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stdout_unordered.push(expected.to_string());
         self
@@ -691,6 +699,7 @@ impl Execs {
     ///
     /// This will randomly fail if the other crate name is `bar`, and the
     /// order changes.
+    #[deprecated(note = "replaced with `Execs::with_stderr_data(expected.unordered())`")]
     pub fn with_stderr_unordered<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr_unordered.push(expected.to_string());
         self
@@ -718,6 +727,7 @@ impl Execs {
     ///
     /// Be careful writing the `without` fragments, see note in
     /// `with_stderr_does_not_contain`.
+    #[deprecated]
     pub fn with_stderr_line_without<S: ToString>(
         &mut self,
         with: &[S],
@@ -750,6 +760,7 @@ impl Execs {
     /// - The order of arrays is ignored.
     /// - Strings support patterns described in [`compare`].
     /// - Use `"{...}"` to match any object.
+    #[deprecated(note = "replaced with `Execs::with_stdout_data(expected.json_lines())`")]
     pub fn with_json(&mut self, expected: &str) -> &mut Self {
         self.expect_json = Some(expected.to_string());
         self
@@ -764,6 +775,7 @@ impl Execs {
     /// what you are doing.
     ///
     /// See `with_json` for more detail.
+    #[deprecated]
     pub fn with_json_contains_unordered(&mut self, expected: &str) -> &mut Self {
         match &mut self.expect_json_contains_unordered {
             None => self.expect_json_contains_unordered = Some(expected.to_string()),

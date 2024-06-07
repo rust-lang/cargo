@@ -1,5 +1,7 @@
 //! Tests for weak-dep-features.
 
+#![allow(deprecated)]
+
 use super::features2::switch_to_resolver_2;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::{Dependency, Package, RegistryBuilder};
