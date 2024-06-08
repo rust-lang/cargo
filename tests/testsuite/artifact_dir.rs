@@ -1,8 +1,8 @@
 //! Tests for --artifact-dir flag.
 
-#![allow(deprecated)]
-
+use cargo_test_support::prelude::*;
 use cargo_test_support::sleep_ms;
+use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, project};
 use std::env;
 use std::fs;
@@ -190,7 +190,14 @@ fn artifact_dir_is_a_file() {
     p.cargo("build -Z unstable-options --artifact-dir out")
         .masquerade_as_nightly_cargo(&["artifact-dir"])
         .with_status(101)
-        .with_stderr_contains("[ERROR] failed to create directory [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] failed to create directory `[ROOT]/foo/out`
+
+Caused by:
+...
+
+"#]])
         .run();
 }
 
@@ -207,7 +214,10 @@ fn replaces_artifacts() {
         &p.root()
             .join(&format!("out/foo{}", env::consts::EXE_SUFFIX)),
     )
-    .with_stdout("foo")
+    .with_stdout_data(str![[r#"
+foo
+
+"#]])
     .run();
 
     sleep_ms(1000);
@@ -220,7 +230,10 @@ fn replaces_artifacts() {
         &p.root()
             .join(&format!("out/foo{}", env::consts::EXE_SUFFIX)),
     )
-    .with_stdout("bar")
+    .with_stdout_data(str![[r#"
+bar
+
+"#]])
     .run();
 }
 
@@ -245,8 +258,14 @@ fn avoid_build_scripts() {
     p.cargo("build -Z unstable-options --artifact-dir out -vv")
         .masquerade_as_nightly_cargo(&["artifact-dir"])
         .enable_mac_dsym()
-        .with_stdout_contains("[a 0.0.1] hello-build-a")
-        .with_stdout_contains("[b 0.0.1] hello-build-b")
+        .with_stdout_data(
+            str![[r#"
+[a 0.0.1] hello-build-a
+[b 0.0.1] hello-build-b
+
+"#]]
+            .unordered(),
+        )
         .run();
     check_dir_contents(
         &p.root().join("out"),
@@ -291,17 +310,16 @@ fn unsupported_short_artifact_dir_flag() {
 
     p.cargo("build -Z unstable-options -O")
         .masquerade_as_nightly_cargo(&["artifact-dir"])
-        .with_stderr(
-            "\
-error: unexpected argument '-O' found
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected argument '-O' found
 
   tip: a similar argument exists: '--artifact-dir'
 
 Usage: cargo[EXE] build [OPTIONS]
 
 For more information, try '--help'.
-",
-        )
+
+"#]])
         .with_status(1)
         .run();
 }
@@ -315,7 +333,12 @@ fn deprecated_out_dir() {
     p.cargo("build -Z unstable-options --out-dir out")
         .masquerade_as_nightly_cargo(&["out-dir"])
         .enable_mac_dsym()
-        .with_stderr_contains("[WARNING] the --out-dir flag has been changed to --artifact-dir")
+        .with_stderr_data(str![[r#"
+[WARNING] the --out-dir flag has been changed to --artifact-dir
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     check_dir_contents(
         &p.root().join("out"),
@@ -342,9 +365,12 @@ fn cargo_build_deprecated_out_dir() {
     p.cargo("build -Z unstable-options")
         .masquerade_as_nightly_cargo(&["out-dir"])
         .enable_mac_dsym()
-        .with_stderr_contains(
-            "[WARNING] the out-dir config option has been changed to artifact-dir",
-        )
+        .with_stderr_data(str![[r#"
+[WARNING] the out-dir config option has been changed to artifact-dir
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     check_dir_contents(
         &p.root().join("out"),
