@@ -1223,7 +1223,6 @@ pub struct TomlTarget {
     pub doctest: Option<bool>,
     pub bench: Option<bool>,
     pub doc: Option<bool>,
-    pub plugin: Option<bool>,
     pub doc_scrape_examples: Option<bool>,
     pub proc_macro: Option<bool>,
     #[serde(rename = "proc_macro")]
