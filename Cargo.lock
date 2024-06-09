@@ -302,7 +302,7 @@ dependencies = [
  "ignore",
  "im-rc",
  "indexmap",
- "itertools 0.12.1",
+ "itertools 0.13.0",
  "jobserver",
  "lazycell",
  "libc",
@@ -425,7 +425,7 @@ dependencies = [
  "flate2",
  "git2",
  "glob",
- "itertools 0.12.1",
+ "itertools 0.13.0",
  "pasetors",
  "regex",
  "serde",
@@ -2070,9 +2070,9 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.12.1"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
+checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
 dependencies = [
  "either",
 ]
@@ -2171,7 +2171,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c2a198fb6b0eada2a8df47933734e6d35d350665a33a3593d7164fa52c75c19"
 dependencies = [
  "cfg-if",
- "windows-targets 0.48.5",
+ "windows-targets 0.52.4",
 ]
 
 [[package]]
@@ -4042,7 +4042,7 @@ dependencies = [
  "anyhow",
  "cargo",
  "clap",
- "itertools 0.12.1",
+ "itertools 0.13.0",
 ]
 
 [[package]]
