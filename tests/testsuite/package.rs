@@ -1943,8 +1943,7 @@ fn exclude_dot_files_and_directories_by_default() {
 
 #[cargo_test]
 fn empty_readme_path() {
-    // Warn but don't fail if `readme` is empty.
-    // Issue #11522.
+    // fail if `readme` is empty.
     let p = project()
         .file(
             "Cargo.toml",
@@ -1963,13 +1962,11 @@ fn empty_readme_path() {
         .build();
 
     p.cargo("package --no-verify")
+        .with_status(101)
         .with_stderr(
             "\
-[WARNING] readme `` does not appear to exist (relative to `[..]/foo`).
-Please update the readme setting in the manifest at `[..]/foo/Cargo.toml`
-This may become a hard error in the future.
-[PACKAGING] foo v1.0.0 ([..]/foo)
-[PACKAGED] [..] files, [..] ([..] compressed)
+[ERROR] readme `` does not appear to exist (relative to `[..]/foo`).
+Please update the readme setting in the manifest at `[..]/foo/Cargo.toml`.
 ",
         )
         .run();
@@ -1977,8 +1974,7 @@ This may become a hard error in the future.
 
 #[cargo_test]
 fn invalid_readme_path() {
-    // Warn but don't fail if `readme` path is invalid.
-    // Issue #11522.
+    // fail if `readme` path is invalid.
     let p = project()
         .file(
             "Cargo.toml",
@@ -1997,13 +1993,11 @@ fn invalid_readme_path() {
         .build();
 
     p.cargo("package --no-verify")
+        .with_status(101)
         .with_stderr(
             "\
-[WARNING] readme `DOES-NOT-EXIST` does not appear to exist (relative to `[..]/foo`).
-Please update the readme setting in the manifest at `[..]/foo/Cargo.toml`
-This may become a hard error in the future.
-[PACKAGING] foo v1.0.0 ([..]/foo)
-[PACKAGED] [..] files, [..] ([..] compressed)
+[ERROR] readme `DOES-NOT-EXIST` does not appear to exist (relative to `[..]/foo`).
+Please update the readme setting in the manifest at `[..]/foo/Cargo.toml`.
 ",
         )
         .run();
@@ -2011,8 +2005,7 @@ This may become a hard error in the future.
 
 #[cargo_test]
 fn readme_or_license_file_is_dir() {
-    // Test warning when `readme` or `license-file` is a directory, not a file.
-    // Issue #11522.
+    // Test error when `readme` or `license-file` is a directory, not a file.
     let p = project()
         .file(
             "Cargo.toml",
@@ -2031,16 +2024,13 @@ fn readme_or_license_file_is_dir() {
         .build();
 
     p.cargo("package --no-verify")
+        .with_status(101)
         .with_stderr(
             "\
-[WARNING] license-file `./src` does not appear to exist (relative to `[..]/foo`).
-Please update the license-file setting in the manifest at `[..]/foo/Cargo.toml`
-This may become a hard error in the future.
-[WARNING] readme `./src` does not appear to exist (relative to `[..]/foo`).
-Please update the readme setting in the manifest at `[..]/foo/Cargo.toml`
-This may become a hard error in the future.
-[PACKAGING] foo v1.0.0 ([..]/foo)
-[PACKAGED] [..] files, [..] ([..] compressed)
+[ERROR] license-file `./src` does not appear to exist (relative to `[..]/foo`).
+Please update the license-file setting in the manifest at `[..]/foo/Cargo.toml`.
+readme `./src` does not appear to exist (relative to `[..]/foo`).
+Please update the readme setting in the manifest at `[..]/foo/Cargo.toml`.
 ",
         )
         .run();
@@ -2048,8 +2038,7 @@ This may become a hard error in the future.
 
 #[cargo_test]
 fn empty_license_file_path() {
-    // Warn but don't fail if license-file is empty.
-    // Issue #11522.
+    // fail if license-file is empty.
     let p = project()
         .file(
             "Cargo.toml",
@@ -2067,15 +2056,13 @@ fn empty_license_file_path() {
         .build();
 
     p.cargo("package --no-verify")
+        .with_status(101)
         .with_stderr(
             "\
 [WARNING] manifest has no license or license-file.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[WARNING] license-file `` does not appear to exist (relative to `[..]/foo`).
-Please update the license-file setting in the manifest at `[..]/foo/Cargo.toml`
-This may become a hard error in the future.
-[PACKAGING] foo v1.0.0 ([..]/foo)
-[PACKAGED] [..] files, [..] ([..] compressed)
+[ERROR] license-file `` does not appear to exist (relative to `[..]/foo`).
+Please update the license-file setting in the manifest at `[..]/foo/Cargo.toml`.
 ",
         )
         .run();
@@ -2101,13 +2088,11 @@ fn invalid_license_file_path() {
         .build();
 
     p.cargo("package --no-verify")
+        .with_status(101)
         .with_stderr(
             "\
-[WARNING] license-file `does-not-exist` does not appear to exist (relative to `[..]/foo`).
-Please update the license-file setting in the manifest at `[..]/foo/Cargo.toml`
-This may become a hard error in the future.
-[PACKAGING] foo v1.0.0 ([..]/foo)
-[PACKAGED] [..] files, [..] ([..] compressed)
+[ERROR] license-file `does-not-exist` does not appear to exist (relative to `[..]/foo`).
+Please update the license-file setting in the manifest at `[..]/foo/Cargo.toml`.
 ",
         )
         .run();
