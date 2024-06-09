@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::fmt::{self, Debug, Formatter};
 use std::path::{Path, PathBuf};
 use std::task::Poll;
@@ -422,16 +421,7 @@ fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathBuf>>
     let root = pkg.root();
     let no_include_option = pkg.manifest().include().is_empty();
     let git_repo = if no_include_option {
-        if gctx
-            .get_env("__CARGO_GITOXIDE_DISABLE_LIST_FILES")
-            .ok()
-            .as_deref()
-            == Some("1")
-        {
-            discover_git_repo(root)?.map(Git2OrGixRepository::Git2)
-        } else {
-            discover_gix_repo(root)?.map(Git2OrGixRepository::Gix)
-        }
+        discover_gix_repo(root)?
     } else {
         None
     };
@@ -489,59 +479,10 @@ fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathBuf>>
     // Attempt Git-prepopulate only if no `include` (see rust-lang/cargo#4135).
     if no_include_option {
         if let Some(repo) = git_repo {
-            return match repo {
-                Git2OrGixRepository::Git2(repo) => list_files_git(pkg, &repo, &filter, gctx),
-                Git2OrGixRepository::Gix(repo) => list_files_gix(pkg, &repo, &filter, gctx),
-            };
+            return list_files_gix(pkg, &repo, &filter, gctx);
         }
     }
     list_files_walk(pkg, &filter, gctx)
-}
-
-enum Git2OrGixRepository {
-    Git2(git2::Repository),
-    Gix(gix::Repository),
-}
-
-/// Returns `Some(git2::Repository)` if found sibling `Cargo.toml` and `.git`
-/// directory; otherwise, caller should fall back on full file list.
-fn discover_git_repo(root: &Path) -> CargoResult<Option<git2::Repository>> {
-    let repo = match git2::Repository::discover(root) {
-        Ok(repo) => repo,
-        Err(e) => {
-            tracing::debug!(
-                "could not discover git repo at or above {}: {}",
-                root.display(),
-                e
-            );
-            return Ok(None);
-        }
-    };
-    let index = repo
-        .index()
-        .with_context(|| format!("failed to open git index at {}", repo.path().display()))?;
-    let repo_root = repo.workdir().ok_or_else(|| {
-        anyhow::format_err!(
-            "did not expect repo at {} to be bare",
-            repo.path().display()
-        )
-    })?;
-    let repo_relative_path = match paths::strip_prefix_canonical(root, repo_root) {
-        Ok(p) => p,
-        Err(e) => {
-            warn!(
-                "cannot determine if path `{:?}` is in git repo `{:?}`: {:?}",
-                root, repo_root, e
-            );
-            return Ok(None);
-        }
-    };
-    let manifest_path = repo_relative_path.join("Cargo.toml");
-    if index.get_path(&manifest_path, 0).is_some() {
-        return Ok(Some(repo));
-    }
-    // Package Cargo.toml is not in git, don't use git to guide our selection.
-    Ok(None)
 }
 
 /// Returns [`Some(gix::Repository)`](gix::Repository) if the discovered repository
@@ -587,164 +528,6 @@ fn discover_gix_repo(root: &Path) -> CargoResult<Option<gix::Repository>> {
     }
     // Package Cargo.toml is not in git, don't use git to guide our selection.
     Ok(None)
-}
-
-/// Lists files relevant to building this package inside this source by
-/// consulting both Git index (tracked) or status (untracked) under
-/// a given Git repository.
-///
-/// This looks into Git submodules as well.
-fn list_files_git(
-    pkg: &Package,
-    repo: &git2::Repository,
-    filter: &dyn Fn(&Path, bool) -> bool,
-    gctx: &GlobalContext,
-) -> CargoResult<Vec<PathBuf>> {
-    debug!("list_files_git {}", pkg.package_id());
-    let index = repo.index()?;
-    let root = repo
-        .workdir()
-        .ok_or_else(|| anyhow::format_err!("can't list files on a bare repository"))?;
-    let pkg_path = pkg.root();
-
-    let mut ret = Vec::<PathBuf>::new();
-
-    // We use information from the Git repository to guide us in traversing
-    // its tree. The primary purpose of this is to take advantage of the
-    // `.gitignore` and auto-ignore files that don't matter.
-    //
-    // Here we're also careful to look at both tracked and untracked files as
-    // the untracked files are often part of a build and may become relevant
-    // as part of a future commit.
-    let index_files = index.iter().map(|entry| {
-        use libgit2_sys::{GIT_FILEMODE_COMMIT, GIT_FILEMODE_LINK};
-        // ``is_dir`` is an optimization to avoid calling
-        // ``fs::metadata`` on every file.
-        let is_dir = if entry.mode == GIT_FILEMODE_LINK as u32 {
-            // Let the code below figure out if this symbolic link points
-            // to a directory or not.
-            None
-        } else {
-            Some(entry.mode == GIT_FILEMODE_COMMIT as u32)
-        };
-        (join(root, &entry.path), is_dir)
-    });
-    let mut opts = git2::StatusOptions::new();
-    opts.include_untracked(true);
-    if let Ok(suffix) = pkg_path.strip_prefix(root) {
-        opts.pathspec(suffix);
-    }
-    let statuses = repo.statuses(Some(&mut opts))?;
-    let mut skip_paths = HashSet::new();
-    let untracked: Vec<_> = statuses
-        .iter()
-        .filter_map(|entry| {
-            match entry.status() {
-                // Don't include Cargo.lock if it is untracked. Packaging will
-                // generate a new one as needed.
-                git2::Status::WT_NEW if entry.path() != Some("Cargo.lock") => {
-                    Some(Ok((join(root, entry.path_bytes()), None)))
-                }
-                git2::Status::WT_DELETED => {
-                    let path = match join(root, entry.path_bytes()) {
-                        Ok(p) => p,
-                        Err(e) => return Some(Err(e)),
-                    };
-                    skip_paths.insert(path);
-                    None
-                }
-                _ => None,
-            }
-        })
-        .collect::<CargoResult<_>>()?;
-
-    let mut subpackages_found = Vec::new();
-
-    for (file_path, is_dir) in index_files.chain(untracked) {
-        let file_path = file_path?;
-        if skip_paths.contains(&file_path) {
-            continue;
-        }
-
-        // Filter out files blatantly outside this package. This is helped a
-        // bit above via the `pathspec` function call, but we need to filter
-        // the entries in the index as well.
-        if !file_path.starts_with(pkg_path) {
-            continue;
-        }
-
-        match file_path.file_name().and_then(|s| s.to_str()) {
-            // The `target` directory is never included.
-            Some("target") => {
-                // Only filter out target if its in the package root.
-                if file_path.parent().unwrap() == pkg_path {
-                    continue;
-                }
-            }
-
-            // Keep track of all sub-packages found and also strip out all
-            // matches we've found so far. Note, though, that if we find
-            // our own `Cargo.toml`, we keep going.
-            Some("Cargo.toml") => {
-                let path = file_path.parent().unwrap();
-                if path != pkg_path {
-                    debug!("subpackage found: {}", path.display());
-                    ret.retain(|p| !p.starts_with(path));
-                    subpackages_found.push(path.to_path_buf());
-                    continue;
-                }
-            }
-
-            _ => {}
-        }
-
-        // If this file is part of any other sub-package we've found so far,
-        // skip it.
-        if subpackages_found.iter().any(|p| file_path.starts_with(p)) {
-            continue;
-        }
-
-        // `is_dir` is None for symlinks. The `unwrap` checks if the
-        // symlink points to a directory.
-        let is_dir = is_dir.unwrap_or_else(|| file_path.is_dir());
-        if is_dir {
-            trace!("  found directory {}", file_path.display());
-            match git2::Repository::open(&file_path) {
-                Ok(repo) => {
-                    let files = list_files_git(pkg, &repo, filter, gctx)?;
-                    ret.extend(files.into_iter());
-                }
-                Err(..) => {
-                    walk(&file_path, &mut ret, false, filter, gctx)?;
-                }
-            }
-        } else if filter(&file_path, is_dir) {
-            assert!(!is_dir);
-            // We found a file!
-            trace!("  found {}", file_path.display());
-            ret.push(file_path);
-        }
-    }
-    return Ok(ret);
-
-    #[cfg(unix)]
-    fn join(path: &Path, data: &[u8]) -> CargoResult<PathBuf> {
-        use std::ffi::OsStr;
-        use std::os::unix::prelude::*;
-        Ok(path.join(<OsStr as OsStrExt>::from_bytes(data)))
-    }
-    #[cfg(windows)]
-    fn join(path: &Path, data: &[u8]) -> CargoResult<PathBuf> {
-        use std::str;
-        match str::from_utf8(data) {
-            Ok(s) => Ok(path.join(s)),
-            Err(e) => Err(anyhow::format_err!(
-                "cannot process path in git with a non utf8 filename: {}\n{:?}",
-                e,
-                data
-            )),
-        }
-    }
 }
 
 /// Lists files relevant to building this package inside this source by
@@ -886,7 +669,7 @@ fn list_files_gix(
 /// Lists files relevant to building this package inside this source by
 /// walking the filesystem from the package root path.
 ///
-/// This is a fallback for [`list_files_git`] when the package
+/// This is a fallback for [`list_files_gix`] when the package
 /// is not tracked under a Git repository.
 fn list_files_walk(
     pkg: &Package,
