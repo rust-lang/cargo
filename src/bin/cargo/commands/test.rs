@@ -74,7 +74,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         args.compile_options(gctx, CompileMode::Test, Some(&ws), ProfileChecking::Custom)?;
 
     compile_opts.build_config.requested_profile =
-        args.get_profile_name(gctx, "test", ProfileChecking::Custom)?;
+        args.get_profile_name("test", ProfileChecking::Custom)?;
 
     // `TESTNAME` is actually an argument of the test binary, but it's
     // important, so we explicitly mention it and reconfigure.

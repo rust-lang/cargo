@@ -85,10 +85,13 @@ pub fn cli() -> Command {
         )
         .arg_features()
         .arg_parallel()
-        .arg(flag(
-            "debug",
-            "Build in debug mode (with the 'dev' profile) instead of release mode",
-        ))
+        .arg(
+            flag(
+                "debug",
+                "Build in debug mode (with the 'dev' profile) instead of release mode",
+            )
+            .conflicts_with("profile"),
+        )
         .arg_redundant_default_mode("release", "install", "debug")
         .arg_profile("Install artifacts with the specified profile")
         .arg_target_triple("Build for the target triple")
@@ -196,7 +199,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     )?;
 
     compile_opts.build_config.requested_profile =
-        args.get_profile_name(gctx, "release", ProfileChecking::Custom)?;
+        args.get_profile_name("release", ProfileChecking::Custom)?;
 
     if args.flag("list") {
         ops::install_list(root, gctx)?;

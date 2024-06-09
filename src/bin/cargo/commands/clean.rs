@@ -146,7 +146,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         gctx,
         spec: values(args, "package"),
         targets: args.targets()?,
-        requested_profile: args.get_profile_name(gctx, "dev", ProfileChecking::Custom)?,
+        requested_profile: args.get_profile_name("dev", ProfileChecking::Custom)?,
         profile_specified: args.contains_id("profile") || args.flag("release"),
         doc: args.flag("doc"),
         dry_run: args.dry_run(),
