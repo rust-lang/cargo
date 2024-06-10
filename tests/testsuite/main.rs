@@ -152,6 +152,7 @@ mod publish_lockfile;
 mod read_manifest;
 mod registry;
 mod registry_auth;
+mod registry_overlay;
 mod rename_deps;
 mod replace;
 mod required_features;
