@@ -2652,3 +2652,47 @@ fn dep_with_optional_host_deps_activated() {
         )
         .run();
 }
+
+#[cargo_test]
+fn dont_unify_proc_macro_example_from_dependency() {
+    // See https://github.com/rust-lang/cargo/issues/13726
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2021"
+
+                [dependencies]
+                pm_helper = { path = "pm_helper" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "pm_helper/Cargo.toml",
+            r#"
+                [package]
+                name = "pm_helper"
+
+                [[example]]
+                name = "pm"
+                proc-macro = true
+                crate-type = ["proc-macro"]
+            "#,
+        )
+        .file("pm_helper/src/lib.rs", "")
+        .file("pm_helper/examples/pm.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr(
+            "\
+[LOCKING] 2 packages to latest compatible versions
+[CHECKING] pm_helper v0.0.0 ([CWD]/pm_helper)
+[CHECKING] foo v0.0.0 ([CWD])
+[FINISHED] `dev` [..]
+",
+        )
+        .run();
+}
