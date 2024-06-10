@@ -116,7 +116,7 @@ version. This may also occur with an optional dependency that is not enabled.";
 /// This is a simple interface used by commands like `clean`, `fetch`, and
 /// `package`, which don't specify any options or features.
 pub fn resolve_ws<'a>(ws: &Workspace<'a>, dry_run: bool) -> CargoResult<(PackageSet<'a>, Resolve)> {
-    let mut registry = PackageRegistry::new(ws.gctx())?;
+    let mut registry = ws.package_registry()?;
     let resolve = resolve_with_registry(ws, &mut registry, dry_run)?;
     let packages = get_resolved_packages(&resolve, registry)?;
     Ok((packages, resolve))
@@ -142,7 +142,7 @@ pub fn resolve_ws_with_opts<'gctx>(
     force_all_targets: ForceAllTargets,
     dry_run: bool,
 ) -> CargoResult<WorkspaceResolve<'gctx>> {
-    let mut registry = PackageRegistry::new(ws.gctx())?;
+    let mut registry = ws.package_registry()?;
     let (resolve, resolved_with_overrides) = if ws.ignore_lock() {
         let add_patches = true;
         let resolve = None;
