@@ -178,6 +178,16 @@ fn add_common_redactions(subs: &mut snapbox::Redactions) {
     if let Some(alt_target) = try_alternate() {
         subs.insert("[ALT_TARGET]", alt_target).unwrap();
     }
+    subs.insert(
+        "[AVG_ELAPSED]",
+        regex!("(?<redacted>[0-9]+(\\.[0-9]+)?) ns/iter"),
+    )
+    .unwrap();
+    subs.insert(
+        "[JITTER]",
+        regex!("ns/iter \\(\\+/- (?<redacted>[0-9]+(\\.[0-9]+)?)\\)"),
+    )
+    .unwrap();
 }
 
 static MIN_LITERAL_REDACTIONS: &[(&str, &str)] = &[
