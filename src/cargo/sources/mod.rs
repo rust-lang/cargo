@@ -39,6 +39,7 @@ pub use self::replaced::ReplacedSource;
 pub mod config;
 pub mod directory;
 pub mod git;
+pub mod overlay;
 pub mod path;
 pub mod registry;
 pub mod replaced;

@@ -5,6 +5,7 @@
 //! sources to one another via the `replace-with` key in `.cargo/config`.
 
 use crate::core::{GitReference, PackageId, SourceId};
+use crate::sources::overlay::DependencyConfusionThreatOverlaySource;
 use crate::sources::source::Source;
 use crate::sources::{ReplacedSource, CRATES_IO_REGISTRY};
 use crate::util::context::{self, ConfigRelativePath, OptValue};
@@ -24,6 +25,8 @@ pub struct SourceConfigMap<'gctx> {
     cfgs: HashMap<String, SourceConfig>,
     /// Mapping of [`SourceId`] to the source name.
     id2name: HashMap<SourceId, String>,
+    /// Mapping of sources to local registries that will be overlaid on them.
+    overlays: HashMap<SourceId, SourceId>,
     gctx: &'gctx GlobalContext,
 }
 
@@ -81,6 +84,18 @@ impl<'gctx> SourceConfigMap<'gctx> {
                 base.add_config(key, value)?;
             }
         }
+
+        Ok(base)
+    }
+
+    /// Like [`SourceConfigMap::new`] but includes sources from source
+    /// replacement configurations.
+    pub fn new_with_overlays(
+        gctx: &'gctx GlobalContext,
+        overlays: impl IntoIterator<Item = (SourceId, SourceId)>,
+    ) -> CargoResult<SourceConfigMap<'gctx>> {
+        let mut base = SourceConfigMap::new(gctx)?;
+        base.overlays = overlays.into_iter().collect();
         Ok(base)
     }
 
@@ -90,6 +105,7 @@ impl<'gctx> SourceConfigMap<'gctx> {
         let mut base = SourceConfigMap {
             cfgs: HashMap::new(),
             id2name: HashMap::new(),
+            overlays: HashMap::new(),
             gctx,
         };
         base.add(
@@ -136,7 +152,7 @@ impl<'gctx> SourceConfigMap<'gctx> {
         debug!("loading: {}", id);
 
         let Some(mut name) = self.id2name.get(&id) else {
-            return id.load(self.gctx, yanked_whitelist);
+            return self.load_overlaid(id, yanked_whitelist);
         };
         let mut cfg_loc = "";
         let orig_name = name;
@@ -161,7 +177,7 @@ impl<'gctx> SourceConfigMap<'gctx> {
                     name = s;
                     cfg_loc = c;
                 }
-                None if id == cfg.id => return id.load(self.gctx, yanked_whitelist),
+                None if id == cfg.id => return self.load_overlaid(id, yanked_whitelist),
                 None => {
                     break cfg.id.with_precise_from(id);
                 }
@@ -178,8 +194,8 @@ impl<'gctx> SourceConfigMap<'gctx> {
             }
         };
 
-        let new_src = new_id.load(
-            self.gctx,
+        let new_src = self.load_overlaid(
+            new_id,
             &yanked_whitelist
                 .iter()
                 .map(|p| p.map_source(id, new_id))
@@ -213,6 +229,23 @@ restore the source replacement configuration to continue the build
         }
 
         Ok(Box::new(ReplacedSource::new(id, new_id, new_src)))
+    }
+
+    /// Gets the [`Source`] for a given [`SourceId`] without performing any source replacement.
+    fn load_overlaid(
+        &self,
+        id: SourceId,
+        yanked_whitelist: &HashSet<PackageId>,
+    ) -> CargoResult<Box<dyn Source + 'gctx>> {
+        let src = id.load(self.gctx, yanked_whitelist)?;
+        if let Some(overlay_id) = self.overlays.get(&id) {
+            let overlay = overlay_id.load(self.gctx(), yanked_whitelist)?;
+            Ok(Box::new(DependencyConfusionThreatOverlaySource::new(
+                overlay, src,
+            )))
+        } else {
+            Ok(src)
+        }
     }
 
     /// Adds a source config with an associated name.
