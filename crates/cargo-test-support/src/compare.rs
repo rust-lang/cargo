@@ -36,8 +36,9 @@
 //!   a problem.
 //! - Carriage returns are removed, which can help when running on Windows.
 
-use crate::diff;
+use crate::cross_compile::try_alternate;
 use crate::paths;
+use crate::{diff, rustc_host};
 use anyhow::{bail, Context, Result};
 use serde_json::Value;
 use std::fmt;
@@ -173,6 +174,10 @@ fn add_common_redactions(subs: &mut snapbox::Redactions) {
         regex!("home/\\.cargo/registry/src/-(?<redacted>[a-z0-9]+)"),
     )
     .unwrap();
+    subs.insert("[HOST_TARGET]", rustc_host()).unwrap();
+    if let Some(alt_target) = try_alternate() {
+        subs.insert("[ALT_TARGET]", alt_target).unwrap();
+    }
 }
 
 static MIN_LITERAL_REDACTIONS: &[(&str, &str)] = &[
