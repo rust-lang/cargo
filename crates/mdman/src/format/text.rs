@@ -137,7 +137,7 @@ impl<'e> TextRenderer<'e> {
                                 self.indent = (level as usize - 1) * 3 + 1;
                             }
                         }
-                        Tag::BlockQuote => {
+                        Tag::BlockQuote(_kind) => {
                             self.indent += 3;
                         }
                         Tag::CodeBlock(_kind) => {
@@ -347,6 +347,8 @@ impl<'e> TextRenderer<'e> {
                 }
                 Event::TaskListMarker(_b) => unimplemented!(),
                 Event::InlineHtml(..) => unimplemented!(),
+                Event::InlineMath(..) => unimplemented!(),
+                Event::DisplayMath(..) => unimplemented!(),
             }
         }
         Ok(())

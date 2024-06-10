@@ -140,7 +140,7 @@ impl<'e> ManRenderer<'e> {
                                 suppress_paragraph = true;
                             }
                         }
-                        Tag::BlockQuote => {
+                        Tag::BlockQuote(_kind) => {
                             self.flush();
                             // .RS = move left margin over 3
                             // .ll = shrink line length
@@ -356,6 +356,8 @@ impl<'e> ManRenderer<'e> {
                 }
                 Event::TaskListMarker(_b) => unimplemented!(),
                 Event::InlineHtml(..) => unimplemented!(),
+                Event::InlineMath(..) => unimplemented!(),
+                Event::DisplayMath(..) => unimplemented!(),
             }
         }
         Ok(())
