@@ -65,6 +65,8 @@
   [#13664](https://github.com/rust-lang/cargo/pull/13664)
 - Emit 1.77 build script syntax error only when msrv is incompatible.
   [#13808](https://github.com/rust-lang/cargo/pull/13808)
+- Don't warn on `lints.rust.unexpected_cfgs.check-cfg`.
+  [#13925](https://github.com/rust-lang/cargo/pull/13925)
 - cargo-init: don't assign `target.name` in Cargo.toml if the value can be inferred.
   [#13606](https://github.com/rust-lang/cargo/pull/13606)
 - cargo-package: normalize paths in `Cargo.toml`, including replacing `\` with `/`.
@@ -74,6 +76,9 @@
 
 ### Fixed
 
+- Ensure `--config net.git-fetch-with-cli=true` is respected.
+  [#13992](https://github.com/rust-lang/cargo/pull/13992)
+  [#13997](https://github.com/rust-lang/cargo/pull/13997)
 - Dont panic when resolving an empty alias.
   [#13613](https://github.com/rust-lang/cargo/pull/13613)
 - When using `--target`, the default debuginfo strip rule also applies.
@@ -118,6 +123,8 @@
   [#13797](https://github.com/rust-lang/cargo/pull/13797)
   [#13740](https://github.com/rust-lang/cargo/pull/13740)
   [#13801](https://github.com/rust-lang/cargo/pull/13801)
+  [#13852](https://github.com/rust-lang/cargo/pull/13852)
+  [#13853](https://github.com/rust-lang/cargo/pull/13853)
 - 🔥 `edition2024`: Add default Edition2024 to resolver v3 (MSRV-aware resolver).
   [#13785](https://github.com/rust-lang/cargo/pull/13785)
 - `edition2024`: Remove underscore field support in 2024.
@@ -190,6 +197,7 @@
   [#13692](https://github.com/rust-lang/cargo/pull/13692)
   [#13731](https://github.com/rust-lang/cargo/pull/13731)
   [#13760](https://github.com/rust-lang/cargo/pull/13760)
+  [#13950](https://github.com/rust-lang/cargo/pull/13950)
 
 ## Cargo 1.78 (2024-05-02)
 [7bb7b539...rust-1.78.0](https://github.com/rust-lang/cargo/compare/7bb7b539...rust-1.78.0)
