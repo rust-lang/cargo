@@ -1,5 +1,62 @@
 # Changelog
 
+## Cargo 1.81 (2024-09-05)
+[34a6a87d...HEAD](https://github.com/rust-lang/cargo/compare/34a6a87d...HEAD)
+
+### Added
+
+### Changed
+
+- ❗️ cargo-package: Disallow `package.license-file` and `package.readme` pointing
+  to non-existent files during packaging.
+- ❗️ Disallow passing `--release`/`--debug` flag along with the `--profile` flag.
+  [#13971](https://github.com/rust-lang/cargo/pull/13971)
+  [#13921](https://github.com/rust-lang/cargo/pull/13921)
+- ❗️ Remove `lib.plugin` key support in Cargo.toml.
+  Rust plugin support has been deprecated for four years and was removed in 1.75.0.
+  [#13902](https://github.com/rust-lang/cargo/pull/13902)
+  [#14038](https://github.com/rust-lang/cargo/pull/14038)
+
+### Fixed
+
+- Fix a proc-macro example from a dependency affecting feature resolution.
+  [#13892](https://github.com/rust-lang/cargo/pull/13892)
+
+### Nightly only
+
+- 🔥 `update-breaking`: Add `--breaking` to `cargo update`,
+  allowing upgrading dependencies to breaking versions.
+  [docs](https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#update-breaking)
+  [#13979](https://github.com/rust-lang/cargo/pull/13979)
+- `--artifact-dir`: Rename `--out-dir` to `--artifact-dir`.
+  The `--out-dir` flag is kept for compatibility
+  and may be removed when the feature gets stabilized.
+  [#13809](https://github.com/rust-lang/cargo/pull/13809)
+- `edition2024`: Ensure unused optional dependencies fire for shadowed dependencies.
+  [#14028](https://github.com/rust-lang/cargo/pull/14028)
+- `-Zcargo-lints`: Add `unknown_lints` to lints list.
+  [#14024](https://github.com/rust-lang/cargo/pull/14024)
+- `-Zcargo-lints`: Add tooling to document lints.
+  [#14025](https://github.com/rust-lang/cargo/pull/14025)
+- `-Zcargo-lints`: Keep lints updated and sorted.
+  [#14030](https://github.com/rust-lang/cargo/pull/14030)
+- cargo-update: Track the behavior of `--precise <prerelease>`.
+  [#14013](https://github.com/rust-lang/cargo/pull/14013)
+
+### Documentation
+
+- contrib: Suggest atomic commits with separate test commits.
+  [#14014](https://github.com/rust-lang/cargo/pull/14014)
+
+### Internal
+
+- Remove the temporary `__CARGO_GITOXIDE_DISABLE_LIST_FILES` environment variable.
+  [#14036](https://github.com/rust-lang/cargo/pull/14036)
+- Update dependencies.
+  [#13995](https://github.com/rust-lang/cargo/pull/13995)
+  [#13998](https://github.com/rust-lang/cargo/pull/13998)
+  [#14037](https://github.com/rust-lang/cargo/pull/14037)
+
 ## Cargo 1.80 (2024-07-25)
 [b60a1555...rust-1.80.0](https://github.com/rust-lang/cargo/compare/b60a1555...rust-1.80.0)
 
