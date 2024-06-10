@@ -1,5 +1,7 @@
 //! Tests for the `cargo rustc` command.
 
+#![allow(deprecated)]
+
 use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project};
 
 const CARGO_RUSTC_ERROR: &str =

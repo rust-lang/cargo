@@ -1,5 +1,7 @@
 //! Tests for `cargo install` where it upgrades a package if it is out-of-date.
 
+#![allow(deprecated)]
+
 use cargo::core::PackageId;
 use std::collections::BTreeSet;
 use std::env;

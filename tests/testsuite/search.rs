@@ -1,5 +1,7 @@
 //! Tests for the `cargo search` command.
 
+#![allow(deprecated)]
+
 use cargo::util::cache_lock::CacheLockMode;
 use cargo_test_support::cargo_process;
 use cargo_test_support::paths;

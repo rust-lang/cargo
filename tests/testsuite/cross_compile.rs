@@ -2,6 +2,8 @@
 //!
 //! See `cargo_test_support::cross_compile` for more detail.
 
+#![allow(deprecated)]
+
 use cargo_test_support::rustc_host;
 use cargo_test_support::{basic_bin_manifest, basic_manifest, cross_compile, project};
 

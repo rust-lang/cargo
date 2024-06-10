@@ -1,5 +1,7 @@
 //! Tests for `[source]` table (source replacement).
 
+#![allow(deprecated)]
+
 use std::fs;
 
 use cargo_test_support::registry::{Package, RegistryBuilder, TestRegistry};

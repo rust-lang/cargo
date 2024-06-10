@@ -1,5 +1,7 @@
 //! Tests for running multiple `cargo` processes at the same time.
 
+#![allow(deprecated)]
+
 use std::fs;
 use std::net::TcpListener;
 use std::process::Stdio;

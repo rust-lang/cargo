@@ -1,5 +1,7 @@
 //! Tests for invalid --manifest-path arguments.
 
+#![allow(deprecated)]
+
 use cargo_test_support::{basic_bin_manifest, main_file, project};
 
 #[track_caller]

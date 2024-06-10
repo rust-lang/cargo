@@ -1,6 +1,8 @@
 //! Tests for packages/target filter flags giving suggestions on which
 //! packages/targets are available.
 
+#![allow(deprecated)]
+
 use cargo_test_support::project;
 
 const EXAMPLE: u8 = 1 << 0;

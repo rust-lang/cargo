@@ -1,5 +1,7 @@
 //! Tests for targets with `rust-version`.
 
+#![allow(deprecated)]
+
 use cargo_test_support::{cargo_process, project, registry::Package};
 
 #[cargo_test]

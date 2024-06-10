@@ -1,5 +1,7 @@
 //! Tests for the --config CLI option.
 
+#![allow(deprecated)]
+
 use super::config::{
     assert_error, read_output, write_config_at, write_config_toml, GlobalContextBuilder,
 };

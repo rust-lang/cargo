@@ -1,5 +1,7 @@
 //! Tests for the `cargo logout` command.
 
+#![allow(deprecated)]
+
 use super::login::check_token;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::TestRegistry;

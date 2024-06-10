@@ -1,5 +1,7 @@
 //! Tests for directory sources.
 
+#![allow(deprecated)]
+
 use std::collections::HashMap;
 use std::fs;
 use std::str;

@@ -1,5 +1,7 @@
 //! Tests for selecting pre-release versions with `update --precise`.
 
+#![allow(deprecated)]
+
 use cargo_test_support::project;
 
 #[cargo_test]

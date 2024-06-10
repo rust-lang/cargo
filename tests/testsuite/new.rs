@@ -1,5 +1,7 @@
 //! Tests for the `cargo new` command.
 
+#![allow(deprecated)]
+
 use cargo_test_support::cargo_process;
 use cargo_test_support::paths;
 use std::env;

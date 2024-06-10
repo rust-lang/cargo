@@ -1,5 +1,7 @@
 //! Tests for profiles.
 
+#![allow(deprecated)]
+
 use cargo_test_support::registry::Package;
 use cargo_test_support::{project, rustc_host};
 use std::env;

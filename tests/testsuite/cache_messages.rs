@@ -1,5 +1,7 @@
 //! Tests for caching compiler diagnostics.
 
+#![allow(deprecated)]
+
 use super::messages::raw_rustc_output;
 use cargo_test_support::tools;
 use cargo_test_support::{basic_manifest, is_coarse_mtime, project, registry::Package, sleep_ms};

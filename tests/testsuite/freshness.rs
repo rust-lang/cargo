@@ -1,5 +1,7 @@
 //! Tests for fingerprinting (rebuild detection).
 
+#![allow(deprecated)]
+
 use filetime::FileTime;
 use std::fs::{self, OpenOptions};
 use std::io;

@@ -1,5 +1,7 @@
 //! Tests for config settings.
 
+#![allow(deprecated)]
+
 use cargo::core::features::{GitFeatures, GitoxideFeatures};
 use cargo::core::{PackageIdSpec, Shell};
 use cargo::util::context::{

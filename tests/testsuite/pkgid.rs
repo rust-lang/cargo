@@ -1,5 +1,7 @@
 //! Tests for the `cargo pkgid` command.
 
+#![allow(deprecated)]
+
 use cargo_test_support::basic_lib_manifest;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git;

@@ -1,5 +1,7 @@
 //! Tests for `[lints]`
 
+#![allow(deprecated)]
+
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
 

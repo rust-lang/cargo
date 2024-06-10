@@ -1,5 +1,7 @@
 //! Tests for --build-plan feature.
 
+#![allow(deprecated)]
+
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_bin_manifest, basic_manifest, main_file, project};
 

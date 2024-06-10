@@ -1,5 +1,7 @@
 //! Tests for target filter flags with glob patterns.
 
+#![allow(deprecated)]
+
 use cargo_test_support::{project, Project};
 
 #[cargo_test]

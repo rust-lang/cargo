@@ -92,6 +92,16 @@ pub fn assert_ui() -> snapbox::Assert {
         regex::Regex::new("Finished.*in (?<redacted>[0-9]+(\\.[0-9]+))s").unwrap(),
     )
     .unwrap();
+    subs.insert(
+        "[FILE_SIZE]",
+        regex::Regex::new("(?<redacted>[0-9]+(\\.[0-9]+)([a-zA-Z]i)?)B").unwrap(),
+    )
+    .unwrap();
+    subs.insert(
+        "[HASH]",
+        regex::Regex::new("home/\\.cargo/registry/src/-(?<redacted>[a-z0-9]+)").unwrap(),
+    )
+    .unwrap();
     snapbox::Assert::new()
         .action_env(snapbox::assert::DEFAULT_ACTION_ENV)
         .redact_with(subs)
@@ -144,6 +154,16 @@ pub fn assert_e2e() -> snapbox::Assert {
     subs.insert(
         "[ELAPSED]",
         regex::Regex::new("[FINISHED].*in (?<redacted>[0-9]+(\\.[0-9]+))s").unwrap(),
+    )
+    .unwrap();
+    subs.insert(
+        "[FILE_SIZE]",
+        regex::Regex::new("(?<redacted>[0-9]+(\\.[0-9]+)([a-zA-Z]i)?)B").unwrap(),
+    )
+    .unwrap();
+    subs.insert(
+        "[HASH]",
+        regex::Regex::new("home/\\.cargo/registry/src/-(?<redacted>[a-z0-9]+)").unwrap(),
     )
     .unwrap();
     snapbox::Assert::new()

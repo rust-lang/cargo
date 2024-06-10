@@ -1,5 +1,7 @@
 //! Tests for workspace member errors.
 
+#![allow(deprecated)]
+
 use cargo::core::resolver::ResolveError;
 use cargo::core::{compiler::CompileMode, Shell, Workspace};
 use cargo::ops::{self, CompileOptions};

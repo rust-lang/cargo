@@ -413,7 +413,7 @@ version = "0.2.1"
 
 [[package]]
 name = "cargo-test-support"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anstream",
  "anstyle",
@@ -3230,6 +3230,7 @@ dependencies = [
  "filetime",
  "normalize-line-endings",
  "regex",
+ "serde",
  "serde_json",
  "similar",
  "snapbox-macros",

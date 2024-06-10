@@ -2,6 +2,8 @@
 //!
 //! Note: Some tests are located in the resolver-tests package.
 
+#![allow(deprecated)]
+
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
 

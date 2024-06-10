@@ -1,5 +1,7 @@
 //! Tests for Cargo's behavior under Rustup.
 
+#![allow(deprecated)]
+
 use cargo_test_support::paths::{home, root, CargoPathExt};
 use cargo_test_support::{cargo_process, process, project};
 use std::env;

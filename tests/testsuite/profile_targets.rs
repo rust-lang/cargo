@@ -2,6 +2,8 @@
 //! example, the `test` profile applying to test targets, but not other
 //! targets, etc.
 
+#![allow(deprecated)]
+
 use cargo_test_support::{basic_manifest, project, Project};
 
 fn all_target_project() -> Project {

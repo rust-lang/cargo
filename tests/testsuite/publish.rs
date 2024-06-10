@@ -1,5 +1,7 @@
 //! Tests for the `cargo publish` command.
 
+#![allow(deprecated)]
+
 use cargo_test_support::git::{self, repo};
 use cargo_test_support::paths;
 use cargo_test_support::registry::{self, Package, RegistryBuilder, Response};

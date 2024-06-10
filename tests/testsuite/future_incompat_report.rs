@@ -7,6 +7,8 @@
 //! So we pick some random lint that will likely always be the same
 //! over time.
 
+#![allow(deprecated)]
+
 use super::config::write_config_toml;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, project, Project};

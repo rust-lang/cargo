@@ -1,5 +1,7 @@
 //! Tests for Cargo usage of rustc `--check-cfg`.
 
+#![allow(deprecated)]
+
 use cargo_test_support::{basic_manifest, project};
 
 macro_rules! x {

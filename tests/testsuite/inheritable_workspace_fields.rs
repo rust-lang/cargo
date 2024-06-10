@@ -1,4 +1,6 @@
 //! Tests for inheriting Cargo.toml fields with field.workspace = true
+#![allow(deprecated)]
+
 use cargo_test_support::registry::{Dependency, Package, RegistryBuilder};
 use cargo_test_support::{
     basic_lib_manifest, basic_manifest, git, path2url, paths, project, publish, registry,

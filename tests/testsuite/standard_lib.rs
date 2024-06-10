@@ -4,6 +4,8 @@
 //! rebuild the real one. There is a separate integration test `build-std`
 //! which builds the real thing, but that should be avoided if possible.
 
+#![allow(deprecated)]
+
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::ProjectBuilder;
 use cargo_test_support::{paths, project, rustc_host, Execs};

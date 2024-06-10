@@ -1,5 +1,7 @@
 //! Tests for the `cargo check` command.
 
+#![allow(deprecated)]
+
 use std::fmt::{self, Write};
 
 use crate::messages::raw_rustc_output;

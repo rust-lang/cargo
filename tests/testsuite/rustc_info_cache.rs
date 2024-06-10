@@ -1,5 +1,7 @@
 //! Tests for the cache file for the rustc version info.
 
+#![allow(deprecated)]
+
 use cargo_test_support::{basic_bin_manifest, paths::CargoPathExt};
 use cargo_test_support::{basic_manifest, project};
 use std::env;

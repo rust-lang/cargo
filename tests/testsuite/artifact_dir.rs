@@ -1,5 +1,7 @@
 //! Tests for --artifact-dir flag.
 
+#![allow(deprecated)]
+
 use cargo_test_support::sleep_ms;
 use cargo_test_support::{basic_manifest, project};
 use std::env;

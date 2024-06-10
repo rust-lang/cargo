@@ -2,6 +2,8 @@
 //! in the output, their arguments are quoted properly
 //! so that the command can be run in a terminal.
 
+#![allow(deprecated)]
+
 use cargo_test_support::project;
 
 #[cargo_test]

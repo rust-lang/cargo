@@ -1,5 +1,7 @@
 //! Tests for public/private dependencies.
 
+#![allow(deprecated)]
+
 use cargo_test_support::project;
 use cargo_test_support::registry::{Dependency, Package};
 

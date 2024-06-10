@@ -1,5 +1,7 @@
 //! Tests for the `cargo yank` command.
 
+#![allow(deprecated)]
+
 use std::fs;
 
 use cargo_test_support::paths::CargoPathExt;

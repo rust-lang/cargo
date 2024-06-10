@@ -3,6 +3,8 @@
 //! Ideally these should never happen, but I don't think we'll ever be able to
 //! prevent all collisions.
 
+#![allow(deprecated)]
+
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, cross_compile, project};
 use std::env;
