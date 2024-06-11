@@ -78,7 +78,7 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
         );
     }
 
-    let mut registry = PackageRegistry::new(options.gctx)?;
+    let mut registry = workspace.package_registry()?;
 
     let deps = {
         let _lock = options

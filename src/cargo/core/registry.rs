@@ -194,8 +194,10 @@ pub struct LockedPatchDependency {
 }
 
 impl<'gctx> PackageRegistry<'gctx> {
-    pub fn new(gctx: &'gctx GlobalContext) -> CargoResult<PackageRegistry<'gctx>> {
-        let source_config = SourceConfigMap::new(gctx)?;
+    pub fn new_with_source_config(
+        gctx: &'gctx GlobalContext,
+        source_config: SourceConfigMap<'gctx>,
+    ) -> CargoResult<PackageRegistry<'gctx>> {
         Ok(PackageRegistry {
             gctx,
             sources: SourceMap::new(),

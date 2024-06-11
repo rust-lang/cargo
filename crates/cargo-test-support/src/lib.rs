@@ -877,6 +877,17 @@ impl Execs {
         self
     }
 
+    pub fn overlay_registry(&mut self, url: &Url, path: &str) -> &mut Self {
+        if let Some(ref mut p) = self.process_builder {
+            let env_value = format!("{}={}", url, path);
+            p.env(
+                "__CARGO_TEST_DEPENDENCY_CONFUSION_VULNERABILITY_DO_NOT_USE_THIS",
+                env_value,
+            );
+        }
+        self
+    }
+
     pub fn enable_split_debuginfo_packed(&mut self) -> &mut Self {
         self.env("CARGO_PROFILE_DEV_SPLIT_DEBUGINFO", "packed")
             .env("CARGO_PROFILE_TEST_SPLIT_DEBUGINFO", "packed")

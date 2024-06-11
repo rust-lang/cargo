@@ -32,7 +32,7 @@ pub struct UpdateOptions<'a> {
 }
 
 pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
-    let mut registry = PackageRegistry::new(ws.gctx())?;
+    let mut registry = ws.package_registry()?;
     let previous_resolve = None;
     let mut resolve = ops::resolve_with_previous(
         &mut registry,
@@ -73,7 +73,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
                 // Precise option specified, so calculate a previous_resolve required
                 // by precise package update later.
                 Some(_) => {
-                    let mut registry = PackageRegistry::new(opts.gctx)?;
+                    let mut registry = ws.package_registry()?;
                     ops::resolve_with_previous(
                         &mut registry,
                         ws,
@@ -88,7 +88,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
             }
         }
     };
-    let mut registry = PackageRegistry::new(opts.gctx)?;
+    let mut registry = ws.package_registry()?;
     let mut to_avoid = HashSet::new();
 
     if opts.to_update.is_empty() {
@@ -226,7 +226,7 @@ pub fn upgrade_manifests(
     // that we're synchronized against other Cargos.
     let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
-    let mut registry = PackageRegistry::new(gctx)?;
+    let mut registry = ws.package_registry()?;
     registry.lock_patches();
 
     for member in ws.members_mut().sorted() {
