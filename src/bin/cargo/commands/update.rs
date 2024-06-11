@@ -38,7 +38,7 @@ pub fn cli() -> Command {
         .arg(
             flag(
                 "breaking",
-                "Upgrade [SPEC] to latest breaking versions, unless pinned (unstable)",
+                "Update [SPEC] to latest SemVer-breaking version (unstable)",
             )
             .short('b'),
         )

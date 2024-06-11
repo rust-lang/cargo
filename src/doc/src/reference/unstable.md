@@ -383,20 +383,25 @@ It would not be possible to upgrade to `0.2.0-pre.0` from `0.1.1` in the same wa
 
 * Tracking Issue: [#12425](https://github.com/rust-lang/cargo/issues/12425)
 
-This feature allows upgrading dependencies to breaking versions with
-`update --breaking`.
+Allow upgrading dependencies version requirements in `Cargo.toml` across SemVer
+incompatible versions using with the `--breaking` flag.
 
-This is essentially migrating `cargo upgrade` from `cargo-edit` into Cargo itself, 
-and involves making changes to the `Cargo.toml` manifests, not just the lock file.
+This only applies to dependencies when
+- The package is a dependency of a workspace member
+- The dependency is not renamed
+- A SemVer-incompatible version is available
+- The "SemVer operator" is used (`^` which is the default)
 
-When doing a breaking update, Cargo will keep all non-breaking dependencies
-unchanged. It will also not change any dependencies that use a different version
-operator than the default caret. Also, it will not upgrade any renamed package
-dependencies. Example:
+Users may further restrict which packages get upgraded by specifying them on
+the command line.
 
-```sh
-cargo +nightly update --breaking -Z unstable-options
+Example:
+```console
+$ cargo +nightly -Zunstable-options update --breaking
+$ cargo +nightly -Zunstable-options update --breaking clap
 ```
+
+*This is meant to fill a similar role as [cargo-upgrade](https://github.com/killercup/cargo-edit/)*
 
 ## build-std
 * Tracking Repository: <https://github.com/rust-lang/wg-cargo-std-aware>

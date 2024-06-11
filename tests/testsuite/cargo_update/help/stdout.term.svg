@@ -35,7 +35,7 @@
 </tspan>
     <tspan x="10px" y="154px"><tspan>      </tspan><tspan class="fg-cyan bold">--precise</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PRECISE&gt;</tspan><tspan>   Update [SPEC] to exactly PRECISE</tspan>
 </tspan>
-    <tspan x="10px" y="172px"><tspan>  </tspan><tspan class="fg-cyan bold">-b</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--breaking</tspan><tspan>            Upgrade [SPEC] to latest breaking versions, unless pinned (unstable)</tspan>
+    <tspan x="10px" y="172px"><tspan>  </tspan><tspan class="fg-cyan bold">-b</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--breaking</tspan><tspan>            Update [SPEC] to latest SemVer-breaking version (unstable)</tspan>
 </tspan>
     <tspan x="10px" y="190px"><tspan>  </tspan><tspan class="fg-cyan bold">-v</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--verbose</tspan><tspan class="fg-cyan">...</tspan><tspan>          Use verbose output (-vv very verbose/build.rs output)</tspan>
 </tspan>
