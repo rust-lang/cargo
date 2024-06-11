@@ -94,7 +94,7 @@
 ### Changed
 
 - ❗️ manifest: Disallow `[badges]` to inherit from `[workspace.package.badges]`.
-  This was considered a bug and should inherit from `[workspace.badges]`.
+  This was considered a bug.
   Keep in mind that `[badges]` is effectively deprecated.
   [#13788](https://github.com/rust-lang/cargo/pull/13788)
 - build-script: Suggest old syntax based on MSRV.
