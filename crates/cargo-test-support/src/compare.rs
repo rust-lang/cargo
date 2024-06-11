@@ -92,6 +92,12 @@ pub fn assert_ui() -> snapbox::Assert {
         regex::Regex::new("Finished.*in (?<redacted>[0-9]+(\\.[0-9]+))s").unwrap(),
     )
     .unwrap();
+    // output from libtest
+    subs.insert(
+        "[ELAPSED]",
+        regex::Regex::new("; finished in (?<redacted>[0-9]+(\\.[0-9]+))s").unwrap(),
+    )
+    .unwrap();
     subs.insert(
         "[FILE_SIZE]",
         regex::Regex::new("(?<redacted>[0-9]+(\\.[0-9]+)([a-zA-Z]i)?)B").unwrap(),
@@ -154,6 +160,12 @@ pub fn assert_e2e() -> snapbox::Assert {
     subs.insert(
         "[ELAPSED]",
         regex::Regex::new("[FINISHED].*in (?<redacted>[0-9]+(\\.[0-9]+))s").unwrap(),
+    )
+    .unwrap();
+    // output from libtest
+    subs.insert(
+        "[ELAPSED]",
+        regex::Regex::new("; finished in (?<redacted>[0-9]+(\\.[0-9]+))s").unwrap(),
     )
     .unwrap();
     subs.insert(
