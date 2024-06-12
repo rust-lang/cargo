@@ -225,9 +225,9 @@ There are several things to consider when triaging an issue:
     needs to discuss whether or not to proceed and what needs to be done to
     address the issue.
   * [S-needs-mentor] --- This is something the Cargo team wants to address,
-    but does not currently have the capacity to help with reviewing.
+    but does not currently have the capacity to help with reviewing. **(reserved for Cargo team)**
   * [S-accepted] --- This is something that clearly needs to be addressed, and
-    a Cargo team member has volunteered to help review.
+    a Cargo team member has volunteered to help review. **(reserved for Cargo team)**
 
 Anyone is welcome to help with the triaging process. You can help with
 reproducing issues, checking for duplicates, gathering more information from
