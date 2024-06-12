@@ -220,13 +220,13 @@ There are several things to consider when triaging an issue:
 * Assuming the issue looks valid, remove the [S-triage] label and move it onto
   a new status:
 
-  * [S-needs-rfc] --- This is a large feature request that will require a
-    public design process.
-  * [S-needs-design] --- The resolution of the issue or small feature request
-    will need more work to come up with the appropriate design.
   * [S-needs-team-input] --- The next steps are not clear, and the Cargo team
     needs to discuss whether or not to proceed and what needs to be done to
     address the issue.
+  * [S-needs-design] --- The resolution of the issue or small feature request
+    will need more work to come up with the appropriate design.
+  * [S-needs-rfc] --- This is a large feature request that will require a
+    public design process.
   * [S-needs-mentor] --- This is something the Cargo team wants to address,
     but does not currently have the capacity to help with reviewing. **(reserved for Cargo team)**
   * [S-accepted] --- This is something that clearly needs to be addressed, and
