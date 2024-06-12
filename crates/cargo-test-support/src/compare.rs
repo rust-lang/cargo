@@ -174,6 +174,8 @@ fn add_common_redactions(subs: &mut snapbox::Redactions) {
         regex!("home/\\.cargo/registry/src/-(?<redacted>[a-z0-9]+)"),
     )
     .unwrap();
+    subs.insert("[HASH]", regex!("/[a-z0-9\\-_]+-(?<redacted>[0-9a-f]{16})"))
+        .unwrap();
     subs.insert("[HOST_TARGET]", rustc_host()).unwrap();
     if let Some(alt_target) = try_alternate() {
         subs.insert("[ALT_TARGET]", alt_target).unwrap();
