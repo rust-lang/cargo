@@ -2261,7 +2261,11 @@ fn update_breaking_spec_version() {
     // Invalid spec
     p.cargo("update -Zunstable-options --breaking incompatible@foo")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr_data(str![[r#""#]])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] expected a version like "1.32"
+
+"#]])
         .run();
 
     // Spec version not matching our current dependencies
@@ -2279,20 +2283,35 @@ fn update_breaking_spec_version() {
     // Accepted spec
     p.cargo("update -Zunstable-options --breaking incompatible@1.0.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr_data(str![[r#""#]])
+        .with_stderr_data(str![[r#"
+[UPDATING] `[..]` index
+[UPGRADING] incompatible ^1.0 -> ^2.0
+[LOCKING] 1 package to latest compatible version
+[UPDATING] incompatible v1.0.0 -> v2.0.0
+
+"#]])
         .run();
 
     // Accepted spec, full format
     Package::new("incompatible", "3.0.0").publish();
     p.cargo("update -Zunstable-options --breaking https://github.com/rust-lang/crates.io-index#incompatible@2.0.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr_data(str![[r#""#]])
+        .with_stderr_data(str![[r#"
+[UPDATING] `[..]` index
+[UPGRADING] incompatible ^2.0 -> ^3.0
+[LOCKING] 1 package to latest compatible version
+[UPDATING] incompatible v2.0.0 -> v3.0.0
+
+"#]])
         .run();
 
     // Spec matches a dependency that will not be upgraded
     p.cargo("update -Zunstable-options --breaking compatible@1.0.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr_data(str![[r#""#]])
+        .with_stderr_data(str![[r#"
+[UPDATING] `[..]` index
+
+"#]])
         .run();
 
     // Non-existing versions
@@ -2352,14 +2371,22 @@ fn update_breaking_spec_version_transitive() {
     // Will upgrade the direct dependency
     p.cargo("update -Zunstable-options --breaking dep@1.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        // FIXME: Should upgrade a dependency here.
-        .with_stderr_data(str![[r#""#]])
+        .with_stderr_data(str![[r#"
+[UPDATING] `[..]` index
+[UPGRADING] dep ^1.0 -> ^2.0
+[LOCKING] 1 package to latest compatible version
+[ADDING] dep v2.0.0
+
+"#]])
         .run();
 
     // But not the transitive one, because bar is not a workspace member
     p.cargo("update -Zunstable-options --breaking dep@1.1")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr_data(str![[r#""#]])
+        .with_stderr_data(str![[r#"
+[UPDATING] `[..]` index
+
+"#]])
         .run();
 
     // A non-breaking update is different, as it will update transitive dependencies

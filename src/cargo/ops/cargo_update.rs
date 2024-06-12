@@ -222,6 +222,11 @@ pub fn upgrade_manifests(
     let mut upgrades = HashMap::new();
     let mut upgrade_messages = HashSet::new();
 
+    let to_update = to_update
+        .iter()
+        .map(|s| PackageIdSpec::parse(s))
+        .collect::<Result<Vec<_>, _>>()?;
+
     // Updates often require a lot of modifications to the registry, so ensure
     // that we're synchronized against other Cargos.
     let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
@@ -239,7 +244,7 @@ pub fn upgrade_manifests(
             .try_map_dependencies(|d| {
                 upgrade_dependency(
                     &gctx,
-                    to_update,
+                    &to_update,
                     &mut registry,
                     &mut upgrades,
                     &mut upgrade_messages,
@@ -253,7 +258,7 @@ pub fn upgrade_manifests(
 
 fn upgrade_dependency(
     gctx: &GlobalContext,
-    to_update: &Vec<String>,
+    to_update: &Vec<PackageIdSpec>,
     registry: &mut PackageRegistry<'_>,
     upgrades: &mut UpgradeMap,
     upgrade_messages: &mut HashSet<String>,
@@ -267,7 +272,18 @@ fn upgrade_dependency(
         return Ok(dependency);
     }
 
-    if !to_update.is_empty() && !to_update.contains(&name.to_string()) {
+    if !to_update.is_empty()
+        && !to_update.iter().any(|spec| {
+            spec.name() == name.as_str()
+                && dependency.source_id().is_registry()
+                && spec
+                    .url()
+                    .map_or(true, |url| url == dependency.source_id().url())
+                && spec
+                    .version()
+                    .map_or(true, |v| dependency.version_req().matches(&v))
+        })
+    {
         trace!("skipping dependency `{name}` not selected for upgrading");
         return Ok(dependency);
     }
