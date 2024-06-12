@@ -45,9 +45,6 @@ fn rerun_if_env_changes_config() {
         "#,
     );
 
-    p.cargo("check").with_stderr("[FINISHED] [..]").run();
-
-    p.cargo("clean").run();
     p.cargo("check")
         .with_status(101)
         .with_stderr_contains("[ERROR] failed to run custom build command for `foo v0.1.0 ([..])`")

@@ -21,6 +21,8 @@ use cargo_util::{paths, ProcessBuilder};
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
+use std::collections::BTreeMap;
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::str::{self, FromStr};
 
@@ -587,6 +589,10 @@ impl TargetInfo {
         self.support_split_debuginfo
             .iter()
             .any(|sup| sup.as_str() == split.as_str())
+    }
+
+    pub fn get_target_envs(&self) -> CargoResult<&BTreeMap<String, Option<OsString>>> {
+        return Ok(self.crate_type_process.get_envs());
     }
 }
 
