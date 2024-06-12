@@ -28,7 +28,7 @@ fn case() {
 
     snapbox::cmd::Command::cargo_ui()
         .arg("remove")
-        .args(["--build", "--target", "x86_64-unknown-linux-gnu", "semver"])
+        .args(["--build", "--target", "wasm32-unknown-unknown", "semver"])
         .current_dir(cwd)
         .assert()
         .success()

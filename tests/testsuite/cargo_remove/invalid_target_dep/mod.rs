@@ -28,7 +28,7 @@ fn case() {
 
     snapbox::cmd::Command::cargo_ui()
         .arg("remove")
-        .args(["--target", "x86_64-unknown-linux-gnu", "toml"])
+        .args(["--target", "wasm32-unknown-unknown", "toml"])
         .current_dir(cwd)
         .assert()
         .code(101)
