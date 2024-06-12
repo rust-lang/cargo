@@ -155,8 +155,9 @@ different steps, or in rare cases have multiple statuses.
 * **[S-needs-rfc]** --- Needs an [RFC] before this can make more progress.
 
   Anyone is welcome to help at this stage, but it should be clear that it is
-  not yet accepted. However, this should only be tagged for changes that are
-  somewhat likely to be accepted.
+  not yet accepted.
+  See [Before creating an RFC](https://github.com/rust-lang/rfcs?tab=readme-ov-file#before-creating-an-rfc)
+  for next steps.
 
 * **[S-needs-mentor]** --- Needs a Cargo team member to commit to helping and
   reviewing.
