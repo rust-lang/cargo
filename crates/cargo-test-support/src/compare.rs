@@ -194,6 +194,10 @@ static MIN_LITERAL_REDACTIONS: &[(&str, &str)] = &[
     ("[EXE]", std::env::consts::EXE_SUFFIX),
     ("[BROKEN_PIPE]", "Broken pipe (os error 32)"),
     ("[BROKEN_PIPE]", "The pipe is being closed. (os error 232)"),
+    // Unix message for exit status
+    ("[EXIT_STATUS]", "exit status"),
+    // Windows message for exit status
+    ("[EXIT_STATUS]", "exit code"),
 ];
 static E2E_LITERAL_REDACTIONS: &[(&str, &str)] = &[
     ("[RUNNING]", "     Running"),
