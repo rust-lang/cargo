@@ -45,6 +45,15 @@ use std::path::Path;
 use std::str;
 use url::Url;
 
+/// This makes it easier to write regex replacements that are guaranteed to only
+/// get compiled once
+macro_rules! regex {
+    ($re:literal $(,)?) => {{
+        static RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        RE.get_or_init(|| regex::Regex::new($re).unwrap())
+    }};
+}
+
 /// Assertion policy for UI tests
 ///
 /// This emphasizes showing as much content as possible at the cost of more brittleness
@@ -139,29 +148,29 @@ fn add_common_redactions(subs: &mut snapbox::Redactions) {
     // For e2e tests
     subs.insert(
         "[ELAPSED]",
-        regex::Regex::new("[FINISHED].*in (?<redacted>[0-9]+(\\.[0-9]+))s").unwrap(),
+        regex!("[FINISHED].*in (?<redacted>[0-9]+(\\.[0-9]+))s"),
     )
     .unwrap();
     // for UI tests
     subs.insert(
         "[ELAPSED]",
-        regex::Regex::new("Finished.*in (?<redacted>[0-9]+(\\.[0-9]+))s").unwrap(),
+        regex!("Finished.*in (?<redacted>[0-9]+(\\.[0-9]+))s"),
     )
     .unwrap();
     // output from libtest
     subs.insert(
         "[ELAPSED]",
-        regex::Regex::new("; finished in (?<redacted>[0-9]+(\\.[0-9]+))s").unwrap(),
+        regex!("; finished in (?<redacted>[0-9]+(\\.[0-9]+))s"),
     )
     .unwrap();
     subs.insert(
         "[FILE_SIZE]",
-        regex::Regex::new("(?<redacted>[0-9]+(\\.[0-9]+)([a-zA-Z]i)?)B").unwrap(),
+        regex!("(?<redacted>[0-9]+(\\.[0-9]+)([a-zA-Z]i)?)B"),
     )
     .unwrap();
     subs.insert(
         "[HASH]",
-        regex::Regex::new("home/\\.cargo/registry/src/-(?<redacted>[a-z0-9]+)").unwrap(),
+        regex!("home/\\.cargo/registry/src/-(?<redacted>[a-z0-9]+)"),
     )
     .unwrap();
 }
