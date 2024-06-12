@@ -197,10 +197,13 @@ issues have not yet been triaged.
 There are several things to consider when triaging an issue:
 
 * Is this a duplicate? Search the issue tracker (including closed issues) to
-  see if there is something similar or identical to what is reported. If it is
-  obviously a duplicate, write a comment that it is a duplicate of the other
-  issue, and close the issue. If it isn't obvious that it is a duplicate,
-  leave a comment asking the author if the other issue covers what they reported.
+  see if there is an issue with a similar or identical root cause to what is reported.
+  We generally focus issues around root causes so alternative solutions can be
+  discussed and evaluated together.
+  If it is obviously a duplicate, write a comment that it is a duplicate of the
+  other issue, and close the issue.
+  If it isn't obvious that it is a duplicate, leave a comment asking the author
+  if the other issue covers what they reported.
 
 * For a bug, check if the report contains enough information to reproduce it.
   If you can't reproduce it, solicit more information from the author to
