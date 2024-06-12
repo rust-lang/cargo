@@ -48,6 +48,36 @@ A compatible \fBpre\-release\fR version can also be specified even when the vers
 requirement in \fBCargo.toml\fR doesn\[cq]t contain any pre\-release identifier (nightly only).
 .RE
 .sp
+\fB\-\-breaking\fR \fIdirectory\fR
+.RS 4
+Update \fIspec\fR to latest SemVer\-breaking version.
+.sp
+Version requirements will be modified to allow this update.
+.sp
+This only applies to dependencies when
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'The package is a dependency of a workspace member
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'The dependency is not renamed
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'A SemVer\-incompatible version is available
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'The \[lq]SemVer operator\[rq] is used (\fB^\fR which is the default)
+.RE
+.sp
+This option is unstable and available only on the
+\fInightly channel\fR <https://doc.rust\-lang.org/book/appendix\-07\-nightly\-rust.html>
+and requires the \fB\-Z unstable\-options\fR flag to enable.
+See <https://github.com/rust\-lang/cargo/issues/12425> for more information.
+.RE
+.sp
 \fB\-w\fR, 
 \fB\-\-workspace\fR
 .RS 4
