@@ -77,37 +77,8 @@ use url::Url;
 ///   a problem.
 /// - Carriage returns are removed, which can help when running on Windows.
 pub fn assert_ui() -> snapbox::Assert {
-    let root = paths::root();
-    // Use `from_file_path` instead of `from_dir_path` so the trailing slash is
-    // put in the users output, rather than hidden in the variable
-    let root_url = url::Url::from_file_path(&root).unwrap().to_string();
-
     let mut subs = snapbox::Redactions::new();
-    subs.extend(MIN_LITERAL_REDACTIONS.into_iter().cloned())
-        .unwrap();
-    subs.insert("[ROOT]", root).unwrap();
-    subs.insert("[ROOTURL]", root_url).unwrap();
-    subs.insert(
-        "[ELAPSED]",
-        regex::Regex::new("Finished.*in (?<redacted>[0-9]+(\\.[0-9]+))s").unwrap(),
-    )
-    .unwrap();
-    // output from libtest
-    subs.insert(
-        "[ELAPSED]",
-        regex::Regex::new("; finished in (?<redacted>[0-9]+(\\.[0-9]+))s").unwrap(),
-    )
-    .unwrap();
-    subs.insert(
-        "[FILE_SIZE]",
-        regex::Regex::new("(?<redacted>[0-9]+(\\.[0-9]+)([a-zA-Z]i)?)B").unwrap(),
-    )
-    .unwrap();
-    subs.insert(
-        "[HASH]",
-        regex::Regex::new("home/\\.cargo/registry/src/-(?<redacted>[a-z0-9]+)").unwrap(),
-    )
-    .unwrap();
+    add_common_redactions(&mut subs);
     snapbox::Assert::new()
         .action_env(snapbox::assert::DEFAULT_ACTION_ENV)
         .redact_with(subs)
@@ -145,21 +116,36 @@ pub fn assert_ui() -> snapbox::Assert {
 ///   a problem.
 /// - Carriage returns are removed, which can help when running on Windows.
 pub fn assert_e2e() -> snapbox::Assert {
+    let mut subs = snapbox::Redactions::new();
+    add_common_redactions(&mut subs);
+    subs.extend(E2E_LITERAL_REDACTIONS.into_iter().cloned())
+        .unwrap();
+
+    snapbox::Assert::new()
+        .action_env(snapbox::assert::DEFAULT_ACTION_ENV)
+        .redact_with(subs)
+}
+
+fn add_common_redactions(subs: &mut snapbox::Redactions) {
     let root = paths::root();
     // Use `from_file_path` instead of `from_dir_path` so the trailing slash is
     // put in the users output, rather than hidden in the variable
     let root_url = url::Url::from_file_path(&root).unwrap().to_string();
 
-    let mut subs = snapbox::Redactions::new();
     subs.extend(MIN_LITERAL_REDACTIONS.into_iter().cloned())
-        .unwrap();
-    subs.extend(E2E_LITERAL_REDACTIONS.into_iter().cloned())
         .unwrap();
     subs.insert("[ROOT]", root).unwrap();
     subs.insert("[ROOTURL]", root_url).unwrap();
+    // For e2e tests
     subs.insert(
         "[ELAPSED]",
         regex::Regex::new("[FINISHED].*in (?<redacted>[0-9]+(\\.[0-9]+))s").unwrap(),
+    )
+    .unwrap();
+    // for UI tests
+    subs.insert(
+        "[ELAPSED]",
+        regex::Regex::new("Finished.*in (?<redacted>[0-9]+(\\.[0-9]+))s").unwrap(),
     )
     .unwrap();
     // output from libtest
@@ -178,9 +164,6 @@ pub fn assert_e2e() -> snapbox::Assert {
         regex::Regex::new("home/\\.cargo/registry/src/-(?<redacted>[a-z0-9]+)").unwrap(),
     )
     .unwrap();
-    snapbox::Assert::new()
-        .action_env(snapbox::assert::DEFAULT_ACTION_ENV)
-        .redact_with(subs)
 }
 
 static MIN_LITERAL_REDACTIONS: &[(&str, &str)] = &[
