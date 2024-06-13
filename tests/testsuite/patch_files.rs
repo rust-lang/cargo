@@ -1124,7 +1124,6 @@ Hello, patched!
     p.cargo("run -v")
         .masquerade_as_nightly_cargo(&["patch-files"])
         .with_stderr_data(str![[r#"
-[UPDATING] `dummy-registry` index
 [FRESH] bar v1.0.0 (bar@1.0.0 with 1 patch file)
 [FRESH] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1177,7 +1176,6 @@ Hello, patched!
     p.cargo("run")
         .masquerade_as_nightly_cargo(&["patch-files"])
         .with_stderr_data(str![[r#"
-[UPDATING] `dummy-registry` index
 [PATCHING] bar v1.0.0
 [COMPILING] bar v1.0.0 (bar@1.0.0 with 1 patch file)
 [COMPILING] foo v0.0.0 ([ROOT]/foo)

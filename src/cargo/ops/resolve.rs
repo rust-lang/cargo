@@ -334,7 +334,7 @@ pub fn resolve_with_previous<'gctx>(
     register_patches: bool,
 ) -> CargoResult<Resolve> {
     let mut patches = if register_patches {
-        Some(PatchEntries::from_workspace(ws)?)
+        Some(PatchEntries::from_workspace(ws, previous)?)
     } else {
         None
     };
@@ -361,7 +361,7 @@ pub fn resolve_with_previous<'gctx>(
 
         if let Some(patches) = patches.as_ref() {
             emit_warnings_of_unused_patches(ws, &resolved, registry)?;
-            emit_warnings_of_unresolved_patches(ws, patches)?;
+            emit_warnings_of_unresolved_patches(ws, &resolved, patches)?;
         }
 
         return Ok(resolved);
@@ -850,16 +850,45 @@ fn emit_warnings_of_unused_patches(
 /// [`emit_warnings_of_unused_patches`] which requires summaries.
 fn emit_warnings_of_unresolved_patches(
     ws: &Workspace<'_>,
+    resolve: &Resolve,
     patches: &PatchEntries,
 ) -> CargoResult<()> {
+    let resolved_patched_pkg_ids: Vec<_> = resolve
+        .iter()
+        .filter(|pkg_id| pkg_id.source_id().is_patched())
+        .collect();
     for (url, patches) in &patches.unresolved {
+        let canonical_url = CanonicalUrl::new(url)?;
         for patch in patches {
+            let maybe_already_used = resolved_patched_pkg_ids
+                .iter()
+                .filter(|id| {
+                    let source_id = id.source_id();
+                    let url = source_id.canonical_url().raw_canonicalized_url();
+                    // To check if the patch is for the same source,
+                    // we need strip `patched` prefix here,
+                    // as CanonicalUrl preserves that.
+                    let url = url.as_str().strip_prefix("patched+").unwrap();
+                    url == canonical_url.raw_canonicalized_url().as_str()
+                })
+                .any(|id| patch.matches_ignoring_source(*id));
+
+            if maybe_already_used {
+                continue;
+            }
+
             let url = if url.as_str() == CRATES_IO_INDEX {
                 "crates-io"
             } else {
                 url.as_str()
             };
-            let msg = format!("unused patch for `{}` in `{url}`", patch.name_in_toml());
+
+            let msg = format!(
+                "unused patch `{}@{}` {} in `{url}`",
+                patch.name_in_toml(),
+                patch.version_req(),
+                patch.source_id(),
+            );
             ws.gctx().shell().warn(msg)?;
         }
     }
@@ -887,8 +916,8 @@ fn register_patch_entries(
 
     registry.clear_patch();
 
-    for (url, patches) in patches {
-        for patch in patches {
+    for (url, patches) in patches.iter() {
+        for patch in patches.iter() {
             version_prefs.prefer_dependency(patch.clone());
         }
         let Some(previous) = previous else {
@@ -907,7 +936,7 @@ fn register_patch_entries(
         // previous resolve graph, which is primarily what's done here to
         // build the `registrations` list.
         let mut registrations = Vec::new();
-        for dep in patches {
+        for dep in patches.iter() {
             let candidates = || {
                 previous
                     .iter()
@@ -1036,6 +1065,8 @@ struct PatchEntries {
     /// resolved dependency graph.
     unresolved: Vec<(Url, Vec<Dependency>)>,
 
+    from_previous: HashMap<Url, Vec<LockedPatchDependency>>,
+
     /// How many times [`PatchEntries::requires_reresolve`] has been called.
     resolve_times: u32,
 }
@@ -1043,7 +1074,7 @@ struct PatchEntries {
 impl PatchEntries {
     const RESOLVE_TIMES_LIMIT: u32 = 20;
 
-    fn from_workspace(ws: &Workspace<'_>) -> CargoResult<PatchEntries> {
+    fn from_workspace(ws: &Workspace<'_>, previous: Option<&Resolve>) -> CargoResult<PatchEntries> {
         let mut ready_patches = HashMap::new();
         let mut unresolved = Vec::new();
         for (url, patches) in ws.root_patch()?.into_iter() {
@@ -1057,9 +1088,60 @@ impl PatchEntries {
                 unresolved.push((url, file_patches));
             }
         }
+
+        let mut from_previous = HashMap::<Url, Vec<_>>::new();
+        let resolved_patched_pkg_ids: Vec<_> = previous
+            .iter()
+            .flat_map(|previous| {
+                previous
+                    .iter()
+                    .chain(previous.unused_patches().iter().cloned())
+            })
+            .filter(|pkg_id| {
+                pkg_id
+                    .source_id()
+                    .patch_info()
+                    .map(|info| info.is_resolved())
+                    .unwrap_or_default()
+            })
+            .collect();
+        for (url, patches) in &unresolved {
+            let mut ready_patches = Vec::new();
+            let canonical_url = CanonicalUrl::new(url)?;
+            for patch in patches {
+                for pkg_id in resolved_patched_pkg_ids.iter().filter(|id| {
+                    let source_id = id.source_id();
+                    let url = source_id.canonical_url().raw_canonicalized_url();
+                    // To check if the patch is for the same source,
+                    // we need strip `patched` prefix here,
+                    // as CanonicalUrl preserves that.
+                    let url = url.as_str().strip_prefix("patched+").unwrap();
+                    url == canonical_url.raw_canonicalized_url().as_str()
+                }) {
+                    if patch.matches_ignoring_source(*pkg_id) {
+                        let mut patch = patch.clone();
+                        patch.set_source_id(pkg_id.source_id());
+                        patch.lock_to(*pkg_id);
+                        ready_patches.push(LockedPatchDependency {
+                            dependency: patch,
+                            package_id: *pkg_id,
+                            alt_package_id: None,
+                        });
+                    }
+                }
+            }
+            if !ready_patches.is_empty() {
+                from_previous
+                    .entry(url.clone())
+                    .or_default()
+                    .extend(ready_patches);
+            }
+        }
+
         Ok(PatchEntries {
             ready_patches,
             unresolved,
+            from_previous,
             resolve_times: 0,
         })
     }
@@ -1109,6 +1191,16 @@ impl PatchEntries {
             *unresolved = pending_patches;
 
             if !ready_patches.is_empty() {
+                if let Some(from_previous) = self.from_previous.get_mut(url) {
+                    for patch in &ready_patches {
+                        if let Some(index) = from_previous
+                            .iter()
+                            .position(|locked| patch.matches_ignoring_source(locked.package_id))
+                        {
+                            from_previous.swap_remove(index);
+                        }
+                    }
+                }
                 self.ready_patches
                     .entry(url.clone())
                     .or_default()
@@ -1119,13 +1211,39 @@ impl PatchEntries {
         self.resolve_times += 1;
         Ok(has_new_patches)
     }
+
+    fn iter(&self) -> Box<dyn Iterator<Item = (&Url, Deps<'_>)> + '_> {
+        if self.ready_patches.is_empty() {
+            Box::new(self.from_previous.iter().map(|(url, deps)| {
+                let deps = Deps {
+                    deps: None,
+                    locked_deps: Some(deps),
+                };
+                (url, deps)
+            }))
+        } else {
+            Box::new(self.ready_patches.iter().map(|(url, deps)| {
+                let deps = Deps {
+                    deps: Some(deps),
+                    locked_deps: self.from_previous.get(url),
+                };
+                (url, deps)
+            }))
+        }
+    }
 }
 
-impl<'a> IntoIterator for &'a PatchEntries {
-    type Item = (&'a Url, &'a Vec<Dependency>);
-    type IntoIter = std::collections::hash_map::Iter<'a, Url, Vec<Dependency>>;
+struct Deps<'a> {
+    deps: Option<&'a Vec<Dependency>>,
+    locked_deps: Option<&'a Vec<LockedPatchDependency>>,
+}
 
-    fn into_iter(self) -> Self::IntoIter {
-        self.ready_patches.iter()
+impl<'a> Deps<'a> {
+    fn iter(&self) -> impl Iterator<Item = &'a Dependency> {
+        let locked_deps = self
+            .locked_deps
+            .into_iter()
+            .flat_map(|deps| deps.into_iter().map(|locked| &locked.dependency));
+        self.deps.into_iter().flatten().chain(locked_deps)
     }
 }
