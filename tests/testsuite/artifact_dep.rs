@@ -447,6 +447,7 @@ error[E0425]: cannot find function `f2` in crate `d2`
 
 For more information about this error, try `rustc --explain E0425`.
 [ERROR] could not compile `d1` (bin "d1") due to 1 previous error
+...
 
 "#]])
         .run();
