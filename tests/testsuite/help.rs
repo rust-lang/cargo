@@ -1,7 +1,5 @@
 //! Tests for cargo's help output.
 
-#![allow(deprecated)]
-
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, cargo_exe, cargo_process, paths, process, project};
 use std::fs;
@@ -17,9 +15,15 @@ fn help() {
     cargo_process("build -h").run();
     cargo_process("help help").run();
     // Ensure that help output goes to stdout, not stderr.
-    cargo_process("search --help").with_stderr("").run();
+    cargo_process("search --help").with_stderr_data("").run();
     cargo_process("search --help")
-        .with_stdout_contains("[..] --frozen [..]")
+        .with_stdout_data(
+            "\
+...
+[..] --frozen [..]
+...
+",
+        )
         .run();
 }
 
@@ -41,7 +45,7 @@ fn help_external_subcommand() {
         .publish();
     cargo_process("install cargo-fake-help").run();
     cargo_process("help fake-help")
-        .with_stdout("fancy help output\n")
+        .with_stdout_data("fancy help output\n")
         .run();
 }
 
@@ -147,7 +151,7 @@ fn help_alias() {
     // The `empty-alias` returns an error.
     cargo_process("help empty-alias")
         .env("PATH", Path::new(""))
-        .with_stderr_contains("[..]The subcommand 'empty-alias' wasn't recognized[..]")
+        .with_stderr_data("[..] The subcommand 'empty-alias' wasn't recognized [..]")
         .run_expect_error();
 
     // Because `simple-alias` aliases a subcommand with no arguments, help shows the manpage.
@@ -162,8 +166,12 @@ fn help_alias() {
 fn alias_z_flag_help() {
     for cmd in ["build", "run", "check", "test", "b", "r", "c", "t"] {
         cargo_process(&format!("{cmd} -Z help"))
-            .with_stdout_contains(
-                "    -Z allow-features[..]  Allow *only* the listed unstable features",
+            .with_stdout_data(
+                "\
+...
+    -Z allow-features[..]  Allow *only* the listed unstable features
+...
+",
             )
             .run();
     }
