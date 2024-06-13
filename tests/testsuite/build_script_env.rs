@@ -6,6 +6,66 @@ use cargo_test_support::sleep_ms;
 use cargo_test_support::str;
 
 #[cargo_test]
+fn rerun_if_env_changes_config() {
+    let p = project()
+        .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [env]
+                FOO = "good"
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+                fn main() {
+                    println!("cargo:rerun-if-env-changed=FOO");
+                    if let Ok(foo) = std::env::var("FOO") {
+                        assert!(&foo != "bad");
+                    }
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.change_file(
+        ".cargo/config.toml",
+        r#"
+            [env]
+            FOO = "bad"
+        "#,
+    );
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("clean").run();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(
+            "\
+            [COMPILING] foo v0.1.0 ([ROOT]/foo)
+[ERROR] failed to run custom build command for `foo v0.1.0 ([..])`
+...",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn rerun_if_env_changes() {
     let p = project()
         .file("src/main.rs", "fn main() {}")
