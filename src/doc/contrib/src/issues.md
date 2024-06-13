@@ -218,8 +218,7 @@ There are several things to consider when triaging an issue:
       prefixed labels (depending on if it is a regression in an already
       released stable release, or it is in nightly).
 
-* Assuming the issue looks valid, remove the [S-triage] label and move it onto
-  a new status:
+* Assuming the issue looks valid, switch the [S-triage] label for one of the following:
 
   * [S-needs-team-input] --- The next steps are not clear, and the Cargo team
     needs to discuss whether or not to proceed and what needs to be done to
