@@ -35,7 +35,6 @@
 //! [`drain_the_queue`]: crate::core::compiler::job_queue
 //! ["Cargo Target"]: https://doc.rust-lang.org/nightly/cargo/reference/cargo-targets.html
 
-use cargo_platform::Cfg;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -439,7 +438,6 @@ pub fn create_bcx<'a, 'gctx>(
         &units,
         &scrape_units,
         host_kind_requested.then_some(explicit_host_kind),
-        &target_data,
     );
 
     let mut extra_compiler_args = HashMap::new();
@@ -579,7 +577,6 @@ fn rebuild_unit_graph_shared(
     roots: &[Unit],
     scrape_units: &[Unit],
     to_host: Option<CompileKind>,
-    target_data: &RustcTargetData<'_>,
 ) -> (Vec<Unit>, Vec<Unit>, UnitGraph) {
     let mut result = UnitGraph::new();
     // Map of the old unit to the new unit, used to avoid recursing into units
@@ -596,7 +593,6 @@ fn rebuild_unit_graph_shared(
                 root,
                 false,
                 to_host,
-                target_data,
             )
         })
         .collect();
@@ -623,7 +619,6 @@ fn traverse_and_share(
     unit: &Unit,
     unit_is_for_host: bool,
     to_host: Option<CompileKind>,
-    target_data: &RustcTargetData<'_>,
 ) -> Unit {
     if let Some(new_unit) = memo.get(unit) {
         // Already computed, no need to recompute.
@@ -641,7 +636,6 @@ fn traverse_and_share(
                 &dep.unit,
                 dep.unit_for.is_for_host(),
                 to_host,
-                target_data,
             );
             new_dep_unit.hash(&mut dep_hash);
             UnitDep {
@@ -665,13 +659,8 @@ fn traverse_and_share(
         _ => unit.kind,
     };
 
-    let cfg = target_data.cfg(unit.kind);
-    let is_target_windows_msvc = cfg.contains(&Cfg::Name("windows".to_string()))
-        && cfg.contains(&Cfg::KeyPair("target_env".to_string(), "msvc".to_string()));
     let mut profile = unit.profile.clone();
-    // For MSVC, rustc currently treats -Cstrip=debuginfo same as -Cstrip=symbols, which causes
-    // this optimization to also remove symbols and thus break backtraces.
-    if profile.strip.is_deferred() && !is_target_windows_msvc {
+    if profile.strip.is_deferred() {
         // If strip was not manually set, and all dependencies of this unit together
         // with this unit have debuginfo turned off, we enable debuginfo stripping.
         // This will remove pre-existing debug symbols coming from the standard library.
