@@ -511,8 +511,8 @@ fn publish_clean() {
             "\
 [..]
 [..]
+[PACKAGED] [..]
 [VERIFYING] foo v0.0.1 ([CWD])
-[..]
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
@@ -561,8 +561,8 @@ fn publish_in_sub_repo() {
             "\
 [..]
 [..]
+[PACKAGED] [..]
 [VERIFYING] foo v0.0.1 ([CWD])
-[..]
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
@@ -611,8 +611,8 @@ fn publish_when_ignored() {
             "\
 [..]
 [..]
+[PACKAGED] [..]
 [VERIFYING] foo v0.0.1 ([CWD])
-[..]
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
@@ -660,8 +660,8 @@ fn ignore_when_crate_ignored() {
             "\
 [..]
 [..]
+[PACKAGED] [..]
 [VERIFYING] foo v0.0.1 ([CWD])
-[..]
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
@@ -740,10 +740,10 @@ fn dry_run() {
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
+[PACKAGED] [..] files, [..] ([..] compressed)
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[PACKAGED] [..] files, [..] ([..] compressed)
 [UPLOADING] foo v0.0.1 ([CWD])
 [WARNING] aborting upload due to dry run
 ",
@@ -854,8 +854,8 @@ fn publish_allowed_registry() {
             "\
 [..]
 [..]
+[PACKAGED] [..]
 [VERIFYING] foo v0.0.1 ([CWD])
-[..]
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
@@ -916,8 +916,8 @@ fn publish_implicitly_to_only_allowed_registry() {
 [NOTE] found `alternative` as only allowed registry. Publishing to it automatically.
 [UPDATING] `alternative` index
 [..]
+[PACKAGED] [..]
 [VERIFYING] foo v0.0.1 ([CWD])
-[..]
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
@@ -1091,8 +1091,8 @@ The registry `alternative` is not listed in the `package.publish` value in Cargo
 [WARNING] [..]
 [..]
 [PACKAGING] [..]
+[PACKAGED] [..]
 [VERIFYING] foo v0.0.1 ([CWD])
-[..]
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
@@ -1143,8 +1143,8 @@ fn publish_with_select_features() {
 [..]
 [..]
 [..]
+[PACKAGED] [..]
 [VERIFYING] foo v0.0.1 ([CWD])
-[..]
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
@@ -1195,8 +1195,8 @@ fn publish_with_all_features() {
 [..]
 [..]
 [..]
+[PACKAGED] [..]
 [VERIFYING] foo v0.0.1 ([CWD])
-[..]
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])
@@ -1301,8 +1301,8 @@ fn publish_with_patch() {
 [..]
 [..]
 [UPDATING] crates.io index
+[PACKAGED] [..]
 [VERIFYING] foo v0.0.1 ([CWD])
-[..]
 [..]
 [..]
 [..]
@@ -1392,8 +1392,8 @@ fn publish_checks_for_token_before_verify() {
 [..]
 [..]
 [..]
+[PACKAGED] [..]
 [VERIFYING] foo v0.0.1 ([CWD])
-[..]
 [..]
 [..]
 [UPLOADING] foo v0.0.1 [..]
@@ -2831,8 +2831,8 @@ fn http_api_not_noop() {
 [..]
 [..]
 [..]
+[PACKAGED] [..]
 [VERIFYING] foo v0.0.1 ([CWD])
-[..]
 [..]
 [..]
 [UPLOADING] foo v0.0.1 ([CWD])

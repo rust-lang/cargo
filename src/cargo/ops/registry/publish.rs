@@ -156,8 +156,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             keep_going: opts.keep_going,
             cli_features,
         },
-    )?
-    .unwrap();
+    )?;
 
     if !opts.dry_run {
         let hash = cargo_util::Sha256::new()

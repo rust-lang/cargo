@@ -506,13 +506,13 @@ Caused by:
             "\
 [PACKAGING] foo v0.0.1 ([CWD])
 [UPDATING] `[..]` index
+[PACKAGED] [..]
 [VERIFYING] foo v0.0.1 ([CWD])
 [DOWNLOADING] crates ...
 [DOWNLOADED] notyet v0.0.1 (registry `dummy-registry`)
 [COMPILING] notyet v0.0.1
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[PACKAGED] [..]
 ",
         )
         .run();
