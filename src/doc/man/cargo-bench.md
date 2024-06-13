@@ -90,7 +90,7 @@ in the manifest settings. Setting examples to `bench = true` will build and
 run the example as a benchmark, replacing the example's `main` function with
 the libtest harness.
 
-Setting targets to `bench = false` will stop them from being bencharmked by
+Setting targets to `bench = false` will stop them from being benchmarked by
 default. Target selection options that take a target by name (such as
 `--example foo`) ignore the `bench` flag and will always benchmark the given
 target.

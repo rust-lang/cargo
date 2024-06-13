@@ -1812,5 +1812,5 @@ See [Registry Authentication](registry-authentication.md) documentation for deta
 The `-Z check-cfg` feature has been stabilized in the 1.80 release by making it the
 default behavior.
 
-See the [build script documentation](build-scripts.md#rustc-check-cfg) for informations
+See the [build script documentation](build-scripts.md#rustc-check-cfg) for information
 about specifying custom cfgs.

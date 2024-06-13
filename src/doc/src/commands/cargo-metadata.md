@@ -27,7 +27,7 @@ for a Rust API for reading the metadata.
 
 Within the same output format version, the compatibility is maintained, except
 some scenarios. The following is a non-exhaustive list of changes that are not
-considersed as incompatible:
+considered as incompatible:
 
 * **Adding new fields** — New fields will be added when needed. Reserving this
   helps Cargo evolve without bumping the format version too often.
