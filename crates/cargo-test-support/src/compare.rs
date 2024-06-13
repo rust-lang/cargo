@@ -36,14 +36,24 @@
 //!   a problem.
 //! - Carriage returns are removed, which can help when running on Windows.
 
-use crate::diff;
+use crate::cross_compile::try_alternate;
 use crate::paths;
+use crate::{diff, rustc_host};
 use anyhow::{bail, Context, Result};
 use serde_json::Value;
 use std::fmt;
 use std::path::Path;
 use std::str;
 use url::Url;
+
+/// This makes it easier to write regex replacements that are guaranteed to only
+/// get compiled once
+macro_rules! regex {
+    ($re:literal $(,)?) => {{
+        static RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        RE.get_or_init(|| regex::Regex::new($re).unwrap())
+    }};
+}
 
 /// Assertion policy for UI tests
 ///
@@ -77,21 +87,8 @@ use url::Url;
 ///   a problem.
 /// - Carriage returns are removed, which can help when running on Windows.
 pub fn assert_ui() -> snapbox::Assert {
-    let root = paths::root();
-    // Use `from_file_path` instead of `from_dir_path` so the trailing slash is
-    // put in the users output, rather than hidden in the variable
-    let root_url = url::Url::from_file_path(&root).unwrap().to_string();
-
     let mut subs = snapbox::Redactions::new();
-    subs.extend(MIN_LITERAL_REDACTIONS.into_iter().cloned())
-        .unwrap();
-    subs.insert("[ROOT]", root).unwrap();
-    subs.insert("[ROOTURL]", root_url).unwrap();
-    subs.insert(
-        "[ELAPSED]",
-        regex::Regex::new("Finished.*in (?<redacted>[0-9]+(\\.[0-9]+))s").unwrap(),
-    )
-    .unwrap();
+    add_common_redactions(&mut subs);
     snapbox::Assert::new()
         .action_env(snapbox::assert::DEFAULT_ACTION_ENV)
         .redact_with(subs)
@@ -129,32 +126,80 @@ pub fn assert_ui() -> snapbox::Assert {
 ///   a problem.
 /// - Carriage returns are removed, which can help when running on Windows.
 pub fn assert_e2e() -> snapbox::Assert {
+    let mut subs = snapbox::Redactions::new();
+    add_common_redactions(&mut subs);
+    subs.extend(E2E_LITERAL_REDACTIONS.into_iter().cloned())
+        .unwrap();
+
+    snapbox::Assert::new()
+        .action_env(snapbox::assert::DEFAULT_ACTION_ENV)
+        .redact_with(subs)
+}
+
+fn add_common_redactions(subs: &mut snapbox::Redactions) {
     let root = paths::root();
     // Use `from_file_path` instead of `from_dir_path` so the trailing slash is
     // put in the users output, rather than hidden in the variable
     let root_url = url::Url::from_file_path(&root).unwrap().to_string();
 
-    let mut subs = snapbox::Redactions::new();
     subs.extend(MIN_LITERAL_REDACTIONS.into_iter().cloned())
-        .unwrap();
-    subs.extend(E2E_LITERAL_REDACTIONS.into_iter().cloned())
         .unwrap();
     subs.insert("[ROOT]", root).unwrap();
     subs.insert("[ROOTURL]", root_url).unwrap();
+    // For e2e tests
     subs.insert(
         "[ELAPSED]",
-        regex::Regex::new("[FINISHED].*in (?<redacted>[0-9]+(\\.[0-9]+))s").unwrap(),
+        regex!("[FINISHED].*in (?<redacted>[0-9]+(\\.[0-9]+))s"),
     )
     .unwrap();
-    snapbox::Assert::new()
-        .action_env(snapbox::assert::DEFAULT_ACTION_ENV)
-        .redact_with(subs)
+    // for UI tests
+    subs.insert(
+        "[ELAPSED]",
+        regex!("Finished.*in (?<redacted>[0-9]+(\\.[0-9]+))s"),
+    )
+    .unwrap();
+    // output from libtest
+    subs.insert(
+        "[ELAPSED]",
+        regex!("; finished in (?<redacted>[0-9]+(\\.[0-9]+))s"),
+    )
+    .unwrap();
+    subs.insert(
+        "[FILE_SIZE]",
+        regex!("(?<redacted>[0-9]+(\\.[0-9]+)([a-zA-Z]i)?)B"),
+    )
+    .unwrap();
+    subs.insert(
+        "[HASH]",
+        regex!("home/\\.cargo/registry/src/-(?<redacted>[a-z0-9]+)"),
+    )
+    .unwrap();
+    subs.insert("[HASH]", regex!("/[a-z0-9\\-_]+-(?<redacted>[0-9a-f]{16})"))
+        .unwrap();
+    subs.insert("[HOST_TARGET]", rustc_host()).unwrap();
+    if let Some(alt_target) = try_alternate() {
+        subs.insert("[ALT_TARGET]", alt_target).unwrap();
+    }
+    subs.insert(
+        "[AVG_ELAPSED]",
+        regex!("(?<redacted>[0-9]+(\\.[0-9]+)?) ns/iter"),
+    )
+    .unwrap();
+    subs.insert(
+        "[JITTER]",
+        regex!("ns/iter \\(\\+/- (?<redacted>[0-9]+(\\.[0-9]+)?)\\)"),
+    )
+    .unwrap();
 }
 
 static MIN_LITERAL_REDACTIONS: &[(&str, &str)] = &[
     ("[EXE]", std::env::consts::EXE_SUFFIX),
     ("[BROKEN_PIPE]", "Broken pipe (os error 32)"),
     ("[BROKEN_PIPE]", "The pipe is being closed. (os error 232)"),
+    // Unix message for exit status
+    ("[EXIT_STATUS]", "exit status"),
+    // Windows message for exit status
+    ("[EXIT_STATUS]", "exit code"),
 ];
 static E2E_LITERAL_REDACTIONS: &[(&str, &str)] = &[
     ("[RUNNING]", "     Running"),
@@ -176,6 +221,7 @@ static E2E_LITERAL_REDACTIONS: &[(&str, &str)] = &[
     ("[DIRTY]", "       Dirty"),
     ("[LOCKING]", "     Locking"),
     ("[UPDATING]", "    Updating"),
+    ("[UPGRADING]", "   Upgrading"),
     ("[ADDING]", "      Adding"),
     ("[REMOVING]", "    Removing"),
     ("[REMOVED]", "     Removed"),

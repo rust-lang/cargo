@@ -1,5 +1,7 @@
 //! Tests for the `cargo doc` command with `-Zrustdoc-scrape-examples`.
 
+#![allow(deprecated)]
+
 use cargo_test_support::project;
 
 #[cargo_test(nightly, reason = "rustdoc scrape examples flags are unstable")]

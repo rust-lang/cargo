@@ -188,17 +188,6 @@ fn to_lib_target(
     let path = lib.path.as_ref().expect("previously resolved");
     let path = package_root.join(&path.0);
 
-    if lib.plugin == Some(true) {
-        warnings.push(format!(
-            "support for rustc plugins has been removed from rustc. \
-            library `{}` should not specify `plugin = true`",
-            name_or_panic(lib)
-        ));
-        warnings.push(format!(
-            "support for `plugin = true` will be removed from cargo in the future"
-        ));
-    }
-
     // Per the Macros 1.1 RFC:
     //
     // > Initially if a crate is compiled with the `proc-macro` crate type
@@ -208,8 +197,8 @@ fn to_lib_target(
     //
     // A plugin requires exporting plugin_registrar so a crate cannot be
     // both at once.
-    let crate_types = match (lib.crate_types(), lib.plugin, lib.proc_macro()) {
-        (Some(kinds), _, _)
+    let crate_types = match (lib.crate_types(), lib.proc_macro()) {
+        (Some(kinds), _)
             if kinds.contains(&CrateType::Dylib.as_str().to_owned())
                 && kinds.contains(&CrateType::Cdylib.as_str().to_owned()) =>
         {
@@ -218,14 +207,7 @@ fn to_lib_target(
                 name_or_panic(lib)
             ));
         }
-        (Some(kinds), _, _) if kinds.contains(&"proc-macro".to_string()) => {
-            if let Some(true) = lib.plugin {
-                // This is a warning to retain backwards compatibility.
-                warnings.push(format!(
-                    "proc-macro library `{}` should not specify `plugin = true`",
-                    name_or_panic(lib)
-                ));
-            }
+        (Some(kinds), _) if kinds.contains(&"proc-macro".to_string()) => {
             warnings.push(format!(
                 "library `{}` should only specify `proc-macro = true` instead of setting `crate-type`",
                 name_or_panic(lib)
@@ -235,13 +217,9 @@ fn to_lib_target(
             }
             vec![CrateType::ProcMacro]
         }
-        (_, Some(true), Some(true)) => {
-            anyhow::bail!("`lib.plugin` and `lib.proc-macro` cannot both be `true`")
-        }
-        (Some(kinds), _, _) => kinds.iter().map(|s| s.into()).collect(),
-        (None, Some(true), _) => vec![CrateType::Dylib],
-        (None, _, Some(true)) => vec![CrateType::ProcMacro],
-        (None, _, _) => vec![CrateType::Lib],
+        (Some(kinds), _) => kinds.iter().map(|s| s.into()).collect(),
+        (None, Some(true)) => vec![CrateType::ProcMacro],
+        (None, _) => vec![CrateType::Lib],
     };
 
     let mut target = Target::lib_target(name_or_panic(lib), crate_types, path, edition);
@@ -869,11 +847,8 @@ fn configure(toml: &TomlTarget, target: &mut Target) -> CargoResult<()> {
             Some(false) => RustdocScrapeExamples::Disabled,
             Some(true) => RustdocScrapeExamples::Enabled,
         })
-        .set_for_host(match (toml.plugin, toml.proc_macro()) {
-            (None, None) => t2.for_host(),
-            (Some(true), _) | (_, Some(true)) => true,
-            (Some(false), _) | (_, Some(false)) => false,
-        });
+        .set_for_host(toml.proc_macro().unwrap_or_else(|| t2.for_host()));
+
     if let Some(edition) = toml.edition.clone() {
         target.set_edition(
             edition

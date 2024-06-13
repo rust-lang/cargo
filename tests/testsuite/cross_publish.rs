@@ -1,5 +1,7 @@
 //! Tests for publishing using the `--target` flag.
 
+#![allow(deprecated)]
+
 use std::fs::File;
 
 use cargo_test_support::{cross_compile, project, publish, registry};

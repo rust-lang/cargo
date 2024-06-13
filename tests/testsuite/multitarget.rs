@@ -1,5 +1,7 @@
 //! Tests for multiple `--target` flags to subcommands
 
+#![allow(deprecated)]
+
 use cargo_test_support::{basic_manifest, cross_compile, project, rustc_host};
 
 #[cargo_test]

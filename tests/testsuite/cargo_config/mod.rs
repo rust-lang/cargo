@@ -1,5 +1,7 @@
 //! Tests for the `cargo config` command.
 
+#![allow(deprecated)]
+
 use super::config::write_config_at;
 use cargo_test_support::paths;
 use std::fs;

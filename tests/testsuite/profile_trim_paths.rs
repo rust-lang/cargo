@@ -1,5 +1,7 @@
 //! Tests for `-Ztrim-paths`.
 
+#![allow(deprecated)]
+
 use cargo_test_support::basic_manifest;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git;

@@ -1,5 +1,7 @@
 //! Tests for the `cargo tree` command.
 
+#![allow(deprecated)]
+
 use super::features2::switch_to_resolver_2;
 use cargo_test_support::cross_compile::{self, alternate};
 use cargo_test_support::registry::{Dependency, Package};

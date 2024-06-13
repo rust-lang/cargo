@@ -1,5 +1,7 @@
 //! Tests for the `cargo locate-project` command.
 
+#![allow(deprecated)]
+
 use cargo_test_support::project;
 
 #[cargo_test]

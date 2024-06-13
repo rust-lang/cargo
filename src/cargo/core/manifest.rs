@@ -905,7 +905,7 @@ impl Target {
     pub fn documented(&self) -> bool {
         self.inner.doc
     }
-    // A plugin, proc-macro, or build-script.
+    // A proc-macro or build-script.
     pub fn for_host(&self) -> bool {
         self.inner.for_host
     }

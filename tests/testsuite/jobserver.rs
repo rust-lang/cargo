@@ -1,5 +1,7 @@
 //! Tests for the jobserver protocol.
 
+#![allow(deprecated)]
+
 use cargo_util::is_ci;
 use std::env;
 use std::net::TcpListener;

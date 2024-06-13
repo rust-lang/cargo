@@ -1,5 +1,7 @@
 //! Tests for supporting older versions of the Cargo.lock file format.
 
+#![allow(deprecated)]
+
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git;
 use cargo_test_support::registry::Package;

@@ -131,7 +131,12 @@ pub trait CommandExt: Sized {
     ) -> Self {
         let msg = format!("`--{default_mode}` is the default for `cargo {command}`; instead `--{supported_mode}` is supported");
         let value_parser = UnknownArgumentValueParser::suggest(msg);
-        self._arg(flag(default_mode, "").value_parser(value_parser).hide(true))
+        self._arg(
+            flag(default_mode, "")
+                .conflicts_with("profile")
+                .value_parser(value_parser)
+                .hide(true),
+        )
     }
 
     fn arg_targets_all(
@@ -226,6 +231,7 @@ pub trait CommandExt: Sized {
         self._arg(
             flag("release", release)
                 .short('r')
+                .conflicts_with("profile")
                 .help_heading(heading::COMPILATION_OPTIONS),
         )
     }
@@ -393,25 +399,35 @@ pub trait CommandExt: Sized {
         )
     }
 
-    fn arg_out_dir(self) -> Self {
+    fn arg_artifact_dir(self) -> Self {
         let unsupported_short_arg = {
-            let value_parser = UnknownArgumentValueParser::suggest_arg("--out-dir");
-            Arg::new("unsupported-short-out-dir-flag")
+            let value_parser = UnknownArgumentValueParser::suggest_arg("--artifact-dir");
+            Arg::new("unsupported-short-artifact-dir-flag")
                 .help("")
                 .short('O')
                 .value_parser(value_parser)
                 .action(ArgAction::SetTrue)
                 .hide(true)
         };
+
         self._arg(
             opt(
-                "out-dir",
+                "artifact-dir",
                 "Copy final artifacts to this directory (unstable)",
             )
             .value_name("PATH")
             .help_heading(heading::COMPILATION_OPTIONS),
         )
         ._arg(unsupported_short_arg)
+        ._arg(
+            opt(
+                "out-dir",
+                "Copy final artifacts to this directory (deprecated; use --artifact-dir instead)",
+            )
+            .value_name("PATH")
+            .conflicts_with("artifact-dir")
+            .hide(true),
+        )
     }
 }
 
@@ -558,7 +574,6 @@ Run `{cmd}` to see possible targets."
 
     fn get_profile_name(
         &self,
-        gctx: &GlobalContext,
         default: &str,
         profile_checking: ProfileChecking,
     ) -> CargoResult<InternedString> {
@@ -571,29 +586,10 @@ Run `{cmd}` to see possible targets."
             (Some(name @ ("dev" | "test" | "bench" | "check")), ProfileChecking::LegacyRustc)
             // `cargo fix` and `cargo check` has legacy handling of this profile name
             | (Some(name @ "test"), ProfileChecking::LegacyTestOnly) => {
-                if self.maybe_flag("release") {
-                    gctx.shell().warn(
-                        "the `--release` flag should not be specified with the `--profile` flag\n\
-                         The `--release` flag will be ignored.\n\
-                         This was historically accepted, but will become an error \
-                         in a future release."
-                    )?;
-                }
                 return Ok(InternedString::new(name));
             }
             _ => {}
         }
-
-        let conflict = |flag: &str, equiv: &str, specified: &str| -> anyhow::Error {
-            anyhow::format_err!(
-                "conflicting usage of --profile={} and --{flag}\n\
-                 The `--{flag}` flag is the same as `--profile={equiv}`.\n\
-                 Remove one flag or the other to continue.",
-                specified,
-                flag = flag,
-                equiv = equiv
-            )
-        };
 
         let name = match (
             self.maybe_flag("release"),
@@ -601,10 +597,8 @@ Run `{cmd}` to see possible targets."
             specified_profile,
         ) {
             (false, false, None) => default,
-            (true, _, None | Some("release")) => "release",
-            (true, _, Some(name)) => return Err(conflict("release", "release", name)),
-            (_, true, None | Some("dev")) => "dev",
-            (_, true, Some(name)) => return Err(conflict("debug", "dev", name)),
+            (true, _, None) => "release",
+            (_, true, None) => "dev",
             // `doc` is separate from all the other reservations because
             // [profile.doc] was historically allowed, but is deprecated and
             // has no effect. To avoid potentially breaking projects, it is a
@@ -710,7 +704,7 @@ Run `{cmd}` to see possible targets."
             mode,
         )?;
         build_config.message_format = message_format.unwrap_or(MessageFormat::Human);
-        build_config.requested_profile = self.get_profile_name(gctx, "dev", profile_checking)?;
+        build_config.requested_profile = self.get_profile_name("dev", profile_checking)?;
         build_config.build_plan = self.flag("build-plan");
         build_config.unit_graph = self.flag("unit-graph");
         build_config.future_incompat_report = self.flag("future-incompat-report");

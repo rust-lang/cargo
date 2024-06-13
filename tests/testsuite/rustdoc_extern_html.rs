@@ -1,5 +1,7 @@
 //! Tests for the -Zrustdoc-map feature.
 
+#![allow(deprecated)]
+
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{paths, project, Project};
 

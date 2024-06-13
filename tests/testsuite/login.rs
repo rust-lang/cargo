@@ -1,5 +1,7 @@
 //! Tests for the `cargo login` command.
 
+#![allow(deprecated)]
+
 use cargo_test_support::cargo_process;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{self, RegistryBuilder};

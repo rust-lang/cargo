@@ -50,7 +50,7 @@ they have `required-features` that are missing.
 {{#options}}
 {{> options-target-dir }}
 
-{{#option "`--out-dir` _directory_" }}
+{{#option "`--artifact-dir` _directory_" }}
 Copy final artifacts to this directory.
 
 This option is unstable and available only on the

@@ -10,6 +10,8 @@
 //! cargo test --test testsuite -- old_cargos --nocapture --ignored
 //! ```
 
+#![allow(deprecated)]
+
 use cargo::CargoResult;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::{self, Dependency, Package};

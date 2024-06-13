@@ -1,5 +1,7 @@
 //! Tests for the `cargo check` command.
 
+#![allow(deprecated)]
+
 use std::fmt::{self, Write};
 
 use crate::messages::raw_rustc_output;
@@ -290,8 +292,27 @@ fn rustc_check() {
 
     // Verify compatible usage of --profile with --release, issue #7488
     foo.cargo("rustc --profile check --release -- --emit=metadata")
+        .with_status(1)
+        .with_stderr(
+            "\
+[ERROR] the argument '--profile <PROFILE-NAME>' cannot be used with '--release'
+
+Usage: cargo[EXE] rustc --profile <PROFILE-NAME> [ARGS]...
+
+For more information, try '--help'.",
+        )
         .run();
+
     foo.cargo("rustc --profile test --release -- --emit=metadata")
+        .with_status(1)
+        .with_stderr(
+            "\
+[ERROR] the argument '--profile <PROFILE-NAME>' cannot be used with '--release'
+
+Usage: cargo[EXE] rustc --profile <PROFILE-NAME> [ARGS]...
+
+For more information, try '--help'.",
+        )
         .run();
 }
 

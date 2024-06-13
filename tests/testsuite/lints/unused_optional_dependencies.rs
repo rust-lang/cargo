@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
 
@@ -151,6 +153,48 @@ warning: unused optional dependency
    | ----------
    |
    = help: remove the dependency or activate it in a feature with `dep:target-dep`
+[CHECKING] foo v0.1.0 ([CWD])
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test(nightly, reason = "edition2024 is not stable")]
+fn shadowed_optional_dep_is_unused_in_2024() {
+    Package::new("optional-dep", "0.1.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+cargo-features = ["edition2024"]
+[package]
+name = "foo"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+optional-dep = { version = "0.1.0", optional = true }
+
+[features]
+optional-dep = []
+"#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["cargo-lints", "edition2024"])
+        .with_stderr(
+            "\
+warning: unused optional dependency
+ --> Cargo.toml:9:1
+  |
+9 | optional-dep = { version = \"0.1.0\", optional = true }
+  | ------------
+  |
+  = note: `cargo::unused_optional_dependency` is set to `warn` by default
+  = help: remove the dependency or activate it in a feature with `dep:optional-dep`
 [CHECKING] foo v0.1.0 ([CWD])
 [FINISHED] [..]
 ",

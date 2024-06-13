@@ -1,9 +1,9 @@
 //! Tests for setting custom rustc flags.
 
+#![allow(deprecated)]
+
 use cargo_test_support::registry::Package;
-use cargo_test_support::{
-    basic_lib_manifest, basic_manifest, paths, project, project_in_home, rustc_host,
-};
+use cargo_test_support::{basic_manifest, paths, project, project_in_home, rustc_host};
 use std::fs;
 
 #[cargo_test]
@@ -101,76 +101,6 @@ fn env_rustflags_build_script_dep() {
     let _bar = project()
         .at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
-        .file(
-            "src/lib.rs",
-            r#"
-                fn bar() { }
-                #[cfg(not(foo))]
-                fn bar() { }
-            "#,
-        )
-        .build();
-
-    foo.cargo("check").env("RUSTFLAGS", "--cfg foo").run();
-}
-
-#[cargo_test]
-fn env_rustflags_plugin() {
-    // RUSTFLAGS should be passed to rustc for plugins
-    // when --target is not specified.
-    // In this test if --cfg foo is not passed the build will fail.
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-
-                [lib]
-                name = "foo"
-                plugin = true
-            "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-                fn main() { }
-                #[cfg(not(foo))]
-                fn main() { }
-            "#,
-        )
-        .build();
-
-    p.cargo("check").env("RUSTFLAGS", "--cfg foo").run();
-}
-
-#[cargo_test]
-fn env_rustflags_plugin_dep() {
-    // RUSTFLAGS should be passed to rustc for plugins
-    // when --target is not specified.
-    // In this test if --cfg foo is not passed the build will fail.
-    let foo = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-
-                [lib]
-                name = "foo"
-                plugin = true
-
-                [dependencies.bar]
-                path = "../bar"
-            "#,
-        )
-        .file("src/lib.rs", "fn foo() {}")
-        .build();
-    let _bar = project()
-        .at("bar")
-        .file("Cargo.toml", &basic_lib_manifest("bar"))
         .file(
             "src/lib.rs",
             r#"
@@ -328,84 +258,6 @@ fn env_rustflags_build_script_dep_with_target() {
     let _bar = project()
         .at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
-        .file(
-            "src/lib.rs",
-            r#"
-                fn bar() { }
-                #[cfg(foo)]
-                fn bar() { }
-            "#,
-        )
-        .build();
-
-    let host = rustc_host();
-    foo.cargo("check --target")
-        .arg(host)
-        .env("RUSTFLAGS", "--cfg foo")
-        .run();
-}
-
-#[cargo_test]
-fn env_rustflags_plugin_with_target() {
-    // RUSTFLAGS should not be passed to rustc for plugins
-    // when --target is specified.
-    // In this test if --cfg foo is passed the build will fail.
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-
-                [lib]
-                name = "foo"
-                plugin = true
-            "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-                fn main() { }
-                #[cfg(foo)]
-                fn main() { }
-            "#,
-        )
-        .build();
-
-    let host = rustc_host();
-    p.cargo("check --target")
-        .arg(host)
-        .env("RUSTFLAGS", "--cfg foo")
-        .run();
-}
-
-#[cargo_test]
-fn env_rustflags_plugin_dep_with_target() {
-    // RUSTFLAGS should not be passed to rustc for plugins
-    // when --target is specified.
-    // In this test if --cfg foo is passed the build will fail.
-    let foo = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-
-                [lib]
-                name = "foo"
-                plugin = true
-
-                [dependencies.bar]
-                path = "../bar"
-            "#,
-        )
-        .file("src/lib.rs", "fn foo() {}")
-        .build();
-    let _bar = project()
-        .at("bar")
-        .file("Cargo.toml", &basic_lib_manifest("bar"))
         .file(
             "src/lib.rs",
             r#"
@@ -584,90 +436,6 @@ fn build_rustflags_build_script_dep() {
 }
 
 #[cargo_test]
-fn build_rustflags_plugin() {
-    // RUSTFLAGS should be passed to rustc for plugins
-    // when --target is not specified.
-    // In this test if --cfg foo is not passed the build will fail.
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-
-                [lib]
-                name = "foo"
-                plugin = true
-            "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-                fn main() { }
-                #[cfg(not(foo))]
-                fn main() { }
-            "#,
-        )
-        .file(
-            ".cargo/config.toml",
-            r#"
-            [build]
-            rustflags = ["--cfg", "foo"]
-            "#,
-        )
-        .build();
-
-    p.cargo("check").run();
-}
-
-#[cargo_test]
-fn build_rustflags_plugin_dep() {
-    // RUSTFLAGS should be passed to rustc for plugins
-    // when --target is not specified.
-    // In this test if --cfg foo is not passed the build will fail.
-    let foo = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-
-                [lib]
-                name = "foo"
-                plugin = true
-
-                [dependencies.bar]
-                path = "../bar"
-            "#,
-        )
-        .file("src/lib.rs", "fn foo() {}")
-        .file(
-            ".cargo/config.toml",
-            r#"
-            [build]
-            rustflags = ["--cfg", "foo"]
-            "#,
-        )
-        .build();
-    let _bar = project()
-        .at("bar")
-        .file("Cargo.toml", &basic_lib_manifest("bar"))
-        .file(
-            "src/lib.rs",
-            r#"
-                fn bar() { }
-                #[cfg(not(foo))]
-                fn bar() { }
-            "#,
-        )
-        .build();
-
-    foo.cargo("check").run();
-}
-
-#[cargo_test]
 fn build_rustflags_normal_source_with_target() {
     let p = project()
         .file("src/lib.rs", "")
@@ -786,92 +554,6 @@ fn build_rustflags_build_script_dep_with_target() {
     let _bar = project()
         .at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
-        .file(
-            "src/lib.rs",
-            r#"
-                fn bar() { }
-                #[cfg(foo)]
-                fn bar() { }
-            "#,
-        )
-        .build();
-
-    let host = rustc_host();
-    foo.cargo("check --target").arg(host).run();
-}
-
-#[cargo_test]
-fn build_rustflags_plugin_with_target() {
-    // RUSTFLAGS should not be passed to rustc for plugins
-    // when --target is specified.
-    // In this test if --cfg foo is passed the build will fail.
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-
-                [lib]
-                name = "foo"
-                plugin = true
-            "#,
-        )
-        .file(
-            "src/lib.rs",
-            r#"
-                fn main() { }
-                #[cfg(foo)]
-                fn main() { }
-            "#,
-        )
-        .file(
-            ".cargo/config.toml",
-            r#"
-            [build]
-            rustflags = ["--cfg", "foo"]
-            "#,
-        )
-        .build();
-
-    let host = rustc_host();
-    p.cargo("check --target").arg(host).run();
-}
-
-#[cargo_test]
-fn build_rustflags_plugin_dep_with_target() {
-    // RUSTFLAGS should not be passed to rustc for plugins
-    // when --target is specified.
-    // In this test if --cfg foo is passed the build will fail.
-    let foo = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-
-                [lib]
-                name = "foo"
-                plugin = true
-
-                [dependencies.bar]
-                path = "../bar"
-            "#,
-        )
-        .file("src/lib.rs", "fn foo() {}")
-        .file(
-            ".cargo/config.toml",
-            r#"
-            [build]
-            rustflags = ["--cfg", "foo"]
-            "#,
-        )
-        .build();
-    let _bar = project()
-        .at("bar")
-        .file("Cargo.toml", &basic_lib_manifest("bar"))
         .file(
             "src/lib.rs",
             r#"

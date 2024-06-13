@@ -1,5 +1,7 @@
 //! Tests for --offline flag.
 
+#![allow(deprecated)]
+
 use cargo_test_support::{
     basic_manifest, git, main_file, path2url, project,
     registry::{Package, RegistryBuilder},

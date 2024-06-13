@@ -1,5 +1,7 @@
 //! Tests for custom json target specifications.
 
+#![allow(deprecated)]
+
 use cargo_test_support::{basic_manifest, project};
 use std::fs;
 

@@ -1,5 +1,7 @@
 //! Tests for ctrl-C handling.
 
+#![allow(deprecated)]
+
 use cargo_test_support::{project, slow_cpu_multiplier};
 use std::fs;
 use std::io::{self, Read};

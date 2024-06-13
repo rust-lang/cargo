@@ -1,5 +1,7 @@
 //! Tests for `cargo-features` definitions.
 
+#![allow(deprecated)]
+
 use cargo_test_support::registry::Package;
 use cargo_test_support::{project, registry};
 

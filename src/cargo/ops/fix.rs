@@ -506,6 +506,7 @@ fn check_resolver_change<'gctx>(
     assert_eq!(ws.resolve_behavior(), ResolveBehavior::V1);
     let specs = opts.compile_opts.spec.to_package_id_specs(ws)?;
     let mut resolve_differences = |has_dev_units| -> CargoResult<(WorkspaceResolve<'_>, DiffMap)> {
+        let dry_run = false;
         let ws_resolve = ops::resolve_ws_with_opts(
             ws,
             target_data,
@@ -514,6 +515,7 @@ fn check_resolver_change<'gctx>(
             &specs,
             has_dev_units,
             crate::core::resolver::features::ForceAllTargets::No,
+            dry_run,
         )?;
 
         let feature_opts = FeatureOpts::new_behavior(ResolveBehavior::V2, has_dev_units);

@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use cargo_test_support::basic_manifest;
 use cargo_test_support::registry::Package;
 

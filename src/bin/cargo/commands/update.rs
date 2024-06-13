@@ -35,6 +35,13 @@ pub fn cli() -> Command {
                 .value_name("PRECISE")
                 .requires("package-group"),
         )
+        .arg(
+            flag(
+                "breaking",
+                "Update [SPEC] to latest SemVer-breaking version (unstable)",
+            )
+            .short('b'),
+        )
         .arg_silent_suggestion()
         .arg(
             flag("workspace", "Only update the workspace packages")
@@ -59,7 +66,8 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
             gctx.cli_unstable().msrv_policy,
         )?;
     }
-    let ws = args.workspace(gctx)?;
+
+    let mut ws = args.workspace(gctx)?;
 
     if args.is_present_with_zero_values("package") {
         print_available_packages(&ws)?;
@@ -89,6 +97,24 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         workspace: args.flag("workspace"),
         gctx,
     };
-    ops::update_lockfile(&ws, &update_opts)?;
+
+    if args.flag("breaking") {
+        gctx.cli_unstable()
+            .fail_if_stable_opt("--breaking", 12425)?;
+
+        let upgrades = ops::upgrade_manifests(&mut ws, &update_opts.to_update)?;
+        ops::resolve_ws(&ws, update_opts.dry_run)?;
+        ops::write_manifest_upgrades(&ws, &upgrades, update_opts.dry_run)?;
+
+        if update_opts.dry_run {
+            update_opts
+                .gctx
+                .shell()
+                .warn("aborting update due to dry run")?;
+        }
+    } else {
+        ops::update_lockfile(&ws, &update_opts)?;
+    }
+
     Ok(())
 }

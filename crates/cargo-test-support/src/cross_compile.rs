@@ -209,18 +209,23 @@ pub fn native_arch() -> &'static str {
 ///
 /// Only use this function on tests that check `cross_compile::disabled`.
 pub fn alternate() -> &'static str {
+    try_alternate().expect("This test should be gated on cross_compile::disabled.")
+}
+
+/// A possible alternate target-triple to build with.
+pub(crate) fn try_alternate() -> Option<&'static str> {
     if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
-        "x86_64-apple-darwin"
+        Some("x86_64-apple-darwin")
     } else if cfg!(target_os = "macos") {
-        "x86_64-apple-ios"
+        Some("x86_64-apple-ios")
     } else if cfg!(target_os = "linux") {
-        "i686-unknown-linux-gnu"
+        Some("i686-unknown-linux-gnu")
     } else if cfg!(all(target_os = "windows", target_env = "msvc")) {
-        "i686-pc-windows-msvc"
+        Some("i686-pc-windows-msvc")
     } else if cfg!(all(target_os = "windows", target_env = "gnu")) {
-        "i686-pc-windows-gnu"
+        Some("i686-pc-windows-gnu")
     } else {
-        panic!("This test should be gated on cross_compile::disabled.");
+        None
     }
 }
 

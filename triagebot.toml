@@ -265,7 +265,7 @@ trigger_files = [
 ]
 
 [autolabel."Command-generate-lockfile"]
-trigger_files = ["src/bin/cargo/commands/generate_lockfile.rs", "src/cargo/ops/cargo_generate_lockfile.rs"]
+trigger_files = ["src/bin/cargo/commands/generate_lockfile.rs"]
 
 [autolabel."Command-git-checkout"]
 trigger_files = ["src/bin/cargo/commands/git_checkout.rs"]
@@ -334,7 +334,7 @@ trigger_files = ["src/bin/cargo/commands/tree.rs", "src/cargo/ops/tree/"]
 trigger_files = ["src/bin/cargo/commands/uninstall.rs", "src/cargo/ops/cargo_uninstall.rs"]
 
 [autolabel."Command-update"]
-trigger_files = ["src/bin/cargo/commands/update.rs"]
+trigger_files = ["src/bin/cargo/commands/update.rs", "src/cargo/ops/cargo_update.rs"]
 
 [autolabel."Command-vendor"]
 trigger_files = ["src/bin/cargo/commands/vendor.rs", "src/cargo/ops/vendor.rs"]

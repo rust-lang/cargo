@@ -1,5 +1,7 @@
 //! Tests for the `cargo test` command.
 
+#![allow(deprecated)]
+
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{

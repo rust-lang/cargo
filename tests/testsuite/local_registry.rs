@@ -1,5 +1,7 @@
 //! Tests for local-registry sources.
 
+#![allow(deprecated)]
+
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::{registry_path, Package};
 use cargo_test_support::{basic_manifest, project, t};

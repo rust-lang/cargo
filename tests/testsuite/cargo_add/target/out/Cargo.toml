@@ -5,6 +5,6 @@ name = "cargo-list-test-fixture"
 version = "0.0.0"
 edition = "2015"
 
-[target.i686-unknown-linux-gnu.dependencies]
+[target.wasm32-unknown-unknown.dependencies]
 my-package1 = "99999.0.0"
 my-package2 = "99999.0.0"

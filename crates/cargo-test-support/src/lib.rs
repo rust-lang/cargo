@@ -25,6 +25,7 @@ use std::time::{self, Duration};
 
 use anyhow::{bail, Result};
 use cargo_util::{is_ci, ProcessBuilder, ProcessError};
+use snapbox::IntoData as _;
 use url::Url;
 
 use self::paths::CargoPathExt;
@@ -534,6 +535,8 @@ pub struct Execs {
     expect_stdin: Option<String>,
     expect_stderr: Option<String>,
     expect_exit_code: Option<i32>,
+    expect_stdout_data: Option<snapbox::Data>,
+    expect_stderr_data: Option<snapbox::Data>,
     expect_stdout_contains: Vec<String>,
     expect_stderr_contains: Vec<String>,
     expect_stdout_contains_n: Vec<(String, usize)>,
@@ -545,6 +548,7 @@ pub struct Execs {
     expect_json: Option<String>,
     expect_json_contains_unordered: Option<String>,
     stream_output: bool,
+    assert: snapbox::Assert,
 }
 
 impl Execs {
@@ -555,6 +559,7 @@ impl Execs {
 
     /// Verifies that stdout is equal to the given lines.
     /// See [`compare`] for supported patterns.
+    #[deprecated(note = "replaced with `Execs::with_stdout_data(expected)`")]
     pub fn with_stdout<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stdout = Some(expected.to_string());
         self
@@ -562,8 +567,25 @@ impl Execs {
 
     /// Verifies that stderr is equal to the given lines.
     /// See [`compare`] for supported patterns.
+    #[deprecated(note = "replaced with `Execs::with_stderr_data(expected)`")]
     pub fn with_stderr<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr = Some(expected.to_string());
+        self
+    }
+
+    /// Verifies that stdout is equal to the given lines.
+    ///
+    /// See [`compare::assert_e2e`] for assertion details.
+    pub fn with_stdout_data(&mut self, expected: impl snapbox::IntoData) -> &mut Self {
+        self.expect_stdout_data = Some(expected.into_data());
+        self
+    }
+
+    /// Verifies that stderr is equal to the given lines.
+    ///
+    /// See [`compare::assert_e2e`] for assertion details.
+    pub fn with_stderr_data(&mut self, expected: impl snapbox::IntoData) -> &mut Self {
+        self.expect_stderr_data = Some(expected.into_data());
         self
     }
 
@@ -593,6 +615,7 @@ impl Execs {
     /// its output.
     ///
     /// See [`compare`] for supported patterns.
+    #[deprecated(note = "replaced with `Execs::with_stdout_data(expected)`")]
     pub fn with_stdout_contains<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stdout_contains.push(expected.to_string());
         self
@@ -602,6 +625,7 @@ impl Execs {
     /// its output.
     ///
     /// See [`compare`] for supported patterns.
+    #[deprecated(note = "replaced with `Execs::with_stderr_data(expected)`")]
     pub fn with_stderr_contains<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr_contains.push(expected.to_string());
         self
@@ -611,6 +635,7 @@ impl Execs {
     /// its output, and should be repeated `number` times.
     ///
     /// See [`compare`] for supported patterns.
+    #[deprecated(note = "replaced with `Execs::with_stdout_data(expected)`")]
     pub fn with_stdout_contains_n<S: ToString>(&mut self, expected: S, number: usize) -> &mut Self {
         self.expect_stdout_contains_n
             .push((expected.to_string(), number));
@@ -622,6 +647,7 @@ impl Execs {
     /// See [`compare`] for supported patterns.
     ///
     /// See note on [`Self::with_stderr_does_not_contain`].
+    #[deprecated]
     pub fn with_stdout_does_not_contain<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stdout_not_contains.push(expected.to_string());
         self
@@ -636,6 +662,7 @@ impl Execs {
     /// your test will pass without verifying the correct behavior. If
     /// possible, write the test first so that it fails, and then implement
     /// your fix/feature to make it pass.
+    #[deprecated]
     pub fn with_stderr_does_not_contain<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr_not_contains.push(expected.to_string());
         self
@@ -645,6 +672,7 @@ impl Execs {
     /// ignoring the order of the lines.
     ///
     /// See [`Execs::with_stderr_unordered`] for more details.
+    #[deprecated(note = "replaced with `Execs::with_stdout_data(expected.unordered())`")]
     pub fn with_stdout_unordered<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stdout_unordered.push(expected.to_string());
         self
@@ -671,6 +699,7 @@ impl Execs {
     ///
     /// This will randomly fail if the other crate name is `bar`, and the
     /// order changes.
+    #[deprecated(note = "replaced with `Execs::with_stderr_data(expected.unordered())`")]
     pub fn with_stderr_unordered<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr_unordered.push(expected.to_string());
         self
@@ -698,6 +727,7 @@ impl Execs {
     ///
     /// Be careful writing the `without` fragments, see note in
     /// `with_stderr_does_not_contain`.
+    #[deprecated]
     pub fn with_stderr_line_without<S: ToString>(
         &mut self,
         with: &[S],
@@ -730,6 +760,7 @@ impl Execs {
     /// - The order of arrays is ignored.
     /// - Strings support patterns described in [`compare`].
     /// - Use `"{...}"` to match any object.
+    #[deprecated(note = "replaced with `Execs::with_stdout_data(expected.json_lines())`")]
     pub fn with_json(&mut self, expected: &str) -> &mut Self {
         self.expect_json = Some(expected.to_string());
         self
@@ -744,6 +775,7 @@ impl Execs {
     /// what you are doing.
     ///
     /// See `with_json` for more detail.
+    #[deprecated]
     pub fn with_json_contains_unordered(&mut self, expected: &str) -> &mut Self {
         match &mut self.expect_json_contains_unordered {
             None => self.expect_json_contains_unordered = Some(expected.to_string()),
@@ -845,6 +877,17 @@ impl Execs {
         self
     }
 
+    pub fn overlay_registry(&mut self, url: &Url, path: &str) -> &mut Self {
+        if let Some(ref mut p) = self.process_builder {
+            let env_value = format!("{}={}", url, path);
+            p.env(
+                "__CARGO_TEST_DEPENDENCY_CONFUSION_VULNERABILITY_DO_NOT_USE_THIS",
+                env_value,
+            );
+        }
+        self
+    }
+
     pub fn enable_split_debuginfo_packed(&mut self) -> &mut Self {
         self.env("CARGO_PROFILE_DEV_SPLIT_DEBUGINFO", "packed")
             .env("CARGO_PROFILE_TEST_SPLIT_DEBUGINFO", "packed")
@@ -908,11 +951,14 @@ impl Execs {
         }
     }
 
+    #[track_caller]
     fn verify_checks_output(&self, stdout: &[u8], stderr: &[u8]) {
         if self.expect_exit_code.unwrap_or(0) != 0
             && self.expect_stdout.is_none()
             && self.expect_stdin.is_none()
             && self.expect_stderr.is_none()
+            && self.expect_stdout_data.is_none()
+            && self.expect_stderr_data.is_none()
             && self.expect_stdout_contains.is_empty()
             && self.expect_stderr_contains.is_empty()
             && self.expect_stdout_contains_n.is_empty()
@@ -934,6 +980,7 @@ impl Execs {
         }
     }
 
+    #[track_caller]
     fn match_process(&self, process: &ProcessBuilder) -> Result<RawOutput> {
         println!("running {}", process);
         let res = if self.stream_output {
@@ -984,6 +1031,7 @@ impl Execs {
         }
     }
 
+    #[track_caller]
     fn match_output(&self, code: Option<i32>, stdout: &[u8], stderr: &[u8]) -> Result<()> {
         self.verify_checks_output(stdout, stderr);
         let stdout = std::str::from_utf8(stdout).expect("stdout is not utf8");
@@ -1007,6 +1055,24 @@ impl Execs {
         }
         if let Some(expect_stderr) = &self.expect_stderr {
             compare::match_exact(expect_stderr, stderr, "stderr", stdout, cwd)?;
+        }
+        if let Some(expect_stdout_data) = &self.expect_stdout_data {
+            if let Err(err) = self.assert.try_eq(
+                Some(&"stdout"),
+                stdout.into_data(),
+                expect_stdout_data.clone(),
+            ) {
+                panic!("{err}")
+            }
+        }
+        if let Some(expect_stderr_data) = &self.expect_stderr_data {
+            if let Err(err) = self.assert.try_eq(
+                Some(&"stderr"),
+                stderr.into_data(),
+                expect_stderr_data.clone(),
+            ) {
+                panic!("{err}")
+            }
         }
         for expect in self.expect_stdout_contains.iter() {
             compare::match_contains(expect, stdout, cwd)?;
@@ -1060,6 +1126,8 @@ pub fn execs() -> Execs {
         expect_stderr: None,
         expect_stdin: None,
         expect_exit_code: Some(0),
+        expect_stdout_data: None,
+        expect_stderr_data: None,
         expect_stdout_contains: Vec::new(),
         expect_stderr_contains: Vec::new(),
         expect_stdout_contains_n: Vec::new(),
@@ -1071,6 +1139,7 @@ pub fn execs() -> Execs {
         expect_json: None,
         expect_json_contains_unordered: None,
         stream_output: false,
+        assert: compare::assert_e2e(),
     }
 }
 

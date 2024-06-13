@@ -36,11 +36,11 @@ pub struct BuildConfig {
     /// A thread used by `cargo fix` to receive messages on a socket regarding
     /// the success/failure of applying fixes.
     pub rustfix_diagnostic_server: Rc<RefCell<Option<RustfixDiagnosticServer>>>,
-    /// The directory to copy final artifacts to. Note that even if `out_dir` is
-    /// set, a copy of artifacts still could be found a `target/(debug\release)`
-    /// as usual.
-    // Note that, although the cmd-line flag name is `out-dir`, in code we use
-    // `export_dir`, to avoid confusion with out dir at `target/debug/deps`.
+    /// The directory to copy final artifacts to. Note that even if
+    /// `artifact-dir` is set, a copy of artifacts still can be found at
+    /// `target/(debug\release)` as usual.
+    /// Named `export_dir` to avoid confusion with
+    /// `CompilationFiles::artifact_dir`.
     pub export_dir: Option<PathBuf>,
     /// `true` to output a future incompatibility report at the end of the build
     pub future_incompat_report: bool,

@@ -1,5 +1,7 @@
 //! Tests for cargo's help output.
 
+#![allow(deprecated)]
+
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, cargo_exe, cargo_process, paths, process, project};
 use std::fs;

@@ -1,5 +1,7 @@
 //! Tests for targets with `required-features`.
 
+#![allow(deprecated)]
+
 use cargo_test_support::install::{
     assert_has_installed_exe, assert_has_not_installed_exe, cargo_home,
 };

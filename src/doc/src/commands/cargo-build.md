@@ -222,7 +222,7 @@ specified with the <code>CARGO_TARGET_DIR</code> environment variable, or the
 Defaults to <code>target</code> in the root of the workspace.</dd>
 
 
-<dt class="option-term" id="option-cargo-build---out-dir"><a class="option-anchor" href="#option-cargo-build---out-dir"></a><code>--out-dir</code> <em>directory</em></dt>
+<dt class="option-term" id="option-cargo-build---artifact-dir"><a class="option-anchor" href="#option-cargo-build---artifact-dir"></a><code>--artifact-dir</code> <em>directory</em></dt>
 <dd class="option-desc">Copy final artifacts to this directory.</p>
 <p>This option is unstable and available only on the
 <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly channel</a>

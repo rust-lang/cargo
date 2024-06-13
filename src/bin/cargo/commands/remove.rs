@@ -121,7 +121,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
             ws.gctx()
                 .shell()
                 .set_verbosity(cargo::core::Verbosity::Quiet);
-            let resolve = resolve_ws(&ws);
+            let resolve = resolve_ws(&ws, dry_run);
             ws.gctx().shell().set_verbosity(verbosity);
             resolve?.1
         };
@@ -129,7 +129,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         // Attempt to gc unused patches and re-resolve if anything is removed
         if gc_unused_patches(&workspace, &resolve)? {
             let ws = args.workspace(gctx)?;
-            resolve_ws(&ws)?;
+            resolve_ws(&ws, dry_run)?;
         }
     }
     Ok(())

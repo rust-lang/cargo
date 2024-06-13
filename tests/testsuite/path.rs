@@ -1,5 +1,7 @@
 //! Tests for `path` dependencies.
 
+#![allow(deprecated)]
+
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, main_file, project};

@@ -1,5 +1,7 @@
 //! Tests for the `cargo build` command.
 
+#![allow(deprecated)]
+
 use cargo::{
     core::compiler::CompileMode,
     core::{Shell, Workspace},

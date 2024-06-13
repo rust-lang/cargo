@@ -184,7 +184,6 @@ test = true            # Is tested by default.
 doctest = true         # Documentation examples are tested by default.
 bench = true           # Is benchmarked by default.
 doc = true             # Is documented by default.
-plugin = false         # Used as a compiler plugin (deprecated).
 proc-macro = false     # Set to `true` for a proc-macro library.
 harness = true         # Use libtest harness.
 edition = "2015"       # The edition of the target.
@@ -247,7 +246,7 @@ libraries and binaries.
 
 ### The `plugin` field
 
-This field is used for `rustc` plugins, which are being deprecated.
+This option is deprecated and unused.
 
 ### The `proc-macro` field
 

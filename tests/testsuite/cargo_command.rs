@@ -1,5 +1,7 @@
 //! Tests for custom cargo commands and other global command features.
 
+#![allow(deprecated)]
+
 use std::env;
 use std::fs;
 use std::io::Read;

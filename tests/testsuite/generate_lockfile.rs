@@ -1,5 +1,7 @@
 //! Tests for the `cargo generate-lockfile` command.
 
+#![allow(deprecated)]
+
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::{basic_manifest, paths, project, ProjectBuilder};
 use std::fs;

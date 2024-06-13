@@ -1,5 +1,7 @@
 //! Tests for named profiles.
 
+#![allow(deprecated)]
+
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::{basic_lib_manifest, project};
 
@@ -380,100 +382,38 @@ fn conflicting_usage() {
         .build();
 
     p.cargo("build --profile=dev --release")
-        .with_status(101)
+        .with_status(1)
         .with_stderr(
             "\
-error: conflicting usage of --profile=dev and --release
-The `--release` flag is the same as `--profile=release`.
-Remove one flag or the other to continue.
-",
+[ERROR] the argument '--profile <PROFILE-NAME>' cannot be used with '--release'
+
+Usage: cargo[EXE] build --profile <PROFILE-NAME>
+
+For more information, try '--help'.",
         )
         .run();
 
     p.cargo("install --profile=release --debug")
-        .with_status(101)
+        .with_status(1)
         .with_stderr(
             "\
-error: conflicting usage of --profile=release and --debug
-The `--debug` flag is the same as `--profile=dev`.
-Remove one flag or the other to continue.
-",
-        )
-        .run();
+[ERROR] the argument '--profile <PROFILE-NAME>' cannot be used with '--debug'
 
-    p.cargo("rustc --profile=dev --release")
-        .with_stderr(
-            "\
-warning: the `--release` flag should not be specified with the `--profile` flag
-The `--release` flag will be ignored.
-This was historically accepted, but will become an error in a future release.
-[COMPILING] foo [..]
-[FINISHED] `dev` profile [..]
-",
+Usage: cargo[EXE] install --profile <PROFILE-NAME> [CRATE[@<VER>]]...
+
+For more information, try '--help'.",
         )
         .run();
 
     p.cargo("check --profile=dev --release")
-        .with_status(101)
+        .with_status(1)
         .with_stderr(
             "\
-error: conflicting usage of --profile=dev and --release
-The `--release` flag is the same as `--profile=release`.
-Remove one flag or the other to continue.
-",
-        )
-        .run();
+[ERROR] the argument '--profile <PROFILE-NAME>' cannot be used with '--release'
 
-    p.cargo("check --profile=test --release")
-        .with_stderr(
-            "\
-warning: the `--release` flag should not be specified with the `--profile` flag
-The `--release` flag will be ignored.
-This was historically accepted, but will become an error in a future release.
-[CHECKING] foo [..]
-[FINISHED] `test` profile [..]
-",
-        )
-        .run();
+Usage: cargo[EXE] check --profile <PROFILE-NAME>
 
-    // This is OK since the two are the same.
-    p.cargo("rustc --profile=release --release")
-        .with_stderr(
-            "\
-[COMPILING] foo [..]
-[FINISHED] `release` profile [..]
-",
-        )
-        .run();
-
-    p.cargo("build --profile=release --release")
-        .with_stderr(
-            "\
-[FINISHED] `release` profile [..]
-",
-        )
-        .run();
-
-    p.cargo("install --path . --profile=dev --debug")
-        .with_stderr(
-            "\
-[INSTALLING] foo [..]
-[FINISHED] `dev` profile [..]
-[INSTALLING] [..]
-[INSTALLED] [..]
-[WARNING] be sure to add [..]
-",
-        )
-        .run();
-
-    p.cargo("install --path . --profile=release --debug")
-        .with_status(101)
-        .with_stderr(
-            "\
-error: conflicting usage of --profile=release and --debug
-The `--debug` flag is the same as `--profile=dev`.
-Remove one flag or the other to continue.
-",
+For more information, try '--help'.",
         )
         .run();
 }

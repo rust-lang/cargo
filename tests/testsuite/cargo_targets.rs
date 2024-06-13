@@ -1,5 +1,7 @@
 //! Tests specifically related to target handling (lib, bins, examples, tests, benches).
 
+#![allow(deprecated)]
+
 use cargo_test_support::project;
 
 #[cargo_test]

@@ -2,6 +2,8 @@
 //!
 //! See `cargo_test_support::cross_compile` for more detail.
 
+#![allow(deprecated)]
+
 use cargo_test_support::rustc_host;
 use cargo_test_support::{basic_bin_manifest, basic_manifest, cross_compile, project};
 
@@ -881,47 +883,6 @@ fn build_script_only_host() {
 
     let target = cross_compile::alternate();
     p.cargo("build -v --target").arg(&target).run();
-}
-
-#[cargo_test]
-fn plugin_build_script_right_arch() {
-    if cross_compile::disabled() {
-        return;
-    }
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.0.1"
-                edition = "2015"
-                authors = []
-                build = "build.rs"
-
-                [lib]
-                name = "foo"
-                plugin = true
-            "#,
-        )
-        .file("build.rs", "fn main() {}")
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("build -v --target")
-        .arg(cross_compile::alternate())
-        .with_stderr(
-            "\
-[WARNING] support for rustc plugins has been removed from rustc. library `foo` should not specify `plugin = true`
-[WARNING] support for `plugin = true` will be removed from cargo in the future
-[COMPILING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..] build.rs [..]`
-[RUNNING] `[..]/build-script-build`
-[RUNNING] `rustc [..] src/lib.rs [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
 }
 
 #[cargo_test]

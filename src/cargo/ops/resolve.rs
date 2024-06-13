@@ -115,9 +115,9 @@ version. This may also occur with an optional dependency that is not enabled.";
 ///
 /// This is a simple interface used by commands like `clean`, `fetch`, and
 /// `package`, which don't specify any options or features.
-pub fn resolve_ws<'a>(ws: &Workspace<'a>) -> CargoResult<(PackageSet<'a>, Resolve)> {
-    let mut registry = PackageRegistry::new(ws.gctx())?;
-    let resolve = resolve_with_registry(ws, &mut registry)?;
+pub fn resolve_ws<'a>(ws: &Workspace<'a>, dry_run: bool) -> CargoResult<(PackageSet<'a>, Resolve)> {
+    let mut registry = ws.package_registry()?;
+    let resolve = resolve_with_registry(ws, &mut registry, dry_run)?;
     let packages = get_resolved_packages(&resolve, registry)?;
     Ok((packages, resolve))
 }
@@ -140,8 +140,9 @@ pub fn resolve_ws_with_opts<'gctx>(
     specs: &[PackageIdSpec],
     has_dev_units: HasDevUnits,
     force_all_targets: ForceAllTargets,
+    dry_run: bool,
 ) -> CargoResult<WorkspaceResolve<'gctx>> {
-    let mut registry = PackageRegistry::new(ws.gctx())?;
+    let mut registry = ws.package_registry()?;
     let (resolve, resolved_with_overrides) = if ws.ignore_lock() {
         let add_patches = true;
         let resolve = None;
@@ -160,7 +161,7 @@ pub fn resolve_ws_with_opts<'gctx>(
     } else if ws.require_optional_deps() {
         // First, resolve the root_package's *listed* dependencies, as well as
         // downloading and updating all remotes and such.
-        let resolve = resolve_with_registry(ws, &mut registry)?;
+        let resolve = resolve_with_registry(ws, &mut registry, dry_run)?;
         // No need to add patches again, `resolve_with_registry` has done it.
         let add_patches = false;
 
@@ -269,6 +270,7 @@ pub fn resolve_ws_with_opts<'gctx>(
 fn resolve_with_registry<'gctx>(
     ws: &Workspace<'gctx>,
     registry: &mut PackageRegistry<'gctx>,
+    dry_run: bool,
 ) -> CargoResult<Resolve> {
     let prev = ops::load_pkg_lockfile(ws)?;
     let mut resolve = resolve_with_previous(
@@ -283,7 +285,11 @@ fn resolve_with_registry<'gctx>(
     )?;
 
     let print = if !ws.is_ephemeral() && ws.require_optional_deps() {
-        ops::write_pkg_lockfile(ws, &mut resolve)?
+        if !dry_run {
+            ops::write_pkg_lockfile(ws, &mut resolve)?
+        } else {
+            true
+        }
     } else {
         // This mostly represents
         // - `cargo install --locked` and the only change is the package is no longer local but

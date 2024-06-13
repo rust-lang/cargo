@@ -109,7 +109,7 @@
 </tspan>
     <tspan x="10px" y="820px"><tspan>      </tspan><tspan class="fg-cyan bold">--target-dir</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;DIRECTORY&gt;</tspan><tspan>  Directory for all generated artifacts</tspan>
 </tspan>
-    <tspan x="10px" y="838px"><tspan>      </tspan><tspan class="fg-cyan bold">--out-dir</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>          Copy final artifacts to this directory (unstable)</tspan>
+    <tspan x="10px" y="838px"><tspan>      </tspan><tspan class="fg-cyan bold">--artifact-dir</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>     Copy final artifacts to this directory (unstable)</tspan>
 </tspan>
     <tspan x="10px" y="856px"><tspan>      </tspan><tspan class="fg-cyan bold">--build-plan</tspan><tspan>              Output the build plan in JSON (unstable)</tspan>
 </tspan>

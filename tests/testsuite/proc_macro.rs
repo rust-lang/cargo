@@ -1,5 +1,7 @@
 //! Tests for proc-macros.
 
+#![allow(deprecated)]
+
 use cargo_test_support::project;
 
 #[cargo_test]
@@ -346,6 +348,28 @@ fn proc_macro_crate_type_warning() {
 }
 
 #[cargo_test]
+fn lib_plugin_unused_key_warning() {
+    let foo = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+                [lib]
+                plugin = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    foo.cargo("check")
+        .with_stderr_contains("[WARNING] unused manifest key: lib.plugin")
+        .run();
+}
+
+#[cargo_test]
 fn proc_macro_crate_type_warning_plugin() {
     let foo = project()
         .file(
@@ -357,23 +381,15 @@ fn proc_macro_crate_type_warning_plugin() {
                 edition = "2015"
                 [lib]
                 crate-type = ["proc-macro"]
-                plugin = true
             "#,
         )
         .file("src/lib.rs", "")
         .build();
 
     foo.cargo("check")
-        .with_stderr_contains(
-            "[WARNING] support for rustc plugins has been removed from rustc. \
-            library `foo` should not specify `plugin = true`")
-        .with_stderr_contains(
-            "[WARNING] support for `plugin = true` will be removed from cargo in the future")
-        .with_stderr_contains(
-            "[WARNING] proc-macro library `foo` should not specify `plugin = true`")
-        .with_stderr_contains(
-            "[WARNING] library `foo` should only specify `proc-macro = true` instead of setting `crate-type`")
-        .run();
+    .with_stderr_contains(
+        "[WARNING] library `foo` should only specify `proc-macro = true` instead of setting `crate-type`")
+    .run();
 }
 
 #[cargo_test]

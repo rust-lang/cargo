@@ -1,5 +1,7 @@
 //! Tests for build.rs scripts.
 
+#![allow(deprecated)]
+
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::install::cargo_home;
 use cargo_test_support::paths::CargoPathExt;
@@ -2176,61 +2178,6 @@ fn shared_dep_with_a_build_script() {
         .file("b/src/lib.rs", "")
         .build();
     p.cargo("build -v").run();
-}
-
-#[cargo_test]
-fn transitive_dep_host() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                [package]
-                name = "foo"
-                version = "0.5.0"
-                edition = "2015"
-                authors = []
-                build = "build.rs"
-
-                [build-dependencies.b]
-                path = "b"
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .file("build.rs", "fn main() {}")
-        .file(
-            "a/Cargo.toml",
-            r#"
-                [package]
-                name = "a"
-                version = "0.5.0"
-                edition = "2015"
-                authors = []
-                links = "foo"
-                build = "build.rs"
-            "#,
-        )
-        .file("a/build.rs", "fn main() {}")
-        .file("a/src/lib.rs", "")
-        .file(
-            "b/Cargo.toml",
-            r#"
-                [package]
-                name = "b"
-                version = "0.5.0"
-                edition = "2015"
-                authors = []
-
-                [lib]
-                name = "b"
-                plugin = true
-
-                [dependencies.a]
-                path = "../a"
-            "#,
-        )
-        .file("b/src/lib.rs", "")
-        .build();
-    p.cargo("build").run();
 }
 
 #[cargo_test]

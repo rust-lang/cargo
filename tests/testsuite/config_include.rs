@@ -1,5 +1,7 @@
 //! Tests for `include` config field.
 
+#![allow(deprecated)]
+
 use super::config::{assert_error, write_config_at, write_config_toml, GlobalContextBuilder};
 use cargo_test_support::{no_such_file_err_msg, project};
 
