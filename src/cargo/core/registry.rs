@@ -180,6 +180,7 @@ pub type PatchDependency<'a> = (&'a Dependency, Option<LockedPatchDependency>);
 
 /// Argument to [`PackageRegistry::patch`] which is information about a `[patch]`
 /// directive that we found in a lockfile, if present.
+#[derive(Debug)]
 pub struct LockedPatchDependency {
     /// The original `Dependency` directive, except "locked" so it's version
     /// requirement is Locked to `foo` and its `SourceId` has a "precise" listed.

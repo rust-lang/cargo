@@ -288,6 +288,10 @@ impl PatchInfo {
             PatchInfo::Deferred { patches } => patches.as_slice(),
         }
     }
+
+    pub fn is_resolved(&self) -> bool {
+        matches!(self, PatchInfo::Resolved { .. })
+    }
 }
 
 /// A [`PatchInfo`] that can be `Display`ed as URL query string.
