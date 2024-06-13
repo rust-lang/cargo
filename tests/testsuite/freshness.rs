@@ -2936,6 +2936,9 @@ fn use_mtime_cache_in_cargo_home() {
         .with_stderr(
             "\
 [DIRTY] foo v0.5.0 ([CWD]): [..]
+
+    THIS RANDOM SENTENCE SHOULD FAIL THIS TEST BUT DIDN'T
+
 [CHECKING] foo v0.5.0 ([CWD])
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]",
         )

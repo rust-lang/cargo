@@ -632,7 +632,9 @@ fn config_invalid_empty() {
         .build();
 
     p.cargo("check")
-        .with_stderr_contains("[..]missing field `level`[..]")
+        .with_stderr_contains(
+            "[..]missing field `level`[..] THIS RANDOM SENTENCE SHOULD FAIL THIS TEST BUT DIDN'T",
+        )
         .run_expect_error();
 }
 
