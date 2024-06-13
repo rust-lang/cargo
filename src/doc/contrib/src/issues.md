@@ -155,8 +155,9 @@ different steps, or in rare cases have multiple statuses.
 * **[S-needs-rfc]** --- Needs an [RFC] before this can make more progress.
 
   Anyone is welcome to help at this stage, but it should be clear that it is
-  not yet accepted. However, this should only be tagged for changes that are
-  somewhat likely to be accepted.
+  not yet accepted.
+  See [Before creating an RFC](https://github.com/rust-lang/rfcs?tab=readme-ov-file#before-creating-an-rfc)
+  for next steps.
 
 * **[S-needs-mentor]** --- Needs a Cargo team member to commit to helping and
   reviewing.
@@ -197,10 +198,13 @@ issues have not yet been triaged.
 There are several things to consider when triaging an issue:
 
 * Is this a duplicate? Search the issue tracker (including closed issues) to
-  see if there is something similar or identical to what is reported. If it is
-  obviously a duplicate, write a comment that it is a duplicate of the other
-  issue, and close the issue. If it isn't obvious that it is a duplicate,
-  leave a comment asking the author if the other issue covers what they reported.
+  see if there is an issue with a similar or identical root cause to what is reported.
+  We generally focus issues around root causes so alternative solutions can be
+  discussed and evaluated together.
+  If it is obviously a duplicate, write a comment that it is a duplicate of the
+  other issue, and close the issue.
+  If it isn't obvious that it is a duplicate, leave a comment asking the author
+  if the other issue covers what they reported.
 
 * For a bug, check if the report contains enough information to reproduce it.
   If you can't reproduce it, solicit more information from the author to
@@ -214,20 +218,19 @@ There are several things to consider when triaging an issue:
       prefixed labels (depending on if it is a regression in an already
       released stable release, or it is in nightly).
 
-* Assuming the issue looks valid, remove the [S-triage] label and move it onto
-  a new status:
+* Assuming the issue looks valid, switch the [S-triage] label for one of the following:
 
-  * [S-needs-rfc] --- This is a large feature request that will require a
-    public design process.
-  * [S-needs-design] --- The resolution of the issue or small feature request
-    will need more work to come up with the appropriate design.
   * [S-needs-team-input] --- The next steps are not clear, and the Cargo team
     needs to discuss whether or not to proceed and what needs to be done to
     address the issue.
+  * [S-needs-design] --- The resolution of the issue or small feature request
+    will need more work to come up with the appropriate design.
+  * [S-needs-rfc] --- This is a large feature request that will require a
+    public design process.
   * [S-needs-mentor] --- This is something the Cargo team wants to address,
-    but does not currently have the capacity to help with reviewing.
+    but does not currently have the capacity to help with reviewing. **(reserved for Cargo team)**
   * [S-accepted] --- This is something that clearly needs to be addressed, and
-    a Cargo team member has volunteered to help review.
+    a Cargo team member has volunteered to help review. **(reserved for Cargo team)**
 
 Anyone is welcome to help with the triaging process. You can help with
 reproducing issues, checking for duplicates, gathering more information from
