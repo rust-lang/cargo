@@ -22,7 +22,7 @@ OUTPUT FORMAT
    Compatibility
        Within the same output format version, the compatibility is maintained,
        except some scenarios. The following is a non-exhaustive list of changes
-       that are not considersed as incompatible:
+       that are not considered as incompatible:
 
        o  Adding new fields — New fields will be added when needed. Reserving
           this helps Cargo evolve without bumping the format version too often.
