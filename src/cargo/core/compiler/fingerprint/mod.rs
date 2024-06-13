@@ -787,7 +787,7 @@ impl LocalFingerprint {
                 opt.as_ref()
                     .and_then(|os_str| os_str.clone().into_string().ok())
             })
-            .or_else(|| env::var(key).ok());
+            .or_else(|| env::var_os(key).and_then(|os_str| os_str.into_string().ok()));
 
         LocalFingerprint::RerunIfEnvChanged { var, val }
     }
