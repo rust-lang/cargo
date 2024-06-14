@@ -88,13 +88,11 @@ fn build_with_symlink_to_path_dependency_with_build_script_in_git() {
 fn cargo_fail_with_no_stderr() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", &String::from("refusal"))
+        .file("src/main.rs", &String::from("refusal"))
         .build();
     p.cargo("build --message-format=json")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[WARNING] path `src/foo.rs` was erroneously implicitly accepted for binary `foo`,
-please set bin.path in Cargo.toml
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [ERROR] could not compile `foo` (bin "foo") due to 2 previous errors
 
@@ -108,14 +106,12 @@ please set bin.path in Cargo.toml
 fn cargo_compile_incremental() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .file("src/main.rs", &main_file(r#""i am foo""#, &[]))
         .build();
 
     p.cargo("build -v")
         .env("CARGO_INCREMENTAL", "1")
         .with_stderr_data(str![[r#"
-[WARNING] path `src/foo.rs` was erroneously implicitly accepted for binary `foo`,
-please set bin.path in Cargo.toml
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] -C incremental=[ROOT]/foo/target/debug/incremental[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -126,8 +122,6 @@ please set bin.path in Cargo.toml
     p.cargo("test -v")
         .env("CARGO_INCREMENTAL", "1")
         .with_stderr_data(str![[r#"
-[WARNING] path `src/foo.rs` was erroneously implicitly accepted for binary `foo`,
-please set bin.path in Cargo.toml
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] -C incremental=[ROOT]/foo/target/debug/incremental[..]`
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -825,14 +819,12 @@ fn cargo_compile_with_lowercase_cargo_toml() {
 fn cargo_compile_with_invalid_code() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", "invalid rust code!")
+        .file("src/main.rs", "invalid rust code!")
         .build();
 
     p.cargo("build")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[WARNING] path `src/foo.rs` was erroneously implicitly accepted for binary `foo`,
-please set bin.path in Cargo.toml
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [ERROR] [..]
 ...
@@ -894,13 +886,11 @@ fn cargo_compile_with_invalid_code_in_deps() {
 fn cargo_compile_with_warnings_in_the_root_package() {
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", "fn main() {} fn dead() {}")
+        .file("src/main.rs", "fn main() {} fn dead() {}")
         .build();
 
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[WARNING] path `src/foo.rs` was erroneously implicitly accepted for binary `foo`,
-please set bin.path in Cargo.toml
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [WARNING] [..]dead[..]
 ...
@@ -932,7 +922,7 @@ fn cargo_compile_with_warnings_in_a_dep_package() {
                 name = "foo"
             "#,
         )
-        .file("src/foo.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
+        .file("src/main.rs", &main_file(r#""{}", bar::gimme()"#, &["bar"]))
         .file("bar/Cargo.toml", &basic_lib_manifest("bar"))
         .file(
             "bar/src/bar.rs",
@@ -948,8 +938,6 @@ fn cargo_compile_with_warnings_in_a_dep_package() {
 
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[WARNING] path `src/foo.rs` was erroneously implicitly accepted for binary `foo`,
-please set bin.path in Cargo.toml
 [LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [WARNING] [..]dead[..]
@@ -2316,7 +2304,7 @@ fn ignore_broken_symlinks() {
 
     let p = project()
         .file("Cargo.toml", &basic_bin_manifest("foo"))
-        .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
+        .file("src/main.rs", &main_file(r#""i am foo""#, &[]))
         .symlink("Notafile", "bar")
         // To hit the symlink directory, we need a build script
         // to trigger a full scan of package files.
@@ -2326,8 +2314,6 @@ fn ignore_broken_symlinks() {
 
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[WARNING] path `src/foo.rs` was erroneously implicitly accepted for binary `foo`,
-please set bin.path in Cargo.toml
 [WARNING] File system loop found: [ROOT]/foo/a/b/c/d/foo points to an ancestor [ROOT]/foo/a/b
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
