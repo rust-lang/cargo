@@ -633,9 +633,7 @@ fn config_invalid_empty() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr_contains(
-            "[..]missing field `level`[..] THIS RANDOM SENTENCE SHOULD FAIL THIS TEST BUT DIDN'T",
-        )
+        .with_stderr_contains("[..]missing field `level`[..]")
         .run();
 }
 
