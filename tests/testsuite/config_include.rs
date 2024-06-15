@@ -1,8 +1,7 @@
 //! Tests for `include` config field.
 
-#![allow(deprecated)]
-
 use super::config::{assert_error, write_config_at, write_config_toml, GlobalContextBuilder};
+use cargo_test_support::str;
 use cargo_test_support::{no_such_file_err_msg, project};
 
 #[cargo_test]
@@ -68,24 +67,22 @@ fn works_with_cli() {
     );
     let p = project().file("src/lib.rs", "").build();
     p.cargo("check -v")
-        .with_stderr(
-            "\
-[CHECKING] foo v0.0.1 [..]
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]-W unused`
-[FINISHED] [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("check -v -Z config-include")
         .masquerade_as_nightly_cargo(&["config-include"])
-        .with_stderr(
-            "\
-[DIRTY] foo v0.0.1 ([..]): the rustflags changed
-[CHECKING] foo v0.0.1 [..]
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the rustflags changed
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]-W unsafe-code -W unused`
-[FINISHED] [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 

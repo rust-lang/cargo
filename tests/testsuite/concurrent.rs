@@ -1,7 +1,5 @@
 //! Tests for running multiple `cargo` processes at the same time.
 
-#![allow(deprecated)]
-
 use std::fs;
 use std::net::TcpListener;
 use std::process::Stdio;
@@ -13,6 +11,7 @@ use cargo_test_support::cargo_process;
 use cargo_test_support::git;
 use cargo_test_support::install::{assert_has_installed_exe, cargo_home};
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, execs, project, slow_cpu_multiplier};
 
 fn pkg(name: &str, vers: &str) {
@@ -433,20 +432,20 @@ fn debug_release_ok() {
     let a = a.join().unwrap();
 
     execs()
-        .with_stderr_contains(
-            "\
-[COMPILING] foo v0.0.1 [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+...
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run_output(&a);
     execs()
-        .with_stderr_contains(
-            "\
-[COMPILING] foo v0.0.1 [..]
-[FINISHED] `release` profile [optimized] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+...
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
         .run_output(&b);
 }
 
