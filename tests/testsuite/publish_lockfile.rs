@@ -78,10 +78,10 @@ fn package_lockfile() {
         .with_stderr(
             "\
 [PACKAGING] foo v0.0.1 ([CWD])
+[PACKAGED] [..] files, [..] ([..] compressed)
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[PACKAGED] [..] files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -100,10 +100,10 @@ src/main.rs
         .with_stderr(
             "\
 [PACKAGING] foo v0.0.1 [..]
+[PACKAGED] 4 files, [..]
 [VERIFYING] foo v0.0.1 [..]
 [COMPILING] foo v0.0.1 [..]
 [FINISHED] [..]
-[PACKAGED] 4 files, [..]
 ",
         )
         .run();
@@ -146,11 +146,11 @@ src/main.rs
 [ARCHIVING] Cargo.toml
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/main.rs
+[PACKAGED] 5 files, [..] ([..] compressed)
 [VERIFYING] foo v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[PACKAGED] 5 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -473,11 +473,11 @@ src/main.rs
 [ARCHIVING] Cargo.toml
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/main.rs
+[PACKAGED] 5 files, [..] ([..] compressed)
 [VERIFYING] foo v0.0.1 ([..])
 [COMPILING] foo v0.0.1 ([..])
 [RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[PACKAGED] 5 files, [..] ([..] compressed)
 ",
         )
         .run();
@@ -570,21 +570,21 @@ fn use_workspace_root_lockfile() {
 See [..]
 [PACKAGING] bar v0.0.1 ([CWD]/bar)
 [UPDATING] `dummy-registry` index
+[PACKAGED] 4 files, [..]
 [VERIFYING] bar v0.0.1 ([CWD]/bar)
 [DOWNLOADING] crates ...
 [DOWNLOADED] serde v0.2.0 ([..])
 [COMPILING] serde v0.2.0
 [COMPILING] bar v0.0.1 ([CWD][..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[PACKAGED] 4 files, [..]
 [WARNING] manifest has no documentation, [..]
 See [..]
 [PACKAGING] foo v0.0.1 ([CWD])
+[PACKAGED] 4 files, [..]
 [VERIFYING] foo v0.0.1 ([CWD])
 [COMPILING] serde v0.2.0
 [COMPILING] foo v0.0.1 ([CWD][..])
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[PACKAGED] 4 files, [..]
 ",
         )
         .run();
