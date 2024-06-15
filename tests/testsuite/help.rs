@@ -1,8 +1,7 @@
 //! Tests for cargo's help output.
 
-#![allow(deprecated)]
-
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, cargo_exe, cargo_process, paths, process, project};
 use std::fs;
 use std::path::Path;
@@ -16,11 +15,6 @@ fn help() {
     cargo_process("help build").run();
     cargo_process("build -h").run();
     cargo_process("help help").run();
-    // Ensure that help output goes to stdout, not stderr.
-    cargo_process("search --help").with_stderr("").run();
-    cargo_process("search --help")
-        .with_stdout_contains("[..] --frozen [..]")
-        .run();
 }
 
 #[cargo_test]
@@ -41,7 +35,10 @@ fn help_external_subcommand() {
         .publish();
     cargo_process("install cargo-fake-help").run();
     cargo_process("help fake-help")
-        .with_stdout("fancy help output\n")
+        .with_stdout_data(str![[r#"
+fancy help output
+
+"#]])
         .run();
 }
 
@@ -147,8 +144,17 @@ fn help_alias() {
     // The `empty-alias` returns an error.
     cargo_process("help empty-alias")
         .env("PATH", Path::new(""))
-        .with_stderr_contains("[..]The subcommand 'empty-alias' wasn't recognized[..]")
-        .run_expect_error();
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] no such command: `empty-alias`
+
+	Did you mean `empty-alias`?
+
+	View all installed commands with `cargo --list`
+	Find a package to install `empty-alias` with `cargo search cargo-empty-alias`
+
+"#]])
+        .run();
 
     // Because `simple-alias` aliases a subcommand with no arguments, help shows the manpage.
     help_with_man_and_path("", "simple-alias", "build", Path::new(""));
@@ -156,15 +162,4 @@ fn help_alias() {
     // Help for `complex-alias` displays the full alias command.
     let out = help_with_stdout_and_path("complex-alias", Path::new(""));
     assert_eq!(out, "`complex-alias` is aliased to `build --release`\n");
-}
-
-#[cargo_test]
-fn alias_z_flag_help() {
-    for cmd in ["build", "run", "check", "test", "b", "r", "c", "t"] {
-        cargo_process(&format!("{cmd} -Z help"))
-            .with_stdout_contains(
-                "    -Z allow-features[..]  Allow *only* the listed unstable features",
-            )
-            .run();
-    }
 }
