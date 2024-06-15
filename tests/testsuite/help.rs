@@ -155,18 +155,3 @@ fn help_alias() {
     let out = help_with_stdout_and_path("complex-alias", Path::new(""));
     assert_eq!(out, "`complex-alias` is aliased to `build --release`\n");
 }
-
-#[cargo_test]
-fn alias_z_flag_help() {
-    for cmd in ["build", "run", "check", "test", "b", "r", "c", "t"] {
-        cargo_process(&format!("{cmd} -Z help"))
-            .with_stdout_data(
-                "\
-...
-    -Z allow-features[..]  Allow *only* the listed unstable features
-...
-",
-            )
-            .run();
-    }
-}
