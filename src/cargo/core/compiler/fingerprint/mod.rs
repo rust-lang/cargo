@@ -770,9 +770,6 @@ pub enum StaleItem {
 impl LocalFingerprint {
     /// Read the environment variable of the given env `key`, and creates a new
     /// [`LocalFingerprint::RerunIfEnvChanged`] for it.
-    ///
-    // TODO: This is allowed at this moment. Should figure out if it makes
-    // sense if permitting to read env from the config system.
     #[allow(clippy::disallowed_methods)]
     fn from_env<K: AsRef<str>>(
         key: K,
