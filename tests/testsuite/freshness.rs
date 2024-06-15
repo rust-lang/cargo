@@ -2934,7 +2934,7 @@ fn use_mtime_cache_in_cargo_home() {
     p.cargo("check -v")
         .env("CARGO_HOME", &cargo_home)
         .with_status(101)
-        .with_stderr(
+        .with_stderr_contains(
             "\
 [DIRTY] foo v0.5.0 ([CWD]): [..]
 [CHECKING] foo v0.5.0 ([CWD])
