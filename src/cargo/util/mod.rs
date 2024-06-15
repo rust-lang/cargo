@@ -126,12 +126,8 @@ pub fn try_canonicalize<P: AsRef<Path>>(path: P) -> std::io::Result<PathBuf> {
 #[cfg(windows)]
 #[inline]
 pub fn try_canonicalize<P: AsRef<Path>>(path: P) -> std::io::Result<PathBuf> {
-    use std::ffi::OsString;
     use std::io::Error;
-    use std::os::windows::ffi::{OsStrExt, OsStringExt};
-    use std::{io::ErrorKind, ptr};
-    use windows_sys::Win32::Foundation::{GetLastError, SetLastError};
-    use windows_sys::Win32::Storage::FileSystem::GetFullPathNameW;
+    use std::io::ErrorKind;
 
     // On Windows `canonicalize` may fail, so we fall back to getting an absolute path.
     std::fs::canonicalize(&path).or_else(|_| {
@@ -139,54 +135,7 @@ pub fn try_canonicalize<P: AsRef<Path>>(path: P) -> std::io::Result<PathBuf> {
         if !path.as_ref().try_exists()? {
             return Err(Error::new(ErrorKind::NotFound, "the path was not found"));
         }
-
-        // This code is based on the unstable `std::path::absolute` and could be replaced with it
-        // if it's stabilized.
-
-        let path = path.as_ref().as_os_str();
-        let mut path_u16 = Vec::with_capacity(path.len() + 1);
-        path_u16.extend(path.encode_wide());
-        if path_u16.iter().find(|c| **c == 0).is_some() {
-            return Err(Error::new(
-                ErrorKind::InvalidInput,
-                "strings passed to WinAPI cannot contain NULs",
-            ));
-        }
-        path_u16.push(0);
-
-        loop {
-            unsafe {
-                SetLastError(0);
-                let len =
-                    GetFullPathNameW(path_u16.as_ptr(), 0, &mut [] as *mut u16, ptr::null_mut());
-                if len == 0 {
-                    let error = GetLastError();
-                    if error != 0 {
-                        return Err(Error::from_raw_os_error(error as i32));
-                    }
-                }
-                let mut result = vec![0u16; len as usize];
-
-                let write_len = GetFullPathNameW(
-                    path_u16.as_ptr(),
-                    result.len().try_into().unwrap(),
-                    result.as_mut_ptr().cast::<u16>(),
-                    ptr::null_mut(),
-                );
-                if write_len == 0 {
-                    let error = GetLastError();
-                    if error != 0 {
-                        return Err(Error::from_raw_os_error(error as i32));
-                    }
-                }
-
-                if write_len <= len {
-                    return Ok(PathBuf::from(OsString::from_wide(
-                        &result[0..(write_len as usize)],
-                    )));
-                }
-            }
-        }
+        std::path::absolute(&path)
     })
 }
 
