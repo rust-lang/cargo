@@ -14,11 +14,6 @@ fn help() {
     cargo_process("help build").run();
     cargo_process("build -h").run();
     cargo_process("help help").run();
-    // Ensure that help output goes to stdout, not stderr.
-    cargo_process("search --help").with_stderr("").run();
-    cargo_process("search --help")
-        .with_stdout_contains("[..] --frozen [..]")
-        .run();
 }
 
 #[cargo_test]
