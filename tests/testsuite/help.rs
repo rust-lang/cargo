@@ -1,7 +1,6 @@
 //! Tests for cargo's help output.
 
 use cargo_test_support::registry::Package;
-use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, cargo_exe, cargo_process, paths, process, project};
 use std::fs;
 use std::path::Path;
@@ -16,11 +15,9 @@ fn help() {
     cargo_process("build -h").run();
     cargo_process("help help").run();
     // Ensure that help output goes to stdout, not stderr.
-    cargo_process("search --help").with_stderr(str![]).run();
+    cargo_process("search --help").with_stderr("").run();
     cargo_process("search --help")
-        .with_stdout_contains(str![[r#"
-HEY SNAPBOX, FIX THIS AUTOMATICALLY PLEASE
-"#]])
+        .with_stdout_contains("[..] --frozen [..]")
         .run();
 }
 
