@@ -1,7 +1,5 @@
 //! Tests for workspace member discovery.
 
-#![allow(deprecated)]
-
 use cargo::core::{Shell, Workspace};
 use cargo::util::context::GlobalContext;
 
