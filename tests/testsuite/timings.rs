@@ -1,9 +1,8 @@
 //! Tests for --timings.
 
-#![allow(deprecated)]
-
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 
 #[cargo_test]
 fn timings_works() {
@@ -29,18 +28,17 @@ fn timings_works() {
         .build();
 
     p.cargo("build --all-targets --timings")
-        .with_stderr_unordered(
-            "\
-[UPDATING] [..]
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] dep v0.1.0 [..]
+[DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
 [COMPILING] dep v0.1.0
-[COMPILING] foo v0.1.0 [..]
-[FINISHED] [..]
-      Timing report saved to [..]/foo/target/cargo-timings/cargo-timing-[..].html
-",
-        )
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+      Timing report saved to [ROOT]/foo/target/cargo-timings/cargo-timing-[..].html
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("clean").run();
