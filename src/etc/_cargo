@@ -60,11 +60,18 @@ _cargo() {
         "--no-default-features[don't build the default features]"
     )
 
+    typeset -A registries_tmp
+    typeset -a registries
+    zstyle -a ":completion:${curcontext}:registries" registries registries_tmp
+    for key in ${(k)registries_tmp}; do
+        registries+=("$key:${registries_tmp[$key]}")
+    done
+
     msgfmt='--message-format=[specify error format]:error format [human]:(human json short)'
     triple='--target=[specify target triple]:target triple:_cargo_target_triple'
     target='--target-dir=[specify directory for all generated artifacts]:directory:_directories'
     manifest='--manifest-path=[specify path to manifest]:path:_directories'
-    registry='--registry=[specify registry to use]:registry'
+    registry='--registry=[specify registry to use]:registry:((${registries[@]}))'
 
     case $state in
         args)
