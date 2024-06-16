@@ -915,15 +915,6 @@ impl Execs {
         }
     }
 
-    #[track_caller]
-    pub fn run_expect_error(&mut self) {
-        self.ran = true;
-        let p = (&self.process_builder).clone().unwrap();
-        if self.match_process(&p).is_ok() {
-            panic!("test was expected to fail, but succeeded running {}", p);
-        }
-    }
-
     /// Runs the process, checks the expected output, and returns the first
     /// JSON object on stdout.
     #[track_caller]
