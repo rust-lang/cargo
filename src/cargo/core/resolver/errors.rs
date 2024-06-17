@@ -193,14 +193,6 @@ pub(super) fn activation_error(
                     );
                     // p == parent so the full path is redundant.
                 }
-                ConflictReason::PublicDependency(pkg_id) => {
-                    // TODO: This needs to be implemented.
-                    unimplemented!("pub dep {:?}", pkg_id);
-                }
-                ConflictReason::PubliclyExports(pkg_id) => {
-                    // TODO: This needs to be implemented.
-                    unimplemented!("pub exp {:?}", pkg_id);
-                }
             }
         }
 

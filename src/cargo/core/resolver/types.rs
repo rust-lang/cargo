@@ -300,12 +300,6 @@ pub enum ConflictReason {
     /// A dependency listed a feature for an optional dependency, but that
     /// optional dependency is "hidden" using namespaced `dep:` syntax.
     NonImplicitDependencyAsFeature(InternedString),
-
-    // TODO: needs more info for `activation_error`
-    // TODO: needs more info for `find_candidate`
-    /// pub dep error
-    PublicDependency(PackageId),
-    PubliclyExports(PackageId),
 }
 
 impl ConflictReason {
@@ -319,13 +313,6 @@ impl ConflictReason {
 
     pub fn is_required_dependency_as_features(&self) -> bool {
         matches!(self, ConflictReason::RequiredDependencyAsFeature(_))
-    }
-
-    pub fn is_public_dependency(&self) -> bool {
-        matches!(
-            self,
-            ConflictReason::PublicDependency(_) | ConflictReason::PubliclyExports(_)
-        )
     }
 }
 
