@@ -1297,9 +1297,9 @@ fn fix_to_broken_code() {
         .with_stderr_contains("[WARNING] failed to automatically apply fixes [..]")
         .run();
 
-    assert_eq!(
+    assert_e2e().eq(
         p.read_file("bar/src/lib.rs"),
-        "pub fn foo() { let x = 3; let _ = x; }"
+        str!["pub fn foo() { let x = 3; let _ = x; }"],
     );
 }
 
@@ -1320,7 +1320,10 @@ fn fix_with_common() {
 
     p.cargo("fix --edition --allow-no-vcs").run();
 
-    assert_eq!(p.read_file("tests/common/mod.rs"), "pub fn r#try() {}");
+    assert_e2e().eq(
+        p.read_file("tests/common/mod.rs"),
+        str!["pub fn r#try() {}"],
+    );
 }
 
 #[cargo_test]
@@ -2312,9 +2315,10 @@ edition = "2021"
 ",
         )
         .run();
-    assert_eq!(
+    assert_e2e().eq(
         p.read_file("Cargo.toml"),
-        r#"
+        str![[r#"
+
 cargo-features = ["edition2024"]
 
 # Before project
@@ -2323,7 +2327,8 @@ cargo-features = ["edition2024"]
 name = "foo"
 edition = "2021"
 # After project table
-"#
+
+"#]],
     );
 }
 
@@ -2365,9 +2370,10 @@ edition = "2021"
 ",
         )
         .run();
-    assert_eq!(
+    assert_e2e().eq(
         p.read_file("Cargo.toml"),
-        r#"
+        str![[r#"
+
 cargo-features = ["edition2024"]
 
 # Before package
@@ -2376,7 +2382,8 @@ cargo-features = ["edition2024"]
 name = "foo"
 edition = "2021"
 # After project table
-"#
+
+"#]],
     );
 }
 
@@ -2469,9 +2476,10 @@ a = {path = "a", default_features = false}
 ",
         )
         .run();
-    assert_eq!(
+    assert_e2e().eq(
         p.read_file("Cargo.toml"),
-        r#"
+        str![[r#"
+
 cargo-features = ["edition2024"]
 
 [workspace.dependencies]
@@ -2519,14 +2527,15 @@ a = {path = "a", default-features = false}
 # After build_dependencies line
 a = {path = "a", default-features = false}
 # After build_dependencies table
-"#,
+
+"#]],
     );
 }
 
 #[cargo_test]
 fn add_feature_for_unused_dep() {
-    Package::new("bar", "0.1.0").publish();
-    Package::new("baz", "0.1.0").publish();
+    Package::new("regular-dep", "0.1.0").publish();
+    Package::new("build-dep", "0.1.0").publish();
     Package::new("target-dep", "0.1.0").publish();
     let p = project()
         .file(
@@ -2538,10 +2547,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bar = { version = "0.1.0", optional = true }
+regular-dep = { version = "0.1.0", optional = true }
 
 [build-dependencies]
-baz = { version = "0.1.0", optional = true }
+build-dep = { version = "0.1.0", optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 target-dep = { version = "0.1.0", optional = true }
@@ -2564,36 +2573,36 @@ target-dep = { version = "0.1.0", optional = true }
 ",
         )
         .run();
-    assert_eq!(
+    assert_e2e().eq(
         p.read_file("Cargo.toml"),
-        r#"
+        str![[r#"
+
 [package]
 name = "foo"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bar = { version = "0.1.0", optional = true }
+regular-dep = { version = "0.1.0", optional = true }
 
 [build-dependencies]
-baz = { version = "0.1.0", optional = true }
+build-dep = { version = "0.1.0", optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 target-dep = { version = "0.1.0", optional = true }
 
 [features]
-bar = ["dep:bar"]
-baz = ["dep:baz"]
+regular-dep = ["dep:regular-dep"]
+build-dep = ["dep:build-dep"]
 target-dep = ["dep:target-dep"]
-"#
+
+"#]],
     );
 }
 
 #[cargo_test]
 fn add_feature_for_unused_dep_existing_table() {
-    Package::new("bar", "0.1.0").publish();
-    Package::new("baz", "0.1.0").publish();
-    Package::new("target-dep", "0.1.0").publish();
+    Package::new("dep", "0.1.0").publish();
     let p = project()
         .file(
             "Cargo.toml",
@@ -2604,16 +2613,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bar = { version = "0.1.0", optional = true }
-
-[build-dependencies]
-baz = { version = "0.1.0", optional = true }
-
-[target.'cfg(target_os = "linux")'.dependencies]
-target-dep = { version = "0.1.0", optional = true }
+dep = { version = "0.1.0", optional = true }
 
 [features]
-target-dep = ["dep:target-dep"]
+existing = []
 "#,
         )
         .file("src/lib.rs", "")
@@ -2624,37 +2627,117 @@ target-dep = ["dep:target-dep"]
         .with_stderr(
             "\
 [MIGRATING] Cargo.toml from 2021 edition to 2024
-[FIXED] Cargo.toml (2 fixes)
+[FIXED] Cargo.toml (1 fix)
 [UPDATING] `dummy-registry` index
-[LOCKING] 4 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] foo v0.1.0 ([CWD])
 [MIGRATING] src/lib.rs from 2021 edition to 2024
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
 ",
         )
         .run();
-    assert_eq!(
+    assert_e2e().eq(
         p.read_file("Cargo.toml"),
-        r#"
+        str![[r#"
+
 [package]
 name = "foo"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bar = { version = "0.1.0", optional = true }
-
-[build-dependencies]
-baz = { version = "0.1.0", optional = true }
-
-[target.'cfg(target_os = "linux")'.dependencies]
-target-dep = { version = "0.1.0", optional = true }
+dep = { version = "0.1.0", optional = true }
 
 [features]
-target-dep = ["dep:target-dep"]
-bar = ["dep:bar"]
-baz = ["dep:baz"]
-"#
+existing = []
+dep = ["dep:dep"]
+
+"#]],
+    );
+}
+
+#[cargo_test]
+fn activate_dep_for_dep_feature() {
+    Package::new("dep-feature", "0.1.0")
+        .feature("a", &[])
+        .feature("b", &[])
+        .publish();
+    Package::new("dep-and-dep-feature", "0.1.0")
+        .feature("a", &[])
+        .feature("b", &[])
+        .publish();
+    Package::new("renamed-feature", "0.1.0")
+        .feature("a", &[])
+        .feature("b", &[])
+        .publish();
+    Package::new("unrelated-feature", "0.1.0")
+        .feature("a", &[])
+        .feature("b", &[])
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[package]
+name = "foo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dep-feature = { version = "0.1.0", optional = true }
+dep-and-dep-feature = { version = "0.1.0", optional = true }
+renamed-feature = { version = "0.1.0", optional = true }
+unrelated-feature = { version = "0.1.0", optional = true }
+
+[features]
+dep-feature = ["dep-feature/a", "dep-feature/b"]
+dep-and-dep-feature = ["dep:dep-and-dep-feature", "dep-and-dep-feature/a", "dep-and-dep-feature/b"]
+renamed = ["renamed-feature/a", "renamed-feature/b"]
+unrelated-feature = []
+unrelated-dep-feature = ["unrelated-feature/a", "unrelated-feature/b"]
+"#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --edition --allow-no-vcs")
+        .masquerade_as_nightly_cargo(&["edition2024"])
+        .with_stderr(
+            "\
+[MIGRATING] Cargo.toml from 2021 edition to 2024
+[FIXED] Cargo.toml (4 fixes)
+[UPDATING] `dummy-registry` index
+[LOCKING] 5 packages to latest compatible versions
+[CHECKING] foo v0.1.0 ([CWD])
+[MIGRATING] src/lib.rs from 2021 edition to 2024
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+",
+        )
+        .run();
+    assert_e2e().eq(
+        p.read_file("Cargo.toml"),
+        str![[r#"
+
+[package]
+name = "foo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dep-feature = { version = "0.1.0", optional = true }
+dep-and-dep-feature = { version = "0.1.0", optional = true }
+renamed-feature = { version = "0.1.0", optional = true }
+unrelated-feature = { version = "0.1.0", optional = true }
+
+[features]
+dep-feature = [ "dep:dep-feature","dep-feature/a", "dep-feature/b"]
+dep-and-dep-feature = ["dep:dep-and-dep-feature", "dep-and-dep-feature/a", "dep-and-dep-feature/b"]
+renamed = [ "dep:renamed-feature","renamed-feature/a", "renamed-feature/b"]
+unrelated-feature = []
+unrelated-dep-feature = [ "dep:unrelated-feature","unrelated-feature/a", "unrelated-feature/b"]
+renamed-feature = ["dep:renamed-feature"]
+
+"#]],
     );
 }
 
@@ -2777,11 +2860,12 @@ dep_df_false = { version = "0.1.0", default-features = false }
         )
         .run();
 
-    assert_eq!(p.read_file("pkg_default/Cargo.toml"), pkg_default);
-    assert_eq!(p.read_file("pkg_df_true/Cargo.toml"), pkg_df_true);
-    assert_eq!(
+    assert_e2e().eq(p.read_file("pkg_default/Cargo.toml"), pkg_default);
+    assert_e2e().eq(p.read_file("pkg_df_true/Cargo.toml"), pkg_df_true);
+    assert_e2e().eq(
         p.read_file("pkg_df_false/Cargo.toml"),
-        r#"
+        str![[r#"
+
 [package]
 name = "pkg_df_false"
 version = "0.1.0"
@@ -2801,6 +2885,7 @@ dep_df_false = { workspace = true, default-features = false }
 dep_simple = { workspace = true}
 dep_df_true = { workspace = true}
 dep_df_false = { workspace = true, default-features = false }
-"#
+
+"#]],
     );
 }

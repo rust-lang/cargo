@@ -285,7 +285,7 @@ fn migrate_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
                 fixes += rename_dep_fields_2024(workspace, "dependencies");
             }
 
-            fixes += add_feature_for_unused_deps(pkg, root);
+            fixes += add_feature_for_unused_deps(pkg, root, ws.gctx());
             fixes += rename_table(root, "project", "package");
             if let Some(target) = root.get_mut("lib").and_then(|t| t.as_table_like_mut()) {
                 fixes += rename_target_fields_2024(target);
@@ -435,7 +435,11 @@ fn rename_table(parent: &mut dyn toml_edit::TableLike, old: &str, new: &str) -> 
     1
 }
 
-fn add_feature_for_unused_deps(pkg: &Package, parent: &mut dyn toml_edit::TableLike) -> usize {
+fn add_feature_for_unused_deps(
+    pkg: &Package,
+    parent: &mut dyn toml_edit::TableLike,
+    gctx: &GlobalContext,
+) -> usize {
     let manifest = pkg.manifest();
 
     let activated_opt_deps = manifest
@@ -456,18 +460,48 @@ fn add_feature_for_unused_deps(pkg: &Package, parent: &mut dyn toml_edit::TableL
     for dep in manifest.dependencies() {
         let dep_name_in_toml = dep.name_in_toml();
         if dep.is_optional() && !activated_opt_deps.contains(dep_name_in_toml.as_str()) {
-            fixes += 1;
             if let Some(features) = parent
                 .entry("features")
                 .or_insert(toml_edit::table())
                 .as_table_like_mut()
             {
-                features.insert(
-                    dep_name_in_toml.as_str(),
-                    toml_edit::Item::Value(toml_edit::Value::Array(toml_edit::Array::from_iter(
-                        &[format!("dep:{}", dep_name_in_toml)],
-                    ))),
-                );
+                let activate_dep = format!("dep:{dep_name_in_toml}");
+                let strong_dep_feature_prefix = format!("{dep_name_in_toml}/");
+                features
+                    .entry(dep_name_in_toml.as_str())
+                    .or_insert_with(|| {
+                        fixes += 1;
+                        toml_edit::Item::Value(toml_edit::Value::Array(
+                            toml_edit::Array::from_iter([&activate_dep]),
+                        ))
+                    });
+                // Ensure `dep:dep_name` is present for `dep_name/feature_name` since `dep:` is the
+                // only way to guarantee an optional dependency is available for use.
+                //
+                // The way we avoid implicitly creating features in Edition2024 is we remove the
+                // dependency from `resolved_toml` if there is no `dep:` syntax as that is the only
+                // syntax that suppresses the creation of the implicit feature.
+                for (feature_name, activations) in features.iter_mut() {
+                    let Some(activations) = activations.as_array_mut() else {
+                        let _ = gctx.shell().warn(format_args!("skipping fix of feature `{feature_name}` in package `{}`: unsupported feature schema", pkg.name()));
+                        continue;
+                    };
+                    if activations
+                        .iter()
+                        .any(|a| a.as_str().map(|a| a == activate_dep).unwrap_or(false))
+                    {
+                        continue;
+                    }
+                    let Some(activate_dep_pos) = activations.iter().position(|a| {
+                        a.as_str()
+                            .map(|a| a.starts_with(&strong_dep_feature_prefix))
+                            .unwrap_or(false)
+                    }) else {
+                        continue;
+                    };
+                    fixes += 1;
+                    activations.insert(activate_dep_pos, &activate_dep);
+                }
             }
         }
     }
