@@ -820,10 +820,6 @@ fn generalize_conflicting(
     let backtrack_critical_reason: ConflictReason =
         conflicting_activations[&backtrack_critical_id].clone();
 
-    if backtrack_critical_reason.is_public_dependency() {
-        return None;
-    }
-
     if cx
         .parents
         .is_path_from_to(&parent.package_id(), &backtrack_critical_id)
