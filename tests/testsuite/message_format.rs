@@ -1,8 +1,6 @@
 //! Tests for --message-format flag.
 
-#![allow(deprecated)]
-
-use cargo_test_support::{basic_lib_manifest, basic_manifest, project};
+use cargo_test_support::{basic_lib_manifest, basic_manifest, project, str};
 
 #[cargo_test]
 fn cannot_specify_two() {
@@ -13,12 +11,14 @@ fn cannot_specify_two() {
 
     let formats = ["human", "json", "short"];
 
-    let two_kinds = "error: cannot specify two kinds of `message-format` arguments\n";
     for a in formats.iter() {
         for b in formats.iter() {
             p.cargo(&format!("build --message-format {},{}", a, b))
                 .with_status(101)
-                .with_stderr(two_kinds)
+                .with_stderr_data(str![[r#"
+[ERROR] cannot specify two kinds of `message-format` arguments
+
+"#]])
                 .run();
         }
     }
@@ -45,6 +45,7 @@ fn double_json_works() {
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn cargo_renders() {
     let p = project()
@@ -89,17 +90,17 @@ fn cargo_renders_short() {
 
     p.cargo("check --message-format json-render-diagnostics,json-diagnostic-short")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[CHECKING] foo [..]
-error[..]`main`[..]
-",
-        )
-        .with_stderr_does_not_contain("note:")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+error[E0601]: `main` function not found in crate `foo`
+[ERROR] could not compile `foo` (bin "foo") due to 1 previous error
+
+"#]])
         .run();
 }
 
 #[cargo_test]
+#[allow(deprecated)]
 fn cargo_renders_ansi() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))
@@ -129,7 +130,24 @@ fn cargo_renders_doctests() {
 
     p.cargo("test --doc --message-format short")
         .with_status(101)
-        .with_stdout_contains("src/lib.rs:2:1: error[E0425]:[..]")
-        .with_stdout_contains("[..]src/lib.rs - bar (line 1)[..]")
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test src/lib.rs - bar (line 1) ... FAILED
+
+failures:
+
+---- src/lib.rs - bar (line 1) stdout ----
+src/lib.rs:2:1: error[E0425]: cannot find function `bar` in this scope
+[ERROR] aborting due to 1 previous error
+Couldn't compile the test.
+
+failures:
+    src/lib.rs - bar (line 1)
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
