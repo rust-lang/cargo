@@ -4,9 +4,8 @@
 // because MSVC link.exe just gives a warning on unknown flags (how helpful!),
 // and other linkers will return an error.
 
-#![allow(deprecated)]
-
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project};
 
 #[cargo_test]
@@ -26,8 +25,11 @@ fn build_script_extra_link_arg_bin() {
 
     p.cargo("build -v")
         .without_status()
-        .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo [..]-C link-arg=--this-is-a-bogus-flag[..]",
+        .with_stderr_data(
+            "\
+...
+[RUNNING] `rustc --crate-name foo [..]-C link-arg=--this-is-a-bogus-flag[..]
+...",
         )
         .run();
 }
@@ -66,11 +68,17 @@ fn build_script_extra_link_arg_bin_single() {
 
     p.cargo("build -v")
         .without_status()
-        .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo [..]-C link-arg=--bogus-flag-all -C link-arg=--bogus-flag-foo[..]",
+        .with_stderr_data(
+            "\
+...
+[RUNNING] `rustc --crate-name foo [..]-C link-arg=--bogus-flag-all -C link-arg=--bogus-flag-foo[..]
+...",
         )
-        .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name bar [..]-C link-arg=--bogus-flag-all -C link-arg=--bogus-flag-bar[..]",
+        .with_stderr_data(
+            "\
+...
+[RUNNING] `rustc --crate-name bar [..]-C link-arg=--bogus-flag-all -C link-arg=--bogus-flag-bar[..]
+...",
         )
         .run();
 }
@@ -92,8 +100,11 @@ fn build_script_extra_link_arg() {
 
     p.cargo("build -v")
         .without_status()
-        .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name foo [..]-C link-arg=--this-is-a-bogus-flag[..]",
+        .with_stderr_data(
+            "\
+...
+[RUNNING] `rustc --crate-name foo [..]-C link-arg=--this-is-a-bogus-flag[..]
+...",
         )
         .run();
 }
@@ -127,11 +138,12 @@ fn link_arg_missing_target() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr("\
-[COMPILING] foo [..]
-error: invalid instruction `cargo::rustc-link-arg-bins` from build script of `foo v0.0.1 ([ROOT]/foo)`
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] invalid instruction `cargo::rustc-link-arg-bins` from build script of `foo v0.0.1 ([ROOT]/foo)`
 The package foo v0.0.1 ([ROOT]/foo) does not have a bin target.
-")
+
+"#]])
         .run();
 
     p.change_file(
@@ -141,13 +153,12 @@ The package foo v0.0.1 ([ROOT]/foo) does not have a bin target.
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-[COMPILING] foo [..]
-error: invalid instruction `cargo::rustc-link-arg-bin` from build script of `foo v0.0.1 ([ROOT]/foo)`
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] invalid instruction `cargo::rustc-link-arg-bin` from build script of `foo v0.0.1 ([ROOT]/foo)`
 The package foo v0.0.1 ([ROOT]/foo) does not have a bin target with the name `abc`.
-",
-        )
+
+"#]])
         .run();
 
     p.change_file(
@@ -157,13 +168,12 @@ The package foo v0.0.1 ([ROOT]/foo) does not have a bin target with the name `ab
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-[COMPILING] foo [..]
-error: invalid instruction `cargo::rustc-link-arg-bin=abc` from build script of `foo v0.0.1 ([ROOT]/foo)`
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] invalid instruction `cargo::rustc-link-arg-bin=abc` from build script of `foo v0.0.1 ([ROOT]/foo)`
 The instruction should have the form cargo::rustc-link-arg-bin=BIN=ARG
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -203,24 +213,26 @@ fn cdylib_link_arg_transitive() {
         .build();
     p.cargo("build -v")
         .without_status()
-        .with_stderr_contains(
+        .with_stderr_data(
             "\
-[COMPILING] bar v1.0.0 [..]
+...
+[COMPILING] bar v1.0.0 ([ROOT]/foo/bar)
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 bar/build.rs [..]
-[RUNNING] `[..]build-script-build[..]
-warning: bar@1.0.0: cargo::rustc-link-arg-cdylib was specified in the build script of bar v1.0.0 \
+[RUNNING] `[ROOT]/foo/target/debug/build/bar-[HASH]/build-script-build`
+[WARNING] bar@1.0.0: cargo::rustc-link-arg-cdylib was specified in the build script of bar v1.0.0 \
 ([ROOT]/foo/bar), but that package does not contain a cdylib target
 
 Allowing this was an unintended change in the 1.50 release, and may become an error in \
 the future. For more information, see <https://github.com/rust-lang/cargo/issues/9562>.
 [RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]
-[COMPILING] foo v0.1.0 [..]
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]-C link-arg=--bogus[..]`
-",
+...",
         )
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn link_arg_transitive_not_allowed() {
     // Verify that transitive dependencies don't pass link args.
@@ -260,21 +272,20 @@ fn link_arg_transitive_not_allowed() {
         .build();
 
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[UPDATING] [..]
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
-[DOWNLOADING] [..]
-[DOWNLOADED] [..]
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [COMPILING] bar v1.0.0
 [RUNNING] `rustc --crate-name build_script_build [..]
-[RUNNING] `[..]/build-script-build[..]
+[RUNNING] `[ROOT]/foo/target/debug/build/bar-[HASH]/build-script-build`
 [RUNNING] `rustc --crate-name bar [..]
-[COMPILING] foo v0.1.0 [..]
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]
-[FINISHED] `dev` profile [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .with_stderr_does_not_contain("--bogus")
         .run();
 }
@@ -303,8 +314,11 @@ fn link_arg_with_doctest() {
 
     p.cargo("test --doc -v")
         .without_status()
-        .with_stderr_contains(
-            "[RUNNING] `rustdoc [..]--crate-name foo [..]-C link-arg=--this-is-a-bogus-flag[..]",
+        .with_stderr_data(
+            "\
+...
+[RUNNING] `rustdoc [..]--crate-name foo [..]-C link-arg=--this-is-a-bogus-flag[..]
+...",
         )
         .run();
 }
@@ -327,8 +341,11 @@ fn build_script_extra_link_arg_tests() {
 
     p.cargo("test -v")
         .without_status()
-        .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name test_foo [..]-C link-arg=--this-is-a-bogus-flag[..]",
+        .with_stderr_data(
+            "\
+...
+[RUNNING] `rustc --crate-name test_foo [..]-C link-arg=--this-is-a-bogus-flag[..]
+...",
         )
         .run();
 }
@@ -351,8 +368,11 @@ fn build_script_extra_link_arg_benches() {
 
     p.cargo("bench -v")
         .without_status()
-        .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name bench_foo [..]-C link-arg=--this-is-a-bogus-flag[..]",
+        .with_stderr_data(
+            "\
+...
+[RUNNING] `rustc --crate-name bench_foo [..]-C link-arg=--this-is-a-bogus-flag[..]
+...",
         )
         .run();
 }
@@ -375,8 +395,11 @@ fn build_script_extra_link_arg_examples() {
 
     p.cargo("build -v --examples")
         .without_status()
-        .with_stderr_contains(
-            "[RUNNING] `rustc --crate-name example_foo [..]-C link-arg=--this-is-a-bogus-flag[..]",
+        .with_stderr_data(
+            "\
+...
+[RUNNING] `rustc --crate-name example_foo [..]-C link-arg=--this-is-a-bogus-flag[..]
+...",
         )
         .run();
 }
