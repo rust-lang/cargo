@@ -324,6 +324,10 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         self.graph.iter().cloned()
     }
 
+    pub fn len(&self) -> usize {
+        self.graph.len()
+    }
+
     pub fn deps(&self, pkg: PackageId) -> impl Iterator<Item = (PackageId, &HashSet<Dependency>)> {
         self.deps_not_replaced(pkg)
             .map(move |(id, deps)| (self.replacement(id).unwrap_or(id), deps))
@@ -334,6 +338,19 @@ unable to verify that `{0}` is the same as when the lockfile was generated
         pkg: PackageId,
     ) -> impl Iterator<Item = (PackageId, &HashSet<Dependency>)> {
         self.graph.edges(&pkg).map(|(id, deps)| (*id, deps))
+    }
+
+    // Only edges that are transitive, filtering out edges between a crate and its dev-dependency
+    // since that doesn't count for cycles.
+    pub fn transitive_deps_not_replaced(
+        &self,
+        pkg: PackageId,
+    ) -> impl Iterator<Item = (PackageId, &Dependency)> {
+        self.graph.edges(&pkg).filter_map(|(id, deps)| {
+            deps.iter()
+                .find(|d| d.is_transitive())
+                .map(|transitive_dep| (*id, transitive_dep))
+        })
     }
 
     pub fn replacement(&self, pkg: PackageId) -> Option<PackageId> {
