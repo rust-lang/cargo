@@ -1,12 +1,6 @@
 //! Tests for the `cargo verify-project` command.
 
-#![allow(deprecated)]
-
-use cargo_test_support::{basic_bin_manifest, main_file, project};
-
-fn verify_project_success_output() -> String {
-    r#"{"success":"true"}"#.into()
-}
+use cargo_test_support::{basic_bin_manifest, main_file, project, str};
 
 #[cargo_test]
 fn cargo_verify_project_path_to_cargo_toml_relative() {
@@ -17,7 +11,10 @@ fn cargo_verify_project_path_to_cargo_toml_relative() {
 
     p.cargo("verify-project --manifest-path foo/Cargo.toml")
         .cwd(p.root().parent().unwrap())
-        .with_stdout(verify_project_success_output())
+        .with_stdout_data(str![[r#"
+{"success":"true"}
+
+"#]])
         .run();
 }
 
@@ -31,7 +28,10 @@ fn cargo_verify_project_path_to_cargo_toml_absolute() {
     p.cargo("verify-project --manifest-path")
         .arg(p.root().join("Cargo.toml"))
         .cwd(p.root().parent().unwrap())
-        .with_stdout(verify_project_success_output())
+        .with_stdout_data(str![[r#"
+{"success":"true"}
+
+"#]])
         .run();
 }
 
@@ -43,7 +43,10 @@ fn cargo_verify_project_cwd() {
         .build();
 
     p.cargo("verify-project")
-        .with_stdout(verify_project_success_output())
+        .with_stdout_data(str![[r#"
+{"success":"true"}
+
+"#]])
         .run();
 }
 
@@ -65,11 +68,17 @@ fn cargo_verify_project_honours_unstable_features() {
 
     p.cargo("verify-project")
         .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
-        .with_stdout(verify_project_success_output())
+        .with_stdout_data(str![[r#"
+{"success":"true"}
+
+"#]])
         .run();
 
     p.cargo("verify-project")
         .with_status(1)
-        .with_json(r#"{"invalid":"failed to parse manifest at `[CWD]/Cargo.toml`"}"#)
+        .with_stdout_data(str![[r#"
+{"invalid":"failed to parse manifest at `[..]`"}
+
+"#]])
         .run();
 }
