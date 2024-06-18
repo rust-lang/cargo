@@ -462,7 +462,7 @@ fn rustc(
         Ok(())
     }));
 
-    // Add all relevant `-L` and `-l` flags from dependencies (now calculated and
+    // Add all relevant `-L`, `-l` and `--extern` flags from dependencies (now calculated and
     // present in `state`) to the command provided.
     fn add_native_deps(
         rustc: &mut ProcessBuilder,
@@ -484,6 +484,10 @@ fn rustc(
             }
 
             if key.0 == current_id {
+                for extern_ in output.library_externs.iter() {
+                    rustc.arg("--extern").arg(extern_);
+                }
+
                 if pass_l_flag {
                     for name in output.library_links.iter() {
                         rustc.arg("-l").arg(name);

@@ -2960,7 +2960,7 @@ fn bad_target_links_overrides() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r"
-[ERROR] Only `-l` and `-L` flags are allowed in target config `target.[..].rustc-flags` (in [..]foo/.cargo/config.toml): `foo`
+[ERROR] Only `-l`, `-L` and `--extern` flags are allowed in target config `target.[..].rustc-flags` (in [..]foo/.cargo/config.toml): `foo`
 
 "]])
         .run();
