@@ -1,9 +1,8 @@
 //! Tests for the `cargo tree` command with -e features option.
 
-#![allow(deprecated)]
-
 use cargo_test_support::project;
 use cargo_test_support::registry::{Dependency, Package};
+use cargo_test_support::str;
 
 #[cargo_test]
 fn dep_feature_various() {
@@ -52,41 +51,40 @@ fn dep_feature_various() {
         .build();
 
     p.cargo("tree -e features")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 ├── nodefaultdep v1.0.0
-├── defaultdep feature \"default\"
+├── defaultdep feature "default"
 │   ├── defaultdep v1.0.0
-│   │   └── optdep feature \"default\"
+│   │   └── optdep feature "default"
 │   │       ├── optdep v1.0.0
-│   │       └── optdep feature \"cat\"
+│   │       └── optdep feature "cat"
 │   │           └── optdep v1.0.0
-│   └── defaultdep feature \"f1\"
+│   └── defaultdep feature "f1"
 │       ├── defaultdep v1.0.0 (*)
-│       └── defaultdep feature \"optdep\"
+│       └── defaultdep feature "optdep"
 │           └── defaultdep v1.0.0 (*)
-├── nameddep feature \"default\"
+├── nameddep feature "default"
 │   ├── nameddep v1.0.0
-│   │   └── serde feature \"default\"
+│   │   └── serde feature "default"
 │   │       └── serde v1.0.0
-│   │           └── serde_derive feature \"default\"
+│   │           └── serde_derive feature "default"
 │   │               └── serde_derive v1.0.0
-│   └── nameddep feature \"serde-stuff\"
+│   └── nameddep feature "serde-stuff"
 │       ├── nameddep v1.0.0 (*)
-│       ├── nameddep feature \"serde\"
+│       ├── nameddep feature "serde"
 │       │   └── nameddep v1.0.0 (*)
-│       └── serde feature \"derive\"
+│       └── serde feature "derive"
 │           ├── serde v1.0.0 (*)
-│           └── serde feature \"serde_derive\"
+│           └── serde feature "serde_derive"
 │               └── serde v1.0.0 (*)
-├── nameddep feature \"serde\" (*)
-└── nameddep feature \"vehicle\"
+├── nameddep feature "serde" (*)
+└── nameddep feature "vehicle"
     ├── nameddep v1.0.0 (*)
-    └── nameddep feature \"car\"
+    └── nameddep feature "car"
         └── nameddep v1.0.0 (*)
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -135,38 +133,36 @@ fn graph_features_ws_interdependent() {
         .build();
 
     p.cargo("tree -e features")
-        .with_stdout(
-            "\
-a v0.1.0 ([..]/foo/a)
-├── b feature \"default\" (command-line)
-│   ├── b v0.1.0 ([..]/foo/b)
-│   └── b feature \"feat1\"
-│       └── b v0.1.0 ([..]/foo/b)
-└── b feature \"feat2\"
-    └── b v0.1.0 ([..]/foo/b)
+        .with_stdout_data(str![[r#"
+a v0.1.0 ([ROOT]/foo/a)
+├── b feature "default" (command-line)
+│   ├── b v0.1.0 ([ROOT]/foo/b)
+│   └── b feature "feat1"
+│       └── b v0.1.0 ([ROOT]/foo/b)
+└── b feature "feat2"
+    └── b v0.1.0 ([ROOT]/foo/b)
 
-b v0.1.0 ([..]/foo/b)
-",
-        )
+b v0.1.0 ([ROOT]/foo/b)
+
+"#]])
         .run();
 
     p.cargo("tree -e features -i a -i b")
-        .with_stdout(
-            "\
-a v0.1.0 ([..]/foo/a)
-├── a feature \"a1\"
-│   └── a feature \"default\" (command-line)
-└── a feature \"default\" (command-line)
+        .with_stdout_data(str![[r#"
+a v0.1.0 ([ROOT]/foo/a)
+├── a feature "a1"
+│   └── a feature "default" (command-line)
+└── a feature "default" (command-line)
 
-b v0.1.0 ([..]/foo/b)
-├── b feature \"default\" (command-line)
-│   └── a v0.1.0 ([..]/foo/a) (*)
-├── b feature \"feat1\"
-│   └── b feature \"default\" (command-line) (*)
-└── b feature \"feat2\"
-    └── a v0.1.0 ([..]/foo/a) (*)
-",
-        )
+b v0.1.0 ([ROOT]/foo/b)
+├── b feature "default" (command-line)
+│   └── a v0.1.0 ([ROOT]/foo/a) (*)
+├── b feature "feat1"
+│   └── b feature "default" (command-line) (*)
+└── b feature "feat2"
+    └── a v0.1.0 ([ROOT]/foo/a) (*)
+
+"#]])
         .run();
 }
 
@@ -202,90 +198,84 @@ fn slash_feature_name() {
         .build();
 
     p.cargo("tree -e features --features f1")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
-├── notopt feature \"default\"
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+├── notopt feature "default"
 │   └── notopt v1.0.0
-└── opt feature \"default\"
+└── opt feature "default"
     └── opt v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -e features --features f1 -i foo")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
-├── foo feature \"default\" (command-line)
-├── foo feature \"f1\" (command-line)
-└── foo feature \"opt\"
-    └── foo feature \"f1\" (command-line)
-",
-        )
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+├── foo feature "default" (command-line)
+├── foo feature "f1" (command-line)
+└── foo feature "opt"
+    └── foo feature "f1" (command-line)
+
+"#]])
         .run();
 
     p.cargo("tree -e features --features f1 -i notopt")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 notopt v1.0.0
-├── notopt feature \"animal\"
-│   └── foo feature \"f1\" (command-line)
-├── notopt feature \"cat\"
-│   └── notopt feature \"animal\" (*)
-└── notopt feature \"default\"
-    └── foo v0.1.0 ([..]/foo)
-        ├── foo feature \"default\" (command-line)
-        ├── foo feature \"f1\" (command-line)
-        └── foo feature \"opt\"
-            └── foo feature \"f1\" (command-line)
-",
-        )
+├── notopt feature "animal"
+│   └── foo feature "f1" (command-line)
+├── notopt feature "cat"
+│   └── notopt feature "animal" (*)
+└── notopt feature "default"
+    └── foo v0.1.0 ([ROOT]/foo)
+        ├── foo feature "default" (command-line)
+        ├── foo feature "f1" (command-line)
+        └── foo feature "opt"
+            └── foo feature "f1" (command-line)
+
+"#]])
         .run();
 
     p.cargo("tree -e features --features notopt/animal -i notopt")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 notopt v1.0.0
-├── notopt feature \"animal\" (command-line)
-├── notopt feature \"cat\"
-│   └── notopt feature \"animal\" (command-line)
-└── notopt feature \"default\"
-    └── foo v0.1.0 ([..]/foo)
-        └── foo feature \"default\" (command-line)
-",
-        )
+├── notopt feature "animal" (command-line)
+├── notopt feature "cat"
+│   └── notopt feature "animal" (command-line)
+└── notopt feature "default"
+    └── foo v0.1.0 ([ROOT]/foo)
+        └── foo feature "default" (command-line)
+
+"#]])
         .run();
 
     p.cargo("tree -e features --all-features")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
-├── notopt feature \"default\"
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+├── notopt feature "default"
 │   └── notopt v1.0.0
-├── opt feature \"default\"
+├── opt feature "default"
 │   └── opt v1.0.0
-└── opt2 feature \"default\"
+└── opt2 feature "default"
     └── opt2 v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -e features --all-features -i opt2")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 opt2 v1.0.0
-└── opt2 feature \"default\"
-    └── foo v0.1.0 ([..]/foo)
-        ├── foo feature \"default\" (command-line)
-        ├── foo feature \"f1\" (command-line)
-        │   └── foo feature \"f2\" (command-line)
-        ├── foo feature \"f2\" (command-line)
-        ├── foo feature \"opt\" (command-line)
-        │   └── foo feature \"f1\" (command-line) (*)
-        └── foo feature \"opt2\" (command-line)
-",
-        )
+└── opt2 feature "default"
+    └── foo v0.1.0 ([ROOT]/foo)
+        ├── foo feature "default" (command-line)
+        ├── foo feature "f1" (command-line)
+        │   └── foo feature "f2" (command-line)
+        ├── foo feature "f2" (command-line)
+        ├── foo feature "opt" (command-line)
+        │   └── foo feature "f1" (command-line) (*)
+        └── foo feature "opt2" (command-line)
+
+"#]])
         .run();
 }
 
@@ -330,35 +320,32 @@ fn features_enables_inactive_target() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("tree -e features")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
-└── dep2 feature \"default\"
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+└── dep2 feature "default"
     └── dep2 v1.0.0
-",
-        )
+
+"#]])
         .run();
     p.cargo("tree -e features --all-features")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
-└── dep2 feature \"default\"
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+└── dep2 feature "default"
     └── dep2 v1.0.0
-",
-        )
+
+"#]])
         .run();
     p.cargo("tree -e features --all-features --target=all")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
-├── dep1 feature \"default\"
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+├── dep1 feature "default"
 │   └── dep1 v1.0.0
-├── dep2 feature \"default\"
+├── dep2 feature "default"
 │   └── dep2 v1.0.0
-│       └── optdep feature \"default\"
+│       └── optdep feature "default"
 │           └── optdep v1.0.0
-└── optdep feature \"default\" (*)
-",
-        )
+└── optdep feature "default" (*)
+
+"#]])
         .run();
 }

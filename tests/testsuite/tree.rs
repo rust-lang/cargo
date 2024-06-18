@@ -1,10 +1,9 @@
 //! Tests for the `cargo tree` command.
 
-#![allow(deprecated)]
-
 use super::features2::switch_to_resolver_2;
 use cargo_test_support::cross_compile::{self, alternate};
 use cargo_test_support::registry::{Dependency, Package};
+use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, git, project, rustc_host, Project};
 
 fn make_simple_proj() -> Project {
@@ -44,9 +43,8 @@ fn simple() {
     let p = make_simple_proj();
 
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 ├── a v1.0.0
 │   └── b v1.0.0
 │       └── c v1.0.0
@@ -57,18 +55,17 @@ foo v0.1.0 ([..]/foo)
 [dev-dependencies]
 └── devdep v1.0.0
     └── b v1.0.0 (*)
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -p bdep")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 bdep v1.0.0
 └── b v1.0.0
     └── c v1.0.0
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -104,63 +101,63 @@ fn virtual_workspace() {
         .build();
 
     p.cargo("tree")
-        .with_stdout(
-            "\
-a v1.0.0 ([..]/foo/a)
+        .with_stdout_data(str![[r#"
+a v1.0.0 ([ROOT]/foo/a)
 
-baz v0.1.0 ([..]/foo/baz)
-├── c v1.0.0 ([..]/foo/c)
+baz v0.1.0 ([ROOT]/foo/baz)
+├── c v1.0.0 ([ROOT]/foo/c)
 └── somedep v1.0.0
 
-c v1.0.0 ([..]/foo/c)
-",
-        )
+c v1.0.0 ([ROOT]/foo/c)
+
+"#]])
         .run();
 
-    p.cargo("tree -p a").with_stdout("a v1.0.0 [..]").run();
+    p.cargo("tree -p a")
+        .with_stdout_data(str![[r#"
+a v1.0.0 ([ROOT]/foo/a)
+
+"#]])
+        .run();
 
     p.cargo("tree")
         .cwd("baz")
-        .with_stdout(
-            "\
-baz v0.1.0 ([..]/foo/baz)
-├── c v1.0.0 ([..]/foo/c)
+        .with_stdout_data(str![[r#"
+baz v0.1.0 ([ROOT]/foo/baz)
+├── c v1.0.0 ([ROOT]/foo/c)
 └── somedep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     // exclude baz
     p.cargo("tree --workspace --exclude baz")
-        .with_stdout(
-            "\
-a v1.0.0 ([..]/foo/a)
+        .with_stdout_data(str![[r#"
+a v1.0.0 ([ROOT]/foo/a)
 
-c v1.0.0 ([..]/foo/c)
-",
-        )
+c v1.0.0 ([ROOT]/foo/c)
+
+"#]])
         .run();
 
     // exclude glob '*z'
     p.cargo("tree --workspace --exclude '*z'")
-        .with_stdout(
-            "\
-a v1.0.0 ([..]/foo/a)
+        .with_stdout_data(str![[r#"
+a v1.0.0 ([ROOT]/foo/a)
 
-c v1.0.0 ([..]/foo/c)
-",
-        )
+c v1.0.0 ([ROOT]/foo/c)
+
+"#]])
         .run();
 
     // include glob '*z'
     p.cargo("tree -p '*z'")
-        .with_stdout(
-            "\
-baz v0.1.0 ([..]/foo/baz)
-├── c v1.0.0 ([..]/foo/c)
+        .with_stdout_data(str![[r#"
+baz v0.1.0 ([ROOT]/foo/baz)
+├── c v1.0.0 ([ROOT]/foo/c)
 └── somedep v1.0.0
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -202,9 +199,8 @@ fn dedupe_edges() {
         .build();
 
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 ├── a v1.0.0
 │   └── manyfeat v1.0.0
 │       └── bitflags v1.0.0
@@ -212,8 +208,8 @@ foo v0.1.0 ([..]/foo)
 │   └── manyfeat v1.0.0 (*)
 └── c v1.0.0
     └── manyfeat v1.0.0 (*)
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -241,15 +237,14 @@ fn renamed_deps() {
         .build();
 
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v1.0.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v1.0.0 ([ROOT]/foo)
 ├── bar v1.0.0
 │   └── one v1.0.0
 └── bar v2.0.0
     └── two v1.0.0
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -284,14 +279,13 @@ fn source_kinds() {
         .build();
 
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
-├── gitdep v1.0.0 (file://[..]/gitdep#[..])
-├── pathdep v1.0.0 ([..]/foo/pathdep)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+├── gitdep v1.0.0 ([ROOTURL]/gitdep#[..])
+├── pathdep v1.0.0 ([ROOT]/foo/pathdep)
 └── regdep v1.0.0
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -320,40 +314,36 @@ fn features() {
         .build();
 
     p.cargo("tree")
-        .with_stdout(
-            "\
-a v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+a v0.1.0 ([ROOT]/foo)
 └── optdep_default v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree --no-default-features")
-        .with_stdout(
-            "\
-a v0.1.0 ([..]/foo)
-",
-        )
+        .with_stdout_data(str![[r#"
+a v0.1.0 ([ROOT]/foo)
+
+"#]])
         .run();
 
     p.cargo("tree --all-features")
-        .with_stdout(
-            "\
-a v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+a v0.1.0 ([ROOT]/foo)
 ├── optdep v1.0.0
 └── optdep_default v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree --features optdep")
-        .with_stdout(
-            "\
-a v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+a v0.1.0 ([ROOT]/foo)
 ├── optdep v1.0.0
 └── optdep_default v1.0.0
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -411,23 +401,21 @@ fn filters_target() {
         .build();
 
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 ├── hostdep v1.0.0
 └── pm_host v1.0.0 (proc-macro)
 [build-dependencies]
 └── build_host_dep v1.0.0
     └── hostdep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree --target")
         .arg(alternate())
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 ├── pm_target v1.0.0 (proc-macro)
 └── targetdep v1.0.0
 [build-dependencies]
@@ -435,28 +423,26 @@ foo v0.1.0 ([..]/foo)
     └── hostdep v1.0.0
 [dev-dependencies]
 └── devdep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree --target")
         .arg(rustc_host())
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 ├── hostdep v1.0.0
 └── pm_host v1.0.0 (proc-macro)
 [build-dependencies]
 └── build_host_dep v1.0.0
     └── hostdep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree --target=all")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 ├── hostdep v1.0.0
 ├── pm_host v1.0.0 (proc-macro)
 ├── pm_target v1.0.0 (proc-macro)
@@ -468,15 +454,14 @@ foo v0.1.0 ([..]/foo)
 └── build_target_dep v1.0.0
 [dev-dependencies]
 └── devdep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     // no-proc-macro
     p.cargo("tree --target=all -e no-proc-macro")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 ├── hostdep v1.0.0
 └── targetdep v1.0.0
 [build-dependencies]
@@ -486,8 +471,8 @@ foo v0.1.0 ([..]/foo)
 └── build_target_dep v1.0.0
 [dev-dependencies]
 └── devdep v1.0.0
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -520,30 +505,26 @@ fn no_selected_target_dependency() {
         .build();
 
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
-",
-        )
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+
+"#]])
         .run();
 
     p.cargo("tree -i targetdep")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] nothing to print.
 
-To find dependencies that require specific target platforms, \
-try to use option `--target all` first, and then narrow your search scope accordingly.
-",
-        )
+To find dependencies that require specific target platforms, try to use option `--target all` first, and then narrow your search scope accordingly.
+
+"#]])
         .run();
     p.cargo("tree -i targetdep --target all")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 targetdep v1.0.0
-└── foo v0.1.0 ([..]/foo)
-",
-        )
+└── foo v0.1.0 ([ROOT]/foo)
+
+"#]])
         .run();
 }
 
@@ -595,9 +576,8 @@ fn dep_kinds() {
         .build();
 
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 └── normaldep v1.0.0
     └── inner-normal v1.0.0
     [build-dependencies]
@@ -614,14 +594,13 @@ foo v0.1.0 ([..]/foo)
     [build-dependencies]
     ├── inner-builddep v1.0.0
     └── inner-buildpm v1.0.0 (proc-macro)
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -e no-dev")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 └── normaldep v1.0.0
     └── inner-normal v1.0.0
     [build-dependencies]
@@ -631,24 +610,22 @@ foo v0.1.0 ([..]/foo)
     └── inner-normal v1.0.0
     [build-dependencies]
     └── inner-builddep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -e normal")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 └── normaldep v1.0.0
     └── inner-normal v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -e dev,build")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 [build-dependencies]
 └── builddep v1.0.0
     [build-dependencies]
@@ -658,14 +635,13 @@ foo v0.1.0 ([..]/foo)
     [build-dependencies]
     ├── inner-builddep v1.0.0
     └── inner-buildpm v1.0.0 (proc-macro)
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -e dev,build,no-proc-macro")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 [build-dependencies]
 └── builddep v1.0.0
     [build-dependencies]
@@ -674,8 +650,8 @@ foo v0.1.0 ([..]/foo)
 └── devdep v1.0.0
     [build-dependencies]
     └── inner-builddep v1.0.0
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -710,25 +686,23 @@ fn cyclic_dev_dep() {
         .build();
 
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 [dev-dependencies]
-└── dev-dep v0.1.0 ([..]/foo/dev-dep)
-    └── foo v0.1.0 ([..]/foo) (*)
-",
-        )
+└── dev-dep v0.1.0 ([ROOT]/foo/dev-dep)
+    └── foo v0.1.0 ([ROOT]/foo) (*)
+
+"#]])
         .run();
 
     p.cargo("tree --invert foo")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
-└── dev-dep v0.1.0 ([..]/foo/dev-dep)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+└── dev-dep v0.1.0 ([ROOT]/foo/dev-dep)
     [dev-dependencies]
-    └── foo v0.1.0 ([..]/foo) (*)
-",
-        )
+    └── foo v0.1.0 ([ROOT]/foo) (*)
+
+"#]])
         .run();
 }
 
@@ -756,27 +730,25 @@ fn invert() {
         .build();
 
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 ├── b1 v1.0.0
 │   └── c v1.0.0
 ├── b2 v1.0.0
 │   └── d v1.0.0
 └── c v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree --invert c")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 c v1.0.0
 ├── b1 v1.0.0
-│   └── foo v0.1.0 ([..]/foo)
-└── foo v0.1.0 ([..]/foo)
-",
-        )
+│   └── foo v0.1.0 ([ROOT]/foo)
+└── foo v0.1.0 ([ROOT]/foo)
+
+"#]])
         .run();
 }
 
@@ -804,27 +776,25 @@ fn invert_with_build_dep() {
         .build();
 
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 └── common v1.0.0
 [build-dependencies]
 └── bdep v1.0.0
     └── common v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -i common")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 common v1.0.0
 ├── bdep v1.0.0
 │   [build-dependencies]
-│   └── foo v0.1.0 ([..]/foo)
-└── foo v0.1.0 ([..]/foo)
-",
-        )
+│   └── foo v0.1.0 ([ROOT]/foo)
+└── foo v0.1.0 ([ROOT]/foo)
+
+"#]])
         .run();
 }
 
@@ -833,9 +803,8 @@ fn no_indent() {
     let p = make_simple_proj();
 
     p.cargo("tree --prefix=none")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 a v1.0.0
 b v1.0.0
 c v1.0.0
@@ -844,8 +813,8 @@ bdep v1.0.0
 b v1.0.0 (*)
 devdep v1.0.0
 b v1.0.0 (*)
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -854,9 +823,8 @@ fn prefix_depth() {
     let p = make_simple_proj();
 
     p.cargo("tree --prefix=depth")
-        .with_stdout(
-            "\
-0foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+0foo v0.1.0 ([ROOT]/foo)
 1a v1.0.0
 2b v1.0.0
 3c v1.0.0
@@ -865,8 +833,8 @@ fn prefix_depth() {
 2b v1.0.0 (*)
 1devdep v1.0.0
 2b v1.0.0 (*)
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -875,9 +843,8 @@ fn no_dedupe() {
     let p = make_simple_proj();
 
     p.cargo("tree --no-dedupe")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 ├── a v1.0.0
 │   └── b v1.0.0
 │       └── c v1.0.0
@@ -890,8 +857,8 @@ foo v0.1.0 ([..]/foo)
 └── devdep v1.0.0
     └── b v1.0.0
         └── c v1.0.0
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -926,25 +893,23 @@ fn no_dedupe_cycle() {
         .build();
 
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 [dev-dependencies]
-└── bar v0.1.0 ([..]/foo/bar)
-    └── foo v0.1.0 ([..]/foo) (*)
-",
-        )
+└── bar v0.1.0 ([ROOT]/foo/bar)
+    └── foo v0.1.0 ([ROOT]/foo) (*)
+
+"#]])
         .run();
 
     p.cargo("tree --no-dedupe")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 [dev-dependencies]
-└── bar v0.1.0 ([..]/foo/bar)
-    └── foo v0.1.0 ([..]/foo) (*)
-",
-        )
+└── bar v0.1.0 ([ROOT]/foo/bar)
+    └── foo v0.1.0 ([ROOT]/foo) (*)
+
+"#]])
         .run();
 }
 
@@ -995,50 +960,46 @@ fn duplicates() {
         .build();
 
     p.cargo("tree -p a")
-        .with_stdout(
-            "\
-a v0.1.0 ([..]/foo/a)
+        .with_stdout_data(str![[r#"
+a v0.1.0 ([ROOT]/foo/a)
 ├── dog v1.0.0
 └── dog v2.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -p b")
-        .with_stdout(
-            "\
-b v0.1.0 ([..]/foo/b)
+        .with_stdout_data(str![[r#"
+b v0.1.0 ([ROOT]/foo/b)
 ├── cat v2.0.0
 └── dep v1.0.0
     ├── cat v1.0.0
     └── dog v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -p a -d")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 dog v1.0.0
-└── a v0.1.0 ([..]/foo/a)
+└── a v0.1.0 ([ROOT]/foo/a)
 
 dog v2.0.0
-└── a v0.1.0 ([..]/foo/a)
-",
-        )
+└── a v0.1.0 ([ROOT]/foo/a)
+
+"#]])
         .run();
 
     p.cargo("tree -p b -d")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 cat v1.0.0
 └── dep v1.0.0
-    └── b v0.1.0 ([..]/foo/b)
+    └── b v0.1.0 ([ROOT]/foo/b)
 
 cat v2.0.0
-└── b v0.1.0 ([..]/foo/b)
-",
-        )
+└── b v0.1.0 ([ROOT]/foo/b)
+
+"#]])
         .run();
 }
 
@@ -1072,19 +1033,21 @@ fn duplicates_with_target() {
         .file("src/lib.rs", "")
         .file("build.rs", "fn main() {}")
         .build();
-    p.cargo("tree -d").with_stdout("").run();
+    p.cargo("tree -d").with_stdout_data(str![""]).run();
 
     p.cargo("tree -d --target")
         .arg(alternate())
-        .with_stdout("")
+        .with_stdout_data(str![""])
         .run();
 
     p.cargo("tree -d --target")
         .arg(rustc_host())
-        .with_stdout("")
+        .with_stdout_data(str![""])
         .run();
 
-    p.cargo("tree -d --target=all").with_stdout("").run();
+    p.cargo("tree -d --target=all")
+        .with_stdout_data(str![""])
+        .run();
 }
 
 #[cargo_test]
@@ -1112,31 +1075,29 @@ fn duplicates_with_proc_macro() {
         .build();
 
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 ├── dupe-dep v2.0.0
 └── proc v1.0.0 (proc-macro)
     └── dupe-dep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree --duplicates")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 dupe-dep v1.0.0
 └── proc v1.0.0 (proc-macro)
-    └── foo v0.1.0 ([..]/foo)
+    └── foo v0.1.0 ([ROOT]/foo)
 
 dupe-dep v2.0.0
-└── foo v0.1.0 ([..]/foo)
-",
-        )
+└── foo v0.1.0 ([ROOT]/foo)
+
+"#]])
         .run();
 
     p.cargo("tree --duplicates --edges no-proc-macro")
-        .with_stdout("")
+        .with_stdout_data(str![""])
         .run();
 }
 
@@ -1144,9 +1105,8 @@ dupe-dep v2.0.0
 fn charset() {
     let p = make_simple_proj();
     p.cargo("tree --charset ascii")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 |-- a v1.0.0
 |   `-- b v1.0.0
 |       `-- c v1.0.0
@@ -1157,8 +1117,8 @@ foo v0.1.0 ([..]/foo)
 [dev-dependencies]
 `-- devdep v1.0.0
     `-- b v1.0.0 (*)
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1208,56 +1168,66 @@ fn format() {
         .build();
 
     p.cargo("tree --format <<<{p}>>>")
-        .with_stdout("<<<foo v0.1.0 ([..]/foo)>>>")
+        .with_stdout_data(str![[r#"
+<<<foo v0.1.0 ([ROOT]/foo)>>>
+
+"#]])
         .run();
 
     p.cargo("tree --format {}")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] tree format `{}` not valid
 
 Caused by:
   unsupported pattern ``
-",
-        )
+
+"#]])
         .with_status(101)
         .run();
 
     p.cargo("tree --format {p}-{{hello}}")
-        .with_stdout("foo v0.1.0 ([..]/foo)-{hello}")
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)-{hello}
+
+"#]])
         .run();
 
     p.cargo("tree --format")
         .arg("{p} {l} {r}")
-        .with_stdout("foo v0.1.0 ([..]/foo) MIT https://github.com/rust-lang/cargo")
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo) MIT https://github.com/rust-lang/cargo
+
+"#]])
         .run();
 
     p.cargo("tree --format")
         .arg("{p} {f}")
-        .with_stdout("foo v0.1.0 ([..]/foo) bar,default,foo")
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo) bar,default,foo
+
+"#]])
         .run();
 
     p.cargo("tree --all-features --format")
         .arg("{p} [{f}]")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo) [bar,default,dep,dep_that_is_awesome,foo,other-dep]
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo) [bar,default,dep,dep_that_is_awesome,foo,other-dep]
 ├── dep v1.0.0 []
 ├── dep_that_is_awesome v1.0.0 []
 └── other-dep v1.0.0 []
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree")
         .arg("--features=other-dep,dep_that_is_awesome")
         .arg("--format={lib}")
-        .with_stdout(
-            "
+        .with_stdout_data(str![[r#"
+
 ├── awesome_dep
 └── other_dep
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1288,49 +1258,45 @@ fn dev_dep_feature() {
 
     // Old behavior.
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 └── bar v1.0.0
     └── optdep v1.0.0
 [dev-dependencies]
 └── bar v1.0.0 (*)
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -e normal")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 └── bar v1.0.0
     └── optdep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     // New behavior.
     switch_to_resolver_2(&p);
 
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 └── bar v1.0.0
     └── optdep v1.0.0
 [dev-dependencies]
 └── bar v1.0.0 (*)
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -e normal")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 └── bar v1.0.0
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1362,89 +1328,82 @@ fn host_dep_feature() {
 
     // Old behavior
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 └── bar v1.0.0
     └── optdep v1.0.0
 [build-dependencies]
 └── bar v1.0.0 (*)
-",
-        )
+
+"#]])
         .run();
 
     // -p
     p.cargo("tree -p bar")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 bar v1.0.0
 └── optdep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     // invert
     p.cargo("tree -i optdep")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 optdep v1.0.0
 └── bar v1.0.0
-    └── foo v0.1.0 ([..]/foo)
+    └── foo v0.1.0 ([ROOT]/foo)
     [build-dependencies]
-    └── foo v0.1.0 ([..]/foo)
-",
-        )
+    └── foo v0.1.0 ([ROOT]/foo)
+
+"#]])
         .run();
 
     // New behavior.
     switch_to_resolver_2(&p);
 
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 └── bar v1.0.0
 [build-dependencies]
 └── bar v1.0.0
     └── optdep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -p bar")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 bar v1.0.0
 
 bar v1.0.0
 └── optdep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -i optdep")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 optdep v1.0.0
 └── bar v1.0.0
     [build-dependencies]
-    └── foo v0.1.0 ([..]/foo)
-",
-        )
+    └── foo v0.1.0 ([ROOT]/foo)
+
+"#]])
         .run();
 
     // Check that -d handles duplicates with features.
     p.cargo("tree -d")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 bar v1.0.0
-└── foo v0.1.0 ([..]/foo)
+└── foo v0.1.0 ([ROOT]/foo)
 
 bar v1.0.0
 [build-dependencies]
-└── foo v0.1.0 ([..]/foo)
-",
-        )
+└── foo v0.1.0 ([ROOT]/foo)
+
+"#]])
         .run();
 }
 
@@ -1477,68 +1436,62 @@ fn proc_macro_features() {
 
     // Old behavior
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 ├── pm v1.0.0 (proc-macro)
 │   └── somedep v1.0.0
 │       └── optdep v1.0.0
 └── somedep v1.0.0 (*)
-",
-        )
+
+"#]])
         .run();
 
     // Old behavior + no-proc-macro
     p.cargo("tree -e no-proc-macro")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 └── somedep v1.0.0
     └── optdep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     // -p
     p.cargo("tree -p somedep")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 somedep v1.0.0
 └── optdep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     // -p -e no-proc-macro
     p.cargo("tree -p somedep -e no-proc-macro")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 somedep v1.0.0
 └── optdep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     // invert
     p.cargo("tree -i somedep")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 somedep v1.0.0
-├── foo v0.1.0 ([..]/foo)
+├── foo v0.1.0 ([ROOT]/foo)
 └── pm v1.0.0 (proc-macro)
-    └── foo v0.1.0 ([..]/foo)
-",
-        )
+    └── foo v0.1.0 ([ROOT]/foo)
+
+"#]])
         .run();
 
     // invert + no-proc-macro
     p.cargo("tree -i somedep -e no-proc-macro")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 somedep v1.0.0
-└── foo v0.1.0 ([..]/foo)
-",
-        )
+└── foo v0.1.0 ([ROOT]/foo)
+
+"#]])
         .run();
 
     // New behavior.
@@ -1546,57 +1499,52 @@ somedep v1.0.0
 
     // Note the missing (*)
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 ├── pm v1.0.0 (proc-macro)
 │   └── somedep v1.0.0
 │       └── optdep v1.0.0
 └── somedep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -e no-proc-macro")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 └── somedep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -p somedep")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 somedep v1.0.0
 
 somedep v1.0.0
 └── optdep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -i somedep")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 somedep v1.0.0
-└── foo v0.1.0 ([..]/foo)
+└── foo v0.1.0 ([ROOT]/foo)
 
 somedep v1.0.0
 └── pm v1.0.0 (proc-macro)
-    └── foo v0.1.0 ([..]/foo)
-",
-        )
+    └── foo v0.1.0 ([ROOT]/foo)
+
+"#]])
         .run();
 
     p.cargo("tree -i somedep -e no-proc-macro")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 somedep v1.0.0
-└── foo v0.1.0 ([..]/foo)
-",
-        )
+└── foo v0.1.0 ([ROOT]/foo)
+
+"#]])
         .run();
 }
 
@@ -1629,25 +1577,23 @@ fn itarget_opt_dep() {
 
     // Old behavior
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v1.0.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v1.0.0 ([ROOT]/foo)
 └── common v1.0.0
     └── optdep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     // New behavior.
     switch_to_resolver_2(&p);
 
     p.cargo("tree")
-        .with_stdout(
-            "\
-foo v1.0.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v1.0.0 ([ROOT]/foo)
 └── common v1.0.0
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1674,14 +1620,20 @@ fn ambiguous_name() {
         .build();
 
     p.cargo("tree -p dep")
-        .with_stderr_contains(
-            "\
-error: There are multiple `dep` packages in your project, and the specification `dep` is ambiguous.
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 4 packages to latest compatible versions
+[ADDING] dep v1.0.0 (latest: v2.0.0)
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep v2.0.0 (registry `dummy-registry`)
+[DOWNLOADED] dep v1.0.0 (registry `dummy-registry`)
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[ERROR] There are multiple `dep` packages in your project, and the specification `dep` is ambiguous.
 Please re-run this command with one of the following specifications:
   dep@1.0.0
   dep@2.0.0
-",
-        )
+
+"#]])
         .with_status(101)
         .run();
 }
@@ -1723,41 +1675,39 @@ fn workspace_features_are_local() {
 
             [dependencies]
             somedep = "1.0"
+
             "#,
         )
         .file("b/src/lib.rs", "")
         .build();
 
     p.cargo("tree")
-        .with_stdout(
-            "\
-a v0.1.0 ([..]/foo/a)
+        .with_stdout_data(str![[r#"
+a v0.1.0 ([ROOT]/foo/a)
 └── somedep v1.0.0
     └── optdep v1.0.0
 
-b v0.1.0 ([..]/foo/b)
+b v0.1.0 ([ROOT]/foo/b)
 └── somedep v1.0.0 (*)
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -p a")
-        .with_stdout(
-            "\
-a v0.1.0 ([..]/foo/a)
+        .with_stdout_data(str![[r#"
+a v0.1.0 ([ROOT]/foo/a)
 └── somedep v1.0.0
     └── optdep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -p b")
-        .with_stdout(
-            "\
-b v0.1.0 ([..]/foo/b)
+        .with_stdout_data(str![[r#"
+b v0.1.0 ([ROOT]/foo/b)
 └── somedep v1.0.0
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1769,14 +1719,10 @@ fn unknown_edge_kind() {
         .build();
 
     p.cargo("tree -e unknown")
-        .with_stderr(
-            "\
-[ERROR] unknown edge kind `unknown`, valid values are \
-\"normal\", \"build\", \"dev\", \
-\"no-normal\", \"no-build\", \"no-dev\", \"no-proc-macro\", \
-\"features\", or \"all\"
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] unknown edge kind `unknown`, valid values are "normal", "build", "dev", "no-normal", "no-build", "no-dev", "no-proc-macro", "features", or "all"
+
+"#]])
         .with_status(101)
         .run();
 }
@@ -1796,22 +1742,19 @@ fn mixed_no_edge_kinds() {
         .build();
 
     p.cargo("tree -e no-build,normal")
-        .with_stderr(
-            "\
-[ERROR] `normal` dependency kind cannot be mixed with \
-\"no-normal\", \"no-build\", or \"no-dev\" dependency kinds
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] `normal` dependency kind cannot be mixed with "no-normal", "no-build", or "no-dev" dependency kinds
+
+"#]])
         .with_status(101)
         .run();
 
     // `no-proc-macro` can be mixed with others
     p.cargo("tree -e no-proc-macro,normal")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
-",
-        )
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
+
+"#]])
         .run();
 }
 
@@ -1820,33 +1763,30 @@ fn depth_limit() {
     let p = make_simple_proj();
 
     p.cargo("tree --depth 0")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 [build-dependencies]
 [dev-dependencies]
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree --depth 1")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 ├── a v1.0.0
 └── c v1.0.0
 [build-dependencies]
 └── bdep v1.0.0
 [dev-dependencies]
 └── devdep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree --depth 2")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 ├── a v1.0.0
 │   └── b v1.0.0
 └── c v1.0.0
@@ -1856,55 +1796,51 @@ foo v0.1.0 ([..]/foo)
 [dev-dependencies]
 └── devdep v1.0.0
     └── b v1.0.0 (*)
-",
-        )
+
+"#]])
         .run();
 
     // specify a package
     p.cargo("tree -p bdep --depth 1")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 bdep v1.0.0
 └── b v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     // different prefix
     p.cargo("tree --depth 1 --prefix depth")
-        .with_stdout(
-            "\
-0foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+0foo v0.1.0 ([ROOT]/foo)
 1a v1.0.0
 1c v1.0.0
 1bdep v1.0.0
 1devdep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     // with edge-kinds
     p.cargo("tree --depth 1 -e no-dev")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 ├── a v1.0.0
 └── c v1.0.0
 [build-dependencies]
 └── bdep v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     // invert
     p.cargo("tree --depth 1 --invert c")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 c v1.0.0
 ├── b v1.0.0
-└── foo v0.1.0 ([..]/foo)
-",
-        )
+└── foo v0.1.0 ([ROOT]/foo)
+
+"#]])
         .run();
 }
 
@@ -1913,9 +1849,8 @@ fn prune() {
     let p = make_simple_proj();
 
     p.cargo("tree --prune c")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 └── a v1.0.0
     └── b v1.0.0
 [build-dependencies]
@@ -1924,41 +1859,38 @@ foo v0.1.0 ([..]/foo)
 [dev-dependencies]
 └── devdep v1.0.0
     └── b v1.0.0 (*)
-",
-        )
+
+"#]])
         .run();
 
     // multiple prune
     p.cargo("tree --prune c --prune bdep")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 └── a v1.0.0
     └── b v1.0.0
 [build-dependencies]
 [dev-dependencies]
 └── devdep v1.0.0
     └── b v1.0.0 (*)
-",
-        )
+
+"#]])
         .run();
 
     // with edge-kinds
     p.cargo("tree --prune c -e normal")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 └── a v1.0.0
     └── b v1.0.0
-",
-        )
+
+"#]])
         .run();
 
     // pruning self does not works
     p.cargo("tree --prune foo")
-        .with_stdout(
-            "\
-foo v0.1.0 ([..]/foo)
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 ├── a v1.0.0
 │   └── b v1.0.0
 │       └── c v1.0.0
@@ -1969,19 +1901,18 @@ foo v0.1.0 ([..]/foo)
 [dev-dependencies]
 └── devdep v1.0.0
     └── b v1.0.0 (*)
-",
-        )
+
+"#]])
         .run();
 
     // dep not exist
     p.cargo("tree --prune no-dep")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] package ID specification `no-dep` did not match any packages
 
-<tab>Did you mean `bdep`?
-",
-        )
+	Did you mean `bdep`?
+
+"#]])
         .with_status(101)
         .run();
 }
@@ -2007,21 +1938,23 @@ fn cyclic_features() {
         .build();
 
     p.cargo("tree -e features")
-        .with_stdout("foo v1.0.0 ([ROOT]/foo)")
+        .with_stdout_data(str![[r#"
+foo v1.0.0 ([ROOT]/foo)
+
+"#]])
         .run();
 
     p.cargo("tree -e features -i foo")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 foo v1.0.0 ([ROOT]/foo)
-├── foo feature \"a\"
-│   ├── foo feature \"b\"
-│   │   └── foo feature \"a\" (*)
-│   └── foo feature \"default\" (command-line)
-├── foo feature \"b\" (*)
-└── foo feature \"default\" (command-line)
-",
-        )
+├── foo feature "a"
+│   ├── foo feature "b"
+│   │   └── foo feature "a" (*)
+│   └── foo feature "default" (command-line)
+├── foo feature "b" (*)
+└── foo feature "default" (command-line)
+
+"#]])
         .run();
 }
 
@@ -2062,33 +1995,31 @@ fn dev_dep_cycle_with_feature() {
         .build();
 
     p.cargo("tree -e features --features a")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 foo v1.0.0 ([ROOT]/foo)
 [dev-dependencies]
-└── bar feature \"default\"
+└── bar feature "default"
     └── bar v1.0.0 ([ROOT]/foo/bar)
-        └── foo feature \"default\" (command-line)
+        └── foo feature "default" (command-line)
             └── foo v1.0.0 ([ROOT]/foo) (*)
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -e features --features a -i foo")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 foo v1.0.0 ([ROOT]/foo)
-├── foo feature \"a\" (command-line)
-│   └── bar feature \"feat1\"
-│       └── foo feature \"a\" (command-line) (*)
-└── foo feature \"default\" (command-line)
+├── foo feature "a" (command-line)
+│   └── bar feature "feat1"
+│       └── foo feature "a" (command-line) (*)
+└── foo feature "default" (command-line)
     └── bar v1.0.0 ([ROOT]/foo/bar)
-        ├── bar feature \"default\"
+        ├── bar feature "default"
         │   [dev-dependencies]
         │   └── foo v1.0.0 ([ROOT]/foo) (*)
-        └── bar feature \"feat1\" (*)
-",
-        )
+        └── bar feature "feat1" (*)
+
+"#]])
         .run();
 }
 
@@ -2132,72 +2063,68 @@ fn dev_dep_cycle_with_feature_nested() {
         .build();
 
     p.cargo("tree -e features")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 foo v1.0.0 ([ROOT]/foo)
 [dev-dependencies]
-└── bar feature \"default\"
+└── bar feature "default"
     └── bar v1.0.0 ([ROOT]/foo/bar)
-        └── foo feature \"default\" (command-line)
+        └── foo feature "default" (command-line)
             └── foo v1.0.0 ([ROOT]/foo) (*)
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("tree -e features --features a -i foo")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 foo v1.0.0 ([ROOT]/foo)
-├── foo feature \"a\" (command-line)
-│   └── foo feature \"b\"
-│       └── bar feature \"feat1\"
-│           └── foo feature \"a\" (command-line) (*)
-├── foo feature \"b\" (*)
-└── foo feature \"default\" (command-line)
+├── foo feature "a" (command-line)
+│   └── foo feature "b"
+│       └── bar feature "feat1"
+│           └── foo feature "a" (command-line) (*)
+├── foo feature "b" (*)
+└── foo feature "default" (command-line)
     └── bar v1.0.0 ([ROOT]/foo/bar)
-        ├── bar feature \"default\"
+        ├── bar feature "default"
         │   [dev-dependencies]
         │   └── foo v1.0.0 ([ROOT]/foo) (*)
-        └── bar feature \"feat1\" (*)
-",
-        )
+        └── bar feature "feat1" (*)
+
+"#]])
         .run();
 
     p.cargo("tree -e features --features b -i foo")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 foo v1.0.0 ([ROOT]/foo)
-├── foo feature \"a\"
-│   └── foo feature \"b\" (command-line)
-│       └── bar feature \"feat1\"
-│           └── foo feature \"a\" (*)
-├── foo feature \"b\" (command-line) (*)
-└── foo feature \"default\" (command-line)
+├── foo feature "a"
+│   └── foo feature "b" (command-line)
+│       └── bar feature "feat1"
+│           └── foo feature "a" (*)
+├── foo feature "b" (command-line) (*)
+└── foo feature "default" (command-line)
     └── bar v1.0.0 ([ROOT]/foo/bar)
-        ├── bar feature \"default\"
+        ├── bar feature "default"
         │   [dev-dependencies]
         │   └── foo v1.0.0 ([ROOT]/foo) (*)
-        └── bar feature \"feat1\" (*)
-",
-        )
+        └── bar feature "feat1" (*)
+
+"#]])
         .run();
 
     p.cargo("tree -e features --features bar/feat1 -i foo")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 foo v1.0.0 ([ROOT]/foo)
-├── foo feature \"a\"
-│   └── foo feature \"b\"
-│       └── bar feature \"feat1\" (command-line)
-│           └── foo feature \"a\" (*)
-├── foo feature \"b\" (*)
-└── foo feature \"default\" (command-line)
+├── foo feature "a"
+│   └── foo feature "b"
+│       └── bar feature "feat1" (command-line)
+│           └── foo feature "a" (*)
+├── foo feature "b" (*)
+└── foo feature "default" (command-line)
     └── bar v1.0.0 ([ROOT]/foo/bar)
-        ├── bar feature \"default\"
+        ├── bar feature "default"
         │   [dev-dependencies]
         │   └── foo v1.0.0 ([ROOT]/foo) (*)
-        └── bar feature \"feat1\" (command-line) (*)
-",
-        )
+        └── bar feature "feat1" (command-line) (*)
+
+"#]])
         .run();
 }
