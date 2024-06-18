@@ -149,32 +149,32 @@ fn add_common_redactions(subs: &mut snapbox::Redactions) {
     // For e2e tests
     subs.insert(
         "[ELAPSED]",
-        regex!("[FINISHED].*in (?<redacted>[0-9]+(\\.[0-9]+))s"),
+        regex!(r"[FINISHED].*in (?<redacted>[0-9]+(\.[0-9]+))s"),
     )
     .unwrap();
     // for UI tests
     subs.insert(
         "[ELAPSED]",
-        regex!("Finished.*in (?<redacted>[0-9]+(\\.[0-9]+))s"),
+        regex!(r"Finished.*in (?<redacted>[0-9]+(\.[0-9]+))s"),
     )
     .unwrap();
     // output from libtest
     subs.insert(
         "[ELAPSED]",
-        regex!("; finished in (?<redacted>[0-9]+(\\.[0-9]+))s"),
+        regex!(r"; finished in (?<redacted>[0-9]+(\.[0-9]+))s"),
     )
     .unwrap();
     subs.insert(
         "[FILE_SIZE]",
-        regex!("(?<redacted>[0-9]+(\\.[0-9]+)([a-zA-Z]i)?)B"),
+        regex!(r"(?<redacted>[0-9]+(\.[0-9]+)([a-zA-Z]i)?)B"),
     )
     .unwrap();
     subs.insert(
         "[HASH]",
-        regex!("home/\\.cargo/registry/src/-(?<redacted>[a-z0-9]+)"),
+        regex!(r"home/\.cargo/registry/src/-(?<redacted>[a-z0-9]+)"),
     )
     .unwrap();
-    subs.insert("[HASH]", regex!("/[a-z0-9\\-_]+-(?<redacted>[0-9a-f]{16})"))
+    subs.insert("[HASH]", regex!(r"/[a-z0-9\-_]+-(?<redacted>[0-9a-f]{16})"))
         .unwrap();
     subs.insert("[HOST_TARGET]", rustc_host()).unwrap();
     if let Some(alt_target) = try_alternate() {
@@ -182,12 +182,12 @@ fn add_common_redactions(subs: &mut snapbox::Redactions) {
     }
     subs.insert(
         "[AVG_ELAPSED]",
-        regex!("(?<redacted>[0-9]+(\\.[0-9]+)?) ns/iter"),
+        regex!(r"(?<redacted>[0-9]+(\.[0-9]+)?) ns/iter"),
     )
     .unwrap();
     subs.insert(
         "[JITTER]",
-        regex!("ns/iter \\(\\+/- (?<redacted>[0-9]+(\\.[0-9]+)?)\\)"),
+        regex!(r"ns/iter \(\+/- (?<redacted>[0-9]+(\.[0-9]+)?)\)"),
     )
     .unwrap();
 }
