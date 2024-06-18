@@ -149,7 +149,7 @@ fn add_common_redactions(subs: &mut snapbox::Redactions) {
     // For e2e tests
     subs.insert(
         "[ELAPSED]",
-        regex!(r"[FINISHED].*in (?<redacted>[0-9]+(\.[0-9]+))s"),
+        regex!(r"\[FINISHED\].*in (?<redacted>[0-9]+(\.[0-9]+))s"),
     )
     .unwrap();
     // for UI tests
