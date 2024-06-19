@@ -69,6 +69,10 @@ impl<N: Eq + Ord + Clone, E: Default + Clone> Graph<N, E> {
         self.nodes.keys()
     }
 
+    pub fn len(&self) -> usize {
+        self.nodes.len()
+    }
+
     /// Checks if there is a path from `from` to `to`.
     pub fn is_path_from_to<'a>(&'a self, from: &'a N, to: &'a N) -> bool {
         let mut stack = vec![from];

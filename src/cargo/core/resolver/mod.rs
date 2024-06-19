@@ -1000,69 +1000,57 @@ fn find_candidate(
 }
 
 fn check_cycles(resolve: &Resolve) -> CargoResult<()> {
-    // Create a simple graph representation alternative of `resolve` which has
-    // only the edges we care about. Note that `BTree*` is used to produce
-    // deterministic error messages here. Also note that the main reason for
-    // this copy of the resolve graph is to avoid edges between a crate and its
-    // dev-dependency since that doesn't count for cycles.
-    let mut graph = BTreeMap::new();
-    for id in resolve.iter() {
-        let map = graph.entry(id).or_insert_with(BTreeMap::new);
-        for (dep_id, listings) in resolve.deps_not_replaced(id) {
-            let transitive_dep = listings.iter().find(|d| d.is_transitive());
-
-            if let Some(transitive_dep) = transitive_dep.cloned() {
-                map.insert(dep_id, transitive_dep.clone());
-                resolve
-                    .replacement(dep_id)
-                    .map(|p| map.insert(p, transitive_dep));
-            }
-        }
-    }
-
-    // After we have the `graph` that we care about, perform a simple cycle
-    // check by visiting all nodes. We visit each node at most once and we keep
+    // Perform a simple cycle check by visiting all nodes.
+    // We visit each node at most once and we keep
     // track of the path through the graph as we walk it. If we walk onto the
     // same node twice that's a cycle.
-    let mut checked = HashSet::new();
-    let mut path = Vec::new();
-    let mut visited = HashSet::new();
-    for pkg in graph.keys() {
-        if !checked.contains(pkg) {
-            visit(&graph, *pkg, &mut visited, &mut path, &mut checked)?
+    let mut checked = HashSet::with_capacity(resolve.len());
+    let mut path = Vec::with_capacity(4);
+    let mut visited = HashSet::with_capacity(4);
+    for pkg in resolve.iter() {
+        if !checked.contains(&pkg) {
+            visit(&resolve, pkg, &mut visited, &mut path, &mut checked)?
         }
     }
     return Ok(());
 
     fn visit(
-        graph: &BTreeMap<PackageId, BTreeMap<PackageId, Dependency>>,
+        resolve: &Resolve,
         id: PackageId,
         visited: &mut HashSet<PackageId>,
         path: &mut Vec<PackageId>,
         checked: &mut HashSet<PackageId>,
     ) -> CargoResult<()> {
-        path.push(id);
         if !visited.insert(id) {
-            let iter = path.iter().rev().skip(1).scan(id, |child, parent| {
-                let dep = graph.get(parent).and_then(|adjacent| adjacent.get(child));
+            // We found a cycle and need to construct an error. Performance is no longer top priority.
+            let iter = path.iter().rev().scan(id, |child, parent| {
+                let dep = resolve.transitive_deps_not_replaced(*parent).find_map(
+                    |(dep_id, transitive_dep)| {
+                        (*child == dep_id || Some(*child) == resolve.replacement(dep_id))
+                            .then_some(transitive_dep)
+                    },
+                );
                 *child = *parent;
                 Some((parent, dep))
             });
             let iter = std::iter::once((&id, None)).chain(iter);
+            let describe_path = errors::describe_path(iter);
             anyhow::bail!(
-                "cyclic package dependency: package `{}` depends on itself. Cycle:\n{}",
-                id,
-                errors::describe_path(iter),
+                "cyclic package dependency: package `{id}` depends on itself. Cycle:\n{describe_path}"
             );
         }
 
         if checked.insert(id) {
-            for dep in graph[&id].keys() {
-                visit(graph, *dep, visited, path, checked)?;
+            path.push(id);
+            for (dep_id, _transitive_dep) in resolve.transitive_deps_not_replaced(id) {
+                visit(resolve, dep_id, visited, path, checked)?;
+                if let Some(replace_id) = resolve.replacement(dep_id) {
+                    visit(resolve, replace_id, visited, path, checked)?;
+                }
             }
+            path.pop();
         }
 
-        path.pop();
         visited.remove(&id);
         Ok(())
     }
