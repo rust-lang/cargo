@@ -1,9 +1,9 @@
 //! Tests for public/private dependencies.
 
-#![allow(deprecated)]
-
+use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::registry::{Dependency, Package};
+use cargo_test_support::str;
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
 fn exported_priv_warning() {
@@ -37,11 +37,11 @@ fn exported_priv_warning() {
 
     p.cargo("check --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
-        .with_stderr_contains(
-            "\
-src/lib.rs:3:13: warning: type `[..]FromPriv` from private dependency 'priv_dep' in public interface
-",
-        )
+        .with_stderr_data(str![[r#"
+...
+src/lib.rs:3:13: [WARNING] type `FromPriv` from private dependency 'priv_dep' in public interface
+...
+"#]])
         .run()
 }
 
@@ -77,17 +77,16 @@ fn exported_pub_dep() {
 
     p.cargo("check --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] pub_dep v0.1.0 ([..])
+[DOWNLOADED] pub_dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] pub_dep v0.1.0
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run()
 }
 
@@ -105,16 +104,15 @@ pub fn requires_nightly_cargo() {
 
     p.cargo("check --message-format=short")
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   the cargo feature `public-dependency` requires a nightly version of Cargo, but this is the `stable` channel
   See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
   See https://doc.rust-lang.org/[..]cargo/reference/unstable.html#public-dependency for more information about using this feature.
-"
-        )
+
+"#]])
         .run()
 }
 
@@ -142,18 +140,17 @@ fn requires_feature() {
 
     p.cargo("check --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] ignoring `public` on dependency pub_dep, pass `-Zpublic-dependency` to enable support for it
-[UPDATING] `[..]` index
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] pub_dep v0.1.0 ([..])
+[DOWNLOADED] pub_dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] pub_dep v0.1.0
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run()
 }
 
@@ -190,14 +187,13 @@ fn pub_dev_dependency() {
     p.cargo("check --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   'public' specifier can only be used on regular dependencies, not dev-dependencies
-",
-        )
+
+"#]])
         .run()
 }
 
@@ -231,14 +227,13 @@ fn pub_dev_dependency_without_feature() {
 
     p.cargo("check --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] 'public' specifier can only be used on regular dependencies, not dev-dependencies
-[UPDATING] `[..]` index
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run()
 }
 
@@ -290,14 +285,13 @@ fn workspace_pub_disallowed() {
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[CWD]/Cargo.toml`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   foo2 is public, but workspace dependencies cannot be public
-",
-        )
+
+"#]])
         .run()
 }
 
@@ -333,17 +327,16 @@ fn allow_priv_in_tests() {
 
     p.cargo("check --tests --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] priv_dep v0.1.0 ([..])
+[DOWNLOADED] priv_dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] priv_dep v0.1.0
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run()
 }
 
@@ -379,17 +372,16 @@ fn allow_priv_in_benchs() {
 
     p.cargo("check --benches --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] priv_dep v0.1.0 ([..])
+[DOWNLOADED] priv_dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] priv_dep v0.1.0
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run()
 }
 
@@ -426,17 +418,16 @@ fn allow_priv_in_bins() {
 
     p.cargo("check --bins --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] priv_dep v0.1.0 ([..])
+[DOWNLOADED] priv_dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] priv_dep v0.1.0
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run()
 }
 
@@ -473,17 +464,16 @@ fn allow_priv_in_examples() {
 
     p.cargo("check --examples --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] priv_dep v0.1.0 ([..])
+[DOWNLOADED] priv_dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] priv_dep v0.1.0
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run()
 }
 
@@ -521,17 +511,16 @@ fn allow_priv_in_custom_build() {
 
     p.cargo("check --all-targets --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] priv_dep v0.1.0 ([..])
+[DOWNLOADED] priv_dep v0.1.0 (registry `dummy-registry`)
 [COMPILING] priv_dep v0.1.0
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run()
 }
 
@@ -576,19 +565,18 @@ fn publish_package_with_public_dependency() {
 
     p.cargo("check --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] pub_bar v0.1.0 ([..])
-[DOWNLOADED] bar v0.1.0 ([..])
+[DOWNLOADED] pub_bar v0.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [CHECKING] pub_bar v0.1.0
 [CHECKING] bar v0.1.0
-[CHECKING] foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run()
 }
 
@@ -634,12 +622,12 @@ fn verify_mix_cargo_feature_z() {
 
     p.cargo("check -Zpublic-dependency --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
-        .with_stderr_contains(
-            "\
-src/lib.rs:5:13: warning: type `FromDep` from private dependency 'dep' in public interface
-src/lib.rs:6:13: warning: type `FromPriv` from private dependency 'priv_dep' in public interface
-",
-        )
+        .with_stderr_data(str![[r#"
+...
+src/lib.rs:5:13: [WARNING] type `FromDep` from private dependency 'dep' in public interface
+src/lib.rs:6:13: [WARNING] type `FromPriv` from private dependency 'priv_dep' in public interface
+...
+"#]])
         .run();
 }
 
@@ -684,11 +672,14 @@ fn verify_z_public_dependency() {
 
     p.cargo("check -Zpublic-dependency --message-format=short")
         .masquerade_as_nightly_cargo(&["public-dependency"])
-        .with_stderr_contains(
-            "\
-src/lib.rs:5:13: warning: type `FromDep` from private dependency 'dep' in public interface
-src/lib.rs:6:13: warning: type `FromPriv` from private dependency 'priv_dep' in public interface
-",
+        .with_stderr_data(
+            str![[r#"
+...
+src/lib.rs:5:13: [WARNING] type `FromDep` from private dependency 'dep' in public interface
+src/lib.rs:6:13: [WARNING] type `FromPriv` from private dependency 'priv_dep' in public interface
+...
+"#]]
+            .unordered(),
         )
         .run();
 }
