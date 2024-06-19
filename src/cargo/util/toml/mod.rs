@@ -1154,8 +1154,8 @@ fn to_real_manifest(
         // so if they can't use a new edition, don't bother to tell them to set it.
         // This also avoids having to worry about whether `package.edition` is compatible with
         // their MSRV.
-        if msrv_edition != default_edition {
-            let tip = if msrv_edition == latest_edition {
+        if msrv_edition != default_edition || rust_version.is_none() {
+            let tip = if msrv_edition == latest_edition || rust_version.is_none() {
                 format!(" while the latest is {latest_edition}")
             } else {
                 format!(" while {msrv_edition} is compatible with `rust-version`")
