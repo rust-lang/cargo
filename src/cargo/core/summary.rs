@@ -179,7 +179,7 @@ fn build_feature_map(
     let explicitly_listed: HashSet<_> = map
         .values()
         .flatten()
-        .filter_map(|fv| fv.explicitly_name())
+        .filter_map(|fv| fv.explicit_dep_name())
         .collect();
     for dep in dependencies {
         if !dep.is_optional() {
@@ -198,7 +198,7 @@ fn build_feature_map(
         FeatureName::new(feature)?;
         for fv in fvs {
             // Find data for the referenced dependency...
-            let dep_data = dep_map.get(&fv.dep_name());
+            let dep_data = dep_map.get(&fv.feature_or_dep_name());
             let is_any_dep = dep_data.is_some();
             let is_optional_dep = dep_data.is_some_and(|&o| o);
             match fv {
@@ -351,14 +351,15 @@ impl FeatureValue {
         }
     }
 
-    fn explicitly_name(&self) -> Option<InternedString> {
+    /// Returns the name of the dependency if and only if it was explicitly named with the `dep:` syntax.
+    fn explicit_dep_name(&self) -> Option<InternedString> {
         match self {
             FeatureValue::Dep { dep_name, .. } => Some(*dep_name),
             _ => None,
         }
     }
 
-    fn dep_name(&self) -> InternedString {
+    fn feature_or_dep_name(&self) -> InternedString {
         match self {
             FeatureValue::Feature(dep_name)
             | FeatureValue::Dep { dep_name, .. }
