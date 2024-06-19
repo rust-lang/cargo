@@ -1,12 +1,11 @@
 //! Tests for the `cargo yank` command.
 
-#![allow(deprecated)]
-
 use std::fs;
 
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::project;
 use cargo_test_support::registry;
+use cargo_test_support::str;
 
 fn setup(name: &str, version: &str) {
     let dir = registry::api_path().join(format!("api/v1/crates/{}/{}", name, version));
@@ -41,14 +40,15 @@ fn explicit_version() {
     p.cargo("yank --undo --version 0.0.1")
         .replace_crates_io(registry.index_url())
         .with_status(101)
-        .with_stderr(
-            "    Updating crates.io index
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
       Unyank foo@0.0.1
-error: failed to undo a yank from the registry at file:///[..]
+[ERROR] failed to undo a yank from the registry at [ROOTURL]/api
 
 Caused by:
-  EOF while parsing a value at line 1 column 0",
-        )
+  EOF while parsing a value at line 1 column 0
+
+"#]])
         .run();
 }
 
@@ -117,14 +117,15 @@ fn inline_version() {
     p.cargo("yank --undo foo@0.0.1")
         .replace_crates_io(registry.index_url())
         .with_status(101)
-        .with_stderr(
-            "    Updating crates.io index
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
       Unyank foo@0.0.1
-error: failed to undo a yank from the registry at file:///[..]
+[ERROR] failed to undo a yank from the registry at [ROOTURL]/api
 
 Caused by:
-  EOF while parsing a value at line 1 column 0",
-        )
+  EOF while parsing a value at line 1 column 0
+
+"#]])
         .run();
 }
 
@@ -149,7 +150,10 @@ fn version_required() {
 
     p.cargo("yank foo")
         .with_status(101)
-        .with_stderr("error: `--version` is required")
+        .with_stderr_data(str![[r#"
+[ERROR] `--version` is required
+
+"#]])
         .run();
 }
 
@@ -174,7 +178,10 @@ fn inline_version_without_name() {
 
     p.cargo("yank @0.0.1")
         .with_status(101)
-        .with_stderr("error: missing crate name for `@0.0.1`")
+        .with_stderr_data(str![[r#"
+[ERROR] missing crate name for `@0.0.1`
+
+"#]])
         .run();
 }
 
@@ -199,6 +206,9 @@ fn inline_and_explicit_version() {
 
     p.cargo("yank foo@0.0.1 --version 0.0.1")
         .with_status(101)
-        .with_stderr("error: cannot specify both `@0.0.1` and `--version`")
+        .with_stderr_data(str![[r#"
+[ERROR] cannot specify both `@0.0.1` and `--version`
+
+"#]])
         .run();
 }
