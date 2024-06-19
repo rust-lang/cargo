@@ -31,10 +31,15 @@ fn assert_deps(project: &Project, fingerprint: &str, test_cb: impl Fn(&Path, &[(
     let dep_info = &mut &dep_info[..];
     let deps = (0..read_usize(dep_info))
         .map(|_| {
-            (
-                read_u8(dep_info),
-                str::from_utf8(read_bytes(dep_info)).unwrap(),
-            )
+            let ty = read_u8(dep_info);
+            let path = str::from_utf8(read_bytes(dep_info)).unwrap();
+            let checksum_present = read_bool(dep_info);
+            if checksum_present {
+                // Read out the checksum info without using it
+                let _file_len = read_u64(dep_info);
+                let _checksum = read_bytes(dep_info);
+            }
+            (ty, path)
         })
         .collect::<Vec<_>>();
     test_cb(&info_path, &deps);
@@ -50,6 +55,17 @@ fn assert_deps(project: &Project, fingerprint: &str, test_cb: impl Fn(&Path, &[(
         let ret = bytes[0];
         *bytes = &bytes[1..];
         ret
+    }
+
+    fn read_bool(bytes: &mut &[u8]) -> bool {
+        read_u8(bytes) != 0
+    }
+
+    fn read_u64(bytes: &mut &[u8]) -> u64 {
+        let ret = &bytes[..8];
+        *bytes = &bytes[8..];
+
+        u64::from_le_bytes(ret.try_into().unwrap())
     }
 
     fn read_bytes<'a>(bytes: &mut &'a [u8]) -> &'a [u8] {

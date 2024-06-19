@@ -529,6 +529,17 @@ the crate will be rebuilt). The primary use case is for building the compiler
 itself, which has implicit dependencies on the standard library that would
 otherwise be untracked for change-detection.
 
+## checksum-freshness
+* Tracking issue: [#14136](https://github.com/rust-lang/cargo/issues/14136)
+
+The `-Z checksum-freshness` flag will replace the use of file mtimes in cargo's
+fingerprints with a file checksum value. This is most useful on systems with a poor
+mtime implementation, or in CI/CD. The checksum algorithm can change without notice
+between cargo versions. Fingerprints are used by cargo to determine when a crate needs to be rebuilt.
+
+For the time being files ingested by build script will continue to use mtimes, even when `checksum-freshness`
+is enabled. This is not intended as a long term solution.
+
 ## panic-abort-tests
 * Tracking Issue: [#67650](https://github.com/rust-lang/rust/issues/67650)
 * Original Pull Request: [#7460](https://github.com/rust-lang/cargo/pull/7460)
