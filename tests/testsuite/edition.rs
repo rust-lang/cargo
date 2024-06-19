@@ -142,6 +142,7 @@ fn unset_edition_with_unset_rust_version() {
     p.cargo("check -v")
         .with_stderr(
             "\
+[WARNING] no edition set: defaulting to the 2015 edition while the latest is 2021
 [CHECKING] foo [..]
 [RUNNING] `rustc [..] --edition=2015 [..]`
 [FINISHED] [..]
