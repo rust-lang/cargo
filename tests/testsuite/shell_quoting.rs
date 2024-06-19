@@ -15,6 +15,7 @@ fn features_are_quoted() {
             name = "foo"
             version = "0.1.0"
             authors = ["mikeyhew@example.com"]
+            edition = "2015"
 
             [features]
             some_feature = []

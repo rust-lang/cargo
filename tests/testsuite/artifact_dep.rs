@@ -1544,6 +1544,7 @@ fn artifact_dep_target_specified() {
                 version = "0.0.0"
                 authors = []
                 resolver = "2"
+                edition = "2015"
 
                 [dependencies]
                 bindep = { path = "bindep", artifact = "bin", target = "$TARGET" }
