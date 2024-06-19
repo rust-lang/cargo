@@ -1,9 +1,8 @@
 //! Tests for `[alias]` config command aliases.
 
-#![allow(deprecated)]
-
 use std::env;
 
+use cargo_test_support::str;
 use cargo_test_support::tools::echo_subcommand;
 use cargo_test_support::{basic_bin_manifest, project};
 
@@ -23,11 +22,11 @@ fn alias_incorrect_config_type() {
 
     p.cargo("b-cargo-test -v")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] invalid configuration for key `alias.b-cargo-test`
-expected a list, but found a integer for [..]",
-        )
+expected a list, but found a integer for `alias.b-cargo-test` in [ROOT]/foo/.cargo/config.toml
+
+"#]])
         .run();
 }
 
@@ -47,22 +46,21 @@ fn alias_malformed_config_string() {
 
     p.cargo("b-cargo-test -v")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] could not load Cargo configuration
 
 Caused by:
-  could not parse TOML configuration in `[..]/config.toml`
+  could not parse TOML configuration in `[ROOT]/foo/.cargo/config.toml`
 
 Caused by:
-  TOML parse error at line [..]
+  TOML parse error at line 3, column 32
     |
   3 |                 b-cargo-test = `
     |                                ^
   invalid string
-  expected `\"`, `'`
-",
-        )
+  expected `"`, `'`
+
+"#]])
         .run();
 }
 
@@ -82,23 +80,22 @@ fn alias_malformed_config_list() {
 
     p.cargo("b-cargo-test -v")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] could not load Cargo configuration
 
 Caused by:
-  failed to load TOML configuration from `[..]/config.toml`
+  failed to load TOML configuration from `[ROOT]/foo/.cargo/config.toml`
 
 Caused by:
-  [..] `alias`
+  failed to parse key `alias`
 
 Caused by:
-  [..] `b-cargo-test`
+  failed to parse key `b-cargo-test`
 
 Caused by:
   expected string but found integer in list
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -117,11 +114,12 @@ fn alias_config() {
         .build();
 
     p.cargo("b-cargo-test -v")
-        .with_stderr_contains(
-            "\
-[COMPILING] foo v0.5.0 [..]
-[RUNNING] `rustc --crate-name foo [..]",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -141,11 +139,12 @@ fn dependent_alias() {
         .build();
 
     p.cargo("a-cargo-test")
-        .with_stderr_contains(
-            "\
-[COMPILING] foo v0.5.0 [..]
-[RUNNING] `rustc --crate-name foo [..]",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -163,13 +162,12 @@ fn builtin_alias_shadowing_external_subcommand() {
 
     p.cargo("t")
         .env("PATH", &path)
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 [..]
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] unittests src/main.rs [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/main.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
         .run();
 }
 
@@ -194,14 +192,14 @@ fn alias_shadowing_external_subcommand() {
 
     p.cargo("echo")
         .env("PATH", &path)
-        .with_stderr("\
+        .with_stderr_data(str![[r#"
 [WARNING] user-defined alias `echo` is shadowing an external subcommand found at: `[ROOT]/cargo-echo/target/debug/cargo-echo[EXE]`
 This was previously accepted but is being phased out; it will become a hard error in a future release.
 For more information, see issue #10049 <https://github.com/rust-lang/cargo/issues/10049>.
-[COMPILING] foo v0.5.0 [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -229,36 +227,35 @@ fn default_args_alias() {
     p.cargo("echo")
         .env("PATH", &path)
         .with_status(101)
-        .with_stderr("\
+        .with_stderr_data(str![[r#"
 [WARNING] user-defined alias `echo` is shadowing an external subcommand found at: `[ROOT]/cargo-echo/target/debug/cargo-echo[EXE]`
 This was previously accepted but is being phased out; it will become a hard error in a future release.
 For more information, see issue #10049 <https://github.com/rust-lang/cargo/issues/10049>.
-error: alias echo has unresolvable recursive definition: echo -> echo
-",
-        )
+[ERROR] alias echo has unresolvable recursive definition: echo -> echo
+
+"#]])
         .run();
 
     p.cargo("test-1")
         .env("PATH", &path)
         .with_status(101)
-        .with_stderr("\
+        .with_stderr_data(str![[r#"
 [WARNING] user-defined alias `echo` is shadowing an external subcommand found at: `[ROOT]/cargo-echo/target/debug/cargo-echo[EXE]`
 This was previously accepted but is being phased out; it will become a hard error in a future release.
 For more information, see issue #10049 <https://github.com/rust-lang/cargo/issues/10049>.
-error: alias test-1 has unresolvable recursive definition: test-1 -> echo -> echo
-",
-        )
+[ERROR] alias test-1 has unresolvable recursive definition: test-1 -> echo -> echo
+
+"#]])
         .run();
 
     // Builtins are not expanded by rule
     p.cargo("build")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] user-defined alias `build` is ignored, because it is shadowed by a built-in command
-[COMPILING] foo v0.5.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -280,16 +277,18 @@ fn corecursive_alias() {
 
     p.cargo("test-1")
         .with_status(101)
-        .with_stderr(
-            "error: alias test-1 has unresolvable recursive definition: test-1 -> test-2 -> test-3 -> test-1",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] alias test-1 has unresolvable recursive definition: test-1 -> test-2 -> test-3 -> test-1
+
+"#]])
         .run();
 
     p.cargo("test-2")
         .with_status(101)
-        .with_stderr(
-            "error: alias test-2 has unresolvable recursive definition: test-2 -> test-3 -> test-1 -> test-2",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] alias test-2 has unresolvable recursive definition: test-2 -> test-3 -> test-1 -> test-2
+
+"#]])
         .run();
 }
 
@@ -308,8 +307,12 @@ fn alias_list_test() {
         .build();
 
     p.cargo("b-cargo-test -v")
-        .with_stderr_contains("[COMPILING] foo v0.5.0 [..]")
-        .with_stderr_contains("[RUNNING] `rustc --crate-name [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -328,8 +331,12 @@ fn alias_with_flags_config() {
         .build();
 
     p.cargo("b-cargo-test -v")
-        .with_stderr_contains("[COMPILING] foo v0.5.0 [..]")
-        .with_stderr_contains("[RUNNING] `rustc --crate-name foo [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -348,13 +355,12 @@ fn alias_cannot_shadow_builtin_command() {
         .build();
 
     p.cargo("build")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] user-defined alias `build` is ignored, because it is shadowed by a built-in command
-[COMPILING] foo v0.5.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -373,13 +379,12 @@ fn alias_override_builtin_alias() {
         .build();
 
     p.cargo("b")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -394,7 +399,12 @@ fn builtin_alias_takes_options() {
         )
         .build();
 
-    p.cargo("r --example ex1 -- asdf").with_stdout("asdf").run();
+    p.cargo("r --example ex1 -- asdf")
+        .with_stdout_data(str![[r#"
+asdf
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -403,13 +413,12 @@ fn global_options_with_alias() {
     let p = project().file("src/lib.rs", "").build();
 
     p.cargo("-v c")
-        .with_stderr(
-            "\
-[CHECKING] foo [..]
-[RUNNING] `rustc [..]
-[FINISHED] `dev` profile [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -422,13 +431,12 @@ fn weird_check() {
 
     p.cargo("-- check --invalid_argument -some-other-argument")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] trailing arguments after built-in command `check` are unsupported: `--invalid_argument -some-other-argument`
 
 To pass the arguments to the subcommand, remove `--`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -449,20 +457,18 @@ fn empty_alias() {
 
     p.cargo("string")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] subcommand is required, but `alias.string` is empty
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("array")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] subcommand is required, but `alias.array` is empty
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -482,10 +488,9 @@ fn alias_no_subcommand() {
 
     p.cargo("a")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] subcommand is required, add a subcommand to the command alias `alias.a`
-",
-        )
+
+"#]])
         .run();
 }

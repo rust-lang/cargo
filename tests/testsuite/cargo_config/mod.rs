@@ -1,9 +1,9 @@
 //! Tests for the `cargo config` command.
 
-#![allow(deprecated)]
-
 use super::config::write_config_at;
 use cargo_test_support::paths;
+use cargo_test_support::prelude::*;
+use cargo_test_support::str;
 use std::fs;
 use std::path::PathBuf;
 
@@ -26,10 +26,11 @@ fn gated() {
     cargo_process("config get")
         .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_status(101)
-        .with_stderr("\
-error: the `cargo config` command is unstable, pass `-Z unstable-options` to enable it
+        .with_stderr_data(str![[r#"
+[ERROR] the `cargo config` command is unstable, pass `-Z unstable-options` to enable it
 See https://github.com/rust-lang/cargo/issues/9301 for more information about the `cargo config` command.
-")
+
+"#]])
         .run();
 }
 
@@ -81,23 +82,22 @@ fn get_toml() {
         .env("CARGO_ALIAS_BAR", "cat dog")
         .env("CARGO_BUILD_JOBS", "100")
         // The weird forward slash in the linux line is due to testsuite normalization.
-        .with_stdout(
-            "\
-alias.foo = \"abc --xyz\"
-alias.sub-example = [\"sub\", \"example\"]
+        .with_stdout_data(str![[r#"
+alias.foo = "abc --xyz"
+alias.sub-example = ["sub", "example"]
 build.jobs = 99
-build.rustflags = [\"--flag-global\", \"--flag-directory\"]
-extra-table.somekey = \"somevalue\"
+build.rustflags = ["--flag-global", "--flag-directory"]
+extra-table.somekey = "somevalue"
 profile.dev.opt-level = 3
 profile.dev.package.foo.opt-level = 1
-target.'cfg(target_os = \"linux\")'.runner = \"runme\"
+target.'cfg(target_os = "linux")'.runner = "runme"
 # The following environment variables may affect the loaded values.
 # CARGO_ALIAS_BAR=[..]cat dog[..]
 # CARGO_BUILD_JOBS=100
 # CARGO_HOME=[ROOT]/home/.cargo
-",
-        )
-        .with_stderr("")
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 
     // Env keys work if they are specific.
@@ -105,37 +105,45 @@ target.'cfg(target_os = \"linux\")'.runner = \"runme\"
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
         .env("CARGO_BUILD_JOBS", "100")
-        .with_stdout("build.jobs = 100")
-        .with_stderr("")
+        .with_stdout_data(str![[r#"
+build.jobs = 100
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 
     // Array value.
     cargo_process("config get build.rustflags -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
-        .with_stdout("build.rustflags = [\"--flag-global\", \"--flag-directory\"]")
-        .with_stderr("")
+        .with_stdout_data(str![[r#"
+build.rustflags = ["--flag-global", "--flag-directory"]
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 
     // Sub-table
     cargo_process("config get profile -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 profile.dev.opt-level = 3
 profile.dev.package.foo.opt-level = 1
-",
-        )
-        .with_stderr("")
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 
     // Specific profile entry.
     cargo_process("config get profile.dev.opt-level -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
-        .with_stdout("profile.dev.opt-level = 3")
-        .with_stderr("")
+        .with_stdout_data(str![[r#"
+profile.dev.opt-level = 3
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 
     // A key that isn't set.
@@ -143,8 +151,11 @@ profile.dev.package.foo.opt-level = 1
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_status(101)
-        .with_stdout("")
-        .with_stderr("error: config value `build.rustc` is not set")
+        .with_stdout_data(str![[r#""#]])
+        .with_stderr_data(str![[r#"
+[ERROR] config value `build.rustc` is not set
+
+"#]])
         .run();
 
     // A key that is not part of Cargo's config schema.
@@ -152,97 +163,140 @@ profile.dev.package.foo.opt-level = 1
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_status(101)
-        .with_stdout("")
-        .with_stderr("error: config value `not.set` is not set")
+        .with_stdout_data(str![[r#""#]])
+        .with_stderr_data(str![[r#"
+[ERROR] config value `not.set` is not set
+
+"#]])
         .run();
 }
 
 #[cargo_test]
 fn get_json() {
-    // Notes:
-    // - This does not show env vars at all. :(
-    let all_json = r#"
-            {
-              "alias": {
-                "foo": "abc --xyz",
-                "sub-example": [
-                  "sub",
-                  "example"
-                ]
-              },
-              "build": {
-                "jobs": 99,
-                "rustflags": [
-                  "--flag-global",
-                  "--flag-directory"
-                ]
-              },
-              "extra-table": {
-                "somekey": "somevalue"
-              },
-              "profile": {
-                "dev": {
-                  "opt-level": 3,
-                  "package": {
-                    "foo": {
-                      "opt-level": 1
-                    }
-                  }
-                }
-              },
-              "target": {
-                "cfg(target_os = \"linux\")": {
-                  "runner": "runme"
-                }
-              }
-            }
-            "#;
     let sub_folder = common_setup();
     cargo_process("config get --format=json -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
         .env("CARGO_ALIAS_BAR", "cat dog")
         .env("CARGO_BUILD_JOBS", "100")
-        .with_json(all_json)
-        .with_stderr(
-            "\
-note: The following environment variables may affect the loaded values.
+        .with_stdout_data(
+            r#"
+{
+  "alias": {
+    "foo": "abc --xyz",
+    "sub-example": [
+      "sub",
+      "example"
+    ]
+  },
+  "build": {
+    "jobs": 99,
+    "rustflags": [
+      "--flag-global",
+      "--flag-directory"
+    ]
+  },
+  "extra-table": {
+    "somekey": "somevalue"
+  },
+  "profile": {
+    "dev": {
+      "opt-level": 3,
+      "package": {
+        "foo": {
+          "opt-level": 1
+        }
+      }
+    }
+  },
+  "target": {
+    "cfg(target_os = \"linux\")": {
+      "runner": "runme"
+    }
+  }
+}
+
+"#
+            .json(),
+        )
+        .with_stderr_data(str![[r#"
+[NOTE] The following environment variables may affect the loaded values.
 CARGO_ALIAS_BAR=[..]cat dog[..]
 CARGO_BUILD_JOBS=100
 CARGO_HOME=[ROOT]/home/.cargo
-",
-        )
+
+"#]])
         .run();
 
     // json-value is the same for the entire root table
     cargo_process("config get --format=json-value -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
-        .with_json(all_json)
-        .with_stderr(
-            "\
-note: The following environment variables may affect the loaded values.
-CARGO_HOME=[ROOT]/home/.cargo
-",
+        .with_stdout_data(
+            r#"
+{
+  "alias": {
+    "foo": "abc --xyz",
+    "sub-example": [
+      "sub",
+      "example"
+    ]
+  },
+  "build": {
+    "jobs": 99,
+    "rustflags": [
+      "--flag-global",
+      "--flag-directory"
+    ]
+  },
+  "extra-table": {
+    "somekey": "somevalue"
+  },
+  "profile": {
+    "dev": {
+      "opt-level": 3,
+      "package": {
+        "foo": {
+          "opt-level": 1
+        }
+      }
+    }
+  },
+  "target": {
+    "cfg(target_os = \"linux\")": {
+      "runner": "runme"
+    }
+  }
+}
+  
+"#
+            .json(),
         )
+        .with_stderr_data(str![[r#"
+[NOTE] The following environment variables may affect the loaded values.
+CARGO_HOME=[ROOT]/home/.cargo
+
+"#]])
         .run();
 
     cargo_process("config get --format=json build.jobs -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
-        .with_json(
-            r#"
-            {"build": {"jobs": 99}}
-            "#,
-        )
-        .with_stderr("")
+        .with_stdout_data(str![[r#"
+{"build":{"jobs":99}}
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 
     cargo_process("config get --format=json-value build.jobs -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
-        .with_stdout("99")
-        .with_stderr("")
+        .with_stdout_data(str![[r#"
+99
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 }
 
@@ -252,44 +306,42 @@ fn show_origin_toml() {
     cargo_process("config get --show-origin -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
-        .with_stdout(
-            "\
-alias.foo = \"abc --xyz\" # [ROOT]/home/.cargo/config.toml
+        .with_stdout_data(str![[r#"
+alias.foo = "abc --xyz" # [ROOT]/home/.cargo/config.toml
 alias.sub-example = [
-    \"sub\", # [ROOT]/foo/.cargo/config.toml
-    \"example\", # [ROOT]/foo/.cargo/config.toml
+    "sub", # [ROOT]/foo/.cargo/config.toml
+    "example", # [ROOT]/foo/.cargo/config.toml
 ]
 build.jobs = 99 # [ROOT]/home/.cargo/config.toml
 build.rustflags = [
-    \"--flag-global\", # [ROOT]/home/.cargo/config.toml
-    \"--flag-directory\", # [ROOT]/foo/.cargo/config.toml
+    "--flag-global", # [ROOT]/home/.cargo/config.toml
+    "--flag-directory", # [ROOT]/foo/.cargo/config.toml
 ]
-extra-table.somekey = \"somevalue\" # [ROOT]/home/.cargo/config.toml
+extra-table.somekey = "somevalue" # [ROOT]/home/.cargo/config.toml
 profile.dev.opt-level = 3 # [ROOT]/home/.cargo/config.toml
 profile.dev.package.foo.opt-level = 1 # [ROOT]/home/.cargo/config.toml
-target.'cfg(target_os = \"linux\")'.runner = \"runme\" # [ROOT]/home/.cargo/config.toml
+target.'cfg(target_os = "linux")'.runner = "runme" # [ROOT]/home/.cargo/config.toml
 # The following environment variables may affect the loaded values.
 # CARGO_HOME=[ROOT]/home/.cargo
-",
-        )
-        .with_stderr("")
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 
     cargo_process("config get --show-origin build.rustflags -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
         .env("CARGO_BUILD_RUSTFLAGS", "env1 env2")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 build.rustflags = [
-    \"--flag-global\", # [ROOT]/home/.cargo/config.toml
-    \"--flag-directory\", # [ROOT]/foo/.cargo/config.toml
-    \"env1\", # environment variable `CARGO_BUILD_RUSTFLAGS`
-    \"env2\", # environment variable `CARGO_BUILD_RUSTFLAGS`
+    "--flag-global", # [ROOT]/home/.cargo/config.toml
+    "--flag-directory", # [ROOT]/foo/.cargo/config.toml
+    "env1", # environment variable `CARGO_BUILD_RUSTFLAGS`
+    "env2", # environment variable `CARGO_BUILD_RUSTFLAGS`
 ]
-",
-        )
-        .with_stderr("")
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 }
 
@@ -300,8 +352,11 @@ fn show_origin_toml_cli() {
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
         .env("CARGO_BUILD_JOBS", "1")
-        .with_stdout("build.jobs = 123 # --config cli option")
-        .with_stderr("")
+        .with_stdout_data(str![[r#"
+build.jobs = 123 # --config cli option
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 
     cargo_process("config get --show-origin build.rustflags -Zunstable-options --config")
@@ -309,19 +364,18 @@ fn show_origin_toml_cli() {
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
         .env("CARGO_BUILD_RUSTFLAGS", "env1 env2")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 build.rustflags = [
-    \"--flag-global\", # [ROOT]/home/.cargo/config.toml
-    \"--flag-directory\", # [ROOT]/foo/.cargo/config.toml
-    \"env1\", # environment variable `CARGO_BUILD_RUSTFLAGS`
-    \"env2\", # environment variable `CARGO_BUILD_RUSTFLAGS`
-    \"cli1\", # --config cli option
-    \"cli2\", # --config cli option
+    "--flag-global", # [ROOT]/home/.cargo/config.toml
+    "--flag-directory", # [ROOT]/foo/.cargo/config.toml
+    "env1", # environment variable `CARGO_BUILD_RUSTFLAGS`
+    "env2", # environment variable `CARGO_BUILD_RUSTFLAGS`
+    "cli1", # --config cli option
+    "cli2", # --config cli option
 ]
-",
-        )
-        .with_stderr("")
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 }
 
@@ -332,7 +386,10 @@ fn show_origin_json() {
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_status(101)
-        .with_stderr("error: the `json` format does not support --show-origin, try the `toml` format instead")
+        .with_stderr_data(str![[r#"
+[ERROR] the `json` format does not support --show-origin, try the `toml` format instead
+
+"#]])
         .run();
 }
 
@@ -344,8 +401,7 @@ fn unmerged_toml() {
         .masquerade_as_nightly_cargo(&["cargo-config"])
         .env("CARGO_ALIAS_BAR", "cat dog")
         .env("CARGO_BUILD_JOBS", "100")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 # Environment variables
 # CARGO=[..]
 # CARGO_ALIAS_BAR=[..]cat dog[..]
@@ -353,58 +409,57 @@ fn unmerged_toml() {
 # CARGO_HOME=[ROOT]/home/.cargo
 
 # [ROOT]/foo/.cargo/config.toml
-alias.sub-example = [\"sub\", \"example\"]
-build.rustflags = [\"--flag-directory\"]
+alias.sub-example = ["sub", "example"]
+build.rustflags = ["--flag-directory"]
 
 # [ROOT]/home/.cargo/config.toml
-alias.foo = \"abc --xyz\"
+alias.foo = "abc --xyz"
 build.jobs = 99
-build.rustflags = [\"--flag-global\"]
-extra-table.somekey = \"somevalue\"
+build.rustflags = ["--flag-global"]
+extra-table.somekey = "somevalue"
 profile.dev.opt-level = 3
 profile.dev.package.foo.opt-level = 1
-target.'cfg(target_os = \"linux\")'.runner = \"runme\"
+target.'cfg(target_os = "linux")'.runner = "runme"
 
-",
-        )
-        .with_stderr("")
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 
     cargo_process("config get --merged=no build.rustflags -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
         .env("CARGO_BUILD_RUSTFLAGS", "env1 env2")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 # Environment variables
 # CARGO_BUILD_RUSTFLAGS=[..]env1 env2[..]
 
 # [ROOT]/foo/.cargo/config.toml
-build.rustflags = [\"--flag-directory\"]
+build.rustflags = ["--flag-directory"]
 
 # [ROOT]/home/.cargo/config.toml
-build.rustflags = [\"--flag-global\"]
+build.rustflags = ["--flag-global"]
 
-",
-        )
-        .with_stderr("")
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 
     cargo_process("config get --merged=no does.not.exist -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
-        .with_stderr("")
-        .with_stderr("")
+        .with_stderr_data(str![[r#""#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 
     cargo_process("config get --merged=no build.rustflags.extra -Zunstable-options")
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_status(101)
-        .with_stderr(
-            "error: expected table for configuration key `build.rustflags`, \
-             but found array in [ROOT]/foo/.cargo/config.toml",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] expected table for configuration key `build.rustflags`, but found array in [ROOT]/foo/.cargo/config.toml
+
+"#]])
         .run();
 }
 
@@ -416,23 +471,22 @@ fn unmerged_toml_cli() {
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
         .env("CARGO_BUILD_RUSTFLAGS", "env1 env2")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 # --config cli option
-build.rustflags = [\"cli1\", \"cli2\"]
+build.rustflags = ["cli1", "cli2"]
 
 # Environment variables
 # CARGO_BUILD_RUSTFLAGS=[..]env1 env2[..]
 
 # [ROOT]/foo/.cargo/config.toml
-build.rustflags = [\"--flag-directory\"]
+build.rustflags = ["--flag-directory"]
 
 # [ROOT]/home/.cargo/config.toml
-build.rustflags = [\"--flag-global\"]
+build.rustflags = ["--flag-global"]
 
-",
-        )
-        .with_stderr("")
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 }
 
@@ -443,9 +497,10 @@ fn unmerged_json() {
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config"])
         .with_status(101)
-        .with_stderr(
-            "error: the `json` format does not support --merged=no, try the `toml` format instead",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] the `json` format does not support --merged=no, try the `toml` format instead
+
+"#]])
         .run();
 }
 
@@ -473,52 +528,53 @@ fn includes() {
     cargo_process("config get build.rustflags -Zunstable-options -Zconfig-include")
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config", "config-include"])
-        .with_stdout(r#"build.rustflags = ["--flag-global", "--flag-other", "--flag-directory"]"#)
-        .with_stderr("")
+        .with_stdout_data(str![[r#"
+build.rustflags = ["--flag-global", "--flag-other", "--flag-directory"]
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 
     cargo_process("config get build.rustflags --show-origin -Zunstable-options -Zconfig-include")
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config", "config-include"])
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 build.rustflags = [
-    \"--flag-global\", # [ROOT]/home/.cargo/config.toml
-    \"--flag-other\", # [ROOT]/foo/.cargo/other.toml
-    \"--flag-directory\", # [ROOT]/foo/.cargo/config.toml
+    "--flag-global", # [ROOT]/home/.cargo/config.toml
+    "--flag-other", # [ROOT]/foo/.cargo/other.toml
+    "--flag-directory", # [ROOT]/foo/.cargo/config.toml
 ]
-",
-        )
-        .with_stderr("")
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 
     cargo_process("config get --merged=no -Zunstable-options -Zconfig-include")
         .cwd(&sub_folder.parent().unwrap())
         .masquerade_as_nightly_cargo(&["cargo-config", "config-include"])
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 # Environment variables
 # CARGO=[..]
 # CARGO_HOME=[ROOT]/home/.cargo
 
 # [ROOT]/foo/.cargo/other.toml
-build.rustflags = [\"--flag-other\"]
+build.rustflags = ["--flag-other"]
 
 # [ROOT]/foo/.cargo/config.toml
-build.rustflags = [\"--flag-directory\"]
-include = \"other.toml\"
+build.rustflags = ["--flag-directory"]
+include = "other.toml"
 
 # [ROOT]/home/.cargo/config.toml
-alias.foo = \"abc --xyz\"
+alias.foo = "abc --xyz"
 build.jobs = 99
-build.rustflags = [\"--flag-global\"]
-extra-table.somekey = \"somevalue\"
+build.rustflags = ["--flag-global"]
+extra-table.somekey = "somevalue"
 profile.dev.opt-level = 3
 profile.dev.package.foo.opt-level = 1
-target.'cfg(target_os = \"linux\")'.runner = \"runme\"
+target.'cfg(target_os = "linux")'.runner = "runme"
 
-",
-        )
-        .with_stderr("")
+
+"#]])
+        .with_stderr_data(str![[r#""#]])
         .run();
 }
