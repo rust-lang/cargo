@@ -213,6 +213,7 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
 /// 1. Feeds the source of a file to [`CodeFix::new`].
 /// 2. Calls [`CodeFix::apply`] to apply suggestions to the source code.
 /// 3. Calls [`CodeFix::finish`] to get the "fixed" code.
+#[derive(Clone)]
 pub struct CodeFix {
     data: replace::Data,
     /// Whether or not the data has been modified.
@@ -230,12 +231,18 @@ impl CodeFix {
 
     /// Applies a suggestion to the code.
     pub fn apply(&mut self, suggestion: &Suggestion) -> Result<(), Error> {
-        for sol in &suggestion.solutions {
-            for r in &sol.replacements {
-                self.data
-                    .replace_range(r.snippet.range.clone(), r.replacement.as_bytes())?;
-                self.modified = true;
-            }
+        for solution in &suggestion.solutions {
+            self.apply_solution(solution)?;
+        }
+        Ok(())
+    }
+
+    /// Applies an individual solution from a [`Suggestion`].
+    pub fn apply_solution(&mut self, solution: &Solution) -> Result<(), Error> {
+        for r in &solution.replacements {
+            self.data
+                .replace_range(r.snippet.range.clone(), r.replacement.as_bytes())?;
+            self.modified = true;
         }
         Ok(())
     }
