@@ -1,9 +1,8 @@
 //! Tests for `path` dependencies.
 
-#![allow(deprecated)]
-
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, main_file, project};
 use cargo_test_support::{sleep_ms, t};
 use std::fs;
@@ -73,44 +72,49 @@ fn cargo_compile_with_nested_deps_shorthand() {
         .build();
 
     p.cargo("build")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 3 packages to latest compatible versions
-[COMPILING] baz v0.5.0 ([CWD]/bar/baz)
-[COMPILING] bar v0.5.0 ([CWD]/bar)
-[COMPILING] foo v0.5.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[COMPILING] baz v0.5.0 ([ROOT]/foo/bar/baz)
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     assert!(p.bin("foo").is_file());
 
-    p.process(&p.bin("foo")).with_stdout("test passed\n").run();
+    p.process(&p.bin("foo"))
+        .with_stdout_data(str![[r#"
+test passed
+
+"#]])
+        .run();
 
     println!("cleaning");
     p.cargo("clean -v")
-        .with_stderr(
-            "[REMOVING] [CWD]/target\n\
-             [REMOVED] [..]",
-        )
+        .with_stderr_data(str![[r#"
+[REMOVING] [ROOT]/foo/target
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
         .run();
     println!("building baz");
     p.cargo("build -p baz")
-        .with_stderr(
-            "[COMPILING] baz v0.5.0 ([CWD]/bar/baz)\n\
-             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) \
-             in [..]\n",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] baz v0.5.0 ([ROOT]/foo/bar/baz)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     println!("building foo");
     p.cargo("build -p foo")
-        .with_stderr(
-            "[COMPILING] bar v0.5.0 ([CWD]/bar)\n\
-             [COMPILING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) \
-             in [..]\n",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -153,7 +157,12 @@ fn cargo_compile_with_root_dev_deps() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr_contains("[..]can't find crate for `bar`")
+        .with_stderr_data(str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+[CHECKING] foo v0.5.0 ([ROOT]/foo)
+error[E0463]: can't find crate for `bar`
+...
+"#]])
         .run();
 }
 
@@ -195,15 +204,22 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] [..] v0.5.0 ([..])
-[COMPILING] [..] v0.5.0 ([..])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains("running 0 tests")
+[COMPILING] bar v0.5.0 ([ROOT]/bar)
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/main.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -257,19 +273,23 @@ fn cargo_compile_with_transitive_dev_deps() {
         .build();
 
     p.cargo("build")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] bar v0.5.0 ([CWD]/bar)
-[COMPILING] foo v0.5.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     assert!(p.bin("foo").is_file());
 
-    p.process(&p.bin("foo")).with_stdout("zoidberg\n").run();
+    p.process(&p.bin("foo"))
+        .with_stdout_data(str![[r#"
+zoidberg
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -295,14 +315,13 @@ fn no_rebuild_dependency() {
         .build();
     // First time around we should compile both foo and bar
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[CHECKING] bar v0.5.0 ([CWD]/bar)
-[CHECKING] foo v0.5.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] bar v0.5.0 ([ROOT]/foo/bar)
+[CHECKING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     sleep_ms(1000);
@@ -315,11 +334,11 @@ fn no_rebuild_dependency() {
     );
     // Don't compile bar, but do recompile foo.
     p.cargo("check")
-        .with_stderr(
-            "[CHECKING] foo v0.5.0 ([..])\n\
-             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) \
-             in [..]\n",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -365,17 +384,21 @@ fn deep_dependencies_trigger_rebuild() {
         .file("baz/src/baz.rs", "pub fn baz() {}")
         .build();
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 3 packages to latest compatible versions
-[CHECKING] baz v0.5.0 ([CWD]/baz)
-[CHECKING] bar v0.5.0 ([CWD]/bar)
-[CHECKING] foo v0.5.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] baz v0.5.0 ([ROOT]/foo/baz)
+[CHECKING] bar v0.5.0 ([ROOT]/foo/bar)
+[CHECKING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
-    p.cargo("check").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 
     // Make sure an update to baz triggers a rebuild of bar
     //
@@ -385,13 +408,13 @@ fn deep_dependencies_trigger_rebuild() {
     p.change_file("baz/src/baz.rs", r#"pub fn baz() { println!("hello!"); }"#);
     sleep_ms(1000);
     p.cargo("check")
-        .with_stderr(
-            "[CHECKING] baz v0.5.0 ([CWD]/baz)\n\
-             [CHECKING] bar v0.5.0 ([CWD]/bar)\n\
-             [CHECKING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) \
-             in [..]\n",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] baz v0.5.0 ([ROOT]/foo/baz)
+[CHECKING] bar v0.5.0 ([ROOT]/foo/bar)
+[CHECKING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     // Make sure an update to bar doesn't trigger baz
@@ -405,12 +428,12 @@ fn deep_dependencies_trigger_rebuild() {
     );
     sleep_ms(1000);
     p.cargo("check")
-        .with_stderr(
-            "[CHECKING] bar v0.5.0 ([CWD]/bar)\n\
-             [CHECKING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) \
-             in [..]\n",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] bar v0.5.0 ([ROOT]/foo/bar)
+[CHECKING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -455,18 +478,22 @@ fn no_rebuild_two_deps() {
         .file("baz/src/baz.rs", "pub fn baz() {}")
         .build();
     p.cargo("build")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 3 packages to latest compatible versions
-[COMPILING] baz v0.5.0 ([CWD]/baz)
-[COMPILING] bar v0.5.0 ([CWD]/bar)
-[COMPILING] foo v0.5.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[COMPILING] baz v0.5.0 ([ROOT]/foo/baz)
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     assert!(p.bin("foo").is_file());
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("build")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
     assert!(p.bin("foo").is_file());
 }
 
@@ -495,14 +522,13 @@ fn nested_deps_recompile() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[CHECKING] bar v0.5.0 ([CWD]/src/bar)
-[CHECKING] foo v0.5.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] bar v0.5.0 ([ROOT]/foo/src/bar)
+[CHECKING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     sleep_ms(1000);
 
@@ -510,11 +536,11 @@ fn nested_deps_recompile() {
 
     // This shouldn't recompile `bar`
     p.cargo("check")
-        .with_stderr(
-            "[CHECKING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) \
-             in [..]\n",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -542,23 +568,22 @@ fn error_message_for_missing_manifest() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to get `bar` as a dependency of package `foo v0.5.0 [..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to get `bar` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
 
 Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update [CWD]/src/bar
+  Unable to update [ROOT]/foo/src/bar
 
 Caused by:
-  failed to read `[..]bar/Cargo.toml`
+  failed to read `[ROOT]/foo/src/bar/Cargo.toml`
 
 Caused by:
-  [..] (os error [..])
-",
-        )
+  [NOT_FOUND]
+
+"#]])
         .run();
 }
 
@@ -745,33 +770,42 @@ fn path_dep_build_cmd() {
     p.root().join("bar").move_into_the_past();
 
     p.cargo("build")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] bar v0.5.0 ([CWD]/bar)
-[COMPILING] foo v0.5.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     assert!(p.bin("foo").is_file());
 
-    p.process(&p.bin("foo")).with_stdout("0\n").run();
+    p.process(&p.bin("foo"))
+        .with_stdout_data(str![[r#"
+0
+
+"#]])
+        .run();
 
     // Touching bar.rs.in should cause the `build` command to run again.
     p.change_file("bar/src/bar.rs.in", "pub fn gimme() -> i32 { 1 }");
 
     p.cargo("build")
-        .with_stderr(
-            "[COMPILING] bar v0.5.0 ([CWD]/bar)\n\
-             [COMPILING] foo v0.5.0 ([CWD])\n\
-             [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in \
-             [..]\n",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
-    p.process(&p.bin("foo")).with_stdout("1\n").run();
+    p.process(&p.bin("foo"))
+        .with_stdout_data(str![[r#"
+1
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -806,24 +840,30 @@ fn dev_deps_no_rebuild_lib() {
         .build();
     p.cargo("build")
         .env("FOO", "bar")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] foo v0.5.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] [..] v0.5.0 ([CWD][..])
-[COMPILING] [..] v0.5.0 ([CWD][..])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains("running 0 tests")
+        .with_stderr_data(str![[r#"
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -862,14 +902,13 @@ fn custom_target_no_rebuild() {
         .file("b/src/lib.rs", "")
         .build();
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 3 packages to latest compatible versions
-[CHECKING] a v0.5.0 ([..])
-[CHECKING] foo v0.5.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] a v0.5.0 ([ROOT]/foo/a)
+[CHECKING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     t!(fs::rename(
@@ -878,12 +917,11 @@ fn custom_target_no_rebuild() {
     ));
     p.cargo("check --manifest-path=b/Cargo.toml")
         .env("CARGO_TARGET_DIR", "target_moved")
-        .with_stderr(
-            "\
-[CHECKING] b v0.5.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] b v0.5.0 ([ROOT]/foo/b)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -924,16 +962,15 @@ fn override_and_depend() {
         .build();
     p.cargo("check")
         .cwd("b")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 3 packages to latest compatible versions
-[WARNING] skipping duplicate package `a2` found at `[..]`
-[CHECKING] a2 v0.5.0 ([..])
-[CHECKING] a1 v0.5.0 ([..])
-[CHECKING] b v0.5.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[WARNING] skipping duplicate package `a2` found at `[ROOT]/foo/[..]`
+[CHECKING] a2 v0.5.0 ([ROOT]/foo/[..])
+[CHECKING] a1 v0.5.0 ([ROOT]/foo/[..])
+[CHECKING] b v0.5.0 ([ROOT]/foo/b)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -949,18 +986,16 @@ fn missing_path_dependency() {
         .build();
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to update path override `[..]../whoa-this-does-not-exist` \
-(defined in `[..]`)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to update path override `[ROOT]/foo/../whoa-this-does-not-exist` (defined in `[ROOT]/foo/.cargo/config.toml`)
 
 Caused by:
-  failed to read directory `[..]`
+  failed to read directory `[ROOT]/foo/../whoa-this-does-not-exist`
 
 Caused by:
-  [..] (os error [..])
-",
-        )
+  [NOT_FOUND]
+
+"#]])
         .run();
 }
 
@@ -1023,15 +1058,14 @@ fn invalid_path_dep_in_workspace_with_lockfile() {
     // overflowed!
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-error: no matching package found
+        .with_stderr_data(str![[r#"
+[ERROR] no matching package found
 searched package name: `bar`
 perhaps you meant:      foo
-location searched: [..]
-required by package `foo v0.5.0 ([..])`
-",
-        )
+location searched: [ROOT]/foo/foo
+required by package `foo v0.5.0 ([ROOT]/foo/foo)`
+
+"#]])
         .run();
 }
 
@@ -1108,25 +1142,24 @@ fn deep_path_error() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to get `c` as a dependency of package `b v0.1.0 [..]`
-    ... which satisfies path dependency `b` of package `a v0.1.0 [..]`
-    ... which satisfies path dependency `a` of package `foo v0.1.0 [..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to get `c` as a dependency of package `b v0.1.0 ([ROOT]/foo/b)`
+    ... which satisfies path dependency `b` of package `a v0.1.0 ([ROOT]/foo/a)`
+    ... which satisfies path dependency `a` of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
   failed to load source for dependency `c`
 
 Caused by:
-  Unable to update [..]/foo/c
+  Unable to update [ROOT]/foo/c
 
 Caused by:
-  failed to read `[..]/foo/c/Cargo.toml`
+  failed to read `[ROOT]/foo/c/Cargo.toml`
 
 Caused by:
-  [..]
-",
-        )
+  [NOT_FOUND]
+
+"#]])
         .run();
 }
 
@@ -1202,7 +1235,11 @@ fn catch_tricky_cycle() {
         .build();
 
     p.cargo("test")
-        .with_stderr_contains("[..]cyclic package dependency[..]")
+        .with_stderr_data(str![[r#"
+[ERROR] cyclic package dependency: package `ledger v0.1.0 ([ROOT]/foo/ledger)` depends on itself. Cycle:
+package `ledger v0.1.0 ([ROOT]/foo/ledger)`
+...
+"#]])
         .with_status(101)
         .run();
 }
@@ -1238,13 +1275,15 @@ fn same_name_version_changed() {
         .build();
 
     p.cargo("tree")
-        .with_stderr("[LOCKING] 2 packages to latest compatible versions")
-        .with_stdout(
-            "\
+        .with_stderr_data(str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+
+"#]])
+        .with_stdout_data(str![[r#"
 foo v1.0.0 ([ROOT]/foo)
 └── foo v2.0.0 ([ROOT]/foo/foo2)
-",
-        )
+
+"#]])
         .run();
 
     p.change_file(
@@ -1257,17 +1296,15 @@ foo v1.0.0 ([ROOT]/foo)
         "#,
     );
     p.cargo("tree")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [ADDING] foo v2.0.1 ([ROOT]/foo/foo2)
-",
-        )
-        .with_stdout(
-            "\
+
+"#]])
+        .with_stdout_data(str![[r#"
 foo v1.0.0 ([ROOT]/foo)
 └── foo v2.0.1 ([ROOT]/foo/foo2)
-",
-        )
+
+"#]])
         .run();
 }
