@@ -1,22 +1,21 @@
 //! Tests for --unit-graph option.
 
-#![allow(deprecated)]
-
+use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 
 #[cargo_test]
 fn gated() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("build --unit-graph")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] the `--unit-graph` flag is unstable[..]
-See [..]
-See [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] the `--unit-graph` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/[..].html for more information about Rust release channels.
+See https://github.com/rust-lang/cargo/issues/8002 for more information about the `--unit-graph` flag.
+
+"#]])
         .run();
 }
 
@@ -49,187 +48,189 @@ fn simple() {
 
     p.cargo("build --features a/feata --unit-graph -Zunstable-options")
         .masquerade_as_nightly_cargo(&["unit-graph"])
-        .with_json(
-            r#"{
-              "roots": [
-                3
-              ],
-              "units": [
-                {
-                  "dependencies": [
-                    {
-                      "extern_crate_name": "b",
-                      "index": 1,
-                      "noprelude": false,
-                      "public": false
-                    }
-                  ],
-                  "features": [
-                    "feata"
-                  ],
-                  "mode": "build",
-                  "pkg_id": "a 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
-                  "platform": null,
-                  "profile": {
-                    "codegen_backend": null,
-                    "codegen_units": null,
-                    "debug_assertions": true,
-                    "debuginfo": 2,
-                    "incremental": false,
-                    "lto": "false",
-                    "name": "dev",
-                    "opt_level": "0",
-                    "overflow_checks": true,
-                    "panic": "unwind",
-                    "rpath": false,
-                    "split_debuginfo": "{...}",
-                    "strip": "{...}"
-                  },
-                  "target": {
-                    "crate_types": [
-                      "lib"
-                    ],
-                    "doc": true,
-                    "doctest": true,
-                    "edition": "2015",
-                    "kind": [
-                      "lib"
-                    ],
-                    "name": "a",
-                    "src_path": "[..]/a-1.0.0/src/lib.rs",
-                    "test": true
-                  }
-                },
-                {
-                  "dependencies": [
-                    {
-                      "extern_crate_name": "c",
-                      "index": 2,
-                      "noprelude": false,
-                      "public": false
-                    }
-                  ],
-                  "features": [
-                    "featb"
-                  ],
-                  "mode": "build",
-                  "pkg_id": "b 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
-                  "platform": null,
-                  "profile": {
-                    "codegen_backend": null,
-                    "codegen_units": null,
-                    "debug_assertions": true,
-                    "debuginfo": 2,
-                    "incremental": false,
-                    "lto": "false",
-                    "name": "dev",
-                    "opt_level": "0",
-                    "overflow_checks": true,
-                    "panic": "unwind",
-                    "rpath": false,
-                    "split_debuginfo": "{...}",
-                    "strip": "{...}"
-                  },
-                  "target": {
-                    "crate_types": [
-                      "lib"
-                    ],
-                    "doc": true,
-                    "doctest": true,
-                    "edition": "2015",
-                    "kind": [
-                      "lib"
-                    ],
-                    "name": "b",
-                    "src_path": "[..]/b-1.0.0/src/lib.rs",
-                    "test": true
-                  }
-                },
-                {
-                  "dependencies": [],
-                  "features": [
-                    "featc"
-                  ],
-                  "mode": "build",
-                  "pkg_id": "c 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
-                  "platform": null,
-                  "profile": {
-                    "codegen_backend": null,
-                    "codegen_units": null,
-                    "debug_assertions": true,
-                    "debuginfo": 2,
-                    "incremental": false,
-                    "lto": "false",
-                    "name": "dev",
-                    "opt_level": "0",
-                    "overflow_checks": true,
-                    "panic": "unwind",
-                    "rpath": false,
-                    "split_debuginfo": "{...}",
-                    "strip": "{...}"
-                  },
-                  "target": {
-                    "crate_types": [
-                      "lib"
-                    ],
-                    "doc": true,
-                    "doctest": true,
-                    "edition": "2015",
-                    "kind": [
-                      "lib"
-                    ],
-                    "name": "c",
-                    "src_path": "[..]/c-1.0.0/src/lib.rs",
-                    "test": true
-                  }
-                },
-                {
-                  "dependencies": [
-                    {
-                      "extern_crate_name": "a",
-                      "index": 0,
-                      "noprelude": false,
-                      "public": false
-                    }
-                  ],
-                  "features": [],
-                  "mode": "build",
-                  "pkg_id": "foo 0.1.0 (path+file://[..]/foo)",
-                  "platform": null,
-                  "profile": {
-                    "codegen_backend": null,
-                    "codegen_units": null,
-                    "debug_assertions": true,
-                    "debuginfo": 2,
-                    "incremental": false,
-                    "lto": "false",
-                    "name": "dev",
-                    "opt_level": "0",
-                    "overflow_checks": true,
-                    "panic": "unwind",
-                    "rpath": false,
-                    "split_debuginfo": "{...}",
-                    "strip": "{...}"
-                  },
-                  "target": {
-                    "crate_types": [
-                      "lib"
-                    ],
-                    "doc": true,
-                    "doctest": true,
-                    "edition": "2015",
-                    "kind": [
-                      "lib"
-                    ],
-                    "name": "foo",
-                    "src_path": "[..]/foo/src/lib.rs",
-                    "test": true
-                  }
-                }
-              ],
-              "version": 1
-            }
-            "#,
+        .with_stdout_data(
+            str![[r#"
+{
+  "roots": [
+    3
+  ],
+  "units": [
+    {
+      "dependencies": [
+        {
+          "extern_crate_name": "b",
+          "index": 1,
+          "noprelude": false,
+          "public": false
+        }
+      ],
+      "features": [
+        "feata"
+      ],
+      "mode": "build",
+      "pkg_id": "a 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+      "platform": null,
+      "profile": {
+        "codegen_backend": null,
+        "codegen_units": null,
+        "debug_assertions": true,
+        "debuginfo": 2,
+        "incremental": false,
+        "lto": "false",
+        "name": "dev",
+        "opt_level": "0",
+        "overflow_checks": true,
+        "panic": "unwind",
+        "rpath": false,
+        "split_debuginfo": "{...}",
+        "strip": "{...}"
+      },
+      "target": {
+        "crate_types": [
+          "lib"
+        ],
+        "doc": true,
+        "doctest": true,
+        "edition": "2015",
+        "kind": [
+          "lib"
+        ],
+        "name": "a",
+        "src_path": "[ROOT]/home/.cargo/registry/src/-[HASH]/a-1.0.0/src/lib.rs",
+        "test": true
+      }
+    },
+    {
+      "dependencies": [
+        {
+          "extern_crate_name": "c",
+          "index": 2,
+          "noprelude": false,
+          "public": false
+        }
+      ],
+      "features": [
+        "featb"
+      ],
+      "mode": "build",
+      "pkg_id": "b 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+      "platform": null,
+      "profile": {
+        "codegen_backend": null,
+        "codegen_units": null,
+        "debug_assertions": true,
+        "debuginfo": 2,
+        "incremental": false,
+        "lto": "false",
+        "name": "dev",
+        "opt_level": "0",
+        "overflow_checks": true,
+        "panic": "unwind",
+        "rpath": false,
+        "split_debuginfo": "{...}",
+        "strip": "{...}"
+      },
+      "target": {
+        "crate_types": [
+          "lib"
+        ],
+        "doc": true,
+        "doctest": true,
+        "edition": "2015",
+        "kind": [
+          "lib"
+        ],
+        "name": "b",
+        "src_path": "[ROOT]/home/.cargo/registry/src/-[HASH]/b-1.0.0/src/lib.rs",
+        "test": true
+      }
+    },
+    {
+      "dependencies": [],
+      "features": [
+        "featc"
+      ],
+      "mode": "build",
+      "pkg_id": "c 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+      "platform": null,
+      "profile": {
+        "codegen_backend": null,
+        "codegen_units": null,
+        "debug_assertions": true,
+        "debuginfo": 2,
+        "incremental": false,
+        "lto": "false",
+        "name": "dev",
+        "opt_level": "0",
+        "overflow_checks": true,
+        "panic": "unwind",
+        "rpath": false,
+        "split_debuginfo": "{...}",
+        "strip": "{...}"
+      },
+      "target": {
+        "crate_types": [
+          "lib"
+        ],
+        "doc": true,
+        "doctest": true,
+        "edition": "2015",
+        "kind": [
+          "lib"
+        ],
+        "name": "c",
+        "src_path": "[ROOT]/home/.cargo/registry/src/-[HASH]/c-1.0.0/src/lib.rs",
+        "test": true
+      }
+    },
+    {
+      "dependencies": [
+        {
+          "extern_crate_name": "a",
+          "index": 0,
+          "noprelude": false,
+          "public": false
+        }
+      ],
+      "features": [],
+      "mode": "build",
+      "pkg_id": "foo 0.1.0 (path+[ROOTURL]/foo)",
+      "platform": null,
+      "profile": {
+        "codegen_backend": null,
+        "codegen_units": null,
+        "debug_assertions": true,
+        "debuginfo": 2,
+        "incremental": false,
+        "lto": "false",
+        "name": "dev",
+        "opt_level": "0",
+        "overflow_checks": true,
+        "panic": "unwind",
+        "rpath": false,
+        "split_debuginfo": "{...}",
+        "strip": "{...}"
+      },
+      "target": {
+        "crate_types": [
+          "lib"
+        ],
+        "doc": true,
+        "doctest": true,
+        "edition": "2015",
+        "kind": [
+          "lib"
+        ],
+        "name": "foo",
+        "src_path": "[ROOT]/foo/src/lib.rs",
+        "test": true
+      }
+    }
+  ],
+  "version": 1
+}
+"#]]
+            .json(),
         )
         .run();
 }
