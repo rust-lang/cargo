@@ -1,10 +1,9 @@
 //! Tests for setting custom rustdoc flags.
 
-#![allow(deprecated)]
-
 use cargo_test_support::project;
 use cargo_test_support::rustc_host;
 use cargo_test_support::rustc_host_env;
+use cargo_test_support::str;
 
 #[cargo_test]
 fn parses_env() {
@@ -12,7 +11,11 @@ fn parses_env() {
 
     p.cargo("doc -v")
         .env("RUSTDOCFLAGS", "--cfg=foo")
-        .with_stderr_contains("[RUNNING] `rustdoc [..] --cfg=foo[..]`")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc [..] --cfg=foo[..]`
+...
+"#]])
         .run();
 }
 
@@ -30,7 +33,11 @@ fn parses_config() {
         .build();
 
     p.cargo("doc -v")
-        .with_stderr_contains("[RUNNING] `rustdoc [..] --cfg foo[..]`")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc [..] --cfg foo [..]`
+...
+"#]])
         .run();
 }
 
@@ -41,7 +48,11 @@ fn bad_flags() {
     p.cargo("doc")
         .env("RUSTDOCFLAGS", "--bogus")
         .with_status(101)
-        .with_stderr_contains("[..]bogus[..]")
+        .with_stderr_data(str![[r#"
+...
+[ERROR] Unrecognized option: 'bogus'
+...
+"#]])
         .run();
 }
 
@@ -52,20 +63,20 @@ fn rerun() {
     p.cargo("doc").env("RUSTDOCFLAGS", "--cfg=foo").run();
     p.cargo("doc")
         .env("RUSTDOCFLAGS", "--cfg=foo")
-        .with_stderr(
-            "[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[GENERATED] [CWD]/target/doc/foo/index.html",
-        )
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
         .run();
     p.cargo("doc")
         .env("RUSTDOCFLAGS", "--cfg=bar")
-        .with_stderr(
-            "\
-[DOCUMENTING] foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[GENERATED] [CWD]/target/doc/foo/index.html
-",
-        )
+        .with_stderr_data(str![[r#"
+[DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
         .run();
 }
 
@@ -102,7 +113,10 @@ fn rustdocflags_misspelled() {
 
     p.cargo("doc")
         .env("RUSTDOC_FLAGS", "foo")
-        .with_stderr_contains("[WARNING] Cargo does not read `RUSTDOC_FLAGS` environment variable. Did you mean `RUSTDOCFLAGS`?")
+        .with_stderr_data(str![[r#"
+[WARNING] Cargo does not read `RUSTDOC_FLAGS` environment variable. Did you mean `RUSTDOCFLAGS`?
+...
+"#]])
         .run();
 }
 
@@ -114,7 +128,11 @@ fn whitespace() {
     // "too many operands"
     p.cargo("doc")
         .env("RUSTDOCFLAGS", "--crate-version this has spaces")
-        .with_stderr_contains("[ERROR] could not document `foo`")
+        .with_stderr_data(str![[r#"
+...
+[ERROR] could not document `foo`
+...
+"#]])
         .with_status(101)
         .run();
 
@@ -155,12 +173,20 @@ fn not_affected_by_target_rustflags() {
     // `cargo build` should fail due to missing docs.
     p.cargo("build -v")
         .with_status(101)
-        .with_stderr_contains("[RUNNING] `rustc [..] -D missing-docs[..]`")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustc [..] -D missing-docs`
+...
+"#]])
         .run();
 
     // `cargo doc` shouldn't fail.
     p.cargo("doc -v")
-        .with_stderr_contains("[RUNNING] `rustdoc [..] --cfg foo[..]`")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc [..] --cfg foo[..]`
+...
+"#]])
         .run();
 }
 
@@ -176,14 +202,22 @@ fn target_triple_rustdocflags_works() {
             &format!("CARGO_TARGET_{host_env}_RUSTDOCFLAGS"),
             "--cfg=foo",
         )
-        .with_stderr_contains("[RUNNING] `rustdoc[..]--cfg[..]foo[..]`")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc[..]--cfg[..]foo[..]`
+...
+"#]])
         .run();
 
     // target.triple.rustdocflags in config works
     p.cargo("doc -v")
         .arg("--config")
         .arg(format!("target.{host}.rustdocflags=['--cfg', 'foo']"))
-        .with_stderr_contains("[RUNNING] `rustdoc[..]--cfg[..]foo[..]`")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc [..] --cfg foo [..]`
+...
+"#]])
         .run();
 }
 
@@ -208,27 +242,39 @@ fn target_triple_rustdocflags_works_through_cargo_test() {
             &format!("CARGO_TARGET_{host_env}_RUSTDOCFLAGS"),
             "--cfg=foo",
         )
-        .with_stderr_contains("[RUNNING] `rustdoc[..]--test[..]--cfg[..]foo[..]`")
-        .with_stdout_contains(
-            "\
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc[..]--test[..]--cfg[..]foo[..]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+
 running 1 test
 test src/lib.rs - (line 2) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]",
-        )
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 
     // target.triple.rustdocflags in config works
     p.cargo("test --doc -v")
         .arg("--config")
         .arg(format!("target.{host}.rustdocflags=['--cfg', 'foo']"))
-        .with_stderr_contains("[RUNNING] `rustdoc[..]--test[..]--cfg[..]foo[..]`")
-        .with_stdout_contains(
-            "\
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc[..]--test[..]--cfg[..]foo[..]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+
 running 1 test
 test src/lib.rs - (line 2) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]",
-        )
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
