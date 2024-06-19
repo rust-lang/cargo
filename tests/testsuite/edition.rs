@@ -126,6 +126,31 @@ fn edition_unstable() {
 }
 
 #[cargo_test]
+fn unset_edition_with_unset_rust_version() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = 'foo'
+                version = '0.1.0'
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check -v")
+        .with_stderr(
+            "\
+[CHECKING] foo [..]
+[RUNNING] `rustc [..] --edition=2015 [..]`
+[FINISHED] [..]
+",
+        )
+        .run();
+}
+
+#[cargo_test]
 fn unset_edition_works_with_no_newer_compatible_edition() {
     let p = project()
         .file(
