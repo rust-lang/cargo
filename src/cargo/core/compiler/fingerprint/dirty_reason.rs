@@ -222,6 +222,13 @@ impl DirtyReason {
                             format_args!("the file `{}` is missing", file.display()),
                         )
                     }
+                    StaleItem::FailedToReadMetadata(file) => {
+                        let file = file.strip_prefix(root).unwrap_or(&file);
+                        s.dirty_because(
+                            unit,
+                            format_args!("couldn't read metadata for file `{}`", file.display()),
+                        )
+                    }
                     StaleItem::ChangedFile {
                         stale,
                         stale_mtime,
@@ -233,6 +240,43 @@ impl DirtyReason {
                         s.dirty_because(
                             unit,
                             format_args!("the file `{}` has changed ({after})", file.display()),
+                        )
+                    }
+                    StaleItem::ChangedChecksum {
+                        source,
+                        stored_checksum,
+                        new_checksum,
+                    } => {
+                        let file = source.strip_prefix(root).unwrap_or(&source);
+                        s.dirty_because(
+                            unit,
+                            format_args!(
+                                "the file `{}` has changed (checksum didn't match, {} != {})",
+                                file.display(),
+                                stored_checksum,
+                                new_checksum,
+                            ),
+                        )
+                    }
+                    StaleItem::FileSizeChanged {
+                        path,
+                        old_size,
+                        new_size,
+                    } => {
+                        let file = path.strip_prefix(root).unwrap_or(&path);
+                        s.dirty_because(
+                            unit,
+                            format_args!(
+                                "file size changed ({old_size} != {new_size}) for `{}`",
+                                file.display()
+                            ),
+                        )
+                    }
+                    StaleItem::MissingChecksum(path) => {
+                        let file = path.strip_prefix(root).unwrap_or(&path);
+                        s.dirty_because(
+                            unit,
+                            format_args!("the checksum for file `{}` is missing", file.display()),
                         )
                     }
                     StaleItem::ChangedEnv { var, .. } => s.dirty_because(
