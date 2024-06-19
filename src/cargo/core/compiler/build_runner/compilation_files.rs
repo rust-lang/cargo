@@ -620,7 +620,7 @@ fn compute_metadata(
     unit.target.name().hash(&mut hasher);
     unit.target.kind().hash(&mut hasher);
 
-    hash_rustc_version(bcx, &mut hasher);
+    hash_rustc_version(bcx, &mut hasher, unit);
 
     if build_runner.bcx.ws.is_member(&unit.pkg) {
         // This is primarily here for clippy. This ensures that the clippy
@@ -656,12 +656,19 @@ fn compute_metadata(
 }
 
 /// Hash the version of rustc being used during the build process.
-fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher) {
+fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher, unit: &Unit) {
     let vers = &bcx.rustc().version;
     if vers.pre.is_empty() || bcx.gctx.cli_unstable().separate_nightlies {
         // For stable, keep the artifacts separate. This helps if someone is
-        // testing multiple versions, to avoid recompiles.
-        bcx.rustc().verbose_version.hash(hasher);
+        // testing multiple versions, to avoid recompiles. Note though that for
+        // cross-compiled builds the `host:` line of `verbose_version` is
+        // omitted since rustc should produce the same output for each target
+        // regardless of the host.
+        for line in bcx.rustc().verbose_version.lines() {
+            if unit.kind.is_host() || !line.starts_with("host: ") {
+                line.hash(hasher);
+            }
+        }
         return;
     }
     // On "nightly"/"beta"/"dev"/etc, keep each "channel" separate. Don't hash
@@ -674,7 +681,9 @@ fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher) {
     // Keep "host" since some people switch hosts to implicitly change
     // targets, (like gnu vs musl or gnu vs msvc). In the future, we may want
     // to consider hashing `unit.kind.short_name()` instead.
-    bcx.rustc().host.hash(hasher);
+    if unit.kind.is_host() {
+        bcx.rustc().host.hash(hasher);
+    }
     // None of the other lines are important. Currently they are:
     // binary: rustc  <-- or "rustdoc"
     // commit-hash: 38114ff16e7856f98b2b4be7ab4cd29b38bed59a
