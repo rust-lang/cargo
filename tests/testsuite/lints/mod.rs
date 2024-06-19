@@ -1,7 +1,6 @@
-#![allow(deprecated)]
-
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 
 mod error;
 mod implicit_features;
@@ -34,20 +33,19 @@ im-a-teapot = "warn"
 
     foo.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
-        .with_stderr(
-            "\
-warning: unknown lint: `im-a-teapot`
+        .with_stderr_data(str![[r#"
+[WARNING] unknown lint: `im-a-teapot`
   --> Cargo.toml:12:1
    |
-12 | im-a-teapot = \"warn\"
+12 | im-a-teapot = "warn"
    | ^^^^^^^^^^^
    |
-   = note: `cargo::unknown_lints` is set to `warn` by default
-   = help: there is a lint with a similar name: `im_a_teapot`
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] [..]
-",
-        )
+   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+   = [HELP] there is a lint with a similar name: `im_a_teapot`
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -77,17 +75,16 @@ test_dummy_unstable = { level = "forbid", priority = -1 }
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
         .with_status(101)
-        .with_stderr(
-            "\
-error: `im_a_teapot` is specified
+        .with_stderr_data(str![[r#"
+[ERROR] `im_a_teapot` is specified
  --> Cargo.toml:9:1
   |
 9 | im-a-teapot = true
   | ^^^^^^^^^^^^^^^^^^
   |
-  = note: `cargo::im_a_teapot` is set to `forbid` in `[lints]`
-",
-        )
+  = [NOTE] `cargo::im_a_teapot` is set to `forbid` in `[lints]`
+
+"#]])
         .run();
 }
 
@@ -120,17 +117,16 @@ workspace = true
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints", "test-dummy-unstable"])
         .with_status(101)
-        .with_stderr(
-            "\
-error: `im_a_teapot` is specified
+        .with_stderr_data(str![[r#"
+[ERROR] `im_a_teapot` is specified
   --> Cargo.toml:13:1
    |
 13 | im-a-teapot = true
    | ^^^^^^^^^^^^^^^^^^
    |
-   = note: `cargo::im_a_teapot` is set to `forbid` in `[lints]`
-",
-        )
+   = [NOTE] `cargo::im_a_teapot` is set to `forbid` in `[lints]`
+
+"#]])
         .run();
 }
 
@@ -165,12 +161,11 @@ im-a-teapot = true
 
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
-        .with_stderr(
-            "\
-[CHECKING] foo v0.0.1 ([CWD]/foo)
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -216,17 +211,16 @@ implicit_features = "warn"
 
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
-        .with_stderr(
-            "\
-[UPDATING] [..]
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.1.0 ([..])
+[DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [CHECKING] bar v0.1.0
-[CHECKING] foo v0.1.0 ([CWD])
-[FINISHED] [..]
-",
-        )
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -252,18 +246,17 @@ im_a_teapot = "warn"
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_status(101)
-        .with_stderr(
-            "\
-error: use of unstable lint `im_a_teapot`
+        .with_stderr_data(str![[r#"
+[ERROR] use of unstable lint `im_a_teapot`
  --> Cargo.toml:9:1
   |
-9 | im_a_teapot = \"warn\"
+9 | im_a_teapot = "warn"
   | ^^^^^^^^^^^ this is behind `test-dummy-unstable`, which is not enabled
   |
-  = help: consider adding `cargo-features = [\"test-dummy-unstable\"]` to the top of the manifest
-error: encountered 1 errors(s) while verifying lints
-",
-        )
+  = [HELP] consider adding `cargo-features = ["test-dummy-unstable"]` to the top of the manifest
+[ERROR] encountered 1 errors(s) while verifying lints
+
+"#]])
         .run();
 }
 
@@ -300,36 +293,35 @@ workspace = true
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
         .with_status(101)
-        .with_stderr(
-            "\
-error: use of unstable lint `im_a_teapot`
+        .with_stderr_data(str![[r#"
+[ERROR] use of unstable lint `im_a_teapot`
  --> Cargo.toml:6:1
   |
-6 | im_a_teapot = { level = \"warn\", priority = 10 }
+6 | im_a_teapot = { level = "warn", priority = 10 }
   | ^^^^^^^^^^^ this is behind `test-dummy-unstable`, which is not enabled
   |
-note: `cargo::im_a_teapot` was inherited
+[NOTE] `cargo::im_a_teapot` was inherited
  --> foo/Cargo.toml:9:1
   |
 9 | workspace = true
   | ----------------
   |
-  = help: consider adding `cargo-features = [\"test-dummy-unstable\"]` to the top of the manifest
-error: use of unstable lint `test_dummy_unstable`
+  = [HELP] consider adding `cargo-features = ["test-dummy-unstable"]` to the top of the manifest
+[ERROR] use of unstable lint `test_dummy_unstable`
  --> Cargo.toml:7:1
   |
-7 | test_dummy_unstable = { level = \"forbid\", priority = -1 }
+7 | test_dummy_unstable = { level = "forbid", priority = -1 }
   | ^^^^^^^^^^^^^^^^^^^ this is behind `test-dummy-unstable`, which is not enabled
   |
-note: `cargo::test_dummy_unstable` was inherited
+[NOTE] `cargo::test_dummy_unstable` was inherited
  --> foo/Cargo.toml:9:1
   |
 9 | workspace = true
   | ----------------
   |
-  = help: consider adding `cargo-features = [\"test-dummy-unstable\"]` to the top of the manifest
-error: encountered 2 errors(s) while verifying lints
-",
-        )
+  = [HELP] consider adding `cargo-features = ["test-dummy-unstable"]` to the top of the manifest
+[ERROR] encountered 2 errors(s) while verifying lints
+
+"#]])
         .run();
 }
