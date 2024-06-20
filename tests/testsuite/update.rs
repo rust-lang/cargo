@@ -1,8 +1,7 @@
 //! Tests for the `cargo update` command.
 
-#![allow(deprecated)]
-
 use cargo_test_support::compare::assert_e2e;
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{self};
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, project, str};
@@ -115,13 +114,12 @@ fn transitive_minor_update() {
     // Also note that this is probably counterintuitive and weird. We may wish
     // to change this one day.
     p.cargo("update serde")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 0 packages to latest compatible versions
 [NOTE] pass `--verbose` to see 2 unchanged dependencies behind latest
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -169,14 +167,13 @@ fn conservative() {
     Package::new("serde", "0.1.1").dep("log", "0.1").publish();
 
     p.cargo("update serde")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [UPDATING] serde v0.1.0 -> v0.1.1
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -406,13 +403,12 @@ fn update_precise() {
     Package::new("serde", "0.2.0").publish();
 
     p.cargo("update serde:0.2.1 --precise 0.2.0")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [DOWNGRADING] serde v0.2.1 -> v0.2.0
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -443,30 +439,28 @@ fn update_precise_mismatched() {
 
     // `1.6.0` does not match `"~1.2"`
     p.cargo("update serde:1.2 --precise 1.6.0")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
-[ERROR] failed to select a version for the requirement `serde = \"~1.2\"`
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `serde = "~1.2"`
 candidate versions found which didn't match: 1.6.0
-location searched: `[..]` index (which is replacing registry `crates-io`)
-required by package `bar v0.0.1 ([..]/foo)`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `bar v0.0.1 ([ROOT]/foo)`
 perhaps a crate was updated and forgotten to be re-vendored?
-",
-        )
+
+"#]])
         .with_status(101)
         .run();
 
     // `1.9.0` does not exist
     p.cargo("update serde:1.2 --precise 1.9.0")
         // This terrible error message has been the same for a long time. A fix is more than welcome!
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [ERROR] no matching package named `serde` found
 location searched: registry `crates-io`
-required by package `bar v0.0.1 ([..]/foo)`
-",
-        )
+required by package `bar v0.0.1 ([ROOT]/foo)`
+
+"#]])
         .with_status(101)
         .run();
 }
@@ -496,23 +490,21 @@ fn update_precise_build_metadata() {
     p.cargo("update serde --precise 0.0.1+first").run();
 
     p.cargo("update serde --precise 0.0.1+second")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [UPDATING] serde v0.0.1+first -> v0.0.1+second
-",
-        )
+
+"#]])
         .run();
 
     // This is not considered "Downgrading". Build metadata are not assumed to
     // be ordered.
     p.cargo("update serde --precise 0.0.1+first")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [UPDATING] serde v0.0.1+second -> v0.0.1+first
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -544,13 +536,12 @@ fn update_precise_do_not_force_update_deps() {
     Package::new("serde", "0.2.2").dep("log", "0.1").publish();
 
     p.cargo("update serde:0.2.1 --precise 0.2.2")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [UPDATING] serde v0.2.1 -> v0.2.2
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -582,14 +573,13 @@ fn update_recursive() {
     Package::new("serde", "0.2.2").dep("log", "0.1").publish();
 
     p.cargo("update serde:0.2.1 --recursive")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [UPDATING] log v0.1.0 -> v0.1.1
 [UPDATING] serde v0.2.1 -> v0.2.2
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -621,14 +611,13 @@ fn update_aggressive_alias_for_recursive() {
     Package::new("serde", "0.2.2").dep("log", "0.1").publish();
 
     p.cargo("update serde:0.2.1 --aggressive")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [UPDATING] log v0.1.0 -> v0.1.1
 [UPDATING] serde v0.2.1 -> v0.2.2
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -661,15 +650,14 @@ fn update_recursive_conflicts_with_precise() {
 
     p.cargo("update serde:0.2.1 --precise 0.2.2 --recursive")
         .with_status(1)
-        .with_stderr(
-            "\
-error: the argument '--precise <PRECISE>' cannot be used with '--recursive'
+        .with_stderr_data(str![[r#"
+[ERROR] the argument '--precise <PRECISE>' cannot be used with '--recursive'
 
 Usage: cargo[EXE] update --precise <PRECISE> <SPEC|--package [<SPEC>]>
 
 For more information, try '--help'.
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -699,18 +687,19 @@ fn update_precise_first_run() {
         .build();
 
     p.cargo("update serde --precise 0.2.0")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [DOWNGRADING] serde v0.2.1 -> v0.2.0
-",
-        )
+
+"#]])
         .run();
 
     // Assert `cargo metadata` shows serde 0.2.0
     p.cargo("metadata")
-        .with_json(
-            r#"{
+        .with_stdout_data(
+            str![[r#"
+{
+  "metadata": null,
   "packages": [
     {
       "authors": [],
@@ -735,15 +724,15 @@ fn update_precise_first_run() {
       "edition": "2015",
       "features": {},
       "homepage": null,
-      "id": "path+file://[..]/foo#bar@0.0.1",
+      "id": "path+[ROOTURL]/foo#bar@0.0.1",
       "keywords": [],
       "license": null,
       "license_file": null,
       "links": null,
-      "manifest_path": "[..]/foo/Cargo.toml",
+      "manifest_path": "[ROOT]/foo/Cargo.toml",
       "metadata": null,
-      "publish": null,
       "name": "bar",
+      "publish": null,
       "readme": null,
       "repository": null,
       "rust_version": null,
@@ -755,13 +744,13 @@ fn update_precise_first_run() {
           ],
           "doc": true,
           "doctest": true,
-          "test": true,
           "edition": "2015",
           "kind": [
             "lib"
           ],
           "name": "bar",
-          "src_path": "[..]/foo/src/lib.rs"
+          "src_path": "[ROOT]/foo/src/lib.rs",
+          "test": true
         }
       ],
       "version": "0.0.1"
@@ -781,10 +770,10 @@ fn update_precise_first_run() {
       "license": null,
       "license_file": null,
       "links": null,
-      "manifest_path": "[..]/home/.cargo/registry/src/-[..]/serde-0.2.0/Cargo.toml",
+      "manifest_path": "[ROOT]/home/.cargo/registry/src/-[HASH]/serde-0.2.0/Cargo.toml",
       "metadata": null,
-      "publish": null,
       "name": "serde",
+      "publish": null,
       "readme": null,
       "repository": null,
       "rust_version": null,
@@ -801,7 +790,7 @@ fn update_precise_first_run() {
             "lib"
           ],
           "name": "serde",
-          "src_path": "[..]/home/.cargo/registry/src/-[..]/serde-0.2.0/src/lib.rs",
+          "src_path": "[ROOT]/home/.cargo/registry/src/-[HASH]/serde-0.2.0/src/lib.rs",
           "test": true
         }
       ],
@@ -827,7 +816,7 @@ fn update_precise_first_run() {
           }
         ],
         "features": [],
-        "id": "path+file://[..]/foo#bar@0.0.1"
+        "id": "path+[ROOTURL]/foo#bar@0.0.1"
       },
       {
         "dependencies": [],
@@ -836,28 +825,28 @@ fn update_precise_first_run() {
         "id": "registry+https://github.com/rust-lang/crates.io-index#serde@0.2.0"
       }
     ],
-    "root": "path+file://[..]/foo#bar@0.0.1"
+    "root": "path+[ROOTURL]/foo#bar@0.0.1"
   },
-  "target_directory": "[..]/foo/target",
+  "target_directory": "[ROOT]/foo/target",
   "version": 1,
-  "workspace_members": [
-    "path+file://[..]/foo#bar@0.0.1"
-  ],
   "workspace_default_members": [
-    "path+file://[..]/foo#bar@0.0.1"
+    "path+[ROOTURL]/foo#bar@0.0.1"
   ],
-  "workspace_root": "[..]/foo",
-  "metadata": null
-}"#,
+  "workspace_members": [
+    "path+[ROOTURL]/foo#bar@0.0.1"
+  ],
+  "workspace_root": "[ROOT]/foo"
+}
+"#]]
+            .json(),
         )
         .run();
 
     p.cargo("update serde --precise 0.2.0")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
-",
-        )
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+
+"#]])
         .run();
 }
 
@@ -931,15 +920,14 @@ fn dry_run_update() {
     Package::new("serde", "0.1.1").dep("log", "0.1").publish();
 
     p.cargo("update serde --dry-run")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [UPDATING] serde v0.1.0 -> v0.1.1
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 [WARNING] not updating lockfile due to dry run
-",
-        )
+
+"#]])
         .run();
     let new_lockfile = p.read_lockfile();
     assert_eq!(old_lockfile, new_lockfile)
@@ -996,57 +984,52 @@ fn precise_with_build_metadata() {
 
     p.cargo("update bar --precise 0.1")
         .with_status(101)
-        .with_stderr(
-            "\
-error: invalid version format for precise version `0.1`
+        .with_stderr_data(str![[r#"
+[ERROR] invalid version format for precise version `0.1`
 
 Caused by:
   unexpected end of input while parsing minor version number
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("update bar --precise 0.1.1+does-not-match")
         .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] [..] index
-error: no matching package named `bar` found
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] no matching package named `bar` found
 location searched: registry `crates-io`
 required by package `foo v0.1.0 ([ROOT]/foo)`
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("update bar --precise 0.1.1")
-        .with_stderr(
-            "\
-[UPDATING] [..] index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [UPDATING] bar v0.1.0+extra-stuff.0 -> v0.1.1+extra-stuff.1
-",
-        )
+
+"#]])
         .run();
 
     Package::new("bar", "0.1.3").publish();
     p.cargo("update bar --precise 0.1.3+foo")
         .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] [..] index
-error: no matching package named `bar` found
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] no matching package named `bar` found
 location searched: registry `crates-io`
 required by package `foo v0.1.0 ([ROOT]/foo)`
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("update bar --precise 0.1.3")
-        .with_stderr(
-            "\
-[UPDATING] [..] index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [UPDATING] bar v0.1.1+extra-stuff.1 -> v0.1.3
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1115,13 +1098,11 @@ rustdns.workspace = true
 
     // First time around we should compile both foo and bar
     p.cargo("generate-lockfile")
-        .with_stderr(&format!(
-            "\
-[UPDATING] git repository `{}`
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/rustdns`
 [LOCKING] 3 packages to latest compatible versions
-",
-            git_project.url(),
-        ))
+
+"#]])
         .run();
     // Modify a file manually, shouldn't trigger a recompile
     git_project.change_file("src/lib.rs", r#"pub fn bar() { println!("hello!"); }"#);
@@ -1133,12 +1114,12 @@ rustdns.workspace = true
     p.change_file("Cargo.toml", &workspace_toml.replace("2.29.8", "2.29.81"));
 
     p.cargo("update -p rootcrate")
-        .with_stderr(&format!(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[UPDATING] rootcrate v2.29.8 ([CWD]/rootcrate) -> v2.29.81
-[UPDATING] subcrate v2.29.8 ([CWD]/subcrate) -> v2.29.81",
-        ))
+[UPDATING] rootcrate v2.29.8 ([ROOT]/foo/rootcrate) -> v2.29.81
+[UPDATING] subcrate v2.29.8 ([ROOT]/foo/subcrate) -> v2.29.81
+
+"#]])
         .run();
 }
 
@@ -1207,13 +1188,11 @@ rustdns.workspace = true
 
     // First time around we should compile both foo and bar
     p.cargo("generate-lockfile")
-        .with_stderr(&format!(
-            "\
-[UPDATING] git repository `{}`
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/rustdns`
 [LOCKING] 3 packages to latest compatible versions
-",
-            git_project.url(),
-        ))
+
+"#]])
         .run();
     // Modify a file manually, shouldn't trigger a recompile
     git_project.change_file("src/lib.rs", r#"pub fn bar() { println!("hello!"); }"#);
@@ -1225,12 +1204,12 @@ rustdns.workspace = true
     p.change_file("Cargo.toml", &workspace_toml.replace("2.29.8", "2.29.81"));
 
     p.cargo("update -p crate2")
-        .with_stderr(&format!(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[UPDATING] crate1 v2.29.8 ([CWD]/crate1) -> v2.29.81
-[UPDATING] crate2 v2.29.8 ([CWD]/crate2) -> v2.29.81",
-        ))
+[UPDATING] crate1 v2.29.8 ([ROOT]/foo/crate1) -> v2.29.81
+[UPDATING] crate2 v2.29.8 ([ROOT]/foo/crate2) -> v2.29.81
+
+"#]])
         .run();
 }
 
@@ -1299,13 +1278,11 @@ rustdns.workspace = true
 
     // First time around we should compile both foo and bar
     p.cargo("generate-lockfile")
-        .with_stderr(&format!(
-            "\
-[UPDATING] git repository `{}`
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/rustdns`
 [LOCKING] 3 packages to latest compatible versions
-",
-            git_project.url(),
-        ))
+
+"#]])
         .run();
     // Modify a file manually, shouldn't trigger a recompile
     git_project.change_file("src/lib.rs", r#"pub fn bar() { println!("hello!"); }"#);
@@ -1317,12 +1294,12 @@ rustdns.workspace = true
     p.change_file("Cargo.toml", &workspace_toml.replace("2.29.8", "2.29.81"));
 
     p.cargo("update --workspace")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[UPDATING] crate1 v2.29.8 ([CWD]/crate1) -> v2.29.81
-[UPDATING] crate2 v2.29.8 ([CWD]/crate2) -> v2.29.81",
-        )
+[UPDATING] crate1 v2.29.8 ([ROOT]/foo/crate1) -> v2.29.81
+[UPDATING] crate2 v2.29.8 ([ROOT]/foo/crate2) -> v2.29.81
+
+"#]])
         .run();
 }
 
@@ -1361,21 +1338,22 @@ fn update_precise_git_revisions() {
         .build();
 
     p.cargo("fetch")
-        .with_stderr(format!(
-            "\
-[UPDATING] git repository `{url}`
-[LOCKING] 2 packages to latest compatible versions"
-        ))
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/git`
+[LOCKING] 2 packages to latest compatible versions
+
+"#]])
         .run();
 
     assert!(p.read_lockfile().contains(&head_id));
 
     p.cargo("update git --precise")
         .arg(tag_name)
-        .with_stderr(format!(
+        .with_stderr_data(format!(
             "\
-[UPDATING] git repository `{url}`
-[UPDATING] git v0.5.0 ([..]) -> #{}",
+[UPDATING] git repository `[ROOTURL]/git`
+[UPDATING] git v0.5.0 ([ROOTURL]/git#[..]) -> #{}
+",
             &tag_commit_id[..8],
         ))
         .run();
@@ -1385,10 +1363,11 @@ fn update_precise_git_revisions() {
 
     p.cargo("update git --precise")
         .arg(short_id)
-        .with_stderr(format!(
+        .with_stderr_data(format!(
             "\
-[UPDATING] git repository `{url}`
-[UPDATING] git v0.5.0 ([..]) -> #{short_id}",
+[UPDATING] git repository `[ROOTURL]/git`
+[UPDATING] git v0.5.0 ([ROOTURL]/git[..]) -> #{short_id}
+",
         ))
         .run();
 
@@ -1399,10 +1378,11 @@ fn update_precise_git_revisions() {
     // as the ref may change over time.
     p.cargo("update git --precise")
         .arg(tag_name)
-        .with_stderr(format!(
+        .with_stderr_data(format!(
             "\
-[UPDATING] git repository `{url}`
-[UPDATING] git v0.5.0 ([..]) -> #{}",
+[UPDATING] git repository `[ROOTURL]/git`
+[UPDATING] git v0.5.0 ([ROOTURL]/git#[..]) -> #{}
+",
             &tag_commit_id[..8],
         ))
         .run();
@@ -1417,10 +1397,11 @@ fn update_precise_git_revisions() {
 
     p.cargo("update git --precise")
         .arg(&arbitrary_tag)
-        .with_stderr(format!(
+        .with_stderr_data(format!(
             "\
-[UPDATING] git repository `{url}`
-[UPDATING] git v0.5.0 ([..]) -> #{}",
+[UPDATING] git repository `[ROOTURL]/git`
+[UPDATING] git v0.5.0 ([ROOTURL]/git#[..]) -> #{}
+",
             &head_id[..8],
         ))
         .run();
@@ -1454,14 +1435,13 @@ fn precise_yanked() {
     assert!(lockfile.contains("\nname = \"bar\"\nversion = \"0.1.0\""));
 
     p.cargo("update --precise 0.1.1 bar")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [WARNING] selected package `bar@0.1.1` was yanked by the author
 [NOTE] if possible, try a compatible non-yanked version
 [UPDATING] bar v0.1.0 -> v0.1.1
-",
-        )
+
+"#]])
         .run();
 
     // Use yanked version.
@@ -1495,14 +1475,13 @@ fn precise_yanked_multiple_presence() {
     assert!(lockfile.contains("\nname = \"bar\"\nversion = \"0.1.0\""));
 
     p.cargo("update --precise 0.1.1 bar")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [WARNING] selected package `bar@0.1.1` was yanked by the author
 [NOTE] if possible, try a compatible non-yanked version
 [UPDATING] bar v0.1.0 -> v0.1.1
-",
-        )
+
+"#]])
         .run();
 
     // Use yanked version.
@@ -1540,20 +1519,18 @@ fn report_behind() {
     Package::new("breaking", "0.1.1").publish();
 
     p.cargo("update --dry-run")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.0)
 [NOTE] pass `--verbose` to see 2 unchanged dependencies behind latest
 [WARNING] not updating lockfile due to dry run
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("update --dry-run --verbose")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.0)
@@ -1561,26 +1538,24 @@ fn report_behind() {
 [UNCHANGED] two-ver v0.1.0 (latest: v0.2.0)
 [NOTE] to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`
 [WARNING] not updating lockfile due to dry run
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("update").run();
 
     p.cargo("update --dry-run")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 0 packages to latest compatible versions
 [NOTE] pass `--verbose` to see 3 unchanged dependencies behind latest
 [WARNING] not updating lockfile due to dry run
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("update --dry-run --verbose")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 0 packages to latest compatible versions
 [UNCHANGED] breaking v0.1.1 (latest: v0.2.0)
@@ -1588,8 +1563,8 @@ fn report_behind() {
 [UNCHANGED] two-ver v0.1.0 (latest: v0.2.0)
 [NOTE] to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`
 [WARNING] not updating lockfile due to dry run
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1620,25 +1595,23 @@ fn update_with_missing_feature() {
     Package::new("bar", "0.1.1").publish();
 
     p.cargo("update")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 0 packages to latest compatible versions
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
-",
-        )
+
+"#]])
         .run();
 
     // Publish a fixed version, should not warn.
     Package::new("bar", "0.1.2").feature("feat1", &[]).publish();
     p.cargo("update")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
 [UPDATING] bar v0.1.0 -> v0.1.2
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1661,12 +1634,11 @@ fn update_breaking_unstable() {
     p.cargo("update --breaking")
         .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] the `--breaking` flag is unstable, pass `-Z unstable-options` to enable it
 See https://github.com/rust-lang/cargo/issues/12425 for more information about the `--breaking` flag.
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1716,8 +1688,7 @@ fn update_breaking_dry_run() {
 
     p.cargo("update -Zunstable-options --dry-run --breaking")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPGRADING] incompatible ^1.0 -> ^2.0
 [UPGRADING] ws ^1.0 -> ^2.0
@@ -1725,8 +1696,8 @@ fn update_breaking_dry_run() {
 [UPDATING] incompatible v1.0.0 -> v2.0.0
 [UPDATING] ws v1.0.0 -> v2.0.0
 [WARNING] aborting update due to dry run
-",
-        )
+
+"#]])
         .run();
 
     let root_manifest_after = p.read_file("Cargo.toml");
@@ -1883,8 +1854,7 @@ fn update_breaking() {
 
     p.cargo("update -Zunstable-options --breaking")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [UPGRADING] multiple-registries ^2.0 -> ^3.0
 [UPDATING] `dummy-registry` index
@@ -1907,8 +1877,8 @@ fn update_breaking() {
 [ADDING] multiple-versions v3.0.0
 [UPDATING] shared v1.0.0 -> v2.0.0
 [UPDATING] ws v1.0.0 -> v2.0.0
-",
-        )
+
+"#]])
         .run();
 
     let root_manifest = p.read_file("Cargo.toml");
@@ -1984,8 +1954,7 @@ fn update_breaking() {
     );
 
     p.cargo("update")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [UPDATING] `dummy-registry` index
 [LOCKING] 4 packages to latest compatible versions
@@ -1993,8 +1962,8 @@ fn update_breaking() {
 [UPDATING] less-than v1.0.0 -> v2.0.0
 [UPDATING] pinned v1.0.0 -> v1.0.1 (latest: v2.0.0)
 [UPDATING] renamed-from v1.0.0 -> v1.0.1 (latest: v2.0.0)
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -2080,9 +2049,8 @@ fn update_breaking_specific_packages() {
 
     p.cargo("update -Zunstable-options --breaking just-foo shared ws")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [UPGRADING] shared ^1.0 -> ^2.0
 [UPGRADING] ws ^1.0 -> ^2.0
 [UPGRADING] just-foo ^1.0 -> ^2.0
@@ -2092,7 +2060,7 @@ fn update_breaking_specific_packages() {
 [UPDATING] transitive-compatible v1.0.0 -> v1.0.1
 [UPDATING] transitive-incompatible v1.0.0 -> v2.0.0
 [UPDATING] ws v1.0.0 -> v2.0.0
-",
-        )
+
+"#]])
         .run();
 }
