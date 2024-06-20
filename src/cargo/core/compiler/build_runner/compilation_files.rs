@@ -718,8 +718,8 @@ fn compute_metadata(
         }
     }
 
-    let c_metadata = UnitHash(c_metadata_hasher.finish());
-    let c_extra_filename = UnitHash(c_extra_filename_hasher.finish());
+    let c_metadata = UnitHash(Hasher::finish(&c_metadata_hasher));
+    let c_extra_filename = UnitHash(Hasher::finish(&c_extra_filename_hasher));
     let unit_id = c_extra_filename;
 
     let c_extra_filename = use_extra_filename.then_some(c_extra_filename);

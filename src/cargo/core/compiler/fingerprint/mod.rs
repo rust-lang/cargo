@@ -1561,7 +1561,7 @@ fn calculate_normal(
         local: Mutex::new(local),
         memoized_hash: Mutex::new(None),
         metadata,
-        config: config.finish(),
+        config: Hasher::finish(&config),
         compile_kind,
         rustflags: extra_flags,
         fs_status: FsStatus::Stale,

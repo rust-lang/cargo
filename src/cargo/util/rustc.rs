@@ -381,7 +381,7 @@ fn rustc_fingerprint(
         _ => (),
     }
 
-    Ok(hasher.finish())
+    Ok(Hasher::finish(&hasher))
 }
 
 fn process_fingerprint(cmd: &ProcessBuilder, extra_fingerprint: u64) -> u64 {
@@ -391,5 +391,5 @@ fn process_fingerprint(cmd: &ProcessBuilder, extra_fingerprint: u64) -> u64 {
     let mut env = cmd.get_envs().iter().collect::<Vec<_>>();
     env.sort_unstable();
     env.hash(&mut hasher);
-    hasher.finish()
+    Hasher::finish(&hasher)
 }
