@@ -348,7 +348,7 @@ fn upgrade_dependency(
         return Ok(dependency);
     }
 
-    let Some(new_req_string) = upgrade_requirement(&current.to_string(), latest)? else {
+    let Some((new_req_string, _)) = upgrade_requirement(&current.to_string(), latest)? else {
         trace!("skipping dependency `{name}` because the version requirement didn't change");
         return Ok(dependency);
     };
@@ -369,8 +369,17 @@ fn upgrade_dependency(
     Ok(dep)
 }
 
-/// Update manifests with upgraded versions, and write to disk. Based on cargo-edit.
-/// Returns true if any file has changed.
+/// Update manifests with upgraded versions, and write to disk. Based on
+/// cargo-edit. Returns true if any file has changed.
+///
+/// Some of the checks here are duplicating checks already done in
+/// upgrade_manifests/upgrade_dependency. Why? Let's say upgrade_dependency has
+/// found that dependency foo was eligible for an upgrade. But foo can occur in
+/// multiple manifest files, and even multiple times in the same manifest file,
+/// and may be pinned, renamed, etc. in some of the instances. So we still need
+/// to check here which dependencies to actually modify. So why not drop the
+/// upgrade map and redo all checks here? Because then we'd have to query the
+/// registries again to find the latest versions.
 pub fn write_manifest_upgrades(
     ws: &Workspace<'_>,
     upgrades: &UpgradeMap,
@@ -407,6 +416,11 @@ pub fn write_manifest_upgrades(
                 )?;
                 let name = &dependency.name;
 
+                if let Some(renamed_to) = dependency.rename {
+                    trace!("skipping dependency renamed from `{name}` to `{renamed_to}`");
+                    continue;
+                }
+
                 let Some(current) = dependency.version() else {
                     trace!("skipping dependency without a version: {name}");
                     continue;
@@ -424,12 +438,26 @@ pub fn write_manifest_upgrades(
                     continue;
                 };
 
-                let Some(new_req_string) = upgrade_requirement(current, latest)? else {
+                let Some((new_req_string, new_req)) = upgrade_requirement(current, latest)? else {
                     trace!(
                         "skipping dependency `{name}` because the version requirement didn't change"
                     );
                     continue;
                 };
+
+                let [comparator] = &new_req.comparators[..] else {
+                    trace!(
+                        "skipping dependency `{}` with multiple version comparators: {:?}",
+                        name,
+                        new_req.comparators
+                    );
+                    continue;
+                };
+
+                if comparator.op != Op::Caret {
+                    trace!("skipping non-caret dependency `{}`: {}", name, comparator);
+                    continue;
+                }
 
                 let mut dep = dependency.clone();
                 let mut source = source.clone();

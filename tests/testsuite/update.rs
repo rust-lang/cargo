@@ -2551,21 +2551,19 @@ fn update_breaking_mixed_pinning_renaming() {
     let root_manifest = p.read_file("Cargo.toml");
     assert_e2e().eq(
         &root_manifest,
-        // FIXME: The pinned dependency should not be upgraded.
         str![[r#"
 
                 [workspace]
                 members = ["pinned", "unpinned", "mixed"]
 
                 [workspace.dependencies]
-                mixed-ws-pinned = "=2.0"
+                mixed-ws-pinned = "=1.0"
             "#]],
     );
 
     let pinned_manifest = p.read_file("pinned/Cargo.toml");
     assert_e2e().eq(
         &pinned_manifest,
-        // FIXME: The pinned and renamed dependencies should not be upgraded.
         str![[r#"
 
                 [package]
@@ -2575,9 +2573,9 @@ fn update_breaking_mixed_pinning_renaming() {
                 authors = []
 
                 [dependencies]
-                mixed-pinned = "=2.0"
+                mixed-pinned = "=1.0"
                 mixed-ws-pinned.workspace = true
-                renamed-to = { package = "renamed-from", version = "2.0" }
+                renamed-to = { package = "renamed-from", version = "1.0" }
             "#]],
     );
 
@@ -2602,7 +2600,6 @@ fn update_breaking_mixed_pinning_renaming() {
     let mixed_manifest = p.read_file("mixed/Cargo.toml");
     assert_e2e().eq(
         &mixed_manifest,
-        // FIXME: The pinned dependency should not be upgraded.
         str![[r#"
 
                 [package]
@@ -2615,7 +2612,7 @@ fn update_breaking_mixed_pinning_renaming() {
                 mixed-pinned = "2.0"
 
                 [target.'cfg(unix)'.dependencies]
-                mixed-pinned = "=2.0"
+                mixed-pinned = "=1.0"
             "#]],
     );
 }
