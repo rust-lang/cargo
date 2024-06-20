@@ -4,12 +4,11 @@
 //! "fake" crates.io is used. Otherwise `vendor` would download the crates.io
 //! index from the network.
 
-#![allow(deprecated)]
-
 use std::fs;
 
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git;
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{self, Package, RegistryBuilder};
 use cargo_test_support::str;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, paths, project, Project};
@@ -61,14 +60,14 @@ fn vendor_sample_config() {
     Package::new("log", "0.3.5").publish();
 
     p.cargo("vendor --respect-source-config")
-        .with_stdout(
-            r#"[source.crates-io]
+        .with_stdout_data(str![[r#"
+[source.crates-io]
 replace-with = "vendored-sources"
 
 [source.vendored-sources]
 directory = "vendor"
-"#,
-        )
+
+"#]])
         .run();
 }
 
@@ -93,7 +92,7 @@ fn vendor_sample_config_alt_registry() {
     Package::new("log", "0.3.5").alternative(true).publish();
 
     p.cargo("vendor --respect-source-config")
-        .with_stdout(format!(
+        .with_stdout_data(format!(
             r#"[source."{0}"]
 registry = "{0}"
 replace-with = "vendored-sources"
@@ -438,12 +437,14 @@ fn test_sync_argument() {
     Package::new("bitflags", "0.8.0").publish();
 
     p.cargo("vendor --respect-source-config --manifest-path foo/Cargo.toml -s bar/Cargo.toml baz/Cargo.toml test_vendor")
-        .with_stderr("\
-error: unexpected argument 'test_vendor' found
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected argument 'test_vendor' found
 
 Usage: cargo[EXE] vendor [OPTIONS] [path]
 
-For more information, try '--help'.",
+For more information, try '--help'.
+
+"#]]
         )
         .with_status(1)
         .run();
@@ -714,21 +715,21 @@ fn git_diff_rev() {
         .build();
 
     p.cargo("vendor --respect-source-config")
-        .with_stdout(
-            r#"[source."git+file://[..]/git?rev=v0.1.0"]
-git = [..]
+        .with_stdout_data(str![[r#"
+[source."git+[ROOTURL]/git?rev=v0.1.0"]
+git = "[ROOTURL]/git"
 rev = "v0.1.0"
 replace-with = "vendored-sources"
 
-[source."git+file://[..]/git?rev=v0.2.0"]
-git = [..]
+[source."git+[ROOTURL]/git?rev=v0.2.0"]
+git = "[ROOTURL]/git"
 rev = "v0.2.0"
 replace-with = "vendored-sources"
 
 [source.vendored-sources]
 directory = "vendor"
-"#,
-        )
+
+"#]])
         .run();
 }
 
@@ -773,22 +774,21 @@ fn git_duplicate() {
     Package::new("b", "0.5.0").publish();
 
     p.cargo("vendor --respect-source-config")
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[UPDATING] [..]
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/a`
+[UPDATING] `dummy-registry` index
 [LOCKING] 4 packages to latest compatible versions
-[DOWNLOADING] [..]
-[DOWNLOADED] [..]
-error: failed to sync
+[DOWNLOADING] crates ...
+[DOWNLOADED] b v0.5.0 (registry `dummy-registry`)
+[ERROR] failed to sync
 
 Caused by:
   found duplicate version of package `b v0.5.0` vendored from two sources:
 
-  <tab>source 1: [..]
-  <tab>source 2: [..]
-",
-        )
+  	source 1: registry `crates-io`
+  	source 2: [ROOTURL]/a#[..]
+
+"#]])
         .with_status(101)
         .run();
 }
@@ -802,6 +802,7 @@ fn git_complex() {
                 [package]
                 name = "b"
                 version = "0.1.0"
+                edition = "2021"
 
                 [dependencies]
                 dep_b = { path = 'dep_b' }
@@ -820,6 +821,7 @@ fn git_complex() {
                     [package]
                     name = "a"
                     version = "0.1.0"
+                    edition = "2021"
 
                     [dependencies]
                     b = {{ git = '{}' }}
@@ -841,6 +843,7 @@ fn git_complex() {
                     [package]
                     name = "foo"
                     version = "0.1.0"
+                    edition = "2021"
 
                     [dependencies]
                     a = {{ git = '{}' }}
@@ -859,10 +862,23 @@ fn git_complex() {
     p.change_file(".cargo/config.toml", &output);
 
     p.cargo("check -v")
-        .with_stderr_contains("[..]foo/vendor/a/src/lib.rs[..]")
-        .with_stderr_contains("[..]foo/vendor/dep_a/src/lib.rs[..]")
-        .with_stderr_contains("[..]foo/vendor/b/src/lib.rs[..]")
-        .with_stderr_contains("[..]foo/vendor/dep_b/src/lib.rs[..]")
+        .with_stderr_data(
+            str![[r#"
+[CHECKING] dep_b v0.5.0 ([ROOTURL]/git_b#[..])
+[CHECKING] dep_a v0.5.0 ([ROOTURL]/git_a#[..])
+[RUNNING] `rustc [..] [ROOT]/foo/vendor/dep_b/src/lib.rs [..]`
+[RUNNING] `rustc [..] [ROOT]/foo/vendor/dep_a/src/lib.rs [..]`
+[CHECKING] b v0.1.0 ([ROOTURL]/git_b#[..])
+[RUNNING] `rustc [..] [ROOT]/foo/vendor/b/src/lib.rs [..]`
+[CHECKING] a v0.1.0 ([ROOTURL]/git_a#[..])
+[RUNNING] `rustc [..] [ROOT]/foo/vendor/a/src/lib.rs [..]`
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc [..] src/lib.rs [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -1087,6 +1103,7 @@ fn config_instructions_works() {
                 [package]
                 name = "foo"
                 version = "0.1.0"
+                edition = "2021"
 
                 [dependencies]
                 dep = "0.1"
@@ -1106,9 +1123,21 @@ fn config_instructions_works() {
     p.change_file(".cargo/config.toml", &output);
 
     p.cargo("check -v")
-        .with_stderr_contains("[..]foo/vendor/dep/src/lib.rs[..]")
-        .with_stderr_contains("[..]foo/vendor/altdep/src/lib.rs[..]")
-        .with_stderr_contains("[..]foo/vendor/gitdep/src/lib.rs[..]")
+        .with_stderr_data(
+            str![[r#"
+[CHECKING] altdep v0.1.0 (registry `alternative`)
+[CHECKING] dep v0.1.0
+[RUNNING] `rustc [..] [ROOT]/foo/vendor/altdep/src/lib.rs [..]`
+[RUNNING] `rustc [..] [ROOT]/foo/vendor/gitdep/src/lib.rs [..]`
+[RUNNING] `rustc [..] [ROOT]/foo/vendor/dep/src/lib.rs [..]`
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc [..] src/lib.rs [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[CHECKING] gitdep v0.5.0 ([ROOTURL]/gitdep#[..])
+
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -1214,11 +1243,11 @@ fn no_remote_dependency_no_vendor() {
         .build();
 
     p.cargo("vendor")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-There is no dependency to vendor in this project.",
-        )
+There is no dependency to vendor in this project.
+
+"#]])
         .run();
     assert!(!p.root().join("vendor").exists());
 }
@@ -1241,6 +1270,7 @@ fn vendor_crate_with_ws_inherit() {
                 [package]
                 name = "bar"
                 version.workspace = true
+                edition = "2021"
             "#,
         )
         .file("bar/src/lib.rs", "")
@@ -1254,6 +1284,7 @@ fn vendor_crate_with_ws_inherit() {
                     [package]
                     name = "foo"
                     version = "0.1.0"
+                    edition = "2021"
 
                     [dependencies]
                     bar = {{ git = '{}' }}
@@ -1282,6 +1313,13 @@ fn vendor_crate_with_ws_inherit() {
     );
 
     p.cargo("check -v")
-        .with_stderr_contains("[..]foo/vendor/bar/src/lib.rs[..]")
+        .with_stderr_data(str![[r#"
+[CHECKING] bar v0.1.0 ([ROOTURL]/ws#[..])
+[RUNNING] `rustc [..] [ROOT]/foo/vendor/bar/src/lib.rs [..]`
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc [..] src/lib.rs [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
