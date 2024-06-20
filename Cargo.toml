@@ -78,6 +78,7 @@ pulldown-cmark = { version = "0.11.0", default-features = false, features = ["ht
 rand = "0.8.5"
 regex = "1.10.4"
 rusqlite = { version = "0.31.0", features = ["bundled"] }
+rustc-stable-hash = { git = "https://github.com/rust-lang/rustc-stable-hash.git", rev = "3805516b78c7b2946ae2071d71ffc8235399652d" }
 rustfix = { version = "0.8.2", path = "crates/rustfix" }
 same-file = "1.0.6"
 security-framework = "2.10.0"
@@ -182,6 +183,7 @@ pathdiff.workspace = true
 rand.workspace = true
 regex.workspace = true
 rusqlite.workspace = true
+rustc-stable-hash.workspace = true
 rustfix.workspace = true
 same-file.workspace = true
 semver.workspace = true
