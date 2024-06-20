@@ -1,6 +1,6 @@
 use std::collections::hash_map::HashMap;
 use std::env;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 

@@ -786,70 +786,93 @@ mod tests {
     // Otherwise please just leave a comment in your PR as to why the hash value is
     // changing and why the old value can't be easily preserved.
     //
-    // The hash value depends on endianness and bit-width, so we only run this test on
-    // little-endian 64-bit CPUs (such as x86-64 and ARM64) where it matches the
-    // well-known value.
+    // The hash value should be stable across platforms, and doesn't depend on
+    // endianness and bit-width. One caveat is that absolute paths is inherently
+    // different on Windows than on Unix-like platforms. Unless we omit or strip
+    // the prefix components (e.g. `C:`), there is not way to have a
+    // cross-platform stable hash for absolute paths.
     #[test]
-    #[cfg(all(target_endian = "little", target_pointer_width = "64"))]
     fn test_cratesio_hash() {
         let gctx = GlobalContext::default().unwrap();
         let crates_io = SourceId::crates_io(&gctx).unwrap();
-        assert_eq!(crate::util::hex::short_hash(&crates_io), "1ecc6299db9ec823");
+        assert_eq!(crate::util::hex::short_hash(&crates_io), "83d63c3e13aca8cc");
     }
 
     // See the comment in `test_cratesio_hash`.
     //
     // Only test on non-Windows as paths on Windows will get different hashes.
     #[test]
-    #[cfg(all(target_endian = "little", target_pointer_width = "64", not(windows)))]
     fn test_stable_hash() {
-        use std::hash::Hasher;
+        use crate::util::StableHasher;
         use std::path::Path;
 
+        #[cfg(not(windows))]
+        let ws_root = Path::new("/tmp/ws");
+        #[cfg(windows)]
+        let ws_root = Path::new(r"C:\\tmp\ws");
+
         let gen_hash = |source_id: SourceId| {
-            let mut hasher = std::collections::hash_map::DefaultHasher::new();
-            source_id.stable_hash(Path::new("/tmp/ws"), &mut hasher);
+            let mut hasher = StableHasher::new();
+            source_id.stable_hash(ws_root, &mut hasher);
             hasher.finish()
         };
 
         let url = "https://my-crates.io".into_url().unwrap();
         let source_id = SourceId::for_registry(&url).unwrap();
-        assert_eq!(gen_hash(source_id), 18108075011063494626);
-        assert_eq!(crate::util::hex::short_hash(&source_id), "fb60813d6cb8df79");
+        assert_eq!(gen_hash(source_id), 2056262832525457700);
+        assert_eq!(crate::util::hex::short_hash(&source_id), "24b984d12650891c");
 
         let url = "https://your-crates.io".into_url().unwrap();
         let source_id = SourceId::for_alt_registry(&url, "alt").unwrap();
-        assert_eq!(gen_hash(source_id), 12862859764592646184);
-        assert_eq!(crate::util::hex::short_hash(&source_id), "09c10fd0cbd74bce");
+        assert_eq!(gen_hash(source_id), 7851411715584162426);
+        assert_eq!(crate::util::hex::short_hash(&source_id), "7afabb545bd1f56c");
 
         let url = "sparse+https://my-crates.io".into_url().unwrap();
         let source_id = SourceId::for_registry(&url).unwrap();
-        assert_eq!(gen_hash(source_id), 8763561830438022424);
-        assert_eq!(crate::util::hex::short_hash(&source_id), "d1ea0d96f6f759b5");
+        assert_eq!(gen_hash(source_id), 15233380663065439616);
+        assert_eq!(crate::util::hex::short_hash(&source_id), "80ed51ce00d767d3");
 
         let url = "sparse+https://your-crates.io".into_url().unwrap();
         let source_id = SourceId::for_alt_registry(&url, "alt").unwrap();
-        assert_eq!(gen_hash(source_id), 5159702466575482972);
-        assert_eq!(crate::util::hex::short_hash(&source_id), "135d23074253cb78");
+        assert_eq!(gen_hash(source_id), 12749290624384351691);
+        assert_eq!(crate::util::hex::short_hash(&source_id), "cbbda5344694eeb0");
 
         let url = "file:///tmp/ws/crate".into_url().unwrap();
         let source_id = SourceId::for_git(&url, GitReference::DefaultBranch).unwrap();
-        assert_eq!(gen_hash(source_id), 15332537265078583985);
-        assert_eq!(crate::util::hex::short_hash(&source_id), "73a808694abda756");
+        assert_eq!(gen_hash(source_id), 3109465066469481245);
+        assert_eq!(crate::util::hex::short_hash(&source_id), "1d5b66d8000a272b");
 
-        let path = Path::new("/tmp/ws/crate");
-
+        let path = &ws_root.join("crate");
         let source_id = SourceId::for_local_registry(path).unwrap();
-        assert_eq!(gen_hash(source_id), 18446533307730842837);
-        assert_eq!(crate::util::hex::short_hash(&source_id), "52a84cc73f6fd48b");
+        #[cfg(not(windows))]
+        {
+            assert_eq!(gen_hash(source_id), 17171351456028149232);
+            assert_eq!(crate::util::hex::short_hash(&source_id), "f0c5f1e92be54cee");
+        }
+        #[cfg(windows)]
+        {
+            assert_eq!(gen_hash(source_id), 10712195329887934127);
+            assert_eq!(crate::util::hex::short_hash(&source_id), "af96919ae55ca994");
+        }
 
         let source_id = SourceId::for_path(path).unwrap();
-        assert_eq!(gen_hash(source_id), 8764714075439899829);
-        assert_eq!(crate::util::hex::short_hash(&source_id), "e1ddd48578620fc1");
+        assert_eq!(gen_hash(source_id), 13241112980875747369);
+        #[cfg(not(windows))]
+        assert_eq!(crate::util::hex::short_hash(&source_id), "e5ba2edec163e65a");
+        #[cfg(windows)]
+        assert_eq!(crate::util::hex::short_hash(&source_id), "429dd6f2283a9b5c");
 
         let source_id = SourceId::for_directory(path).unwrap();
-        assert_eq!(gen_hash(source_id), 17459999773908528552);
-        assert_eq!(crate::util::hex::short_hash(&source_id), "6568fe2c2fab5bfe");
+        #[cfg(not(windows))]
+        {
+            assert_eq!(gen_hash(source_id), 12461124588148212881);
+            assert_eq!(crate::util::hex::short_hash(&source_id), "91c47582caceeeac");
+        }
+        #[cfg(windows)]
+        {
+            assert_eq!(gen_hash(source_id), 17000469607053345884);
+            assert_eq!(crate::util::hex::short_hash(&source_id), "5c443d0709cdedeb");
+        }
     }
 
     #[test]
