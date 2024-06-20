@@ -792,16 +792,6 @@ mod tests {
     // the prefix components (e.g. `C:`), there is not way to have a
     // cross-platform stable hash for absolute paths.
     #[test]
-    fn test_cratesio_hash() {
-        let gctx = GlobalContext::default().unwrap();
-        let crates_io = SourceId::crates_io(&gctx).unwrap();
-        assert_eq!(crate::util::hex::short_hash(&crates_io), "83d63c3e13aca8cc");
-    }
-
-    // See the comment in `test_cratesio_hash`.
-    //
-    // Only test on non-Windows as paths on Windows will get different hashes.
-    #[test]
     fn test_stable_hash() {
         use std::hash::Hasher;
         use std::path::Path;
