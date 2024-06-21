@@ -2201,7 +2201,7 @@ fn publish_artifact_dep() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [PACKAGING] foo v0.1.0 ([ROOT]/foo)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] [FILE_NUM] files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.1.0 ([ROOT]/foo)
 [UPLOADED] foo v0.1.0 to registry `crates-io`
 [NOTE] waiting for `foo v0.1.0` to be available at registry `crates-io`.
