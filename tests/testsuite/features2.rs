@@ -1153,6 +1153,7 @@ it is false
         .exists());
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn proc_macro_ws() {
     // Checks for bug with proc-macro in a workspace with dependency (shouldn't panic).
@@ -1225,22 +1226,12 @@ fn proc_macro_ws() {
 "#]])
         .run();
     // Selecting just foo will build without unification.
-    let expected = if cfg!(target_os = "macos") {
-        str![[r#"
-...
-[RUNNING] `rustc --crate-name foo --edition=2015 foo/src/lib.rs --error-format=json --json=[..] --crate-type lib --emit=[..] -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --check-cfg[..] --check-cfg[..] -C metadata=[..] -C extra-filename=[..] --out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps`
-...
-"#]]
-    } else {
-        str![[r#"
-...
-[RUNNING] `rustc --crate-name foo --edition=2015 foo/src/lib.rs --error-format=json --json=[..] --crate-type lib --emit=[..] -C embed-bitcode=no -C debuginfo=2 --check-cfg[..] --check-cfg[..] -C metadata=[..] -C extra-filename=[..] --out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps`
-...
-"#]]
-    };
     p.cargo("check -p foo -v")
         // Make sure `foo` is built without feat1
-        .with_stderr_data(expected)
+        .with_stderr_line_without(
+            &["[RUNNING] `rustc --crate-name foo --edition=2015"],
+            &["--cfg[..]feat1"],
+        )
         .run();
 }
 
