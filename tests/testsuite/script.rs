@@ -1,7 +1,7 @@
-#![allow(deprecated)]
-
 use cargo_test_support::basic_manifest;
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 
 const ECHO_SCRIPT: &str = r#"#!/usr/bin/env cargo
 
@@ -30,19 +30,18 @@ fn basic_rs() {
 
     p.cargo("-Zscript -v echo.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"bin: [..]/debug/echo[EXE]
+        .with_stdout_data(str![[r#"
+bin: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
 args: []
-"#,
-        )
-        .with_stderr(
-            "\
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] echo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/echo[EXE]`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]`
+
+"#]])
         .run();
 }
 
@@ -54,19 +53,18 @@ fn basic_path() {
 
     p.cargo("-Zscript -v ./echo")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"bin: [..]/debug/echo[EXE]
+        .with_stdout_data(str![[r#"
+bin: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
 args: []
-"#,
-        )
-        .with_stderr(
-            "\
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] echo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/echo[EXE]`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]`
+
+"#]])
         .run();
 }
 
@@ -78,18 +76,17 @@ fn basic_cargo_toml() {
 
     p.cargo("-Zscript -v Cargo.toml")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"bin: target/debug/foo[EXE]
+        .with_stdout_data(str![[r#"
+bin: target/debug/foo[EXE]
 args: []
-"#,
-        )
-        .with_stderr(
-            "\
+
+"#]])
+        .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -102,18 +99,17 @@ fn path_required() {
     p.cargo("-Zscript -v echo")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
-        .with_stdout("")
-        .with_stderr(
-            "\
-error: no such command: `echo`
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[ERROR] no such command: `echo`
 
-<tab>Did you mean `bench`?
+	Did you mean `bench`?
 
-<tab>View all installed commands with `cargo --list`
-<tab>Find a package to install `echo` with `cargo search cargo-echo`
-<tab>To run the file `echo`, provide a relative path like `./echo`
-",
-        )
+	View all installed commands with `cargo --list`
+	Find a package to install `echo` with `cargo search cargo-echo`
+	To run the file `echo`, provide a relative path like `./echo`
+
+"#]])
         .run();
 }
 
@@ -133,19 +129,18 @@ fn manifest_precedence_over_plugins() {
     p.cargo("-Zscript -v echo.rs")
         .env("PATH", &path)
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"bin: [..]/debug/echo[EXE]
+        .with_stdout_data(str![[r#"
+bin: [ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]
 args: []
-"#,
-        )
-        .with_stderr(
-            "\
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] echo v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/echo[EXE]`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]`
+
+"#]])
         .run();
 }
 
@@ -163,14 +158,13 @@ fn warn_when_plugin_masks_manifest_on_stable() {
 
     p.cargo("-v echo.rs")
         .env("PATH", &path)
-        .with_stdout("")
-        .with_stderr(
-            "\
-warning: external subcommand `echo.rs` has the appearance of a manifest-command
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[WARNING] external subcommand `echo.rs` has the appearance of a manifest-command
 This was previously accepted but will be phased out when `-Zscript` is stabilized.
 For more information, see issue #12207 <https://github.com/rust-lang/cargo/issues/12207>.
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -182,12 +176,11 @@ fn requires_nightly() {
 
     p.cargo("-v echo.rs")
         .with_status(101)
-        .with_stdout("")
-        .with_stderr(
-            "\
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
 [ERROR] running the file `echo.rs` requires `-Zscript`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -200,12 +193,11 @@ fn requires_z_flag() {
     p.cargo("-v echo.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
-        .with_stdout("")
-        .with_stderr(
-            "\
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
 [ERROR] running the file `echo.rs` requires `-Zscript`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -226,17 +218,16 @@ fn main() {
 
     p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"Hello world!
-"#,
-        )
-        .with_stderr(
-            "\
+        .with_stdout_data(str![[r#"
+Hello world!
+
+"#]])
+        .with_stderr_data(str![[r#"
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/script[EXE]`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+
+"#]])
         .run();
 }
 
@@ -256,18 +247,17 @@ fn main() {
 
     p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"Hello world!
-"#,
-        )
-        .with_stderr(
-            "\
+        .with_stdout_data(str![[r#"
+Hello world!
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/script[EXE]`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+
+"#]])
         .run();
 }
 
@@ -285,52 +275,49 @@ fn main() {
 
     p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"msg = undefined
-"#,
-        )
-        .with_stderr(
-            "\
+        .with_stdout_data(str![[r#"
+msg = undefined
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/script[EXE]`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+
+"#]])
         .run();
 
     // Verify we don't rebuild
     p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"msg = undefined
-"#,
-        )
-        .with_stderr(
-            "\
+        .with_stdout_data(str![[r#"
+msg = undefined
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/script[EXE]`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+
+"#]])
         .run();
 
     // Verify we do rebuild
     p.cargo("-Zscript -v script.rs")
         .env("_MESSAGE", "hello")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"msg = hello
-"#,
-        )
-        .with_stderr(
-            "\
+        .with_stdout_data(str![[r#"
+msg = hello
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/script[EXE]`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+
+"#]])
         .run();
 }
 
@@ -357,21 +344,23 @@ rustc = "non-existent-rustc"
     p.cargo("-Zscript script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
-        .with_stderr_contains(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] could not execute process `non-existent-rustc -vV` (never executed)
-",
-        )
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
         .run();
 
     // Verify that the config isn't used
     p.cargo("-Zscript ../script/script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"bin: [..]/debug/script[EXE]
+        .with_stdout_data(str![[r#"
+bin: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
 args: ["-NotAnArg"]
-"#,
-        )
+
+"#]])
         .run();
 }
 
@@ -384,15 +373,12 @@ fn default_programmatic_verbosity() {
 
     p.cargo("-Zscript script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"bin: [..]/debug/script[EXE]
+        .with_stdout_data(str![[r#"
+bin: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
 args: ["-NotAnArg"]
-"#,
-        )
-        .with_stderr(
-            "\
-",
-        )
+
+"#]])
+        .with_stderr_data("")
         .run();
 }
 
@@ -405,15 +391,12 @@ fn quiet() {
 
     p.cargo("-Zscript -q script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"bin: [..]/debug/script[EXE]
+        .with_stdout_data(str![[r#"
+bin: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
 args: ["-NotAnArg"]
-"#,
-        )
-        .with_stderr(
-            "\
-",
-        )
+
+"#]])
+        .with_stderr_data("")
         .run();
 }
 
@@ -431,18 +414,17 @@ fn main() {
 
     p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"line: 4
-"#,
-        )
-        .with_stderr(
-            "\
+        .with_stdout_data(str![[r#"
+line: 4
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/script[EXE]`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+
+"#]])
         .run();
 }
 
@@ -455,19 +437,18 @@ fn test_escaped_hyphen_arg() {
 
     p.cargo("-Zscript -v -- script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"bin: [..]/debug/script[EXE]
+        .with_stdout_data(str![[r#"
+bin: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
 args: ["-NotAnArg"]
-"#,
-        )
-        .with_stderr(
-            "\
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/script[EXE] -NotAnArg`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] -NotAnArg`
+
+"#]])
         .run();
 }
 
@@ -480,19 +461,18 @@ fn test_unescaped_hyphen_arg() {
 
     p.cargo("-Zscript -v script.rs -NotAnArg")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"bin: [..]/debug/script[EXE]
+        .with_stdout_data(str![[r#"
+bin: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
 args: ["-NotAnArg"]
-"#,
-        )
-        .with_stderr(
-            "\
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/script[EXE] -NotAnArg`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] -NotAnArg`
+
+"#]])
         .run();
 }
 
@@ -505,19 +485,18 @@ fn test_same_flags() {
 
     p.cargo("-Zscript -v script.rs --help")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"bin: [..]/debug/script[EXE]
+        .with_stdout_data(str![[r#"
+bin: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
 args: ["--help"]
-"#,
-        )
-        .with_stderr(
-            "\
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/script[EXE] --help`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] --help`
+
+"#]])
         .run();
 }
 
@@ -530,18 +509,18 @@ fn test_name_has_weird_chars() {
 
     p.cargo("-Zscript -v s-h.w§c!.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"bin: [..]/debug/s-h-w-c-[EXE]
+        .with_stdout_data(str![[r#"
+bin: [ROOT]/home/.cargo/target/[HASH]/debug/s-h-w-c-[EXE]
 args: []
-"#,
-        )
-        .with_stderr(
-            r#"[WARNING] `package.edition` is unspecified, defaulting to `2021`
+
+"#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] s-h-w-c- v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/s-h-w-c-[EXE]`
-"#,
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/s-h-w-c-[EXE]`
+
+"#]])
         .run();
 }
 
@@ -554,18 +533,18 @@ fn test_name_has_leading_number() {
 
     p.cargo("-Zscript -v 42answer.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"bin: [..]/debug/answer[EXE]
+        .with_stdout_data(str![[r#"
+bin: [ROOT]/home/.cargo/target/[HASH]/debug/answer[EXE]
 args: []
-"#,
-        )
-        .with_stderr(
-            r#"[WARNING] `package.edition` is unspecified, defaulting to `2021`
+
+"#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] answer v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/answer[EXE]`
-"#,
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/answer[EXE]`
+
+"#]])
         .run();
 }
 
@@ -576,18 +555,18 @@ fn test_name_is_number() {
 
     p.cargo("-Zscript -v 42.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"bin: [..]/debug/package[EXE]
+        .with_stdout_data(str![[r#"
+bin: [ROOT]/home/.cargo/target/[HASH]/debug/package[EXE]
 args: []
-"#,
-        )
-        .with_stderr(
-            r#"[WARNING] `package.edition` is unspecified, defaulting to `2021`
+
+"#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] package v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/package[EXE]`
-"#,
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/package[EXE]`
+
+"#]])
         .run();
 }
 
@@ -600,12 +579,11 @@ fn script_like_dir() {
     p.cargo("-Zscript -v foo.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] no such file or subcommand `foo.rs`
-<tab>`foo.rs` is a directory
-",
-        )
+	`foo.rs` is a directory
+
+"#]])
         .run();
 }
 
@@ -616,11 +594,10 @@ fn non_existent_rs() {
     p.cargo("-Zscript -v foo.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] no such file or subcommand `foo.rs`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -631,12 +608,11 @@ fn non_existent_rs_stable() {
     p.cargo("-v foo.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
-        .with_stdout("")
-        .with_stderr(
-            "\
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
 [ERROR] no such subcommand `foo.rs`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -649,13 +625,12 @@ fn did_you_mean_file() {
     p.cargo("-Zscript -v foo.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
-        .with_stdout("")
-        .with_stderr(
-            "\
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
 [ERROR] no such file or subcommand `foo.rs`
-<tab>Did you mean the file `./food.rs`
-",
-        )
+	Did you mean the file `./food.rs`
+
+"#]])
         .run();
 }
 
@@ -668,13 +643,12 @@ fn did_you_mean_file_stable() {
     p.cargo("-v foo.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
-        .with_stdout("")
-        .with_stderr(
-            "\
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
 [ERROR] no such subcommand `foo.rs`
-<tab>Did you mean the file `./food.rs` with `-Zscript`
-",
-        )
+	Did you mean the file `./food.rs` with `-Zscript`
+
+"#]])
         .run();
 }
 
@@ -685,13 +659,12 @@ fn did_you_mean_command() {
     p.cargo("-Zscript -v build--manifest-path=./Cargo.toml")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
-        .with_stdout("")
-        .with_stderr(
-            "\
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
 [ERROR] no such file or subcommand `build--manifest-path=./Cargo.toml`
-<tab>Did you mean the command `build --manifest-path=./Cargo.toml`
-",
-        )
+	Did you mean the command `build --manifest-path=./Cargo.toml`
+
+"#]])
         .run();
 }
 
@@ -702,13 +675,12 @@ fn did_you_mean_command_stable() {
     p.cargo("-v build--manifest-path=./Cargo.toml")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
-        .with_stdout("")
-        .with_stderr(
-            "\
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
 [ERROR] no such subcommand `build--manifest-path=./Cargo.toml`
-<tab>Did you mean the command `build --manifest-path=./Cargo.toml`
-",
-        )
+	Did you mean the command `build --manifest-path=./Cargo.toml`
+
+"#]])
         .run();
 }
 
@@ -730,12 +702,11 @@ fn main() {
 
     p.cargo("-Zscript -v script.rs --help")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"Hello world!
-"#,
-        )
-        .with_stderr(
-            "\
+        .with_stdout_data(str![[r#"
+Hello world!
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
@@ -743,10 +714,10 @@ fn main() {
 [DOWNLOADED] script v1.0.0 (registry `dummy-registry`)
 [COMPILING] script v1.0.0
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/script[EXE] --help`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] --help`
+
+"#]])
         .run();
 }
 
@@ -770,20 +741,19 @@ fn main() {
 
     p.cargo("-Zscript -v script.rs --help")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"Hello world!
-"#,
-        )
-        .with_stderr(
-            "\
+        .with_stdout_data(str![[r#"
+Hello world!
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/script[EXE] --help`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] --help`
+
+"#]])
         .run();
 }
 
@@ -801,18 +771,17 @@ fn main() {
 
     p.cargo("-Zscript -v script.rs --help")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"Hello world!
-"#,
-        )
-        .with_stderr(
-            "\
+        .with_stdout_data(str![[r#"
+Hello world!
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/script[EXE] --help`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] --help`
+
+"#]])
         .run();
 }
 
@@ -830,18 +799,17 @@ fn main() {
 
     p.cargo("-Zscript -v script.rs --help")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"Hello world!
-"#,
-        )
-        .with_stderr(
-            "\
+        .with_stdout_data(str![[r#"
+Hello world!
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/script[EXE] --help`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] --help`
+
+"#]])
         .run();
 }
 
@@ -854,19 +822,18 @@ fn implicit_target_dir() {
 
     p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"bin: [ROOT]/home/.cargo/target/[..]/debug/script[EXE]
+        .with_stdout_data(str![[r#"
+bin: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
 args: []
-"#,
-        )
-        .with_stderr(
-            "\
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/target/[..]/debug/script[EXE]`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+
+"#]])
         .run();
 }
 
@@ -882,19 +849,18 @@ fn no_local_lockfile() {
 
     p.cargo("-Zscript -v script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"bin: [ROOT]/home/.cargo/target/[..]/debug/script[EXE]
+        .with_stdout_data(str![[r#"
+bin: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
 args: []
-"#,
-        )
-        .with_stderr(
-            "\
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[ROOT]/home/.cargo/target/[..]/debug/script[EXE]`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+
+"#]])
         .run();
 
     assert!(!local_lockfile_path.exists());
@@ -909,12 +875,11 @@ fn cmd_check_requires_nightly() {
 
     p.cargo("check --manifest-path script.rs")
         .with_status(101)
-        .with_stdout("")
-        .with_stderr(
-            "\
-error: embedded manifest `[ROOT]/foo/script.rs` requires `-Zscript`
-",
-        )
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[ERROR] embedded manifest `[ROOT]/foo/script.rs` requires `-Zscript`
+
+"#]])
         .run();
 }
 
@@ -928,12 +893,11 @@ fn cmd_check_requires_z_flag() {
     p.cargo("check --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
-        .with_stdout("")
-        .with_stderr(
-            "\
-error: embedded manifest `[ROOT]/foo/script.rs` requires `-Zscript`
-",
-        )
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[ERROR] embedded manifest `[ROOT]/foo/script.rs` requires `-Zscript`
+
+"#]])
         .run();
 }
 
@@ -946,17 +910,13 @@ fn cmd_check_with_embedded() {
 
     p.cargo("-Zscript check --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            "\
-",
-        )
-        .with_stderr(
-            "\
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [CHECKING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -967,15 +927,11 @@ fn cmd_check_with_missing_script_rs() {
     p.cargo("-Zscript check --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
-        .with_stdout(
-            "\
-",
-        )
-        .with_stderr(
-            "\
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
 [ERROR] manifest path `script.rs` does not exist
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -986,15 +942,11 @@ fn cmd_check_with_missing_script() {
     p.cargo("-Zscript check --manifest-path script")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
-        .with_stdout(
-            "\
-",
-        )
-        .with_stderr(
-            "\
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
 [ERROR] the manifest-path must be a path to a Cargo.toml file
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1007,17 +959,13 @@ fn cmd_build_with_embedded() {
 
     p.cargo("-Zscript build --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            "\
-",
-        )
-        .with_stderr(
-            "\
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1030,23 +978,22 @@ fn cmd_test_with_embedded() {
 
     p.cargo("-Zscript test --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            "
+        .with_stdout_data(str![[r#"
+
 running 1 test
 test test ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [..]s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
 
-",
-        )
-        .with_stderr(
-            "\
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] unittests script.rs ([..])
-",
-        )
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests script.rs ([ROOT]/home/.cargo/target/[HASH]/debug/deps/script-[HASH][EXE])
+
+"#]])
         .run();
 }
 
@@ -1064,16 +1011,12 @@ fn cmd_clean_with_embedded() {
 
     p.cargo("-Zscript clean --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            "\
-",
-        )
-        .with_stderr(
-            "\
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
-[REMOVED] [..] files, [..] total
-",
-        )
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
         .run();
 }
 
@@ -1086,15 +1029,11 @@ fn cmd_generate_lockfile_with_embedded() {
 
     p.cargo("-Zscript generate-lockfile --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            "\
-",
-        )
-        .with_stderr(
-            "\
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1107,79 +1046,81 @@ fn cmd_metadata_with_embedded() {
 
     p.cargo("-Zscript metadata --manifest-path script.rs --format-version=1")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_json(
-            r#"
+        .with_stdout_data(
+            str![[r#"
+{
+  "metadata": null,
+  "packages": [
     {
-        "packages": [
-            {
-                "authors": [
-                ],
-                "categories": [],
-                "default_run": null,
-                "name": "script",
-                "version": "0.0.0",
-                "id": "path+file:[..]foo#script@0.0.0",
-                "keywords": [],
-                "source": null,
-                "dependencies": [],
-                "edition": "[..]",
-                "license": null,
-                "license_file": null,
-                "links": null,
-                "description": null,
-                "readme": null,
-                "repository": null,
-                "rust_version": null,
-                "homepage": null,
-                "documentation": null,
-                "homepage": null,
-                "documentation": null,
-                "targets": [
-                    {
-                        "kind": [
-                            "bin"
-                        ],
-                        "crate_types": [
-                            "bin"
-                        ],
-                        "doc": true,
-                        "doctest": false,
-                        "test": true,
-                        "edition": "[..]",
-                        "name": "script",
-                        "src_path": "[..]/script.rs"
-                    }
-                ],
-                "features": {},
-                "manifest_path": "[..]script.rs",
-                "metadata": null,
-                "publish": []
-            }
-        ],
-        "workspace_members": ["path+file:[..]foo#script@0.0.0"],
-        "workspace_default_members": ["path+file:[..]foo#script@0.0.0"],
-        "resolve": {
-            "nodes": [
-                {
-                    "dependencies": [],
-                    "deps": [],
-                    "features": [],
-                    "id": "path+file:[..]foo#script@0.0.0"
-                }
-            ],
-            "root": "path+file:[..]foo#script@0.0.0"
-        },
-        "target_directory": "[ROOT]/home/.cargo/target/[..]",
-        "version": 1,
-        "workspace_root": "[..]/foo",
-        "metadata": null
-    }"#,
+      "authors": [],
+      "categories": [],
+      "default_run": null,
+      "dependencies": [],
+      "description": null,
+      "documentation": null,
+      "edition": "2021",
+      "features": {},
+      "homepage": null,
+      "id": "path+[ROOTURL]/foo#script@0.0.0",
+      "keywords": [],
+      "license": null,
+      "license_file": null,
+      "links": null,
+      "manifest_path": "[ROOT]/foo/script.rs",
+      "metadata": null,
+      "name": "script",
+      "publish": [],
+      "readme": null,
+      "repository": null,
+      "rust_version": null,
+      "source": null,
+      "targets": [
+        {
+          "crate_types": [
+            "bin"
+          ],
+          "doc": true,
+          "doctest": false,
+          "edition": "2021",
+          "kind": [
+            "bin"
+          ],
+          "name": "script",
+          "src_path": "[ROOT]/foo/script.rs",
+          "test": true
+        }
+      ],
+      "version": "0.0.0"
+    }
+  ],
+  "resolve": {
+    "nodes": [
+      {
+        "dependencies": [],
+        "deps": [],
+        "features": [],
+        "id": "path+[ROOTURL]/foo#script@0.0.0"
+      }
+    ],
+    "root": "path+[ROOTURL]/foo#script@0.0.0"
+  },
+  "target_directory": "[ROOT]/home/.cargo/target/[HASH]",
+  "version": 1,
+  "workspace_default_members": [
+    "path+[ROOTURL]/foo#script@0.0.0"
+  ],
+  "workspace_members": [
+    "path+[ROOTURL]/foo#script@0.0.0"
+  ],
+  "workspace_root": "[ROOT]/foo"
+}
+"#]]
+            .json(),
         )
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1192,50 +1133,56 @@ fn cmd_read_manifest_with_embedded() {
 
     p.cargo("-Zscript read-manifest --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_json(
-            r#"
+        .with_stdout_data(
+            str![[r#"
 {
-    "authors": [
-    ],
-    "categories": [],
-    "default_run": null,
-    "name":"script",
-    "readme": null,
-    "homepage": null,
-    "documentation": null,
-    "repository": null,
-    "rust_version": null,
-    "version":"0.0.0",
-    "id":"path+file://[..]/foo#script@0.0.0",
-    "keywords": [],
-    "license": null,
-    "license_file": null,
-    "links": null,
-    "description": null,
-    "edition": "[..]",
-    "source":null,
-    "dependencies":[],
-    "targets":[{
-        "kind":["bin"],
-        "crate_types":["bin"],
-        "doc": true,
-        "doctest": false,
-        "test": true,
-        "edition": "[..]",
-        "name":"script",
-        "src_path":"[..]/script.rs"
-    }],
-    "features":{},
-    "manifest_path":"[..]script.rs",
-    "metadata": null,
-    "publish": []
-}"#,
+  "authors": [],
+  "categories": [],
+  "default_run": null,
+  "dependencies": [],
+  "description": null,
+  "documentation": null,
+  "edition": "2021",
+  "features": {},
+  "homepage": null,
+  "id": "path+[ROOTURL]/foo#script@0.0.0",
+  "keywords": [],
+  "license": null,
+  "license_file": null,
+  "links": null,
+  "manifest_path": "[ROOT]/foo/script.rs",
+  "metadata": null,
+  "name": "script",
+  "publish": [],
+  "readme": null,
+  "repository": null,
+  "rust_version": null,
+  "source": null,
+  "targets": [
+    {
+      "crate_types": [
+        "bin"
+      ],
+      "doc": true,
+      "doctest": false,
+      "edition": "2021",
+      "kind": [
+        "bin"
+      ],
+      "name": "script",
+      "src_path": "[ROOT]/foo/script.rs",
+      "test": true
+    }
+  ],
+  "version": "0.0.0"
+}
+"#]]
+            .json(),
         )
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1247,19 +1194,18 @@ fn cmd_run_with_embedded() {
 
     p.cargo("-Zscript run --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            r#"bin: [..]/debug/script[EXE]
+        .with_stdout_data(str![[r#"
+bin: [ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]
 args: []
-"#,
-        )
-        .with_stderr(
-            "\
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-[RUNNING] `[..]/debug/script[EXE]`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+
+"#]])
         .run();
 }
 
@@ -1271,16 +1217,14 @@ fn cmd_tree_with_embedded() {
 
     p.cargo("-Zscript tree --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 script v0.0.0 ([ROOT]/foo)
-",
-        )
-        .with_stderr(
-            "\
+
+"#]])
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1292,15 +1236,11 @@ fn cmd_update_with_embedded() {
 
     p.cargo("-Zscript update --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout(
-            "\
-",
-        )
-        .with_stderr(
-            "\
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1312,12 +1252,18 @@ fn cmd_verify_project_with_embedded() {
 
     p.cargo("-Zscript verify-project --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_json(r#"{"success":"true"}"#)
-        .with_stderr(
-            "\
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
-",
+        .with_stdout_data(
+            str![[r#"
+{
+  "success": "true"
+}
+"#]]
+            .json(),
         )
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
+
+"#]])
         .run();
 }
 
@@ -1330,12 +1276,11 @@ fn cmd_pkgid_with_embedded() {
     p.cargo("-Zscript pkgid --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [ERROR] [ROOT]/foo/script.rs is unsupported by `cargo pkgid`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1348,12 +1293,11 @@ fn cmd_package_with_embedded() {
     p.cargo("-Zscript package --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [ERROR] [ROOT]/foo/script.rs is unsupported by `cargo package`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1366,11 +1310,10 @@ fn cmd_publish_with_embedded() {
     p.cargo("-Zscript publish --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
 [ERROR] [ROOT]/foo/script.rs is unsupported by `cargo publish`
-",
-        )
+
+"#]])
         .run();
 }
