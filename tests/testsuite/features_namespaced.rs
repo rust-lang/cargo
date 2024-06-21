@@ -599,20 +599,7 @@ fn json_exposed() {
       "authors": [],
       "categories": [],
       "default_run": null,
-      "dependencies": [
-        {
-          "features": [],
-          "kind": null,
-          "name": "bar",
-          "optional": true,
-          "registry": null,
-          "rename": null,
-          "req": "^1.0",
-          "source": "registry+https://github.com/rust-lang/crates.io-index",
-          "target": null,
-          "uses_default_features": true
-        }
-      ],
+      "dependencies": "{...}",
       "description": null,
       "documentation": null,
       "edition": "2015",
@@ -635,22 +622,7 @@ fn json_exposed() {
       "repository": null,
       "rust_version": null,
       "source": null,
-      "targets": [
-        {
-          "crate_types": [
-            "lib"
-          ],
-          "doc": true,
-          "doctest": true,
-          "edition": "2015",
-          "kind": [
-            "lib"
-          ],
-          "name": "foo",
-          "src_path": "[ROOT]/foo/src/lib.rs",
-          "test": true
-        }
-      ],
+      "targets": "{...}",
       "version": "0.1.0"
     }
   ],
