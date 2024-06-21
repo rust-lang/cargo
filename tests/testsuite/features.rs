@@ -1,9 +1,8 @@
 //! Tests for `[features]` table.
 
-#![allow(deprecated)]
-
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::{Dependency, Package};
+use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]
@@ -27,14 +26,13 @@ fn invalid1() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   feature `bar` includes `baz` which is neither a dependency nor another feature
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -59,16 +57,15 @@ fn empty_feature_name() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] feature name cannot be empty
  --> Cargo.toml:9:17
   |
-9 |                 \"\" = []
+9 |                 "" = []
   |                 ^^
   |
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -100,28 +97,25 @@ fn same_name() {
 
     p.cargo("tree -f")
         .arg("{p} [{f}]")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-",
-        )
-        .with_stdout(
-            "\
-foo v0.0.1 ([..]) []
-└── bar v1.0.0 ([..]) []
-",
-        )
+
+"#]])
+        .with_stdout_data(str![[r#"
+foo v0.0.1 ([ROOT]/foo) []
+└── bar v1.0.0 ([ROOT]/foo/bar) []
+
+"#]])
         .run();
 
     p.cargo("tree --features bar -f")
         .arg("{p} [{f}]")
-        .with_stderr("")
-        .with_stdout(
-            "\
-foo v0.0.1 ([..]) [bar,baz]
-└── bar v1.0.0 ([..]) []
-",
-        )
+        .with_stderr_data("")
+        .with_stdout_data(str![[r#"
+foo v0.0.1 ([ROOT]/foo) [bar,baz]
+└── bar v1.0.0 ([ROOT]/foo/bar) []
+
+"#]])
         .run();
 }
 
@@ -149,15 +143,14 @@ fn invalid3() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   feature `bar` includes `baz`, but `baz` is not an optional dependency
   A non-optional dependency of the same name is defined; consider adding `optional = true` to its definition.
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -185,24 +178,27 @@ fn invalid4() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to select a version for `bar`.
-    ... required by package `foo v0.0.1 ([..])`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to select a version for `bar`.
+    ... required by package `foo v0.0.1 ([ROOT]/foo)`
 versions that meet the requirements `*` are: 0.0.1
 
 the package `foo` depends on `bar`, with features: `bar` but `bar` does not have these features.
 
 
-failed to select a version for `bar` which could resolve this conflict",
-        )
+failed to select a version for `bar` which could resolve this conflict
+
+"#]])
         .run();
 
     p.change_file("Cargo.toml", &basic_manifest("foo", "0.0.1"));
 
     p.cargo("check --features test")
         .with_status(101)
-        .with_stderr("error: Package `foo v0.0.1 ([..])` does not have the feature `test`")
+        .with_stderr_data(str![[r#"
+[ERROR] Package `foo v0.0.1 ([ROOT]/foo)` does not have the feature `test`
+
+"#]])
         .run();
 }
 
@@ -228,14 +224,13 @@ fn invalid5() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   dev-dependencies are not allowed to be optional: `bar`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -260,14 +255,13 @@ fn invalid6() {
 
     p.cargo("check --features foo")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   feature `foo` includes `bar/baz`, but `bar` is not a dependency
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -293,14 +287,13 @@ fn invalid7() {
 
     p.cargo("check --features foo")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   feature `foo` includes `bar/baz`, but `bar` is not a dependency
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -328,15 +321,14 @@ fn invalid8() {
 
     p.cargo("check --features foo")
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[CWD]/Cargo.toml`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   feature `foo/bar` in dependency `bar` is not allowed to contain slashes
   If you want to enable features [..]
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -362,12 +354,13 @@ fn invalid9() {
         .build();
 
     p.cargo("check --features bar")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-error: Package `foo v0.0.1 ([..])` does not have feature `bar`. It has a required dependency with that name, but only optional dependencies can be used as features.
-",
-        ).with_status(101).run();
+[ERROR] Package `foo v0.0.1 ([ROOT]/foo)` does not have feature `bar`. It has a required dependency with that name, but only optional dependencies can be used as features.
+
+"#]])
+        .with_status(101)
+        .run();
 }
 
 #[cargo_test]
@@ -406,9 +399,10 @@ fn invalid10() {
         .file("bar/baz/src/lib.rs", "")
         .build();
 
-    p.cargo("check").with_stderr("\
-error: failed to select a version for `bar`.
-    ... required by package `foo v0.0.1 ([..])`
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[ERROR] failed to select a version for `bar`.
+    ... required by package `foo v0.0.1 ([ROOT]/foo)`
 versions that meet the requirements `*` are: 0.0.1
 
 the package `foo` depends on `bar`, with features: `baz` but `bar` does not have these features.
@@ -416,7 +410,9 @@ the package `foo` depends on `bar`, with features: `baz` but `bar` does not have
 
 
 failed to select a version for `bar` which could resolve this conflict
-").with_status(101)
+
+"#]])
+        .with_status(101)
         .run();
 }
 
@@ -483,14 +479,13 @@ fn no_transitive_dep_feature_requirement() {
         .build();
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[CWD]/Cargo.toml`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   multiple slashes in feature `derived/bar/qux` (included by feature `default`) are not allowed
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -527,29 +522,44 @@ fn no_feature_doesnt_build() {
         .build();
 
     p.cargo("build")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
-    p.process(&p.bin("foo")).with_stdout("").run();
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-    p.cargo("build --features bar -v")
-        .with_stderr(
-            "\
-[COMPILING] bar v0.0.1 ([CWD]/bar)
-[RUNNING] `rustc --crate-name bar [..]
-[DIRTY-MSVC] foo v0.0.1 ([CWD]): the list of features changed
-[COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+"#]])
         .run();
-    p.process(&p.bin("foo")).with_stdout("bar\n").run();
+    p.process(&p.bin("foo")).with_stdout_data("").run();
+
+    let expected = if cfg!(target_os = "windows") && cfg!(target_env = "msvc") {
+        str![[r#"
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[RUNNING] `rustc --crate-name bar [..]`
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the list of features changed
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+    } else {
+        str![[r#"
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[RUNNING] `rustc --crate-name bar [..]`
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+    };
+    p.cargo("build --features bar -v")
+        .with_stderr_data(expected)
+        .run();
+    p.process(&p.bin("foo"))
+        .with_stdout_data(str![[r#"
+bar
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -588,28 +598,41 @@ fn default_feature_pulled_in() {
         .build();
 
     p.cargo("build")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] bar v0.0.1 ([CWD]/bar)
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
-    p.process(&p.bin("foo")).with_stdout("bar\n").run();
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-    p.cargo("build --no-default-features -v")
-        .with_stderr(
-            "\
-[DIRTY-MSVC] foo v0.0.1 ([CWD]): the list of features changed
-[COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name foo [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+"#]])
         .run();
-    p.process(&p.bin("foo")).with_stdout("").run();
+    p.process(&p.bin("foo"))
+        .with_stdout_data(str![[r#"
+bar
+
+"#]])
+        .run();
+
+    let expected = if cfg!(target_os = "windows") && cfg!(target_env = "msvc") {
+        str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the list of features changed
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+    } else {
+        str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+    };
+    p.cargo("build --no-default-features -v")
+        .with_stderr_data(expected)
+        .run();
+    p.process(&p.bin("foo")).with_stdout_data("").run();
 }
 
 #[cargo_test]
@@ -633,7 +656,10 @@ fn cyclic_feature() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr("[ERROR] cyclic feature dependency: feature `default` depends on itself")
+        .with_stderr_data(str![[r#"
+[ERROR] cyclic feature dependency: feature `default` depends on itself
+
+"#]])
         .run();
 }
 
@@ -658,12 +684,11 @@ fn cyclic_feature2() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
-[CHECKING] foo [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -715,15 +740,14 @@ fn groups_on_groups_on_groups() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 3 packages to latest compatible versions
-[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
-[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
+[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -766,15 +790,14 @@ fn many_cli_features() {
 
     p.cargo("check --features")
         .arg("bar baz")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 3 packages to latest compatible versions
-[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
-[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
+[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -853,15 +876,14 @@ fn union_features() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 3 packages to latest compatible versions
-[CHECKING] d2 v0.0.1 ([CWD]/d2)
-[CHECKING] d1 v0.0.1 ([CWD]/d1)
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] d2 v0.0.1 ([ROOT]/foo/d2)
+[CHECKING] d1 v0.0.1 ([ROOT]/foo/d1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -902,25 +924,23 @@ fn many_features_no_rebuilds() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[CHECKING] a v0.1.0 ([CWD]/a)
-[CHECKING] b v0.1.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] a v0.1.0 ([ROOT]/foo/a)
+[CHECKING] b v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.root().move_into_the_past();
 
     p.cargo("check -v")
-        .with_stderr(
-            "\
-[FRESH] a v0.1.0 ([..]/a)
-[FRESH] b v0.1.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[FRESH] a v0.1.0 ([ROOT]/foo/a)
+[FRESH] b v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1103,8 +1123,18 @@ fn no_rebuild_when_frobbing_default_feature() {
         .build();
 
     p.cargo("check").run();
-    p.cargo("check").with_stderr("[FINISHED] [..]").run();
-    p.cargo("check").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -1157,8 +1187,18 @@ fn unions_work_with_no_default_features() {
         .build();
 
     p.cargo("check").run();
-    p.cargo("check").with_stderr("[FINISHED] [..]").run();
-    p.cargo("check").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -1185,13 +1225,12 @@ fn optional_and_dev_dep() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[CHECKING] test v0.1.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] test v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1359,7 +1398,11 @@ fn dep_feature_in_cmd_line() {
     // Building without any features enabled should fail:
     p.cargo("check")
         .with_status(101)
-        .with_stderr_contains("[..]unresolved import `bar::test`")
+        .with_stderr_data(str![[r#"
+...
+error[E0432]: unresolved import `bar::test`
+...
+"#]])
         .run();
 
     // We should be able to enable the feature "derived-feat", which enables "some-feat",
@@ -1369,13 +1412,19 @@ fn dep_feature_in_cmd_line() {
     // Trying to enable features of transitive dependencies is an error
     p.cargo("check --features bar/some-feat")
         .with_status(101)
-        .with_stderr("error: package `foo v0.0.1 ([..])` does not have a dependency named `bar`")
+        .with_stderr_data(str![[r#"
+[ERROR] package `foo v0.0.1 ([ROOT]/foo)` does not have a dependency named `bar`
+
+"#]])
         .run();
 
     // Hierarchical feature specification should still be disallowed
     p.cargo("check --features derived/bar/some-feat")
         .with_status(101)
-        .with_stderr("[ERROR] multiple slashes in feature `derived/bar/some-feat` is not allowed")
+        .with_stderr_data(str![[r#"
+[ERROR] multiple slashes in feature `derived/bar/some-feat` is not allowed
+
+"#]])
         .run();
 }
 
@@ -1463,15 +1512,14 @@ fn many_cli_features_comma_delimited() {
         .build();
 
     p.cargo("check --features bar,baz")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 3 packages to latest compatible versions
-[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
-[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
+[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1530,17 +1578,16 @@ fn many_cli_features_comma_and_space_delimited() {
 
     p.cargo("check --features")
         .arg("bar,baz bam bap")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 5 packages to latest compatible versions
-[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
-[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
-[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
-[CHECKING] ba[..] v0.0.1 ([CWD]/ba[..])
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
+[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
+[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
+[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1700,15 +1747,13 @@ fn warn_if_default_features() {
         .file("bar/src/lib.rs", "pub fn bar() {}")
         .build();
 
-    p.cargo("check")
-        .with_stderr(
-            r#"
+    p.cargo("check").with_stderr_data(str![[r#"
 [WARNING] `default-features = [".."]` was found in [features]. Did you mean to use `default = [".."]`?
 [LOCKING] 2 packages to latest compatible versions
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-            "#.trim(),
-        ).run();
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -1917,14 +1962,30 @@ fn all_features_virtual_ws() {
         )
         .build();
 
-    p.cargo("run").with_stdout("f1\n").run();
+    p.cargo("run")
+        .with_stdout_data(str![[r#"
+f1
+
+"#]])
+        .run();
     p.cargo("run --all-features")
-        .with_stdout("f1\nf2\nf3\nf4\n")
+        .with_stdout_data(str![[r#"
+f1
+f2
+f3
+f4
+
+"#]])
         .run();
     // In `a`, it behaves differently. :(
     p.cargo("run --all-features")
         .cwd("a")
-        .with_stdout("f1\nf2\nf3\n")
+        .with_stdout_data(str![[r#"
+f1
+f2
+f3
+
+"#]])
         .run();
 }
 
@@ -1974,7 +2035,11 @@ fn slash_optional_enables() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr_contains("[..]dep not set[..]")
+        .with_stderr_data(str![[r#"
+...
+[ERROR] dep not set
+...
+"#]])
         .run();
 
     p.cargo("check --features dep/feat").run();
@@ -2040,21 +2105,23 @@ fn registry_summary_order_doesnt_matter() {
         .build();
 
     p.cargo("run")
-        .with_stderr(
-            "\
-[UPDATING] [..]
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] [..]
-[DOWNLOADED] [..]
+[DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [COMPILING] dep v0.1.0
 [COMPILING] bar v0.1.0
-[COMPILING] foo v0.1.0 [..]
-[FINISHED] [..]
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
-",
-        )
-        .with_stdout("it works")
+
+"#]])
+        .with_stdout_data(str![[r#"
+it works
+
+"#]])
         .run();
 }
 
@@ -2095,19 +2162,13 @@ fn nonexistent_required_features() {
         .file("examples/ololo.rs", "fn main() {}")
         .build();
 
-    p.cargo("check --examples")
-        .with_stderr_contains(
-            "\
-[WARNING] invalid feature `not_present` in required-features of target `ololo`: \
-    `not_present` is not present in [features] section
-[WARNING] invalid feature `required_dependency/not_existing` in required-features \
-    of target `ololo`: feature `not_existing` does not exist in package \
-    `required_dependency v0.1.0`
-[WARNING] invalid feature `not_specified_dependency/some_feature` in required-features \
-    of target `ololo`: dependency `not_specified_dependency` does not exist
-",
-        )
-        .run();
+    p.cargo("check --examples").with_stderr_data(str![[r#"
+...
+[WARNING] invalid feature `not_present` in required-features of target `ololo`: `not_present` is not present in [features] section
+[WARNING] invalid feature `required_dependency/not_existing` in required-features of target `ololo`: feature `not_existing` does not exist in package `required_dependency v0.1.0`
+[WARNING] invalid feature `not_specified_dependency/some_feature` in required-features of target `ololo`: dependency `not_specified_dependency` does not exist
+...
+"#]]).run();
 }
 
 #[cargo_test]
@@ -2132,16 +2193,15 @@ fn invalid_feature_names_error() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] invalid character `+` in feature name: `+foo`, the first character must be a Unicode XID start character or digit (most letters or `_` or `0` to `9`)
  --> Cargo.toml:9:17
   |
-9 |                 \"+foo\" = []
+9 |                 "+foo" = []
   |                 ^^^^^^
   |
-",
-        )
+
+"#]])
         .run();
 
     p.change_file(
@@ -2160,16 +2220,15 @@ fn invalid_feature_names_error() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] invalid character `&` in feature name: `a&b`, characters must be Unicode XID characters, '-', `+`, or `.` (numbers, `+`, `-`, `_`, `.`, or most letters)
  --> Cargo.toml:9:13
   |
-9 |             \"a&b\" = []
+9 |             "a&b" = []
   |             ^^^^^
   |
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -2194,15 +2253,14 @@ fn invalid_feature_name_slash_error() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] invalid character `/` in feature name: `foo/bar`, feature name is not allowed to contain slashes
  --> Cargo.toml:8:17
   |
-8 |                 \"foo/bar\" = []
+8 |                 "foo/bar" = []
   |                 ^^^^^^^^^
   |
-",
-        )
+
+"#]])
         .run();
 }
