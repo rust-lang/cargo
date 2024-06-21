@@ -1,6 +1,5 @@
-#![allow(deprecated)]
-
 use cargo_test_support::project;
+use cargo_test_support::str;
 
 #[cargo_test]
 fn default() {
@@ -23,19 +22,18 @@ this-lint-does-not-exist = "warn"
 
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
-        .with_stderr(
-            "\
-warning: unknown lint: `this-lint-does-not-exist`
+        .with_stderr_data(str![[r#"
+[WARNING] unknown lint: `this-lint-does-not-exist`
  --> Cargo.toml:9:1
   |
-9 | this-lint-does-not-exist = \"warn\"
+9 | this-lint-does-not-exist = "warn"
   | ^^^^^^^^^^^^^^^^^^^^^^^^
   |
-  = note: `cargo::unknown_lints` is set to `warn` by default
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] [..]
-",
-        )
+  = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -70,24 +68,23 @@ workspace = true
 
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
-        .with_stderr(
-            "\
-warning: unknown lint: `this-lint-does-not-exist`
+        .with_stderr_data(str![[r#"
+[WARNING] unknown lint: `this-lint-does-not-exist`
  --> Cargo.toml:6:1
   |
-6 | this-lint-does-not-exist = \"warn\"
+6 | this-lint-does-not-exist = "warn"
   | ^^^^^^^^^^^^^^^^^^^^^^^^
   |
-note: `cargo::this-lint-does-not-exist` was inherited
+[NOTE] `cargo::this-lint-does-not-exist` was inherited
  --> foo/Cargo.toml:9:1
   |
 9 | workspace = true
   | ----------------
   |
-  = note: `cargo::unknown_lints` is set to `warn` by default
-[CHECKING] foo v0.0.1 ([CWD]/foo)
-[FINISHED] [..]
-",
-        )
+  = [NOTE] `cargo::unknown_lints` is set to `warn` by default
+[CHECKING] foo v0.0.1 ([ROOT]/foo/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
