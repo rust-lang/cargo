@@ -166,7 +166,7 @@ fn add_common_redactions(subs: &mut snapbox::Redactions) {
     .unwrap();
     subs.insert(
         "[FILE_NUM]",
-        regex!(r"\[(PACKAGED|REMOVED|SUMMARY)\] (?<redacted>[0-9]+) files"),
+        regex!(r"\[(REMOVED|SUMMARY)\] (?<redacted>[0-9]+) files"),
     )
     .unwrap();
     subs.insert(
