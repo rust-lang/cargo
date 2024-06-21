@@ -201,6 +201,18 @@ static MIN_LITERAL_REDACTIONS: &[(&str, &str)] = &[
     ("[EXE]", std::env::consts::EXE_SUFFIX),
     ("[BROKEN_PIPE]", "Broken pipe (os error 32)"),
     ("[BROKEN_PIPE]", "The pipe is being closed. (os error 232)"),
+    // Unix message for an entity was not found
+    ("[NOT_FOUND]", "No such file or directory (os error 2)"),
+    // Windows message for an entity was not found
+    (
+        "[NOT_FOUND]",
+        "The system cannot find the file specified. (os error 2)",
+    ),
+    (
+        "[NOT_FOUND]",
+        "The system cannot find the path specified. (os error 3)",
+    ),
+    ("[NOT_FOUND]", "program not found"),
     // Unix message for exit status
     ("[EXIT_STATUS]", "exit status"),
     // Windows message for exit status

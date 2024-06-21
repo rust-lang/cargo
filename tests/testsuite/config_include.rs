@@ -1,8 +1,8 @@
 //! Tests for `include` config field.
 
 use super::config::{assert_error, write_config_at, write_config_toml, GlobalContextBuilder};
+use cargo_test_support::project;
 use cargo_test_support::str;
-use cargo_test_support::{no_such_file_err_msg, project};
 
 #[cargo_test]
 fn gated() {
@@ -162,8 +162,7 @@ Caused by:
   failed to read configuration file `[..]/.cargo/missing.toml`
 
 Caused by:
-  {}",
-            no_such_file_err_msg()
+  [NOT_FOUND]",
         ),
     );
 }
@@ -270,8 +269,7 @@ Caused by:
   failed to read configuration file `[..]/foobar.toml`
 
 Caused by:
-  {}",
-            no_such_file_err_msg()
+  [NOT_FOUND]"
         ),
     );
 }
