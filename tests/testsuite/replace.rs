@@ -1,11 +1,9 @@
 //! Tests for `[replace]` table source replacement.
 
-#![allow(deprecated)]
-
 use cargo_test_support::git;
 use cargo_test_support::paths;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_manifest, project};
+use cargo_test_support::{basic_manifest, project, str};
 
 #[cargo_test]
 fn override_simple() {
@@ -43,16 +41,15 @@ fn override_simple() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[UPDATING] git repository `[..]`
+[UPDATING] git repository `[ROOTURL]/override`
 [LOCKING] 3 packages to latest compatible versions
-[CHECKING] bar v0.1.0 (file://[..])
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] bar v0.1.0 ([ROOTURL]/override#[..])
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -91,20 +88,16 @@ fn override_with_features() {
         )
         .build();
 
-    p.cargo("check")
-        .with_stderr(
-            "\
-[UPDATING] [..] index
-[UPDATING] git repository `[..]`
+    p.cargo("check").with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[UPDATING] git repository `[ROOTURL]/override`
 [LOCKING] 3 packages to latest compatible versions
-[WARNING] replacement for `bar` uses the features mechanism. default-features and features \
-will not take effect because the replacement dependency does not support this mechanism
-[CHECKING] bar v0.1.0 (file://[..])
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
+[WARNING] replacement for `bar` uses the features mechanism. default-features and features will not take effect because the replacement dependency does not support this mechanism
+[CHECKING] bar v0.1.0 ([ROOTURL]/override#[..])
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -142,20 +135,16 @@ fn override_with_setting_default_features() {
         )
         .build();
 
-    p.cargo("check")
-        .with_stderr(
-            "\
-[UPDATING] [..] index
-[UPDATING] git repository `[..]`
+    p.cargo("check").with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[UPDATING] git repository `[ROOTURL]/override`
 [LOCKING] 3 packages to latest compatible versions
-[WARNING] replacement for `bar` uses the features mechanism. default-features and features \
-will not take effect because the replacement dependency does not support this mechanism
-[CHECKING] bar v0.1.0 (file://[..])
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
+[WARNING] replacement for `bar` uses the features mechanism. default-features and features will not take effect because the replacement dependency does not support this mechanism
+[CHECKING] bar v0.1.0 ([ROOTURL]/override#[..])
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -180,17 +169,13 @@ fn missing_version() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check")
-        .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
+    p.cargo("check").with_status(101).with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  replacements must specify a version to replace, but `[..]bar` does not
-",
-        )
-        .run();
+  replacements must specify a version to replace, but `https://github.com/rust-lang/crates.io-index#bar` does not
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -217,14 +202,13 @@ fn invalid_semver_version() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-error: failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   replacements must specify a valid semver version to replace, but `bar:*` does not
-",
-        )
+...
+"#]])
         .run();
 }
 
@@ -253,17 +237,13 @@ fn different_version() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check")
-        .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
+    p.cargo("check").with_status(101).with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  replacements cannot specify a version requirement, but found one for [..]
-",
-        )
-        .run();
+  replacements cannot specify a version requirement, but found one for `https://github.com/rust-lang/crates.io-index#bar@0.1.0`
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -303,22 +283,26 @@ fn transitive() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[UPDATING] git repository `[..]`
+[UPDATING] git repository `[ROOTURL]/override`
 [LOCKING] 4 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] baz v0.2.0 (registry [..])
-[CHECKING] bar v0.1.0 (file://[..])
+[DOWNLOADED] baz v0.2.0 (registry `dummy-registry`)
+[CHECKING] bar v0.1.0 ([ROOTURL]/override#[..])
 [CHECKING] baz v0.2.0
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
-    p.cargo("check").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -357,19 +341,23 @@ fn persists_across_rebuilds() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[UPDATING] git repository `file://[..]`
+[UPDATING] git repository `[ROOTURL]/override`
 [LOCKING] 3 packages to latest compatible versions
-[CHECKING] bar v0.1.0 (file://[..])
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] bar v0.1.0 ([ROOTURL]/override#[..])
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
-    p.cargo("check").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -406,15 +394,14 @@ fn replace_registry_with_path() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest compatible versions
-[CHECKING] bar v0.1.0 ([ROOT][..]/bar)
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] bar v0.1.0 ([ROOT]/bar)
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -473,22 +460,21 @@ fn use_a_spec_to_select() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[UPDATING] git repository `[..]`
+[UPDATING] git repository `[ROOTURL]/override`
 [LOCKING] 5 packages to latest compatible versions
 [ADDING] baz v0.1.1 (latest: v0.2.0)
 [DOWNLOADING] crates ...
-[DOWNLOADED] [..]
-[DOWNLOADED] [..]
-[CHECKING] [..]
-[CHECKING] [..]
-[CHECKING] [..]
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[DOWNLOADED] baz v0.1.1 (registry `dummy-registry`)
+[DOWNLOADED] bar v0.1.1 (registry `dummy-registry`)
+[CHECKING] baz v0.2.0 ([ROOTURL]/override#[..])
+[CHECKING] baz v0.1.1
+[CHECKING] bar v0.1.1
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -538,46 +524,53 @@ fn override_adds_some_deps() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[UPDATING] git repository `[..]`
+[UPDATING] git repository `[ROOTURL]/override`
 [LOCKING] 4 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] baz v0.1.1 (registry [..])
+[DOWNLOADED] baz v0.1.1 (registry `dummy-registry`)
 [CHECKING] baz v0.1.1
-[CHECKING] bar v0.1.0 ([..])
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] bar v0.1.0 ([ROOTURL]/override#[..])
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
-    p.cargo("check").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 
     Package::new("baz", "0.1.2").publish();
     p.cargo("update")
         .arg(&format!("{}#bar", foo.url()))
-        .with_stderr(
-            "\
-[UPDATING] git repository `file://[..]`
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/override`
 [UPDATING] `dummy-registry` index
 [LOCKING] 0 packages to latest compatible versions
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
-",
-        )
+
+"#]])
         .run();
     p.cargo("update  https://github.com/rust-lang/crates.io-index#bar")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 0 packages to latest compatible versions
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
-",
-        )
+
+"#]])
         .run();
 
-    p.cargo("check").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -630,8 +623,18 @@ fn locked_means_locked_yes_no_seriously_i_mean_locked() {
 
     p.cargo("check").run();
 
-    p.cargo("check").with_stderr("[FINISHED] [..]").run();
-    p.cargo("check").with_stderr("[FINISHED] [..]").run();
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -668,18 +671,17 @@ fn override_wrong_name() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] [..] index
-[UPDATING] git repository [..]
-[ERROR] failed to get `baz` as a dependency of package `foo v0.0.1 ([..])`
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[UPDATING] git repository `[ROOTURL]/override`
+[ERROR] failed to get `baz` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
-  no matching package for override `[..]baz@0.1.0` found
-  location searched: file://[..]
+  no matching package for override `https://github.com/rust-lang/crates.io-index#baz@0.1.0` found
+  location searched: [ROOTURL]/override
   version required: =0.1.0
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -716,22 +718,21 @@ fn override_with_nothing() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] [..] index
-[UPDATING] git repository [..]
-[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([..])`
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[UPDATING] git repository `[ROOTURL]/override`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
   failed to load source for dependency `bar`
 
 Caused by:
-  Unable to update file://[..]
+  Unable to update [ROOTURL]/override
 
 Caused by:
-  Could not find Cargo.toml in `[..]`
-",
-        )
+  Could not find Cargo.toml in `[ROOT]/home/.cargo/git/checkouts/override-[HASH]/[..]`
+
+"#]])
         .run();
 }
 
@@ -754,17 +755,13 @@ fn override_wrong_version() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check")
-        .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
+    p.cargo("check").with_status(101).with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  replacements cannot specify a version requirement, but found one for `[..]bar@0.1.0`
-",
-        )
-        .run();
+  replacements cannot specify a version requirement, but found one for `https://github.com/rust-lang/crates.io-index#bar@0.1.0`
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -804,21 +801,20 @@ fn multiple_specs() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] [..] index
-[UPDATING] git repository [..]
-[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([..])`
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[UPDATING] git repository `[ROOTURL]/override`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
   overlapping replacement specifications found:
 
-    * [..]
-    * [..]
+    * https://github.com/rust-lang/crates.io-index#bar@0.1.0
+    * https://github.com/rust-lang/crates.io-index#bar@0.1.0
 
   both specifications match: bar v0.1.0
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -856,14 +852,16 @@ fn test_override_dep() {
 
     p.cargo("test -p bar")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-error: There are multiple `bar` packages in your project, and the [..]
-Please re-run this command with [..]
-  [..]#bar@0.1.0
-  [..]#bar@0.1.0
-",
-        )
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[UPDATING] git repository `[ROOTURL]/override`
+[LOCKING] 3 packages to latest compatible versions
+[ERROR] There are multiple `bar` packages in your project, and the specification `bar` is ambiguous.
+Please re-run this command with one of the following specifications:
+  registry+https://github.com/rust-lang/crates.io-index#bar@0.1.0
+  git+[ROOTURL]/override#bar@0.1.0
+
+"#]])
         .run();
 }
 
@@ -901,13 +899,12 @@ fn update() {
 
     p.cargo("generate-lockfile").run();
     p.cargo("update")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
-[UPDATING] git repository `[..]`
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[UPDATING] git repository `[ROOTURL]/override`
 [LOCKING] 0 packages to latest compatible versions
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1122,13 +1119,12 @@ fn overriding_nonexistent_no_spurious() {
 
     p.cargo("check").run();
     p.cargo("check")
-        .with_stderr(
-            "\
-[WARNING] package replacement is not used: [..]baz@0.1.0
-[FINISHED] [..]
-",
-        )
-        .with_stdout("")
+        .with_stderr_data(str![[r#"
+[WARNING] package replacement is not used: https://github.com/rust-lang/crates.io-index#baz@0.1.0
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stdout_data("")
         .run();
 }
 
@@ -1172,25 +1168,25 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
 
     p.cargo("check")
         .cwd("first_crate")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 4 packages to latest compatible versions
-[CHECKING] bar v0.1.0 ([..])
-[CHECKING] first_crate v0.1.0 ([..])
-[FINISHED] [..]",
-        )
+[CHECKING] bar v0.1.0 ([ROOT]/foo/local_bar)
+[CHECKING] first_crate v0.1.0 ([ROOT]/foo/first_crate)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("check")
         .cwd("second_crate")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[CHECKING] second_crate v0.1.0 ([..])
-[FINISHED] [..]",
-        )
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[CHECKING] second_crate v0.1.0 ([ROOT]/foo/second_crate)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1346,7 +1342,14 @@ fn override_plus_dep() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr_contains("error: cyclic package dependency: [..]")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] cyclic package dependency: package `bar v0.1.0 ([ROOT]/foo/bar)` depends on itself. Cycle:
+package `bar v0.1.0 ([ROOT]/foo/bar)`
+    ... which satisfies dependency `bar = "^0.1"` of package `foo v0.0.1 ([ROOT]/foo)`
+    ... which satisfies path dependency `foo` of package `bar v0.1.0 ([ROOT]/foo/bar)`
+
+"#]])
         .run();
 }
 
@@ -1385,20 +1388,16 @@ fn override_generic_matching_other_versions() {
         )
         .build();
 
-    p.cargo("check")
-        .with_stderr(
-            "\
+    p.cargo("check").with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[UPDATING] git repository `[..]`
-[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([..]/foo)`
+[UPDATING] git repository `[ROOTURL]/override`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
   replacement specification `https://github.com/rust-lang/crates.io-index#bar@0.1.0` matched 0.1.0+a and tried to override it with 0.1.0
   avoid matching unrelated packages by being more specific
-",
-        )
-        .with_status(101)
-        .run();
+
+"#]]).with_status(101).run();
 }
 
 #[cargo_test]
@@ -1436,28 +1435,19 @@ fn override_respects_spec_metadata() {
         )
         .build();
 
-    p.cargo("check")
-        .with_stderr(
-            "\
+    p.cargo("check").with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [WARNING] package replacement is not used: https://github.com/rust-lang/crates.io-index#bar@0.1.0+notTheBuild
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0+a (registry `dummy-registry`)
 [CHECKING] bar v0.1.0+a
-[CHECKING] foo v0.0.1 ([..]/foo)
-[..]
-[..]
-[..]
-[..]
-[..]
-[..]
-[..]
-error: could not compile `foo` (lib) due to 1 previous error
-",
-        )
-        .with_status(101)
-        .run();
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+error[E0425]: cannot find function `bar` in crate `bar`
+...
+[ERROR] could not compile `foo` (lib) due to 1 previous error
+
+"#]]).with_status(101).run();
 }
 
 #[cargo_test]
@@ -1496,15 +1486,14 @@ fn override_spec_metadata_is_optional() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[UPDATING] git repository `[..]`
+[UPDATING] git repository `[ROOTURL]/override`
 [LOCKING] 3 packages to latest compatible versions
-[CHECKING] bar v0.1.0+a (file://[..])
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] bar v0.1.0+a ([ROOTURL]/override#[..])
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
