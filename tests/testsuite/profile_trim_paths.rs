@@ -1,7 +1,5 @@
 //! Tests for `-Ztrim-paths`.
 
-#![allow(deprecated)]
-
 use cargo_test_support::basic_manifest;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git;
@@ -31,13 +29,13 @@ fn gated_manifest() {
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  feature `trim-paths` is required",
-        )
+  feature `trim-paths` is required
+...
+"#]])
         .run();
 }
 
@@ -57,13 +55,13 @@ fn gated_config_toml() {
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[ERROR] config profile `dev` is not valid (defined in `[CWD]/.cargo/config.toml`)
+        .with_stderr_data(str![[r#"
+[ERROR] config profile `dev` is not valid (defined in `[ROOT]/foo/.cargo/config.toml`)
 
 Caused by:
-  feature `trim-paths` is required",
-        )
+  feature `trim-paths` is required
+...
+"#]])
         .run();
 }
 
@@ -84,18 +82,16 @@ fn release_profile_default_to_object() {
 
     p.cargo("build --release --verbose -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc [..]\
-    -Zremap-path-scope=object \
-    --remap-path-prefix=[CWD]=. \
-    --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[FINISHED] `release` profile [..]",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
 fn one_option() {
     let build = |option| {
@@ -123,14 +119,15 @@ fn one_option() {
     for option in ["macro", "diagnostics", "object", "all"] {
         build(option)
             .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-            .with_stderr(&format!(
+            .with_stderr_data(&format!(
                 "\
-[COMPILING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]\
     -Zremap-path-scope={option} \
-    --remap-path-prefix=[CWD]=. \
+    --remap-path-prefix=[ROOT]/foo=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[FINISHED] `dev` profile [..]",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+",
             ))
             .run();
     }
@@ -161,15 +158,12 @@ fn multiple_options() {
 
     p.cargo("build --verbose -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc [..]\
-    -Zremap-path-scope=diagnostics,macro,object \
-    --remap-path-prefix=[CWD]=. \
-    --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[FINISHED] `dev` profile [..]",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..]-Zremap-path-scope=diagnostics,macro,object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -197,15 +191,12 @@ fn profile_merge_works() {
 
     p.cargo("build -v -Ztrim-paths --profile custom")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc [..]\
-    -Zremap-path-scope=diagnostics \
-    --remap-path-prefix=[CWD]=. \
-    --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[FINISHED] `custom` profile [..]",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..]-Zremap-path-scope=diagnostics --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[FINISHED] `custom` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -234,31 +225,25 @@ fn registry_dependency() {
         .file("src/main.rs", "fn main() { bar::f(); }")
         .build();
 
-    let registry_src = paths::home().join(".cargo/registry/src");
-    let registry_src = registry_src.display();
-
     p.cargo("run --verbose -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-        .with_stdout("-[..]/bar-0.0.1/src/lib.rs") // Omit the hash of Source URL
-        .with_stderr(&format!(
-            "\
-[UPDATING] [..]
+        .with_stdout_data(str![[r#"
+[..]/bar-0.0.1/src/lib.rs
+
+"#]]) // Omit the hash of Source URL
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.0.1 ([..])
+[DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [COMPILING] bar v0.0.1
-[RUNNING] `rustc [..]\
-    -Zremap-path-scope=object \
-    --remap-path-prefix={registry_src}= \
-    --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc [..]\
-    -Zremap-path-scope=object \
-    --remap-path-prefix=[CWD]=. \
-    --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[FINISHED] `dev` profile [..]
-[RUNNING] `target/debug/foo[EXE]`"
-        ))
+[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
         .run();
 }
 
@@ -292,29 +277,23 @@ fn git_dependency() {
         .file("src/main.rs", "fn main() { bar::f(); }")
         .build();
 
-    let git_checkouts_src = paths::home().join(".cargo/git/checkouts");
-    let git_checkouts_src = git_checkouts_src.display();
-
     p.cargo("run --verbose -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-        .with_stdout("bar-[..]/[..]/src/lib.rs") // Omit the hash of Source URL and commit
-        .with_stderr(&format!(
-            "\
-[UPDATING] git repository `{url}`
+        .with_stdout_data(str![[r#"
+[..]/[..]/src/lib.rs
+
+"#]]) // Omit the hash of Source URL and commit
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/bar`
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] bar v0.0.1 ({url}[..])
-[RUNNING] `rustc [..]\
-    -Zremap-path-scope=object \
-    --remap-path-prefix={git_checkouts_src}= \
-    --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc [..]\
-    -Zremap-path-scope=object \
-    --remap-path-prefix=[CWD]=. \
-    --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[FINISHED] `dev` profile [..]
-[RUNNING] `target/debug/foo[EXE]`"
-        ))
+[COMPILING] bar v0.0.1 ([ROOTURL]/bar#[..])
+[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/home/.cargo/git/checkouts= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
         .run();
 }
 
@@ -346,35 +325,30 @@ fn path_dependency() {
 
     p.cargo("run --verbose -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-        .with_stdout("cocktail-bar/src/lib.rs")
-        .with_stderr(&format!(
-            "\
+        .with_stdout_data(str![[r#"
+cocktail-bar/src/lib.rs
+
+"#]])
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] bar v0.0.1 ([..]/cocktail-bar)
-[RUNNING] `rustc [..]\
-    -Zremap-path-scope=object \
-    --remap-path-prefix=[CWD]=. \
-    --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc [..]\
-    -Zremap-path-scope=object \
-    --remap-path-prefix=[CWD]=. \
-    --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[FINISHED] `dev` profile [..]
-[RUNNING] `target/debug/foo[EXE]`"
-        ))
+[COMPILING] bar v0.0.1 ([ROOT]/foo/cocktail-bar)
+[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
         .run();
 }
 
 #[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
 fn path_dependency_outside_workspace() {
-    let bar = project()
+    let _bar = project()
         .at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
         .file("src/lib.rs", r#"pub fn f() { println!("{}", file!()); }"#)
         .build();
-    let bar_path = bar.url().to_file_path().unwrap();
-    let bar_path = bar_path.display();
 
     let p = project()
         .file(
@@ -397,26 +371,24 @@ fn path_dependency_outside_workspace() {
 
     p.cargo("run --verbose -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-        .with_stdout("bar-0.0.1/src/lib.rs")
-        .with_stderr(&format!(
-            "\
+        .with_stdout_data(str![[r#"
+bar-0.0.1/src/lib.rs
+
+"#]])
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] bar v0.0.1 ([..]/bar)
-[RUNNING] `rustc [..]\
-    -Zremap-path-scope=object \
-    --remap-path-prefix={bar_path}=bar-0.0.1 \
-    --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc [..]\
-    -Zremap-path-scope=object \
-    --remap-path-prefix=[CWD]=. \
-    --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[FINISHED] `dev` profile [..]
-[RUNNING] `target/debug/foo[EXE]`"
-        ))
+[COMPILING] bar v0.0.1 ([ROOT]/bar)
+[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/bar=bar-0.0.1 --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
 fn diagnostics_works() {
     Package::new("bar", "0.0.1")
@@ -451,21 +423,14 @@ fn diagnostics_works() {
             &["[..]bar-0.0.1/src/lib.rs:1[..]"],
             &[&format!("{registry_src}")],
         )
-        .with_stderr_contains("[..]unused_variables[..]")
-        .with_stderr_contains(&format!(
-            "\
-[RUNNING] [..]rustc [..]\
-    -Zremap-path-scope=diagnostics \
-    --remap-path-prefix={registry_src}= \
-    --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]",
-        ))
-        .with_stderr_contains(
-            "\
-[RUNNING] [..]rustc [..]\
-    -Zremap-path-scope=diagnostics \
-    --remap-path-prefix=[CWD]=. \
-    --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]",
-        )
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `[..] rustc [..]-Zremap-path-scope=diagnostics --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[WARNING] unused variable: `unused`
+...
+[RUNNING] `[..] rustc [..]-Zremap-path-scope=diagnostics --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+...
+"#]])
         .run();
 }
 
@@ -534,7 +499,6 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
 
     let registry_src = paths::home().join(".cargo/registry/src");
     let registry_src_bytes = registry_src.as_os_str().as_bytes();
-    let registry_src = registry_src.display();
     let rust_src = "/lib/rustc/src/rust".as_bytes();
 
     Package::new("bar", "0.0.1")
@@ -583,19 +547,20 @@ fn object_works_helper(split_debuginfo: &str, run: impl Fn(&std::path::Path) -> 
         .arg("--config")
         .arg(r#"profile.dev.trim-paths="object""#)
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-        .with_stderr(&format!(
+        .with_stderr_data(&format!(
             "\
 [COMPILING] bar v0.0.1
 [RUNNING] `rustc [..]-C split-debuginfo={split_debuginfo} [..]\
     -Zremap-path-scope=object \
-    --remap-path-prefix={registry_src}= \
+    --remap-path-prefix=[ROOT]/home/.cargo/registry/src= \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[COMPILING] foo v0.0.1 ([CWD])
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]-C split-debuginfo={split_debuginfo} [..]\
     -Zremap-path-scope=object \
-    --remap-path-prefix=[CWD]=. \
+    --remap-path-prefix=[ROOT]/foo=. \
     --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]
-[FINISHED] `dev` profile [..]",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+",
         ))
         .run();
 
@@ -761,13 +726,12 @@ fn lldb_works_after_trimmed() {
 
     p.cargo("build --verbose -Ztrim-paths")
         .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
-        .with_stderr_contains(
-            "\
-[RUNNING] `rustc [..]\
-    -Zremap-path-scope=object \
-    --remap-path-prefix=[CWD]=. \
-    --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..]-Zremap-path-scope=object --remap-path-prefix=[ROOT]/foo=. --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let bin_path = p.bin("foo");
