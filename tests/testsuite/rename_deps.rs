@@ -1,11 +1,9 @@
 //! Tests for renaming dependencies.
 
-#![allow(deprecated)]
-
 use cargo_test_support::git;
 use cargo_test_support::paths;
 use cargo_test_support::registry::{self, Package};
-use cargo_test_support::{basic_manifest, project};
+use cargo_test_support::{basic_manifest, project, str};
 
 #[cargo_test]
 fn rename_dependency() {
@@ -191,15 +189,14 @@ fn rename_twice() {
 
     p.cargo("build -v")
         .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] foo v0.1.0 (registry [..])
-error: the crate `test v0.1.0 ([CWD])` depends on crate `foo v0.1.0` multiple times with different names
-",
-        )
+[DOWNLOADED] foo v0.1.0 (registry `dummy-registry`)
+[ERROR] the crate `test v0.1.0 ([ROOT]/foo)` depends on crate `foo v0.1.0` multiple times with different names
+
+"#]])
         .run();
 }
 
@@ -242,7 +239,14 @@ fn rename_affects_fingerprint() {
 
     p.cargo("build -v")
         .with_status(101)
-        .with_stderr_contains("[..]can't find crate for `foo`")
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.1.0
+[DIRTY] test v0.1.0 ([ROOT]/foo): name of dependency changed (foo => bar)
+[COMPILING] test v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc [..]`
+error[E0463]: can't find crate for `foo`
+...
+"#]])
         .run();
 }
 
@@ -274,18 +278,12 @@ fn can_run_doc_tests() {
         )
         .build();
 
-    foo.cargo("test -v")
-        .with_stderr_contains(
-            "\
+    foo.cargo("test -v").with_stderr_data(str![[r#"
+...
 [DOCTEST] foo
-[RUNNING] `rustdoc [..]--test [..]src/lib.rs \
-        [..] \
-        --extern bar=[CWD]/target/debug/deps/libbar-[..].rlib \
-        --extern baz=[CWD]/target/debug/deps/libbar-[..].rlib \
-        [..]`
-",
-        )
-        .run();
+[RUNNING] `rustdoc [..]--test src/lib.rs [..] --extern bar=[ROOT]/foo/target/debug/deps/libbar-[HASH].rlib --extern baz=[ROOT]/foo/target/debug/deps/libbar-[HASH].rlib [..]`
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -373,14 +371,13 @@ fn features_not_working() {
 
     p.cargo("build -v")
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   feature `default` includes `p1` which is neither a dependency nor another feature
-",
-        )
+
+"#]])
         .run();
 }
 
