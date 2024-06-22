@@ -1,9 +1,8 @@
 //! Tests for profile overrides (build-override and per-package overrides).
 
-#![allow(deprecated)]
-
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_lib_manifest, basic_manifest, project};
+use cargo_test_support::{basic_lib_manifest, basic_manifest, project, str};
 
 #[cargo_test]
 fn profile_override_basic() {
@@ -33,15 +32,15 @@ fn profile_override_basic() {
         .build();
 
     p.cargo("check -v")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[CHECKING] bar [..]
+[CHECKING] bar v0.5.0 ([ROOT]/foo/bar)
 [RUNNING] `rustc --crate-name bar [..] -C opt-level=3 [..]`
-[CHECKING] foo [..]
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..] -C opt-level=1 [..]`
-[FINISHED] `dev` profile [optimized + debuginfo] target(s) in [..]",
-        )
+[FINISHED] `dev` profile [optimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -74,20 +73,18 @@ fn profile_override_warnings() {
         .file("bar/src/lib.rs", "")
         .build();
 
-    p.cargo("build")
-        .with_stderr_contains(
-            "\
-[WARNING] profile package spec `bar@1.2.3` in profile `dev` \
-    has a version or URL that does not match any of the packages: \
-    bar v0.5.0 ([..]/foo/bar)
+    p.cargo("build").with_stderr_data(str![[r#"
+...
+[WARNING] profile package spec `bar@1.2.3` in profile `dev` has a version or URL that does not match any of the packages: bar v0.5.0 ([ROOT]/foo/bar)
 [WARNING] profile package spec `bart` in profile `dev` did not match any packages
 
-<tab>Did you mean `bar`?
+	Did you mean `bar`?
 [WARNING] profile package spec `no-suggestion` in profile `dev` did not match any packages
-[COMPILING] [..]
-",
-        )
-        .run();
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -134,7 +131,13 @@ fn profile_override_bad_settings() {
 
         p.cargo("check")
             .with_status(101)
-            .with_stderr_contains(format!("Caused by:\n  {}", expected))
+            .with_stderr_data(format!(
+                "\
+...
+Caused by:\n  {}
+",
+                expected
+            ))
             .run();
     }
 }
@@ -221,24 +224,25 @@ fn profile_override_hierarchy() {
     // m2: 2 (as [profile.dev.package.m2])
     // m1: 1 (as [profile.dev])
 
-    p.cargo("build -v").with_stderr_unordered("\
+    p.cargo("build -v")
+        .with_stderr_data(str![[r#"
 [LOCKING] 4 packages to latest compatible versions
-[COMPILING] m3 [..]
-[COMPILING] dep [..]
-[RUNNING] `rustc --crate-name m3 --edition=2015 m3/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=4 [..]
-[RUNNING] `rustc --crate-name dep[..]dep/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=3 [..]
-[RUNNING] `rustc --crate-name m3 --edition=2015 m3/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=1 [..]
-[RUNNING] `rustc --crate-name build_script_build --edition=2015 m1/build.rs [..] --crate-type bin --emit=[..]link[..]-C codegen-units=4 [..]
-[COMPILING] m2 [..]
-[RUNNING] `rustc --crate-name build_script_build --edition=2015 m2/build.rs [..] --crate-type bin --emit=[..]link[..]-C codegen-units=2 [..]
-[RUNNING] `[..]/m1-[..]/build-script-build`
-[RUNNING] `[..]/m2-[..]/build-script-build`
-[RUNNING] `rustc --crate-name m2 --edition=2015 m2/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=2 [..]
-[COMPILING] m1 [..]
-[RUNNING] `rustc --crate-name m1 --edition=2015 m1/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=1 [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] [..]
-",
-        )
+[COMPILING] m3 v0.5.0 ([ROOT]/foo/m3)
+[COMPILING] dep v0.5.0 ([ROOT]/dep)
+[RUNNING] `rustc --crate-name m3 --edition=2015 m3/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=4 [..]`
+[RUNNING] `rustc --crate-name dep [..][ROOT]/dep/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=3 [..]`
+[RUNNING] `rustc --crate-name m3 --edition=2015 m3/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=1 [..]`
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 m1/build.rs [..] --crate-type bin --emit=[..]link[..]-C codegen-units=4 [..]`
+[COMPILING] m2 v0.0.1 ([ROOT]/foo/m2)
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 m2/build.rs [..] --crate-type bin --emit=[..]link[..]-C codegen-units=2 [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/m1-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/m2-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name m2 --edition=2015 m2/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=2 [..]`
+[COMPILING] m1 v0.0.1 ([ROOT]/foo/m1)
+[RUNNING] `rustc --crate-name m1 --edition=2015 m1/src/lib.rs [..] --crate-type lib --emit=[..]link[..]-C codegen-units=1 [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]].unordered())
         .run();
 }
 
@@ -270,11 +274,12 @@ fn profile_override_spec_multiple() {
 
     p.cargo("check -v")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[ERROR] multiple package overrides in profile `dev` match package `bar v0.5.0 ([..])`
-found package specs: bar, bar@0.5.0",
-        )
+        .with_stderr_data(str![[r#"
+...
+[ERROR] multiple package overrides in profile `dev` match package `bar v0.5.0 ([ROOT]/foo/bar)`
+found package specs: bar, bar@0.5.0
+
+"#]])
         .run();
 }
 
@@ -302,7 +307,12 @@ fn profile_override_spec_with_version() {
         .build();
 
     p.cargo("check -v")
-        .with_stderr_contains("[RUNNING] `rustc [..]bar/src/lib.rs [..] -C codegen-units=2 [..]")
+        .with_stderr_data(str![[r#"
+...
+[CHECKING] bar v0.5.0 ([ROOT]/foo/bar)
+[RUNNING] `rustc [..]bar/src/lib.rs [..] -C codegen-units=2 [..]`
+...
+"#]])
         .run();
 }
 
@@ -330,7 +340,12 @@ fn profile_override_spec_with_partial_version() {
         .build();
 
     p.cargo("check -v")
-        .with_stderr_contains("[RUNNING] `rustc [..]bar/src/lib.rs [..] -C codegen-units=2 [..]")
+        .with_stderr_data(str![[r#"
+...
+[CHECKING] bar v0.5.0 ([ROOT]/foo/bar)
+[RUNNING] `rustc [..]bar/src/lib.rs [..] -C codegen-units=2 [..]`
+...
+"#]])
         .run();
 }
 
@@ -393,11 +408,19 @@ fn profile_override_spec() {
         .build();
 
     p.cargo("check -v")
-        .with_stderr_contains("[RUNNING] `rustc [..]dep1/src/lib.rs [..] -C codegen-units=1 [..]")
-        .with_stderr_contains("[RUNNING] `rustc [..]dep2/src/lib.rs [..] -C codegen-units=2 [..]")
+        .with_stderr_data(
+            str![[r#"
+...
+[RUNNING] `rustc [..][ROOT]/dep1/src/lib.rs [..] -C codegen-units=1 [..]`
+[RUNNING] `rustc [..][ROOT]/dep2/src/lib.rs [..] -C codegen-units=2 [..]`
+...
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn override_proc_macro() {
     Package::new("shared", "1.0.0").publish();
@@ -450,13 +473,18 @@ fn override_proc_macro() {
 
     p.cargo("check -v")
         // Shared built for the proc-macro.
-        .with_stderr_contains("[RUNNING] `rustc [..]--crate-name shared [..]-C codegen-units=4[..]")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustc [..]--crate-name shared [..] -C codegen-units=4[..]`
+...
+[RUNNING] `rustc [..]--crate-name pm [..] -C codegen-units=4[..]`
+...
+"#]])
         // Shared built for the library.
         .with_stderr_line_without(
             &["[RUNNING] `rustc --crate-name shared --edition=2015"],
             &["-C codegen-units"],
         )
-        .with_stderr_contains("[RUNNING] `rustc [..]--crate-name pm [..]-C codegen-units=4[..]")
         .with_stderr_line_without(
             &["[RUNNING] `rustc [..]--crate-name foo"],
             &["-C codegen-units"],
@@ -485,13 +513,12 @@ fn no_warning_ws() {
         .build();
 
     p.cargo("check -p b")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[CHECKING] b [..]
-[FINISHED] [..]
-",
-        )
+[CHECKING] b v0.1.0 ([ROOT]/foo/b)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
