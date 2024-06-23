@@ -30,7 +30,7 @@ use crate::util::{internal, CargoResult, Filesystem, GlobalContext, OptVersionRe
 use cargo_util::registry::make_dep_path;
 use cargo_util_schemas::manifest::RustVersion;
 use semver::Version;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -195,44 +195,44 @@ impl IndexSummary {
 }
 
 /// A single line in the index representing a single version of a package.
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct IndexPackage<'a> {
     /// Name of the package.
-    name: InternedString,
+    pub name: InternedString,
     /// The version of this dependency.
-    vers: Version,
+    pub vers: Version,
     /// All kinds of direct dependencies of the package, including dev and
     /// build dependencies.
     #[serde(borrow)]
-    deps: Vec<RegistryDependency<'a>>,
+    pub deps: Vec<RegistryDependency<'a>>,
     /// Set of features defined for the package, i.e., `[features]` table.
-    features: BTreeMap<InternedString, Vec<InternedString>>,
+    pub features: BTreeMap<InternedString, Vec<InternedString>>,
     /// This field contains features with new, extended syntax. Specifically,
     /// namespaced features (`dep:`) and weak dependencies (`pkg?/feat`).
     ///
     /// This is separated from `features` because versions older than 1.19
     /// will fail to load due to not being able to parse the new syntax, even
     /// with a `Cargo.lock` file.
-    features2: Option<BTreeMap<InternedString, Vec<InternedString>>>,
+    pub features2: Option<BTreeMap<InternedString, Vec<InternedString>>>,
     /// Checksum for verifying the integrity of the corresponding downloaded package.
-    cksum: String,
+    pub cksum: String,
     /// If `true`, Cargo will skip this version when resolving.
     ///
     /// This was added in 2014. Everything in the crates.io index has this set
     /// now, so this probably doesn't need to be an option anymore.
-    yanked: Option<bool>,
+    pub yanked: Option<bool>,
     /// Native library name this package links to.
     ///
     /// Added early 2018 (see <https://github.com/rust-lang/cargo/pull/4978>),
     /// can be `None` if published before then.
-    links: Option<InternedString>,
+    pub links: Option<InternedString>,
     /// Required version of rust
     ///
     /// Corresponds to `package.rust-version`.
     ///
     /// Added in 2023 (see <https://github.com/rust-lang/crates.io/pull/6267>),
     /// can be `None` if published before then or if not set in the manifest.
-    rust_version: Option<RustVersion>,
+    pub rust_version: Option<RustVersion>,
     /// The schema version for this entry.
     ///
     /// If this is None, it defaults to version `1`. Entries with unknown
@@ -255,41 +255,41 @@ pub struct IndexPackage<'a> {
     /// incorrectly select a new package that uses a new index schema. A
     /// workaround is to downgrade any packages that are incompatible with the
     /// `--precise` flag of `cargo update`.
-    v: Option<u32>,
+    pub v: Option<u32>,
 }
 
 /// A dependency as encoded in the [`IndexPackage`] index JSON.
-#[derive(Deserialize)]
-struct RegistryDependency<'a> {
+#[derive(Deserialize, Serialize)]
+pub struct RegistryDependency<'a> {
     /// Name of the dependency. If the dependency is renamed, the original
     /// would be stored in [`RegistryDependency::package`].
-    name: InternedString,
+    pub name: InternedString,
     /// The SemVer requirement for this dependency.
     #[serde(borrow)]
-    req: Cow<'a, str>,
+    pub req: Cow<'a, str>,
     /// Set of features enabled for this dependency.
-    features: Vec<InternedString>,
+    pub features: Vec<InternedString>,
     /// Whether or not this is an optional dependency.
-    optional: bool,
+    pub optional: bool,
     /// Whether or not default features are enabled.
-    default_features: bool,
+    pub default_features: bool,
     /// The target platform for this dependency.
-    target: Option<Cow<'a, str>>,
+    pub target: Option<Cow<'a, str>>,
     /// The dependency kind. "dev", "build", and "normal".
-    kind: Option<Cow<'a, str>>,
+    pub kind: Option<Cow<'a, str>>,
     // The URL of the index of the registry where this dependency is from.
     // `None` if it is from the same index.
-    registry: Option<Cow<'a, str>>,
+    pub registry: Option<Cow<'a, str>>,
     /// The original name if the dependency is renamed.
-    package: Option<InternedString>,
+    pub package: Option<InternedString>,
     /// Whether or not this is a public dependency. Unstable. See [RFC 1977].
     ///
     /// [RFC 1977]: https://rust-lang.github.io/rfcs/1977-public-private-dependencies.html
-    public: Option<bool>,
-    artifact: Option<Vec<Cow<'a, str>>>,
-    bindep_target: Option<Cow<'a, str>>,
+    pub public: Option<bool>,
+    pub artifact: Option<Vec<Cow<'a, str>>>,
+    pub bindep_target: Option<Cow<'a, str>>,
     #[serde(default)]
-    lib: bool,
+    pub lib: bool,
 }
 
 impl<'gctx> RegistryIndex<'gctx> {

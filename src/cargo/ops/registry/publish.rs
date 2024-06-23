@@ -155,6 +155,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             jobs: opts.jobs.clone(),
             keep_going: opts.keep_going,
             cli_features,
+            reg_or_index,
         },
     )?;
 
