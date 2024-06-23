@@ -36,6 +36,8 @@ pub use self::publish::PublishOpts;
 pub use self::search::search;
 pub use self::yank::yank;
 
+pub(crate) use self::publish::prepare_transmit;
+
 /// Represents either `--registry` or `--index` argument, which is mutually exclusive.
 #[derive(Debug, Clone)]
 pub enum RegistryOrIndex {
@@ -254,9 +256,9 @@ fn gen_replacement_error(replacement_sid: SourceId) -> String {
     error_message
 }
 
-struct RegistrySourceIds {
+pub(crate) struct RegistrySourceIds {
     /// Use when looking up the auth token, or writing out `Cargo.lock`
-    original: SourceId,
+    pub(crate) original: SourceId,
     /// Use when interacting with the source (querying / publishing , etc)
     ///
     /// The source for crates.io may be replaced by a built-in source for accessing crates.io with
@@ -264,5 +266,5 @@ struct RegistrySourceIds {
     /// function is used)
     ///
     /// User-defined source replacement is not applied.
-    replacement: SourceId,
+    pub(crate) replacement: SourceId,
 }
