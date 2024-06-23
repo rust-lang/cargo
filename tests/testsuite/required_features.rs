@@ -1,13 +1,12 @@
 //! Tests for targets with `required-features`.
 
-#![allow(deprecated)]
-
 use cargo_test_support::install::{
     assert_has_installed_exe, assert_has_not_installed_exe, cargo_home,
 };
 use cargo_test_support::is_nightly;
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::project;
+use cargo_test_support::str;
 
 #[cargo_test]
 fn build_bin_default_features() {
@@ -56,12 +55,11 @@ fn build_bin_default_features() {
 
     p.cargo("build --bin=foo --no-default-features")
         .with_status(101)
-        .with_stderr(
-            "\
-error: target `foo` in package `foo` requires the features: `a`
-Consider enabling them by passing, e.g., `--features=\"a\"`
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] target `foo` in package `foo` requires the features: `a`
+Consider enabling them by passing, e.g., `--features="a"`
+
+"#]])
         .run();
 }
 
@@ -167,12 +165,11 @@ fn build_example_default_features() {
 
     p.cargo("build --example=foo --no-default-features")
         .with_status(101)
-        .with_stderr(
-            "\
-error: target `foo` in package `foo` requires the features: `a`
-Consider enabling them by passing, e.g., `--features=\"a\"`
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] target `foo` in package `foo` requires the features: `a`
+Consider enabling them by passing, e.g., `--features="a"`
+
+"#]])
         .run();
 }
 
@@ -236,12 +233,11 @@ fn build_example_multiple_required_features() {
 
     p.cargo("build --example=foo_1")
         .with_status(101)
-        .with_stderr(
-            "\
-error: target `foo_1` in package `foo` requires the features: `b`, `c`
-Consider enabling them by passing, e.g., `--features=\"b c\"`
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] target `foo_1` in package `foo` requires the features: `b`, `c`
+Consider enabling them by passing, e.g., `--features="b c"`
+
+"#]])
         .run();
     p.cargo("build --example=foo_2").run();
 
@@ -256,21 +252,19 @@ Consider enabling them by passing, e.g., `--features=\"b c\"`
 
     p.cargo("build --example=foo_1 --no-default-features")
         .with_status(101)
-        .with_stderr(
-            "\
-error: target `foo_1` in package `foo` requires the features: `b`, `c`
-Consider enabling them by passing, e.g., `--features=\"b c\"`
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] target `foo_1` in package `foo` requires the features: `b`, `c`
+Consider enabling them by passing, e.g., `--features="b c"`
+
+"#]])
         .run();
     p.cargo("build --example=foo_2 --no-default-features")
         .with_status(101)
-        .with_stderr(
-            "\
-error: target `foo_2` in package `foo` requires the features: `a`
-Consider enabling them by passing, e.g., `--features=\"a\"`
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] target `foo_2` in package `foo` requires the features: `a`
+Consider enabling them by passing, e.g., `--features="a"`
+
+"#]])
         .run();
 }
 
@@ -299,37 +293,55 @@ fn test_default_features() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains("test test ... ok")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] tests/foo.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 
     p.cargo("test --no-default-features")
-        .with_stderr("[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]")
-        .with_stdout("")
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stdout_data("")
         .run();
 
     p.cargo("test --test=foo")
-        .with_stderr(
-            "\
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains("test test ... ok")
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] tests/foo.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 
     p.cargo("test --test=foo --no-default-features")
         .with_status(101)
-        .with_stderr(
-            "\
-error: target `foo` in package `foo` requires the features: `a`
-Consider enabling them by passing, e.g., `--features=\"a\"`
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] target `foo` in package `foo` requires the features: `a`
+Consider enabling them by passing, e.g., `--features="a"`
+
+"#]])
         .run();
 }
 
@@ -357,13 +369,21 @@ fn test_arg_features() {
         .build();
 
     p.cargo("test --features a")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains("test test ... ok")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] tests/foo.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -399,29 +419,54 @@ fn test_multiple_required_features() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo_2-[..][EXE])",
-        )
-        .with_stdout_contains("test test ... ok")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] tests/foo_2.rs (target/debug/deps/foo_2-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 
     p.cargo("test --features c")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo_1-[..][EXE])
-[RUNNING] [..] (target/debug/deps/foo_2-[..][EXE])",
-        )
-        .with_stdout_contains_n("test test ... ok", 2)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] tests/foo_1.rs (target/debug/deps/foo_1-[HASH][EXE])
+[RUNNING] tests/foo_2.rs (target/debug/deps/foo_2-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 
     p.cargo("test --no-default-features")
-        .with_stderr("[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]")
-        .with_stdout("")
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stdout_data("")
         .run();
 }
 
@@ -460,37 +505,55 @@ fn bench_default_features() {
         .build();
 
     p.cargo("bench")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains("test bench ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] benches/foo.rs (target/release/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 
     p.cargo("bench --no-default-features")
-        .with_stderr("[FINISHED] `bench` profile [optimized] target(s) in [..]".to_string())
-        .with_stdout("")
+        .with_stderr_data(str![[r#"
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stdout_data("")
         .run();
 
     p.cargo("bench --bench=foo")
-        .with_stderr(
-            "\
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains("test bench ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] benches/foo.rs (target/release/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 
     p.cargo("bench --bench=foo --no-default-features")
         .with_status(101)
-        .with_stderr(
-            "\
-error: target `foo` in package `foo` requires the features: `a`
-Consider enabling them by passing, e.g., `--features=\"a\"`
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] target `foo` in package `foo` requires the features: `a`
+Consider enabling them by passing, e.g., `--features="a"`
+
+"#]])
         .run();
 }
 
@@ -528,13 +591,21 @@ fn bench_arg_features() {
         .build();
 
     p.cargo("bench --features a")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains("test bench ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] benches/foo.rs (target/release/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -590,29 +661,54 @@ fn bench_multiple_required_features() {
         .build();
 
     p.cargo("bench")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo_2-[..][EXE])",
-        )
-        .with_stdout_contains("test bench ... bench: [..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] benches/foo_2.rs (target/release/deps/foo_2-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 
     p.cargo("bench --features c")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo_1-[..][EXE])
-[RUNNING] [..] (target/release/deps/foo_2-[..][EXE])",
-        )
-        .with_stdout_contains_n("test bench ... bench: [..]", 2)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] benches/foo_1.rs (target/release/deps/foo_1-[HASH][EXE])
+[RUNNING] benches/foo_2.rs (target/release/deps/foo_2-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 
     p.cargo("bench --no-default-features")
-        .with_stderr("[FINISHED] `bench` profile [optimized] target(s) in [..]")
-        .with_stdout("")
+        .with_stderr_data(str![[r#"
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stdout_data("")
         .run();
 }
 
@@ -650,16 +746,15 @@ fn install_default_features() {
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --no-default-features")
-        .with_stderr(
-            "\
-[INSTALLING] foo v0.0.1 ([..])
-[FINISHED] `release` profile [optimized] target(s) in [..]
+        .with_stderr_data(str![[r#"
+[INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin \"foo\" requires the features: `a`
-  example \"foo\" requires the features: `a`
-Consider enabling some of the needed features by passing, e.g., `--features=\"a\"`
-",
-        )
+  bin "foo" requires the features: `a`
+  example "foo" requires the features: `a`
+Consider enabling some of the needed features by passing, e.g., `--features="a"`
+
+"#]])
         .run();
     assert_has_not_installed_exe(cargo_home(), "foo");
 
@@ -669,19 +764,16 @@ Consider enabling some of the needed features by passing, e.g., `--features=\"a\
 
     p.cargo("install --path . --bin=foo --no-default-features")
         .with_status(101)
-        .with_stderr(
-            "\
-[INSTALLING] foo v0.0.1 ([..])
-[ERROR] failed to compile `foo v0.0.1 ([..])`, intermediate artifacts can be found at \
-    `[..]target`.
-To reuse those artifacts with a future compilation, set the environment \
-variable `CARGO_TARGET_DIR` to that path.
+        .with_stderr_data(str![[r#"
+[INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] failed to compile `foo v0.0.1 ([ROOT]/foo)`, intermediate artifacts can be found at `[ROOT]/foo/target`.
+To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
 
 Caused by:
   target `foo` in package `foo` requires the features: `a`
-  Consider enabling them by passing, e.g., `--features=\"a\"`
-",
-        )
+  Consider enabling them by passing, e.g., `--features="a"`
+
+"#]])
         .run();
     assert_has_not_installed_exe(cargo_home(), "foo");
 
@@ -691,18 +783,16 @@ Caused by:
 
     p.cargo("install --path . --example=foo --no-default-features")
         .with_status(101)
-        .with_stderr(
-            "\
-[INSTALLING] foo v0.0.1 ([..])
-[ERROR] failed to compile `foo v0.0.1 ([..])`, intermediate artifacts can be found at \
-    `[..]target`.\nTo reuse those artifacts with a future compilation, set the environment \
-    variable `CARGO_TARGET_DIR` to that path.
+        .with_stderr_data(str![[r#"
+[INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] failed to compile `foo v0.0.1 ([ROOT]/foo)`, intermediate artifacts can be found at `[ROOT]/foo/target`.
+To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
 
 Caused by:
   target `foo` in package `foo` requires the features: `a`
-  Consider enabling them by passing, e.g., `--features=\"a\"`
-",
-        )
+  Consider enabling them by passing, e.g., `--features="a"`
+
+"#]])
         .run();
     assert_has_not_installed_exe(cargo_home(), "foo");
 }
@@ -810,63 +900,59 @@ fn install_multiple_required_features() {
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --no-default-features")
-        .with_stderr(
-            "\
-[INSTALLING] foo v0.0.1 ([..])
-[FINISHED] `release` profile [optimized] target(s) in [..]
+        .with_stderr_data(str![[r#"
+[INSTALLING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin \"foo_1\" requires the features: `b`, `c`
-  bin \"foo_2\" requires the features: `a`
-  example \"foo_3\" requires the features: `b`, `c`
-  example \"foo_4\" requires the features: `a`
-Consider enabling some of the needed features by passing, e.g., `--features=\"b c\"`
-",
-        )
+  bin "foo_1" requires the features: `b`, `c`
+  bin "foo_2" requires the features: `a`
+  example "foo_3" requires the features: `b`, `c`
+  example "foo_4" requires the features: `a`
+Consider enabling some of the needed features by passing, e.g., `--features="b c"`
+
+"#]])
         .run();
     p.cargo("install --path . --no-default-features --bins")
-        .with_stderr(
-            "\
-[INSTALLING] foo v0.0.1 ([..])
+        .with_stderr_data(str![[r#"
+[INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] target filter `bins` specified, but no targets matched; this is a no-op
-[FINISHED] `release` profile [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin \"foo_1\" requires the features: `b`, `c`
-  bin \"foo_2\" requires the features: `a`
-  example \"foo_3\" requires the features: `b`, `c`
-  example \"foo_4\" requires the features: `a`
-Consider enabling some of the needed features by passing, e.g., `--features=\"b c\"`
-",
-        )
+  bin "foo_1" requires the features: `b`, `c`
+  bin "foo_2" requires the features: `a`
+  example "foo_3" requires the features: `b`, `c`
+  example "foo_4" requires the features: `a`
+Consider enabling some of the needed features by passing, e.g., `--features="b c"`
+
+"#]])
         .run();
     p.cargo("install --path . --no-default-features --examples")
-        .with_stderr(
-            "\
-[INSTALLING] foo v0.0.1 ([..])
+        .with_stderr_data(str![[r#"
+[INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] target filter `examples` specified, but no targets matched; this is a no-op
-[FINISHED] `release` profile [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin \"foo_1\" requires the features: `b`, `c`
-  bin \"foo_2\" requires the features: `a`
-  example \"foo_3\" requires the features: `b`, `c`
-  example \"foo_4\" requires the features: `a`
-Consider enabling some of the needed features by passing, e.g., `--features=\"b c\"`
-",
-        )
+  bin "foo_1" requires the features: `b`, `c`
+  bin "foo_2" requires the features: `a`
+  example "foo_3" requires the features: `b`, `c`
+  example "foo_4" requires the features: `a`
+Consider enabling some of the needed features by passing, e.g., `--features="b c"`
+
+"#]])
         .run();
     p.cargo("install --path . --no-default-features --bins --examples")
-        .with_stderr(
-            "\
-[INSTALLING] foo v0.0.1 ([..])
+        .with_stderr_data(str![[r#"
+[INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] target filters `bins`, `examples` specified, but no targets matched; this is a no-op
-[FINISHED] `release` profile [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin \"foo_1\" requires the features: `b`, `c`
-  bin \"foo_2\" requires the features: `a`
-  example \"foo_3\" requires the features: `b`, `c`
-  example \"foo_4\" requires the features: `a`
-Consider enabling some of the needed features by passing, e.g., `--features=\"b c\"`
-",
-        )
+  bin "foo_1" requires the features: `b`, `c`
+  bin "foo_2" requires the features: `a`
+  example "foo_3" requires the features: `b`, `c`
+  example "foo_4" requires the features: `a`
+Consider enabling some of the needed features by passing, e.g., `--features="b c"`
+
+"#]])
         .run();
     assert_has_not_installed_exe(cargo_home(), "foo_1");
     assert_has_not_installed_exe(cargo_home(), "foo_2");
@@ -948,26 +1034,42 @@ fn dep_feature_in_toml() {
 
     // test
     p.cargo("test --test=foo")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains("test test ... ok")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] tests/foo.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 
     // bench
     if is_nightly() {
         p.cargo("bench --bench=foo")
-            .with_stderr(
-                "\
-[COMPILING] bar v0.0.1 ([CWD]/bar)
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
-            )
-            .with_stdout_contains("test bench ... bench: [..]")
+            .with_stderr_data(str![[r#"
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] benches/foo.rs (target/release/deps/foo-[HASH][EXE])
+
+"#]])
+            .with_stdout_data(str![[r#"
+
+running 1 test
+test bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
             .run();
     }
 
@@ -1051,23 +1153,22 @@ fn dep_feature_in_cmd_line() {
 
     // This is a no-op
     p.cargo("build")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[FINISHED] `dev` profile [..]",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     assert!(!p.bin("foo").is_file());
 
     // bin
     p.cargo("build --bin=foo")
         .with_status(101)
-        .with_stderr(
-            "\
-error: target `foo` in package `foo` requires the features: `bar/a`
-Consider enabling them by passing, e.g., `--features=\"bar/a\"`
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] target `foo` in package `foo` requires the features: `bar/a`
+Consider enabling them by passing, e.g., `--features="bar/a"`
+
+"#]])
         .run();
 
     p.cargo("build --bin=foo --features bar/a").run();
@@ -1076,12 +1177,11 @@ Consider enabling them by passing, e.g., `--features=\"bar/a\"`
     // example
     p.cargo("build --example=foo")
         .with_status(101)
-        .with_stderr(
-            "\
-error: target `foo` in package `foo` requires the features: `bar/a`
-Consider enabling them by passing, e.g., `--features=\"bar/a\"`
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] target `foo` in package `foo` requires the features: `bar/a`
+Consider enabling them by passing, e.g., `--features="bar/a"`
+
+"#]])
         .run();
 
     p.cargo("build --example=foo --features bar/a").run();
@@ -1090,55 +1190,76 @@ Consider enabling them by passing, e.g., `--features=\"bar/a\"`
     // test
     // This is a no-op, since no tests are enabled
     p.cargo("test")
-        .with_stderr("[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]")
-        .with_stdout("")
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_stdout_data("")
         .run();
 
     // Delete the target directory so this can check if the main.rs gets built.
     p.build_dir().rm_rf();
     p.cargo("test --test=foo --features bar/a")
-        .with_stderr(
-            "\
-[COMPILING] bar v0.0.1 ([CWD]/bar)
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains("test bin_is_built ... ok")
+        .with_stderr_data(str![[r#"
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] tests/foo.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test bin_is_built ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 
     // bench
     if is_nightly() {
         p.cargo("bench")
-            .with_stderr("[FINISHED] `bench` profile [optimized] target(s) in [..]")
-            .with_stdout("")
+            .with_stderr_data(str![[r#"
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
+            .with_stdout_data("")
             .run();
 
         p.cargo("bench --bench=foo --features bar/a")
-            .with_stderr(
-                "\
-[COMPILING] bar v0.0.1 ([CWD]/bar)
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
-            )
-            .with_stdout_contains("test bench ... bench: [..]")
+            .with_stderr_data(str![[r#"
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] benches/foo.rs (target/release/deps/foo-[HASH][EXE])
+
+"#]])
+            .with_stdout_data(str![[r#"
+
+running 1 test
+test bench ... bench:           [AVG_ELAPSED] ns/iter (+/- [JITTER])
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
             .run();
     }
 
     // install
     p.cargo("install --path .")
-        .with_stderr(
-            "\
-[INSTALLING] foo v0.0.1 ([..])
+        .with_stderr_data(str![[r#"
+[INSTALLING] foo v0.0.1 ([ROOT]/foo)
 [LOCKING] 2 packages to latest compatible versions
-[FINISHED] `release` profile [optimized] target(s) in [..]
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin \"foo\" requires the features: `bar/a`
-  example \"foo\" requires the features: `bar/a`
-Consider enabling some of the needed features by passing, e.g., `--features=\"bar/a\"`
-",
-        )
+  bin "foo" requires the features: `bar/a`
+  example "foo" requires the features: `bar/a`
+Consider enabling some of the needed features by passing, e.g., `--features="bar/a"`
+
+"#]])
         .run();
     assert_has_not_installed_exe(cargo_home(), "foo");
 
@@ -1174,42 +1295,56 @@ fn test_skips_compiling_bin_with_missing_required_features() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains("running 0 tests")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] tests/foo.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 
     p.cargo("test --features a -j 1")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-error[E0463]: can't find crate for `bar`",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+error[E0463]: can't find crate for `bar`
+...
+"#]])
         .run();
 
     if is_nightly() {
         p.cargo("bench")
-            .with_stderr(
-                "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `bench` profile [optimized] target(s) in [..]
-[RUNNING] [..] (target/release/deps/foo-[..][EXE])",
-            )
-            .with_stdout_contains("running 0 tests")
+            .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] benches/foo.rs (target/release/deps/foo-[HASH][EXE])
+
+"#]])
+            .with_stdout_data(str![[r#"
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
             .run();
 
         p.cargo("bench --features a -j 1")
             .with_status(101)
-            .with_stderr_contains(
-                "\
-[COMPILING] foo v0.0.1 ([CWD])
-error[E0463]: can't find crate for `bar`",
-            )
+            .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+error[E0463]: can't find crate for `bar`
+...
+"#]])
             .run();
     }
 }
@@ -1241,12 +1376,11 @@ fn run_default() {
 
     p.cargo("run")
         .with_status(101)
-        .with_stderr(
-            "\
-error: target `foo` in package `foo` requires the features: `a`
-Consider enabling them by passing, e.g., `--features=\"a\"`
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] target `foo` in package `foo` requires the features: `a`
+Consider enabling them by passing, e.g., `--features="a"`
+
+"#]])
         .run();
 
     p.cargo("run --features a").run();
@@ -1293,11 +1427,11 @@ fn run_default_multiple_required_features() {
 
     p.cargo("run")
         .with_status(101)
-        .with_stderr(
-            "\
-error: `cargo run` could not determine which binary to run[..]
-available binaries: foo1, foo2, foo3",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] `cargo run` could not determine which binary to run. Use the `--bin` option to specify a binary, or the `default-run` manifest key.
+available binaries: foo1, foo2, foo3
+
+"#]])
         .run();
 }
 
@@ -1377,21 +1511,29 @@ fn renamed_required_features() {
 
     p.cargo("run")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 3 packages to latest compatible versions
 [ERROR] target `x` in package `foo` requires the features: `a1/f1`
-Consider enabling them by passing, e.g., `--features=\"a1/f1\"`
-",
-        )
+Consider enabling them by passing, e.g., `--features="a1/f1"`
+
+"#]])
         .run();
 
     p.cargo("build --features a1/f1").run();
-    p.rename_run("x", "x_with_f1").with_stdout("a1 f1").run();
+    p.rename_run("x", "x_with_f1")
+        .with_stdout_data(str![[r#"
+a1 f1
+
+"#]])
+        .run();
 
     p.cargo("build --features a1/f1,a2/f2").run();
     p.rename_run("x", "x_with_f1_f2")
-        .with_stdout("a1 f1\na2 f2")
+        .with_stdout_data(str![[r#"
+a1 f1
+a2 f2
+
+"#]])
         .run();
 }
 
@@ -1471,17 +1613,19 @@ fn truncated_install_warning_message() {
         .file("examples/example1.rs", "fn main() {}")
         .build();
 
-    p.cargo("install --path .").with_stderr("\
-[INSTALLING] foo v0.1.0 ([..])
-[FINISHED] `release` profile [optimized] target(s) in [..]
+    p.cargo("install --path .").with_stderr_data(str![[r#"
+[INSTALLING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [WARNING] none of the package's binaries are available for install using the selected features
-  bin \"foo1\" requires the features: `feature1`, `feature2`, `feature3`
-  bin \"foo10\" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
-  bin \"foo2\" requires the features: `feature2`
-  bin \"foo3\" requires the features: `feature3`
-  bin \"foo4\" requires the features: `feature4`, `feature1`
-  bin \"foo5\" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
-  bin \"foo6\" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
+  bin "foo1" requires the features: `feature1`, `feature2`, `feature3`
+  bin "foo10" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
+  bin "foo2" requires the features: `feature2`
+  bin "foo3" requires the features: `feature3`
+  bin "foo4" requires the features: `feature4`, `feature1`
+  bin "foo5" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
+  bin "foo6" requires the features: `feature1`, `feature2`, `feature3`, `feature4`, `feature5`
 4 more targets also requires features not enabled. See them in the Cargo.toml file.
-Consider enabling some of the needed features by passing, e.g., `--features=\"feature1 feature2 feature3\"`").run();
+Consider enabling some of the needed features by passing, e.g., `--features="feature1 feature2 feature3"`
+
+"#]]).run();
 }
