@@ -1,9 +1,7 @@
 //! Tests for Cargo's behavior under Rustup.
 
-#![allow(deprecated)]
-
 use cargo_test_support::paths::{home, root, CargoPathExt};
-use cargo_test_support::{cargo_process, process, project};
+use cargo_test_support::{cargo_process, process, project, str};
 use std::env;
 use std::env::consts::EXE_EXTENSION;
 use std::ffi::OsString;
@@ -164,13 +162,12 @@ fn typical_rustup() {
         .env("RUSTUP_TOOLCHAIN", "test-toolchain")
         .env("RUSTUP_HOME", &rustup_home)
         .env("PATH", &path)
-        .with_stderr(
-            "\
-[CHECKING] foo v0.0.1 [..]
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
 real rustc running
-[FINISHED] [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     // Do a similar test, but with a toolchain link that does not have cargo
@@ -182,13 +179,12 @@ real rustc running
         .env("RUSTUP_TOOLCHAIN", "test-toolchain")
         .env("RUSTUP_HOME", &rustup_home)
         .env("PATH", &path)
-        .with_stderr(
-            "\
-[CHECKING] foo v0.0.1 [..]
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
 real rustc running
-[FINISHED] [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -252,13 +248,12 @@ fn custom_calls_other_cargo() {
         // rustup proxies.
         .env("RUSTUP_TOOLCHAIN", "test-toolchain")
         .env("RUSTUP_HOME", &rustup_home)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 custom command running
-[CHECKING] foo [..]
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
 custom toolchain rustc running
-[FINISHED] [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
