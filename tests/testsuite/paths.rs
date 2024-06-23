@@ -1,8 +1,7 @@
 //! Tests for `paths` overrides.
 
-#![allow(deprecated)]
-
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, project};
 
 #[cargo_test]
@@ -57,12 +56,11 @@ fn broken_path_override_warns() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
-[UPDATING] [..]
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest compatible versions
 [ADDING] bar v0.1.0 (latest: v0.2.0)
-warning: path override for crate `a` has altered the original list of
+[WARNING] path override for crate `a` has altered the original list of
 dependencies; the dependency on `bar` was either added or
 modified to not match the previously resolved version
 
@@ -78,13 +76,13 @@ documented online at the url below for more information.
 https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
 
 [DOWNLOADING] crates ...
-[DOWNLOADED] [..]
-[CHECKING] [..]
-[CHECKING] [..]
-[CHECKING] [..]
-[FINISHED] [..]
-",
-        )
+[DOWNLOADED] bar v0.2.0 (registry `dummy-registry`)
+[CHECKING] bar v0.2.0
+[CHECKING] a v0.0.1 ([ROOT]/foo/a2)
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -179,14 +177,13 @@ fn paths_ok_with_optional() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[CHECKING] bar v0.1.0 ([..]bar2)
-[CHECKING] foo v0.0.1 ([..])
-[FINISHED] [..]
-",
-        )
+[CHECKING] bar v0.1.0 ([ROOT]/foo/bar2)
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -201,6 +198,7 @@ fn paths_add_optional_bad() {
                 [package]
                 name = "foo"
                 version = "0.0.1"
+                edition = "2021"
                 authors = []
 
                 [dependencies]
@@ -216,6 +214,7 @@ fn paths_add_optional_bad() {
                 [package]
                 name = "bar"
                 version = "0.1.0"
+                edition = "2021"
                 authors = []
 
                 [dependencies]
@@ -227,11 +226,27 @@ fn paths_add_optional_bad() {
         .build();
 
     p.cargo("check")
-        .with_stderr_contains(
-            "\
-warning: path override for crate `bar` has altered the original list of
-dependencies; the dependency on `baz` was either added or\
-",
-        )
+        .with_stderr_data(str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+[WARNING] path override for crate `bar` has altered the original list of
+dependencies; the dependency on `baz` was either added or
+modified to not match the previously resolved version
+
+This is currently allowed but is known to produce buggy behavior with spurious
+recompiles and changes to the crate graph. Path overrides unfortunately were
+never intended to support this feature, so for now this message is just a
+warning. In the future, however, this message will become a hard error.
+
+To change the dependency graph via an override it's recommended to use the
+`[patch]` feature of Cargo instead of the path override feature. This is
+documented online at the url below for more information.
+
+https://doc.rust-lang.org/cargo/reference/overriding-dependencies.html
+
+[CHECKING] bar v0.1.0 ([ROOT]/foo/bar2)
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
