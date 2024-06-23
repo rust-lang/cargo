@@ -1,9 +1,8 @@
 //! Tests for named profiles.
 
-#![allow(deprecated)]
-
 use cargo_test_support::paths::CargoPathExt;
-use cargo_test_support::{basic_lib_manifest, project};
+use cargo_test_support::prelude::*;
+use cargo_test_support::{basic_lib_manifest, project, str};
 
 #[cargo_test]
 fn inherits_on_release() {
@@ -26,11 +25,10 @@ fn inherits_on_release() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] `inherits` must not be specified in root profile `release`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -55,12 +53,10 @@ fn missing_inherits() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] profile `release-lto` is missing an `inherits` directive \
-    (`inherits` is required for all profiles except `dev` or `release`)
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] profile `release-lto` is missing an `inherits` directive (`inherits` is required for all profiles except `dev` or `release`)
+
+"#]])
         .run();
 }
 
@@ -86,16 +82,15 @@ fn invalid_profile_name() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] invalid character `.` in profile name: `.release-lto`, allowed characters are letters, numbers, underscore, and hyphen
  --> Cargo.toml:8:26
   |
 8 |                 [profile.'.release-lto']
   |                          ^^^^^^^^^^^^^^
   |
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -126,13 +121,13 @@ fn invalid_dir_name() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at [..]
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   Invalid character `.` in dir-name: `.subdir`",
-        )
+
+"#]])
         .run();
 }
 
@@ -158,15 +153,13 @@ fn dir_name_disabled() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  dir-name=\"lto\" in profile `release-lto` is not currently allowed, \
-  directory names are tied to the profile name for custom profiles
-",
-        )
+  dir-name="lto" in profile `release-lto` is not currently allowed, directory names are tied to the profile name for custom profiles
+
+"#]])
         .run();
 }
 
@@ -192,10 +185,10 @@ fn invalid_inherits() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr(
-            "error: profile `release-lto` inherits from `.release`, \
-             but that profile is not defined",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] profile `release-lto` inherits from `.release`, but that profile is not defined
+
+"#]])
         .run();
 }
 
@@ -221,11 +214,10 @@ fn non_existent_inherits() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] profile `release-lto` inherits from `non-existent`, but that profile is not defined
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -251,11 +243,10 @@ fn self_inherits() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] profile inheritance loop detected with profile `release-lto` inheriting `release-lto`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -285,11 +276,10 @@ fn inherits_loop() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] profile inheritance loop detected with profile `release-lto2` inheriting `release-lto`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -335,32 +325,36 @@ fn overrides_with_custom() {
     // profile overrides are inherited between profiles using inherits and have a
     // higher priority than profile options provided by custom profiles
     p.cargo("build -v")
-        .with_stderr_unordered(
-            "\
+        .with_stderr_data(
+            str![[r#"
 [LOCKING] 3 packages to latest compatible versions
-[COMPILING] xxx [..]
-[COMPILING] yyy [..]
-[COMPILING] foo [..]
+[COMPILING] xxx v0.5.0 ([ROOT]/foo/xxx)
+[COMPILING] yyy v0.5.0 ([ROOT]/foo/yyy)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name xxx [..] -C codegen-units=5 [..]`
 [RUNNING] `rustc --crate-name yyy [..] -C codegen-units=3 [..]`
 [RUNNING] `rustc --crate-name foo [..] -C codegen-units=7 [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
         )
         .run();
 
     // This also verifies that the custom profile names appears in the finished line.
     p.cargo("build --profile=other -v")
-        .with_stderr_unordered(
-            "\
-[COMPILING] xxx [..]
-[COMPILING] yyy [..]
-[COMPILING] foo [..]
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] xxx v0.5.0 ([ROOT]/foo/xxx)
+[COMPILING] yyy v0.5.0 ([ROOT]/foo/yyy)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name xxx [..] -C codegen-units=5 [..]`
 [RUNNING] `rustc --crate-name yyy [..] -C codegen-units=6 [..]`
 [RUNNING] `rustc --crate-name foo [..] -C codegen-units=2 [..]`
-[FINISHED] `other` profile [unoptimized + debuginfo] target(s) in [..]
-",
+[FINISHED] `other` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
         )
         .run();
 }
@@ -383,38 +377,38 @@ fn conflicting_usage() {
 
     p.cargo("build --profile=dev --release")
         .with_status(1)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] the argument '--profile <PROFILE-NAME>' cannot be used with '--release'
 
 Usage: cargo[EXE] build --profile <PROFILE-NAME>
 
-For more information, try '--help'.",
-        )
+For more information, try '--help'.
+
+"#]])
         .run();
 
     p.cargo("install --profile=release --debug")
         .with_status(1)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] the argument '--profile <PROFILE-NAME>' cannot be used with '--debug'
 
 Usage: cargo[EXE] install --profile <PROFILE-NAME> [CRATE[@<VER>]]...
 
-For more information, try '--help'.",
-        )
+For more information, try '--help'.
+
+"#]])
         .run();
 
     p.cargo("check --profile=dev --release")
         .with_status(1)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] the argument '--profile <PROFILE-NAME>' cannot be used with '--release'
 
 Usage: cargo[EXE] check --profile <PROFILE-NAME>
 
-For more information, try '--help'.",
-        )
+For more information, try '--help'.
+
+"#]])
         .run();
 }
 
@@ -438,54 +432,49 @@ fn clean_custom_dirname() {
         .build();
 
     p.cargo("build --release")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] `release` profile [optimized] target(s) in [..]
-",
-        )
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("clean -p foo").run();
 
     p.cargo("build --release")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[FINISHED] `release` profile [optimized] target(s) in [..]
-",
-        )
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("clean -p foo --release").run();
 
     p.cargo("build --release")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] `release` profile [optimized] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("build")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("build --profile=other")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] `other` profile [optimized] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `other` profile [optimized] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("clean").arg("--release").run();
@@ -498,7 +487,10 @@ fn clean_custom_dirname() {
 
     // This should clean 'other'
     p.cargo("clean --profile=other")
-        .with_stderr("[REMOVED] [..] files, [..] total")
+        .with_stderr_data(str![[r#"
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
         .run();
     assert!(p.build_dir().join("debug").is_dir());
     assert!(!p.build_dir().join("other").is_dir());
@@ -520,12 +512,18 @@ fn unknown_profile() {
         .build();
 
     p.cargo("build --profile alpha")
-        .with_stderr("[ERROR] profile `alpha` is not defined")
+        .with_stderr_data(str![[r#"
+[ERROR] profile `alpha` is not defined
+
+"#]])
         .with_status(101)
         .run();
     // Clean has a separate code path, need to check it too.
     p.cargo("clean --profile alpha")
-        .with_stderr("[ERROR] profile `alpha` is not defined")
+        .with_stderr_data(str![[r#"
+[ERROR] profile `alpha` is not defined
+
+"#]])
         .with_status(101)
         .run();
 }
@@ -550,15 +548,18 @@ fn reserved_profile_names() {
 
     p.cargo("build --profile=doc")
         .with_status(101)
-        .with_stderr("error: profile `doc` is reserved and not allowed to be explicitly specified")
+        .with_stderr_data(str![[r#"
+[ERROR] profile `doc` is reserved and not allowed to be explicitly specified
+
+"#]])
         .run();
     // Not an exhaustive list, just a sample.
     for name in ["build", "cargo", "check", "rustc", "CaRgO_startswith"] {
         p.cargo(&format!("build --profile={}", name))
             .with_status(101)
-            .with_stderr(&format!(
+            .with_stderr_data(&format!(
                 "\
-error: profile name `{}` is reserved
+[ERROR] profile name `{}` is reserved
 Please choose a different name.
 See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
 ",
@@ -586,7 +587,7 @@ See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configur
         let highlight = "^".repeat(name.len());
         p.cargo("build")
             .with_status(101)
-            .with_stderr(&format!(
+            .with_stderr_data(&format!(
                 "\
 [ERROR] profile name `{name}` is reserved
 Please choose a different name.
@@ -618,8 +619,7 @@ See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configur
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] profile name `debug` is reserved
 To configure the default development profile, use the name `dev` as in [profile.dev]
 See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configuring profiles.
@@ -628,8 +628,8 @@ See https://doc.rust-lang.org/cargo/reference/profiles.html for more on configur
 8 |                [profile.debug]
   |                         ^^^^^
   |
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -660,7 +660,13 @@ fn legacy_commands_support_custom() {
         }
         pb.arg("--profile=super-dev")
             .arg("-v")
-            .with_stderr_contains("[RUNNING] [..]codegen-units=3[..]")
+            .with_stderr_data(str![
+                r#"
+...
+[RUNNING] [..]codegen-units=3[..]
+...
+"#
+            ])
             .run();
         p.build_dir().rm_rf();
     }
@@ -686,12 +692,11 @@ fn legacy_rustc() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("rustc --profile dev -v")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 [..]
-[RUNNING] `rustc --crate-name foo [..]-C codegen-units=3[..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]-C codegen-units=3[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
