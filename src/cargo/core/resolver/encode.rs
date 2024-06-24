@@ -533,8 +533,6 @@ pub struct EncodableDependency {
 /// The serialization for `SourceId` doesn't do URL encode for parameters.
 /// In contrast, this type is aware of that whenever [`ResolveVersion`] allows
 /// us to do so (v4 or later).
-///
-/// [`EncodableResolve`] turns into a `
 #[derive(Deserialize, Debug, PartialOrd, Ord, Clone)]
 #[serde(transparent)]
 pub struct EncodableSourceId {
