@@ -98,7 +98,7 @@ thiserror = "1.0.59"
 time = { version = "0.3.36", features = ["parsing", "formatting", "serde"] }
 toml = "0.8.14"
 toml_edit = { version = "0.22.14", features = ["serde"] }
-tracing = "0.1.40" # be compatible with rustc_log: https://github.com/rust-lang/rust/blob/e51e98dde6a/compiler/rustc_log/Cargo.toml#L9
+tracing = { version = "0.1.40", default-features = false, features = ["std"] } # be compatible with rustc_log: https://github.com/rust-lang/rust/blob/e51e98dde6a/compiler/rustc_log/Cargo.toml#L9
 tracing-chrome = "0.7.2"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 unicase = "2.7.0"
@@ -197,7 +197,7 @@ tempfile.workspace = true
 time.workspace = true
 toml.workspace = true
 toml_edit.workspace = true
-tracing.workspace = true
+tracing = { workspace = true, features = ["attributes"] }
 tracing-subscriber.workspace = true
 unicase.workspace = true
 unicode-width.workspace = true
