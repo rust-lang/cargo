@@ -1893,8 +1893,7 @@ fn update_breaking() {
 
                 [workspace.dependencies]
                 ws  =  "2.0"  # This line gets partially rewritten
-            
-"#]],
+            "#]],
     );
 
     let foo_manifest = p.read_file("foo/Cargo.toml");
@@ -1983,12 +1982,12 @@ fn update_breaking_specific_packages() {
         .file(
             "Cargo.toml",
             r#"
-            [workspace]
-            members = ["foo", "bar"]
+                [workspace]
+                members = ["foo", "bar"]
 
-            [workspace.dependencies]
-            ws = "1.0"
-        "#,
+                [workspace.dependencies]
+                ws = "1.0"
+            "#,
         )
         .file(
             "foo/Cargo.toml",
@@ -2019,7 +2018,7 @@ fn update_breaking_specific_packages() {
                 just-bar = "1.0"
                 shared = "1.0"
                 ws.workspace = true
-        "#,
+            "#,
         )
         .file("bar/src/lib.rs", "")
         .build();
