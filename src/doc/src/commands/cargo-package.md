@@ -26,8 +26,8 @@ steps:
       executable binary or example target. [cargo-install(1)](cargo-install.html) will use the
       packaged lock file if the `--locked` flag is used.
     - A `.cargo_vcs_info.json` file is included that contains information
-      about the current VCS checkout hash if available (not included with
-      `--allow-dirty`).
+      about the current VCS checkout hash if available, as well as a flag if the
+      worktree is dirty.
 3. Extract the `.crate` file and build it to verify it can build.
     - This will rebuild your package from scratch to ensure that it can be
       built from a pristine state. The `--no-verify` flag can be used to skip
@@ -47,11 +47,15 @@ Will generate a `.cargo_vcs_info.json` in the following format
 ```javascript
 {
  "git": {
-   "sha1": "aac20b6e7e543e6dd4118b246c77225e3a3a1302"
+   "sha1": "aac20b6e7e543e6dd4118b246c77225e3a3a1302",
+   "dirty": true
  },
  "path_in_vcs": ""
 }
 ```
+
+`dirty` indicates that the Git worktree was dirty when the package
+was built.
 
 `path_in_vcs` will be set to a repo-relative path for packages
 in subdirectories of the version control repository.

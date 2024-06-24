@@ -703,6 +703,7 @@ fn no_duplicates_from_modified_tracked_files() {
     p.cargo("package --list --allow-dirty")
         .with_stdout(
             "\
+.cargo_vcs_info.json
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
@@ -1011,6 +1012,7 @@ src/main.rs
         .with_stderr("")
         .with_stdout(
             "\
+.cargo_vcs_info.json
 .gitignore
 Cargo.lock
 Cargo.toml
@@ -1169,6 +1171,111 @@ src/lib.rs
 ",
         )
         .run();
+}
+
+#[cargo_test]
+fn issue_13695_allow_dirty_vcs_info() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+            description = "foo"
+            license = "foo"
+            documentation = "foo"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    let repo = git::init(&p.root());
+    // Initial commit, with no files added.
+    git::commit(&repo);
+
+    // Allowing a dirty worktree results in the vcs file still being included.
+    p.cargo("package --allow-dirty").run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.1.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.1.0.crate",
+        &[
+            ".cargo_vcs_info.json",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+        ],
+        &[(
+            ".cargo_vcs_info.json",
+            r#"{
+  "git": {
+    "sha1": "[..]",
+    "dirty": true
+  },
+  "path_in_vcs": ""
+}"#,
+        )],
+    );
+
+    // Listing provides a consistent result.
+    p.cargo("package --list --allow-dirty")
+        .with_stderr("")
+        .with_stdout(
+            "\
+.cargo_vcs_info.json
+Cargo.toml
+Cargo.toml.orig
+src/lib.rs
+",
+        )
+        .run();
+}
+
+#[cargo_test]
+fn issue_13695_allowing_dirty_vcs_info_but_clean() {
+    let p = project().build();
+    let _ = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+            description = "foo"
+            license = "foo"
+            documentation = "foo"
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    // Allowing a dirty worktree despite it being clean.
+    p.cargo("package --allow-dirty").run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.1.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.1.0.crate",
+        &[
+            ".cargo_vcs_info.json",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+        ],
+        &[(
+            ".cargo_vcs_info.json",
+            r#"{
+  "git": {
+    "sha1": "[..]"
+  },
+  "path_in_vcs": ""
+}"#,
+        )],
+    );
 }
 
 #[cargo_test]
@@ -2333,6 +2440,7 @@ fn finds_git_in_parent() {
     p.cargo("package --list --allow-dirty")
         .with_stdout(
             "\
+.cargo_vcs_info.json
 Cargo.toml
 Cargo.toml.orig
 ignoreme
@@ -2346,6 +2454,7 @@ src/lib.rs
     p.cargo("package --list --allow-dirty")
         .with_stdout(
             "\
+.cargo_vcs_info.json
 .gitignore
 Cargo.toml
 Cargo.toml.orig
@@ -2359,6 +2468,7 @@ src/lib.rs
     p.cargo("package --list --allow-dirty")
         .with_stdout(
             "\
+.cargo_vcs_info.json
 .gitignore
 Cargo.toml
 Cargo.toml.orig
@@ -2621,6 +2731,7 @@ fn deleted_git_working_tree() {
     p.cargo("package --allow-dirty --list")
         .with_stdout(
             "\
+.cargo_vcs_info.json
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
@@ -2635,6 +2746,7 @@ src/main.rs
     p.cargo("package --allow-dirty --list")
         .with_stdout(
             "\
+.cargo_vcs_info.json
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig

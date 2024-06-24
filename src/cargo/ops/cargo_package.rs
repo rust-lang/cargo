@@ -81,6 +81,9 @@ struct VcsInfo {
 #[derive(Serialize)]
 struct GitVcsInfo {
     sha1: String,
+    /// Indicate whether or not the Git worktree is dirty.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    dirty: bool,
 }
 
 /// Packages a single package in a workspace, returning the resulting tar file.
@@ -235,14 +238,8 @@ fn prepare_archive(
     }
     let src_files = src.list_files(pkg)?;
 
-    // Check (git) repository state, getting the current commit hash if not
-    // dirty.
-    let vcs_info = if !opts.allow_dirty {
-        // This will error if a dirty repo is found.
-        check_repo_state(pkg, &src_files, gctx)?
-    } else {
-        None
-    };
+    // Check (git) repository state, getting the current commit hash.
+    let vcs_info = check_repo_state(pkg, &src_files, gctx, &opts)?;
 
     build_ar_list(ws, pkg, src_files, vcs_info)
 }
@@ -559,13 +556,15 @@ fn check_metadata(pkg: &Package, gctx: &GlobalContext) -> CargoResult<()> {
 }
 
 /// Checks if the package source is in a *git* DVCS repository. If *git*, and
-/// the source is *dirty* (e.g., has uncommitted changes) then `bail!` with an
-/// informative message. Otherwise return the sha1 hash of the current *HEAD*
-/// commit, or `None` if no repo is found.
+/// the source is *dirty* (e.g., has uncommitted changes), and `--allow-dirty`
+/// has not been passed, then `bail!` with an informative message. Otherwise
+/// return the sha1 hash of the current *HEAD* commit, or `None` if no repo is
+/// found.
 fn check_repo_state(
     p: &Package,
     src_files: &[PathBuf],
     gctx: &GlobalContext,
+    opts: &PackageOpts<'_>,
 ) -> CargoResult<Option<VcsInfo>> {
     if let Ok(repo) = git2::Repository::discover(p.root()) {
         if let Some(workdir) = repo.workdir() {
@@ -585,7 +584,7 @@ fn check_repo_state(
                         .unwrap_or("")
                         .replace("\\", "/");
                     return Ok(Some(VcsInfo {
-                        git: git(p, src_files, &repo)?,
+                        git: git(p, src_files, &repo, &opts)?,
                         path_in_vcs,
                     }));
                 }
@@ -608,7 +607,12 @@ fn check_repo_state(
     // directory is dirty or not, thus we have to assume that it's clean.
     return Ok(None);
 
-    fn git(p: &Package, src_files: &[PathBuf], repo: &git2::Repository) -> CargoResult<GitVcsInfo> {
+    fn git(
+        p: &Package,
+        src_files: &[PathBuf],
+        repo: &git2::Repository,
+        opts: &PackageOpts<'_>,
+    ) -> CargoResult<GitVcsInfo> {
         // This is a collection of any dirty or untracked files. This covers:
         // - new/modified/deleted/renamed/type change (index or worktree)
         // - untracked files (which are "new" worktree files)
@@ -633,10 +637,12 @@ fn check_repo_state(
                     .to_string()
             })
             .collect();
-        if dirty_src_files.is_empty() {
+        let dirty = !dirty_src_files.is_empty();
+        if !dirty || opts.allow_dirty {
             let rev_obj = repo.revparse_single("HEAD")?;
             Ok(GitVcsInfo {
                 sha1: rev_obj.id().to_string(),
+                dirty,
             })
         } else {
             anyhow::bail!(

@@ -2610,6 +2610,7 @@ fn include_overrides_gitignore() {
     p.cargo("package --list --allow-dirty")
         .with_stdout(
             "\
+.cargo_vcs_info.json
 Cargo.toml
 Cargo.toml.orig
 ignored.txt
