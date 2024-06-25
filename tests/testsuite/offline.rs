@@ -1,14 +1,13 @@
 //! Tests for --offline flag.
 
-#![allow(deprecated)]
-
 use cargo_test_support::{
-    basic_manifest, git, main_file, path2url, project,
+    basic_manifest, git, main_file, project,
     registry::{Package, RegistryBuilder},
-    Execs,
+    str, Execs,
 };
 use std::fs;
 
+#[allow(deprecated)]
 #[cargo_test]
 fn offline_unused_target_dep() {
     // --offline with a target dependency that is not used and not downloaded.
@@ -32,7 +31,11 @@ fn offline_unused_target_dep() {
         .build();
     // Do a build that downloads only what is necessary.
     p.cargo("check")
-        .with_stderr_contains("[DOWNLOADED] used_dep [..]")
+        .with_stderr_data(str![[r#"
+...
+[DOWNLOADED] used_dep v1.0.0 (registry `dummy-registry`)
+...
+"#]])
         .with_stderr_does_not_contain("[DOWNLOADED] unused_dep [..]")
         .run();
     p.cargo("clean").run();
@@ -40,6 +43,7 @@ fn offline_unused_target_dep() {
     p.cargo("check --offline").run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn offline_missing_optional() {
     Package::new("opt_dep", "1.0.0").publish();
@@ -65,14 +69,13 @@ fn offline_missing_optional() {
     // Build offline, make sure it works.
     p.cargo("check --offline").run();
     p.cargo("check --offline --features=opt_dep")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] failed to download `opt_dep v1.0.0`
 
 Caused by:
   attempting to make an HTTP request, but --offline was specified
-",
-        )
+
+"#]])
         .with_status(101)
         .run();
 }
@@ -144,13 +147,13 @@ fn cargo_compile_with_downloaded_dependency_with_offline() {
         .build();
 
     p2.cargo("check --offline")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] present_dep v1.2.3
-[CHECKING] bar v0.1.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
-        )
+[CHECKING] bar v0.1.0 ([ROOT]/bar)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -175,23 +178,26 @@ fn cargo_compile_offline_not_try_update() {
         .file("src/lib.rs", "")
         .build();
 
-    let msg = "\
-[ERROR] no matching package named `not_cached_dep` found
-location searched: registry `crates-io`
-required by package `bar v0.1.0 ([..]/bar)`
-As a reminder, you're using offline mode (--offline) which can sometimes cause \
-surprising resolution failures, if this error is too confusing you may wish to \
-retry without the offline flag.
-";
-
     p.cargo("check --offline")
         .with_status(101)
-        .with_stderr(msg)
+        .with_stderr_data(str![[r#"
+[ERROR] no matching package named `not_cached_dep` found
+location searched: registry `crates-io`
+required by package `bar v0.1.0 ([ROOT]/bar)`
+As a reminder, you're using offline mode (--offline) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without the offline flag.
+
+"#]])
         .run();
 
     // While we're here, also check the config works.
     p.change_file(".cargo/config.toml", "net.offline = true");
-    p.cargo("check").with_status(101).with_stderr(msg).run();
+    p.cargo("check").with_status(101).with_stderr_data(str![[r#"
+[ERROR] no matching package named `not_cached_dep` found
+location searched: registry `crates-io`
+required by package `bar v0.1.0 ([ROOT]/bar)`
+As a reminder, you're using offline mode (--offline) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without the offline flag.
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -254,15 +260,18 @@ fn main(){
         .build();
 
     p2.cargo("run --offline")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [COMPILING] present_dep v1.2.3
-[COMPILING] foo v0.1.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-     Running `[..]`",
-        )
-        .with_stdout("1.2.3")
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+1.2.3
+
+"#]])
         .run();
 }
 
@@ -286,8 +295,8 @@ fn cargo_compile_forbird_git_httpsrepo_offline() {
         .file("src/main.rs", "")
         .build();
 
-    p.cargo("check --offline").with_status(101).with_stderr("\
-[ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 [..]`
+    p.cargo("check --offline").with_status(101).with_stderr_data(str![[r#"
+[ERROR] failed to get `dep1` as a dependency of package `foo v0.5.0 ([ROOT]/foo)`
 
 Caused by:
   failed to load source for dependency `dep1`
@@ -296,7 +305,9 @@ Caused by:
   Unable to update https://github.com/some_user/dep1.git
 
 Caused by:
-  can't checkout from 'https://github.com/some_user/dep1.git': you are in the offline mode (--offline)").run();
+  can't checkout from 'https://github.com/some_user/dep1.git': you are in the offline mode (--offline)
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -330,7 +341,12 @@ fn compile_offline_while_transitive_dep_not_cached() {
     // simulate download bar, but fail to download baz
     p.cargo("check")
         .with_status(101)
-        .with_stderr_contains("[..]failed to verify the checksum of `baz[..]")
+        .with_stderr_data(str![[r#"
+...
+Caused by:
+  failed to verify the checksum of `baz v1.0.0 (registry `dummy-registry`)`
+
+"#]])
         .run();
 
     // Restore the file contents.
@@ -338,14 +354,13 @@ fn compile_offline_while_transitive_dep_not_cached() {
 
     p.cargo("check --offline")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] failed to download `bar v0.1.0`
 
 Caused by:
   attempting to make an HTTP request, but --offline was specified
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -368,14 +383,15 @@ fn update_offline_not_cached() {
         .build();
     p.cargo("update --offline")
         .with_status(101)
-        .with_stderr(
+        .with_stderr_data(
             "\
 [ERROR] no matching package named `bar` found
-location searched: registry `[..]`
-required by package `foo v0.0.1 ([..]/foo)`
+location searched: registry `crates-io`
+required by package `foo v0.0.1 ([ROOT]/foo)`
 As a reminder, you're using offline mode (--offline) which can sometimes cause \
 surprising resolution failures, if this error is too confusing you may wish to \
-retry without the offline flag.",
+retry without the offline flag.
+",
         )
         .run();
 }
@@ -500,23 +516,21 @@ fn compile_offline_with_cached_git_dep(shallow: bool) {
         )
         .build();
 
-    let git_root = git_project.root();
-
     let mut cargo = p.cargo("build --offline");
-    cargo.with_stderr(format!(
+    cargo.with_stderr_data(format!(
         "\
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] dep1 v0.5.0 ({}#[..])
-[COMPILING] foo v0.5.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]",
-        path2url(git_root),
+[COMPILING] dep1 v0.5.0 ([ROOTURL]/dep1#[..])
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+",
     ));
     maybe_use_shallow(cargo).run();
 
     assert!(p.bin("foo").is_file());
 
     p.process(&p.bin("foo"))
-        .with_stdout("hello from cached git repo rev2\n")
+        .with_stdout_data("hello from cached git repo rev2\n")
         .run();
 
     p.change_file(
@@ -539,7 +553,7 @@ fn compile_offline_with_cached_git_dep(shallow: bool) {
 
     maybe_use_shallow(p.cargo("build --offline")).run();
     p.process(&p.bin("foo"))
-        .with_stdout("hello from cached git repo rev1\n")
+        .with_stdout_data("hello from cached git repo rev1\n")
         .run();
 }
 
@@ -588,17 +602,16 @@ fn offline_resolve_optional_fail() {
 
     p.cargo("check --offline")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to select a version for the requirement `dep = \"^2.0\"`
+        .with_stderr_data(
+            str![[r#"
+[ERROR] failed to select a version for the requirement `dep = "^2.0"`
 candidate versions found which didn't match: 1.0.0
-location searched: `[..]` index (which is replacing registry `crates-io`)
-required by package `foo v0.1.0 ([..]/foo)`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `foo v0.1.0 ([ROOT]/foo)`
 perhaps a crate was updated and forgotten to be re-vendored?
-As a reminder, you're using offline mode (--offline) which can sometimes cause \
-surprising resolution failures, if this error is too confusing you may wish to \
-retry without the offline flag.
-",
+As a reminder, you're using offline mode (--offline) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without the offline flag.
+
+"#]]
         )
         .run();
 }
@@ -687,64 +700,65 @@ fn main(){
         .build();
 
     p2.cargo("build --offline")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [COMPILING] present_dep v1.2.9
-[COMPILING] foo v0.1.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p2.rename_run("foo", "with_1_2_9")
-        .with_stdout("1.2.9")
+        .with_stdout_data(str![[r#"
+1.2.9
+
+"#]])
         .run();
     // updates happen without updating the index
     p2.cargo("update present_dep --precise 1.2.3 --offline")
         .with_status(0)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [DOWNGRADING] present_dep v1.2.9 -> v1.2.3
-",
-        )
+
+"#]])
         .run();
 
     p2.cargo("build --offline")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [COMPILING] present_dep v1.2.3
-[COMPILING] foo v0.1.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p2.rename_run("foo", "with_1_2_3")
-        .with_stdout("1.2.3")
+        .with_stdout_data(str![[r#"
+1.2.3
+
+"#]])
         .run();
 
     // Offline update should only print package details and not index updating
     p2.cargo("update --offline")
         .with_status(0)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [UPDATING] present_dep v1.2.3 -> v1.2.9
-",
-        )
+
+"#]])
         .run();
 
     // No v1.2.8 loaded into the cache so expect failure.
     p2.cargo("update present_dep --precise 1.2.8 --offline")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(
+            str![[r#"
 [ERROR] no matching package named `present_dep` found
-location searched: registry `[..]`
-required by package `foo v0.1.0 ([..]/foo)`
-As a reminder, you're using offline mode (--offline) which can sometimes cause \
-surprising resolution failures, if this error is too confusing you may wish to \
-retry without the offline flag.
-",
+location searched: registry `crates-io`
+required by package `foo v0.1.0 ([ROOT]/foo)`
+As a reminder, you're using offline mode (--offline) which can sometimes cause surprising resolution failures, if this error is too confusing you may wish to retry without the offline flag.
+
+"#]]
         )
         .run();
 }
@@ -754,11 +768,11 @@ fn offline_and_frozen_and_no_lock() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("check --frozen --offline")
         .with_status(101)
-        .with_stderr("\
-error: the lock file [ROOT]/foo/Cargo.lock needs to be updated but --frozen was passed to prevent this
-If you want to try to generate the lock file without accessing the network, \
-remove the --frozen flag and use --offline instead.
-")
+        .with_stderr_data(str![[r#"
+[ERROR] the lock file [ROOT]/foo/Cargo.lock needs to be updated but --frozen was passed to prevent this
+If you want to try to generate the lock file without accessing the network, remove the --frozen flag and use --offline instead.
+
+"#]])
         .run();
 }
 
@@ -767,10 +781,10 @@ fn offline_and_locked_and_no_frozen() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("check --locked --offline")
         .with_status(101)
-        .with_stderr("\
-error: the lock file [ROOT]/foo/Cargo.lock needs to be updated but --locked was passed to prevent this
-If you want to try to generate the lock file without accessing the network, \
-remove the --locked flag and use --offline instead.
-")
+        .with_stderr_data(str![[r#"
+[ERROR] the lock file [ROOT]/foo/Cargo.lock needs to be updated but --locked was passed to prevent this
+If you want to try to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.
+
+"#]])
         .run();
 }
