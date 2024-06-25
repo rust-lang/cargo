@@ -903,13 +903,6 @@ See [debug](profiles.md#debug).
 
 See [split-debuginfo](profiles.md#split-debuginfo).
 
-#### `profile.<name>.strip`
-* Type: string or boolean
-* Default: See profile docs.
-* Environment: `CARGO_PROFILE_<name>_STRIP`
-
-See [strip](profiles.md#strip).
-
 #### `profile.<name>.debug-assertions`
 * Type: boolean
 * Default: See profile docs.
@@ -960,7 +953,7 @@ See [panic](profiles.md#panic).
 See [rpath](profiles.md#rpath).
 
 #### `profile.<name>.strip`
-* Type: string
+* Type: string or boolean
 * Default: See profile docs.
 * Environment: `CARGO_PROFILE_<name>_STRIP`
 
