@@ -1,7 +1,7 @@
-#![allow(deprecated)]
-
+use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::registry::RegistryBuilder;
+use cargo_test_support::str;
 
 #[cargo_test]
 fn within_namespace_requires_feature() {
@@ -21,8 +21,8 @@ fn within_namespace_requires_feature() {
     p.cargo("read-manifest")
         .masquerade_as_nightly_cargo(&["open-namespaces"])
         .with_status(101)
-        .with_stderr(
-            r#"error: failed to parse manifest at `[CWD]/Cargo.toml`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   feature `open-namespaces` is required
@@ -30,8 +30,8 @@ Caused by:
   The package requires the Cargo feature called `open-namespaces`, but that feature is not stabilized in this version of Cargo ([..]).
   Consider adding `cargo-features = ["open-namespaces"]` to the top of Cargo.toml (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
   See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#open-namespaces for more information about the status of this feature.
-"#,
-        )
+
+"#]])
         .run()
 }
 
@@ -54,8 +54,9 @@ fn implicit_lib_within_namespace() {
 
     p.cargo("read-manifest")
         .masquerade_as_nightly_cargo(&["open-namespaces"])
-        .with_json(
-            r#"{
+        .with_stdout_data(
+            str![[r#"
+{
   "authors": [],
   "categories": [],
   "default_run": null,
@@ -65,12 +66,12 @@ fn implicit_lib_within_namespace() {
   "edition": "2015",
   "features": {},
   "homepage": null,
-  "id": "path+file://[..]#foo::bar@0.0.1",
+  "id": "path+[ROOTURL]/foo#foo::bar@0.0.1",
   "keywords": [],
   "license": null,
   "license_file": null,
   "links": null,
-  "manifest_path": "[CWD]/Cargo.toml",
+  "manifest_path": "[ROOT]/foo/Cargo.toml",
   "metadata": null,
   "name": "foo::bar",
   "publish": null,
@@ -90,14 +91,16 @@ fn implicit_lib_within_namespace() {
         "lib"
       ],
       "name": "foo::bar",
-      "src_path": "[CWD]/src/lib.rs",
+      "src_path": "[ROOT]/foo/src/lib.rs",
       "test": true
     }
   ],
   "version": "0.0.1"
-}"#,
+}
+"#]]
+            .json(),
         )
-        .with_stderr("")
+        .with_stderr_data("")
         .run()
 }
 
@@ -120,8 +123,9 @@ fn implicit_bin_within_namespace() {
 
     p.cargo("read-manifest")
         .masquerade_as_nightly_cargo(&["open-namespaces"])
-        .with_json(
-            r#"{
+        .with_stdout_data(
+            str![[r#"
+{
   "authors": [],
   "categories": [],
   "default_run": null,
@@ -131,12 +135,12 @@ fn implicit_bin_within_namespace() {
   "edition": "2015",
   "features": {},
   "homepage": null,
-  "id": "path+file://[..]#foo::bar@0.0.1",
+  "id": "path+[ROOTURL]/foo#foo::bar@0.0.1",
   "keywords": [],
   "license": null,
   "license_file": null,
   "links": null,
-  "manifest_path": "[CWD]/Cargo.toml",
+  "manifest_path": "[ROOT]/foo/Cargo.toml",
   "metadata": null,
   "name": "foo::bar",
   "publish": null,
@@ -156,14 +160,16 @@ fn implicit_bin_within_namespace() {
         "bin"
       ],
       "name": "foo::bar",
-      "src_path": "[CWD]/src/main.rs",
+      "src_path": "[ROOT]/foo/src/main.rs",
       "test": true
     }
   ],
   "version": "0.0.1"
-}"#,
+}
+"#]]
+            .json(),
         )
-        .with_stderr("")
+        .with_stderr_data("")
         .run()
 }
 
@@ -190,8 +196,9 @@ fn explicit_bin_within_namespace() {
 
     p.cargo("read-manifest")
         .masquerade_as_nightly_cargo(&["open-namespaces"])
-        .with_json(
-            r#"{
+        .with_stdout_data(
+            str![[r#"
+{
   "authors": [],
   "categories": [],
   "default_run": null,
@@ -201,12 +208,12 @@ fn explicit_bin_within_namespace() {
   "edition": "2015",
   "features": {},
   "homepage": null,
-  "id": "path+file://[..]#foo::bar@0.0.1",
+  "id": "path+[ROOTURL]/foo#foo::bar@0.0.1",
   "keywords": [],
   "license": null,
   "license_file": null,
   "links": null,
-  "manifest_path": "[CWD]/Cargo.toml",
+  "manifest_path": "[ROOT]/foo/Cargo.toml",
   "metadata": null,
   "name": "foo::bar",
   "publish": null,
@@ -226,7 +233,7 @@ fn explicit_bin_within_namespace() {
         "lib"
       ],
       "name": "foo::bar",
-      "src_path": "[CWD]/src/lib.rs",
+      "src_path": "[ROOT]/foo/src/lib.rs",
       "test": true
     },
     {
@@ -240,14 +247,16 @@ fn explicit_bin_within_namespace() {
         "bin"
       ],
       "name": "foo-bar",
-      "src_path": "[CWD]/src/bin/foo-bar/main.rs",
+      "src_path": "[ROOT]/foo/src/bin/foo-bar/main.rs",
       "test": true
     }
   ],
   "version": "0.0.1"
-}"#,
+}
+"#]]
+            .json(),
         )
-        .with_stderr("")
+        .with_stderr_data("")
         .run()
 }
 
@@ -269,8 +278,9 @@ fn main() {}
 
     p.cargo("read-manifest -Zscript --manifest-path foo::bar.rs")
         .masquerade_as_nightly_cargo(&["script", "open-namespaces"])
-        .with_json(
-            r#"{
+        .with_stdout_data(
+            str![[r#"
+{
   "authors": [],
   "categories": [],
   "default_run": null,
@@ -280,12 +290,12 @@ fn main() {}
   "edition": "2021",
   "features": {},
   "homepage": null,
-  "id": "path+file://[..]#foo::bar@0.0.0",
+  "id": "path+[ROOTURL]/foo#foo::bar@0.0.0",
   "keywords": [],
   "license": null,
   "license_file": null,
   "links": null,
-  "manifest_path": "[CWD]/foo::bar.rs",
+  "manifest_path": "[ROOT]/foo/foo::bar.rs",
   "metadata": null,
   "name": "foo::bar",
   "publish": [],
@@ -305,15 +315,16 @@ fn main() {}
         "bin"
       ],
       "name": "foo::bar",
-      "src_path": "[..]/foo::bar.rs",
+      "src_path": "[ROOT]/home/.cargo/target/[HASH]/foo::bar.rs",
       "test": true
     }
   ],
   "version": "0.0.0"
 }
-"#,
+"#]]
+            .json(),
         )
-        .with_stderr("")
+        .with_stderr_data("")
         .run();
 }
 
@@ -344,17 +355,16 @@ fn publish_namespaced() {
         .masquerade_as_nightly_cargo(&["script", "open-namespaces"])
         .replace_crates_io(registry.index_url())
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-   Packaging foo::bar v0.0.1 ([CWD])
+[PACKAGING] foo::bar v0.0.1 ([ROOT]/foo)
 [ERROR] failed to prepare local package for uploading
 
 Caused by:
   cannot publish with `open-namespaces`
-",
-        )
+
+"#]])
         .run();
 }
