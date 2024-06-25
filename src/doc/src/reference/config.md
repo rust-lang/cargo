@@ -396,7 +396,7 @@ Can be overridden with the `--jobs` CLI option.
 
 #### `build.rustc`
 * Type: string (program path)
-* Default: "rustc"
+* Default: `"rustc"`
 * Environment: `CARGO_BUILD_RUSTC` or `RUSTC`
 
 Sets the executable to use for `rustc`.
@@ -426,7 +426,7 @@ the final invocation is `$RUSTC_WRAPPER $RUSTC_WORKSPACE_WRAPPER $RUSTC`.
 
 #### `build.rustdoc`
 * Type: string (program path)
-* Default: "rustdoc"
+* Default: `"rustdoc"`
 * Environment: `CARGO_BUILD_RUSTDOC` or `RUSTDOC`
 
 Sets the executable to use for `rustdoc`.
@@ -453,7 +453,7 @@ target = ["x86_64-unknown-linux-gnu", "i686-unknown-linux-gnu"]
 
 #### `build.target-dir`
 * Type: string (path)
-* Default: "target"
+* Default: `"target"`
 * Environment: `CARGO_BUILD_TARGET_DIR` or `CARGO_TARGET_DIR`
 
 The path to where all compiler output is placed. The default if not specified
@@ -601,7 +601,7 @@ This option is deprecated and unused.
 
 #### `cargo-new.vcs`
 * Type: string
-* Default: "git" or "none"
+* Default: `"git"` or `"none"`
 * Environment: `CARGO_CARGO_NEW_VCS`
 
 Specifies the source control system to use for initializing a new repository.
@@ -639,7 +639,7 @@ The `[future-incompat-report]` table controls setting for [future incompat repor
 
 #### `future-incompat-report.frequency`
 * Type: string
-* Default: "always"
+* Default: `"always"`
 * Environment: `CARGO_FUTURE_INCOMPAT_REPORT_FREQUENCY`
 
 Controls how often we display a notification to the terminal when a future incompat report is available. Possible values:
@@ -705,15 +705,15 @@ performed. This only works on Windows.
 * Environment: `CARGO_HTTP_SSL_VERSION`
 
 This sets the minimum TLS version to use. It takes a string, with one of the
-possible values of "default", "tlsv1", "tlsv1.0", "tlsv1.1", "tlsv1.2", or
-"tlsv1.3".
+possible values of `"default"`, `"tlsv1"`, `"tlsv1.0"`, `"tlsv1.1"`, `"tlsv1.2"`, or
+`"tlsv1.3"`.
 
 This may alternatively take a table with two keys, `min` and `max`, which each
 take a string value of the same kind that specifies the minimum and maximum
 range of TLS versions to use.
 
-The default is a minimum version of "tlsv1.0" and a max of the newest version
-supported on your platform, typically "tlsv1.3".
+The default is a minimum version of `"tlsv1.0"` and a max of the newest version
+supported on your platform, typically `"tlsv1.3"`.
 
 #### `http.low-speed-limit`
 * Type: integer
@@ -1284,7 +1284,7 @@ Specifying the `--verbose` flag will override and force verbose output.
 
 #### `term.color`
 * Type: string
-* Default: "auto"
+* Default: `"auto"`
 * Environment: `CARGO_TERM_COLOR`
 
 Controls whether or not colored output is used in the terminal. Possible values:
@@ -1312,7 +1312,7 @@ Control whether output can be rendered using non-ASCII unicode characters.
 
 #### `term.progress.when`
 * Type: string
-* Default: "auto"
+* Default: `"auto"`
 * Environment: `CARGO_TERM_PROGRESS_WHEN`
 
 Controls whether or not progress bar is shown in the terminal. Possible values:
