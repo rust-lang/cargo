@@ -1,12 +1,11 @@
 //! Tests for the `cargo owner` command.
 
-#![allow(deprecated)]
-
 use std::fs;
 
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::project;
 use cargo_test_support::registry::{self, api_path};
+use cargo_test_support::str;
 
 fn setup(name: &str, content: Option<&str>) {
     let dir = api_path().join(format!("api/v1/crates/{}", name));
@@ -51,12 +50,11 @@ fn simple_list() {
 
     p.cargo("owner -l")
         .replace_crates_io(registry.index_url())
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 github:rust-lang:core (Core)
 octocat
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -83,13 +81,14 @@ fn simple_add() {
     p.cargo("owner -a username")
         .replace_crates_io(registry.index_url())
         .with_status(101)
-        .with_stderr(
-            "    Updating crates.io index
-error: failed to invite owners to crate `foo` on registry at file://[..]
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[ERROR] failed to invite owners to crate `foo` on registry at [ROOTURL]/api
 
 Caused by:
-  EOF while parsing a value at line 1 column 0",
-        )
+  EOF while parsing a value at line 1 column 0
+
+"#]])
         .run();
 }
 
@@ -149,14 +148,15 @@ fn simple_remove() {
     p.cargo("owner -r username")
         .replace_crates_io(registry.index_url())
         .with_status(101)
-        .with_stderr(
-            "    Updating crates.io index
-       Owner removing [\"username\"] from crate foo
-error: failed to remove owners from crate `foo` on registry at file://[..]
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[OWNER] removing ["username"] from crate foo
+[ERROR] failed to remove owners from crate `foo` on registry at [ROOTURL]/api
 
 Caused by:
-  EOF while parsing a value at line 1 column 0",
-        )
+  EOF while parsing a value at line 1 column 0
+
+"#]])
         .run();
 }
 
