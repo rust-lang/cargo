@@ -138,7 +138,7 @@ test src/lib.rs - bar (line 1) ... FAILED
 failures:
 
 ---- src/lib.rs - bar (line 1) stdout ----
-src/lib.rs:2:1: error[E0425]: cannot find function `bar` in this scope
+src/lib.rs:2:1: error[E0425]: cannot find function `bar`[..]
 [ERROR] aborting due to 1 previous error
 Couldn't compile the test.
 
