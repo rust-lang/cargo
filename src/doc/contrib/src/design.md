@@ -77,6 +77,13 @@ data in Cargo's home directory) should not *prevent* older versions from
 running, but they may cause older versions to recreate the cache, which may
 result in a performance impact.
 
+Introducing new hard errors should be carefully considered, given their
+potential impact on compatibility. New errors might cause newer versions of
+Cargo to fail builds that older versions would have succeeded on, contradicting
+the expectation that packages compiling with older versions should also compile
+with newer ones unless critical bugs are addressed. Therefore, such changes
+should be thoroughly evaluated to minimize disruption.
+
 Changes to the registry index should not prevent older versions from working.
 Generally, older versions ignore new fields, so the format should be easily
 extensible. Changes to the format or interpretation of existing fields should
