@@ -1,8 +1,6 @@
 //! Tests for dep-info files. This includes the dep-info file Cargo creates in
 //! the output directory, and the ones stored in the fingerprint.
 
-#![allow(deprecated)]
-
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::registry::Package;
@@ -323,7 +321,11 @@ fn relative_depinfo_paths_ws() {
     p.cargo("build -Z binary-dep-depinfo --target")
         .arg(&host)
         .masquerade_as_nightly_cargo(&["binary-dep-depinfo"])
-        .with_stderr_contains("[COMPILING] foo [..]")
+        .with_stderr_data(str![[r#"
+...
+[COMPILING] foo v0.1.0 ([ROOT]/foo/foo)
+...
+"#]])
         .run();
 
     assert_deps_contains(
@@ -360,7 +362,10 @@ fn relative_depinfo_paths_ws() {
     p.cargo("build -Z binary-dep-depinfo --target")
         .arg(&host)
         .masquerade_as_nightly_cargo(&["binary-dep-depinfo"])
-        .with_stderr("[FINISHED] `dev` profile [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -446,7 +451,11 @@ fn relative_depinfo_paths_no_ws() {
 
     p.cargo("build -Z binary-dep-depinfo")
         .masquerade_as_nightly_cargo(&["binary-dep-depinfo"])
-        .with_stderr_contains("[COMPILING] foo [..]")
+        .with_stderr_data(str![[r#"
+...
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+...
+"#]])
         .run();
 
     assert_deps_contains(
@@ -482,7 +491,10 @@ fn relative_depinfo_paths_no_ws() {
     // Make sure it stays fresh.
     p.cargo("build -Z binary-dep-depinfo")
         .masquerade_as_nightly_cargo(&["binary-dep-depinfo"])
-        .with_stderr("[FINISHED] `dev` profile [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
