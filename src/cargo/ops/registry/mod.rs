@@ -2,6 +2,7 @@
 //!
 //! [1]: https://doc.rust-lang.org/nightly/cargo/reference/registry-web-api.html
 
+mod info;
 mod login;
 mod logout;
 mod owner;
@@ -18,7 +19,7 @@ use cargo_credential::{Operation, Secret};
 use crates_io::Registry;
 use url::Url;
 
-use crate::core::SourceId;
+use crate::core::{PackageId, SourceId};
 use crate::sources::source::Source;
 use crate::sources::{RegistrySource, SourceConfigMap};
 use crate::util::auth;
@@ -27,6 +28,7 @@ use crate::util::context::{GlobalContext, PathAndArgs};
 use crate::util::errors::CargoResult;
 use crate::util::network::http::http_handle;
 
+pub use self::info::info;
 pub use self::login::registry_login;
 pub use self::logout::registry_logout;
 pub use self::owner::modify_owners;
@@ -206,6 +208,47 @@ fn get_source_id(
     }
 }
 
+/// Very similar to [`get_source_id`], but is used when the `package_id` is known.
+fn get_source_id_with_package_id(
+    gctx: &GlobalContext,
+    package_id: Option<PackageId>,
+    reg_or_index: Option<&RegistryOrIndex>,
+) -> CargoResult<(bool, RegistrySourceIds)> {
+    let (use_package_source_id, sid) = match (&reg_or_index, package_id) {
+        (None, Some(package_id)) => (true, package_id.source_id()),
+        (None, None) => (false, SourceId::crates_io(gctx)?),
+        (Some(RegistryOrIndex::Index(url)), None) => (false, SourceId::for_registry(url)?),
+        (Some(RegistryOrIndex::Registry(r)), None) => (false, SourceId::alt_registry(gctx, r)?),
+        (Some(reg_or_index), Some(package_id)) => {
+            let sid = get_initial_source_id_from_registry_or_index(gctx, reg_or_index)?;
+            let package_source_id = package_id.source_id();
+            // 1. Same registry, use the package's source.
+            // 2. Use the package's source if the specified registry is a replacement for the package's source.
+            if sid == package_source_id
+                || is_replacement_for_package_source(gctx, sid, package_source_id)?
+            {
+                (true, package_source_id)
+            } else {
+                (false, sid)
+            }
+        }
+    };
+
+    let (builtin_replacement_sid, replacement_sid) = get_replacement_source_ids(gctx, sid)?;
+
+    if reg_or_index.is_none() && replacement_sid != builtin_replacement_sid {
+        bail!(gen_replacement_error(replacement_sid));
+    } else {
+        Ok((
+            use_package_source_id,
+            RegistrySourceIds {
+                original: sid,
+                replacement: builtin_replacement_sid,
+            },
+        ))
+    }
+}
+
 fn get_initial_source_id(
     gctx: &GlobalContext,
     reg_or_index: Option<&RegistryOrIndex>,
@@ -237,6 +280,17 @@ fn get_replacement_source_ids(
         .load(sid, &HashSet::new())?
         .replaced_source_id();
     Ok((builtin_replacement_sid, replacement_sid))
+}
+
+fn is_replacement_for_package_source(
+    gctx: &GlobalContext,
+    sid: SourceId,
+    package_source_id: SourceId,
+) -> CargoResult<bool> {
+    let pkg_source_replacement_sid = SourceConfigMap::new(gctx)?
+        .load(package_source_id, &HashSet::new())?
+        .replaced_source_id();
+    Ok(pkg_source_replacement_sid == sid)
 }
 
 fn gen_replacement_error(replacement_sid: SourceId) -> String {
