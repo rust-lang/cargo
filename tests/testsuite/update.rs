@@ -362,7 +362,7 @@ fn change_package_version() {
 }
 
 #[cargo_test]
-fn update_precise() {
+fn update_precise_downgrade() {
     Package::new("serde", "0.1.0").publish();
     Package::new("serde", "0.2.1").publish();
 
@@ -1411,7 +1411,7 @@ fn update_precise_git_revisions() {
 }
 
 #[cargo_test]
-fn precise_yanked() {
+fn update_precise_yanked() {
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.1.1").yanked(true).publish();
     let p = project()
@@ -1450,7 +1450,7 @@ fn precise_yanked() {
 }
 
 #[cargo_test]
-fn precise_yanked_multiple_presence() {
+fn update_precise_yanked_multiple_presence() {
     Package::new("bar", "0.1.0").publish();
     Package::new("bar", "0.1.1").yanked(true).publish();
     let p = project()
@@ -2162,7 +2162,7 @@ fn update_breaking_specific_packages_that_wont_update() {
     p.cargo("update -Zunstable-options --breaking compatible renamed-from non-semver transitive-compatible transitive-incompatible")
         .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_stderr_data(str![[r#"
-[UPDATING] `[..]` index
+[UPDATING] `dummy-registry` index
 
 "#]])
         .run();
@@ -2177,7 +2177,7 @@ fn update_breaking_specific_packages_that_wont_update() {
         "update compatible renamed-from non-semver transitive-compatible transitive-incompatible",
     )
     .with_stderr_data(str![[r#"
-[UPDATING] `[..]` index
+[UPDATING] `dummy-registry` index
 [LOCKING] 5 packages to latest compatible versions
 [UPDATING] compatible v1.0.0 -> v1.0.1
 [UPDATING] non-semver v1.0.0 -> v1.0.1 (latest: v2.0.0)
@@ -2220,7 +2220,7 @@ fn update_breaking_without_lock_file() {
     p.cargo("update -Zunstable-options --breaking")
         .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_stderr_data(str![[r#"
-[UPDATING] `[..]` index
+[UPDATING] `dummy-registry` index
 [UPGRADING] incompatible ^1.0 -> ^2.0
 [LOCKING] 3 packages to latest compatible versions
 
@@ -2284,7 +2284,7 @@ fn update_breaking_spec_version() {
     p.cargo("update -Zunstable-options --breaking incompatible@1.0.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_stderr_data(str![[r#"
-[UPDATING] `[..]` index
+[UPDATING] `dummy-registry` index
 [UPGRADING] incompatible ^1.0 -> ^2.0
 [LOCKING] 1 package to latest compatible version
 [UPDATING] incompatible v1.0.0 -> v2.0.0
@@ -2297,7 +2297,7 @@ fn update_breaking_spec_version() {
     p.cargo("update -Zunstable-options --breaking https://github.com/rust-lang/crates.io-index#incompatible@2.0.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_stderr_data(str![[r#"
-[UPDATING] `[..]` index
+[UPDATING] `dummy-registry` index
 [UPGRADING] incompatible ^2.0 -> ^3.0
 [LOCKING] 1 package to latest compatible version
 [UPDATING] incompatible v2.0.0 -> v3.0.0
@@ -2309,7 +2309,7 @@ fn update_breaking_spec_version() {
     p.cargo("update -Zunstable-options --breaking compatible@1.0.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_stderr_data(str![[r#"
-[UPDATING] `[..]` index
+[UPDATING] `dummy-registry` index
 
 "#]])
         .run();
@@ -2329,7 +2329,7 @@ fn update_breaking_spec_version() {
 #[cargo_test]
 fn update_breaking_spec_version_transitive() {
     Package::new("dep", "1.0.0").publish();
-    Package::new("dep", "1.1.0").publish();
+    Package::new("dep", "2.0.0").publish();
 
     let p = project()
         .file(
@@ -2357,7 +2357,7 @@ fn update_breaking_spec_version_transitive() {
                 authors  =  []
 
                 [dependencies]
-                dep  =  "1.1"
+                dep  =  "2.0"
             "#,
         )
         .file("bar/src/lib.rs", "")
@@ -2365,36 +2365,36 @@ fn update_breaking_spec_version_transitive() {
 
     p.cargo("generate-lockfile").run();
 
-    Package::new("dep", "1.1.1").publish();
-    Package::new("dep", "2.0.0").publish();
+    Package::new("dep", "2.0.1").publish();
+    Package::new("dep", "3.0.0").publish();
 
     // Will upgrade the direct dependency
     p.cargo("update -Zunstable-options --breaking dep@1.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_stderr_data(str![[r#"
-[UPDATING] `[..]` index
-[UPGRADING] dep ^1.0 -> ^2.0
+[UPDATING] `dummy-registry` index
+[UPGRADING] dep ^1.0 -> ^3.0
 [LOCKING] 1 package to latest compatible version
-[ADDING] dep v2.0.0
+[UPDATING] dep v1.0.0 -> v3.0.0
 
 "#]])
         .run();
 
     // But not the transitive one, because bar is not a workspace member
-    p.cargo("update -Zunstable-options --breaking dep@1.1")
+    p.cargo("update -Zunstable-options --breaking dep@2.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_stderr_data(str![[r#"
-[UPDATING] `[..]` index
+[UPDATING] `dummy-registry` index
 
 "#]])
         .run();
 
     // A non-breaking update is different, as it will update transitive dependencies
-    p.cargo("update dep@1.1")
+    p.cargo("update dep@2.0")
         .with_stderr_data(str![[r#"
-[UPDATING] `[..]` index
+[UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-[UPDATING] dep v1.1.0 -> v1.1.1 (latest: v2.0.0)
+[UPDATING] dep v2.0.0 -> v2.0.1 (latest: v3.0.0)
 
 "#]])
         .run();
@@ -2450,7 +2450,7 @@ fn update_breaking_mixed_compatibility() {
     p.cargo("update -Zunstable-options --breaking")
         .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_stderr_data(str![[r#"
-[UPDATING] `[..]` index
+[UPDATING] `dummy-registry` index
 [UPGRADING] mixed-compatibility ^1.0 -> ^2.0
 [LOCKING] 1 package to latest compatible version
 [ADDING] mixed-compatibility v2.0.1
@@ -2536,7 +2536,7 @@ fn update_breaking_mixed_pinning_renaming() {
     p.cargo("update -Zunstable-options --breaking")
         .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_stderr_data(str![[r#"
-[UPDATING] `[..]` index
+[UPDATING] `dummy-registry` index
 [UPGRADING] mixed-pinned ^1.0 -> ^2.0
 [UPGRADING] mixed-ws-pinned ^1.0 -> ^2.0
 [UPGRADING] renamed-from ^1.0 -> ^2.0
