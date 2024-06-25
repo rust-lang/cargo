@@ -102,7 +102,8 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         gctx,
     };
 
-    let breaking_update = update_opts.breaking; // or if doing a breaking precise update, coming in #14140.
+    let breaking_update = update_opts.breaking
+        || (update_opts.precise.is_some() && gctx.cli_unstable().unstable_options);
 
     // We are using the term "upgrade" here, which is the typical case, but it
     // can also be a downgrade (in the case of a precise update). In general, it
@@ -114,7 +115,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         }
 
         trace!("allowing breaking updates");
-        ops::upgrade_manifests(&mut ws, &update_opts.to_update)?
+        ops::upgrade_manifests(&mut ws, &update_opts.to_update, &update_opts.precise)?
     } else {
         HashMap::new()
     };

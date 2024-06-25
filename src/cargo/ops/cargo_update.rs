@@ -15,6 +15,7 @@ use crate::util::toml_mut::manifest::LocalManifest;
 use crate::util::toml_mut::upgrade::upgrade_requirement;
 use crate::util::{style, OptVersionReq};
 use crate::util::{CargoResult, VersionExt};
+use anyhow::Context as _;
 use itertools::Itertools;
 use semver::{Op, Version, VersionReq};
 use std::cmp::Ordering;
@@ -262,6 +263,7 @@ pub fn print_lockfile_changes(
 pub fn upgrade_manifests(
     ws: &mut Workspace<'_>,
     to_update: &Vec<String>,
+    precise: &Option<&str>,
 ) -> CargoResult<UpgradeMap> {
     let gctx = ws.gctx();
     let mut upgrades = HashMap::new();
@@ -290,6 +292,7 @@ pub fn upgrade_manifests(
                 upgrade_dependency(
                     &gctx,
                     &to_update,
+                    precise,
                     &mut registry,
                     &mut upgrades,
                     &mut upgrade_messages,
@@ -304,6 +307,7 @@ pub fn upgrade_manifests(
 fn upgrade_dependency(
     gctx: &GlobalContext,
     to_update: &Vec<PackageIdSpec>,
+    precise: &Option<&str>,
     registry: &mut PackageRegistry<'_>,
     upgrades: &mut UpgradeMap,
     upgrade_messages: &mut HashSet<String>,
@@ -361,7 +365,7 @@ fn upgrade_dependency(
     let query =
         crate::core::dependency::Dependency::parse(name, None, dependency.source_id().clone())?;
 
-    let possibilities = {
+    let possibilities = if precise.is_none() {
         loop {
             match registry.query_vec(&query, QueryKind::Exact) {
                 std::task::Poll::Ready(res) => {
@@ -370,6 +374,8 @@ fn upgrade_dependency(
                 std::task::Poll::Pending => registry.block_until_ready()?,
             }
         }
+    } else {
+        Vec::new()
     };
 
     let latest = if !possibilities.is_empty() {
@@ -383,17 +389,23 @@ fn upgrade_dependency(
         None
     };
 
-    let Some(latest) = latest else {
+    let new_version = if let Some(precise) = precise {
+        Version::parse(precise)
+            .with_context(|| format!("invalid version format for precise version `{precise}`"))?
+    } else if let Some(latest) = latest {
+        latest.clone()
+    } else {
+        // Breaking (not precise) upgrade did not find a latest version
         trace!("skipping dependency `{name}` without any published versions");
         return Ok(dependency);
     };
 
-    if current.matches(&latest) {
+    if current.matches(&new_version) {
         trace!("skipping dependency `{name}` without a breaking update available");
         return Ok(dependency);
     }
 
-    let Some((new_req_string, _)) = upgrade_requirement(&current.to_string(), latest)? else {
+    let Some((new_req_string, _)) = upgrade_requirement(&current.to_string(), &new_version)? else {
         trace!("skipping dependency `{name}` because the version requirement didn't change");
         return Ok(dependency);
     };
@@ -401,17 +413,36 @@ fn upgrade_dependency(
     let upgrade_message = format!("{name} {current} -> {new_req_string}");
     trace!(upgrade_message);
 
+    let old_version = semver::Version::new(
+        comparator.major,
+        comparator.minor.unwrap_or_default(),
+        comparator.patch.unwrap_or_default(),
+    );
+    let is_downgrade = new_version < old_version;
+    let status = if is_downgrade {
+        "Downgrading"
+    } else {
+        "Upgrading"
+    };
+
     if upgrade_messages.insert(upgrade_message.clone()) {
         gctx.shell()
-            .status_with_color("Upgrading", &upgrade_message, &style::GOOD)?;
+            .status_with_color(status, &upgrade_message, &style::WARN)?;
     }
 
     upgrades.insert(
         (name, dependency.source_id()),
-        (current.clone(), latest.clone()),
+        (current.clone(), new_version.clone()),
     );
 
-    let req = OptVersionReq::Req(VersionReq::parse(&latest.to_string())?);
+    let new_version_req = VersionReq::parse(&new_version.to_string())?;
+
+    let req = if precise.is_some() {
+        OptVersionReq::Precise(new_version, new_version_req)
+    } else {
+        OptVersionReq::Req(new_version_req)
+    };
+
     let mut dep = dependency.clone();
     dep.set_version_req(req);
     Ok(dep)
