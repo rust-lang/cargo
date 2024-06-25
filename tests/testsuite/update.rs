@@ -925,7 +925,7 @@ fn dry_run_update() {
 [LOCKING] 1 package to latest compatible version
 [UPDATING] serde v0.1.0 -> v0.1.1
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
-[WARNING] not updating lockfile due to dry run
+[WARNING] aborting update due to dry run
 
 "#]])
         .run();
@@ -1569,14 +1569,13 @@ fn update_precise_breaking_dry_run() {
 
     p.cargo("update -Zunstable-options --dry-run incompatible ws --precise 2.0.0")
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
+[UPGRADING] incompatible ^1.0 -> ^2.0
+[UPGRADING] ws ^1.0 -> ^2.0
 [UPDATING] `dummy-registry` index
-[ERROR] failed to select a version for the requirement `incompatible = "^1.0"`
-candidate versions found which didn't match: 2.0.0
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+[UPDATING] incompatible v1.0.0 -> v2.0.0
+[UPDATING] ws v1.0.0 -> v2.0.0
+[WARNING] aborting update due to dry run
 
 "#]])
         .run();
@@ -1638,14 +1637,11 @@ fn update_precise_breaking_incompatible() {
 
     p.cargo("update -Zunstable-options incompatible@0.1.0 --precise 0.3.0")
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
+[UPGRADING] incompatible ^0.1 -> ^0.3
 [UPDATING] `dummy-registry` index
-[ERROR] failed to select a version for the requirement `incompatible = "^0.1"`
-candidate versions found which didn't match: 0.3.0
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+[UPDATING] incompatible v0.1.0 -> v0.3.0
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -1664,7 +1660,7 @@ perhaps a crate was updated and forgotten to be re-vendored?
                 authors  =  []
 
                 [dependencies]
-                incompatible  =  "0.1"  # Comment
+                incompatible  =  "0.3"  # Comment
                 bar = { path = "bar" }
             
 "#]],
@@ -1713,14 +1709,11 @@ fn update_precise_breaking_consistent_output() {
 
     p.cargo("update -Zunstable-options incompatible --precise 0.2.0")
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
+[UPGRADING] incompatible ^0.1 -> ^0.2
 [UPDATING] `dummy-registry` index
-[ERROR] failed to select a version for the requirement `incompatible = "^0.1"`
-candidate versions found which didn't match: 0.2.0
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+[UPDATING] incompatible v0.1.0 -> v0.2.0
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -1764,13 +1757,10 @@ fn update_precise_breaking_alternative() {
 
     p.cargo("update -Zunstable-options alternative@0.1.0 --precise 0.2.0")
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
+[UPGRADING] alternative ^0.1 -> ^0.2
 [UPDATING] `alternative` index
-[ERROR] failed to select a version for the requirement `alternative = "^0.1"`
-candidate versions found which didn't match: 0.2.0
-location searched: `alternative` index
-required by package `foo v0.0.1 ([ROOT]/foo)`
+[UPDATING] alternative v0.1.0 (registry `alternative`) -> v0.2.0
 
 "#]])
         .run();
@@ -1789,9 +1779,8 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
                 authors  =  []
 
                 [dependencies]
-                alternative  =  { registry  =  "alternative", version  =  "0.1" }  # Comment
-            
-"#]],
+                alternative  =  { registry  =  "alternative", version  =  "0.2" }  # Comment
+            "#]],
     );
 }
 
@@ -1824,14 +1813,7 @@ fn update_precise_breaking_pre_release_cannot_upgrade_nonexplicit_version_req() 
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[UPDATING] `dummy-registry` index
-[ERROR] failed to select a version for the requirement `pre = "^0.1"`
-candidate versions found which didn't match: 0.2.0-beta
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
-if you are looking for the prerelease package it needs to be specified explicitly
-    pre = { version = "0.2.0-beta" }
-perhaps a crate was updated and forgotten to be re-vendored?
+[ERROR] new requirement ^0.2 is invalid, because it doesn't match 0.2.0-beta
 
 "#]])
         .run();
@@ -1867,16 +1849,10 @@ fn update_precise_breaking_pre_release_explicit_version_req() {
 
     p.cargo("update -Zunstable-options pre --precise 0.2.0-beta")
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
+[UPGRADING] pre ^0.1.0 -> ^0.2.0-beta
 [UPDATING] `dummy-registry` index
-[ERROR] failed to select a version for the requirement `pre = "^0.1.0"`
-candidate versions found which didn't match: 0.2.0-beta
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
-if you are looking for the prerelease package it needs to be specified explicitly
-    pre = { version = "0.2.0-beta" }
-perhaps a crate was updated and forgotten to be re-vendored?
+[UPDATING] pre v0.1.0 -> v0.2.0-beta
 
 "#]])
         .run();
@@ -1895,7 +1871,7 @@ perhaps a crate was updated and forgotten to be re-vendored?
                 authors  =  []
 
                 [dependencies]
-                pre  =  "0.1.0"  # Comment
+                pre  =  "0.2.0-beta"  # Comment
             
 "#]],
     );
@@ -1931,14 +1907,10 @@ fn update_precise_breaking_upgrade_from_pre_release() {
 
     p.cargo("update -Zunstable-options pre --precise 2.0.0")
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
+[UPGRADING] pre ^1.0.0-alpha -> ^2.0.0
 [UPDATING] `dummy-registry` index
-[ERROR] failed to select a version for the requirement `pre = "^1.0.0-alpha"`
-candidate versions found which didn't match: 2.0.0
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+[UPDATING] pre v1.0.0-alpha -> v2.0.0
 
 "#]])
         .run();
@@ -1974,16 +1946,12 @@ fn update_precise_breaking_yanked() {
 
     p.cargo("update -Zunstable-options yanked@0.1.0 --precise 0.2.0")
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
+[UPGRADING] yanked ^0.1 -> ^0.2
 [UPDATING] `dummy-registry` index
 [WARNING] selected package `yanked@0.2.0` was yanked by the author
 [NOTE] if possible, try a compatible non-yanked version
-[ERROR] failed to select a version for the requirement `yanked = "^0.1"`
-candidate versions found which didn't match: 0.2.0
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+[UPDATING] yanked v0.1.0 -> v0.2.0
 
 "#]])
         .run();
@@ -2028,14 +1996,10 @@ fn update_precise_breaking_ws() {
 
     p.cargo("update -Zunstable-options ws@0.1.0 --precise 0.2.0")
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
+[UPGRADING] ws ^0.1 -> ^0.2
 [UPDATING] `dummy-registry` index
-[ERROR] failed to select a version for the requirement `ws = "^0.1"`
-candidate versions found which didn't match: 0.2.0
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+[UPDATING] ws v0.1.0 -> v0.2.0
 
 "#]])
         .run();
@@ -2049,9 +2013,8 @@ perhaps a crate was updated and forgotten to be re-vendored?
                 members = ["foo"]
 
                 [workspace.dependencies]
-                ws  =  "0.1"  # Comment
-            
-"#]],
+                ws  =  "0.2"  # Comment
+            "#]],
     );
 
     let crate_manifest_after = p.read_file("foo/Cargo.toml");
@@ -2110,14 +2073,10 @@ fn update_precise_breaking_shared_ws() {
 
     p.cargo("update -Zunstable-options shared@0.1.0 --precise 0.2.0")
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
+[UPGRADING] shared ^0.1 -> ^0.2
 [UPDATING] `dummy-registry` index
-[ERROR] failed to select a version for the requirement `shared = "^0.1"`
-candidate versions found which didn't match: 0.2.0
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+[UPDATING] shared v0.1.0 -> v0.2.0
 
 "#]])
         .run();
@@ -2136,10 +2095,9 @@ perhaps a crate was updated and forgotten to be re-vendored?
                 authors  =  []
 
                 [dependencies]
-                shared  =  "0.1"  # Comment
+                shared  =  "0.2"  # Comment
                 bar = { path = "../bar" }
-            
-"#]],
+            "#]],
     );
 
     let bar_manifest = p.read_file("bar/Cargo.toml");
@@ -2154,9 +2112,8 @@ perhaps a crate was updated and forgotten to be re-vendored?
                 authors = []
 
                 [dependencies]
-                shared = "0.1"
-            
-"#]],
+                shared = "0.2"
+            "#]],
     );
 }
 
@@ -2206,12 +2163,18 @@ fn update_precise_breaking_shared_non_ws() {
     p.cargo("update -Zunstable-options shared@0.1.0 --precise 0.2.0")
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_status(101)
+        // The lockfile update is failing for the same reason a non-breaking
+        // update would. There is still a shared@0.1.0 here that didn't get
+        // upgraded (the transitive dependency within bar), and we are now
+        // asking the lockfile update to update it to 0.2.0, which it cannot do.
         .with_stderr_data(str![[r#"
+[UPGRADING] shared ^0.1 -> ^0.2
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `shared = "^0.1"`
 candidate versions found which didn't match: 0.2.0
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
+required by package `bar v0.0.1 ([ROOT]/foo/bar)`
+    ... which satisfies path dependency `bar` (locked to 0.0.1) of package `foo v0.0.1 ([ROOT]/foo)`
 perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]])
@@ -2255,14 +2218,10 @@ fn update_precise_breaking_spec_version() {
     // No spec
     p.cargo("update -Zunstable-options incompatible --precise 0.3.1")
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
+[UPGRADING] incompatible ^0.1 -> ^0.3
 [UPDATING] `dummy-registry` index
-[ERROR] failed to select a version for the requirement `incompatible = "^0.1"`
-candidate versions found which didn't match: 0.3.1
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+[UPDATING] incompatible v0.1.0 -> v0.3.1
 
 "#]])
         .run();
@@ -2272,10 +2231,7 @@ perhaps a crate was updated and forgotten to be re-vendored?
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid package ID specification: `incompatible@foo`
-
-Caused by:
-  expected a version like "1.32"
+[ERROR] expected a version like "1.32"
 
 "#]])
         .run();
@@ -2288,7 +2244,7 @@ Caused by:
 [ERROR] package ID specification `incompatible@2.0.0` did not match any packages
 Did you mean one of these?
 
-  incompatible@0.1.0
+  incompatible@0.3.1
 
 "#]])
         .run();
@@ -2301,7 +2257,7 @@ Did you mean one of these?
 [ERROR] package ID specification `https://alternative.com/#incompatible@0.1.0` did not match any packages
 Did you mean one of these?
 
-  incompatible@0.1.0
+  incompatible@0.3.1
 
 "#]])
         .run();
@@ -2309,12 +2265,10 @@ Did you mean one of these?
     // Accepted spec, full format
     p.cargo("update -Zunstable-options https://github.com/rust-lang/crates.io-index#incompatible@0.3.1 --precise 0.1.0")
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] package ID specification `https://github.com/rust-lang/crates.io-index#incompatible@0.3.1` did not match any packages
-Did you mean one of these?
-
-  incompatible@0.1.0
+[DOWNGRADING] incompatible ^0.3 -> ^0.1
+[UPDATING] `dummy-registry` index
+[DOWNGRADING] incompatible v0.3.1 -> v0.1.0
 
 "#]])
         .run();
@@ -2347,13 +2301,15 @@ fn update_precise_breaking_without_lock_file() {
     p.cargo("update -Zunstable-options incompatible@0.1.0 --precise 0.2.0")
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_status(101)
+        // Sort of makes sense, as there is no lock file with incompatible@0.1.0
+        // in it. Although the hint isn't very helpful.
         .with_stderr_data(str![[r#"
+[UPGRADING] incompatible ^0.1 -> ^0.2
 [UPDATING] `dummy-registry` index
-[ERROR] failed to select a version for the requirement `incompatible = "^0.1"`
-candidate versions found which didn't match: 0.2.0
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+[ERROR] package ID specification `incompatible@0.1.0` did not match any packages
+Did you mean one of these?
+
+  incompatible@0.2.0
 
 "#]])
         .run();
@@ -2391,6 +2347,7 @@ fn update_precise_breaking_non_existing_version() {
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_status(101)
         .with_stderr_data(str![[r#"
+[UPGRADING] bar ^0.1 -> ^0.9
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `bar` found
 location searched: registry `crates-io`
@@ -2589,6 +2546,8 @@ fn update_precise_breaking_transitive() {
     Package::new("incompatible", "0.3.0").publish();
     Package::new("incompatible", "0.3.1").publish();
 
+    // We cannot do this, as incompatible@0.2.0 is a transitive dependency, not
+    // a direct workspace dependency.
     p.cargo("update -Zunstable-options incompatible@0.2.0 --precise 0.3.0")
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_status(101)
@@ -2598,7 +2557,7 @@ fn update_precise_breaking_transitive() {
 candidate versions found which didn't match: 0.3.0
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `bar v0.0.1 ([ROOT]/foo/bar)`
-    ... which satisfies path dependency `bar` (locked to 0.0.1) of package `foo v0.0.1 ([..]/foo)`
+    ... which satisfies path dependency `bar` (locked to 0.0.1) of package `foo v0.0.1 ([ROOT]/foo)`
 perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]])
@@ -2632,14 +2591,10 @@ fn update_precise_breaking_incompatible_downgrade() {
     p.cargo("generate-lockfile").run();
     p.cargo("update -Zunstable-options incompatible --precise 1.0.0")
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
+[DOWNGRADING] incompatible ^2.0 -> ^1.0
 [UPDATING] `dummy-registry` index
-[ERROR] failed to select a version for the requirement `incompatible = "^2.0"`
-candidate versions found which didn't match: 1.0.0
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+[DOWNGRADING] incompatible v2.0.0 -> v1.0.0
 
 "#]])
         .run();
@@ -2658,7 +2613,7 @@ perhaps a crate was updated and forgotten to be re-vendored?
                 authors  =  []
 
                 [dependencies]
-                incompatible  =  "2.0"  # Comment
+                incompatible  =  "1.0"  # Comment
             
 "#]],
     );
@@ -2693,14 +2648,10 @@ fn update_precise_breaking_incompatible_build_metadata() {
     p.cargo("generate-lockfile").run();
     p.cargo("update -Zunstable-options incompatible --precise 2.0.0+b")
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
+[UPGRADING] incompatible ^1.0 -> ^2.0
 [UPDATING] `dummy-registry` index
-[ERROR] failed to select a version for the requirement `incompatible = "^1.0"`
-candidate versions found which didn't match: 2.0.0+b
-location searched: `dummy-registry` index (which is replacing registry `crates-io`)
-required by package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
+[UPDATING] incompatible v1.0.0 -> v2.0.0+b
 
 "#]])
         .run();
@@ -2719,7 +2670,7 @@ perhaps a crate was updated and forgotten to be re-vendored?
                 authors  =  []
 
                 [dependencies]
-                incompatible  =  "1.0"  # Comment
+                incompatible  =  "2.0"  # Comment
             
 "#]],
     );
@@ -2785,7 +2736,14 @@ fn update_precise_breaking_mixed_pinning_renaming() {
     p.cargo("update -Zunstable-options mixed-pinned mixed-ws-pinned renamed-from --precise 2.0.0")
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_status(101)
+        // The lockfile update is failing for the same reason a non-breaking
+        // update would. There is still a mixed-pinned@=1.0.0 here that didn't
+        // get upgraded, and we are now asking the lockfile update to update it
+        // to 2.0.0, which it cannot do.
         .with_stderr_data(str![[r#"
+[UPGRADING] mixed-pinned ^1.0 -> ^2.0
+[UPGRADING] mixed-ws-pinned ^1.0 -> ^2.0
+[UPGRADING] renamed-from ^1.0 -> ^2.0
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `mixed-pinned = "=1.0"`
 candidate versions found which didn't match: 2.0.0
@@ -2847,6 +2805,8 @@ fn update_precise_breaking_specific_packages_that_wont_upgrade() {
     p.cargo("update -Zunstable-options renamed-from non-semver transitive-compatible transitive-incompatible --precise 2.0.0")
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_status(101)
+        // This falls back to the non-breaking update, as no packages got upgraded.
+        // The non-breaking update consequently fails.
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `renamed-from = "^1.0"`
@@ -2900,7 +2860,7 @@ fn report_behind() {
 [LOCKING] 1 package to latest compatible version
 [UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.0)
 [NOTE] pass `--verbose` to see 2 unchanged dependencies behind latest
-[WARNING] not updating lockfile due to dry run
+[WARNING] aborting update due to dry run
 
 "#]])
         .run();
@@ -2913,7 +2873,7 @@ fn report_behind() {
 [UNCHANGED] pre v1.0.0-alpha.0 (latest: v1.0.0-alpha.1)
 [UNCHANGED] two-ver v0.1.0 (latest: v0.2.0)
 [NOTE] to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`
-[WARNING] not updating lockfile due to dry run
+[WARNING] aborting update due to dry run
 
 "#]])
         .run();
@@ -2925,7 +2885,7 @@ fn report_behind() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 0 packages to latest compatible versions
 [NOTE] pass `--verbose` to see 3 unchanged dependencies behind latest
-[WARNING] not updating lockfile due to dry run
+[WARNING] aborting update due to dry run
 
 "#]])
         .run();
@@ -2938,7 +2898,7 @@ fn report_behind() {
 [UNCHANGED] pre v1.0.0-alpha.0 (latest: v1.0.0-alpha.1)
 [UNCHANGED] two-ver v0.1.0 (latest: v0.2.0)
 [NOTE] to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`
-[WARNING] not updating lockfile due to dry run
+[WARNING] aborting update due to dry run
 
 "#]])
         .run();
@@ -3288,10 +3248,13 @@ fn update_breaking() {
 [UPDATING] multiple-registries v2.0.0 (registry `alternative`) -> v3.0.0
 [UPDATING] multiple-registries v1.0.0 -> v2.0.0
 [UPDATING] multiple-source-types v1.0.0 -> v2.0.0
+[REMOVING] multiple-versions v1.0.0
+[REMOVING] multiple-versions v2.0.0
 [ADDING] multiple-versions v3.0.0
 [UPDATING] platform-specific v1.0.0 -> v2.0.0
 [UPDATING] shared v1.0.0 -> v2.0.0
 [UPDATING] ws v1.0.0 -> v2.0.0
+[NOTE] pass `--verbose` to see 4 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -3484,6 +3447,7 @@ fn update_breaking_specific_packages() {
 [UPDATING] transitive-compatible v1.0.0 -> v1.0.1
 [UPDATING] transitive-incompatible v1.0.0 -> v2.0.0
 [UPDATING] ws v1.0.0 -> v2.0.0
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -3539,6 +3503,8 @@ fn update_breaking_specific_packages_that_wont_update() {
         .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[LOCKING] 0 packages to latest compatible versions
+[NOTE] pass `--verbose` to see 5 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -3647,13 +3613,27 @@ fn update_breaking_spec_version() {
     // Spec version not matching our current dependencies
     p.cargo("update -Zunstable-options --breaking incompatible@2.0.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr_data(str![""])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] package ID specification `incompatible@2.0.0` did not match any packages
+Did you mean one of these?
+
+  incompatible@1.0.0
+
+"#]])
         .run();
 
     // Spec source not matching our current dependencies
     p.cargo("update -Zunstable-options --breaking https://alternative.com#incompatible@1.0.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr_data(str![""])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] package ID specification `https://alternative.com/#incompatible@1.0.0` did not match any packages
+Did you mean one of these?
+
+  incompatible@1.0.0
+
+"#]])
         .run();
 
     // Accepted spec
@@ -3664,6 +3644,7 @@ fn update_breaking_spec_version() {
 [UPGRADING] incompatible ^1.0 -> ^2.0
 [LOCKING] 1 package to latest compatible version
 [UPDATING] incompatible v1.0.0 -> v2.0.0
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -3677,6 +3658,7 @@ fn update_breaking_spec_version() {
 [UPGRADING] incompatible ^2.0 -> ^3.0
 [LOCKING] 1 package to latest compatible version
 [UPDATING] incompatible v2.0.0 -> v3.0.0
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -3686,6 +3668,8 @@ fn update_breaking_spec_version() {
         .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[LOCKING] 0 packages to latest compatible versions
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -3693,12 +3677,26 @@ fn update_breaking_spec_version() {
     // Non-existing versions
     p.cargo("update -Zunstable-options --breaking incompatible@9.0.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr_data(str![""])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] package ID specification `incompatible@9.0.0` did not match any packages
+Did you mean one of these?
+
+  incompatible@3.0.0
+
+"#]])
         .run();
 
     p.cargo("update -Zunstable-options --breaking compatible@9.0.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr_data(str![""])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] package ID specification `compatible@9.0.0` did not match any packages
+Did you mean one of these?
+
+  compatible@1.0.0
+
+"#]])
         .run();
 }
 
@@ -3752,6 +3750,7 @@ fn update_breaking_spec_version_transitive() {
 [UPGRADING] dep ^1.0 -> ^3.0
 [LOCKING] 1 package to latest compatible version
 [UPDATING] dep v1.0.0 -> v3.0.0
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -3761,6 +3760,8 @@ fn update_breaking_spec_version_transitive() {
         .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[LOCKING] 0 packages to latest compatible versions
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -3829,6 +3830,8 @@ fn update_breaking_mixed_compatibility() {
 [UPDATING] `dummy-registry` index
 [UPGRADING] mixed-compatibility ^1.0 -> ^2.0
 [LOCKING] 1 package to latest compatible version
+[REMOVING] mixed-compatibility v1.0.0
+[REMOVING] mixed-compatibility v2.0.0
 [ADDING] mixed-compatibility v2.0.1
 
 "#]])
@@ -3920,6 +3923,7 @@ fn update_breaking_mixed_pinning_renaming() {
 [ADDING] mixed-pinned v2.0.0
 [ADDING] mixed-ws-pinned v2.0.0
 [ADDING] renamed-from v2.0.0
+[NOTE] pass `--verbose` to see 3 unchanged dependencies behind latest
 
 "#]])
         .run();

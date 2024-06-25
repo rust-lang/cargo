@@ -14,18 +14,31 @@ use crate::util::toml_mut::manifest::LocalManifest;
 use crate::util::toml_mut::upgrade::upgrade_requirement;
 use crate::util::{style, OptVersionReq};
 use crate::util::{CargoResult, VersionExt};
+use anyhow::Context as _;
 use itertools::Itertools;
 use semver::{Op, Version, VersionReq};
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use tracing::{debug, trace};
 
-pub type UpgradeMap = HashMap<(String, SourceId), Version>;
+/// A map of all breaking upgrades which is filled in by
+/// upgrade_manifests/upgrade_dependency when going through workspace member
+/// manifests, and later used by write_manifest_upgrades in order to know which
+/// upgrades to write to manifest files on disk. Also used by update_lockfile to
+/// know which dependencies to keep unchanged if any have been upgraded (we will
+/// do either breaking or non-breaking updates, but not both).
+pub type UpgradeMap = HashMap<
+    // The key is a tuple of the package name and the source id of the package.
+    (String, SourceId),
+    // The value is the upgraded version of the package.
+    Version,
+>;
 
 pub struct UpdateOptions<'a> {
     pub gctx: &'a GlobalContext,
     pub to_update: Vec<String>,
     pub precise: Option<&'a str>,
+    pub breaking: bool,
     pub recursive: bool,
     pub dry_run: bool,
     pub workspace: bool,
@@ -49,7 +62,11 @@ pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
     Ok(())
 }
 
-pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoResult<()> {
+pub fn update_lockfile(
+    ws: &Workspace<'_>,
+    opts: &UpdateOptions<'_>,
+    upgrades: &UpgradeMap,
+) -> CargoResult<()> {
     if opts.recursive && opts.precise.is_some() {
         anyhow::bail!("cannot specify both recursive and precise simultaneously")
     }
@@ -165,7 +182,15 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         .filter(|s| !s.is_registry())
         .collect();
 
-    let keep = |p: &PackageId| !to_avoid_sources.contains(&p.source_id()) && !to_avoid.contains(p);
+    let breaking_precise_upgrades = opts.precise.is_some() && !upgrades.is_empty();
+    let breaking_mode = opts.breaking || breaking_precise_upgrades;
+
+    let keep = |p: &PackageId| {
+        (!to_avoid_sources.contains(&p.source_id()) && !to_avoid.contains(p))
+            // In case of `--breaking` or precise upgrades, we want to keep all
+            // packages unchanged that didn't get upgraded.
+                || (breaking_mode && !upgrades.contains_key(&(p.name().to_string(), p.source_id())))
+    };
 
     let mut resolve = ops::resolve_with_previous(
         &mut registry,
@@ -185,11 +210,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         opts.precise.is_some(),
         &mut registry,
     )?;
-    if opts.dry_run {
-        opts.gctx
-            .shell()
-            .warn("not updating lockfile due to dry run")?;
-    } else {
+    if !opts.dry_run {
         ops::write_pkg_lockfile(ws, &mut resolve)?;
     }
     Ok(())
@@ -217,6 +238,7 @@ pub fn print_lockfile_changes(
 pub fn upgrade_manifests(
     ws: &mut Workspace<'_>,
     to_update: &Vec<String>,
+    precise: &Option<&str>,
 ) -> CargoResult<UpgradeMap> {
     let gctx = ws.gctx();
     let mut upgrades = HashMap::new();
@@ -245,6 +267,7 @@ pub fn upgrade_manifests(
                 upgrade_dependency(
                     &gctx,
                     &to_update,
+                    precise,
                     &mut registry,
                     &mut upgrades,
                     &mut upgrade_messages,
@@ -259,6 +282,7 @@ pub fn upgrade_manifests(
 fn upgrade_dependency(
     gctx: &GlobalContext,
     to_update: &Vec<PackageIdSpec>,
+    precise: &Option<&str>,
     registry: &mut PackageRegistry<'_>,
     upgrades: &mut UpgradeMap,
     upgrade_messages: &mut HashSet<String>,
@@ -316,7 +340,7 @@ fn upgrade_dependency(
     let query =
         crate::core::dependency::Dependency::parse(name, None, dependency.source_id().clone())?;
 
-    let possibilities = {
+    let possibilities = if precise.is_none() {
         loop {
             match registry.query_vec(&query, QueryKind::Exact) {
                 std::task::Poll::Ready(res) => {
@@ -325,6 +349,8 @@ fn upgrade_dependency(
                 std::task::Poll::Pending => registry.block_until_ready()?,
             }
         }
+    } else {
+        Vec::new()
     };
 
     let latest = if !possibilities.is_empty() {
@@ -338,17 +364,23 @@ fn upgrade_dependency(
         None
     };
 
-    let Some(latest) = latest else {
+    let new_version = if let Some(precise) = precise {
+        Version::parse(precise)
+            .with_context(|| format!("invalid version format for precise version `{precise}`"))?
+    } else if let Some(latest) = latest {
+        latest.clone()
+    } else {
+        // Breaking (not precise) upgrade did not find a latest version
         trace!("skipping dependency `{name}` without any published versions");
         return Ok(dependency);
     };
 
-    if current.matches(&latest) {
+    if current.matches(&new_version) {
         trace!("skipping dependency `{name}` without a breaking update available");
         return Ok(dependency);
     }
 
-    let Some((new_req_string, _)) = upgrade_requirement(&current.to_string(), latest)? else {
+    let Some((new_req_string, _)) = upgrade_requirement(&current.to_string(), &new_version)? else {
         trace!("skipping dependency `{name}` because the version requirement didn't change");
         return Ok(dependency);
     };
@@ -356,14 +388,36 @@ fn upgrade_dependency(
     let upgrade_message = format!("{name} {current} -> {new_req_string}");
     trace!(upgrade_message);
 
+    let old_version = semver::Version::new(
+        comparator.major,
+        comparator.minor.unwrap_or_default(),
+        comparator.patch.unwrap_or_default(),
+    );
+    let is_downgrade = new_version < old_version;
+    let status = if is_downgrade {
+        "Downgrading"
+    } else {
+        "Upgrading"
+    };
+
     if upgrade_messages.insert(upgrade_message.clone()) {
         gctx.shell()
-            .status_with_color("Upgrading", &upgrade_message, &style::GOOD)?;
+            .status_with_color(status, &upgrade_message, &style::WARN)?;
     }
 
-    upgrades.insert((name.to_string(), dependency.source_id()), latest.clone());
+    upgrades.insert(
+        (name.to_string(), dependency.source_id()),
+        new_version.clone(),
+    );
 
-    let req = OptVersionReq::Req(VersionReq::parse(&latest.to_string())?);
+    let new_version_req = VersionReq::parse(&new_version.to_string())?;
+
+    let req = if precise.is_some() {
+        OptVersionReq::Precise(new_version, new_version_req)
+    } else {
+        OptVersionReq::Req(new_version_req)
+    };
+
     let mut dep = dependency.clone();
     dep.set_version_req(req);
     Ok(dep)
