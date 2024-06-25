@@ -249,7 +249,7 @@ fn note_resolve_changes() {
 [NOTE] package `multi v0.1.0` added to the packaged Cargo.lock file, was originally sourced from `[..]/foo/multi`
 [NOTE] package `patched v1.0.0` added to the packaged Cargo.lock file, was originally sourced from `[..]/foo/patched`
 [PACKAGED] [..] files, [..] ([..] compressed)
-[WARNING] no (git) Cargo.toml found at `target/tmp/[..]/foo/Cargo.toml` in workdir `[..]`
+[WARNING] no (git) Cargo.toml found at `[..]/foo/Cargo.toml` in workdir `[..]`
 ",
         )
         .run();
