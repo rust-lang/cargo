@@ -76,6 +76,10 @@ rustdocflags = ["…", "…"]     # custom flags to pass to rustdoc
 incremental = true            # whether or not to enable incremental compilation
 dep-info-basedir = "…"        # path for the base directory for targets in depfiles
 
+[credential-alias]
+# Provides a way to define aliases for credential providers.
+my-alias = ["/usr/bin/cargo-credential-example", "--argument", "value", "--flag"]
+
 [doc]
 browser = "chromium"          # browser to use with `cargo doc --open`,
                               # overrides the `BROWSER` environment variable
@@ -142,10 +146,16 @@ rpath = false            # Sets the rpath linking option.
 [registries.<name>]  # registries other than crates.io
 index = "…"          # URL of the registry index
 token = "…"          # authentication token for the registry
+credential-provider = "cargo:token" # The credential provider for this registry.
+
+[registries.crates-io]
+protocol = "sparse"  # The protocol to use to access crates.io.
 
 [registry]
 default = "…"        # name of the default registry
 token = "…"          # authentication token for crates.io
+credential-provider = "cargo:token"           # The credential provider for crates.io.
+global-credential-providers = ["cargo:token"] # The credential providers to use by default.
 
 [source.<name>]      # source definition and replacement
 replace-with = "…"   # replace this source with the given named source
@@ -1001,7 +1011,7 @@ See [Registry Authentication](registry-authentication.md) for more information.
 
 #### `registries.crates-io.protocol`
 * Type: string
-* Default: `sparse`
+* Default: `"sparse"`
 * Environment: `CARGO_REGISTRIES_CRATES_IO_PROTOCOL`
 
 Specifies the protocol used to access crates.io. Allowed values are `git` or `sparse`.
