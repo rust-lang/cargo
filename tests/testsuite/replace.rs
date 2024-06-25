@@ -1443,7 +1443,7 @@ fn override_respects_spec_metadata() {
 [DOWNLOADED] bar v0.1.0+a (registry `dummy-registry`)
 [CHECKING] bar v0.1.0+a
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-error[E0425]: cannot find function `bar` in crate `bar`
+error[E0425]: cannot find function `bar`[..]
 ...
 [ERROR] could not compile `foo` (lib) due to 1 previous error
 
