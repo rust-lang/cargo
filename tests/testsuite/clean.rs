@@ -825,6 +825,7 @@ fn clean_spec_reserved() {
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn clean_dry_run() {
     // Basic `clean --dry-run` test.
@@ -866,15 +867,11 @@ fn clean_dry_run() {
     // Verify it didn't delete anything.
     let after = p.build_dir().ls_r();
     assert_eq!(before, after);
-    let path_stringify = |p: &PathBuf| format!("{}\n", p.to_str().unwrap());
-    let files = itertools::join(before.iter().map(path_stringify), "");
-    let re = regex::Regex::new("/(?<head>[a-z0-9\\-_]+)-([0-9a-f]{16})(?<tail>.*)").unwrap();
-    let expected = re.replace_all(&files, "/$head-[HASH]$tail");
-    let expected = expected.replace(p.build_dir().to_str().unwrap(), "[ROOT]/foo/target");
+    let expected = itertools::join(before.iter().map(|p| p.to_str().unwrap()), "\n");
     eprintln!("{expected}");
     // Verify the verbose output.
     p.cargo("clean --dry-run -v")
-        .with_stdout_data(expected.unordered())
+        .with_stdout_unordered(expected)
         .with_stderr_data(str![[r#"
 [SUMMARY] [FILE_NUM] files, [FILE_SIZE]B total
 [WARNING] no files deleted due to --dry-run
