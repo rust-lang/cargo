@@ -4,11 +4,9 @@
 //! rebuild the real one. There is a separate integration test `build-std`
 //! which builds the real thing, but that should be avoided if possible.
 
-#![allow(deprecated)]
-
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::ProjectBuilder;
-use cargo_test_support::{paths, project, rustc_host, Execs};
+use cargo_test_support::{paths, project, rustc_host, str, Execs};
 use std::path::{Path, PathBuf};
 
 struct Setup {
@@ -254,14 +252,22 @@ fn simple_lib_std() {
     p.cargo("build -v")
         .build_std(&setup)
         .target_host()
-        .with_stderr_contains("[RUNNING] `[..]--crate-name std [..]`")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `[..] rustc --crate-name std [..]`
+...
+"#]])
         .run();
     // Check freshness.
     p.change_file("src/lib.rs", " ");
     p.cargo("build -v")
         .build_std(&setup)
         .target_host()
-        .with_stderr_contains("[FRESH] std[..]")
+        .with_stderr_data(str![[r#"
+...
+[FRESH] std v0.1.0 ([..]/tests/testsuite/mock-std/library/std)
+...
+"#]])
         .run();
 }
 
@@ -273,6 +279,7 @@ fn simple_bin_std() {
     p.cargo("run -v").build_std(&setup).target_host().run();
 }
 
+#[allow(deprecated)]
 #[cargo_test(build_std_mock)]
 fn lib_nostd() {
     let setup = setup();
@@ -306,7 +313,11 @@ fn check_core() {
     p.cargo("check -v")
         .build_std_arg(&setup, "core")
         .target_host()
-        .with_stderr_contains("[WARNING] [..]unused_fn[..]")
+        .with_stderr_data(str![[r#"
+...
+[WARNING] function `unused_fn` is never used
+...
+"#]])
         .run();
 }
 
@@ -366,7 +377,14 @@ fn test() {
     p.cargo("test -v")
         .build_std(&setup)
         .target_host()
-        .with_stdout_contains("test tests::it_works ... ok")
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test tests::it_works ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+...
+"#]])
         .run();
 }
 
@@ -483,7 +501,15 @@ fn doctest() {
 
     p.cargo("test --doc -v -Zdoctest-xcompile")
         .build_std(&setup)
-        .with_stdout_contains("test src/lib.rs - f [..] ... ok")
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test src/lib.rs - f (line 3) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .target_host()
         .run();
 }
@@ -507,7 +533,11 @@ fn no_implicit_alloc() {
     p.cargo("build -v")
         .build_std(&setup)
         .target_host()
-        .with_stderr_contains("[..]use of undeclared [..]`alloc`")
+        .with_stderr_data(str![[r#"
+...
+error[E0433]: failed to resolve: use of undeclared crate or module `alloc`
+...
+"#]])
         .with_status(101)
         .run();
 }
@@ -562,6 +592,7 @@ fn ignores_incremental() {
         .starts_with("foo-"));
 }
 
+#[allow(deprecated)]
 #[cargo_test(build_std_mock)]
 fn cargo_config_injects_compiler_builtins() {
     let setup = setup();
@@ -622,7 +653,11 @@ fn no_roots() {
     p.cargo("build")
         .build_std(&setup)
         .target_host()
-        .with_stderr_contains("[FINISHED] [..]")
+        .with_stderr_data(str![[r#"
+...
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -648,10 +683,15 @@ fn proc_macro_only() {
     p.cargo("build")
         .build_std(&setup)
         .target_host()
-        .with_stderr_contains("[FINISHED] [..]")
+        .with_stderr_data(str![[r#"
+...
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test(build_std_mock)]
 fn fetch() {
     let setup = setup();
