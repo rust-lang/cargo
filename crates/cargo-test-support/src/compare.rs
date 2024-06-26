@@ -171,7 +171,7 @@ fn add_common_redactions(subs: &mut snapbox::Redactions) {
     .unwrap();
     subs.insert(
         "[FILE_SIZE]",
-        regex!(r"(?<redacted>[0-9]+(\.[0-9]+)([a-zA-Z]i)?)B"),
+        regex!(r"(?<redacted>[0-9]+(\.[0-9]+)?([a-zA-Z]i)?)B\s"),
     )
     .unwrap();
     subs.insert(
