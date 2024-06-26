@@ -377,12 +377,11 @@ use anyhow::{bail, format_err, Context as _};
 use cargo_util::{paths, ProcessBuilder, Sha256};
 use filetime::FileTime;
 use itertools::Either;
-use md5::Md5;
 use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
-use sha1::{Digest, Sha1};
 use tracing::{debug, info};
+use xxhash_rust::xxh3;
 
 use crate::core::compiler::unit_graph::UnitDep;
 use crate::core::Package;
@@ -2517,16 +2516,14 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum ChecksumAlgo {
     Sha256,
-    Sha1,
-    Md5,
+    XxHash,
 }
 
 impl ChecksumAlgo {
     fn hash_len(&self) -> usize {
         match self {
             ChecksumAlgo::Sha256 => 32,
-            ChecksumAlgo::Sha1 => 20,
-            ChecksumAlgo::Md5 => 16,
+            ChecksumAlgo::XxHash => 16,
         }
     }
 }
@@ -2537,8 +2534,7 @@ impl FromStr for ChecksumAlgo {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "sha256" => Ok(Self::Sha256),
-            "sha1" => Ok(Self::Sha1),
-            "md5" => Ok(Self::Md5),
+            "xxhash" => Ok(Self::XxHash),
             _ => Err(InvalidChecksumAlgo {}),
         }
     }
@@ -2548,8 +2544,7 @@ impl Display for ChecksumAlgo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
             ChecksumAlgo::Sha256 => "sha256",
-            ChecksumAlgo::Sha1 => "sha1",
-            ChecksumAlgo::Md5 => "md5",
+            ChecksumAlgo::XxHash => "xxhash",
         })
     }
 }
@@ -2559,7 +2554,7 @@ pub struct InvalidChecksumAlgo {}
 
 impl Display for InvalidChecksumAlgo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "expected `sha256`, `sha1`, or `md5`")
+        write!(f, "expected `sha256`, or `xxhash`")
     }
 }
 
@@ -2622,25 +2617,13 @@ impl Checksum {
                     value,
                 )?;
             }
-            ChecksumAlgo::Sha1 => {
+            ChecksumAlgo::XxHash => {
                 digest(
-                    Sha1::new(),
+                    xxh3::Xxh3::new(),
                     |h, b| {
                         h.update(b);
                     },
-                    |h, out| out.copy_from_slice(&h.finalize()),
-                    contents,
-                    &mut buf,
-                    value,
-                )?;
-            }
-            ChecksumAlgo::Md5 => {
-                digest(
-                    Md5::new(),
-                    |h, b| {
-                        h.update(b);
-                    },
-                    |h, out| out.copy_from_slice(&h.finalize()),
+                    |h, out| out.copy_from_slice(&h.digest128().to_be_bytes()),
                     contents,
                     &mut buf,
                     value,

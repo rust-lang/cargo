@@ -307,7 +307,6 @@ dependencies = [
  "lazycell",
  "libc",
  "libgit2-sys",
- "md-5",
  "memchr",
  "opener",
  "openssl",
@@ -342,6 +341,7 @@ dependencies = [
  "url",
  "walkdir",
  "windows-sys 0.52.0",
+ "xxhash-rust",
 ]
 
 [[package]]
@@ -2271,16 +2271,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "md-5"
-version = "0.10.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d89e7ee0cfbedfc4da3340218492196241d89eefb6dab27de5df917a6d2e78cf"
-dependencies = [
- "cfg-if",
- "digest",
-]
-
-[[package]]
 name = "mdman"
 version = "0.0.0"
 dependencies = [
@@ -4063,6 +4053,12 @@ version = "0.0.0"
 dependencies = [
  "toml_edit",
 ]
+
+[[package]]
+name = "xxhash-rust"
+version = "0.8.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "927da81e25be1e1a2901d59b81b37dd2efd1fc9c9345a55007f09bf5a2d3ee03"
 
 [[package]]
 name = "zerocopy"
