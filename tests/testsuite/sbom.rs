@@ -45,7 +45,7 @@ fn build_sbom_without_passing_unstable_flag() {
 
     p.cargo("build")
         .masquerade_as_nightly_cargo(&["sbom"])
-        .with_stderr(
+        .with_stderr_data(
             "\
             [WARNING] ignoring 'sbom' config, pass `-Zsbom` to enable it\n\
             [COMPILING] foo v0.5.0 ([..])\n\
