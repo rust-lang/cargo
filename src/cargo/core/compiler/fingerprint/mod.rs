@@ -381,7 +381,7 @@ use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
-use xxhash_rust::xxh3;
+use twox_hash::XxHash64;
 
 use crate::core::compiler::unit_graph::UnitDep;
 use crate::core::Package;
@@ -2523,7 +2523,7 @@ impl ChecksumAlgo {
     fn hash_len(&self) -> usize {
         match self {
             ChecksumAlgo::Sha256 => 32,
-            ChecksumAlgo::XxHash => 16,
+            ChecksumAlgo::XxHash => 8,
         }
     }
 }
@@ -2619,11 +2619,11 @@ impl Checksum {
             }
             ChecksumAlgo::XxHash => {
                 digest(
-                    xxh3::Xxh3::new(),
+                    XxHash64::with_seed(0),
                     |h, b| {
-                        h.update(b);
+                        h.write(b);
                     },
-                    |h, out| out.copy_from_slice(&h.digest128().to_be_bytes()),
+                    |h, out| out.copy_from_slice(&h.finish().to_be_bytes()),
                     contents,
                     &mut buf,
                     value,
