@@ -6575,7 +6575,7 @@ fn user_specific_cfgs_are_filtered_out() {
         )
         .build();
 
-    p.cargo("rustc -- --cfg debug_assertions --cfg proc_macro")
+    p.cargo("rustc -- --cfg debug_assertions --cfg proc_macro -Aunknown_lints -Aunexpected_builtin_cfgs")
         .run();
     p.process(&p.bin("foo")).run();
 }
