@@ -336,12 +336,12 @@ dependencies = [
  "tracing",
  "tracing-chrome",
  "tracing-subscriber",
+ "twox-hash",
  "unicase",
  "unicode-width",
  "url",
  "walkdir",
  "windows-sys 0.52.0",
- "xxhash-rust",
 ]
 
 [[package]]
@@ -3559,6 +3559,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "twox-hash"
+version = "1.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
+dependencies = [
+ "cfg-if",
+ "rand",
+ "static_assertions",
+]
+
+[[package]]
 name = "typeid"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4053,12 +4064,6 @@ version = "0.0.0"
 dependencies = [
  "toml_edit",
 ]
-
-[[package]]
-name = "xxhash-rust"
-version = "0.8.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "927da81e25be1e1a2901d59b81b37dd2efd1fc9c9345a55007f09bf5a2d3ee03"
 
 [[package]]
 name = "zerocopy"
