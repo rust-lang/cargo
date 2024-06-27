@@ -217,6 +217,7 @@ static MIN_LITERAL_REDACTIONS: &[(&str, &str)] = &[
         "[NOT_FOUND]",
         "The system cannot find the path specified. (os error 3)",
     ),
+    ("[NOT_FOUND]", "Access is denied. (os error 5)"),
     ("[NOT_FOUND]", "program not found"),
     // Unix message for exit status
     ("[EXIT_STATUS]", "exit status"),

@@ -1,13 +1,12 @@
 //! Tests for the `cargo package` command.
 
-#![allow(deprecated)]
-
 use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::prelude::*;
 use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{
-    basic_manifest, cargo_process, git, path2url, paths, project, rustc_host, symlink_supported, t,
-    ProjectBuilder,
+    basic_manifest, cargo_process, git, path2url, paths, project, rustc_host, str,
+    symlink_supported, t, ProjectBuilder,
 };
 use flate2::read::GzDecoder;
 use std::fs::{self, read_to_string, File};
@@ -35,41 +34,38 @@ fn simple() {
         .build();
 
     p.cargo("package")
-        .with_stderr(
-            "\
-[WARNING] manifest has no documentation[..]
-See [..]
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] 4 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/main.rs
-",
-        )
+
+"#]])
         .run();
     p.cargo("package")
-        .with_stderr(
-            "\
-[WARNING] manifest has no documentation[..]
-See [..]
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] 4 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -85,18 +81,16 @@ See [..]
 fn metadata_warning() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("package")
-        .with_stderr(
-            "\
-warning: manifest has no description, license, license-file, documentation, \
-homepage or repository.
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] [..] files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let p = project()
@@ -114,17 +108,16 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         .file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("package")
-        .with_stderr(
-            "\
-warning: manifest has no description, documentation, homepage or repository.
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no description, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] [..] files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let p = project()
@@ -144,15 +137,14 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         .file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("package")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] [..] files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -170,19 +162,18 @@ fn package_verbose() {
     println!("package main repo");
     cargo_process("package -v --no-verify")
         .cwd(repo.root())
-        .with_stderr(
-            "\
-[WARNING] manifest has no description[..]
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[PACKAGING] foo v0.0.1 ([..])
+[PACKAGING] foo v0.0.1 ([ROOT]/all)
 [ARCHIVING] .cargo_vcs_info.json
 [ARCHIVING] Cargo.lock
 [ARCHIVING] Cargo.toml
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/main.rs
-[PACKAGED] 5 files, [..] ([..] compressed)
-",
-        )
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
         .run();
 
     let f = File::open(&repo.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -212,18 +203,17 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
     println!("package sub-repo");
     cargo_process("package -v --no-verify")
         .cwd(repo.root().join("a/a"))
-        .with_stderr(
-            "\
-[WARNING] manifest has no description[..]
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[PACKAGING] a v0.0.1 ([..])
+[PACKAGING] a v0.0.1 ([ROOT]/all/a/a)
 [ARCHIVING] .cargo_vcs_info.json
 [ARCHIVING] Cargo.toml
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/lib.rs
-[PACKAGED] 4 files, [..] ([..] compressed)
-",
-        )
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
         .run();
 
     let f = File::open(&repo.root().join("a/a/target/package/a-0.0.1.crate")).unwrap();
@@ -255,17 +245,16 @@ fn package_verification() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("build").run();
     p.cargo("package")
-        .with_stderr(
-            "\
-[WARNING] manifest has no description[..]
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] [..] files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -300,12 +289,10 @@ fn vcs_file_collision() {
     p.cargo("package")
         .arg("--no-verify")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] invalid inclusion of reserved file name .cargo_vcs_info.json \
-in package source
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] invalid inclusion of reserved file name .cargo_vcs_info.json in package source
+
+"#]])
         .run();
 }
 
@@ -340,12 +327,10 @@ fn orig_file_collision() {
     p.cargo("package")
         .arg("--no-verify")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] invalid inclusion of reserved file name Cargo.toml.orig \
-in package source
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] invalid inclusion of reserved file name Cargo.toml.orig in package source
+
+"#]])
         .run();
 }
 
@@ -374,16 +359,15 @@ fn path_dependency_no_version() {
 
     p.cargo("package")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [ERROR] all dependencies must have a version specified when packaging.
-dependency `bar` does not specify a version\n\
+dependency `bar` does not specify a version
 Note: The packaged dependency will use the version from crates.io,
 the `path` specification will be removed from the dependency declaration.
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -412,16 +396,15 @@ fn git_dependency_no_version() {
 
     p.cargo("package")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [ERROR] all dependencies must have a version specified when packaging.
 dependency `foo` does not specify a version
 Note: The packaged dependency will use the version from crates.io,
 the `git` specification will be removed from the dependency declaration.
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -497,12 +480,11 @@ fn exclude() {
 
     cargo_process("package --no-verify -v")
         .cwd(repo.root())
-        .with_stdout("")
-        .with_stderr(
-            "\
-[WARNING] manifest has no description[..]
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[PACKAGING] foo v0.0.1 ([..])
+[PACKAGING] foo v0.0.1 ([ROOT]/exclude)
 [ARCHIVING] .cargo_vcs_info.json
 [ARCHIVING] Cargo.lock
 [ARCHIVING] Cargo.toml
@@ -518,17 +500,16 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [ARCHIVING] some_dir/file_deep_4
 [ARCHIVING] some_dir/file_deep_5
 [ARCHIVING] src/main.rs
-[PACKAGED] 15 files, [..] ([..] compressed)
-",
-        )
+[PACKAGED] 15 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
         .run();
 
     assert!(repo.root().join("target/package/foo-0.0.1.crate").is_file());
 
     cargo_process("package -l")
         .cwd(repo.root())
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
 Cargo.lock
 Cargo.toml
@@ -544,8 +525,8 @@ some_dir/file_deep_3
 some_dir/file_deep_4
 some_dir/file_deep_5
 src/main.rs
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -574,12 +555,11 @@ fn include() {
 
     cargo_process("package --no-verify -v")
         .cwd(repo.root())
-        .with_stderr(
-            "\
-[WARNING] manifest has no description[..]
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [WARNING] both package.include and package.exclude are specified; the exclude list will be ignored
-[PACKAGING] foo v0.0.1 ([..])
+[PACKAGING] foo v0.0.1 ([ROOT]/include)
 [ARCHIVING] .cargo_vcs_info.json
 [ARCHIVING] .dotfile
 [ARCHIVING] Cargo.lock
@@ -587,9 +567,9 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] foo.txt
 [ARCHIVING] src/main.rs
-[PACKAGED] 7 files, [..] ([..] compressed)
-",
-        )
+[PACKAGED] 7 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
         .run();
 }
 
@@ -642,10 +622,15 @@ fn package_git_submodule() {
 
     project
         .cargo("package --no-verify -v")
-        .with_stderr_contains("[ARCHIVING] bar/Makefile")
+        .with_stderr_data(str![[r#"
+...
+[ARCHIVING] bar/Makefile
+...
+"#]])
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 /// Tests if a symlink to a git submodule is properly handled.
 ///
@@ -701,15 +686,14 @@ fn no_duplicates_from_modified_tracked_files() {
     p.change_file("src/main.rs", r#"fn main() { println!("A change!"); }"#);
     p.cargo("build").run();
     p.cargo("package --list --allow-dirty")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/main.rs
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -738,37 +722,34 @@ fn ignore_nested() {
         .build();
 
     p.cargo("package")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] 4 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/main.rs
-",
-        )
+
+"#]])
         .run();
     p.cargo("package")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] 4 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -791,13 +772,12 @@ fn package_weird_characters() {
 
     p.cargo("package")
         .with_status(101)
-        .with_stderr(
-            "\
-warning: [..]
-See [..]
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [ERROR] cannot package a filename with a special character `:`: src/:foo
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -814,17 +794,16 @@ fn repackage_on_source_change() {
 
     // Check that cargo rebuilds the tarball
     p.cargo("package")
-        .with_stderr(
-            "\
-[WARNING] [..]
-See [..]
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] 5 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     // Check that the tarball contains the added file
@@ -880,17 +859,17 @@ fn broken_symlink() {
 
     p.cargo("package -v")
         .with_status(101)
-        .with_stderr_contains(
-            "\
+        .with_stderr_data(str![[r#"
+...
 [ERROR] failed to prepare local package for uploading
 
 Caused by:
-  failed to open for archiving: `[..]foo.rs`
+  failed to open for archiving: `[ROOT]/foo/src/foo.rs`
 
 Caused by:
-  [..]
-",
-        )
+  [NOT_FOUND]
+
+"#]])
         .run();
 }
 
@@ -933,14 +912,13 @@ fn broken_but_excluded_symlink() {
 
     p.cargo("package -v --list")
         // `src/foo.rs` is excluded.
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/main.rs
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -962,17 +940,16 @@ fn gitignore_symlink_dir() {
     });
 
     p.cargo("package -l --no-metadata")
-        .with_stderr("")
-        .with_stdout(
-            "\
+        .with_stderr_data("")
+        .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
 .gitignore
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/main.rs
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -995,31 +972,29 @@ fn gitignore_symlink_dir_dirty() {
     p.symlink("src", "src4");
 
     p.cargo("package -l --no-metadata")
-        .with_stderr("")
-        .with_stdout(
-            "\
+        .with_stderr_data("")
+        .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
 .gitignore
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/main.rs
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("package -l --no-metadata --allow-dirty")
-        .with_stderr("")
-        .with_stdout(
-            "\
+        .with_stderr_data("")
+        .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
 .gitignore
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/main.rs
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1039,7 +1014,11 @@ fn package_symlink_to_dir() {
         .symlink_dir("bla", "foo")
         .build()
         .cargo("package -v")
-        .with_stderr_contains("[ARCHIVING] foo/Makefile")
+        .with_stderr_data(str![[r#"
+...
+[ARCHIVING] foo/Makefile
+...
+"#]])
         .run();
 }
 
@@ -1058,9 +1037,11 @@ fn filesystem_loop() {
         .symlink_dir("a/b", "a/b/c/d/foo")
         .build()
         .cargo("package -v")
-        .with_stderr_contains(
-            "[WARNING] File system loop found: [..]/a/b/c/d/foo points to an ancestor [..]/a/b",
-        )
+        .with_stderr_data(str![[r#"
+...
+[WARNING] File system loop found: [ROOT]/foo/a/b/c/d/foo points to an ancestor [ROOT]/foo/a/b
+...
+"#]])
         .run();
 }
 
@@ -1106,16 +1087,14 @@ fn do_not_package_if_repository_is_dirty() {
 
     p.cargo("package")
         .with_status(101)
-        .with_stderr(
-            "\
-error: 1 files in the working directory contain changes that were not yet \
-committed into git:
+        .with_stderr_data(str![[r#"
+[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
 
 Cargo.toml
 
 to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1144,15 +1123,14 @@ fn dirty_ignored() {
     p.change_file("src/build/mod.rs", "");
     p.cargo("package --list")
         .with_status(101)
-        .with_stderr(
-            "\
-error: 1 files in the working directory contain changes that were not yet committed into git:
+        .with_stderr_data(str![[r#"
+[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
 
 src/build/mod.rs
 
 to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
-",
-        )
+
+"#]])
         .run();
     // Add the ignored file and make sure it is included.
     let mut index = t!(repo.index());
@@ -1160,16 +1138,15 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
     t!(index.write());
     git::commit(&repo);
     p.cargo("package --list")
-        .with_stderr("")
-        .with_stdout(
-            "\
+        .with_stderr_data("")
+        .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
 Cargo.toml
 Cargo.toml.orig
 src/build/mod.rs
 src/lib.rs
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1222,15 +1199,14 @@ fn issue_13695_allow_dirty_vcs_info() {
 
     // Listing provides a consistent result.
     p.cargo("package --list --allow-dirty")
-        .with_stderr("")
-        .with_stdout(
-            "\
+        .with_stderr_data("")
+        .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
 Cargo.toml
 Cargo.toml.orig
 src/lib.rs
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1573,12 +1549,13 @@ fn test_edition() {
         .build();
 
     p.cargo("check -v")
-        .with_stderr_contains(
-            "\
-[CHECKING] foo v0.0.1 ([..])
-[RUNNING] `rustc [..]--edition=2018 [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+...
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc [..]--edition=2018 [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1622,18 +1599,16 @@ fn test_edition_malformed() {
 
     p.cargo("check -v")
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   failed to parse the `edition` key
 
 Caused by:
   supported edition values are `2015`, `2018`, `2021`, or `2024`, but `chicken` is unknown
-"
-            .to_string(),
-        )
+
+"#]])
         .run();
 }
 
@@ -1654,18 +1629,16 @@ fn test_edition_from_the_future() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   failed to parse the `edition` key
 
 Caused by:
   this version of Cargo is older than the `2038` edition, and only supports `2015`, `2018`, `2021`, and `2024` editions.
-"
-            .to_string(),
-        )
+
+"#]])
         .run();
 }
 
@@ -1695,21 +1668,21 @@ fn do_not_package_if_src_was_modified() {
 
     p.cargo("package")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-error: failed to verify package tarball
+        .with_stderr_data(str![[r#"
+...
+[ERROR] failed to verify package tarball
 
 Caused by:
-  Source directory was modified by build.rs during cargo publish. \
-  Build scripts should not modify anything outside of OUT_DIR.
-  Changed: [CWD]/target/package/foo-0.0.1/bar.txt
-  Added: [CWD]/target/package/foo-0.0.1/new-dir
-  <tab>[CWD]/target/package/foo-0.0.1/src/generated.txt
-  Removed: [CWD]/target/package/foo-0.0.1/dir
-  <tab>[CWD]/target/package/foo-0.0.1/dir/foo.txt
+  Source directory was modified by build.rs during cargo publish. Build scripts should not modify anything outside of OUT_DIR.
+  Changed: [ROOT]/foo/target/package/foo-0.0.1/bar.txt
+  Added: [ROOT]/foo/target/package/foo-0.0.1/new-dir
+  	[ROOT]/foo/target/package/foo-0.0.1/src/generated.txt
+  Removed: [ROOT]/foo/target/package/foo-0.0.1/dir
+  	[ROOT]/foo/target/package/foo-0.0.1/dir/foo.txt
 
-  To proceed despite this, pass the `--no-verify` flag.",
-        )
+  To proceed despite this, pass the `--no-verify` flag.
+
+"#]])
         .run();
 
     p.cargo("package --no-verify").run();
@@ -1803,7 +1776,11 @@ fn package_no_default_features() {
         .build();
 
     p.cargo("package --no-default-features")
-        .with_stderr_contains("error: This crate requires `required` feature!")
+        .with_stderr_data(str![[r#"
+...
+[ERROR] This crate requires `required` feature!
+...
+"#]])
         .with_status(101)
         .run();
 }
@@ -1825,7 +1802,12 @@ fn include_cargo_toml_implicit() {
         .build();
 
     p.cargo("package --list")
-        .with_stdout("Cargo.toml\nCargo.toml.orig\nsrc/lib.rs\n")
+        .with_stdout_data(str![[r#"
+Cargo.toml
+Cargo.toml.orig
+src/lib.rs
+
+"#]])
         .run();
 }
 
@@ -1856,8 +1838,8 @@ fn include_exclude_test(include: &str, exclude: &str, files: &[&str], expected: 
     let p = pb.build();
 
     p.cargo("package --list")
-        .with_stderr("")
-        .with_stdout(expected)
+        .with_stderr_data("")
+        .with_stdout_data(expected)
         .run();
     p.root().rm_rf();
 }
@@ -2072,12 +2054,11 @@ fn empty_readme_path() {
 
     p.cargo("package --no-verify")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] readme `` does not appear to exist (relative to `[..]/foo`).
-Please update the readme setting in the manifest at `[..]/foo/Cargo.toml`.
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] readme `` does not appear to exist (relative to `[ROOT]/foo`).
+Please update the readme setting in the manifest at `[ROOT]/foo/Cargo.toml`.
+
+"#]])
         .run();
 }
 
@@ -2103,12 +2084,11 @@ fn invalid_readme_path() {
 
     p.cargo("package --no-verify")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] readme `DOES-NOT-EXIST` does not appear to exist (relative to `[..]/foo`).
-Please update the readme setting in the manifest at `[..]/foo/Cargo.toml`.
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] readme `DOES-NOT-EXIST` does not appear to exist (relative to `[ROOT]/foo`).
+Please update the readme setting in the manifest at `[ROOT]/foo/Cargo.toml`.
+
+"#]])
         .run();
 }
 
@@ -2134,14 +2114,13 @@ fn readme_or_license_file_is_dir() {
 
     p.cargo("package --no-verify")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] license-file `./src` does not appear to exist (relative to `[..]/foo`).
-Please update the license-file setting in the manifest at `[..]/foo/Cargo.toml`.
-readme `./src` does not appear to exist (relative to `[..]/foo`).
-Please update the readme setting in the manifest at `[..]/foo/Cargo.toml`.
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] license-file `./src` does not appear to exist (relative to `[ROOT]/foo`).
+Please update the license-file setting in the manifest at `[ROOT]/foo/Cargo.toml`.
+readme `./src` does not appear to exist (relative to `[ROOT]/foo`).
+Please update the readme setting in the manifest at `[ROOT]/foo/Cargo.toml`.
+
+"#]])
         .run();
 }
 
@@ -2166,14 +2145,13 @@ fn empty_license_file_path() {
 
     p.cargo("package --no-verify")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] manifest has no license or license-file.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[ERROR] license-file `` does not appear to exist (relative to `[..]/foo`).
-Please update the license-file setting in the manifest at `[..]/foo/Cargo.toml`.
-",
-        )
+[ERROR] license-file `` does not appear to exist (relative to `[ROOT]/foo`).
+Please update the license-file setting in the manifest at `[ROOT]/foo/Cargo.toml`.
+
+"#]])
         .run();
 }
 
@@ -2198,12 +2176,11 @@ fn invalid_license_file_path() {
 
     p.cargo("package --no-verify")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] license-file `does-not-exist` does not appear to exist (relative to `[..]/foo`).
-Please update the license-file setting in the manifest at `[..]/foo/Cargo.toml`.
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] license-file `does-not-exist` does not appear to exist (relative to `[ROOT]/foo`).
+Please update the license-file setting in the manifest at `[ROOT]/foo/Cargo.toml`.
+
+"#]])
         .run();
 }
 
@@ -2229,30 +2206,28 @@ fn license_file_implicit_include() {
     });
 
     p.cargo("package --list")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
 Cargo.toml
 Cargo.toml.orig
 src/lib.rs
 subdir/LICENSE
-",
-        )
-        .with_stderr("")
+
+"#]])
+        .with_stderr_data("")
         .run();
 
     p.cargo("package --no-verify -v")
-        .with_stderr(
-            "\
-[PACKAGING] foo v1.0.0 [..]
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v1.0.0 ([ROOT]/foo)
 [ARCHIVING] .cargo_vcs_info.json
 [ARCHIVING] Cargo.toml
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/lib.rs
 [ARCHIVING] subdir/LICENSE
-[PACKAGED] 5 files, [..] ([..] compressed)
-",
-        )
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
         .run();
     let f = File::open(&p.root().join("target/package/foo-1.0.0.crate")).unwrap();
     validate_crate_contents(
@@ -2290,27 +2265,25 @@ fn relative_license_included() {
         .build();
 
     p.cargo("package --list")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 Cargo.toml
 Cargo.toml.orig
 LICENSE
 src/lib.rs
-",
-        )
-        .with_stderr("")
+
+"#]])
+        .with_stderr_data("")
         .run();
 
     p.cargo("package")
-        .with_stderr(
-            "\
-[PACKAGING] foo v1.0.0 [..]
-[PACKAGED] 4 files, [..] ([..] compressed)
-[VERIFYING] foo v1.0.0 [..]
-[COMPILING] foo v1.0.0 [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v1.0.0 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v1.0.0 ([ROOT]/foo)
+[COMPILING] foo v1.0.0 ([ROOT]/foo/target/package/foo-1.0.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     let f = File::open(&p.root().join("target/package/foo-1.0.0.crate")).unwrap();
     validate_crate_contents(
@@ -2349,29 +2322,28 @@ fn relative_license_include_collision() {
         .build();
 
     p.cargo("package --list")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 Cargo.toml
 Cargo.toml.orig
 LICENSE
 src/lib.rs
-",
-        )
-        .with_stderr("[WARNING] license-file `../LICENSE` appears to be [..]")
+
+"#]])
+        .with_stderr_data(str![[r#"
+[WARNING] license-file `../LICENSE` appears to be a path outside of the package, but there is already a file named `LICENSE` in the root of the package. The archived crate will contain the copy in the root of the package. Update the license-file to point to the path relative to the root of the package to remove this warning.
+
+"#]])
         .run();
 
-    p.cargo("package")
-        .with_stderr(
-            "\
-[WARNING] license-file `../LICENSE` appears to be [..]
-[PACKAGING] foo v1.0.0 [..]
-[PACKAGED] 4 files, [..] ([..] compressed)
-[VERIFYING] foo v1.0.0 [..]
-[COMPILING] foo v1.0.0 [..]
-[FINISHED] [..]
-",
-        )
-        .run();
+    p.cargo("package").with_stderr_data(str![[r#"
+[WARNING] license-file `../LICENSE` appears to be a path outside of the package, but there is already a file named `LICENSE` in the root of the package. The archived crate will contain the copy in the root of the package. Update the license-file to point to the path relative to the root of the package to remove this warning.
+[PACKAGING] foo v1.0.0 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v1.0.0 ([ROOT]/foo)
+[COMPILING] foo v1.0.0 ([ROOT]/foo/target/package/foo-1.0.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]).run();
     let f = File::open(&p.root().join("target/package/foo-1.0.0.crate")).unwrap();
     validate_crate_contents(
         f,
@@ -2408,16 +2380,18 @@ fn package_restricted_windows() {
 
     p.cargo("package")
         // use unordered here because the order of the warning is different on each platform.
-        .with_stderr_unordered(
-            "\
-[WARNING] file src/aux/mod.rs is a reserved Windows filename, it will not work on Windows platforms
+        .with_stderr_data(
+            str![[r#"
 [WARNING] file src/con.rs is a reserved Windows filename, it will not work on Windows platforms
-[PACKAGING] foo [..]
-[PACKAGED] [..] files, [..] ([..] compressed)
-[VERIFYING] foo [..]
-[COMPILING] foo [..]
-[FINISHED] [..]
-",
+[WARNING] file src/aux/mod.rs is a reserved Windows filename, it will not work on Windows platforms
+[PACKAGING] foo v0.1.0 ([ROOT]/foo)
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.1.0 ([ROOT]/foo)
+[COMPILING] foo v0.1.0 ([ROOT]/foo/target/package/foo-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
         )
         .run();
 }
@@ -2438,43 +2412,40 @@ fn finds_git_in_parent() {
     p.change_file("ignoreme", "");
     p.change_file("ignoreme2", "");
     p.cargo("package --list --allow-dirty")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
 Cargo.toml
 Cargo.toml.orig
 ignoreme
 ignoreme2
 src/lib.rs
-",
-        )
+
+"#]])
         .run();
 
     p.change_file(".gitignore", "ignoreme");
     p.cargo("package --list --allow-dirty")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
 .gitignore
 Cargo.toml
 Cargo.toml.orig
 ignoreme2
 src/lib.rs
-",
-        )
+
+"#]])
         .run();
 
     fs::write(repo_path.join(".gitignore"), "ignoreme2").unwrap();
     p.cargo("package --list --allow-dirty")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
 .gitignore
 Cargo.toml
 Cargo.toml.orig
 src/lib.rs
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -2512,28 +2483,32 @@ fn reserved_windows_name() {
         .build();
     p.cargo("package")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-error: failed to verify package tarball
+        .with_stderr_data(str![[r#"
+...
+[ERROR] failed to verify package tarball
 
 Caused by:
-  failed to download replaced source registry `[..]`
+  failed to download replaced source registry `crates-io`
 
 Caused by:
-  failed to unpack package `[..] `[..]`)`
+  failed to unpack package `bar v1.0.0 (registry `dummy-registry`)`
 
 Caused by:
-  failed to unpack entry at `[..]aux.rs`
+  failed to unpack entry at `bar-1.0.0/src/aux.rs`
 
 Caused by:
-  `[..]aux.rs` appears to contain a reserved Windows path, it cannot be extracted on Windows
+  `bar-1.0.0/src/aux.rs` appears to contain a reserved Windows path, it cannot be extracted on Windows
 
 Caused by:
-  failed to unpack `[..]aux.rs`
+  failed to unpack `[ROOT]/home/.cargo/registry/src/-[HASH]/bar-1.0.0/src/aux.rs`
 
 Caused by:
-  failed to unpack `[..]aux.rs` into `[..]aux.rs`",
-        )
+  failed to unpack `bar-1.0.0/src/aux.rs` into `[ROOT]/home/.cargo/registry/src/-[HASH]/bar-1.0.0/src/aux.rs`
+
+Caused by:
+  [NOT_FOUND]
+
+"#]])
         .run();
 }
 
@@ -2566,26 +2541,24 @@ fn list_with_path_and_lock() {
         .build();
 
     p.cargo("package --list")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/main.rs
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("package")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] all dependencies must have a version specified when packaging.
 dependency `bar` does not specify a version
 Note: The packaged dependency will use the version from crates.io,
 the `path` specification will be removed from the dependency declaration.
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -2648,18 +2621,14 @@ fn long_file_names() {
         .build();
 
     p.cargo("package").run();
-    p.cargo("package --list")
-        .with_stdout(&format!(
-            "\
-{}
+    p.cargo("package --list").with_stdout_data(str![[r#"
+012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/main.rs
-",
-            long_name
-        ))
-        .run();
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -2729,30 +2698,28 @@ fn deleted_git_working_tree() {
     });
     p.root().join("src/lib.rs").rm_rf();
     p.cargo("package --allow-dirty --list")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/main.rs
-",
-        )
+
+"#]])
         .run();
     p.cargo("package --allow-dirty").run();
     let mut index = t!(repo.index());
     t!(index.remove(Path::new("src/lib.rs"), 0));
     t!(index.write());
     p.cargo("package --allow-dirty --list")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/main.rs
-",
-        )
+
+"#]])
         .run();
     p.cargo("package --allow-dirty").run();
 }
@@ -2798,11 +2765,10 @@ fn package_in_workspace_not_found() {
 
     p.cargo("package -p doesnt-exist")
         .with_status(101)
-        .with_stderr_contains(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] package ID specification `doesnt-exist` did not match any packages
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -2842,24 +2808,23 @@ fn in_workspace() {
         .build();
 
     p.cargo("package --workspace")
-        .with_stderr(
-            "\
-[WARNING] manifest has no documentation, [..]
-See [..]
-[PACKAGING] bar v0.0.1 ([CWD]/bar)
-[PACKAGED] [..] files, [..] ([..] compressed)
-[VERIFYING] bar v0.0.1 ([CWD]/bar)
-[COMPILING] bar v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[WARNING] manifest has no documentation, [..]
-See [..]
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] [..] files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] bar v0.0.1 ([ROOT]/foo/bar)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] bar v0.0.1 ([ROOT]/foo/bar)
+[COMPILING] bar v0.0.1 ([ROOT]/foo/target/package/bar-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
@@ -2897,15 +2862,14 @@ fn workspace_noconflict_readme() {
         .build();
 
     p.cargo("package")
-        .with_stderr(
-            "\
-[PACKAGING] bar v0.0.1 ([CWD]/bar)
-[PACKAGED] [..] files, [..] ([..] compressed)
-[VERIFYING] bar v0.0.1 ([CWD]/bar)
-[COMPILING] bar v0.0.1 ([CWD]/[..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[PACKAGING] bar v0.0.1 ([ROOT]/foo/bar)
+[PACKAGED] 6 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] bar v0.0.1 ([ROOT]/foo/bar)
+[COMPILING] bar v0.0.1 ([ROOT]/foo/target/package/bar-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -2939,18 +2903,15 @@ fn workspace_conflict_readme() {
         .file("bar/README.md", "# workspace member: Bar")
         .build();
 
-    p.cargo("package")
-        .with_stderr(
-            "\
-warning: readme `../README.md` appears to be a path outside of the package, but there is already a file named `README.md` in the root of the package. The archived crate will contain the copy in the root of the package. Update the readme to point to the path relative to the root of the package to remove this warning.
-[PACKAGING] bar v0.0.1 ([CWD]/bar)
-[PACKAGED] [..] files, [..] ([..] compressed)
-[VERIFYING] bar v0.0.1 ([CWD]/bar)
-[COMPILING] bar v0.0.1 ([CWD]/[..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
+    p.cargo("package").with_stderr_data(str![[r#"
+[WARNING] readme `../README.md` appears to be a path outside of the package, but there is already a file named `README.md` in the root of the package. The archived crate will contain the copy in the root of the package. Update the readme to point to the path relative to the root of the package to remove this warning.
+[PACKAGING] bar v0.0.1 ([ROOT]/foo/bar)
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] bar v0.0.1 ([ROOT]/foo/bar)
+[COMPILING] bar v0.0.1 ([ROOT]/foo/target/package/bar-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -3133,25 +3094,23 @@ version = "0.0.1"
 
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/main.rs
-",
-        )
+
+"#]])
         .run();
     p.cargo("package")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 [..]
-[PACKAGED] 4 files[..]
-[VERIFYING] foo v0.0.1 [..]
-[COMPILING] foo v0.0.1 [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -3238,26 +3197,24 @@ version = "0.0.1"
     let output = p.cargo("package").exec_with_output().unwrap();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/bar.txt
 src/main.rs
-",
-        )
+
+"#]])
         .run();
     p.cargo("package")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 [..]
-[PACKAGED] 5 files, [..]
-[VERIFYING] foo v0.0.1 [..]
-[COMPILING] foo v0.0.1 [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -3358,8 +3315,7 @@ version = "0.0.1"
     let output = p.cargo("package").exec_with_output().unwrap();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
@@ -3367,19 +3323,18 @@ bla/bar.txt
 foo/bar.txt
 src/main.rs
 src/main.rs.bak
-",
-        )
+
+"#]])
         .run();
     p.cargo("package")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 [..]
-[PACKAGED] 7 files, [..]
-[VERIFYING] foo v0.0.1 [..]
-[COMPILING] foo v0.0.1 [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 7 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -3441,28 +3396,24 @@ fn normalize_case() {
     )
     .unwrap();
 
-    p.cargo("package")
-        .with_stderr(
-            "\
-[WARNING] manifest has no documentation[..]
-See [..]
-[PACKAGING] foo v0.0.1 ([CWD])
+    p.cargo("package").with_stderr_data(str![[r#"
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] ignoring `package.build` as `build.rs` is not included in the published package
 [WARNING] ignoring binary `foo` as `src/main.rs` is not included in the published package
 [WARNING] ignoring example `ExampleFoo` as `examples/ExampleFoo.rs` is not included in the published package
 [WARNING] ignoring test `ExplicitPath` as `tests/ExplicitPath.rs` is not included in the published package
 [WARNING] ignoring test `explicitpath` as `tests/explicitpath.rs` is not included in the published package
-[PACKAGED] 8 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
+[PACKAGED] 8 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]).run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 Build.rs
 Cargo.lock
 Cargo.toml
@@ -3471,27 +3422,24 @@ Examples/ExampleFoo.rs
 Tests/ExplicitPath.rs
 src/Main.rs
 src/lib.rs
-",
-        )
+
+"#]])
         .run();
-    p.cargo("package")
-        .with_stderr(
-            "\
-[WARNING] manifest has no documentation[..]
-See [..]
-[PACKAGING] foo v0.0.1 ([CWD])
+    p.cargo("package").with_stderr_data(str![[r#"
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] ignoring `package.build` as `build.rs` is not included in the published package
 [WARNING] ignoring binary `foo` as `src/main.rs` is not included in the published package
 [WARNING] ignoring example `ExampleFoo` as `examples/ExampleFoo.rs` is not included in the published package
 [WARNING] ignoring test `ExplicitPath` as `tests/ExplicitPath.rs` is not included in the published package
 [WARNING] ignoring test `explicitpath` as `tests/explicitpath.rs` is not included in the published package
-[PACKAGED] 8 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
+[PACKAGED] 8 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]).run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
     validate_crate_contents(
@@ -3557,41 +3505,38 @@ fn mixed_case() {
         .build();
 
     p.cargo("package")
-        .with_stderr(
-            "\
-[WARNING] manifest has no documentation[..]
-See [..]
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] 4 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/main.rs
-",
-        )
+
+"#]])
         .run();
     p.cargo("package")
-        .with_stderr(
-            "\
-[WARNING] manifest has no documentation[..]
-See [..]
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] 4 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -3619,17 +3564,16 @@ fn versionless_package() {
         .build();
 
     p.cargo("package")
-        .with_stderr(
-            "\
-warning: manifest has no license, license-file, documentation, homepage or repository.
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[PACKAGING] foo v0.0.0 ([CWD])
-[PACKAGED] 4 files, [..]B ([..]B compressed)
-[VERIFYING] foo v0.0.0 ([CWD])
-[COMPILING] foo v0.0.0 ([CWD]/target/package/foo-0.0.0)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]s
-",
-        )
+[PACKAGING] foo v0.0.0 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.0 ([ROOT]/foo)
+[COMPILING] foo v0.0.0 ([ROOT]/foo/target/package/foo-0.0.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.0.crate")).unwrap();
@@ -3650,8 +3594,7 @@ fn include_files_called_target_project() {
         .build();
 
     p.cargo("package -l")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 Cargo.lock
 Cargo.toml
 Cargo.toml.orig
@@ -3660,8 +3603,8 @@ data/target
 derp/not_target/foo.txt
 derp/target/foo.txt
 src/main.rs
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -3674,8 +3617,7 @@ fn include_files_called_target_git() {
     _ = fs::create_dir(p.build_dir()).unwrap();
     _ = fs::write(p.build_dir().join("foo.txt"), "").unwrap();
     p.cargo("package -l")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
 Cargo.lock
 Cargo.toml
@@ -3685,16 +3627,15 @@ data/target
 derp/not_target/foo.txt
 derp/target/foo.txt
 src/main.rs
-",
-        )
+
+"#]])
         .run();
 
     // if target is committed, it should be included.
     git::add(&repo);
     git::commit(&repo);
     p.cargo("package -l")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
 Cargo.lock
 Cargo.toml
@@ -3705,8 +3646,8 @@ derp/not_target/foo.txt
 derp/target/foo.txt
 src/main.rs
 target/foo.txt
-",
-        )
+
+"#]])
         .run();
 
     // Untracked files shouldn't be included, if they are also ignored.
@@ -3715,8 +3656,7 @@ target/foo.txt
     git::commit(&repo);
     _ = fs::write(p.build_dir().join("untracked.txt"), "").unwrap();
     p.cargo("package -l")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
 .gitignore
 Cargo.lock
@@ -3728,8 +3668,8 @@ derp/not_target/foo.txt
 derp/target/foo.txt
 src/main.rs
 target/foo.txt
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -3776,13 +3716,14 @@ fn build_script_outside_pkg_root() {
     // custom_build.rs does not exist
     p.cargo("package -l")
         .with_status(101)
-        .with_stderr("\
-warning: manifest has no documentation, homepage or repository.
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-error: the source file of build script doesn't appear to exist.
+[ERROR] the source file of build script doesn't appear to exist.
 This may cause issue during packaging, as modules resolution and resources included via macros are often relative to the path of source files.
-Please update the `build` setting in the manifest at `[CWD]/Cargo.toml` and point to a path inside the root of the package.
-")
+Please update the `build` setting in the manifest at `[ROOT]/foo/Cargo.toml` and point to a path inside the root of the package.
+
+"#]])
         .run();
 
     // custom_build.rs outside the package root
@@ -3791,15 +3732,15 @@ Please update the `build` setting in the manifest at `[CWD]/Cargo.toml` and poin
     _ = fs::write(&custom_build_root.join("custom_build.rs"), "fn main() {}");
     p.cargo("package -l")
         .with_status(101)
-        .with_stderr(&format!(
-        "\
-warning: manifest has no documentation, homepage or repository.
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-error: the source file of build script doesn't appear to be a path inside of the package.
-It is at `{}/t_custom_build/custom_build.rs`, whereas the root the package is `[CWD]`.
+[ERROR] the source file of build script doesn't appear to be a path inside of the package.
+It is at `[ROOT]/t_custom_build/custom_build.rs`, whereas the root the package is `[ROOT]/foo`.
 This may cause issue during packaging, as modules resolution and resources included via macros are often relative to the path of source files.
-Please update the `build` setting in the manifest at `[CWD]/Cargo.toml` and point to a path inside the root of the package.
-", paths::root().display()))
+Please update the `build` setting in the manifest at `[ROOT]/foo/Cargo.toml` and point to a path inside the root of the package.
+
+"#]])
         .run();
 }
 
@@ -3825,14 +3766,13 @@ fn symlink_manifest_path() {
 
     cargo_process("package --no-verify --manifest-path")
         .arg(foo_symlink.join("Cargo.toml"))
-        .with_stderr(
-            "\
-warning: manifest has no description, license, license-file, documentation, homepage or repository.
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[PACKAGING] foo v1.0.0 ([..]foo-symlink)
-[PACKAGED] 6 files[..]
-",
-        )
+[PACKAGING] foo v1.0.0 ([ROOT]/foo-symlink)
+[PACKAGED] 6 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
         .run()
 }
 
@@ -3885,16 +3825,15 @@ fn normalize_paths() {
         .build();
 
     p.cargo("package")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] 11 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 11 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -3988,16 +3927,15 @@ fn discovery_inferred_build_rs_included() {
         .build();
 
     p.cargo("package")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] 4 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -4067,17 +4005,16 @@ fn discovery_inferred_build_rs_excluded() {
         .build();
 
     p.cargo("package")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 ([CWD])
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] ignoring `package.build` as `build.rs` is not included in the published package
-[PACKAGED] 3 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -4145,16 +4082,15 @@ fn discovery_explicit_build_rs_included() {
         .build();
 
     p.cargo("package")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] 4 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -4225,17 +4161,16 @@ fn discovery_explicit_build_rs_excluded() {
         .build();
 
     p.cargo("package")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 ([CWD])
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] ignoring `package.build` as `build.rs` is not included in the published package
-[PACKAGED] 3 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -4302,16 +4237,15 @@ fn discovery_inferred_lib_included() {
         .build();
 
     p.cargo("package")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] 5 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -4391,17 +4325,16 @@ fn discovery_inferred_lib_excluded() {
         .build();
 
     p.cargo("package")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 ([CWD])
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] ignoring library `foo` as `src/lib.rs` is not included in the published package
-[PACKAGED] 4 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -4471,16 +4404,15 @@ fn discovery_explicit_lib_included() {
         .build();
 
     p.cargo("package")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] 5 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -4563,17 +4495,16 @@ fn discovery_explicit_lib_excluded() {
         .build();
 
     p.cargo("package")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 ([CWD])
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] ignoring library `foo` as `src/lib.rs` is not included in the published package
-[PACKAGED] 4 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -4643,16 +4574,15 @@ fn discovery_inferred_other_included() {
         .build();
 
     p.cargo("package")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] 8 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 8 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -4753,20 +4683,19 @@ fn discovery_inferred_other_excluded() {
         .build();
 
     p.cargo("package")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 ([CWD])
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] ignoring binary `foo` as `src/bin/foo/main.rs` is not included in the published package
 [WARNING] ignoring example `example_foo` as `examples/example_foo.rs` is not included in the published package
 [WARNING] ignoring test `test_foo` as `tests/test_foo.rs` is not included in the published package
 [WARNING] ignoring benchmark `bench_foo` as `benches/bench_foo.rs` is not included in the published package
-[PACKAGED] 4 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -4848,16 +4777,15 @@ fn discovery_explicit_other_included() {
         .build();
 
     p.cargo("package")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] 8 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 8 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -4970,20 +4898,19 @@ fn discovery_explicit_other_excluded() {
         .build();
 
     p.cargo("package")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 ([CWD])
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] ignoring binary `foo` as `src/bin/foo/main.rs` is not included in the published package
 [WARNING] ignoring example `example_foo` as `examples/example_foo.rs` is not included in the published package
 [WARNING] ignoring test `test_foo` as `tests/test_foo.rs` is not included in the published package
 [WARNING] ignoring benchmark `bench_foo` as `benches/bench_foo.rs` is not included in the published package
-[PACKAGED] 4 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
@@ -5063,16 +4990,15 @@ fn deterministic_build_targets() {
         .build();
 
     p.cargo("package")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[PACKAGING] foo v0.0.1 ([CWD])
-[PACKAGED] 10 files, [..] ([..] compressed)
-[VERIFYING] foo v0.0.1 ([CWD])
-[COMPILING] foo v0.0.1 ([CWD][..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 10 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let f = File::open(&p.root().join("target/package/foo-0.0.1.crate")).unwrap();
