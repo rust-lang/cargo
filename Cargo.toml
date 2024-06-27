@@ -46,7 +46,7 @@ filetime = "0.2.23"
 flate2 = { version = "1.0.30", default-features = false, features = ["zlib"] }
 git2 = "0.19.0"
 git2-curl = "0.20.0"
-gix = { version = "0.63.0", default-features = false, features = ["blocking-http-transport-curl", "progress-tree", "revision", "parallel", "dirwalk"] }
+gix = { version = "0.63.0", default-features = false, features = ["blocking-http-transport-curl", "progress-tree", "parallel", "dirwalk"] }
 glob = "0.3.1"
 handlebars = { version = "5.1.2", features = ["dir_source"] }
 hex = "0.4.3"
@@ -239,6 +239,7 @@ features = [
 annotate-snippets = { workspace = true, features = ["testing-colors"] }
 cargo-test-macro.workspace = true
 cargo-test-support.workspace = true
+gix = { workspace = true, features = ["revision"] }
 same-file.workspace = true
 snapbox.workspace = true
 
