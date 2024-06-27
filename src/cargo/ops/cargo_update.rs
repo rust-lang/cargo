@@ -222,6 +222,11 @@ pub fn upgrade_manifests(
     let mut upgrades = HashMap::new();
     let mut upgrade_messages = HashSet::new();
 
+    let to_update = to_update
+        .iter()
+        .map(|s| PackageIdSpec::parse(s))
+        .collect::<Result<Vec<_>, _>>()?;
+
     // Updates often require a lot of modifications to the registry, so ensure
     // that we're synchronized against other Cargos.
     let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
@@ -239,7 +244,7 @@ pub fn upgrade_manifests(
             .try_map_dependencies(|d| {
                 upgrade_dependency(
                     &gctx,
-                    to_update,
+                    &to_update,
                     &mut registry,
                     &mut upgrades,
                     &mut upgrade_messages,
@@ -253,7 +258,7 @@ pub fn upgrade_manifests(
 
 fn upgrade_dependency(
     gctx: &GlobalContext,
-    to_update: &Vec<String>,
+    to_update: &Vec<PackageIdSpec>,
     registry: &mut PackageRegistry<'_>,
     upgrades: &mut UpgradeMap,
     upgrade_messages: &mut HashSet<String>,
@@ -263,46 +268,48 @@ fn upgrade_dependency(
     let renamed_to = dependency.name_in_toml();
 
     if name != renamed_to {
-        trace!(
-            "skipping dependency renamed from `{}` to `{}`",
-            name,
-            renamed_to
-        );
+        trace!("skipping dependency renamed from `{name}` to `{renamed_to}`");
         return Ok(dependency);
     }
 
-    if !to_update.is_empty() && !to_update.contains(&name.to_string()) {
-        trace!("skipping dependency `{}` not selected for upgrading", name);
+    if !to_update.is_empty()
+        && !to_update.iter().any(|spec| {
+            spec.name() == name.as_str()
+                && dependency.source_id().is_registry()
+                && spec
+                    .url()
+                    .map_or(true, |url| url == dependency.source_id().url())
+                && spec
+                    .version()
+                    .map_or(true, |v| dependency.version_req().matches(&v))
+        })
+    {
+        trace!("skipping dependency `{name}` not selected for upgrading");
         return Ok(dependency);
     }
 
     if !dependency.source_id().is_registry() {
-        trace!("skipping non-registry dependency: {}", name);
+        trace!("skipping non-registry dependency: {name}");
         return Ok(dependency);
     }
 
     let version_req = dependency.version_req();
 
     let OptVersionReq::Req(current) = version_req else {
-        trace!(
-            "skipping dependency `{}` without a simple version requirement: {}",
-            name,
-            version_req
-        );
+        trace!("skipping dependency `{name}` without a simple version requirement: {version_req}");
         return Ok(dependency);
     };
 
     let [comparator] = &current.comparators[..] else {
         trace!(
-            "skipping dependency `{}` with multiple version comparators: {:?}",
-            name,
+            "skipping dependency `{name}` with multiple version comparators: {:?}",
             &current.comparators
         );
         return Ok(dependency);
     };
 
     if comparator.op != Op::Caret {
-        trace!("skipping non-caret dependency `{}`: {}", name, comparator);
+        trace!("skipping non-caret dependency `{name}`: {comparator}");
         return Ok(dependency);
     }
 
@@ -332,30 +339,21 @@ fn upgrade_dependency(
     };
 
     let Some(latest) = latest else {
-        trace!(
-            "skipping dependency `{}` without any published versions",
-            name
-        );
+        trace!("skipping dependency `{name}` without any published versions");
         return Ok(dependency);
     };
 
     if current.matches(&latest) {
-        trace!(
-            "skipping dependency `{}` without a breaking update available",
-            name
-        );
+        trace!("skipping dependency `{name}` without a breaking update available");
         return Ok(dependency);
     }
 
-    let Some(new_req_string) = upgrade_requirement(&current.to_string(), latest)? else {
-        trace!(
-            "skipping dependency `{}` because the version requirement didn't change",
-            name
-        );
+    let Some((new_req_string, _)) = upgrade_requirement(&current.to_string(), latest)? else {
+        trace!("skipping dependency `{name}` because the version requirement didn't change");
         return Ok(dependency);
     };
 
-    let upgrade_message = format!("{} {} -> {}", name, current, new_req_string);
+    let upgrade_message = format!("{name} {current} -> {new_req_string}");
     trace!(upgrade_message);
 
     if upgrade_messages.insert(upgrade_message.clone()) {
@@ -371,8 +369,17 @@ fn upgrade_dependency(
     Ok(dep)
 }
 
-/// Update manifests with upgraded versions, and write to disk. Based on cargo-edit.
-/// Returns true if any file has changed.
+/// Update manifests with upgraded versions, and write to disk. Based on
+/// cargo-edit. Returns true if any file has changed.
+///
+/// Some of the checks here are duplicating checks already done in
+/// upgrade_manifests/upgrade_dependency. Why? Let's say upgrade_dependency has
+/// found that dependency foo was eligible for an upgrade. But foo can occur in
+/// multiple manifest files, and even multiple times in the same manifest file,
+/// and may be pinned, renamed, etc. in some of the instances. So we still need
+/// to check here which dependencies to actually modify. So why not drop the
+/// upgrade map and redo all checks here? Because then we'd have to query the
+/// registries again to find the latest versions.
 pub fn write_manifest_upgrades(
     ws: &Workspace<'_>,
     upgrades: &UpgradeMap,
@@ -389,10 +396,7 @@ pub fn write_manifest_upgrades(
         .collect::<Vec<_>>();
 
     for manifest_path in manifest_paths {
-        trace!(
-            "updating TOML manifest at `{:?}` with upgraded dependencies",
-            manifest_path
-        );
+        trace!("updating TOML manifest at `{manifest_path:?}` with upgraded dependencies");
 
         let crate_root = manifest_path
             .parent()
@@ -410,41 +414,57 @@ pub fn write_manifest_upgrades(
                     dep_key_str,
                     dep_item,
                 )?;
+                let name = &dependency.name;
+
+                if let Some(renamed_to) = dependency.rename {
+                    trace!("skipping dependency renamed from `{name}` to `{renamed_to}`");
+                    continue;
+                }
 
                 let Some(current) = dependency.version() else {
-                    trace!("skipping dependency without a version: {}", dependency.name);
+                    trace!("skipping dependency without a version: {name}");
                     continue;
                 };
 
                 let (MaybeWorkspace::Other(source_id), Some(Source::Registry(source))) =
                     (dependency.source_id(ws.gctx())?, dependency.source())
                 else {
-                    trace!("skipping non-registry dependency: {}", dependency.name);
+                    trace!("skipping non-registry dependency: {name}");
                     continue;
                 };
 
-                let Some(latest) = upgrades.get(&(dependency.name.to_owned(), source_id)) else {
+                let Some(latest) = upgrades.get(&(name.to_owned(), source_id)) else {
+                    trace!("skipping dependency without an upgrade: {name}");
+                    continue;
+                };
+
+                let Some((new_req_string, new_req)) = upgrade_requirement(current, latest)? else {
                     trace!(
-                        "skipping dependency without an upgrade: {}",
-                        dependency.name
+                        "skipping dependency `{name}` because the version requirement didn't change"
                     );
                     continue;
                 };
 
-                let Some(new_req_string) = upgrade_requirement(current, latest)? else {
+                let [comparator] = &new_req.comparators[..] else {
                     trace!(
-                        "skipping dependency `{}` because the version requirement didn't change",
-                        dependency.name
+                        "skipping dependency `{}` with multiple version comparators: {:?}",
+                        name,
+                        new_req.comparators
                     );
                     continue;
                 };
+
+                if comparator.op != Op::Caret {
+                    trace!("skipping non-caret dependency `{}`: {}", name, comparator);
+                    continue;
+                }
 
                 let mut dep = dependency.clone();
                 let mut source = source.clone();
                 source.version = new_req_string;
                 dep.source = Some(Source::Registry(source));
 
-                trace!("upgrading dependency {}", dependency.name);
+                trace!("upgrading dependency {name}");
                 dep.update_toml(&crate_root, &mut dep_key, dep_item);
                 manifest_has_changed = true;
                 any_file_has_changed = true;

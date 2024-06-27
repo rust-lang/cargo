@@ -7,7 +7,7 @@ use crate::CargoResult;
 pub(crate) fn upgrade_requirement(
     req: &str,
     version: &semver::Version,
-) -> CargoResult<Option<String>> {
+) -> CargoResult<Option<(String, semver::VersionReq)>> {
     let req_text = req.to_string();
     let raw_req = semver::VersionReq::parse(&req_text)
         .expect("semver to generate valid version requirements");
@@ -40,7 +40,7 @@ pub(crate) fn upgrade_requirement(
         if new_req_text == req_text {
             Ok(None)
         } else {
-            Ok(Some(new_req_text))
+            Ok(Some((new_req_text, new_req)))
         }
     }
 }
@@ -103,7 +103,9 @@ mod test {
         #[track_caller]
         fn assert_req_bump<'a, O: Into<Option<&'a str>>>(version: &str, req: &str, expected: O) {
             let version = semver::Version::parse(version).unwrap();
-            let actual = upgrade_requirement(req, &version).unwrap();
+            let actual = upgrade_requirement(req, &version)
+                .unwrap()
+                .map(|(actual, _req)| actual);
             let expected = expected.into();
             assert_eq!(actual.as_deref(), expected);
         }

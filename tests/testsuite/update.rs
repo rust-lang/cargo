@@ -1722,6 +1722,7 @@ fn update_breaking() {
     Package::new("yanked", "1.0.0").publish();
     Package::new("ws", "1.0.0").publish();
     Package::new("shared", "1.0.0").publish();
+    Package::new("multiple-locations", "1.0.0").publish();
     Package::new("multiple-versions", "1.0.0").publish();
     Package::new("multiple-versions", "2.0.0").publish();
     Package::new("alternative-1", "1.0.0")
@@ -1736,6 +1737,9 @@ fn update_breaking() {
         .alternative(true)
         .publish();
     Package::new("multiple-source-types", "1.0.0").publish();
+    Package::new("platform-specific", "1.0.0").publish();
+    Package::new("dev", "1.0.0").publish();
+    Package::new("build", "1.0.0").publish();
 
     let p = project()
         .file(
@@ -1771,6 +1775,7 @@ fn update_breaking() {
                 yanked  =  "1.0"  # Comment
                 ws.workspace  =  true  # Comment
                 shared  =  "1.0"  # Comment
+                multiple-locations  =  { path  =  "../multiple-locations", version  =  "1.0" }  # Comment
                 multiple-versions  =  "1.0"  # Comment
                 alternative-1  =  { registry  =  "alternative", version  =  "1.0" }  # Comment
                 multiple-registries  =  "1.0"  # Comment
@@ -1780,6 +1785,15 @@ fn update_breaking() {
                 [dependencies.alternative-2]  # Comment
                 version  =  "1.0"  # Comment
                 registry  =  "alternative"  # Comment
+
+                [target.'cfg(unix)'.dependencies]
+                platform-specific  =  "1.0"  # Comment
+
+                [dev-dependencies]
+                dev  =  "1.0"  # Comment
+
+                [build-dependencies]
+                build  =  "1.0"  # Comment
             "#,
         )
         .file("foo/src/lib.rs", "")
@@ -1801,6 +1815,17 @@ fn update_breaking() {
         )
         .file("bar/src/lib.rs", "")
         .file(
+            "multiple-locations/Cargo.toml",
+            r#"
+                [package]
+                name = "multiple-locations"
+                version = "1.0.0"
+                edition = "2015"
+                authors = []
+            "#,
+        )
+        .file("multiple-locations/src/lib.rs", "")
+        .file(
             "multiple-source-types/Cargo.toml",
             r#"
                 [package]
@@ -1821,6 +1846,7 @@ fn update_breaking() {
     Package::new("less-than", "1.0.1").publish();
     Package::new("renamed-from", "1.0.1").publish();
     Package::new("ws", "1.0.1").publish();
+    Package::new("multiple-locations", "1.0.1").publish();
     Package::new("multiple-versions", "1.0.1").publish();
     Package::new("multiple-versions", "2.0.1").publish();
     Package::new("alternative-1", "1.0.1")
@@ -1829,6 +1855,9 @@ fn update_breaking() {
     Package::new("alternative-2", "1.0.1")
         .alternative(true)
         .publish();
+    Package::new("platform-specific", "1.0.1").publish();
+    Package::new("dev", "1.0.1").publish();
+    Package::new("build", "1.0.1").publish();
 
     Package::new("incompatible", "2.0.0").publish();
     Package::new("pinned", "2.0.0").publish();
@@ -1838,6 +1867,7 @@ fn update_breaking() {
     Package::new("yanked", "2.0.0").yanked(true).publish();
     Package::new("ws", "2.0.0").publish();
     Package::new("shared", "2.0.0").publish();
+    Package::new("multiple-locations", "2.0.0").publish();
     Package::new("multiple-versions", "3.0.0").publish();
     Package::new("alternative-1", "2.0.0")
         .alternative(true)
@@ -1851,6 +1881,9 @@ fn update_breaking() {
         .alternative(true)
         .publish();
     Package::new("multiple-source-types", "2.0.0").publish();
+    Package::new("platform-specific", "2.0.0").publish();
+    Package::new("dev", "2.0.0").publish();
+    Package::new("build", "2.0.0").publish();
 
     p.cargo("update -Zunstable-options --breaking")
         .masquerade_as_nightly_cargo(&["update-breaking"])
@@ -1867,14 +1900,20 @@ fn update_breaking() {
 [UPGRADING] multiple-registries ^1.0 -> ^2.0
 [UPGRADING] multiple-versions ^1.0 -> ^3.0
 [UPGRADING] ws ^1.0 -> ^2.0
-[LOCKING] 9 packages to latest compatible versions
+[UPGRADING] dev ^1.0 -> ^2.0
+[UPGRADING] build ^1.0 -> ^2.0
+[UPGRADING] platform-specific ^1.0 -> ^2.0
+[LOCKING] 12 packages to latest compatible versions
 [UPDATING] alternative-1 v1.0.0 (registry `alternative`) -> v2.0.0
 [UPDATING] alternative-2 v1.0.0 (registry `alternative`) -> v2.0.0
+[UPDATING] build v1.0.0 -> v2.0.0
+[UPDATING] dev v1.0.0 -> v2.0.0
 [UPDATING] incompatible v1.0.0 -> v2.0.0
 [UPDATING] multiple-registries v2.0.0 (registry `alternative`) -> v3.0.0
 [UPDATING] multiple-registries v1.0.0 -> v2.0.0
 [UPDATING] multiple-source-types v1.0.0 -> v2.0.0
 [ADDING] multiple-versions v3.0.0
+[UPDATING] platform-specific v1.0.0 -> v2.0.0
 [UPDATING] shared v1.0.0 -> v2.0.0
 [UPDATING] ws v1.0.0 -> v2.0.0
 
@@ -1893,8 +1932,7 @@ fn update_breaking() {
 
                 [workspace.dependencies]
                 ws  =  "2.0"  # This line gets partially rewritten
-            
-"#]],
+            "#]],
     );
 
     let foo_manifest = p.read_file("foo/Cargo.toml");
@@ -1921,6 +1959,7 @@ fn update_breaking() {
                 yanked  =  "1.0"  # Comment
                 ws.workspace  =  true  # Comment
                 shared  =  "2.0"  # Comment
+                multiple-locations  =  { path  =  "../multiple-locations", version  =  "1.0" }  # Comment
                 multiple-versions  =  "3.0"  # Comment
                 alternative-1  =  { registry  =  "alternative", version  =  "2.0" }  # Comment
                 multiple-registries  =  "2.0"  # Comment
@@ -1930,6 +1969,15 @@ fn update_breaking() {
                 [dependencies.alternative-2]  # Comment
                 version  =  "2.0"  # Comment
                 registry  =  "alternative"  # Comment
+
+                [target.'cfg(unix)'.dependencies]
+                platform-specific  =  "2.0"  # Comment
+
+                [dev-dependencies]
+                dev  =  "2.0"  # Comment
+
+                [build-dependencies]
+                build  =  "2.0"  # Comment
             "#]],
     );
 
@@ -1983,12 +2031,12 @@ fn update_breaking_specific_packages() {
         .file(
             "Cargo.toml",
             r#"
-            [workspace]
-            members = ["foo", "bar"]
+                [workspace]
+                members = ["foo", "bar"]
 
-            [workspace.dependencies]
-            ws = "1.0"
-        "#,
+                [workspace.dependencies]
+                ws = "1.0"
+            "#,
         )
         .file(
             "foo/Cargo.toml",
@@ -2019,7 +2067,7 @@ fn update_breaking_specific_packages() {
                 just-bar = "1.0"
                 shared = "1.0"
                 ws.workspace = true
-        "#,
+            "#,
         )
         .file("bar/src/lib.rs", "")
         .build();
@@ -2063,4 +2111,508 @@ fn update_breaking_specific_packages() {
 
 "#]])
         .run();
+}
+
+#[cargo_test]
+fn update_breaking_specific_packages_that_wont_update() {
+    Package::new("compatible", "1.0.0").publish();
+    Package::new("renamed-from", "1.0.0").publish();
+    Package::new("non-semver", "1.0.0").publish();
+    Package::new("bar", "1.0.0")
+        .add_dep(Dependency::new("transitive-compatible", "1.0.0").build())
+        .add_dep(Dependency::new("transitive-incompatible", "1.0.0").build())
+        .publish();
+    Package::new("transitive-compatible", "1.0.0").publish();
+    Package::new("transitive-incompatible", "1.0.0").publish();
+
+    let crate_manifest = r#"
+        # Check if formatting is preserved
+
+        [package]
+        name  =  "foo"
+        version  =  "0.0.1"
+        edition  =  "2015"
+        authors  =  []
+
+        [dependencies]
+        compatible  =  "1.0"  # Comment
+        renamed-to  =  { package  =  "renamed-from", version  =  "1.0" }  # Comment
+        non-semver  =  "~1.0"  # Comment
+        bar  =  "1.0"  # Comment
+    "#;
+
+    let p = project()
+        .file("Cargo.toml", crate_manifest)
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+    let lock_file = p.read_file("Cargo.lock");
+
+    Package::new("compatible", "1.0.1").publish();
+    Package::new("renamed-from", "1.0.1").publish();
+    Package::new("non-semver", "1.0.1").publish();
+    Package::new("transitive-compatible", "1.0.1").publish();
+    Package::new("transitive-incompatible", "1.0.1").publish();
+
+    Package::new("renamed-from", "2.0.0").publish();
+    Package::new("non-semver", "2.0.0").publish();
+    Package::new("transitive-incompatible", "2.0.0").publish();
+
+    p.cargo("update -Zunstable-options --breaking compatible renamed-from non-semver transitive-compatible transitive-incompatible")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `[..]` index
+
+"#]])
+        .run();
+
+    let crate_manifest_after = p.read_file("Cargo.toml");
+    assert_e2e().eq(&crate_manifest_after, crate_manifest);
+
+    let lock_file_after = p.read_file("Cargo.lock");
+    assert_e2e().eq(&lock_file_after, lock_file);
+
+    p.cargo(
+        "update compatible renamed-from non-semver transitive-compatible transitive-incompatible",
+    )
+    .with_stderr_data(str![[r#"
+[UPDATING] `[..]` index
+[LOCKING] 5 packages to latest compatible versions
+[UPDATING] compatible v1.0.0 -> v1.0.1
+[UPDATING] non-semver v1.0.0 -> v1.0.1 (latest: v2.0.0)
+[UPDATING] renamed-from v1.0.0 -> v1.0.1 (latest: v2.0.0)
+[UPDATING] transitive-compatible v1.0.0 -> v1.0.1
+[UPDATING] transitive-incompatible v1.0.0 -> v1.0.1 (latest: v2.0.0)
+
+"#]])
+    .run();
+}
+
+#[cargo_test]
+fn update_breaking_without_lock_file() {
+    Package::new("compatible", "1.0.0").publish();
+    Package::new("incompatible", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name  =  "foo"
+            version  =  "0.0.1"
+            edition  =  "2015"
+            authors  =  []
+
+            [dependencies]
+            compatible  =  "1.0"  # Comment
+            incompatible  =  "1.0"  # Comment
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    Package::new("compatible", "1.0.1").publish();
+    Package::new("incompatible", "1.0.1").publish();
+
+    Package::new("incompatible", "2.0.0").publish();
+
+    p.cargo("update -Zunstable-options --breaking")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `[..]` index
+[UPGRADING] incompatible ^1.0 -> ^2.0
+[LOCKING] 3 packages to latest compatible versions
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn update_breaking_spec_version() {
+    Package::new("compatible", "1.0.0").publish();
+    Package::new("incompatible", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name  =  "foo"
+            version  =  "0.0.1"
+            edition  =  "2015"
+            authors  =  []
+
+            [dependencies]
+            compatible  =  "1.0"  # Comment
+            incompatible  =  "1.0"  # Comment
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    Package::new("compatible", "1.0.1").publish();
+    Package::new("incompatible", "1.0.1").publish();
+
+    Package::new("incompatible", "2.0.0").publish();
+
+    // Invalid spec
+    p.cargo("update -Zunstable-options --breaking incompatible@foo")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] expected a version like "1.32"
+
+"#]])
+        .run();
+
+    // Spec version not matching our current dependencies
+    p.cargo("update -Zunstable-options --breaking incompatible@2.0.0")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#""#]])
+        .run();
+
+    // Spec source not matching our current dependencies
+    p.cargo("update -Zunstable-options --breaking https://alternative.com#incompatible@1.0.0")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#""#]])
+        .run();
+
+    // Accepted spec
+    p.cargo("update -Zunstable-options --breaking incompatible@1.0.0")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `[..]` index
+[UPGRADING] incompatible ^1.0 -> ^2.0
+[LOCKING] 1 package to latest compatible version
+[UPDATING] incompatible v1.0.0 -> v2.0.0
+
+"#]])
+        .run();
+
+    // Accepted spec, full format
+    Package::new("incompatible", "3.0.0").publish();
+    p.cargo("update -Zunstable-options --breaking https://github.com/rust-lang/crates.io-index#incompatible@2.0.0")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `[..]` index
+[UPGRADING] incompatible ^2.0 -> ^3.0
+[LOCKING] 1 package to latest compatible version
+[UPDATING] incompatible v2.0.0 -> v3.0.0
+
+"#]])
+        .run();
+
+    // Spec matches a dependency that will not be upgraded
+    p.cargo("update -Zunstable-options --breaking compatible@1.0.0")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `[..]` index
+
+"#]])
+        .run();
+
+    // Non-existing versions
+    p.cargo("update -Zunstable-options --breaking incompatible@9.0.0")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#""#]])
+        .run();
+
+    p.cargo("update -Zunstable-options --breaking compatible@9.0.0")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#""#]])
+        .run();
+}
+
+#[cargo_test]
+fn update_breaking_spec_version_transitive() {
+    Package::new("dep", "1.0.0").publish();
+    Package::new("dep", "1.1.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name  =  "foo"
+                version  =  "0.0.1"
+                edition  =  "2015"
+                authors  =  []
+
+                [dependencies]
+                dep  =  "1.0"
+                bar = { path = "bar", version = "0.0.1" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name  =  "bar"
+                version  =  "0.0.1"
+                edition  =  "2015"
+                authors  =  []
+
+                [dependencies]
+                dep  =  "1.1"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    Package::new("dep", "1.1.1").publish();
+    Package::new("dep", "2.0.0").publish();
+
+    // Will upgrade the direct dependency
+    p.cargo("update -Zunstable-options --breaking dep@1.0")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `[..]` index
+[UPGRADING] dep ^1.0 -> ^2.0
+[LOCKING] 1 package to latest compatible version
+[ADDING] dep v2.0.0
+
+"#]])
+        .run();
+
+    // But not the transitive one, because bar is not a workspace member
+    p.cargo("update -Zunstable-options --breaking dep@1.1")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `[..]` index
+
+"#]])
+        .run();
+
+    // A non-breaking update is different, as it will update transitive dependencies
+    p.cargo("update dep@1.1")
+        .with_stderr_data(str![[r#"
+[UPDATING] `[..]` index
+[LOCKING] 1 package to latest compatible version
+[UPDATING] dep v1.1.0 -> v1.1.1 (latest: v2.0.0)
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn update_breaking_mixed_compatibility() {
+    Package::new("mixed-compatibility", "1.0.0").publish();
+    Package::new("mixed-compatibility", "2.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["foo", "bar"]
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                mixed-compatibility = "1.0"
+            "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                mixed-compatibility = "2.0"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    Package::new("mixed-compatibility", "2.0.1").publish();
+
+    p.cargo("update -Zunstable-options --breaking")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `[..]` index
+[UPGRADING] mixed-compatibility ^1.0 -> ^2.0
+[LOCKING] 1 package to latest compatible version
+[ADDING] mixed-compatibility v2.0.1
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn update_breaking_mixed_pinning_renaming() {
+    Package::new("mixed-pinned", "1.0.0").publish();
+    Package::new("mixed-ws-pinned", "1.0.0").publish();
+    Package::new("renamed-from", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["pinned", "unpinned", "mixed"]
+
+                [workspace.dependencies]
+                mixed-ws-pinned = "=1.0"
+            "#,
+        )
+        .file(
+            "pinned/Cargo.toml",
+            r#"
+                [package]
+                name = "pinned"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                mixed-pinned = "=1.0"
+                mixed-ws-pinned.workspace = true
+                renamed-to = { package = "renamed-from", version = "1.0" }
+            "#,
+        )
+        .file("pinned/src/lib.rs", "")
+        .file(
+            "unpinned/Cargo.toml",
+            r#"
+                [package]
+                name = "unpinned"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                mixed-pinned = "1.0"
+                mixed-ws-pinned = "1.0"
+                renamed-from = "1.0"
+            "#,
+        )
+        .file("unpinned/src/lib.rs", "")
+        .file(
+            "mixed/Cargo.toml",
+            r#"
+                [package]
+                name = "mixed"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [target.'cfg(windows)'.dependencies]
+                mixed-pinned = "1.0"
+
+                [target.'cfg(unix)'.dependencies]
+                mixed-pinned = "=1.0"
+            "#,
+        )
+        .file("mixed/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    Package::new("mixed-pinned", "2.0.0").publish();
+    Package::new("mixed-ws-pinned", "2.0.0").publish();
+    Package::new("renamed-from", "2.0.0").publish();
+
+    p.cargo("update -Zunstable-options --breaking")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `[..]` index
+[UPGRADING] mixed-pinned ^1.0 -> ^2.0
+[UPGRADING] mixed-ws-pinned ^1.0 -> ^2.0
+[UPGRADING] renamed-from ^1.0 -> ^2.0
+[LOCKING] 3 packages to latest compatible versions
+[ADDING] mixed-pinned v2.0.0
+[ADDING] mixed-ws-pinned v2.0.0
+[ADDING] renamed-from v2.0.0
+
+"#]])
+        .run();
+
+    let root_manifest = p.read_file("Cargo.toml");
+    assert_e2e().eq(
+        &root_manifest,
+        str![[r#"
+
+                [workspace]
+                members = ["pinned", "unpinned", "mixed"]
+
+                [workspace.dependencies]
+                mixed-ws-pinned = "=1.0"
+            "#]],
+    );
+
+    let pinned_manifest = p.read_file("pinned/Cargo.toml");
+    assert_e2e().eq(
+        &pinned_manifest,
+        str![[r#"
+
+                [package]
+                name = "pinned"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                mixed-pinned = "=1.0"
+                mixed-ws-pinned.workspace = true
+                renamed-to = { package = "renamed-from", version = "1.0" }
+            "#]],
+    );
+
+    let unpinned_manifest = p.read_file("unpinned/Cargo.toml");
+    assert_e2e().eq(
+        &unpinned_manifest,
+        str![[r#"
+
+                [package]
+                name = "unpinned"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                mixed-pinned = "2.0"
+                mixed-ws-pinned = "2.0"
+                renamed-from = "2.0"
+            "#]],
+    );
+
+    let mixed_manifest = p.read_file("mixed/Cargo.toml");
+    assert_e2e().eq(
+        &mixed_manifest,
+        str![[r#"
+
+                [package]
+                name = "mixed"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [target.'cfg(windows)'.dependencies]
+                mixed-pinned = "2.0"
+
+                [target.'cfg(unix)'.dependencies]
+                mixed-pinned = "=1.0"
+            "#]],
+    );
 }
