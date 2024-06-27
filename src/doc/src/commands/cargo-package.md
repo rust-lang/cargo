@@ -10,9 +10,8 @@ cargo-package --- Assemble the local package into a distributable tarball
 ## DESCRIPTION
 
 This command will create a distributable, compressed `.crate` file with the
-source code of the package in the current directory. The resulting file will
-be stored in the `target/package` directory. This performs the following
-steps:
+source code of the package in the current directory. The resulting file will be
+stored in the `target/package` directory. This performs the following steps:
 
 1. Load and check the current workspace, performing some basic checks.
     - Path dependencies are not allowed unless they have a version key. Cargo
@@ -89,6 +88,18 @@ or the license).</dd>
 
 <dt class="option-term" id="option-cargo-package---allow-dirty"><a class="option-anchor" href="#option-cargo-package---allow-dirty"></a><code>--allow-dirty</code></dt>
 <dd class="option-desc">Allow working directories with uncommitted VCS changes to be packaged.</dd>
+
+
+<dt class="option-term" id="option-cargo-package---index"><a class="option-anchor" href="#option-cargo-package---index"></a><code>--index</code> <em>index</em></dt>
+<dd class="option-desc">The URL of the registry index to use.</dd>
+
+
+<dt class="option-term" id="option-cargo-package---registry"><a class="option-anchor" href="#option-cargo-package---registry"></a><code>--registry</code> <em>registry</em></dt>
+<dd class="option-desc">Name of the registry to package for; see <code>cargo publish --help</code> for more details
+about configuration of registry names. The packages will not be published
+to this registry, but if we are packaging multiple inter-dependent crates,
+lock-files will be generated under the assumption that dependencies will be
+published to this registry.</dd>
 
 
 </dl>

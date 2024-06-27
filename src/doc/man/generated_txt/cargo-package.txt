@@ -87,6 +87,16 @@ OPTIONS
            Allow working directories with uncommitted VCS changes to be
            packaged.
 
+       --index index
+           The URL of the registry index to use.
+
+       --registry registry
+           Name of the registry to package for; see cargo publish --help for
+           more details about configuration of registry names. The packages
+           will not be published to this registry, but if we are packaging
+           multiple inter-dependent crates, lock-files will be generated under
+           the assumption that dependencies will be published to this registry.
+
    Package Selection
        By default, when no package selection options are given, the packages
        selected depend on the selected manifest file (based on the current
