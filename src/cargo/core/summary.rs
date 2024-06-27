@@ -30,6 +30,35 @@ struct Inner {
     rust_version: Option<RustVersion>,
 }
 
+/// Indicates the dependency inferred from the `dep` syntax that should exist,
+/// but missing on the resolved dependencies tables.
+#[derive(Debug)]
+pub struct MissingDependencyError {
+    pub dep_name: InternedString,
+    pub feature: InternedString,
+    pub feature_value: FeatureValue,
+    /// Indicates the dependency inferred from the `dep?` syntax that is weak optional
+    pub weak_optional: bool,
+}
+
+impl std::error::Error for MissingDependencyError {}
+
+impl fmt::Display for MissingDependencyError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self {
+            dep_name,
+            feature,
+            feature_value: fv,
+            ..
+        } = self;
+
+        write!(
+            f,
+            "feature `{feature}` includes `{fv}`, but `{dep_name}` is not a dependency",
+        )
+    }
+}
+
 impl Summary {
     #[tracing::instrument(skip_all)]
     pub fn new(
@@ -274,7 +303,12 @@ fn build_feature_map(
 
                     // Validation of the feature name will be performed in the resolver.
                     if !is_any_dep {
-                        bail!("feature `{feature}` includes `{fv}`, but `{dep_name}` is not a dependency");
+                        bail!(MissingDependencyError {
+                            feature: *feature,
+                            feature_value: (*fv).clone(),
+                            dep_name: *dep_name,
+                            weak_optional: *weak,
+                        })
                     }
                     if *weak && !is_optional_dep {
                         bail!(

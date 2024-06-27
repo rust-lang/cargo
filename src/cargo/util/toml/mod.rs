@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::{self, FromStr};
 
+use crate::core::summary::MissingDependencyError;
 use crate::AlreadyPrintedError;
 use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
@@ -1435,24 +1436,35 @@ fn to_real_manifest(
             .unwrap_or_else(|| semver::Version::new(0, 0, 0)),
         source_id,
     );
-    let summary = Summary::new(
-        pkgid,
-        deps,
-        &resolved_toml
-            .features
-            .as_ref()
-            .unwrap_or(&Default::default())
-            .iter()
-            .map(|(k, v)| {
-                (
-                    InternedString::new(k),
-                    v.iter().map(InternedString::from).collect(),
-                )
-            })
-            .collect(),
-        resolved_package.links.as_deref(),
-        rust_version.clone(),
-    )?;
+    let summary = {
+        let summary = Summary::new(
+            pkgid,
+            deps,
+            &resolved_toml
+                .features
+                .as_ref()
+                .unwrap_or(&Default::default())
+                .iter()
+                .map(|(k, v)| {
+                    (
+                        InternedString::new(k),
+                        v.iter().map(InternedString::from).collect(),
+                    )
+                })
+                .collect(),
+            resolved_package.links.as_deref(),
+            rust_version.clone(),
+        );
+        // editon2024 stops exposing implicit features, which will strip weak optional dependencies from `dependencies`,
+        // need to check whether `dep_name` is stripped as unused dependency
+        if let Err(ref err) = summary {
+            if let Some(missing_dep) = err.downcast_ref::<MissingDependencyError>() {
+                check_weak_optional_dep_unused(&original_toml, missing_dep)?;
+            }
+        }
+        summary?
+    };
+
     if summary.features().contains_key("default-features") {
         warnings.push(
             "`default-features = [\"..\"]` was found in [features]. \
@@ -1556,6 +1568,39 @@ fn to_real_manifest(
     manifest.feature_gate()?;
 
     Ok(manifest)
+}
+
+fn check_weak_optional_dep_unused(
+    original_toml: &TomlManifest,
+    missing_dep: &MissingDependencyError,
+) -> CargoResult<()> {
+    if missing_dep.weak_optional {
+        // dev-dependencies are not allowed to be optional
+        let mut orig_deps = vec![
+            original_toml.dependencies.as_ref(),
+            original_toml.build_dependencies.as_ref(),
+        ];
+        for (_, platform) in original_toml.target.iter().flatten() {
+            orig_deps.extend(vec![
+                platform.dependencies.as_ref(),
+                platform.build_dependencies.as_ref(),
+            ]);
+        }
+        for deps in orig_deps {
+            if let Some(deps) = deps {
+                if deps.keys().any(|p| *p.as_str() == *missing_dep.dep_name) {
+                    bail!(
+                            "feature `{feature}` includes `{feature_value}`, but missing `dep:{dep_name}` to activate it",
+                            feature = missing_dep.feature,
+                            feature_value = missing_dep.feature_value,
+                            dep_name = missing_dep.dep_name,
+                        )
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn to_virtual_manifest(
