@@ -30,6 +30,55 @@ struct Inner {
     rust_version: Option<RustVersion>,
 }
 
+// Indicates the dependency inferred from the `dep` syntax that should exist,
+// but missing on the resolved dependencies tables.
+#[derive(Debug)]
+pub struct MissingDependencyError {
+    dep_name: InternedString,
+    feature: InternedString,
+    feature_value: FeatureValue,
+    // Indicates the dependency inferred from the `dep?` syntax that is weak optional
+    weak_optional: bool,
+    // Indicates the dependency is unused but not absent in the manifest
+    unused_dependency: bool,
+}
+
+impl MissingDependencyError {
+    pub fn set_unused_dependency(&mut self, flag: bool) {
+        self.unused_dependency = flag
+    }
+    pub fn weak_optional(&self) -> bool {
+        self.weak_optional
+    }
+    pub fn dep_name(&self) -> String {
+        self.dep_name.to_string()
+    }
+}
+
+impl std::error::Error for MissingDependencyError {}
+
+impl fmt::Display for MissingDependencyError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self {
+            dep_name,
+            feature,
+            feature_value: fv,
+            ..
+        } = self;
+        if self.unused_dependency && self.weak_optional {
+            write!(
+                f,
+                "feature `{feature}` includes `{fv}`, but missing `dep:{dep_name}` to activate it",
+            )
+        } else {
+            write!(
+                f,
+                "feature `{feature}` includes `{fv}`, but `{dep_name}` is not a dependency",
+            )
+        }
+    }
+}
+
 impl Summary {
     #[tracing::instrument(skip_all)]
     pub fn new(
@@ -274,7 +323,13 @@ fn build_feature_map(
 
                     // Validation of the feature name will be performed in the resolver.
                     if !is_any_dep {
-                        bail!("feature `{feature}` includes `{fv}`, but `{dep_name}` is not a dependency");
+                        bail!(MissingDependencyError {
+                            feature: *feature,
+                            feature_value: (*fv).clone(),
+                            dep_name: *dep_name,
+                            weak_optional: *weak,
+                            unused_dependency: false,
+                        })
                     }
                     if *weak && !is_optional_dep {
                         bail!(
