@@ -1,15 +1,22 @@
 //! Tests for the `cargo locate-project` command.
 
-#![allow(deprecated)]
-
+use cargo_test_support::prelude::*;
 use cargo_test_support::project;
+use cargo_test_support::str;
 
 #[cargo_test]
 fn simple() {
     let p = project().build();
 
     p.cargo("locate-project")
-        .with_json(r#"{"root": "[ROOT]/foo/Cargo.toml"}"#)
+        .with_stdout_data(
+            str![[r#"
+{
+  "root": "[ROOT]/foo/Cargo.toml"
+}
+"#]]
+            .json(),
+        )
         .run();
 }
 
@@ -18,15 +25,28 @@ fn message_format() {
     let p = project().build();
 
     p.cargo("locate-project --message-format plain")
-        .with_stdout("[ROOT]/foo/Cargo.toml")
+        .with_stdout_data(str![[r#"
+[ROOT]/foo/Cargo.toml
+
+"#]])
         .run();
 
     p.cargo("locate-project --message-format json")
-        .with_json(r#"{"root": "[ROOT]/foo/Cargo.toml"}"#)
+        .with_stdout_data(
+            str![[r#"
+{
+  "root": "[ROOT]/foo/Cargo.toml"
+}
+"#]]
+            .json(),
+        )
         .run();
 
     p.cargo("locate-project --message-format cryptic")
-        .with_stderr("error: invalid message format specifier: `cryptic`")
+        .with_stderr_data(str![[r#"
+[ERROR] invalid message format specifier: `cryptic`
+
+"#]])
         .with_status(101)
         .run();
 }
@@ -57,22 +77,49 @@ fn workspace() {
         .file("inner/src/lib.rs", "")
         .build();
 
-    let outer_manifest = r#"{"root": "[ROOT]/foo/Cargo.toml"}"#;
-    let inner_manifest = r#"{"root": "[ROOT]/foo/inner/Cargo.toml"}"#;
-
-    p.cargo("locate-project").with_json(outer_manifest).run();
+    p.cargo("locate-project")
+        .with_stdout_data(
+            str![[r#"
+{
+  "root": "[ROOT]/foo/Cargo.toml"
+}
+"#]]
+            .json(),
+        )
+        .run();
 
     p.cargo("locate-project")
         .cwd("inner")
-        .with_json(inner_manifest)
+        .with_stdout_data(
+            str![[r#"
+{
+  "root": "[ROOT]/foo/inner/Cargo.toml"
+}
+"#]]
+            .json(),
+        )
         .run();
 
     p.cargo("locate-project --workspace")
-        .with_json(outer_manifest)
+        .with_stdout_data(
+            str![[r#"
+{
+  "root": "[ROOT]/foo/Cargo.toml"
+}
+"#]]
+            .json(),
+        )
         .run();
 
     p.cargo("locate-project --workspace")
         .cwd("inner")
-        .with_json(outer_manifest)
+        .with_stdout_data(
+            str![[r#"
+{
+  "root": "[ROOT]/foo/Cargo.toml"
+}
+"#]]
+            .json(),
+        )
         .run();
 }
