@@ -4204,11 +4204,11 @@ fn doctest_skip_staticlib() {
         .build();
 
     p.cargo("test --doc")
-        .with_status(101)
         .with_stderr(
             "\
 [WARNING] doc tests are not supported for crate type(s) `staticlib` in package `foo`
-[ERROR] no library targets found in package `foo`",
+[WARNING] target filter `lib` specified, but no targets matched; this is a no-op
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]",
         )
         .run();
 
