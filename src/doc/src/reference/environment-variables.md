@@ -347,6 +347,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
     * `CARGO_CFG_TARGET_ARCH=x86_64` --- The CPU [target architecture].
     * `CARGO_CFG_TARGET_VENDOR=apple` --- The [target vendor].
     * `CARGO_CFG_TARGET_ENV=gnu` --- The [target environment] ABI.
+    * `CARGO_CFG_TARGET_ABI=sim` --- The [target ABI].
     * `CARGO_CFG_TARGET_POINTER_WIDTH=64` --- The CPU [pointer width].
     * `CARGO_CFG_TARGET_ENDIAN=little` --- The CPU [target endianness].
     * `CARGO_CFG_TARGET_FEATURE=mmx,sse` --- List of CPU [target features] enabled.
@@ -397,6 +398,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
 [target architecture]: ../../reference/conditional-compilation.html#target_arch
 [target vendor]: ../../reference/conditional-compilation.html#target_vendor
 [target environment]: ../../reference/conditional-compilation.html#target_env
+[target ABI]: ../../reference/conditional-compilation.html#target_abi
 [pointer width]: ../../reference/conditional-compilation.html#target_pointer_width
 [target endianness]: ../../reference/conditional-compilation.html#target_endian
 [target features]: ../../reference/conditional-compilation.html#target_feature
