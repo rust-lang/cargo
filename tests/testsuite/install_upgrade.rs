@@ -1,7 +1,5 @@
 //! Tests for `cargo install` where it upgrades a package if it is out-of-date.
 
-#![allow(deprecated)]
-
 use cargo::core::PackageId;
 use std::collections::BTreeSet;
 use std::env;
@@ -13,7 +11,7 @@ use cargo_test_support::install::{cargo_home, exe};
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{
-    basic_manifest, cargo_process, cross_compile, execs, git, process, project, Execs,
+    basic_manifest, cargo_process, cross_compile, execs, git, process, project, str, Execs,
 };
 
 fn pkg_maybe_yanked(name: &str, vers: &str, yanked: bool) {
@@ -127,69 +125,92 @@ fn validate_trackers(name: &str, version: &str, bins: &[&str]) {
 fn registry_upgrade() {
     // Installing and upgrading from a registry.
     pkg("foo", "1.0.0");
-    cargo_process("install foo")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+    cargo_process("install foo").with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] foo v1.0.0 (registry [..])
+[DOWNLOADED] foo v1.0.0 (registry `dummy-registry`)
 [INSTALLING] foo v1.0.0
 [COMPILING] foo v1.0.0
-[FINISHED] `release` profile [optimized] target(s) in [..]
-[INSTALLING] [CWD]/home/.cargo/bin/foo[EXE]
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
 [INSTALLED] package `foo v1.0.0` (executable `foo[EXE]`)
-[WARNING] be sure to add [..]
-",
-        )
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]]).run();
+    installed_process("foo")
+        .with_stdout_data(str![[r#"
+1.0.0
+
+"#]])
         .run();
-    installed_process("foo").with_stdout("1.0.0").run();
     validate_trackers("foo", "1.0.0", &["foo"]);
 
-    cargo_process("install foo")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
-[IGNORED] package `foo v1.0.0` is already installed[..]
-[WARNING] be sure to add [..]
-",
-        )
-        .run();
+    cargo_process("install foo").with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[IGNORED] package `foo v1.0.0` is already installed, use --force to override
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]]).run();
 
     pkg("foo", "1.0.1");
 
-    cargo_process("install foo")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+    cargo_process("install foo").with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] foo v1.0.1 (registry [..])
+[DOWNLOADED] foo v1.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v1.0.1
 [COMPILING] foo v1.0.1
-[FINISHED] `release` profile [optimized] target(s) in [..]
-[REPLACING] [CWD]/home/.cargo/bin/foo[EXE]
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
 [REPLACED] package `foo v1.0.0` with `foo v1.0.1` (executable `foo[EXE]`)
-[WARNING] be sure to add [..]
-",
-        )
-        .run();
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
-    installed_process("foo").with_stdout("1.0.1").run();
+"#]]).run();
+
+    installed_process("foo")
+        .with_stdout_data(str![[r#"
+1.0.1
+
+"#]])
+        .run();
     validate_trackers("foo", "1.0.1", &["foo"]);
 
     cargo_process("install foo --version=1.0.0")
-        .with_stderr_contains("[COMPILING] foo v1.0.0")
+        .with_stderr_data(str![[r#"
+...
+[COMPILING] foo v1.0.0
+...
+"#]])
         .run();
-    installed_process("foo").with_stdout("1.0.0").run();
+    installed_process("foo")
+        .with_stdout_data(str![[r#"
+1.0.0
+
+"#]])
+        .run();
     validate_trackers("foo", "1.0.0", &["foo"]);
 
     cargo_process("install foo --version=^1.0")
-        .with_stderr_contains("[COMPILING] foo v1.0.1")
+        .with_stderr_data(str![[r#"
+...
+[COMPILING] foo v1.0.1
+...
+"#]])
         .run();
-    installed_process("foo").with_stdout("1.0.1").run();
+    installed_process("foo")
+        .with_stdout_data(str![[r#"
+1.0.1
+
+"#]])
+        .run();
     validate_trackers("foo", "1.0.1", &["foo"]);
 
     cargo_process("install foo --version=^1.0")
-        .with_stderr_contains("[IGNORED] package `foo v1.0.1` is already installed[..]")
+        .with_stderr_data(str![[r#"
+...
+[IGNORED] package `foo v1.0.1` is already installed, use --force to override
+...
+"#]])
         .run();
 }
 
@@ -210,17 +231,16 @@ fn upgrade_force() {
     pkg("foo", "1.0.0");
     cargo_process("install foo").run();
     cargo_process("install foo --force")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [INSTALLING] foo v1.0.0
 [COMPILING] foo v1.0.0
-[FINISHED] `release` profile [optimized] target(s) in [..]
-[REPLACING] [..]/.cargo/bin/foo[EXE]
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
 [REPLACED] package `foo v1.0.0` with `foo v1.0.0` (executable `foo[EXE]`)
-[WARNING] be sure to add `[..]/.cargo/bin` to your PATH [..]
-",
-        )
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
         .run();
     validate_trackers("foo", "1.0.0", &["foo"]);
 }
@@ -230,15 +250,14 @@ fn ambiguous_version_no_longer_allowed() {
     // Non-semver-requirement is not allowed for `--version`.
     pkg("foo", "1.0.0");
     cargo_process("install foo --version=1.0")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] invalid value '1.0' for '--version <VERSION>': unexpected end of input while parsing minor version number
 
   tip: if you want to specify SemVer range, add an explicit qualifier, like '^1.0'
 
 For more information, try '--help'.
-",
-        )
+
+"#]])
         .with_status(1)
         .run();
 }
@@ -249,7 +268,11 @@ fn path_is_always_dirty() {
     let p = project().file("src/main.rs", "fn main() {}").build();
     p.cargo("install --path .").run();
     p.cargo("install --path .")
-        .with_stderr_contains("[REPLACING] [..]/foo[EXE]")
+        .with_stderr_data(str![[r#"
+...
+[REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
+...
+"#]])
         .run();
 }
 
@@ -261,7 +284,11 @@ fn fails_for_conflicts_unknown() {
     exe.parent().unwrap().mkdir_p();
     fs::write(exe, "").unwrap();
     cargo_process("install foo")
-        .with_stderr_contains("[ERROR] binary `foo[EXE]` already exists in destination")
+        .with_stderr_data(str![[r#"
+...
+[ERROR] binary `foo[EXE]` already exists in destination
+...
+"#]])
         .with_status(101)
         .run();
 }
@@ -275,9 +302,11 @@ fn fails_for_conflicts_known() {
         .publish();
     cargo_process("install foo").run();
     cargo_process("install bar")
-        .with_stderr_contains(
-            "[ERROR] binary `foo[EXE]` already exists in destination as part of `foo v1.0.0`",
-        )
+        .with_stderr_data(str![[r#"
+...
+[ERROR] binary `foo[EXE]` already exists in destination as part of `foo v1.0.0`
+...
+"#]])
         .with_status(101)
         .run();
 }
@@ -291,16 +320,31 @@ fn supports_multiple_binary_names() {
         .file("examples/ex1.rs", r#"fn main() { println!("ex1"); }"#)
         .publish();
     cargo_process("install foo --bin foo").run();
-    installed_process("foo").with_stdout("foo").run();
+    installed_process("foo")
+        .with_stdout_data(str![[r#"
+foo
+
+"#]])
+        .run();
     assert!(!installed_exe("a").exists());
     assert!(!installed_exe("ex1").exists());
     validate_trackers("foo", "1.0.0", &["foo"]);
     cargo_process("install foo --bin a").run();
-    installed_process("a").with_stdout("a").run();
+    installed_process("a")
+        .with_stdout_data(str![[r#"
+a
+
+"#]])
+        .run();
     assert!(!installed_exe("ex1").exists());
     validate_trackers("foo", "1.0.0", &["a", "foo"]);
     cargo_process("install foo --example ex1").run();
-    installed_process("ex1").with_stdout("ex1").run();
+    installed_process("ex1")
+        .with_stdout_data(str![[r#"
+ex1
+
+"#]])
+        .run();
     validate_trackers("foo", "1.0.0", &["a", "ex1", "foo"]);
     cargo_process("uninstall foo --bin foo").run();
     assert!(!installed_exe("foo").exists());
@@ -317,7 +361,11 @@ fn v1_already_installed_fresh() {
     pkg("foo", "1.0.0");
     cargo_process("install foo").run();
     cargo_process("install foo")
-        .with_stderr_contains("[IGNORED] package `foo v1.0.0` is already installed[..]")
+        .with_stderr_data(str![[r#"
+...
+[IGNORED] package `foo v1.0.0` is already installed, use --force to override
+...
+"#]])
         .run();
 }
 
@@ -328,8 +376,13 @@ fn v1_already_installed_dirty() {
     cargo_process("install foo").run();
     pkg("foo", "1.0.1");
     cargo_process("install foo")
-        .with_stderr_contains("[COMPILING] foo v1.0.1")
-        .with_stderr_contains("[REPLACING] [..]/foo[EXE]")
+        .with_stderr_data(str![[r#"
+...
+[COMPILING] foo v1.0.1
+...
+[REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
+...
+"#]])
         .run();
     validate_trackers("foo", "1.0.1", &["foo"]);
 }
@@ -365,13 +418,29 @@ fn change_features_rebuilds() {
         )
         .publish();
     cargo_process("install foo").run();
-    installed_process("foo").with_stdout("f1").run();
+    installed_process("foo")
+        .with_stdout_data(str![[r#"
+f1
+
+"#]])
+        .run();
     cargo_process("install foo --no-default-features").run();
-    installed_process("foo").with_stdout("").run();
+    installed_process("foo").with_stdout_data("").run();
     cargo_process("install foo --all-features").run();
-    installed_process("foo").with_stdout("f1\nf2").run();
+    installed_process("foo")
+        .with_stdout_data(str![[r#"
+f1
+f2
+
+"#]])
+        .run();
     cargo_process("install foo --no-default-features --features=f1").run();
-    installed_process("foo").with_stdout("f1").run();
+    installed_process("foo")
+        .with_stdout_data(str![[r#"
+f1
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -379,11 +448,20 @@ fn change_profile_rebuilds() {
     pkg("foo", "1.0.0");
     cargo_process("install foo").run();
     cargo_process("install foo --debug")
-        .with_stderr_contains("[COMPILING] foo v1.0.0")
-        .with_stderr_contains("[REPLACING] [..]foo[EXE]")
+        .with_stderr_data(str![[r#"
+...
+[COMPILING] foo v1.0.0
+...
+[REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
+...
+"#]])
         .run();
     cargo_process("install foo --debug")
-        .with_stderr_contains("[IGNORED] package `foo v1.0.0` is already installed[..]")
+        .with_stderr_data(str![[r#"
+...
+[IGNORED] package `foo v1.0.0` is already installed, use --force to override
+...
+"#]])
         .run();
 }
 
@@ -397,9 +475,14 @@ fn change_target_rebuilds() {
     let target = cross_compile::alternate();
     cargo_process("install foo -v --target")
         .arg(&target)
-        .with_stderr_contains("[COMPILING] foo v1.0.0")
-        .with_stderr_contains("[REPLACING] [..]foo[EXE]")
-        .with_stderr_contains(&format!("[..]--target {}[..]", target))
+        .with_stderr_data(str![[r#"
+...
+[COMPILING] foo v1.0.0
+[RUNNING] `rustc [..]--target [ALT_TARGET][..]`
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
+...
+"#]])
         .run();
 }
 
@@ -417,17 +500,23 @@ fn change_bin_sets_rebuilds() {
     assert!(!installed_exe("foo").exists());
     validate_trackers("foo", "1.0.0", &["x"]);
     cargo_process("install foo --bin y")
-        .with_stderr_contains("[INSTALLED] package `foo v1.0.0` (executable `y[EXE]`)")
+        .with_stderr_data(str![[r#"
+...
+[INSTALLED] package `foo v1.0.0` (executable `y[EXE]`)
+...
+"#]])
         .run();
     assert!(installed_exe("x").exists());
     assert!(installed_exe("y").exists());
     assert!(!installed_exe("foo").exists());
     validate_trackers("foo", "1.0.0", &["x", "y"]);
     cargo_process("install foo")
-        .with_stderr_contains("[INSTALLED] package `foo v1.0.0` (executable `foo[EXE]`)")
-        .with_stderr_contains(
-            "[REPLACED] package `foo v1.0.0` with `foo v1.0.0` (executables `x[EXE]`, `y[EXE]`)",
-        )
+        .with_stderr_data(str![[r#"
+...
+[INSTALLED] package `foo v1.0.0` (executable `foo[EXE]`)
+[REPLACED] package `foo v1.0.0` with `foo v1.0.0` (executables `x[EXE]`, `y[EXE]`)
+...
+"#]])
         .run();
     assert!(installed_exe("x").exists());
     assert!(installed_exe("y").exists());
@@ -477,23 +566,31 @@ fn v2_syncs() {
     cargo_process("install three").run();
     validate_trackers("three", "1.0.0", &["three"]);
     cargo_process("install --list")
-        .with_stdout(
-            "\
-foo v0.0.1 ([..]/foo):
+        .with_stdout_data(str![[r#"
+foo v0.0.1 ([ROOT]/foo):
     x[EXE]
     y[EXE]
 three v1.0.0:
     three[EXE]
 two v1.0.0:
     two[EXE]
-",
-        )
+
+"#]])
         .run();
     cargo_process("install one").run();
-    installed_process("one").with_stdout("1.0.0").run();
+    installed_process("one")
+        .with_stdout_data(str![[r#"
+1.0.0
+
+"#]])
+        .run();
     validate_trackers("one", "1.0.0", &["one"]);
     cargo_process("install two")
-        .with_stderr_contains("[IGNORED] package `two v1.0.0` is already installed[..]")
+        .with_stderr_data(str![[r#"
+...
+[IGNORED] package `two v1.0.0` is already installed, use --force to override
+...
+"#]])
         .run();
     // v1 remove
     p.cargo("uninstall --bin x").run();
@@ -504,10 +601,11 @@ two v1.0.0:
     validate_trackers("x", "1.0.0", &["x"]);
     // This should fail because `y` still exists in a different package.
     cargo_process("install y")
-        .with_stderr_contains(
-            "[ERROR] binary `y[EXE]` already exists in destination \
-             as part of `foo v0.0.1 ([..])`",
-        )
+        .with_stderr_data(str![[r#"
+...
+[ERROR] binary `y[EXE]` already exists in destination as part of `foo v0.0.1 ([ROOT]/foo)`
+...
+"#]])
         .with_status(101)
         .run();
 }
@@ -522,10 +620,11 @@ fn upgrade_git() {
     // Check install stays fresh.
     cargo_process("install --git")
         .arg(git_project.url().to_string())
-        .with_stderr_contains(
-            "[IGNORED] package `foo v0.0.1 (file://[..]/foo#[..])` is \
-             already installed,[..]",
-        )
+        .with_stderr_data(str![[r#"
+...
+[IGNORED] package `foo v0.0.1 ([ROOTURL]/foo#[..])` is already installed, use --force to override
+...
+"#]])
         .run();
     // Modify a file.
     let repo = git2::Repository::open(git_project.root()).unwrap();
@@ -535,17 +634,29 @@ fn upgrade_git() {
     // Install should reinstall.
     cargo_process("install --git")
         .arg(git_project.url().to_string())
-        .with_stderr_contains("[COMPILING] foo v0.0.1 ([..])")
-        .with_stderr_contains("[REPLACING] [..]/foo[EXE]")
+        .with_stderr_data(str![[r#"
+...
+[COMPILING] foo v0.0.1 ([ROOT]/home/.cargo/git/checkouts/foo-[HASH]/[..])
+...
+[REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
+...
+"#]])
         .run();
-    installed_process("foo").with_stdout("onomatopoeia").run();
+    installed_process("foo")
+        .with_stdout_data(str![[r#"
+onomatopoeia
+
+"#]])
+        .run();
     // Check install stays fresh.
     cargo_process("install --git")
         .arg(git_project.url().to_string())
-        .with_stderr_contains(
-            "[IGNORED] package `foo v0.0.1 (file://[..]/foo#[..])` is \
-             already installed,[..]",
-        )
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/foo`
+[IGNORED] package `foo v0.0.1 ([ROOTURL]/foo#[..])` is already installed, use --force to override
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
         .run();
 }
 
@@ -569,15 +680,35 @@ fn switch_sources() {
     });
 
     cargo_process("install foo").run();
-    installed_process("foo").with_stdout("1.0.0").run();
+    installed_process("foo")
+        .with_stdout_data(str![[r#"
+1.0.0
+
+"#]])
+        .run();
     cargo_process("install foo --registry alternative").run();
-    installed_process("foo").with_stdout("alt").run();
+    installed_process("foo")
+        .with_stdout_data(str![[r#"
+alt
+
+"#]])
+        .run();
     p.cargo("install --path .").run();
-    installed_process("foo").with_stdout("local").run();
+    installed_process("foo")
+        .with_stdout_data(str![[r#"
+local
+
+"#]])
+        .run();
     cargo_process("install --git")
         .arg(git_project.url().to_string())
         .run();
-    installed_process("foo").with_stdout("git").run();
+    installed_process("foo")
+        .with_stdout_data(str![[r#"
+git
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -594,97 +725,92 @@ fn multiple_report() {
     }
     three("1.0.0");
     cargo_process("install one two three")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] one v1.0.0 (registry `[..]`)
+[DOWNLOADED] one v1.0.0 (registry `dummy-registry`)
 [DOWNLOADING] crates ...
-[DOWNLOADED] two v1.0.0 (registry `[..]`)
+[DOWNLOADED] two v1.0.0 (registry `dummy-registry`)
 [DOWNLOADING] crates ...
-[DOWNLOADED] three v1.0.0 (registry `[..]`)
+[DOWNLOADED] three v1.0.0 (registry `dummy-registry`)
 [INSTALLING] one v1.0.0
 [COMPILING] one v1.0.0
-[FINISHED] `release` profile [optimized] target(s) in [..]
-[INSTALLING] [..]/.cargo/bin/one[EXE]
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/one[EXE]
 [INSTALLED] package `one v1.0.0` (executable `one[EXE]`)
 [INSTALLING] two v1.0.0
 [COMPILING] two v1.0.0
-[FINISHED] `release` profile [optimized] target(s) in [..]
-[INSTALLING] [..]/.cargo/bin/two[EXE]
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/two[EXE]
 [INSTALLED] package `two v1.0.0` (executable `two[EXE]`)
 [INSTALLING] three v1.0.0
 [COMPILING] three v1.0.0
-[FINISHED] `release` profile [optimized] target(s) in [..]
-[INSTALLING] [..]/.cargo/bin/three[EXE]
-[INSTALLING] [..]/.cargo/bin/x[EXE]
-[INSTALLING] [..]/.cargo/bin/y[EXE]
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/three[EXE]
+[INSTALLING] [ROOT]/home/.cargo/bin/x[EXE]
+[INSTALLING] [ROOT]/home/.cargo/bin/y[EXE]
 [INSTALLED] package `three v1.0.0` (executables `three[EXE]`, `x[EXE]`, `y[EXE]`)
 [SUMMARY] Successfully installed one, two, three!
-[WARNING] be sure to add `[..]/.cargo/bin` to your PATH [..]
-",
-        )
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
         .run();
     pkg("foo", "1.0.1");
     pkg("bar", "1.0.1");
     three("1.0.1");
     cargo_process("install one two three")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [IGNORED] package `one v1.0.0` is already installed, use --force to override
 [IGNORED] package `two v1.0.0` is already installed, use --force to override
 [DOWNLOADING] crates ...
-[DOWNLOADED] three v1.0.1 (registry `[..]`)
+[DOWNLOADED] three v1.0.1 (registry `dummy-registry`)
 [INSTALLING] three v1.0.1
 [COMPILING] three v1.0.1
-[FINISHED] `release` profile [optimized] target(s) in [..]
-[REPLACING] [..]/.cargo/bin/three[EXE]
-[REPLACING] [..]/.cargo/bin/x[EXE]
-[REPLACING] [..]/.cargo/bin/y[EXE]
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[REPLACING] [ROOT]/home/.cargo/bin/three[EXE]
+[REPLACING] [ROOT]/home/.cargo/bin/x[EXE]
+[REPLACING] [ROOT]/home/.cargo/bin/y[EXE]
 [REPLACED] package `three v1.0.0` with `three v1.0.1` (executables `three[EXE]`, `x[EXE]`, `y[EXE]`)
 [SUMMARY] Successfully installed one, two, three!
-[WARNING] be sure to add `[..]/.cargo/bin` to your PATH [..]
-",
-        )
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
         .run();
     cargo_process("uninstall three")
-        .with_stderr(
-            "\
-[REMOVING] [..]/.cargo/bin/three[EXE]
-[REMOVING] [..]/.cargo/bin/x[EXE]
-[REMOVING] [..]/.cargo/bin/y[EXE]
-",
-        )
+        .with_stderr_data(str![[r#"
+[REMOVING] [ROOT]/home/.cargo/bin/three[EXE]
+[REMOVING] [ROOT]/home/.cargo/bin/x[EXE]
+[REMOVING] [ROOT]/home/.cargo/bin/y[EXE]
+
+"#]])
         .run();
     cargo_process("install three --bin x")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [INSTALLING] three v1.0.1
 [COMPILING] three v1.0.1
-[FINISHED] `release` profile [optimized] target(s) in [..]
-[INSTALLING] [..]/.cargo/bin/x[EXE]
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/x[EXE]
 [INSTALLED] package `three v1.0.1` (executable `x[EXE]`)
-[WARNING] be sure to add `[..]/.cargo/bin` to your PATH [..]
-",
-        )
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
         .run();
     cargo_process("install three")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [INSTALLING] three v1.0.1
 [COMPILING] three v1.0.1
-[FINISHED] `release` profile [optimized] target(s) in [..]
-[INSTALLING] [..]/.cargo/bin/three[EXE]
-[INSTALLING] [..]/.cargo/bin/y[EXE]
-[REPLACING] [..]/.cargo/bin/x[EXE]
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/three[EXE]
+[INSTALLING] [ROOT]/home/.cargo/bin/y[EXE]
+[REPLACING] [ROOT]/home/.cargo/bin/x[EXE]
 [INSTALLED] package `three v1.0.1` (executables `three[EXE]`, `y[EXE]`)
 [REPLACED] package `three v1.0.1` with `three v1.0.1` (executable `x[EXE]`)
-[WARNING] be sure to add `[..]/.cargo/bin` to your PATH [..]
-",
-        )
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
         .run();
 }
 
@@ -695,13 +821,12 @@ fn no_track() {
     assert!(!v1_path().exists());
     assert!(!v2_path().exists());
     cargo_process("install --no-track foo")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
-[ERROR] binary `foo[EXE]` already exists in destination `[..]/.cargo/bin/foo[EXE]`
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] binary `foo[EXE]` already exists in destination `[ROOT]/home/.cargo/bin/foo[EXE]`
 Add --force to overwrite
-",
-        )
+
+"#]])
         .with_status(101)
         .run();
 }
@@ -737,20 +862,19 @@ fn deletes_orphaned() {
         "#,
     );
     p.cargo("install --path . --bins --examples")
-        .with_stderr(
-            "\
-[INSTALLING] foo v0.2.0 [..]
-[COMPILING] foo v0.2.0 [..]
-[FINISHED] `release` profile [..]
-[INSTALLING] [..]/.cargo/bin/ex2[EXE]
-[REPLACING] [..]/.cargo/bin/ex1[EXE]
-[REPLACING] [..]/.cargo/bin/foo[EXE]
-[REMOVING] executable `[..]/.cargo/bin/other[EXE]` from previous version foo v0.1.0 [..]
-[INSTALLED] package `foo v0.2.0 [..]` (executable `ex2[EXE]`)
-[REPLACED] package `foo v0.1.0 [..]` with `foo v0.2.0 [..]` (executables `ex1[EXE]`, `foo[EXE]`)
-[WARNING] be sure to add [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[INSTALLING] foo v0.2.0 ([ROOT]/foo)
+[COMPILING] foo v0.2.0 ([ROOT]/foo)
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/ex2[EXE]
+[REPLACING] [ROOT]/home/.cargo/bin/ex1[EXE]
+[REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
+[REMOVING] executable `[ROOT]/home/.cargo/bin/other[EXE]` from previous version foo v0.1.0 ([ROOT]/foo)
+[INSTALLED] package `foo v0.2.0 ([ROOT]/foo)` (executable `ex2[EXE]`)
+[REPLACED] package `foo v0.1.0 ([ROOT]/foo)` with `foo v0.2.0 ([ROOT]/foo)` (executables `ex1[EXE]`, `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
         .run();
     assert!(!installed_exe("other").exists());
     validate_trackers("foo", "0.2.0", &["foo", "ex1", "ex2"]);
@@ -763,38 +887,35 @@ fn already_installed_exact_does_not_update() {
     pkg("foo", "1.0.0");
     cargo_process("install foo  --version=1.0.0").run();
     cargo_process("install foo --version=1.0.0")
-        .with_stderr(
-            "\
-[IGNORED] package `foo v1.0.0` is already installed[..]
-[WARNING] be sure to add [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[IGNORED] package `foo v1.0.0` is already installed, use --force to override
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
         .run();
 
     cargo_process("install foo --version=>=1.0.0")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
-[IGNORED] package `foo v1.0.0` is already installed[..]
-[WARNING] be sure to add [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[IGNORED] package `foo v1.0.0` is already installed, use --force to override
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
         .run();
     pkg("foo", "1.0.1");
     cargo_process("install foo --version=>=1.0.0")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] foo v1.0.1 (registry [..])
+[DOWNLOADED] foo v1.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v1.0.1
 [COMPILING] foo v1.0.1
-[FINISHED] `release` profile [optimized] target(s) in [..]
-[REPLACING] [CWD]/home/.cargo/bin/foo[EXE]
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
 [REPLACED] package `foo v1.0.0` with `foo v1.0.1` (executable `foo[EXE]`)
-[WARNING] be sure to add [..]
-",
-        )
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
         .run();
 }
 
@@ -806,30 +927,29 @@ fn already_installed_updates_yank_status_on_upgrade() {
 
     cargo_process("install foo --version=1.0.1")
         .with_status(101)
-        .with_stderr_contains(
-            "\
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [ERROR] cannot install package `foo`, it has been yanked from registry `crates-io`
-",
-        )
+
+"#]])
         .run();
 
     pkg_maybe_yanked("foo", "1.0.1", false);
 
     pkg("foo", "1.0.1");
     cargo_process("install foo --version=1.0.1")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] foo v1.0.1 (registry [..])
+[DOWNLOADED] foo v1.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v1.0.1
 [COMPILING] foo v1.0.1
-[FINISHED] `release` profile [optimized] target(s) in [..]
-[REPLACING] [CWD]/home/.cargo/bin/foo[EXE]
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
 [REPLACED] package `foo v1.0.0` with `foo v1.0.1` (executable `foo[EXE]`)
-[WARNING] be sure to add [..]
-",
-        )
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
         .run();
 }
 
@@ -840,27 +960,26 @@ fn partially_already_installed_does_one_update() {
     pkg("bar", "1.0.0");
     pkg("baz", "1.0.0");
     cargo_process("install foo bar baz --version=1.0.0")
-        .with_stderr(
-            "\
-[IGNORED] package `foo v1.0.0` is already installed[..]
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[IGNORED] package `foo v1.0.0` is already installed, use --force to override
+[UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v1.0.0 (registry [..])
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [DOWNLOADING] crates ...
-[DOWNLOADED] baz v1.0.0 (registry [..])
+[DOWNLOADED] baz v1.0.0 (registry `dummy-registry`)
 [INSTALLING] bar v1.0.0
 [COMPILING] bar v1.0.0
-[FINISHED] `release` profile [optimized] target(s) in [..]
-[INSTALLING] [CWD]/home/.cargo/bin/bar[EXE]
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/bar[EXE]
 [INSTALLED] package `bar v1.0.0` (executable `bar[EXE]`)
 [INSTALLING] baz v1.0.0
 [COMPILING] baz v1.0.0
-[FINISHED] `release` profile [optimized] target(s) in [..]
-[INSTALLING] [CWD]/home/.cargo/bin/baz[EXE]
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/baz[EXE]
 [INSTALLED] package `baz v1.0.0` (executable `baz[EXE]`)
 [SUMMARY] Successfully installed foo, bar, baz!
-[WARNING] be sure to add [..]
-",
-        )
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
         .run();
 }
