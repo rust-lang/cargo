@@ -1,6 +1,7 @@
 //! Tests for `[features]` table.
 
 use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, project};
@@ -740,14 +741,17 @@ fn groups_on_groups_on_groups() {
         .build();
 
     p.cargo("check")
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [LOCKING] 3 packages to latest compatible versions
-[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
-[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
+[CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
+[CHECKING] baz v0.0.1 ([ROOT]/foo/baz)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -790,14 +794,17 @@ fn many_cli_features() {
 
     p.cargo("check --features")
         .arg("bar baz")
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [LOCKING] 3 packages to latest compatible versions
-[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
-[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
+[CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
+[CHECKING] baz v0.0.1 ([ROOT]/foo/baz)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -1512,14 +1519,17 @@ fn many_cli_features_comma_delimited() {
         .build();
 
     p.cargo("check --features bar,baz")
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [LOCKING] 3 packages to latest compatible versions
-[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
-[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
+[CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
+[CHECKING] baz v0.0.1 ([ROOT]/foo/baz)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -1578,16 +1588,19 @@ fn many_cli_features_comma_and_space_delimited() {
 
     p.cargo("check --features")
         .arg("bar,baz bam bap")
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [LOCKING] 5 packages to latest compatible versions
-[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
-[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
-[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
-[CHECKING] ba[..] v0.0.1 ([ROOT]/foo/ba[..])
+[CHECKING] bam v0.0.1 ([ROOT]/foo/bam)
+[CHECKING] bap v0.0.1 ([ROOT]/foo/bap)
+[CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
+[CHECKING] baz v0.0.1 ([ROOT]/foo/baz)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
