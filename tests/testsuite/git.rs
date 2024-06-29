@@ -2855,7 +2855,7 @@ fn use_the_cli() {
 [UPDATING] git repository `[ROOTURL]/dep1`
 [RUNNING] `git fetch --verbose --force --update-head-ok [..][ROOTURL]/dep1[..] [..]+HEAD:refs/remotes/origin/HEAD[..]`
 From [ROOTURL]/dep1
- * [new ref]         HEAD       -> origin/HEAD
+ * [new ref] [..] -> origin/HEAD[..]
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] dep1 v0.5.0 ([ROOTURL]/dep1#[..])
 [RUNNING] `rustc --crate-name dep1 [..]`

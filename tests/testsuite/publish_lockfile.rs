@@ -241,7 +241,7 @@ fn note_resolve_changes() {
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/main.rs
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[WARNING] no (git) Cargo.toml found at `target/tmp/[..]/foo/Cargo.toml` in workdir `[..]`
+[WARNING] no (git) Cargo.toml found at `[..]/foo/Cargo.toml` in workdir `[..]`
 
 "#]].unordered())
         .run();
