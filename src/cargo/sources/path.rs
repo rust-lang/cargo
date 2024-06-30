@@ -80,12 +80,6 @@ impl<'gctx> PathSource<'gctx> {
         }
     }
 
-    fn read_package(&self) -> CargoResult<Package> {
-        let path = self.path.join("Cargo.toml");
-        let pkg = ops::read_package(&path, self.source_id, self.gctx)?;
-        Ok(pkg)
-    }
-
     /// List all files relevant to building this package inside this source.
     ///
     /// This function will use the appropriate methods to determine the
@@ -124,6 +118,12 @@ impl<'gctx> PathSource<'gctx> {
         }
 
         Ok(())
+    }
+
+    fn read_package(&self) -> CargoResult<Package> {
+        let path = self.path.join("Cargo.toml");
+        let pkg = ops::read_package(&path, self.source_id, self.gctx)?;
+        Ok(pkg)
     }
 }
 
