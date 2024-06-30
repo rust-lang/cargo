@@ -141,7 +141,7 @@ impl<'gctx> InstallablePackage<'gctx> {
                 select_pkg(
                     &mut src,
                     dep,
-                    |path: &mut PathSource<'_>| path.read_packages(),
+                    |path: &mut PathSource<'_>| path.root_package().map(|p| vec![p]),
                     gctx,
                     current_rust_version,
                 )?

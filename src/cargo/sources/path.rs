@@ -80,17 +80,6 @@ impl<'gctx> PathSource<'gctx> {
         }
     }
 
-    /// Returns the packages discovered by this source. It may walk the
-    /// filesystem if package information haven't yet loaded.
-    pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
-        if self.loaded {
-            Ok(self.package.clone().into_iter().collect())
-        } else {
-            let pkg = self.read_package()?;
-            Ok(vec![pkg])
-        }
-    }
-
     fn read_package(&self) -> CargoResult<Package> {
         let path = self.path.join("Cargo.toml");
         let pkg = ops::read_package(&path, self.source_id, self.gctx)?;
