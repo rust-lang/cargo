@@ -29,8 +29,8 @@ pub struct PathSource<'gctx> {
     source_id: SourceId,
     /// The root path of this source.
     path: PathBuf,
-    /// Whether this source has updated all package information it may contain.
-    updated: bool,
+    /// Whether this source has loaded all package information it may contain.
+    loaded: bool,
     /// Packages that this sources has discovered.
     package: Option<Package>,
     gctx: &'gctx GlobalContext,
@@ -45,7 +45,7 @@ impl<'gctx> PathSource<'gctx> {
         Self {
             source_id,
             path: path.to_path_buf(),
-            updated: false,
+            loaded: false,
             package: None,
             gctx,
         }
@@ -59,7 +59,7 @@ impl<'gctx> PathSource<'gctx> {
         Self {
             source_id,
             path,
-            updated: true,
+            loaded: true,
             package: Some(pkg),
             gctx,
         }
@@ -69,7 +69,7 @@ impl<'gctx> PathSource<'gctx> {
     pub fn root_package(&mut self) -> CargoResult<Package> {
         trace!("root_package; source={:?}", self);
 
-        self.update()?;
+        self.load()?;
 
         match &self.package {
             Some(pkg) => Ok(pkg.clone()),
@@ -81,9 +81,9 @@ impl<'gctx> PathSource<'gctx> {
     }
 
     /// Returns the packages discovered by this source. It may walk the
-    /// filesystem if package information haven't yet updated.
+    /// filesystem if package information haven't yet loaded.
     pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
-        if self.updated {
+        if self.loaded {
             Ok(self.package.clone().into_iter().collect())
         } else {
             let pkg = self.read_package()?;
@@ -113,9 +113,9 @@ impl<'gctx> PathSource<'gctx> {
 
     /// Gets the last modified file in a package.
     pub fn last_modified_file(&self, pkg: &Package) -> CargoResult<(FileTime, PathBuf)> {
-        if !self.updated {
+        if !self.loaded {
             return Err(internal(format!(
-                "BUG: source `{:?}` was not updated",
+                "BUG: source `{:?}` was not loaded",
                 self.path
             )));
         }
@@ -128,10 +128,10 @@ impl<'gctx> PathSource<'gctx> {
     }
 
     /// Discovers packages inside this source if it hasn't yet done.
-    pub fn update(&mut self) -> CargoResult<()> {
-        if !self.updated {
+    pub fn load(&mut self) -> CargoResult<()> {
+        if !self.loaded {
             self.package = Some(self.read_package()?);
-            self.updated = true;
+            self.loaded = true;
         }
 
         Ok(())
@@ -151,7 +151,7 @@ impl<'gctx> Source for PathSource<'gctx> {
         kind: QueryKind,
         f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
-        self.update()?;
+        self.load()?;
         if let Some(s) = self.package.as_ref().map(|p| p.summary()) {
             let matched = match kind {
                 QueryKind::Exact => dep.matches(s),
@@ -179,7 +179,7 @@ impl<'gctx> Source for PathSource<'gctx> {
 
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         trace!("getting packages; id={}", id);
-        self.update()?;
+        self.load()?;
         let pkg = self.package.iter().find(|pkg| pkg.package_id() == id);
         pkg.cloned()
             .map(MaybePackage::Ready)
@@ -213,7 +213,7 @@ impl<'gctx> Source for PathSource<'gctx> {
     }
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
-        self.update()
+        self.load()
     }
 
     fn invalidate_cache(&mut self) {
@@ -232,8 +232,8 @@ pub struct RecursivePathSource<'gctx> {
     source_id: SourceId,
     /// The root path of this source.
     path: PathBuf,
-    /// Whether this source has updated all package information it may contain.
-    updated: bool,
+    /// Whether this source has loaded all package information it may contain.
+    loaded: bool,
     /// Packages that this sources has discovered.
     packages: Vec<Package>,
     gctx: &'gctx GlobalContext,
@@ -252,16 +252,16 @@ impl<'gctx> RecursivePathSource<'gctx> {
         Self {
             source_id,
             path: root.to_path_buf(),
-            updated: false,
+            loaded: false,
             packages: Vec::new(),
             gctx,
         }
     }
 
     /// Returns the packages discovered by this source. It may walk the
-    /// filesystem if package information haven't yet updated.
+    /// filesystem if package information haven't yet loaded.
     pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
-        if self.updated {
+        if self.loaded {
             Ok(self.packages.clone())
         } else {
             self.read_packages_inner()
@@ -288,9 +288,9 @@ impl<'gctx> RecursivePathSource<'gctx> {
 
     /// Gets the last modified file in a package.
     pub fn last_modified_file(&self, pkg: &Package) -> CargoResult<(FileTime, PathBuf)> {
-        if !self.updated {
+        if !self.loaded {
             return Err(internal(format!(
-                "BUG: source `{:?}` was not updated",
+                "BUG: source `{:?}` was not loaded",
                 self.path
             )));
         }
@@ -303,10 +303,10 @@ impl<'gctx> RecursivePathSource<'gctx> {
     }
 
     /// Discovers packages inside this source if it hasn't yet done.
-    pub fn update(&mut self) -> CargoResult<()> {
-        if !self.updated {
+    pub fn load(&mut self) -> CargoResult<()> {
+        if !self.loaded {
             self.packages = self.read_packages_inner()?;
-            self.updated = true;
+            self.loaded = true;
         }
 
         Ok(())
@@ -326,7 +326,7 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
         kind: QueryKind,
         f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
-        self.update()?;
+        self.load()?;
         for s in self.packages.iter().map(|p| p.summary()) {
             let matched = match kind {
                 QueryKind::Exact => dep.matches(s),
@@ -354,7 +354,7 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
 
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         trace!("getting packages; id={}", id);
-        self.update()?;
+        self.load()?;
         let pkg = self.packages.iter().find(|pkg| pkg.package_id() == id);
         pkg.cloned()
             .map(MaybePackage::Ready)
@@ -388,7 +388,7 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
     }
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
-        self.update()
+        self.load()
     }
 
     fn invalidate_cache(&mut self) {

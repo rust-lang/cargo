@@ -460,7 +460,7 @@ pub fn add_overrides<'a>(
     for (path, definition) in paths {
         let id = SourceId::for_path(&path)?;
         let mut source = RecursivePathSource::new(&path, id, ws.gctx());
-        source.update().with_context(|| {
+        source.load().with_context(|| {
             format!(
                 "failed to update path override `{}` \
                  (defined in `{}`)",
