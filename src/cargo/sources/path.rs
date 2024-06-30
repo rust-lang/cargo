@@ -29,8 +29,6 @@ pub struct PathSource<'gctx> {
     source_id: SourceId,
     /// The root path of this source.
     path: PathBuf,
-    /// Whether this source has loaded all package information it may contain.
-    loaded: bool,
     /// Packages that this sources has discovered.
     package: Option<Package>,
     gctx: &'gctx GlobalContext,
@@ -45,7 +43,6 @@ impl<'gctx> PathSource<'gctx> {
         Self {
             source_id,
             path: path.to_path_buf(),
-            loaded: false,
             package: None,
             gctx,
         }
@@ -59,7 +56,6 @@ impl<'gctx> PathSource<'gctx> {
         Self {
             source_id,
             path,
-            loaded: true,
             package: Some(pkg),
             gctx,
         }
@@ -96,7 +92,7 @@ impl<'gctx> PathSource<'gctx> {
 
     /// Gets the last modified file in a package.
     pub fn last_modified_file(&self, pkg: &Package) -> CargoResult<(FileTime, PathBuf)> {
-        if !self.loaded {
+        if self.package.is_none() {
             return Err(internal(format!(
                 "BUG: source `{:?}` was not loaded",
                 self.path
@@ -112,9 +108,8 @@ impl<'gctx> PathSource<'gctx> {
 
     /// Discovers packages inside this source if it hasn't yet done.
     pub fn load(&mut self) -> CargoResult<()> {
-        if !self.loaded {
+        if self.package.is_none() {
             self.package = Some(self.read_package()?);
-            self.loaded = true;
         }
 
         Ok(())
