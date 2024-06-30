@@ -91,7 +91,7 @@ impl<'gctx> PathSource<'gctx> {
     }
 
     /// Gets the last modified file in a package.
-    pub fn last_modified_file(&self, pkg: &Package) -> CargoResult<(FileTime, PathBuf)> {
+    fn last_modified_file(&self, pkg: &Package) -> CargoResult<(FileTime, PathBuf)> {
         if self.package.is_none() {
             return Err(internal(format!(
                 "BUG: source `{:?}` was not loaded",
@@ -271,7 +271,7 @@ impl<'gctx> RecursivePathSource<'gctx> {
     }
 
     /// Gets the last modified file in a package.
-    pub fn last_modified_file(&self, pkg: &Package) -> CargoResult<(FileTime, PathBuf)> {
+    fn last_modified_file(&self, pkg: &Package) -> CargoResult<(FileTime, PathBuf)> {
         if !self.loaded {
             return Err(internal(format!(
                 "BUG: source `{:?}` was not loaded",
