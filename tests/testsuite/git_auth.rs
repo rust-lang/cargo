@@ -241,16 +241,14 @@ Caused by:
   An IO error occurred when talking to the server
 
 Caused by:
-  [35] SSL connect error (schannel: failed to receive handshake, SSL/TLS connection failed)"
+  [35] SSL connect error ([..])"
             } else if cfg!(windows) {
-                r"\
-  failed to send request: A connection with the server could not be established
-  ; class=Os (2)"
+                "  failed to send request: A connection with the server could not be established\n  ; class=Os (2)"
             } else if cfg!(target_os = "macos") {
                 // macOS is difficult to tests as some builds may use Security.framework,
                 // while others may use OpenSSL. In that case, let's just not verify the error
                 // message here.
-                "[..]"
+                "..."
             } else {
                 r"  SSL [ERROR] syscall failure: ; class=Os (2)"
             }
@@ -302,10 +300,26 @@ fn ssh_something_happens() {
             // "[..]banner exchange: Connection to 127.0.0.1 [..]"
             //   banner exchange: Connection to 127.0.0.1 port 62250: Software caused connection abort
             // But since there is no common meaningful sequence or word, we can only match a small telling sequence of characters.
-            "onnect".to_string()
-        } else {
             format!(
-                r"
+                "  banner exchange: Connection to {} port {}: Software caused connection abort",
+                addr.ip(),
+                addr.port()
+            )
+        } else {
+            "[..]Connection closed by [..]".to_string()
+        };
+        format!(
+            "\
+[UPDATING] git repository `ssh://{addr}/foo/bar`
+...
+[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
+
+Caused by:
+  failed to load source for dependency `bar`
+
+Caused by:
+  Unable to update ssh://{addr}/foo/bar
+
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
 
@@ -318,23 +332,8 @@ Caused by:
   An IO error occurred when talking to the server
 
 Caused by:
-  Connection closed by {} port {}
-",
-                addr.ip(),
-                addr.port()
-            )
-        };
-        format!(
-            "\
-[UPDATING] git repository `ssh://{addr}/foo/bar`
-[ERROR] failed to get `bar` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `bar`
-
-Caused by:
-  Unable to update ssh://{addr}/foo/bar
-{message}"
+{message}
+"
         )
     } else {
         format!(
@@ -393,9 +392,9 @@ fn net_err_suggests_fetch_with_cli() {
         .with_stderr_data(format!(
             "\
 [UPDATING] git repository `ssh://needs-proxy.invalid/git`
-[WARNING] spurious network error (3 tries remaining): failed to resolve address for needs-proxy.invalid: Name or service not known; class=Net (12)
-[WARNING] spurious network error (2 tries remaining): failed to resolve address for needs-proxy.invalid: Name or service not known; class=Net (12)
-[WARNING] spurious network error (1 tries remaining): failed to resolve address for needs-proxy.invalid: Name or service not known; class=Net (12)
+[WARNING] spurious network error (3 tries remaining): [..] resolve [..] needs-proxy.invalid: [..] known[..]
+[WARNING] spurious network error (2 tries remaining): [..] resolve [..] needs-proxy.invalid: [..] known[..]
+[WARNING] spurious network error (1 tries remaining): [..] resolve [..] needs-proxy.invalid: [..] known[..]
 [ERROR] failed to get `foo` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
 
 Caused by:
@@ -419,9 +418,9 @@ Caused by:
                 r"  An IO error occurred when talking to the server
 
 Caused by:
-  ssh: Could not resolve hostname needs-proxy.invalid"
+  ssh: Could not resolve hostname needs-proxy.invalid[..]"
             } else {
-                "  failed to resolve address for needs-proxy.invalid: Name or service not known; class=Net (12)"
+                "  failed to resolve address for needs-proxy.invalid: [..] known[..]; class=Net (12)"
             }
         ))
         .run();
@@ -438,8 +437,8 @@ Caused by:
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `ssh://needs-proxy.invalid/git`
-[RUNNING] `git fetch --verbose --force --update-head-ok 'ssh://needs-proxy.invalid/git' '+HEAD:refs/remotes/origin/HEAD'`
-ssh: Could not resolve hostname needs-proxy.invalid: Name or service not known
+[RUNNING] `git fetch --verbose --force --update-head-ok [..]ssh://needs-proxy.invalid/git[..] [..]+HEAD:refs/remotes/origin/HEAD[..]`
+ssh: Could not resolve hostname needs-proxy.invalid: [..] not known
 fatal: Could not read from remote repository.
 
 Please make sure you have the correct access rights
@@ -456,7 +455,7 @@ Caused by:
   failed to fetch into: [ROOT]/home/.cargo/git/db/git-[HASH]
 
 Caused by:
-  process didn't exit successfully: `git fetch --verbose --force --update-head-ok 'ssh://needs-proxy.invalid/git' '+HEAD:refs/remotes/origin/HEAD'` ([EXIT_STATUS]: 128)
+  process didn't exit successfully: `git fetch --verbose --force --update-head-ok [..]ssh://needs-proxy.invalid/git[..] [..]+HEAD:refs/remotes/origin/HEAD[..]` ([EXIT_STATUS]: 128)
 
 "#]])
         .with_stderr_does_not_contain("[..]try enabling `git-fetch-with-cli`[..]")
