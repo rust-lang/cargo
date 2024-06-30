@@ -1,8 +1,6 @@
 //! Tests for custom json target specifications.
 
-#![allow(deprecated)]
-
-use cargo_test_support::{basic_manifest, project};
+use cargo_test_support::{basic_manifest, project, str};
 use std::fs;
 
 const MINIMAL_LIB: &str = r#"
@@ -60,7 +58,13 @@ fn custom_target_minimal() {
     // Ensure that the correct style of flag is passed to --target with doc tests.
     p.cargo("test --doc --target src/../custom-target.json -v -Zdoctest-xcompile")
         .masquerade_as_nightly_cargo(&["doctest-xcompile", "no_core", "lang_items"])
-        .with_stderr_contains("[RUNNING] `rustdoc [..]--target [..]foo/custom-target.json[..]")
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[DOCTEST] foo
+[RUNNING] `rustdoc [..]--target [..]foo/custom-target.json[..]
+
+"#]])
         .run();
 }
 
@@ -157,12 +161,11 @@ fn changing_spec_rebuilds() {
 
     p.cargo("build --lib --target custom-target.json -v").run();
     p.cargo("build --lib --target custom-target.json -v")
-        .with_stderr(
-            "\
-[FRESH] foo [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     let spec_path = p.root().join("custom-target.json");
     let spec = fs::read_to_string(&spec_path).unwrap();
@@ -170,13 +173,12 @@ fn changing_spec_rebuilds() {
     let spec = spec.replace('{', "{\n\"vendor\": \"unknown\",\n");
     fs::write(&spec_path, spec).unwrap();
     p.cargo("build --lib --target custom-target.json -v")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 [..]
-[RUNNING] `rustc [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -204,7 +206,10 @@ fn changing_spec_relearns_crate_types() {
 
     p.cargo("build --lib --target custom-target.json -v")
         .with_status(101)
-        .with_stderr("error: cannot produce cdylib for `foo [..]")
+        .with_stderr_data(str![[r#"
+[ERROR] cannot produce cdylib for `foo v0.1.0 ([ROOT]/foo)` [..]
+
+"#]])
         .run();
 
     // Enable dynamic linking.
@@ -214,13 +219,12 @@ fn changing_spec_relearns_crate_types() {
     fs::write(&spec_path, spec).unwrap();
 
     p.cargo("build --lib --target custom-target.json -v")
-        .with_stderr(
-            "\
-[COMPILING] foo [..]
-[RUNNING] `rustc [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -245,16 +249,18 @@ fn custom_target_ignores_filepath() {
 
     // Should build the library the first time.
     p.cargo("build --lib --target a/custom-target.json")
-        .with_stderr(
-            "\
-[..]Compiling foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     // But not the second time, even though the path to the custom target is dfferent.
     p.cargo("build --lib --target b/custom-target.json")
-        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }

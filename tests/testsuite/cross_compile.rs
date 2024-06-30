@@ -2,9 +2,9 @@
 //!
 //! See `cargo_test_support::cross_compile` for more detail.
 
-#![allow(deprecated)]
-
+use cargo_test_support::prelude::*;
 use cargo_test_support::rustc_host;
+use cargo_test_support::str;
 use cargo_test_support::{basic_bin_manifest, basic_manifest, cross_compile, project};
 
 #[cargo_test]
@@ -402,20 +402,14 @@ fn linker() {
     p.cargo("build -v --target")
         .arg(&target)
         .with_status(101)
-        .with_stderr_contains(&format!(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc --crate-name foo --edition=2015 src/foo.rs [..]--crate-type bin \
-    --emit=[..]link[..]-C debuginfo=2 [..]\
-    -C metadata=[..] \
-    --out-dir [CWD]/target/{target}/debug/deps \
-    --target {target} \
-    -C linker=my-linker-tool \
-    -L dependency=[CWD]/target/{target}/debug/deps \
-    -L dependency=[CWD]/target/debug/deps`
-",
-            target = target,
-        ))
+        .with_stderr_data(str![[r#"
+[WARNING] path `src/foo.rs` was erroneously implicitly accepted for binary `foo`,
+please set bin.path in Cargo.toml
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo --edition=2015 src/foo.rs [..]--crate-type bin --emit=[..]link[..]-C debuginfo=2 [..] -C metadata=[..] --out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/deps --target [ALT_TARGET] -C linker=my-linker-tool -L dependency=[ROOT]/foo/target/[ALT_TARGET]/debug/deps -L dependency=[ROOT]/foo/target/debug/deps`
+[ERROR] linker `my-linker-tool` not found
+...
+"#]])
         .run();
 }
 
@@ -470,16 +464,28 @@ fn cross_tests() {
     let target = cross_compile::alternate();
     p.cargo("test --target")
         .arg(&target)
-        .with_stderr(&format!(
-            "\
-[COMPILING] foo v0.0.0 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/{triple}/debug/deps/foo-[..][EXE])
-[RUNNING] [..] (target/{triple}/debug/deps/bar-[..][EXE])",
-            triple = target
-        ))
-        .with_stdout_contains("test test_foo ... ok")
-        .with_stdout_contains("test test ... ok")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/[ALT_TARGET]/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/bin/bar.rs (target/[ALT_TARGET]/debug/deps/bar-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test test_foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test test ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -502,45 +508,47 @@ fn no_cross_doctests() {
         .build();
 
     let host_output = "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
 [DOCTEST] foo
 ";
 
     println!("a");
-    p.cargo("test").with_stderr(&host_output).run();
+    p.cargo("test").with_stderr_data(host_output).run();
 
     println!("b");
     let target = rustc_host();
     p.cargo("test -v --target")
         .arg(&target)
         // Unordered since the two `rustc` invocations happen concurrently.
-        .with_stderr_unordered(&format!(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]--crate-type lib[..]
 [RUNNING] `rustc --crate-name foo [..]--test[..]
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[CWD]/target/{target}/debug/deps/foo-[..][EXE]`
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/target/[HOST_TARGET]/debug/deps/foo-[HASH][EXE]`
 [DOCTEST] foo
-[RUNNING] `rustdoc [..]--target {target}[..]`
-",
-        ))
-        .with_stdout(
-            "
+[RUNNING] `rustdoc [..]--target [HOST_TARGET][..]`
+
+"#]]
+            .unordered(),
+        )
+        .with_stdout_data(str![[r#"
+
 running 0 tests
 
-test result: ok. 0 passed[..]
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
 
 
 running 1 test
 test src/lib.rs - (line 2) ... ok
 
-test result: ok. 1 passed[..]
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
 
-",
-        )
+
+"#]])
         .run();
 
     println!("c");
@@ -550,17 +558,14 @@ test result: ok. 1 passed[..]
     // This should probably be a warning or error.
     p.cargo("test -v --doc --target")
         .arg(&target)
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[NOTE] skipping doctests for foo v0.0.1 ([ROOT]/foo) (lib), \
-cross-compilation doctests are not yet supported
-See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#doctest-xcompile \
-for more information.
-",
-        )
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[NOTE] skipping doctests for foo v0.0.1 ([ROOT]/foo) (lib), cross-compilation doctests are not yet supported
+See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#doctest-xcompile for more information.
+
+"#]])
         .run();
 
     if !cross_compile::can_run_on_host() {
@@ -570,19 +575,15 @@ for more information.
     // This tests the library, but does not run the doc tests.
     p.cargo("test -v --target")
         .arg(&target)
-        .with_stderr(&format!(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]--test[..]
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[CWD]/target/{triple}/debug/deps/foo-[..][EXE]`
-[NOTE] skipping doctests for foo v0.0.1 ([ROOT]/foo) (lib), \
-cross-compilation doctests are not yet supported
-See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#doctest-xcompile \
-for more information.
-",
-            triple = target
-        ))
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/target/[ALT_TARGET]/debug/deps/foo-[HASH][EXE]`
+[NOTE] skipping doctests for foo v0.0.1 ([ROOT]/foo) (lib), cross-compilation doctests are not yet supported
+See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#doctest-xcompile for more information.
+
+"#]])
         .run();
 }
 
@@ -661,16 +662,14 @@ fn cross_with_a_build_script() {
 
     p.cargo("build -v --target")
         .arg(&target)
-        .with_stderr(&format!(
-            "\
-[COMPILING] foo v0.0.0 ([CWD])
-[RUNNING] `rustc [..] build.rs [..] --out-dir [CWD]/target/debug/build/foo-[..]`
-[RUNNING] `[CWD]/target/debug/build/foo-[..]/build-script-build`
-[RUNNING] `rustc [..] src/main.rs [..] --target {target} [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-            target = target,
-        ))
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustc [..] build.rs [..] --out-dir [ROOT]/foo/target/debug/build/foo-[HASH] [..]
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc [..] src/main.rs [..] --target [ALT_TARGET] [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -681,7 +680,6 @@ fn build_script_needed_for_host_and_target() {
     }
 
     let target = cross_compile::alternate();
-    let host = rustc_host();
     let p = project()
         .file(
             "Cargo.toml",
@@ -762,28 +760,23 @@ fn build_script_needed_for_host_and_target() {
 
     p.cargo("build -v --target")
         .arg(&target)
-        .with_stderr_contains(&"[COMPILING] d1 v0.0.0 ([CWD]/d1)")
-        .with_stderr_contains(
-            "[RUNNING] `rustc [..] d1/build.rs [..] --out-dir [CWD]/target/debug/build/d1-[..]`",
-        )
-        .with_stderr_contains("[RUNNING] `[CWD]/target/debug/build/d1-[..]/build-script-build`")
-        .with_stderr_contains("[RUNNING] `rustc [..] d1/src/lib.rs [..]`")
-        .with_stderr_contains("[COMPILING] d2 v0.0.0 ([CWD]/d2)")
-        .with_stderr_contains(&format!(
-            "[RUNNING] `rustc [..] d2/src/lib.rs [..] -L /path/to/{host}`",
-            host = host
-        ))
-        .with_stderr_contains("[COMPILING] foo v0.0.0 ([CWD])")
-        .with_stderr_contains(&format!(
-            "[RUNNING] `rustc [..] build.rs [..] --out-dir [CWD]/target/debug/build/foo-[..] \
-             -L /path/to/{host}`",
-            host = host
-        ))
-        .with_stderr_contains(&format!(
-            "[RUNNING] `rustc [..] src/main.rs [..] --target {target} [..] \
-             -L /path/to/{target}`",
-            target = target
-        ))
+        .with_stderr_data(str![[r#"
+[LOCKING] 3 packages to latest compatible versions
+[COMPILING] d1 v0.0.0 ([ROOT]/foo/d1)
+[RUNNING] `rustc [..] d1/build.rs [..] --out-dir [ROOT]/foo/target/debug/build/d1-[HASH] [..]
+[RUNNING] `[ROOT]/foo/target/debug/build/d1-[HASH]/build-script-build`
+[RUNNING] `[ROOT]/foo/target/debug/build/d1-[HASH]/build-script-build`
+[RUNNING] `rustc [..] d1/src/lib.rs [..] --out-dir [ROOT]/foo/target/debug/deps [..]
+[RUNNING] `rustc [..] d1/src/lib.rs [..] --out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/deps [..]
+[COMPILING] d2 v0.0.0 ([ROOT]/foo/d2)
+[RUNNING] `rustc [..] d2/src/lib.rs [..] --out-dir [ROOT]/foo/target/debug/deps [..]
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustc [..] build.rs [..] --out-dir [ROOT]/foo/target/debug/build/foo-[HASH] [..]
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc [..] src/main.rs [..] --out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/deps --target [ALT_TARGET] [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]].unordered())
         .run();
 }
 
@@ -943,21 +936,19 @@ fn build_script_with_platform_specific_dependencies() {
 
     p.cargo("build -v --target")
         .arg(&target)
-        .with_stderr(&format!(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 3 packages to latest compatible versions
-[COMPILING] d2 v0.0.0 ([..])
+[COMPILING] d2 v0.0.0 ([ROOT]/foo/d2)
 [RUNNING] `rustc [..] d2/src/lib.rs [..]`
-[COMPILING] d1 v0.0.0 ([..])
+[COMPILING] d1 v0.0.0 ([ROOT]/foo/d1)
 [RUNNING] `rustc [..] d1/src/lib.rs [..]`
-[COMPILING] foo v0.0.1 ([..])
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..] build.rs [..]`
-[RUNNING] `[CWD]/target/debug/build/foo-[..]/build-script-build`
-[RUNNING] `rustc [..] src/lib.rs [..] --target {target} [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-            target = target
-        ))
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc [..] src/lib.rs [..] --target [ALT_TARGET] [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1013,7 +1004,11 @@ fn platform_specific_dependencies_do_not_leak() {
     p.cargo("build -v --target")
         .arg(&target)
         .with_status(101)
-        .with_stderr_contains("[..] can't find crate for `d2`[..]")
+        .with_stderr_data(str![[r#"
+...
+error[E0463]: can't find crate for `d2`
+...
+"#]])
         .run();
 }
 
@@ -1192,17 +1187,30 @@ fn cross_test_dylib() {
 
     p.cargo("test --target")
         .arg(&target)
-        .with_stderr(&format!(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] bar v0.0.1 ([CWD]/bar)
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/{arch}/debug/deps/foo-[..][EXE])
-[RUNNING] [..] (target/{arch}/debug/deps/test-[..][EXE])",
-            arch = cross_compile::alternate()
-        ))
-        .with_stdout_contains_n("test foo ... ok", 2)
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/[ALT_TARGET]/debug/deps/foo-[HASH][EXE])
+[RUNNING] tests/test.rs (target/[ALT_TARGET]/debug/deps/test-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -1241,12 +1249,14 @@ fn doctest_xcompile_linker() {
         .arg(&target)
         .with_status(101)
         .masquerade_as_nightly_cargo(&["doctest-xcompile"])
-        .with_stderr_contains(&format!(
-            "\
-[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo --test [..]\
-    --target {target} [..] -C linker=my-linker-tool[..]
-",
-            target = target,
-        ))
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..] --out-dir [ROOT]/foo/target/[ALT_TARGET]/debug/deps --target [ALT_TARGET] [..]
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[DOCTEST] foo
+[RUNNING] `rustdoc [..] src/lib.rs [..]
+[ERROR] doctest failed, to rerun pass `--doc`
+
+"#]])
         .run();
 }
