@@ -178,6 +178,8 @@ impl From<VersionReq> for OptVersionReq {
 
 #[cfg(test)]
 mod matches_prerelease {
+    use semver::{Version, VersionReq};
+
     use super::OptVersionReq;
 
     #[test]
@@ -237,5 +239,18 @@ mod matches_prerelease {
             let matched = OptVersionReq::Req(version_req).matches_prerelease(&version);
             assert_eq!(expected, matched, "req: {req}; ver: {ver}");
         }
+    }
+
+    #[test]
+    fn precise_prerelease() {
+        let version_req = VersionReq::parse("1.2.3-pre").unwrap();
+        let version = Version::parse("1.2.3-pre").unwrap();
+        let matched =
+            OptVersionReq::Precise(version.clone(), version_req).matches_prerelease(&version);
+
+        assert!(!matched, "this is wrong");
+
+        // FIXME: See https://github.com/rust-lang/cargo/issues/12425#issuecomment-2186198258
+        // assert!(matched, "a version must match its own precise requirement");
     }
 }
