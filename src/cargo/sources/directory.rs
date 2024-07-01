@@ -175,7 +175,7 @@ impl<'gctx> Source for DirectorySource<'gctx> {
             }
 
             let mut src = PathSource::new(&path, self.source_id, self.gctx);
-            src.update()?;
+            src.load()?;
             let mut pkg = src.root_package()?;
 
             let cksum_file = path.join(".cargo-checksum.json");

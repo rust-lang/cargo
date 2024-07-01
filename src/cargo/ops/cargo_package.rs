@@ -224,7 +224,7 @@ fn prepare_archive(
 ) -> CargoResult<Vec<ArchiveFile>> {
     let gctx = ws.gctx();
     let mut src = PathSource::new(pkg.root(), pkg.package_id().source_id(), gctx);
-    src.update()?;
+    src.load()?;
 
     if opts.check_metadata {
         check_metadata(pkg, gctx)?;

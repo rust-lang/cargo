@@ -361,7 +361,7 @@ impl<'gctx> Source for GitSource<'gctx> {
         self.path_source = Some(path_source);
         self.short_id = Some(short_id.as_str().into());
         self.locked_rev = Revision::Locked(actual_rev);
-        self.path_source.as_mut().unwrap().update()?;
+        self.path_source.as_mut().unwrap().load()?;
 
         // Hopefully this shouldn't incur too much of a performance hit since
         // most of this should already be in cache since it was just

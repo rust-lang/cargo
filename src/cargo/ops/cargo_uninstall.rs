@@ -87,7 +87,7 @@ fn uninstall_cwd(root: &Filesystem, bins: &[String], gctx: &GlobalContext) -> Ca
     let pkg = select_pkg(
         &mut src,
         None,
-        |path: &mut PathSource<'_>| path.read_packages(),
+        |path: &mut PathSource<'_>| path.root_package().map(|p| vec![p]),
         gctx,
         None,
     )?;
