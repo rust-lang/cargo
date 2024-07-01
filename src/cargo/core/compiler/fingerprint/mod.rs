@@ -775,13 +775,29 @@ impl LocalFingerprint {
         key: K,
         envs: &BTreeMap<String, Option<OsString>>,
     ) -> LocalFingerprint {
-        let key = key.as_ref();
+        fn get_envs_case_insensitive(
+            key: &str,
+            envs: &BTreeMap<String, Option<OsString>>,
+        ) -> Option<OsString> {
+            let upper_case_key: String = key.to_uppercase();
+            for (k, v) in envs {
+                if k.to_uppercase().eq(&upper_case_key) {
+                    return v.to_owned();
+                }
+            }
+            None
+        }
+
+        let key: &str = key.as_ref();
         let var = key.to_owned();
-        let val = envs
-            .get(key)
-            .map(|v| v.to_owned())
-            .or_else(|| Some(env::var_os(key)))
-            .and_then(|os_str| os_str?.into_string().ok());
+
+        let val: Option<String> = if cfg!(windows) {
+            get_envs_case_insensitive(key, envs)
+        } else {
+            envs.get(key).and_then(|v| v.to_owned())
+        }
+        .xor(env::var_os(key))
+        .and_then(|os_str| os_str.into_string().ok());
 
         LocalFingerprint::RerunIfEnvChanged { var, val }
     }
