@@ -46,6 +46,7 @@ pub(crate) mod cargo_compile;
 pub mod cargo_config;
 mod cargo_doc;
 mod cargo_fetch;
+pub mod cargo_info;
 mod cargo_install;
 mod cargo_new;
 mod cargo_output_metadata;
