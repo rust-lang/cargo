@@ -3,12 +3,8 @@
     "extends": [
         "config:recommended",
         "schedule:weekly",
-        ":automergePatch",
         ":automergeStableNonMajor",
-        ":combinePatchMinorReleases",
-        ":disableDependencyDashboard",
-        ":maintainLockFilesWeekly",
-        ":separateMajorReleases"
+        ":disableDependencyDashboard"
     ],
     "platformCommit": true,
     "customManagers": [
