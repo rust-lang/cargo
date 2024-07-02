@@ -3035,6 +3035,7 @@ fn package_lock_inside_package_is_overwritten() {
 
     Package::new("bar", "0.0.1")
         .file("src/lib.rs", "")
+        .file(".CaRgo-oK", "")
         .file(".cargo-ok", "")
         .publish();
 
