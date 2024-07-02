@@ -25,7 +25,7 @@
             "matchStringsStrategy": "recursive",
             "depNameTemplate": "rust-version",
             "packageNameTemplate": "rust-lang/rust",
-            "datasourceTemplate": "github-releases",
+            "datasourceTemplate": "git-tags",
             "versioningTemplate": "cargo",
             "extractVersionTemplate": "^(?<version>\\d+\\.\\d+)" // drop patch version
         }
