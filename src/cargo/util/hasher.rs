@@ -1,23 +1,24 @@
-//! Implementation of a hasher that produces the same values across releases.
+//! A hasher that produces the same values across releases and platforms.
 //!
-//! The hasher should be fast and have a low chance of collisions (but is not
-//! sufficient for cryptographic purposes).
-#![allow(deprecated)]
+//! This is a wrapper around [`rustc_stable_hash::StableHasher`].
 
-use std::hash::{Hasher, SipHasher};
-
-pub struct StableHasher(SipHasher);
+pub struct StableHasher(rustc_stable_hash::StableHasher);
 
 impl StableHasher {
     pub fn new() -> StableHasher {
-        StableHasher(SipHasher::new())
+        StableHasher(rustc_stable_hash::StableHasher::new())
+    }
+
+    pub fn finish(self) -> u64 {
+        self.0.finalize().0
     }
 }
 
-impl Hasher for StableHasher {
+impl std::hash::Hasher for StableHasher {
     fn finish(&self) -> u64 {
-        self.0.finish()
+        panic!("call StableHasher::finish instead");
     }
+
     fn write(&mut self, bytes: &[u8]) {
         self.0.write(bytes)
     }

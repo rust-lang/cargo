@@ -456,7 +456,7 @@ fn short_name(id: SourceId, is_shallow: bool) -> String {
     // CAUTION: This should not change between versions. If you change how
     // this is computed, it will orphan previously cached data, forcing the
     // cache to be rebuilt and potentially wasting significant disk space. If
-    // you change it, be cautious of the impact. See `test_cratesio_hash` for
+    // you change it, be cautious of the impact. See `test_stable_hash` for
     // a similar discussion.
     let hash = hex::short_hash(&id);
     let ident = id.url().host_str().unwrap_or("").to_string();

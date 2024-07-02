@@ -8,7 +8,7 @@ use anyhow::Context as _;
 use serde::Serialize;
 use std::collections::BTreeSet;
 use std::fs;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 use std::path::Path;
 
 /// Indicator for how a unit is being compiled.
