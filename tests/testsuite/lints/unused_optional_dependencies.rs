@@ -1,5 +1,3 @@
-#![allow(deprecated)]
-
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
@@ -34,34 +32,33 @@ target-dep = { version = "0.1.0", optional = true }
 
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints", "edition2024"])
-        .with_stderr(
-            "\
-warning: unused optional dependency
+        .with_stderr_data(str![[r#"
+[WARNING] unused optional dependency
  --> Cargo.toml:9:1
   |
-9 | bar = { version = \"0.1.0\", optional = true }
+9 | bar = { version = "0.1.0", optional = true }
   | ---
   |
-  = note: `cargo::unused_optional_dependency` is set to `warn` by default
-  = help: remove the dependency or activate it in a feature with `dep:bar`
-warning: unused optional dependency
+  = [NOTE] `cargo::unused_optional_dependency` is set to `warn` by default
+  = [HELP] remove the dependency or activate it in a feature with `dep:bar`
+[WARNING] unused optional dependency
   --> Cargo.toml:12:1
    |
-12 | baz = { version = \"0.1.0\", optional = true }
+12 | baz = { version = "0.1.0", optional = true }
    | ---
    |
-   = help: remove the dependency or activate it in a feature with `dep:baz`
-warning: unused optional dependency
+   = [HELP] remove the dependency or activate it in a feature with `dep:baz`
+[WARNING] unused optional dependency
   --> Cargo.toml:15:1
    |
-15 | target-dep = { version = \"0.1.0\", optional = true }
+15 | target-dep = { version = "0.1.0", optional = true }
    | ----------
    |
-   = help: remove the dependency or activate it in a feature with `dep:target-dep`
-[CHECKING] foo v0.1.0 ([CWD])
-[FINISHED] [..]
-",
-        )
+   = [HELP] remove the dependency or activate it in a feature with `dep:target-dep`
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -89,14 +86,13 @@ implicit_features = "allow"
 
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
-        .with_stderr(
-            "\
-[UPDATING] [..]
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
-[CHECKING] foo v0.1.0 ([CWD])
-[FINISHED] [..]
-",
-        )
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -130,34 +126,33 @@ target-dep = { version = "0.1.0", optional = true }
 
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints", "edition2024"])
-        .with_stderr(
-            "\
-warning: unused optional dependency
+        .with_stderr_data(str![[r#"
+[WARNING] unused optional dependency
  --> Cargo.toml:9:1
   |
-9 | bar = { version = \"0.1.0\", optional = true }
+9 | bar = { version = "0.1.0", optional = true }
   | ---
   |
-  = note: `cargo::unused_optional_dependency` is set to `warn` by default
-  = help: remove the dependency or activate it in a feature with `dep:bar`
-warning: unused optional dependency
+  = [NOTE] `cargo::unused_optional_dependency` is set to `warn` by default
+  = [HELP] remove the dependency or activate it in a feature with `dep:bar`
+[WARNING] unused optional dependency
   --> Cargo.toml:12:1
    |
-12 | baz = { version = \"0.2.0\", package = \"bar\", optional = true }
+12 | baz = { version = "0.2.0", package = "bar", optional = true }
    | ---
    |
-   = help: remove the dependency or activate it in a feature with `dep:baz`
-warning: unused optional dependency
+   = [HELP] remove the dependency or activate it in a feature with `dep:baz`
+[WARNING] unused optional dependency
   --> Cargo.toml:15:1
    |
-15 | target-dep = { version = \"0.1.0\", optional = true }
+15 | target-dep = { version = "0.1.0", optional = true }
    | ----------
    |
-   = help: remove the dependency or activate it in a feature with `dep:target-dep`
-[CHECKING] foo v0.1.0 ([CWD])
-[FINISHED] [..]
-",
-        )
+   = [HELP] remove the dependency or activate it in a feature with `dep:target-dep`
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -186,20 +181,19 @@ optional-dep = []
 
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints", "edition2024"])
-        .with_stderr(
-            "\
-warning: unused optional dependency
+        .with_stderr_data(str![[r#"
+[WARNING] unused optional dependency
  --> Cargo.toml:9:1
   |
-9 | optional-dep = { version = \"0.1.0\", optional = true }
+9 | optional-dep = { version = "0.1.0", optional = true }
   | ------------
   |
-  = note: `cargo::unused_optional_dependency` is set to `warn` by default
-  = help: remove the dependency or activate it in a feature with `dep:optional-dep`
-[CHECKING] foo v0.1.0 ([CWD])
-[FINISHED] [..]
-",
-        )
+  = [NOTE] `cargo::unused_optional_dependency` is set to `warn` by default
+  = [HELP] remove the dependency or activate it in a feature with `dep:optional-dep`
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
