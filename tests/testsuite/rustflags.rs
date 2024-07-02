@@ -1587,3 +1587,29 @@ fn host_config_rustflags_with_target() {
         .arg("host.rustflags=[\"--cfg=foo\"]")
         .run();
 }
+
+#[cargo_test]
+fn target_applies_to_host_rustflags_works() {
+    // Ensures that rustflags are passed to the target when
+    // target_applies_to_host=false
+    let p = project()
+        .file(
+            "src/lib.rs",
+            r#"#[cfg(feature = "flag")] compile_error!("flag passed");"#,
+        )
+        .build();
+
+    // Use RUSTFLAGS to pass an argument that will generate an error.
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["target-applies-to-host"])
+        .arg("-Ztarget-applies-to-host")
+        .env("CARGO_TARGET_APPLIES_TO_HOST", "false")
+        .env("RUSTFLAGS", r#"--cfg feature="flag""#)
+        .with_status(101)
+        .with_stderr_data(
+            "[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] flag passed
+...",
+        )
+        .run();
+}

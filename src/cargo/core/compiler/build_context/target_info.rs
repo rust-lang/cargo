@@ -23,6 +23,7 @@ use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
 use std::path::{Path, PathBuf};
 use std::str::{self, FromStr};
+use std::sync::Arc;
 
 /// Information about the platform target gleaned from querying rustc.
 ///
@@ -52,9 +53,9 @@ pub struct TargetInfo {
     /// target libraries.
     pub sysroot_target_libdir: PathBuf,
     /// Extra flags to pass to `rustc`, see [`extra_args`].
-    pub rustflags: Vec<String>,
+    pub rustflags: Arc<[String]>,
     /// Extra flags to pass to `rustdoc`, see [`extra_args`].
-    pub rustdocflags: Vec<String>,
+    pub rustdocflags: Arc<[String]>,
     /// Whether or not rustc (stably) supports the `--check-cfg` flag.
     ///
     /// Can be removed once the minimum supported rustc version of Cargo is
@@ -312,7 +313,7 @@ impl TargetInfo {
                 crate_types: RefCell::new(map),
                 sysroot,
                 sysroot_target_libdir,
-                rustflags,
+                rustflags: rustflags.into(),
                 rustdocflags: extra_args(
                     gctx,
                     requested_kinds,
@@ -320,7 +321,8 @@ impl TargetInfo {
                     Some(&cfg),
                     kind,
                     Flags::Rustdoc,
-                )?,
+                )?
+                .into(),
                 cfg,
                 support_split_debuginfo,
                 support_check_cfg,
@@ -867,7 +869,10 @@ pub struct RustcTargetData<'gctx> {
 
     /// Build information for the "host", which is information about when
     /// `rustc` is invoked without a `--target` flag. This is used for
-    /// procedural macros, build scripts, etc.
+    /// selecting a linker, and applying link overrides.
+    ///
+    /// The configuration read into this depends on whether or not
+    /// `target-applies-to-host=true`.
     host_config: TargetConfig,
     /// Information about the host platform.
     host_info: TargetInfo,
@@ -889,7 +894,10 @@ impl<'gctx> RustcTargetData<'gctx> {
         let mut target_config = HashMap::new();
         let mut target_info = HashMap::new();
         let target_applies_to_host = gctx.target_applies_to_host()?;
+        let host_target = CompileTarget::new(&rustc.host)?;
         let host_info = TargetInfo::new(gctx, requested_kinds, &rustc, CompileKind::Host)?;
+
+        // This config is used for link overrides and choosing a linker.
         let host_config = if target_applies_to_host {
             gctx.target_cfg_triple(&rustc.host)?
         } else {
@@ -902,9 +910,21 @@ impl<'gctx> RustcTargetData<'gctx> {
         // needs access to the target config data, create a copy so that it
         // can be found. See `rebuild_unit_graph_shared` for why this is done.
         if requested_kinds.iter().any(CompileKind::is_host) {
-            let ct = CompileTarget::new(&rustc.host)?;
-            target_info.insert(ct, host_info.clone());
-            target_config.insert(ct, gctx.target_cfg_triple(&rustc.host)?);
+            target_config.insert(host_target, gctx.target_cfg_triple(&rustc.host)?);
+
+            // If target_applies_to_host is true, the host_info is the target info,
+            // otherwise we need to build target info for the target.
+            if target_applies_to_host {
+                target_info.insert(host_target, host_info.clone());
+            } else {
+                let host_target_info = TargetInfo::new(
+                    gctx,
+                    requested_kinds,
+                    &rustc,
+                    CompileKind::Target(host_target),
+                )?;
+                target_info.insert(host_target, host_target_info);
+            }
         };
 
         let mut res = RustcTargetData {

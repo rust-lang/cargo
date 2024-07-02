@@ -178,6 +178,7 @@ pub fn generate_std_roots(
     package_set: &PackageSet<'_>,
     interner: &UnitInterner,
     profiles: &Profiles,
+    target_data: &RustcTargetData<'_>,
 ) -> CargoResult<HashMap<CompileKind, Vec<Unit>>> {
     // Generate the root Units for the standard library.
     let std_ids = crates
@@ -216,6 +217,8 @@ pub fn generate_std_roots(
                 *kind,
                 mode,
                 features.clone(),
+                target_data.info(*kind).rustflags.clone(),
+                target_data.info(*kind).rustdocflags.clone(),
                 /*is_std*/ true,
                 /*dep_hash*/ 0,
                 IsArtifact::No,
