@@ -1,7 +1,5 @@
 //! Tests for directory sources.
 
-#![allow(deprecated)]
-
 use std::collections::HashMap;
 use std::fs;
 use std::str;
@@ -12,6 +10,7 @@ use cargo_test_support::cargo_process;
 use cargo_test_support::git;
 use cargo_test_support::paths;
 use cargo_test_support::registry::{cksum, Package};
+use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, project, t, ProjectBuilder};
 
 fn setup() {
@@ -107,14 +106,13 @@ fn simple() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0
-[CHECKING] foo v0.1.0 ([CWD])
-[FINISHED] [..]
-",
-        )
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -147,18 +145,17 @@ fn simple_install() {
         .build();
 
     cargo_process("install bar")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [INSTALLING] bar v0.1.0
 [LOCKING] 2 packages to latest compatible versions
 [COMPILING] foo v0.0.1
 [COMPILING] bar v0.1.0
-[FINISHED] `release` profile [optimized] target(s) in [..]s
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [..]bar[..]
 [INSTALLED] package `bar v0.1.0` (executable `bar[EXE]`)
-[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
-",
-        )
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
         .run();
 }
 
@@ -193,11 +190,10 @@ fn simple_install_fail() {
 
     cargo_process("install bar")
         .with_status(101)
-        .with_stderr(
-            "  Installing bar v0.1.0
-error: failed to compile `bar v0.1.0`, intermediate artifacts can be found at `[..]`.
-To reuse those artifacts with a future compilation, set the environment variable \
-`CARGO_TARGET_DIR` to that path.
+        .with_stderr_data(str![[r#"
+[INSTALLING] bar v0.1.0
+[ERROR] failed to compile `bar v0.1.0`, intermediate artifacts can be found at `[..]`.
+To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
 
 Caused by:
   no matching package found
@@ -205,8 +201,8 @@ Caused by:
   perhaps you meant:      bar or foo
   location searched: registry `crates-io`
   required by package `bar v0.1.0`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -243,18 +239,17 @@ fn install_without_feature_dep() {
         .build();
 
     cargo_process("install bar")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [INSTALLING] bar v0.1.0
 [LOCKING] 2 packages to latest compatible versions
 [COMPILING] foo v0.0.1
 [COMPILING] bar v0.1.0
-[FINISHED] `release` profile [optimized] target(s) in [..]s
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 [INSTALLING] [..]bar[..]
 [INSTALLED] package `bar v0.1.0` (executable `bar[EXE]`)
-[WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
-",
-        )
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
         .run();
 }
 
@@ -286,13 +281,12 @@ fn not_there() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-error: no matching package named `bar` found
-location searched: [..]
-required by package `foo v0.1.0 ([..])`
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] no matching package named `bar` found
+location searched: registry `crates-io`
+required by package `foo v0.1.0 ([ROOT]/foo)`
+
+"#]])
         .run();
 }
 
@@ -333,15 +327,14 @@ fn multiple() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [ADDING] bar v0.1.0 (latest: v0.2.0)
 [CHECKING] bar v0.1.0
-[CHECKING] foo v0.1.0 ([CWD])
-[FINISHED] [..]
-",
-        )
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -372,17 +365,16 @@ fn crates_io_then_directory() {
         .publish();
 
     p.cargo("check")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.1.0 ([..])
+[DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [CHECKING] bar v0.1.0
-[CHECKING] foo v0.1.0 ([CWD])
-[FINISHED] [..]
-",
-        )
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     setup();
@@ -394,13 +386,12 @@ fn crates_io_then_directory() {
     v.build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [CHECKING] bar v0.1.0
-[CHECKING] foo v0.1.0 ([CWD])
-[FINISHED] [..]
-",
-        )
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -435,9 +426,8 @@ fn crates_io_then_bad_checksum() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-error: checksum for `bar v0.1.0` changed between lock files
+        .with_stderr_data(str![[r#"
+[ERROR] checksum for `bar v0.1.0` changed between lock files
 
 this could be indicative of a few possible errors:
 
@@ -447,8 +437,8 @@ this could be indicative of a few possible errors:
 
 unable to verify that `bar v0.1.0` is the same as when the lockfile was generated
 
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -485,18 +475,15 @@ fn bad_file_checksum() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-error: the listed checksum of `[..]lib.rs` has changed:
+[ERROR] the listed checksum of `[ROOT]/index/bar/src/lib.rs` has changed:
 expected: [..]
 actual:   [..]
 
-directory sources are not intended to be edited, if modifications are \
-required then it is recommended that `[patch]` is used with a forked copy of \
-the source
-",
-        )
+directory sources are not intended to be edited, if modifications are required then it is recommended that `[patch]` is used with a forked copy of the source
+
+"#]])
         .run();
 }
 
@@ -622,13 +609,12 @@ fn git_lock_file_doesnt_change() {
     ));
 
     p.cargo("check")
-        .with_stderr(
-            "\
-[CHECKING] [..]
-[CHECKING] [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] git v0.5.0 ([..])
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     let lock2 = p.read_lockfile();
@@ -676,9 +662,8 @@ fn git_override_requires_lockfile() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to get `git` as a dependency of package `foo v0.0.1 ([..])`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to get `git` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
 
 Caused by:
   failed to load source for dependency `git`
@@ -692,8 +677,8 @@ Caused by:
 
   remove the source replacement configuration, generate a lock file, and then
   restore the source replacement configuration to continue the build
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -748,13 +733,12 @@ fn workspace_different_locations() {
     p.cargo("check").cwd("foo").run();
     p.cargo("check")
         .cwd("bar")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[CHECKING] bar [..]
-[FINISHED] [..]
-",
-        )
+[CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -784,21 +768,19 @@ fn version_missing() {
         .build();
 
     cargo_process("install bar")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [INSTALLING] bar v0.1.0
-error: failed to compile [..], intermediate artifacts can be found at `[..]`.
-To reuse those artifacts with a future compilation, set the environment variable \
-`CARGO_TARGET_DIR` to that path.
+[ERROR] failed to compile [..], intermediate artifacts can be found at `[..]`.
+To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
 
 Caused by:
-  failed to select a version for the requirement `foo = \"^2\"`
+  failed to select a version for the requirement `foo = "^2"`
   candidate versions found which didn't match: 0.0.1
   location searched: directory source `[..] (which is replacing registry `[..]`)
   required by package `bar v0.1.0`
   perhaps a crate was updated and forgotten to be re-vendored?
-",
-        )
+
+"#]])
         .with_status(101)
         .run();
 }
