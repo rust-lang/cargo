@@ -3,7 +3,6 @@
     "extends": [
         "config:recommended",
         "schedule:weekly",
-        ":automergeStableNonMajor",
         ":disableDependencyDashboard"
     ],
     "platformCommit": true,
@@ -28,6 +27,7 @@
     ],
     "packageRules": [
         {
+            "automerge": true,
             "minimumReleaseAge": "6 months",
             "matchDepNames": [
                 "rust-version"
