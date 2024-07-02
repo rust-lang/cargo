@@ -1,9 +1,7 @@
 //! Tests for edition setting.
 
-#![allow(deprecated)]
-
 use cargo::core::Edition;
-use cargo_test_support::{basic_lib_manifest, project};
+use cargo_test_support::{basic_lib_manifest, project, str};
 
 #[cargo_test]
 fn edition_works_for_build_script() {
@@ -66,21 +64,17 @@ fn edition_unstable_gated() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(&format!(
+        .with_stderr_data(format!(
             "\
-[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   feature `edition{next}` is required
 
-  The package requires the Cargo feature called `edition{next}`, \
-  but that feature is not stabilized in this version of Cargo (1.[..]).
+  The package requires the Cargo feature called `edition{next}`, but that feature is not stabilized in this version of Cargo (1.[..]).
   Consider trying a newer version of Cargo (this may require the nightly release).
-  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#edition-{next} \
-  for more information about the status of this feature.
-",
-            next = next
-        ))
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#edition-{next} for more information about the status of this feature.
+"))
         .run();
 }
 
@@ -116,12 +110,11 @@ fn edition_unstable() {
 
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["always_nightly"])
-        .with_stderr(
-            "\
-[CHECKING] foo [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -140,14 +133,13 @@ fn unset_edition_with_unset_rust_version() {
         .build();
 
     p.cargo("check -v")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] no edition set: defaulting to the 2015 edition while the latest is 2021
-[CHECKING] foo [..]
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] --edition=2015 [..]`
-[FINISHED] [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -167,13 +159,12 @@ fn unset_edition_works_with_no_newer_compatible_edition() {
         .build();
 
     p.cargo("check -v")
-        .with_stderr(
-            "\
-[CHECKING] foo [..]
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] --edition=2015 [..]`
-[FINISHED] [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -193,13 +184,12 @@ fn unset_edition_works_on_old_msrv() {
         .build();
 
     p.cargo("check -v")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] no edition set: defaulting to the 2015 edition while 2018 is compatible with `rust-version`
-[CHECKING] foo [..]
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] --edition=2015 [..]`
-[FINISHED] [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
