@@ -65,6 +65,9 @@
 //! [`IndexSummary::parse`]: super::IndexSummary::parse
 //! [`RemoteRegistry`]: crate::sources::registry::remote::RemoteRegistry
 
+use std::cell::OnceCell;
+use std::cell::RefCell;
+use std::collections::BTreeMap;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
@@ -72,14 +75,21 @@ use std::str;
 
 use anyhow::bail;
 use cargo_util::registry::make_dep_path;
+use rusqlite::params;
+use rusqlite::Connection;
 use semver::Version;
 
 use crate::util::cache_lock::CacheLockMode;
+use crate::util::sqlite;
+use crate::util::sqlite::basic_migration;
+use crate::util::sqlite::Migration;
 use crate::util::Filesystem;
 use crate::CargoResult;
 use crate::GlobalContext;
 
 use super::split;
+use super::Summaries;
+use super::MaybeIndexSummary;
 use super::INDEX_V_MAX;
 
 /// The current version of [`SummariesCache`].
@@ -220,12 +230,30 @@ impl<'a> SummariesCache<'a> {
     }
 }
 
+/// An abstraction of the actual cache store.
+trait CacheStore {
+    /// Gets the cache associated with the key.
+    fn get(&self, key: &str) -> Option<MaybeSummaries>;
+
+    /// Associates the value with the key.
+    fn put(&self, key: &str, value: &[u8]);
+
+    /// Associates the value with the key + version tuple.
+    fn put_summary(&self, key: (&str, &Version), value: &[u8]);
+
+    /// Invalidates the cache associated with the key.
+    fn invalidate(&self, key: &str);
+}
+
+pub enum MaybeSummaries {
+    Unparsed(Vec<u8>),
+    Parsed(Summaries),
+}
+
 /// Manages the on-disk index caches.
 pub struct CacheManager<'gctx> {
-    /// The root path where caches are located.
-    cache_root: Filesystem,
-    /// [`GlobalContext`] reference for convenience.
-    gctx: &'gctx GlobalContext,
+    store: Box<dyn CacheStore + 'gctx>,
+    is_sqlite: bool,
 }
 
 impl<'gctx> CacheManager<'gctx> {
@@ -233,14 +261,70 @@ impl<'gctx> CacheManager<'gctx> {
     ///
     /// `root` --- The root path where caches are located.
     pub fn new(cache_root: Filesystem, gctx: &'gctx GlobalContext) -> CacheManager<'gctx> {
-        CacheManager { cache_root, gctx }
+        #[allow(clippy::disallowed_methods)]
+        let use_sqlite = gctx.cli_unstable().index_cache_sqlite
+            || std::env::var("__CARGO_TEST_FORCE_SQLITE_INDEX_CACHE").is_ok();
+        let store: Box<dyn CacheStore> = if use_sqlite {
+            Box::new(LocalDatabase::new(cache_root, gctx))
+        } else {
+            Box::new(LocalFileSystem::new(cache_root, gctx))
+        };
+        CacheManager { store, is_sqlite: use_sqlite }
+    }
+
+    pub fn is_sqlite(&self) -> bool {
+        self.is_sqlite
     }
 
     /// Gets the cache associated with the key.
-    pub fn get(&self, key: &str) -> Option<Vec<u8>> {
+    pub fn get(&self, key: &str) -> Option<MaybeSummaries> {
+        self.store.get(key)
+    }
+
+    /// Associates the value with the key.
+    pub fn put(&self, key: &str, value: &[u8]) {
+        self.store.put(key, value)
+    }
+
+    /// Associates the value with the key + version tuple.
+    pub fn put_summary(&self, key: (&str, &Version), value: &[u8]) {
+        self.store.put_summary(key, value)
+    }
+
+    /// Invalidates the cache associated with the key.
+    pub fn invalidate(&self, key: &str) {
+        self.store.invalidate(key)
+    }
+}
+
+/// Stores index caches in a file system wth a registry index like layout.
+struct LocalFileSystem<'gctx> {
+    /// The root path where caches are located.
+    cache_root: Filesystem,
+    /// [`GlobalContext`] reference for convenience.
+    gctx: &'gctx GlobalContext,
+}
+
+impl LocalFileSystem<'_> {
+    /// Creates a new instance of the file system index cache store.
+    fn new(cache_root: Filesystem, gctx: &GlobalContext) -> LocalFileSystem<'_> {
+        LocalFileSystem { cache_root, gctx }
+    }
+
+    fn cache_path(&self, key: &str) -> PathBuf {
+        let relative = make_dep_path(key, false);
+        // This is the file we're loading from cache or the index data.
+        // See module comment in `registry/mod.rs` for why this is structured
+        // the way it is.
+        self.cache_root.join(relative).into_path_unlocked()
+    }
+}
+
+impl CacheStore for LocalFileSystem<'_> {
+    fn get(&self, key: &str) -> Option<MaybeSummaries> {
         let cache_path = &self.cache_path(key);
         match fs::read(cache_path) {
-            Ok(contents) => Some(contents),
+            Ok(contents) => Some(MaybeSummaries::Unparsed(contents)),
             Err(e) => {
                 tracing::debug!(?cache_path, "cache missing: {e}");
                 None
@@ -248,8 +332,7 @@ impl<'gctx> CacheManager<'gctx> {
         }
     }
 
-    /// Associates the value with the key.
-    pub fn put(&self, key: &str, value: &[u8]) {
+    fn put(&self, key: &str, value: &[u8]) {
         let cache_path = &self.cache_path(key);
         if fs::create_dir_all(cache_path.parent().unwrap()).is_ok() {
             let path = Filesystem::new(cache_path.clone());
@@ -261,8 +344,11 @@ impl<'gctx> CacheManager<'gctx> {
         }
     }
 
-    /// Invalidates the cache associated with the key.
-    pub fn invalidate(&self, key: &str) {
+    fn put_summary(&self, _key: (&str, &Version), _value: &[u8]) {
+        panic!("unsupported");
+    }
+
+    fn invalidate(&self, key: &str) {
         let cache_path = &self.cache_path(key);
         if let Err(e) = fs::remove_file(cache_path) {
             if e.kind() != io::ErrorKind::NotFound {
@@ -270,12 +356,137 @@ impl<'gctx> CacheManager<'gctx> {
             }
         }
     }
+}
 
-    fn cache_path(&self, key: &str) -> PathBuf {
-        let relative = make_dep_path(key, false);
-        // This is the file we're loading from cache or the index data.
-        // See module comment in `registry/mod.rs` for why this is structured
-        // the way it is.
-        self.cache_root.join(relative).into_path_unlocked()
+/// Stores index caches in a local SQLite database.
+struct LocalDatabase<'gctx> {
+    /// The root path where caches are located.
+    cache_root: Filesystem,
+    /// Connection to the SQLite database.
+    conn: OnceCell<Option<RefCell<Connection>>>,
+    /// [`GlobalContext`] reference for convenience.
+    deferred_writes: RefCell<BTreeMap<String, Vec<(String, Vec<u8>)>>>,
+    gctx: &'gctx GlobalContext,
+}
+
+impl LocalDatabase<'_> {
+    /// Creates a new instance of the SQLite index cache store.
+    fn new(cache_root: Filesystem, gctx: &GlobalContext) -> LocalDatabase<'_> {
+        LocalDatabase {
+            cache_root,
+            conn: OnceCell::new(),
+            deferred_writes: Default::default(),
+            gctx,
+        }
     }
+
+    fn conn(&self) -> Option<&RefCell<Connection>> {
+        self.conn
+            .get_or_init(|| {
+                self.conn_init()
+                    .map(RefCell::new)
+                    .map_err(|e| tracing::debug!("cannot open index cache db: {e}"))
+                    .ok()
+            })
+            .as_ref()
+    }
+
+    fn conn_init(&self) -> CargoResult<Connection> {
+        let _lock = self
+            .gctx
+            .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)
+            .unwrap();
+        let cache_root = self.cache_root.as_path_unlocked();
+        fs::create_dir_all(cache_root)?;
+        let mut conn = Connection::open(cache_root.join("index-cache.db"))?;
+        sqlite::migrate(&mut conn, &migrations())?;
+        Ok(conn)
+    }
+
+    fn bulk_put(&self) -> CargoResult<()> {
+        let Some(conn) = self.conn() else {
+            anyhow::bail!("no connection");
+        };
+        let mut conn = conn.borrow_mut();
+        let tx = conn.transaction()?;
+        let mut stmt =
+            tx.prepare_cached("INSERT OR REPLACE INTO summaries (name, version, value) VALUES (?, ?, ?)")?;
+        for (name, summaries) in self.deferred_writes.borrow().iter() {
+            for (version, value) in summaries {
+                stmt.execute(params!(name, version, value))?;
+            }
+        }
+        drop(stmt);
+        tx.commit()?;
+        self.deferred_writes.borrow_mut().clear();
+        Ok(())
+    }
+}
+
+impl Drop for LocalDatabase<'_> {
+    fn drop(&mut self) {
+        let _ = self
+            .bulk_put()
+            .map_err(|e| tracing::info!("failed to flush cache: {e}"));
+    }
+}
+
+impl CacheStore for LocalDatabase<'_> {
+    fn get(&self, key: &str) -> Option<MaybeSummaries> {
+        self.conn()?
+            .borrow()
+            .prepare_cached("SELECT version, value FROM summaries WHERE name = ?")
+            .and_then(|mut stmt| {
+                let rows = stmt.query_map([key], |row| Ok((row.get(0)?, row.get(1)?)))?;
+                let mut summaries = Summaries::default();
+                for row in rows {
+                    let (version, raw_data): (String, Vec<u8>) = row?;
+                    let version = Version::parse(&version).expect("semver");
+                    summaries.versions.insert(version, MaybeIndexSummary::UnparsedData(raw_data));
+                }
+                Ok(MaybeSummaries::Parsed(summaries))
+            })
+            .map_err(|e| {
+                tracing::debug!(key, "cache missing: {e}");
+            })
+            .ok()
+    }
+
+    fn put(&self, _key: &str, _value: &[u8]) {
+        panic!("unsupported");
+    }
+
+    fn put_summary(&self, (name, version): (&str, &Version), value: &[u8]) {
+        self.deferred_writes
+            .borrow_mut()
+            .entry(name.into())
+            .or_insert(Default::default())
+            .push((version.to_string(), value.to_vec()));
+    }
+
+    fn invalidate(&self, key: &str) {
+        if let Some(conn) = self.conn() {
+            _ = conn
+                .borrow()
+                .prepare_cached("DELETE FROM summaries WHERE name = ?")
+                .and_then(|mut stmt| stmt.execute([key]))
+                .map_err(|e| tracing::debug!(key, "failed to remove from cache: {e}"));
+        }
+    }
+}
+
+/// Migrations which initialize the database, and can be used to evolve it over time.
+///
+/// See [`Migration`] for more detail.
+///
+/// **Be sure to not change the order or entries here!**
+fn migrations() -> Vec<Migration> {
+    vec![basic_migration(
+        "CREATE TABLE IF NOT EXISTS summaries (
+            name TEXT NOT NULL,
+            version TEXT NOT NULL,
+            value BLOB NOT NULL,
+            PRIMARY KEY (name, version)
+        )",
+    )]
 }
