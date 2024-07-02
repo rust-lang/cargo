@@ -33,6 +33,12 @@
 //!      details. If any input files are missing, or are newer than the
 //!      dep-info, then the unit is dirty.
 //!
+//!  - Alternatively if you're using the unstable feature `checksum-freshness`
+//!    mtimes are ignored entirely in favor of comparing first the file size, and
+//!    then the checksum with a known prior value emitted by rustc. Only nightly
+//!    rustc will emit the needed metadata at the time of writing. This is dependent
+//!    on the unstable feature `-Z checksum-hash-algorithm`.
+//!
 //! Note: Fingerprinting is not a perfect solution. Filesystem mtime tracking
 //! is notoriously imprecise and problematic. Only a small part of the
 //! environment is captured. This is a balance of performance, simplicity, and
@@ -358,20 +364,24 @@ mod dirty_reason;
 use std::collections::hash_map::{Entry, HashMap};
 
 use std::env;
+use std::fmt::{self, Display};
+use std::fs::File;
 use std::hash::{self, Hash, Hasher};
-use std::io;
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
-use std::str;
+use std::str::{self, from_utf8, FromStr};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
 use anyhow::{bail, format_err, Context as _};
-use cargo_util::{paths, ProcessBuilder};
+use cargo_util::{paths, ProcessBuilder, Sha256};
 use filetime::FileTime;
+use itertools::Either;
 use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
+use twox_hash::XxHash64;
 
 use crate::core::compiler::unit_graph::UnitDep;
 use crate::core::Package;
@@ -727,6 +737,16 @@ enum LocalFingerprint {
     /// we need to recompile.
     CheckDepInfo { dep_info: PathBuf },
 
+    /// This is used for crate compilations. The `dep_info` file is a relative
+    /// path anchored at `target_root(...)` to the dep-info file that Cargo
+    /// generates (which is a custom serialization after parsing rustc's own
+    /// `dep-info` output).
+    ///
+    /// The `dep_info` file, when present, also lists a number of other files
+    /// for us to look at. If any of those files have a different checksum then
+    /// we need to recompile.
+    CheckDepInfoChecksums { dep_info: PathBuf },
+
     /// This represents a nonempty set of `rerun-if-changed` annotations printed
     /// out by a build script. The `output` file is a relative file anchored at
     /// `target_root(...)` which is the actual output of the build script. That
@@ -752,12 +772,24 @@ enum LocalFingerprint {
 #[derive(Clone, Debug)]
 pub enum StaleItem {
     MissingFile(PathBuf),
+    FailedToReadMetadata(PathBuf),
+    FileSizeChanged {
+        path: PathBuf,
+        old_size: u64,
+        new_size: u64,
+    },
     ChangedFile {
         reference: PathBuf,
         reference_mtime: FileTime,
         stale: PathBuf,
         stale_mtime: FileTime,
     },
+    ChangedChecksum {
+        source: PathBuf,
+        stored_checksum: Checksum,
+        new_checksum: Checksum,
+    },
+    MissingChecksum(PathBuf),
     ChangedEnv {
         var: String,
         previous: Option<String>,
@@ -793,6 +825,7 @@ impl LocalFingerprint {
     fn find_stale_item(
         &self,
         mtime_cache: &mut HashMap<PathBuf, FileTime>,
+        checksum_cache: &mut HashMap<PathBuf, Checksum>,
         pkg_root: &Path,
         target_root: &Path,
         cargo_exe: &Path,
@@ -807,43 +840,50 @@ impl LocalFingerprint {
             // rustc.
             LocalFingerprint::CheckDepInfo { dep_info } => {
                 let dep_info = target_root.join(dep_info);
-                let Some(info) = parse_dep_info(pkg_root, target_root, &dep_info)? else {
-                    return Ok(Some(StaleItem::MissingFile(dep_info)));
-                };
-                for (key, previous) in info.env.iter() {
-                    let current = if key == CARGO_ENV {
-                        Some(
-                            cargo_exe
-                                .to_str()
-                                .ok_or_else(|| {
-                                    format_err!(
-                                        "cargo exe path {} must be valid UTF-8",
-                                        cargo_exe.display()
-                                    )
-                                })?
-                                .to_string(),
-                        )
-                    } else {
-                        gctx.get_env(key).ok()
-                    };
-                    if current == *previous {
-                        continue;
+                let info = match dep_info_shared(pkg_root, target_root, &dep_info, cargo_exe, gctx)?
+                {
+                    Either::Left(stale) => {
+                        return Ok(Some(stale));
                     }
-                    return Ok(Some(StaleItem::ChangedEnv {
-                        var: key.clone(),
-                        previous: previous.clone(),
-                        current,
-                    }));
-                }
-                Ok(find_stale_file(mtime_cache, &dep_info, info.files.iter()))
+                    Either::Right(info) => info,
+                };
+                Ok(find_stale_file(
+                    mtime_cache,
+                    checksum_cache,
+                    &dep_info,
+                    info.files.iter().map(|p| (p, None)),
+                    false,
+                ))
+            }
+
+            LocalFingerprint::CheckDepInfoChecksums { dep_info } => {
+                let dep_info = target_root.join(dep_info);
+                let info = match dep_info_shared(pkg_root, target_root, &dep_info, cargo_exe, gctx)?
+                {
+                    Either::Left(stale) => {
+                        return Ok(Some(stale));
+                    }
+                    Either::Right(info) => info,
+                };
+                Ok(find_stale_file(
+                    mtime_cache,
+                    checksum_cache,
+                    &dep_info,
+                    info.files
+                        .iter()
+                        .map(|file| (file.clone(), info.checksum.get(file).cloned())),
+                    true,
+                ))
             }
 
             // We need to verify that no paths listed in `paths` are newer than
             // the `output` path itself, or the last time the build script ran.
             LocalFingerprint::RerunIfChanged { output, paths } => Ok(find_stale_file(
                 mtime_cache,
+                checksum_cache,
                 &target_root.join(output),
-                paths.iter().map(|p| pkg_root.join(p)),
+                paths.iter().map(|p| (pkg_root.join(p), None)),
+                false,
             )),
 
             // These have no dependencies on the filesystem, and their values
@@ -858,10 +898,46 @@ impl LocalFingerprint {
         match self {
             LocalFingerprint::Precalculated(..) => "precalculated",
             LocalFingerprint::CheckDepInfo { .. } => "dep-info",
+            LocalFingerprint::CheckDepInfoChecksums { .. } => "dep-info-checksums",
             LocalFingerprint::RerunIfChanged { .. } => "rerun-if-changed",
             LocalFingerprint::RerunIfEnvChanged { .. } => "rerun-if-env-changed",
         }
     }
+}
+
+fn dep_info_shared(
+    pkg_root: &Path,
+    target_root: &Path,
+    dep_info: &PathBuf,
+    cargo_exe: &Path,
+    gctx: &GlobalContext,
+) -> Result<Either<StaleItem, RustcDepInfo>, anyhow::Error> {
+    let Some(info) = parse_dep_info(pkg_root, target_root, dep_info)? else {
+        return Ok(Either::Left(StaleItem::MissingFile(dep_info.clone())));
+    };
+    for (key, previous) in info.env.iter() {
+        let current = if key == CARGO_ENV {
+            Some(
+                cargo_exe
+                    .to_str()
+                    .ok_or_else(|| {
+                        format_err!("cargo exe path {} must be valid UTF-8", cargo_exe.display())
+                    })?
+                    .to_string(),
+            )
+        } else {
+            gctx.get_env(key).ok()
+        };
+        if current == *previous {
+            continue;
+        }
+        return Ok(Either::Left(StaleItem::ChangedEnv {
+            var: key.clone(),
+            previous: previous.clone(),
+            current,
+        }));
+    }
+    Ok(Either::Right(info))
 }
 
 impl Fingerprint {
@@ -976,6 +1052,17 @@ impl Fingerprint {
                     }
                 }
                 (
+                    LocalFingerprint::CheckDepInfoChecksums { dep_info: adep },
+                    LocalFingerprint::CheckDepInfoChecksums { dep_info: bdep },
+                ) => {
+                    if adep != bdep {
+                        return DirtyReason::DepInfoOutputChanged {
+                            old: bdep.clone(),
+                            new: adep.clone(),
+                        };
+                    }
+                }
+                (
                     LocalFingerprint::RerunIfChanged {
                         output: aout,
                         paths: apaths,
@@ -1077,6 +1164,7 @@ impl Fingerprint {
     fn check_filesystem(
         &mut self,
         mtime_cache: &mut HashMap<PathBuf, FileTime>,
+        checksum_cache: &mut HashMap<PathBuf, Checksum>,
         pkg_root: &Path,
         target_root: &Path,
         cargo_exe: &Path,
@@ -1181,9 +1269,14 @@ impl Fingerprint {
         // files for this package itself. If we do find something log a helpful
         // message and bail out so we stay stale.
         for local in self.local.get_mut().unwrap().iter() {
-            if let Some(item) =
-                local.find_stale_item(mtime_cache, pkg_root, target_root, cargo_exe, gctx)?
-            {
+            if let Some(item) = local.find_stale_item(
+                mtime_cache,
+                checksum_cache,
+                pkg_root,
+                target_root,
+                cargo_exe,
+                gctx,
+            )? {
                 item.log();
                 self.fs_status = FsStatus::StaleItem(item);
                 return Ok(());
@@ -1293,6 +1386,9 @@ impl StaleItem {
             StaleItem::MissingFile(path) => {
                 info!("stale: missing {:?}", path);
             }
+            StaleItem::FailedToReadMetadata(path) => {
+                info!("stale: couldn't read metadata {:?}", path);
+            }
             StaleItem::ChangedFile {
                 reference,
                 reference_mtime,
@@ -1302,6 +1398,27 @@ impl StaleItem {
                 info!("stale: changed {:?}", stale);
                 info!("          (vs) {:?}", reference);
                 info!("               {:?} < {:?}", reference_mtime, stale_mtime);
+            }
+            StaleItem::FileSizeChanged {
+                path,
+                new_size,
+                old_size,
+            } => {
+                info!("stale: changed {:?}", path);
+                info!("prior file size {old_size}");
+                info!("  new file size {new_size}");
+            }
+            StaleItem::ChangedChecksum {
+                source,
+                stored_checksum,
+                new_checksum,
+            } => {
+                info!("stale: changed {:?}", source);
+                info!("prior checksum {stored_checksum}");
+                info!("  new checksum {new_checksum}");
+            }
+            StaleItem::MissingChecksum(path) => {
+                info!("stale: no prior checksum {:?}", path);
             }
             StaleItem::ChangedEnv {
                 var,
@@ -1347,6 +1464,7 @@ fn calculate(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
     let cargo_exe = build_runner.bcx.gctx.cargo_exe()?;
     fingerprint.check_filesystem(
         &mut build_runner.mtime_cache,
+        &mut build_runner.checksum_cache,
         unit.pkg.root(),
         &target_root,
         cargo_exe,
@@ -1399,7 +1517,11 @@ fn calculate_normal(
     } else {
         let dep_info = dep_info_loc(build_runner, unit);
         let dep_info = dep_info.strip_prefix(&target_root).unwrap().to_path_buf();
-        vec![LocalFingerprint::CheckDepInfo { dep_info }]
+        if build_runner.bcx.gctx.cli_unstable().checksum_freshness {
+            vec![LocalFingerprint::CheckDepInfoChecksums { dep_info }]
+        } else {
+            vec![LocalFingerprint::CheckDepInfo { dep_info }]
+        }
     };
 
     // Figure out what the outputs of our unit is, and we'll be storing them
@@ -1865,14 +1987,30 @@ pub fn parse_dep_info(
     };
     let mut ret = RustcDepInfo::default();
     ret.env = info.env;
-    ret.files.extend(info.files.into_iter().map(|(ty, path)| {
-        match ty {
-            DepInfoPathType::PackageRootRelative => pkg_root.join(path),
-            // N.B. path might be absolute here in which case the join will have no effect
-            DepInfoPathType::TargetRootRelative => target_root.join(path),
-        }
-    }));
+    ret.files.extend(
+        info.files
+            .into_iter()
+            .map(|(ty, path)| make_absolute_path(ty, pkg_root, path, target_root)),
+    );
+    for (ty, path, file_len, checksum) in info.checksum {
+        let path = make_absolute_path(ty, pkg_root, path, target_root);
+        ret.checksum
+            .insert(path, (file_len, Checksum::from_str(&checksum)?));
+    }
     Ok(Some(ret))
+}
+
+fn make_absolute_path(
+    ty: DepInfoPathType,
+    pkg_root: &Path,
+    path: PathBuf,
+    target_root: &Path,
+) -> PathBuf {
+    match ty {
+        DepInfoPathType::PackageRootRelative => pkg_root.join(path),
+        // N.B. path might be absolute here in which case the join will have no effect
+        DepInfoPathType::TargetRootRelative => target_root.join(path),
+    }
 }
 
 /// Calculates the fingerprint of a unit thats contains no dep-info files.
@@ -1887,14 +2025,16 @@ fn pkg_fingerprint(bcx: &BuildContext<'_, '_>, pkg: &Package) -> CargoResult<Str
 }
 
 /// The `reference` file is considered as "stale" if any file from `paths` has a newer mtime.
-fn find_stale_file<I>(
+fn find_stale_file<I, P>(
     mtime_cache: &mut HashMap<PathBuf, FileTime>,
+    checksum_cache: &mut HashMap<PathBuf, Checksum>,
     reference: &Path,
     paths: I,
+    use_checksums: bool,
 ) -> Option<StaleItem>
 where
-    I: IntoIterator,
-    I::Item: AsRef<Path>,
+    I: IntoIterator<Item = (P, Option<(u64, Checksum)>)>,
+    P: AsRef<Path>,
 {
     let Ok(reference_mtime) = paths::mtime(reference) else {
         return Some(StaleItem::MissingFile(reference.to_path_buf()));
@@ -1909,8 +2049,7 @@ where
     } else {
         None
     };
-
-    for path in paths {
+    for (path, prior_checksum) in paths {
         let path = path.as_ref();
 
         // Assuming anything in cargo_home/{git, registry} is immutable
@@ -1922,44 +2061,82 @@ where
                 continue;
             }
         }
-        let path_mtime = match mtime_cache.entry(path.to_path_buf()) {
-            Entry::Occupied(o) => *o.get(),
-            Entry::Vacant(v) => {
-                let Ok(mtime) = paths::mtime_recursive(path) else {
-                    return Some(StaleItem::MissingFile(path.to_path_buf()));
-                };
-                *v.insert(mtime)
+        if use_checksums {
+            let Some((file_len, prior_checksum)) = prior_checksum else {
+                return Some(StaleItem::MissingChecksum(path.to_path_buf()));
+            };
+            let path_buf = path.to_path_buf();
+
+            let path_checksum = match checksum_cache.entry(path_buf) {
+                Entry::Occupied(o) => *o.get(),
+                Entry::Vacant(v) => {
+                    let Ok(file) = File::open(path) else {
+                        return Some(StaleItem::MissingFile(path.to_path_buf()));
+                    };
+                    let Ok(current_file_len) = file.metadata().map(|m| m.len()) else {
+                        return Some(StaleItem::FailedToReadMetadata(path.to_path_buf()));
+                    };
+                    if current_file_len != file_len {
+                        return Some(StaleItem::FileSizeChanged {
+                            path: path.to_path_buf(),
+                            new_size: current_file_len,
+                            old_size: file_len,
+                        });
+                    }
+                    let Ok(checksum) = Checksum::compute(prior_checksum.algo, file) else {
+                        return Some(StaleItem::MissingFile(path.to_path_buf()));
+                    };
+                    *v.insert(checksum)
+                }
+            };
+            if path_checksum == prior_checksum {
+                continue;
             }
-        };
+            return Some(StaleItem::ChangedChecksum {
+                source: path.to_path_buf(),
+                stored_checksum: prior_checksum,
+                new_checksum: path_checksum,
+            });
+        } else {
+            let path_mtime = match mtime_cache.entry(path.to_path_buf()) {
+                Entry::Occupied(o) => *o.get(),
+                Entry::Vacant(v) => {
+                    let Ok(mtime) = paths::mtime_recursive(path) else {
+                        return Some(StaleItem::MissingFile(path.to_path_buf()));
+                    };
+                    *v.insert(mtime)
+                }
+            };
 
-        // TODO: fix #5918.
-        // Note that equal mtimes should be considered "stale". For filesystems with
-        // not much timestamp precision like 1s this is would be a conservative approximation
-        // to handle the case where a file is modified within the same second after
-        // a build starts. We want to make sure that incremental rebuilds pick that up!
-        //
-        // For filesystems with nanosecond precision it's been seen in the wild that
-        // its "nanosecond precision" isn't really nanosecond-accurate. It turns out that
-        // kernels may cache the current time so files created at different times actually
-        // list the same nanosecond precision. Some digging on #5919 picked up that the
-        // kernel caches the current time between timer ticks, which could mean that if
-        // a file is updated at most 10ms after a build starts then Cargo may not
-        // pick up the build changes.
-        //
-        // All in all, an equality check here would be a conservative assumption that,
-        // if equal, files were changed just after a previous build finished.
-        // Unfortunately this became problematic when (in #6484) cargo switch to more accurately
-        // measuring the start time of builds.
-        if path_mtime <= reference_mtime {
-            continue;
+            // TODO: fix #5918.
+            // Note that equal mtimes should be considered "stale". For filesystems with
+            // not much timestamp precision like 1s this is would be a conservative approximation
+            // to handle the case where a file is modified within the same second after
+            // a build starts. We want to make sure that incremental rebuilds pick that up!
+            //
+            // For filesystems with nanosecond precision it's been seen in the wild that
+            // its "nanosecond precision" isn't really nanosecond-accurate. It turns out that
+            // kernels may cache the current time so files created at different times actually
+            // list the same nanosecond precision. Some digging on #5919 picked up that the
+            // kernel caches the current time between timer ticks, which could mean that if
+            // a file is updated at most 10ms after a build starts then Cargo may not
+            // pick up the build changes.
+            //
+            // All in all, an equality check here would be a conservative assumption that,
+            // if equal, files were changed just after a previous build finished.
+            // Unfortunately this became problematic when (in #6484) cargo switch to more accurately
+            // measuring the start time of builds.
+            if path_mtime <= reference_mtime {
+                continue;
+            }
+
+            return Some(StaleItem::ChangedFile {
+                reference: reference.to_path_buf(),
+                reference_mtime,
+                stale: path.to_path_buf(),
+                stale_mtime: path_mtime,
+            });
         }
-
-        return Some(StaleItem::ChangedFile {
-            reference: reference.to_path_buf(),
-            reference_mtime,
-            stale: path.to_path_buf(),
-            stale_mtime: path_mtime,
-        });
     }
 
     debug!(
@@ -1971,7 +2148,8 @@ where
 
 /// Tells the associated path in [`EncodedDepInfo::files`] is relative to package root,
 /// target root, or absolute.
-enum DepInfoPathType {
+#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
+pub enum DepInfoPathType {
     /// src/, e.g. src/lib.rs
     PackageRootRelative,
     /// target/debug/deps/lib...
@@ -2050,7 +2228,7 @@ pub fn translate_dep_info(
         .env
         .retain(|(key, _)| !rustc_cmd.get_envs().contains_key(key) || key == CARGO_ENV);
 
-    for file in depinfo.files {
+    let serialize_path = |file| {
         // The path may be absolute or relative, canonical or not. Make sure
         // it is canonicalized so we are comparing the same kinds of paths.
         let abs_file = rustc_cwd.join(file);
@@ -2063,7 +2241,7 @@ pub fn translate_dep_info(
             (DepInfoPathType::TargetRootRelative, stripped)
         } else if let Ok(stripped) = canon_file.strip_prefix(&pkg_root) {
             if !allow_package {
-                continue;
+                return None;
             }
             (DepInfoPathType::PackageRootRelative, stripped)
         } else {
@@ -2072,7 +2250,25 @@ pub fn translate_dep_info(
             // effect.
             (DepInfoPathType::TargetRootRelative, &*abs_file)
         };
-        on_disk_info.files.push((ty, path.to_owned()));
+        Some((ty, path.to_owned()))
+    };
+
+    for file in depinfo.files {
+        let Some(serializable_path) = serialize_path(file) else {
+            continue;
+        };
+        on_disk_info.files.push(serializable_path);
+    }
+    for (file, (file_len, checksum)) in depinfo.checksum {
+        let Some(serializable_path) = serialize_path(file) else {
+            continue;
+        };
+        on_disk_info.checksum.push((
+            serializable_path.0,
+            serializable_path.1,
+            file_len,
+            checksum.to_string(),
+        ));
     }
     paths::write(cargo_dep_info, on_disk_info.serialize()?)?;
     Ok(())
@@ -2091,6 +2287,10 @@ pub struct RustcDepInfo {
     /// means that the env var wasn't actually set and the compilation depends
     /// on it not being set.
     pub env: Vec<(String, Option<String>)>,
+
+    /// If provided by rustc, a mapping that ties a file to the checksum and file size
+    /// at the time rustc ingested it.
+    pub checksum: HashMap<PathBuf, (u64, Checksum)>,
 }
 
 /// Same as [`RustcDepInfo`] except avoids absolute paths as much as possible to
@@ -2102,13 +2302,14 @@ pub struct RustcDepInfo {
 struct EncodedDepInfo {
     files: Vec<(DepInfoPathType, PathBuf)>,
     env: Vec<(String, Option<String>)>,
+    checksum: Vec<(DepInfoPathType, PathBuf, u64, String)>,
 }
 
 impl EncodedDepInfo {
     fn parse(mut bytes: &[u8]) -> Option<EncodedDepInfo> {
         let bytes = &mut bytes;
         let nfiles = read_usize(bytes)?;
-        let mut files = Vec::with_capacity(nfiles as usize);
+        let mut files = Vec::with_capacity(nfiles);
         for _ in 0..nfiles {
             let ty = match read_u8(bytes)? {
                 0 => DepInfoPathType::PackageRootRelative,
@@ -2120,7 +2321,7 @@ impl EncodedDepInfo {
         }
 
         let nenv = read_usize(bytes)?;
-        let mut env = Vec::with_capacity(nenv as usize);
+        let mut env = Vec::with_capacity(nenv);
         for _ in 0..nenv {
             let key = str::from_utf8(read_bytes(bytes)?).ok()?.to_string();
             let val = match read_u8(bytes)? {
@@ -2130,12 +2331,40 @@ impl EncodedDepInfo {
             };
             env.push((key, val));
         }
-        return Some(EncodedDepInfo { files, env });
+        let nchecksum = read_usize(bytes)?;
+        let mut checksum = Vec::with_capacity(nchecksum);
+        for _ in 0..nchecksum {
+            let ty = match read_u8(bytes)? {
+                0 => DepInfoPathType::PackageRootRelative,
+                1 => DepInfoPathType::TargetRootRelative,
+                _ => return None,
+            };
+            let path_bytes = read_bytes(bytes)?;
+            let file_len = read_u64(bytes)?;
+            let checksum_bytes = read_bytes(bytes)?;
+            checksum.push((
+                ty,
+                paths::bytes2path(path_bytes).ok()?,
+                file_len,
+                from_utf8(checksum_bytes).ok()?.to_string(),
+            ));
+        }
+        return Some(EncodedDepInfo {
+            files,
+            env,
+            checksum,
+        });
 
         fn read_usize(bytes: &mut &[u8]) -> Option<usize> {
             let ret = bytes.get(..4)?;
             *bytes = &bytes[4..];
             Some(u32::from_le_bytes(ret.try_into().unwrap()) as usize)
+        }
+
+        fn read_u64(bytes: &mut &[u8]) -> Option<u64> {
+            let ret = bytes.get(..8)?;
+            *bytes = &bytes[8..];
+            Some(u64::from_le_bytes(ret.try_into().unwrap()))
         }
 
         fn read_u8(bytes: &mut &[u8]) -> Option<u8> {
@@ -2175,6 +2404,17 @@ impl EncodedDepInfo {
                 }
             }
         }
+
+        write_usize(dst, self.checksum.len());
+        for (ty, file, file_len, checksum) in self.checksum.iter() {
+            match ty {
+                DepInfoPathType::PackageRootRelative => dst.push(0),
+                DepInfoPathType::TargetRootRelative => dst.push(1),
+            }
+            write_bytes(dst, paths::path2bytes(file)?);
+            write_u64(dst, *file_len);
+            write_bytes(dst, checksum);
+        }
         return Ok(ret);
 
         fn write_bytes(dst: &mut Vec<u8>, val: impl AsRef<[u8]>) {
@@ -2185,6 +2425,10 @@ impl EncodedDepInfo {
 
         fn write_usize(dst: &mut Vec<u8>, val: usize) {
             dst.extend(&u32::to_le_bytes(val as u32));
+        }
+
+        fn write_u64(dst: &mut Vec<u8>, val: u64) {
+            dst.extend(&u64::to_le_bytes(val));
         }
     }
 }
@@ -2206,6 +2450,22 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
                 None => None,
             };
             ret.env.push((unescape_env(env_var)?, env_val));
+        } else if let Some(rest) = line.strip_prefix("# checksum:") {
+            let mut parts = rest.splitn(3, ' ');
+            let Some(checksum) = parts.next().map(Checksum::from_str).transpose()? else {
+                continue;
+            };
+            let Some(Ok(file_len)) = parts
+                .next()
+                .and_then(|s| s.strip_prefix("file_len:").map(|s| s.parse::<u64>()))
+            else {
+                continue;
+            };
+            let Some(path) = parts.next().map(PathBuf::from) else {
+                continue;
+            };
+
+            ret.checksum.insert(path, (file_len, checksum));
         } else if let Some(pos) = line.find(": ") {
             if found_deps {
                 continue;
@@ -2248,5 +2508,206 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
             }
         }
         Ok(ret)
+    }
+}
+
+/// Some algorithms are here to ensure compatibility with possible rustc outputs.
+/// The presence of an algorithm here is not a suggestion that it's fit for use.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum ChecksumAlgo {
+    Sha256,
+    XxHash,
+}
+
+impl ChecksumAlgo {
+    fn hash_len(&self) -> usize {
+        match self {
+            ChecksumAlgo::Sha256 => 32,
+            ChecksumAlgo::XxHash => 8,
+        }
+    }
+}
+
+impl FromStr for ChecksumAlgo {
+    type Err = InvalidChecksumAlgo;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "sha256" => Ok(Self::Sha256),
+            "xxhash" => Ok(Self::XxHash),
+            _ => Err(InvalidChecksumAlgo {}),
+        }
+    }
+}
+
+impl Display for ChecksumAlgo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            ChecksumAlgo::Sha256 => "sha256",
+            ChecksumAlgo::XxHash => "xxhash",
+        })
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct InvalidChecksumAlgo {}
+
+impl Display for InvalidChecksumAlgo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "expected `sha256`, or `xxhash`")
+    }
+}
+
+impl std::error::Error for InvalidChecksumAlgo {}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct Checksum {
+    algo: ChecksumAlgo,
+    /// If the algorithm uses fewer than 32 bytes, then the remaining bytes will be zero.
+    value: [u8; 32],
+}
+
+impl Checksum {
+    pub fn new(algo: ChecksumAlgo, value: [u8; 32]) -> Self {
+        Self { algo, value }
+    }
+
+    pub fn compute(algo: ChecksumAlgo, contents: impl Read) -> Result<Self, io::Error> {
+        // Buffer size is the same as default for std::io::BufReader.
+        // This was completely arbitrary and can probably be improved upon.
+        //
+        // Mostly I just don't want to read the entire file into memory at once if it's massive.
+        let mut buf = vec![0; 8 * 1024];
+        let mut ret = Self {
+            algo,
+            value: [0; 32],
+        };
+        let len = algo.hash_len();
+        let value = &mut ret.value[..len];
+
+        fn digest<T>(
+            mut hasher: T,
+            mut update: impl FnMut(&mut T, &[u8]),
+            finish: impl FnOnce(T, &mut [u8]),
+            mut contents: impl Read,
+            buf: &mut [u8],
+            value: &mut [u8],
+        ) -> Result<(), io::Error> {
+            loop {
+                let bytes_read = contents.read(buf)?;
+                if bytes_read == 0 {
+                    break;
+                }
+                update(&mut hasher, &buf[0..bytes_read]);
+            }
+            finish(hasher, value);
+            Ok(())
+        }
+
+        match algo {
+            ChecksumAlgo::Sha256 => {
+                digest(
+                    Sha256::new(),
+                    |h, b| {
+                        h.update(b);
+                    },
+                    |mut h, out| out.copy_from_slice(&h.finish()),
+                    contents,
+                    &mut buf,
+                    value,
+                )?;
+            }
+            ChecksumAlgo::XxHash => {
+                digest(
+                    XxHash64::with_seed(0),
+                    |h, b| {
+                        h.write(b);
+                    },
+                    |h, out| out.copy_from_slice(&h.finish().to_be_bytes()),
+                    contents,
+                    &mut buf,
+                    value,
+                )?;
+            }
+        }
+        Ok(ret)
+    }
+
+    pub fn algo(&self) -> ChecksumAlgo {
+        self.algo
+    }
+
+    pub fn value(&self) -> &[u8; 32] {
+        &self.value
+    }
+}
+
+impl FromStr for Checksum {
+    type Err = InvalidChecksum;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut parts = s.split('=');
+        let Some(algo) = parts.next().map(ChecksumAlgo::from_str).transpose()? else {
+            return Err(InvalidChecksum::InvalidFormat);
+        };
+        let Some(checksum) = parts.next() else {
+            return Err(InvalidChecksum::InvalidFormat);
+        };
+        let mut value = [0; 32];
+        if hex::decode_to_slice(checksum, &mut value[0..algo.hash_len()]).is_err() {
+            return Err(InvalidChecksum::InvalidChecksum(algo));
+        }
+        Ok(Self { algo, value })
+    }
+}
+
+impl Display for Checksum {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut checksum = [0; 64];
+        let hash_len = self.algo.hash_len();
+        hex::encode_to_slice(&self.value[0..hash_len], &mut checksum[0..(hash_len * 2)])
+            .map_err(|_| fmt::Error)?;
+        write!(
+            f,
+            "{}={}",
+            self.algo,
+            from_utf8(&checksum[0..(hash_len * 2)]).unwrap_or_default()
+        )
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum InvalidChecksum {
+    InvalidChecksumAlgo(InvalidChecksumAlgo),
+    InvalidChecksum(ChecksumAlgo),
+    InvalidFormat,
+}
+
+impl Display for InvalidChecksum {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            InvalidChecksum::InvalidChecksumAlgo(e) => {
+                write!(f, "algorithm portion incorrect, {e}")
+            }
+            InvalidChecksum::InvalidChecksum(algo) => {
+                let expected_len = algo.hash_len() * 2;
+                write!(
+                    f,
+                    "expected {expected_len} hexadecimal digits in checksum portion"
+                )
+            }
+            InvalidChecksum::InvalidFormat => write!(
+                f,
+                "expected a string with format \"algorithm=hex_checksum\""
+            ),
+        }
+    }
+}
+
+impl std::error::Error for InvalidChecksum {}
+
+impl From<InvalidChecksumAlgo> for InvalidChecksum {
+    fn from(value: InvalidChecksumAlgo) -> Self {
+        InvalidChecksum::InvalidChecksumAlgo(value)
     }
 }
