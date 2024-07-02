@@ -128,6 +128,55 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
     validate_upload_foo();
 }
 
+#[cargo_test]
+fn duplicate_version() {
+    let arc: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
+    let registry_dupl = RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .add_responder("/index/3/f/foo", move |req, server| {
+            let mut lock = arc.lock().unwrap();
+            *lock += 1;
+            if *lock <= 1 {
+                server.not_found(req)
+            } else {
+                server.index(req)
+            }
+        })
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish")
+        .replace_crates_io(registry_dupl.index_url())
+        .without_status()
+        .run();
+
+    p.cargo("publish")
+        .replace_crates_io(registry_dupl.index_url())
+        .with_stderr(
+            "\
+[UPDATING] crates.io index
+error: crate foo already has version 0.0.1. Aborting publish.
+",
+        )
+        .with_status(101)
+        .run();
+}
+
 // Check that the `token` key works at the root instead of under a
 // `[registry]` table.
 #[cargo_test]
