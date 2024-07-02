@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::{self, FromStr};
 
+use crate::core::summary::MissingDependencyError;
 use crate::AlreadyPrintedError;
 use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
@@ -1435,24 +1436,53 @@ fn to_real_manifest(
             .unwrap_or_else(|| semver::Version::new(0, 0, 0)),
         source_id,
     );
-    let summary = Summary::new(
-        pkgid,
-        deps,
-        &resolved_toml
-            .features
-            .as_ref()
-            .unwrap_or(&Default::default())
-            .iter()
-            .map(|(k, v)| {
-                (
-                    InternedString::new(k),
-                    v.iter().map(InternedString::from).collect(),
-                )
-            })
-            .collect(),
-        resolved_package.links.as_deref(),
-        rust_version.clone(),
-    )?;
+    let summary = {
+        let mut summary = Summary::new(
+            pkgid,
+            deps,
+            &resolved_toml
+                .features
+                .as_ref()
+                .unwrap_or(&Default::default())
+                .iter()
+                .map(|(k, v)| {
+                    (
+                        InternedString::new(k),
+                        v.iter().map(InternedString::from).collect(),
+                    )
+                })
+                .collect(),
+            resolved_package.links.as_deref(),
+            rust_version.clone(),
+        );
+        // editon2024 stops exposing implicit features, which will strip weak optional dependencies from `dependencies`,
+        // need to check whether `dep_name` is stripped as unused dependency
+        if let Err(ref mut err) = summary {
+            if let Some(missing_dep) = err.downcast_mut::<MissingDependencyError>() {
+                if missing_dep.weak_optional() {
+                    // dev-dependencies are not allowed to be optional
+                    let mut orig_deps = vec![
+                        original_toml.dependencies.as_ref(),
+                        original_toml.build_dependencies.as_ref(),
+                    ];
+                    for (_, platform) in original_toml.target.iter().flatten() {
+                        orig_deps.extend(vec![
+                            platform.dependencies.as_ref(),
+                            platform.build_dependencies.as_ref(),
+                        ]);
+                    }
+                    for deps in orig_deps {
+                        if let Some(deps) = deps {
+                            if deps.keys().any(|p| *p.as_str() == missing_dep.dep_name()) {
+                                missing_dep.set_unused_dependency(true);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        summary?
+    };
     if summary.features().contains_key("default-features") {
         warnings.push(
             "`default-features = [\"..\"]` was found in [features]. \
