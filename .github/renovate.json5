@@ -1,35 +1,41 @@
 {
     "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-    "schedule": "every 6 weeks on tuesday",
+    "extends": [
+        "config:recommended",
+        "schedule:weekly",
+        ":automergePatch",
+        ":automergeStableNonMajor",
+        ":combinePatchMinorReleases",
+        ":disableDependencyDashboard",
+        ":maintainLockFilesWeekly",
+        ":separateMajorReleases"
+    ],
+    "platformCommit": true,
     "customManagers": [
         {
             "customType": "regex",
+            "description": "Update the minimal supported Rust version in Cargo.toml",
             "fileMatch": [
-                "Cargo.toml$"
+                "(^|/)Cargo\\.toml$"
             ],
             "matchStrings": [
-                "rust-version = \"(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)\""
+                "(^|\\[package\\])(.|\n)*?($|\n\\s*\\[)", // select package table
+                "rust-version = \"(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)\"" // select rust-version
             ],
+            "matchStringsStrategy": "recursive",
             "depNameTemplate": "rust-version",
             "packageNameTemplate": "rust-lang/rust",
-            "datasourceTemplate": "github-releases"
+            "datasourceTemplate": "github-releases",
+            "versioningTemplate": "cargo",
+            "extractVersionTemplate": "^(?<version>\\d+\\.\\d+)" // drop patch version
         }
     ],
     "packageRules": [
         {
-            "commitMessageTopic": "bump rust-version",
-            "matchManagers": [
-                "custom.regex"
-            ],
-            "matchPackageNames": [
-                "rust-version"
-            ],
-            "extractVersion": "^(?<version>\\d+\\.\\d+)", // drop patch version
-            "schedule": [
-                "* * * * *"
-            ],
             "minimumReleaseAge": "6 months",
-            "internalChecksFilter": "strict"
+            "matchDepNames": [
+                "rust-version"
+            ]
         }
     ]
 }
