@@ -6232,10 +6232,10 @@ fn target_filters_workspace_not_found() {
         .build();
 
     ws.cargo("build -v --lib")
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[ERROR] no library targets found in packages: a, b
+[WARNING] target filter `lib` specified, but no targets matched; this is a no-op
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -6522,9 +6522,9 @@ fn build_with_no_lib() {
         .build();
 
     p.cargo("build --lib")
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] no library targets found in package `foo`
+[WARNING] target filter `lib` specified, but no targets matched; this is a no-op
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
