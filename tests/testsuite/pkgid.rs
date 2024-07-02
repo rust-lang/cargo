@@ -321,7 +321,7 @@ fn pkgid_json_message_metadata_consistency() {
   "profile": "{...}",
   "features": [],
   "filenames": "{...}",
-  "executable": null,
+  "executable": "[..]",
   "fresh": false
 }
 

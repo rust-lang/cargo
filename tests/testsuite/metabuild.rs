@@ -711,7 +711,7 @@ fn metabuild_json_artifact() {
         .with_json_contains_unordered(
             r#"
             {
-              "executable": null,
+              "executable": "[..]/metabuild-foo[EXE]",
               "features": [],
               "filenames": "{...}",
               "fresh": false,
