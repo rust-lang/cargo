@@ -55,6 +55,14 @@
 //! [source implementations]: crate::sources
 //! [`Downloads`]: crate::core::package::Downloads
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+
+use anyhow::Context as _;
+use tracing::debug;
+use tracing::trace;
+use url::Url;
+
 use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::registry::{LockedPatchDependency, PackageRegistry};
 use crate::core::resolver::features::{
@@ -74,12 +82,10 @@ use crate::core::SourceId;
 use crate::core::Workspace;
 use crate::ops;
 use crate::sources::RecursivePathSource;
+use crate::sources::CRATES_IO_INDEX;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::CanonicalUrl;
-use anyhow::Context as _;
-use std::collections::{HashMap, HashSet};
-use tracing::{debug, trace};
 
 /// Filter for keep using Package ID from previous lockfile.
 type Keep<'a> = &'a dyn Fn(&PackageId) -> bool;
@@ -330,6 +336,53 @@ pub fn resolve_with_previous<'gctx>(
     specs: &[PackageIdSpec],
     register_patches: bool,
 ) -> CargoResult<Resolve> {
+    let mut patches = if register_patches {
+        Some(PatchEntries::from_workspace(ws, previous)?)
+    } else {
+        None
+    };
+
+    loop {
+        let resolved = resolve_with_previous_inner(
+            registry,
+            ws,
+            cli_features,
+            has_dev_units,
+            previous,
+            keep_previous,
+            specs,
+            patches.as_ref(),
+        )?;
+
+        if let Some(patches) = patches.as_mut() {
+            if patches.requires_reresolve(&resolved)? {
+                let times = patches.resolve_times;
+                debug!(times, "re-resolve due to new patches ready");
+                continue;
+            }
+        }
+
+        if let Some(patches) = patches.as_ref() {
+            emit_warnings_of_unused_patches(ws, &resolved, registry)?;
+            emit_warnings_of_unresolved_patches(ws, &resolved, patches)?;
+        }
+
+        return Ok(resolved);
+    }
+}
+
+/// Helper for re-resolve for [`resolve_with_previous`].
+#[tracing::instrument(skip_all)]
+fn resolve_with_previous_inner<'gctx>(
+    registry: &mut PackageRegistry<'gctx>,
+    ws: &Workspace<'gctx>,
+    cli_features: &CliFeatures,
+    has_dev_units: HasDevUnits,
+    previous: Option<&Resolve>,
+    keep_previous: Option<&dyn Fn(&PackageId) -> bool>,
+    specs: &[PackageIdSpec],
+    patches: Option<&PatchEntries>,
+) -> CargoResult<Resolve> {
     // We only want one Cargo at a time resolving a crate graph since this can
     // involve a lot of frobbing of the global caches.
     let _lock = ws
@@ -366,11 +419,13 @@ pub fn resolve_with_previous<'gctx>(
         version_prefs.max_rust_version(Some(rust_version));
     }
 
-    let avoid_patch_ids = if register_patches {
-        register_patch_entries(registry, ws, previous, &mut version_prefs, keep_previous)?
-    } else {
-        HashSet::new()
-    };
+    let avoid_patch_ids = register_patch_entries(
+        registry,
+        patches,
+        previous,
+        &mut version_prefs,
+        keep_previous,
+    )?;
 
     // Refine `keep` with patches that should avoid locking.
     let keep = |p: &PackageId| keep_previous(p) && !avoid_patch_ids.contains(p);
@@ -392,7 +447,7 @@ pub fn resolve_with_previous<'gctx>(
         }
     }
 
-    if register_patches {
+    if patches.is_some() {
         registry.lock_patches();
     }
 
@@ -422,12 +477,7 @@ pub fn resolve_with_previous<'gctx>(
         Some(ws.gctx()),
     )?;
 
-    let patches = registry.patches().values().flat_map(|v| v.iter());
-    resolved.register_used_patches(patches);
-
-    if register_patches && !resolved.unused_patches().is_empty() {
-        emit_warnings_of_unused_patches(ws, &resolved, registry)?;
-    }
+    resolved.register_used_patches(registry.patches().values().flat_map(|v| v.iter()));
 
     if let Some(previous) = previous {
         resolved.merge_from(previous)?;
@@ -786,6 +836,58 @@ fn emit_warnings_of_unused_patches(
     return Ok(());
 }
 
+/// Emits warnings of unresolved patches case by case.
+///
+/// Patches from [`PatchEntries::unresolved`] have not yet get a "resolved",
+/// e.g. don't know which versions of packages, hence we can't use
+/// [`emit_warnings_of_unused_patches`] which requires summaries.
+fn emit_warnings_of_unresolved_patches(
+    ws: &Workspace<'_>,
+    resolve: &Resolve,
+    patches: &PatchEntries,
+) -> CargoResult<()> {
+    let resolved_patched_pkg_ids: Vec<_> = resolve
+        .iter()
+        .filter(|pkg_id| pkg_id.source_id().is_patched())
+        .collect();
+    for (url, patches) in &patches.unresolved {
+        let canonical_url = CanonicalUrl::new(url)?;
+        for patch in patches {
+            let maybe_already_used = resolved_patched_pkg_ids
+                .iter()
+                .filter(|id| {
+                    let source_id = id.source_id();
+                    let url = source_id.canonical_url().raw_canonicalized_url();
+                    // To check if the patch is for the same source,
+                    // we need strip `patched` prefix here,
+                    // as CanonicalUrl preserves that.
+                    let url = url.as_str().strip_prefix("patched+").unwrap();
+                    url == canonical_url.raw_canonicalized_url().as_str()
+                })
+                .any(|id| patch.matches_ignoring_source(*id));
+
+            if maybe_already_used {
+                continue;
+            }
+
+            let url = if url.as_str() == CRATES_IO_INDEX {
+                "crates-io"
+            } else {
+                url.as_str()
+            };
+
+            let msg = format!(
+                "unused patch `{}@{}` {} in `{url}`",
+                patch.name_in_toml(),
+                patch.version_req(),
+                patch.source_id(),
+            );
+            ws.gctx().shell().warn(msg)?;
+        }
+    }
+    Ok(())
+}
+
 /// Informs `registry` and `version_pref` that `[patch]` entries are available
 /// and preferable for the dependency resolution.
 ///
@@ -795,14 +897,20 @@ fn emit_warnings_of_unused_patches(
 #[tracing::instrument(level = "debug", skip_all, ret)]
 fn register_patch_entries(
     registry: &mut PackageRegistry<'_>,
-    ws: &Workspace<'_>,
+    patches: Option<&PatchEntries>,
     previous: Option<&Resolve>,
     version_prefs: &mut VersionPreferences,
     keep_previous: Keep<'_>,
 ) -> CargoResult<HashSet<PackageId>> {
     let mut avoid_patch_ids = HashSet::new();
-    for (url, patches) in ws.root_patch()?.iter() {
-        for patch in patches {
+    let Some(patches) = patches else {
+        return Ok(avoid_patch_ids);
+    };
+
+    registry.clear_patch();
+
+    for (url, patches) in patches.iter() {
+        for patch in patches.iter() {
             version_prefs.prefer_dependency(patch.clone());
         }
         let Some(previous) = previous else {
@@ -821,7 +929,7 @@ fn register_patch_entries(
         // previous resolve graph, which is primarily what's done here to
         // build the `registrations` list.
         let mut registrations = Vec::new();
-        for dep in patches {
+        for dep in patches.iter() {
             let candidates = || {
                 previous
                     .iter()
@@ -929,4 +1037,206 @@ fn lock_replacements(
         None => root_replace.to_vec(),
     };
     replace
+}
+
+/// All `[patch]` from a workspace, including patches from mainfests and configurations.
+///
+/// This keeps track of patches that are fully resolved and ready to be applied,
+/// as well as patches that are pending resolution.
+#[derive(Debug, Default)]
+struct PatchEntries {
+    /// Patches that have been resolved and are ready to be applied.
+    ///
+    /// All patches fall into this, except file `[patch]`, which need delay appalications.
+    ready_patches: HashMap<Url, Vec<Dependency>>,
+    /// Patches that are pending resolution.
+    ///
+    /// Only after a few dependency resolution happen, can a `[patch]` entry
+    /// with patch files know which version it is going to patch. Hence we need
+    /// to "delay" the patch process until at least one resolution is done, and
+    /// re-resolves the graph is any patch become applicable with the newly
+    /// resolved dependency graph.
+    unresolved: Vec<(Url, Vec<Dependency>)>,
+
+    from_previous: HashMap<Url, Vec<LockedPatchDependency>>,
+
+    /// How many times [`PatchEntries::requires_reresolve`] has been called.
+    resolve_times: u32,
+}
+
+impl PatchEntries {
+    const RESOLVE_TIMES_LIMIT: u32 = 20;
+
+    fn from_workspace(ws: &Workspace<'_>, previous: Option<&Resolve>) -> CargoResult<PatchEntries> {
+        let mut ready_patches = HashMap::new();
+        let mut unresolved = Vec::new();
+        for (url, patches) in ws.root_patch()?.into_iter() {
+            let (source_patches, file_patches): (Vec<_>, Vec<_>) = patches
+                .into_iter()
+                .partition(|p| !p.source_id().is_patched());
+            if !source_patches.is_empty() {
+                ready_patches.insert(url.clone(), source_patches);
+            }
+            if !file_patches.is_empty() {
+                unresolved.push((url, file_patches));
+            }
+        }
+
+        let mut from_previous = HashMap::<Url, Vec<_>>::new();
+        let resolved_patched_pkg_ids: Vec<_> = previous
+            .iter()
+            .flat_map(|previous| {
+                previous
+                    .iter()
+                    .chain(previous.unused_patches().iter().cloned())
+            })
+            .filter(|pkg_id| {
+                pkg_id
+                    .source_id()
+                    .patch_info()
+                    .map(|info| info.is_resolved())
+                    .unwrap_or_default()
+            })
+            .collect();
+        for (url, patches) in &unresolved {
+            let mut ready_patches = Vec::new();
+            let canonical_url = CanonicalUrl::new(url)?;
+            for patch in patches {
+                for pkg_id in resolved_patched_pkg_ids.iter().filter(|id| {
+                    let source_id = id.source_id();
+                    let url = source_id.canonical_url().raw_canonicalized_url();
+                    // To check if the patch is for the same source,
+                    // we need strip `patched` prefix here,
+                    // as CanonicalUrl preserves that.
+                    let url = url.as_str().strip_prefix("patched+").unwrap();
+                    url == canonical_url.raw_canonicalized_url().as_str()
+                }) {
+                    if patch.matches_ignoring_source(*pkg_id) {
+                        let mut patch = patch.clone();
+                        patch.set_source_id(pkg_id.source_id());
+                        patch.lock_to(*pkg_id);
+                        ready_patches.push(LockedPatchDependency {
+                            dependency: patch,
+                            package_id: *pkg_id,
+                            alt_package_id: None,
+                        });
+                    }
+                }
+            }
+            if !ready_patches.is_empty() {
+                from_previous
+                    .entry(url.clone())
+                    .or_default()
+                    .extend(ready_patches);
+            }
+        }
+
+        Ok(PatchEntries {
+            ready_patches,
+            unresolved,
+            from_previous,
+            resolve_times: 0,
+        })
+    }
+
+    /// Returns true when there are new patches ready to apply.
+    fn requires_reresolve(&mut self, resolve: &Resolve) -> CargoResult<bool> {
+        if self.resolve_times >= PatchEntries::RESOLVE_TIMES_LIMIT {
+            anyhow::bail!("patching recursion appears to never reach a fixed point");
+        }
+
+        let mut has_new_patches = false;
+        for (url, unresolved) in self.unresolved.iter_mut() {
+            let canonical_url = CanonicalUrl::new(url)?;
+            let mut ready_patches = Vec::new();
+            let mut pending_patches = Vec::new();
+            for patch in unresolved.iter() {
+                // TODO: Performance
+                let mut matched = false;
+                for pkg_id in resolve
+                    .iter()
+                    .filter(|id| id.source_id().canonical_url() == &canonical_url)
+                {
+                    if patch.matches_ignoring_source(pkg_id) {
+                        has_new_patches |= true;
+                        let mut patch = patch.clone();
+                        let name = pkg_id.name();
+                        let version = pkg_id.version();
+                        let patch_info = patch
+                            .source_id()
+                            .patch_info()
+                            .expect("patched source must have patch info")
+                            .clone()
+                            .finalize(name.to_string(), version.to_string());
+                        let new_source_id = SourceId::for_patches(pkg_id.source_id(), patch_info)?;
+                        patch.set_source_id(new_source_id);
+                        patch.lock_version(version);
+                        ready_patches.push(patch);
+                    }
+                    matched |= true;
+                }
+                // Match nothing. Still pending.
+                if !matched {
+                    pending_patches.push(patch.clone());
+                }
+            }
+            // Keep pending patches as unresolved for the next iteration, if any
+            *unresolved = pending_patches;
+
+            if !ready_patches.is_empty() {
+                if let Some(from_previous) = self.from_previous.get_mut(url) {
+                    for patch in &ready_patches {
+                        if let Some(index) = from_previous
+                            .iter()
+                            .position(|locked| patch.matches_ignoring_source(locked.package_id))
+                        {
+                            from_previous.swap_remove(index);
+                        }
+                    }
+                }
+                self.ready_patches
+                    .entry(url.clone())
+                    .or_default()
+                    .extend(ready_patches);
+            }
+        }
+
+        self.resolve_times += 1;
+        Ok(has_new_patches)
+    }
+
+    fn iter(&self) -> Box<dyn Iterator<Item = (&Url, Deps<'_>)> + '_> {
+        if self.ready_patches.is_empty() {
+            Box::new(self.from_previous.iter().map(|(url, deps)| {
+                let deps = Deps {
+                    deps: None,
+                    locked_deps: Some(deps),
+                };
+                (url, deps)
+            }))
+        } else {
+            Box::new(self.ready_patches.iter().map(|(url, deps)| {
+                let deps = Deps {
+                    deps: Some(deps),
+                    locked_deps: self.from_previous.get(url),
+                };
+                (url, deps)
+            }))
+        }
+    }
+}
+
+struct Deps<'a> {
+    deps: Option<&'a Vec<Dependency>>,
+    locked_deps: Option<&'a Vec<LockedPatchDependency>>,
+}
+
+impl<'a> Deps<'a> {
+    fn iter(&self) -> impl Iterator<Item = &'a Dependency> {
+        let locked_deps = self
+            .locked_deps
+            .into_iter()
+            .flat_map(|deps| deps.into_iter().map(|locked| &locked.dependency));
+        self.deps.into_iter().flatten().chain(locked_deps)
+    }
 }

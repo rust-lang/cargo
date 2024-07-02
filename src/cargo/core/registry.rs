@@ -180,6 +180,7 @@ pub type PatchDependency<'a> = (&'a Dependency, Option<LockedPatchDependency>);
 
 /// Argument to [`PackageRegistry::patch`] which is information about a `[patch]`
 /// directive that we found in a lockfile, if present.
+#[derive(Debug)]
 pub struct LockedPatchDependency {
     /// The original `Dependency` directive, except "locked" so it's version
     /// requirement is Locked to `foo` and its `SourceId` has a "precise" listed.
@@ -514,6 +515,13 @@ impl<'gctx> PackageRegistry<'gctx> {
     /// They might not be the same as patches actually used during dependency resolving.
     pub fn patches(&self) -> &HashMap<CanonicalUrl, Vec<Summary>> {
         &self.patches
+    }
+
+    /// Removes all residual state of patches.
+    pub fn clear_patch(&mut self) {
+        self.patches = Default::default();
+        self.patches_locked = false;
+        self.patches_available = Default::default();
     }
 
     /// Loads the [`Source`] for a given [`SourceId`] to this registry, making

@@ -39,7 +39,12 @@ impl CanonicalUrl {
         // almost certainly not using the same case conversion rules that GitHub
         // does. (See issue #84)
         if url.host_str() == Some("github.com") {
-            url = format!("https{}", &url[url::Position::AfterScheme..])
+            let proto = if url.scheme().starts_with("patched+") {
+                "patched+https"
+            } else {
+                "https"
+            };
+            url = format!("{proto}{}", &url[url::Position::AfterScheme..])
                 .parse()
                 .unwrap();
             let path = url.path().to_lowercase();

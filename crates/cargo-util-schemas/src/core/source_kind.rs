@@ -1,4 +1,5 @@
 use std::cmp::Ordering;
+use std::path::PathBuf;
 
 /// The possible kinds of code source.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -15,6 +16,8 @@ pub enum SourceKind {
     LocalRegistry,
     /// A directory-based registry.
     Directory,
+    /// A source with paths to patch files (unstable).
+    Patched(PatchInfo),
 }
 
 impl SourceKind {
@@ -27,6 +30,8 @@ impl SourceKind {
             SourceKind::SparseRegistry => None,
             SourceKind::LocalRegistry => Some("local-registry"),
             SourceKind::Directory => Some("directory"),
+            // Patched source URL already includes the `patched+` prefix, see `SourceId::new`
+            SourceKind::Patched(_) => None,
         }
     }
 }
@@ -106,6 +111,10 @@ impl Ord for SourceKind {
             (SourceKind::Directory, SourceKind::Directory) => Ordering::Equal,
             (SourceKind::Directory, _) => Ordering::Less,
             (_, SourceKind::Directory) => Ordering::Greater,
+
+            (SourceKind::Patched(a), SourceKind::Patched(b)) => a.cmp(b),
+            (SourceKind::Patched(_), _) => Ordering::Less,
+            (_, SourceKind::Patched(_)) => Ordering::Greater,
 
             (SourceKind::Git(a), SourceKind::Git(b)) => a.cmp(b),
         }
@@ -199,3 +208,134 @@ impl<'a> std::fmt::Display for PrettyRef<'a> {
         Ok(())
     }
 }
+
+/// Information to find the source package and patch files.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum PatchInfo {
+    /// The package to be patched is known and finalized.
+    Resolved {
+        /// Name and version of the package to be patched.
+        name: String,
+        /// Version of the package to be patched.
+        version: String,
+        /// Absolute paths to patch files.
+        ///
+        /// These are absolute to ensure Cargo can locate them in the patching phase.
+        patches: Vec<PathBuf>,
+    },
+    /// The package to be patched hasn't yet be resolved. Usually after a few
+    /// times of dependecy resolution, this will become [`PatchInfo::Resolved`].
+    Deferred {
+        /// Absolute paths to patch files.
+        ///
+        /// These are absolute to ensure Cargo can locate them in the patching phase.
+        patches: Vec<PathBuf>,
+    },
+}
+
+impl PatchInfo {
+    /// Collects patch information from query string.
+    ///
+    /// * `name` --- Package name
+    /// * `version` --- Package exact version
+    /// * `patch` --- Paths to patch files. Mutiple occurrences allowed.
+    pub fn from_query(
+        query_pairs: impl Iterator<Item = (impl AsRef<str>, impl AsRef<str>)>,
+    ) -> Result<PatchInfo, PatchInfoError> {
+        let mut name = None;
+        let mut version = None;
+        let mut patches = Vec::new();
+        for (k, v) in query_pairs {
+            let v = v.as_ref();
+            match k.as_ref() {
+                "name" => name = Some(v.to_owned()),
+                "version" => version = Some(v.to_owned()),
+                "patch" => patches.push(PathBuf::from(v)),
+                _ => {}
+            }
+        }
+        let name = name.ok_or_else(|| PatchInfoError("name"))?;
+        let version = version.ok_or_else(|| PatchInfoError("version"))?;
+        if patches.is_empty() {
+            return Err(PatchInfoError("path"));
+        }
+        Ok(PatchInfo::Resolved {
+            name,
+            version,
+            patches,
+        })
+    }
+
+    /// As a URL query string.
+    pub fn as_query(&self) -> PatchInfoQuery<'_> {
+        PatchInfoQuery(self)
+    }
+
+    pub fn finalize(self, name: String, version: String) -> Self {
+        match self {
+            PatchInfo::Deferred { patches } => PatchInfo::Resolved {
+                name,
+                version,
+                patches,
+            },
+            _ => panic!("patch info has already finalized: {self:?}"),
+        }
+    }
+
+    pub fn patches(&self) -> &[PathBuf] {
+        match self {
+            PatchInfo::Resolved { patches, .. } => patches.as_slice(),
+            PatchInfo::Deferred { patches } => patches.as_slice(),
+        }
+    }
+
+    pub fn is_resolved(&self) -> bool {
+        matches!(self, PatchInfo::Resolved { .. })
+    }
+}
+
+/// A [`PatchInfo`] that can be `Display`ed as URL query string.
+pub struct PatchInfoQuery<'a>(&'a PatchInfo);
+
+impl<'a> std::fmt::Display for PatchInfoQuery<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.0 {
+            PatchInfo::Resolved {
+                name,
+                version,
+                patches,
+            } => {
+                f.write_str("name=")?;
+                for value in url::form_urlencoded::byte_serialize(name.as_bytes()) {
+                    write!(f, "{value}")?;
+                }
+                f.write_str("&version=")?;
+                for value in url::form_urlencoded::byte_serialize(version.as_bytes()) {
+                    write!(f, "{value}")?;
+                }
+                if !patches.is_empty() {
+                    f.write_str("&")?;
+                }
+            }
+            _ => {}
+        }
+
+        let mut patches = self.0.patches().iter().peekable();
+        while let Some(path) = patches.next() {
+            f.write_str("patch=")?;
+            let path = path.to_str().expect("utf8 patch").replace("\\", "/");
+            for value in url::form_urlencoded::byte_serialize(path.as_bytes()) {
+                write!(f, "{value}")?;
+            }
+            if patches.peek().is_some() {
+                f.write_str("&")?
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Error parsing patch info from URL query string.
+#[derive(Debug, thiserror::Error)]
+#[error("missing query string `{0}`")]
+pub struct PatchInfoError(&'static str);
