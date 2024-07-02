@@ -67,6 +67,8 @@ pub struct BuildOutput {
     pub library_paths: Vec<PathBuf>,
     /// Names and link kinds of libraries, suitable for the `-l` flag.
     pub library_links: Vec<String>,
+    /// External direct library dependencies passed to rustc with the `--extern` flag.
+    pub library_externs: Vec<String>,
     /// Linker arguments suitable to be passed to `-C link-arg=<args>`
     pub linker_args: Vec<(LinkArgTarget, String)>,
     /// Various `--cfg` flags to pass to the compiler.
@@ -684,6 +686,7 @@ impl BuildOutput {
     ) -> CargoResult<BuildOutput> {
         let mut library_paths = Vec::new();
         let mut library_links = Vec::new();
+        let mut library_externs = Vec::new();
         let mut linker_args = Vec::new();
         let mut cfgs = Vec::new();
         let mut check_cfgs = Vec::new();
@@ -855,9 +858,10 @@ impl BuildOutput {
             // Keep in sync with TargetConfig::parse_links_overrides.
             match key {
                 "rustc-flags" => {
-                    let (paths, links) = BuildOutput::parse_rustc_flags(&value, &whence)?;
+                    let (paths, links, externs) = BuildOutput::parse_rustc_flags(&value, &whence)?;
                     library_links.extend(links.into_iter());
                     library_paths.extend(paths.into_iter());
+                    library_externs.extend(externs.into_iter());
                 }
                 "rustc-link-lib" => library_links.push(value.to_string()),
                 "rustc-link-search" => library_paths.push(PathBuf::from(value)),
@@ -1001,6 +1005,7 @@ impl BuildOutput {
         Ok(BuildOutput {
             library_paths,
             library_links,
+            library_externs,
             linker_args,
             cfgs,
             check_cfgs,
@@ -1018,19 +1023,22 @@ impl BuildOutput {
     pub fn parse_rustc_flags(
         value: &str,
         whence: &str,
-    ) -> CargoResult<(Vec<PathBuf>, Vec<String>)> {
+    ) -> CargoResult<(Vec<PathBuf>, Vec<String>, Vec<String>)> {
         let value = value.trim();
         let mut flags_iter = value
             .split(|c: char| c.is_whitespace())
             .filter(|w| w.chars().any(|c| !c.is_whitespace()));
-        let (mut library_paths, mut library_links) = (Vec::new(), Vec::new());
+        let (mut library_paths, mut library_links, mut externs) =
+            (Vec::new(), Vec::new(), Vec::new());
 
         while let Some(flag) = flags_iter.next() {
-            if flag.starts_with("-l") || flag.starts_with("-L") {
+            let is_extern = flag.starts_with("--extern");
+            if flag.starts_with("-l") || flag.starts_with("-L") || is_extern {
                 // Check if this flag has no space before the value as is
                 // common with tools like pkg-config
                 // e.g. -L/some/dir/local/lib or -licui18n
-                let (flag, mut value) = flag.split_at(2);
+                let split_location = if is_extern { 8 } else { 2 };
+                let (flag, mut value) = flag.split_at(split_location);
                 if value.is_empty() {
                     value = match flags_iter.next() {
                         Some(v) => v,
@@ -1045,19 +1053,20 @@ impl BuildOutput {
                 match flag {
                     "-l" => library_links.push(value.to_string()),
                     "-L" => library_paths.push(PathBuf::from(value)),
+                    "--extern" => externs.push(value.to_string()),
 
                     // This was already checked above
                     _ => unreachable!(),
                 };
             } else {
                 bail!(
-                    "Only `-l` and `-L` flags are allowed in {}: `{}`",
+                    "Only `-l`, `-L` and `--extern` flags are allowed in {}: `{}`",
                     whence,
                     value
                 )
             }
         }
-        Ok((library_paths, library_links))
+        Ok((library_paths, library_links, externs))
     }
 
     /// Parses [`cargo::rustc-env`] instruction.
