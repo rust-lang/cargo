@@ -1,8 +1,7 @@
 //! Tests for `cargo-features` definitions.
 
-#![allow(deprecated)]
-
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 use cargo_test_support::{project, registry};
 
 #[cargo_test]
@@ -24,9 +23,8 @@ fn feature_required() {
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   the `im-a-teapot` manifest key is unstable and may not work properly in England
@@ -34,22 +32,18 @@ Caused by:
 Caused by:
   feature `test-dummy-unstable` is required
 
-  The package requires the Cargo feature called `test-dummy-unstable`, \
-  but that feature is not stabilized in this version of Cargo (1.[..]).
-  Consider adding `cargo-features = [\"test-dummy-unstable\"]` to the top of Cargo.toml \
-  (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
-  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html for more information \
-  about the status of this feature.
-",
-        )
+  The package requires the Cargo feature called `test-dummy-unstable`, but that feature is not stabilized in this version of Cargo (1.[..]).
+  Consider adding `cargo-features = ["test-dummy-unstable"]` to the top of Cargo.toml (above the [package] table) to tell Cargo you are opting in to use this unstable feature.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html for more information about the status of this feature.
+
+"#]])
         .run();
 
     // Same, but stable.
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   the `im-a-teapot` manifest key is unstable and may not work properly in England
@@ -57,13 +51,11 @@ Caused by:
 Caused by:
   feature `test-dummy-unstable` is required
 
-  The package requires the Cargo feature called `test-dummy-unstable`, \
-  but that feature is not stabilized in this version of Cargo (1.[..]).
+  The package requires the Cargo feature called `test-dummy-unstable`, but that feature is not stabilized in this version of Cargo (1.[..]).
   Consider trying a newer version of Cargo (this may require the nightly release).
-  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html \
-  for more information about the status of this feature.
-",
-        )
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html for more information about the status of this feature.
+
+"#]])
         .run();
 }
 
@@ -105,16 +97,15 @@ fn feature_required_dependency() {
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] [..]
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
-[DOWNLOADING] [..]
-[DOWNLOADED] bar v1.0.0 [..]
-error: failed to download replaced source registry `crates-io`
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[ERROR] failed to download replaced source registry `crates-io`
 
 Caused by:
-  failed to parse manifest at `[..]/bar-1.0.0/Cargo.toml`
+  failed to parse manifest at `[ROOT]/home/.cargo/registry/src/-[HASH]/bar-1.0.0/Cargo.toml`
 
 Caused by:
   the `im-a-teapot` manifest key is unstable and may not work properly in England
@@ -122,21 +113,18 @@ Caused by:
 Caused by:
   feature `test-dummy-unstable` is required
 
-  The package requires the Cargo feature called `test-dummy-unstable`, \
-  but that feature is not stabilized in this version of Cargo (1.[..]).
+  The package requires the Cargo feature called `test-dummy-unstable`, but that feature is not stabilized in this version of Cargo (1.[..]).
   Consider trying a more recent nightly release.
-  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html \
-  for more information about the status of this feature.
-",
-        )
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html for more information about the status of this feature.
+
+"#]])
         .run();
 
     // Same, but stable.
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to download `bar v1.0.0`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to download `bar v1.0.0`
 
 Caused by:
   unable to get packages from source
@@ -145,7 +133,7 @@ Caused by:
   failed to download replaced source registry `crates-io`
 
 Caused by:
-  failed to parse manifest at `[..]/bar-1.0.0/Cargo.toml`
+  failed to parse manifest at `[ROOT]/home/.cargo/registry/src/-[HASH]/bar-1.0.0/Cargo.toml`
 
 Caused by:
   the `im-a-teapot` manifest key is unstable and may not work properly in England
@@ -153,13 +141,11 @@ Caused by:
 Caused by:
   feature `test-dummy-unstable` is required
 
-  The package requires the Cargo feature called `test-dummy-unstable`, \
-  but that feature is not stabilized in this version of Cargo (1.[..]).
+  The package requires the Cargo feature called `test-dummy-unstable`, but that feature is not stabilized in this version of Cargo (1.[..]).
   Consider trying a newer version of Cargo (this may require the nightly release).
-  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html \
-  for more information about the status of this feature.
-",
-        )
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html for more information about the status of this feature.
+
+"#]])
         .run();
 }
 
@@ -182,14 +168,13 @@ fn unknown_feature() {
         .build();
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   unknown cargo feature `foo`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -211,15 +196,13 @@ fn stable_feature_warns() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("check")
-        .with_stderr(
-            "\
-warning: the cargo feature `test-dummy-stable` has been stabilized in the 1.0 \
-release and is no longer necessary to be listed in the manifest
-  See https://doc.rust-lang.org/[..]cargo/ for more information about using this feature.
-[CHECKING] a [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[WARNING] the cargo feature `test-dummy-stable` has been stabilized in the 1.0 release and is no longer necessary to be listed in the manifest
+  See https://doc.rust-lang.org/cargo/ for more information about using this feature.
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -244,12 +227,11 @@ fn allow_features() {
 
     p.cargo("-Zallow-features=test-dummy-unstable check")
         .masquerade_as_nightly_cargo(&["allow-features", "test-dummy-unstable"])
-        .with_stderr(
-            "\
-[CHECKING] a [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("-Zallow-features=test-dummy-unstable,print-im-a-teapot -Zprint-im-a-teapot check")
@@ -258,7 +240,10 @@ fn allow_features() {
             "test-dummy-unstable",
             "print-im-a-teapot",
         ])
-        .with_stdout("im-a-teapot = true")
+        .with_stdout_data(str![[r#"
+im-a-teapot = true
+
+"#]])
         .run();
 
     p.cargo("-Zallow-features=test-dummy-unstable -Zprint-im-a-teapot check")
@@ -268,24 +253,22 @@ fn allow_features() {
             "print-im-a-teapot",
         ])
         .with_status(101)
-        .with_stderr(
-            "\
-error: the feature `print-im-a-teapot` is not in the list of allowed features: [test-dummy-unstable]
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] the feature `print-im-a-teapot` is not in the list of allowed features: [test-dummy-unstable]
+
+"#]])
         .run();
 
     p.cargo("-Zallow-features= check")
         .masquerade_as_nightly_cargo(&["allow-features", "test-dummy-unstable"])
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   the feature `test-dummy-unstable` is not in the list of allowed features: []
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -314,17 +297,20 @@ fn allow_features_to_rustc() {
     p.cargo("-Zallow-features= check")
         .masquerade_as_nightly_cargo(&["allow-features"])
         .with_status(101)
-        .with_stderr_contains("[..]E0725[..]")
+        .with_stderr_data(str![[r#"
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+error[E0725]: the feature `rustc_attrs` is not in the list of allowed features
+...
+"#]])
         .run();
 
     p.cargo("-Zallow-features=rustc_attrs check")
         .masquerade_as_nightly_cargo(&["allow-features"])
-        .with_stderr(
-            "\
-[CHECKING] a [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -360,12 +346,11 @@ fn allow_features_in_cfg() {
             "test-dummy-unstable",
             "print-im-a-teapot",
         ])
-        .with_stderr(
-            "\
-[CHECKING] a [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("-Zprint-im-a-teapot check")
@@ -374,18 +359,23 @@ fn allow_features_in_cfg() {
             "test-dummy-unstable",
             "print-im-a-teapot",
         ])
-        .with_stdout("im-a-teapot = true")
-        .with_stderr("[FINISHED] [..]")
+        .with_stdout_data(str![[r#"
+im-a-teapot = true
+
+"#]])
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("-Zunstable-options check")
         .masquerade_as_nightly_cargo(&["allow-features", "test-dummy-unstable", "print-im-a-teapot"])
         .with_status(101)
-        .with_stderr(
-            "\
-error: the feature `unstable-options` is not in the list of allowed features: [print-im-a-teapot, test-dummy-unstable]
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] the feature `unstable-options` is not in the list of allowed features: [print-im-a-teapot, test-dummy-unstable]
+
+"#]])
         .run();
 
     // -Zallow-features overrides .cargo/config.toml
@@ -396,11 +386,10 @@ error: the feature `unstable-options` is not in the list of allowed features: [p
             "print-im-a-teapot",
         ])
         .with_status(101)
-        .with_stderr(
-            "\
-error: the feature `print-im-a-teapot` is not in the list of allowed features: [test-dummy-unstable]
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] the feature `print-im-a-teapot` is not in the list of allowed features: [test-dummy-unstable]
+
+"#]])
         .run();
 
     p.cargo("-Zallow-features= check")
@@ -410,14 +399,13 @@ error: the feature `print-im-a-teapot` is not in the list of allowed features: [
             "print-im-a-teapot",
         ])
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   the feature `test-dummy-unstable` is not in the list of allowed features: []
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -441,28 +429,22 @@ fn nightly_feature_requires_nightly() {
         .build();
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
-        .with_stderr(
-            "\
-[CHECKING] a [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
-  but this is the `stable` channel
-  See [..]
-  See https://doc.rust-lang.org/[..]cargo/reference/unstable.html for more \
-  information about using this feature.
-",
-        )
+  the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, but this is the `stable` channel
+...
+"#]])
         .run();
 }
 
@@ -500,39 +482,33 @@ fn nightly_feature_requires_nightly_in_dep() {
         .build();
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[CHECKING] a [..]
-[CHECKING] b [..]
-[FINISHED] [..]
-",
-        )
+[CHECKING] a v0.0.1 ([ROOT]/foo/a)
+[CHECKING] b v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to get `a` as a dependency of package `b v0.0.1 ([..])`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to get `a` as a dependency of package `b v0.0.1 ([ROOT]/foo)`
 
 Caused by:
   failed to load source for dependency `a`
 
 Caused by:
-  Unable to update [..]
+  Unable to update [ROOT]/foo/a
 
 Caused by:
-  failed to parse manifest at `[..]`
+  failed to parse manifest at `[ROOT]/foo/a/Cargo.toml`
 
 Caused by:
-  the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
-  but this is the `stable` channel
-  See [..]
-  See https://doc.rust-lang.org/[..]cargo/reference/unstable.html for more \
-  information about using this feature.
-",
-        )
+  the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, but this is the `stable` channel
+...
+"#]])
         .run();
 }
 
@@ -556,28 +532,23 @@ fn cant_publish() {
         .build();
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
-        .with_stderr(
-            "\
-[CHECKING] a [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-error: failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, \
-  but this is the `stable` channel
-  See [..]
-  See https://doc.rust-lang.org/[..]cargo/reference/unstable.html for more \
-  information about using this feature.
-",
-        )
+  the cargo feature `test-dummy-unstable` requires a nightly version of Cargo, but this is the `stable` channel
+...
+
+"#]])
         .run();
 }
 
@@ -601,34 +572,36 @@ fn z_flags_rejected() {
         .build();
     p.cargo("check -Zprint-im-a-teapot")
         .with_status(101)
-        .with_stderr(
-            "error: the `-Z` flag is only accepted on the nightly \
-             channel of Cargo, but this is the `stable` channel\n\
-             See [..]",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] the `-Z` flag is only accepted on the nightly channel of Cargo, but this is the `stable` channel
+See [..]
+
+"#]])
         .run();
 
     p.cargo("check -Zarg")
         .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_status(101)
-        .with_stderr(
-            r#"error: unknown `-Z` flag specified: arg
+        .with_stderr_data(str![[r#"
+[ERROR] unknown `-Z` flag specified: arg
 
 For available unstable features, see https://doc.rust-lang.org/nightly/cargo/reference/unstable.html
 If you intended to use an unstable rustc feature, try setting `RUSTFLAGS="-Zarg"`
-"#,
-        )
+
+"#]])
         .run();
 
     p.cargo("check -Zprint-im-a-teapot")
         .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
-        .with_stdout("im-a-teapot = true\n")
-        .with_stderr(
-            "\
-[CHECKING] a [..]
-[FINISHED] [..]
-",
-        )
+        .with_stdout_data(str![[r#"
+im-a-teapot = true
+
+"#]])
+        .with_stderr_data(str![[r#"
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -658,23 +631,22 @@ fn publish_allowed() {
     p.cargo("publish")
         .replace_crates_io(registry.index_url())
         .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[WARNING] [..]
-[..]
-[PACKAGING] a v0.0.1 [..]
-[PACKAGED] [..]
-[VERIFYING] a v0.0.1 [..]
-[COMPILING] a v0.0.1 [..]
-[FINISHED] [..]
-[UPLOADING] a v0.0.1 [..]
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] a v0.0.1 ([ROOT]/foo)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] a v0.0.1 ([ROOT]/foo)
+[COMPILING] a v0.0.1 ([ROOT]/foo/target/package/a-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] a v0.0.1 ([ROOT]/foo)
 [UPLOADED] a v0.0.1 to registry `crates-io`
 [NOTE] waiting for `a v0.0.1` to be available at registry `crates-io`.
 You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] a v0.0.1 at registry `crates-io`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -696,16 +668,15 @@ fn wrong_position() {
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["test-dummy-unstable"])
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] the field `cargo-features` should be set at the top of Cargo.toml before any tables
  --> Cargo.toml:6:34
   |
-6 |                 cargo-features = [\"test-dummy-unstable\"]
+6 |                 cargo-features = ["test-dummy-unstable"]
   |                                  ^^^^^^^^^^^^^^^^^^^^^^^
   |
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -715,27 +686,24 @@ fn z_stabilized() {
 
     p.cargo("check -Z cache-messages")
         .masquerade_as_nightly_cargo(&["always_nightly"])
-        .with_stderr(
-            "\
-warning: flag `-Z cache-messages` has been stabilized in the 1.40 release, \
-  and is no longer necessary
+        .with_stderr_data(str![[r#"
+[WARNING] flag `-Z cache-messages` has been stabilized in the 1.40 release, and is no longer necessary
   Message caching is now always enabled.
 
-[CHECKING] foo [..]
-[FINISHED] [..]
-",
-        )
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("check -Z offline")
         .masquerade_as_nightly_cargo(&["always_nightly"])
         .with_status(101)
-        .with_stderr(
-            "\
-error: flag `-Z offline` has been stabilized in the 1.36 release
+        .with_stderr_data(str![[r#"
+[ERROR] flag `-Z offline` has been stabilized in the 1.36 release
   Offline mode is now available via the --offline CLI option
 
-",
-        )
+
+"#]])
         .run();
 }
