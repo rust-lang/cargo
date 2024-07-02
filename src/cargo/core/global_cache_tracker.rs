@@ -138,6 +138,8 @@ const REGISTRY_CRATE_TABLE: &str = "registry_crate";
 const REGISTRY_SRC_TABLE: &str = "registry_src";
 const GIT_DB_TABLE: &str = "git_db";
 const GIT_CO_TABLE: &str = "git_checkout";
+const WORKSPACE_MANIFEST_TABLE: &str = "workspace_manifest_index";
+const TARGET_DIR_TABLE: &str = "target_dir_index";
 
 /// How often timestamps will be updated.
 ///
@@ -207,6 +209,26 @@ pub struct GitCheckout {
     /// This can be None when the size is unknown. See [`RegistrySrc::size`]
     /// for an explanation.
     pub size: Option<u64>,
+}
+
+/// The key for a workspace manifest entry stored in the database.
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+pub struct WorkspaceManifestIndex {
+    /// A unique name of the workspace manifest.
+    pub workspace_manifest_path: InternedString,
+}
+
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+pub struct TargetDirIndex {
+    /// A unique name of the target directory.
+    pub target_dir_path: InternedString,
+}
+
+/// The key for a workspace entry stored in the database.
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+pub struct WorkspaceSrc {
+    pub workspace_manifest_path: InternedString,
+    pub target_dir_path: InternedString,
 }
 
 /// Filesystem paths in the global cache.
@@ -303,6 +325,30 @@ fn migrations() -> Vec<Migration> {
             )?;
             Ok(())
         }),
+        basic_migration(
+            "CREATE TABLE workspace_manifest_index (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                timestamp INTEGER NOT NULL
+            )",
+        ),
+        basic_migration(
+            "CREATE TABLE target_dir_index (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                timestamp INTEGER NOT NULL
+            )",
+        ),
+        basic_migration(
+            "CREATE TABLE workspace_src (
+                workspace_id INTEGER NOT NULL,
+                target_dir_id INTEGER NOT NULL,
+                timestamp INTEGER NOT NULL,
+                PRIMARY KEY (workspace_id, target_dir_id),
+                FOREIGN KEY (workspace_id) REFERENCES workspace_manifest_index (id) ON DELETE CASCADE,
+                FOREIGN KEY (target_dir_id) REFERENCES target_dir_index (id) ON DELETE CASCADE
+            )",
+        )
     ]
 }
 
@@ -505,6 +551,42 @@ impl GlobalCacheTracker {
                     encoded_git_name,
                     short_name,
                     size,
+                };
+                Ok((kind, timestamp))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    // Return all workspace_manifest cache timestamps.
+    pub fn workspace_manifest_all(&self) -> CargoResult<Vec<(WorkspaceManifestIndex, Timestamp)>> {
+        let mut stmt = self
+            .conn
+            .prepare_cached("SELECT name, timestamp FROM workspace_manifest_index")?;
+        let rows = stmt
+            .query_map([], |row| {
+                let workspace_manifest_path = row.get_unwrap(0);
+                let timestamp = row.get_unwrap(1);
+                let kind = WorkspaceManifestIndex {
+                    workspace_manifest_path: workspace_manifest_path,
+                };
+                Ok((kind, timestamp))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    // Return all target dir cache timestamps.
+    pub fn target_dir_all(&self) -> CargoResult<Vec<(TargetDirIndex, Timestamp)>> {
+        let mut stmt = self
+            .conn
+            .prepare_cached("SELECT name, timestamp FROM target_dir_index")?;
+        let rows = stmt
+            .query_map([], |row| {
+                let target_dir_path = row.get_unwrap(0);
+                let timestamp = row.get_unwrap(1);
+                let kind = TargetDirIndex {
+                    target_dir_path: target_dir_path,
                 };
                 Ok((kind, timestamp))
             })?
@@ -1413,7 +1495,16 @@ pub struct DeferredGlobalLastUse {
     /// The key is the git db name (which is its directory name) and the value
     /// is the `id` in the `git_db` table.
     git_keys: HashMap<InternedString, ParentId>,
-
+    /// Cache of workspace manifest keys, used for faster fetching.
+    ///
+    /// The key is the workspace manifest path and the value
+    /// is the `id` in the `workspace_manifest` table.
+    workspace_manifest_keys: HashMap<InternedString, ParentId>,
+    /// Cache of target dir keys, used for faster fetching.
+    ///
+    /// The key is the target dir path and the value
+    /// is the `id` in the `target_dir` table.
+    target_dir_keys: HashMap<InternedString, ParentId>,
     /// New registry index entries to insert.
     registry_index_timestamps: HashMap<RegistryIndex, Timestamp>,
     /// New registry `.crate` entries to insert.
@@ -1424,6 +1515,12 @@ pub struct DeferredGlobalLastUse {
     git_db_timestamps: HashMap<GitDb, Timestamp>,
     /// New git checkout entries to insert.
     git_checkout_timestamps: HashMap<GitCheckout, Timestamp>,
+    /// New workspace manifest index entries to insert.
+    workspace_manifest_index_timestamps: HashMap<WorkspaceManifestIndex, Timestamp>,
+    /// New target dir index entries to insert.
+    target_dir_index_timestamps: HashMap<TargetDirIndex, Timestamp>,
+    /// New workspace src entries to insert.
+    workspace_src_timestamps: HashMap<WorkspaceSrc, Timestamp>,
     /// This is used so that a warning about failing to update the database is
     /// only displayed once.
     save_err_has_warned: bool,
@@ -1437,11 +1534,16 @@ impl DeferredGlobalLastUse {
         DeferredGlobalLastUse {
             registry_keys: HashMap::new(),
             git_keys: HashMap::new(),
+            workspace_manifest_keys: HashMap::new(),
+            target_dir_keys: HashMap::new(),
             registry_index_timestamps: HashMap::new(),
             registry_crate_timestamps: HashMap::new(),
             registry_src_timestamps: HashMap::new(),
             git_db_timestamps: HashMap::new(),
             git_checkout_timestamps: HashMap::new(),
+            target_dir_index_timestamps: HashMap::new(),
+            workspace_manifest_index_timestamps: HashMap::new(),
+            workspace_src_timestamps: HashMap::new(),
             save_err_has_warned: false,
             now: now(),
         }
@@ -1453,6 +1555,9 @@ impl DeferredGlobalLastUse {
             && self.registry_src_timestamps.is_empty()
             && self.git_db_timestamps.is_empty()
             && self.git_checkout_timestamps.is_empty()
+            && self.target_dir_index_timestamps.is_empty()
+            && self.workspace_manifest_index_timestamps.is_empty()
+            && self.workspace_src_timestamps.is_empty()
     }
 
     fn clear(&mut self) {
@@ -1461,6 +1566,9 @@ impl DeferredGlobalLastUse {
         self.registry_src_timestamps.clear();
         self.git_db_timestamps.clear();
         self.git_checkout_timestamps.clear();
+        self.target_dir_index_timestamps.clear();
+        self.workspace_manifest_index_timestamps.clear();
+        self.workspace_src_timestamps.clear();
     }
 
     /// Indicates the given [`RegistryIndex`] has been used right now.
@@ -1487,6 +1595,13 @@ impl DeferredGlobalLastUse {
     /// Also implicitly marks the git db used, too.
     pub fn mark_git_checkout_used(&mut self, git_checkout: GitCheckout) {
         self.mark_git_checkout_used_stamp(git_checkout, None);
+    }
+
+    /// Indicates the given [`WorkspaceSrc`] has been used right now.
+    ///
+    /// Also implicitly marks the workspace manifest used, too.
+    pub fn mark_workspace_src_used(&mut self, workspace_src: WorkspaceSrc) {
+        self.mark_workspace_src_used_stamp(workspace_src, None);
     }
 
     /// Indicates the given [`RegistryIndex`] has been used with the given
@@ -1553,6 +1668,26 @@ impl DeferredGlobalLastUse {
         self.git_checkout_timestamps.insert(git_checkout, timestamp);
     }
 
+    pub fn mark_workspace_src_used_stamp(
+        &mut self,
+        workspace_src: WorkspaceSrc,
+        timestamp: Option<&SystemTime>,
+    ) {
+        let timestamp = timestamp.map_or(self.now, to_timestamp);
+        let workspace_manifest_index = WorkspaceManifestIndex {
+            workspace_manifest_path: workspace_src.workspace_manifest_path,
+        };
+        let target_dir_db = TargetDirIndex {
+            target_dir_path: workspace_src.target_dir_path,
+        };
+        self.target_dir_index_timestamps
+            .insert(target_dir_db, timestamp);
+        self.workspace_manifest_index_timestamps
+            .insert(workspace_manifest_index, timestamp);
+        self.workspace_src_timestamps
+            .insert(workspace_src, timestamp);
+    }
+
     /// Saves all of the deferred information to the database.
     ///
     /// This will also clear the state of `self`.
@@ -1566,9 +1701,13 @@ impl DeferredGlobalLastUse {
         // These must run before the ones that refer to their IDs.
         self.insert_registry_index_from_cache(&tx)?;
         self.insert_git_db_from_cache(&tx)?;
+        self.insert_target_dir_index_from_cache(&tx)?;
+        self.insert_workspace_manifest_index_from_cache(&tx)?;
+
         self.insert_registry_crate_from_cache(&tx)?;
         self.insert_registry_src_from_cache(&tx)?;
         self.insert_git_checkout_from_cache(&tx)?;
+        self.insert_workspace_src_from_cache(&tx)?;
         tx.commit()?;
         trace!(target: "gc", "last-use save complete");
         Ok(())
@@ -1629,6 +1768,32 @@ impl DeferredGlobalLastUse {
             git_db_timestamps,
             git_keys,
             encoded_git_name
+        );
+    }
+
+    // Flushes all of the `target_dir_db_timestamps` to the database,
+    // clearing `target_dir_index_timestamps`.
+    fn insert_target_dir_index_from_cache(&mut self, conn: &Connection) -> CargoResult<()> {
+        insert_or_update_parent!(
+            self,
+            conn,
+            "target_dir_index",
+            target_dir_index_timestamps,
+            target_dir_keys,
+            target_dir_path
+        );
+    }
+
+    // Flushes all of the `workspace_manifest_index_timestamps` to the database,
+    // clearing `workspace_manifest_index_timestamps`.
+    fn insert_workspace_manifest_index_from_cache(&mut self, conn: &Connection) -> CargoResult<()> {
+        insert_or_update_parent!(
+            self,
+            conn,
+            "workspace_manifest_index",
+            workspace_manifest_index_timestamps,
+            workspace_manifest_keys,
+            workspace_manifest_path
         );
     }
 
@@ -1705,6 +1870,79 @@ impl DeferredGlobalLastUse {
         }
 
         Ok(())
+    }
+
+    // Flushes all of the `workspace_src_timestamps` to the database,
+    // clearing `workspace_src_timestamps`.
+    fn insert_workspace_src_from_cache(&mut self, conn: &Connection) -> CargoResult<()> {
+        let workspace_src_timestamps = std::mem::take(&mut self.workspace_src_timestamps);
+        for (workspace_src, timestamp) in workspace_src_timestamps {
+            let workspace_id = self.workspace_id(conn, workspace_src.workspace_manifest_path)?;
+            let target_dir_id = self.target_dir_id(conn, workspace_src.target_dir_path)?;
+            let mut stmt = conn.prepare_cached(
+                "INSERT INTO workspace_src (workspace_id, target_dir_id, timestamp)
+                 VALUES (?1, ?2, ?3)
+                 ON CONFLICT DO UPDATE SET timestamp=excluded.timestamp
+                    WHERE timestamp < ?4",
+            )?;
+            stmt.execute(params![
+                workspace_id,
+                target_dir_id,
+                timestamp,
+                timestamp - UPDATE_RESOLUTION
+            ])?;
+        }
+        Ok(())
+    }
+
+    fn workspace_id(
+        &mut self,
+        conn: &Connection,
+        encoded_workspace_manifest_path: InternedString,
+    ) -> CargoResult<ParentId> {
+        match self
+            .workspace_manifest_keys
+            .get(&encoded_workspace_manifest_path)
+        {
+            Some(i) => Ok(*i),
+            None => {
+                let Some(id) = GlobalCacheTracker::id_from_name(
+                    conn,
+                    WORKSPACE_MANIFEST_TABLE,
+                    &encoded_workspace_manifest_path,
+                )?
+                else {
+                    bail!("expected workspace_manifest {encoded_workspace_manifest_path} to exist, but wasn't found");
+                };
+                self.workspace_manifest_keys
+                    .insert(encoded_workspace_manifest_path, id);
+                Ok(id)
+            }
+        }
+    }
+
+    fn target_dir_id(
+        &mut self,
+        conn: &Connection,
+        encoded_target_dir_path: InternedString,
+    ) -> CargoResult<ParentId> {
+        match self.target_dir_keys.get(&encoded_target_dir_path) {
+            Some(i) => Ok(*i),
+            None => {
+                let Some(id) = GlobalCacheTracker::id_from_name(
+                    conn,
+                    TARGET_DIR_TABLE,
+                    &encoded_target_dir_path,
+                )?
+                else {
+                    bail!(
+                        "expected target_dir {encoded_target_dir_path} to exist, but wasn't found"
+                    );
+                };
+                self.target_dir_keys.insert(encoded_target_dir_path, id);
+                Ok(id)
+            }
+        }
     }
 
     /// Returns the numeric ID of the registry, either fetching from the local
