@@ -5,4 +5,5 @@ authors = ["Alex Crichton <alex@alexcrichton.com>"]
 edition = "2018"
 
 [dependencies]
+core = { path = "../core" }
 registry-dep-using-core = { version = "*", features = ['mockbuild'] }
