@@ -134,6 +134,7 @@ mod owner;
 mod package;
 mod package_features;
 mod patch;
+mod patch_files;
 mod path;
 mod paths;
 mod pkgid;
