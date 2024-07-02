@@ -178,6 +178,7 @@ mod tree;
 mod tree_graph_features;
 mod unit_graph;
 mod update;
+mod update_duplicated_with_precise_breaking_feature;
 mod vendor;
 mod verify_project;
 mod version;

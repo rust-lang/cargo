@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+
 use crate::command_prelude::*;
 
 use anyhow::anyhow;
 use cargo::ops::{self, UpdateOptions};
 use cargo::util::print_available_packages;
+use tracing::trace;
 
 pub fn cli() -> Command {
     subcommand("update")
@@ -92,28 +95,39 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let update_opts = UpdateOptions {
         recursive: args.flag("recursive"),
         precise: args.get_one::<String>("precise").map(String::as_str),
+        breaking: args.flag("breaking"),
         to_update,
         dry_run: args.dry_run(),
         workspace: args.flag("workspace"),
         gctx,
     };
 
-    if args.flag("breaking") {
-        gctx.cli_unstable()
-            .fail_if_stable_opt("--breaking", 12425)?;
+    let breaking_update = update_opts.breaking
+        || (update_opts.precise.is_some() && gctx.cli_unstable().unstable_options);
 
-        let upgrades = ops::upgrade_manifests(&mut ws, &update_opts.to_update)?;
-        ops::resolve_ws(&ws, update_opts.dry_run)?;
-        ops::write_manifest_upgrades(&ws, &upgrades, update_opts.dry_run)?;
-
-        if update_opts.dry_run {
-            update_opts
-                .gctx
-                .shell()
-                .warn("aborting update due to dry run")?;
+    // We are using the term "upgrade" here, which is the typical case, but
+    // it can also be a downgrade. In general, it is a change to a version
+    // req matching a precise version.
+    let upgrades = if breaking_update {
+        if update_opts.breaking {
+            gctx.cli_unstable()
+                .fail_if_stable_opt("--breaking", 12425)?;
         }
+
+        trace!("allowing breaking updates");
+        ops::upgrade_manifests(&mut ws, &update_opts.to_update, &update_opts.precise)?
     } else {
-        ops::update_lockfile(&ws, &update_opts)?;
+        HashMap::new()
+    };
+
+    ops::update_lockfile(&ws, &update_opts, &upgrades)?;
+    ops::write_manifest_upgrades(&ws, &upgrades, update_opts.dry_run)?;
+
+    if update_opts.dry_run {
+        update_opts
+            .gctx
+            .shell()
+            .warn("aborting update due to dry run")?;
     }
 
     Ok(())
