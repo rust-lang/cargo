@@ -7,11 +7,9 @@
 //! So we pick some random lint that will likely always be the same
 //! over time.
 
-#![allow(deprecated)]
-
 use super::config::write_config_toml;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_manifest, project, Project};
+use cargo_test_support::{basic_manifest, project, str, Project};
 
 // An arbitrary lint (unused_variables) that triggers a lint.
 // We use a special flag to force it to generate a report.
@@ -35,8 +33,13 @@ fn output_on_stable() {
 
     p.cargo("check")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
-        .with_stderr_contains(FUTURE_OUTPUT)
-        .with_stderr_contains("[..]cargo report[..]")
+        .with_stderr_data(str![[r#"
+...
+[WARNING] unused variable: `x`
+...
+[NOTE] to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+
+"#]])
         .run();
 }
 
@@ -50,7 +53,10 @@ fn no_gate_future_incompat_report() {
         .run();
 
     p.cargo("report future-incompatibilities --id foo")
-        .with_stderr_contains("error: no reports are currently available")
+        .with_stderr_data(str![[r#"
+[ERROR] no reports are currently available
+
+"#]])
         .with_status(101)
         .run();
 }
@@ -68,25 +74,24 @@ fn test_zero_future_incompat() {
     // No note if --future-incompat-report is not specified.
     p.cargo("check")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
-        .with_stderr(
-            "\
-[CHECKING] foo v0.0.0 [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("check --future-incompat-report")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
-        .with_stderr(
-            "\
-[FINISHED] [..]
-note: 0 dependencies had future-incompatible warnings
-",
-        )
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[NOTE] 0 dependencies had future-incompatible warnings
+
+"#]])
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test(
     nightly,
     reason = "-Zfuture-incompat-test requires nightly (permanently)"
@@ -98,8 +103,13 @@ fn test_single_crate() {
         let check_has_future_compat = || {
             p.cargo(command)
                 .env("RUSTFLAGS", "-Zfuture-incompat-test")
-                .with_stderr_contains(FUTURE_OUTPUT)
-                .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 [..]")
+                .with_stderr_data("\
+...
+[WARNING] unused variable: `x`
+...
+[WARNING] the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 ([ROOT]/foo)
+...
+")
                 .with_stderr_does_not_contain("[..]incompatibility[..]")
                 .run();
         };
@@ -126,7 +136,12 @@ frequency = 'never'
         );
         p.cargo(command)
             .env("RUSTFLAGS", "-Zfuture-incompat-test")
-            .with_stderr_contains(FUTURE_OUTPUT)
+            .with_stderr_data(
+                "\
+[WARNING] unused variable: `x`
+...
+",
+            )
             .with_stderr_does_not_contain("[..]rejected[..]")
             .with_stderr_does_not_contain("[..]incompatibility[..]")
             .run();
@@ -134,13 +149,19 @@ frequency = 'never'
         // Check that passing `--future-incompat-report` overrides `frequency = 'never'`
         p.cargo(command).arg("--future-incompat-report")
             .env("RUSTFLAGS", "-Zfuture-incompat-test")
-            .with_stderr_contains(FUTURE_OUTPUT)
-            .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 [..]")
-            .with_stderr_contains("  - foo@0.0.0[..]")
+            .with_stderr_data("\
+[WARNING] unused variable: `x`
+...
+[WARNING] the following packages contain code that will be rejected by a future version of Rust: foo v0.0.0 ([ROOT]/foo)
+...
+  - foo@0.0.0
+...
+")
             .run();
     }
 }
 
+#[allow(deprecated)]
 #[cargo_test(
     nightly,
     reason = "-Zfuture-incompat-test requires nightly (permanently)"
@@ -173,7 +194,11 @@ fn test_multi_crate() {
         p.cargo(command)
             .env("RUSTFLAGS", "-Zfuture-incompat-test")
             .with_stderr_does_not_contain(FUTURE_OUTPUT)
-            .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: first-dep v0.0.1, second-dep v0.0.2")
+            .with_stderr_data("\
+...
+[WARNING] the following packages contain code that will be rejected by a future version of Rust: first-dep v0.0.1, second-dep v0.0.2
+...
+")
             // Check that we don't have the 'triggers' message shown at the bottom of this loop,
             // and that we don't explain how to show a per-package report
             .with_stderr_does_not_contain("[..]triggers[..]")
@@ -183,20 +208,42 @@ fn test_multi_crate() {
 
         p.cargo(command).arg("--future-incompat-report")
             .env("RUSTFLAGS", "-Zfuture-incompat-test")
-            .with_stderr_contains("warning: the following packages contain code that will be rejected by a future version of Rust: first-dep v0.0.1, second-dep v0.0.2")
-            .with_stderr_contains("  - first-dep@0.0.1")
-            .with_stderr_contains("  - second-dep@0.0.2")
+            .with_stderr_data("\
+...
+[WARNING] the following packages contain code that will be rejected by a future version of Rust: first-dep v0.0.1, second-dep v0.0.2
+...
+  - first-dep@0.0.1
+...
+  - second-dep@0.0.2
+...
+")
             .run();
 
-        p.cargo("report future-incompatibilities").arg("--package").arg("first-dep@0.0.1")
-            .with_stdout_contains("The package `first-dep v0.0.1` currently triggers the following future incompatibility lints:")
-            .with_stdout_contains(FUTURE_OUTPUT)
+        p.cargo("report future-incompatibilities")
+            .arg("--package")
+            .arg("first-dep@0.0.1")
+            .with_stdout_data(
+                "\
+...
+The package `first-dep v0.0.1` currently triggers the following future incompatibility lints:
+> [WARNING] unused variable: `x`
+...
+",
+            )
             .with_stdout_does_not_contain("[..]second-dep-0.0.2/src[..]")
             .run();
 
-        p.cargo("report future-incompatibilities").arg("--package").arg("second-dep@0.0.2")
-            .with_stdout_contains("The package `second-dep v0.0.2` currently triggers the following future incompatibility lints:")
-            .with_stdout_contains(FUTURE_OUTPUT)
+        p.cargo("report future-incompatibilities")
+            .arg("--package")
+            .arg("second-dep@0.0.2")
+            .with_stdout_data(
+                "\
+...
+The package `second-dep v0.0.2` currently triggers the following future incompatibility lints:
+> [WARNING] unused variable: `x`
+...
+",
+            )
             .with_stdout_does_not_contain("[..]first-dep-0.0.1/src[..]")
             .run();
     }
@@ -225,8 +272,13 @@ fn test_multi_crate() {
     let id: String = id.chars().take_while(|c| *c != '`').collect();
 
     p.cargo(&format!("report future-incompatibilities --id {}", id))
-        .with_stdout_contains("The package `first-dep v0.0.1` currently triggers the following future incompatibility lints:")
-        .with_stdout_contains("The package `second-dep v0.0.2` currently triggers the following future incompatibility lints:")
+        .with_stdout_data(str![[r#"
+...
+The package `first-dep v0.0.1` currently triggers the following future incompatibility lints:
+...
+The package `second-dep v0.0.2` currently triggers the following future incompatibility lints:
+...
+"#]])
         .run();
 
     // Test without --id, and also the full output of the report.
@@ -262,6 +314,7 @@ fn test_multi_crate() {
     assert_eq!(lines.next(), None);
 }
 
+#[allow(deprecated)]
 #[cargo_test(
     nightly,
     reason = "-Zfuture-incompat-test requires nightly (permanently)"
@@ -293,7 +346,10 @@ fn bad_ids() {
 
     p.cargo("report future-incompatibilities --id 1")
         .with_status(101)
-        .with_stderr("error: no reports are currently available")
+        .with_stderr_data(str![[r#"
+[ERROR] no reports are currently available
+
+"#]])
         .run();
 
     p.cargo("check")
@@ -303,17 +359,18 @@ fn bad_ids() {
 
     p.cargo("report future-incompatibilities --id foo")
         .with_status(1)
-        .with_stderr("error: Invalid value: could not parse `foo` as a number")
+        .with_stderr_data(str![
+            "[ERROR] Invalid value: could not parse `foo` as a number"
+        ])
         .run();
 
     p.cargo("report future-incompatibilities --id 7")
         .with_status(101)
-        .with_stderr(
-            "\
-error: could not find report with ID 7
+        .with_stderr_data(str![[r#"
+[ERROR] could not find report with ID 7
 Available IDs are: 1
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -373,21 +430,29 @@ fn suggestions_for_updates() {
     // in a long while?).
     p.cargo("update without_updates").run();
 
-    let update_message = "\
+    p.cargo("check --future-incompat-report")
+        .masquerade_as_nightly_cargo(&["future-incompat-test"])
+        .env("RUSTFLAGS", "-Zfuture-incompat-test")
+        .with_stderr_data(str![[r#"
+...
 - Some affected dependencies have newer versions available.
 You may want to consider updating them to a newer version to see if the issue has been fixed.
 
 big_update v1.0.0 has the following newer versions available: 2.0.0
 with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.0.1
-";
-
-    p.cargo("check --future-incompat-report")
-        .masquerade_as_nightly_cargo(&["future-incompat-test"])
-        .env("RUSTFLAGS", "-Zfuture-incompat-test")
-        .with_stderr_contains(update_message)
+...
+"#]])
         .run();
 
     p.cargo("report future-incompatibilities")
-        .with_stdout_contains(update_message)
+        .with_stdout_data(str![[r#"
+...
+- Some affected dependencies have newer versions available.
+You may want to consider updating them to a newer version to see if the issue has been fixed.
+
+big_update v1.0.0 has the following newer versions available: 2.0.0
+with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.0.1
+...
+"#]])
         .run()
 }
