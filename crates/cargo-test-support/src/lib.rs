@@ -350,6 +350,17 @@ impl Project {
             .join(paths::get_lib_filename(name, kind))
     }
 
+    /// Path to a dynamic library.
+    /// `kind` should be one of: "lib", "rlib", "staticlib", "dylib", "proc-macro"
+    /// ex: `/path/to/cargo/target/cit/t0/foo/target/debug/examples/libex.dylib`
+    pub fn dylib(&self, name: &str) -> PathBuf {
+        self.target_debug_dir().join(format!(
+            "{}{name}{}",
+            env::consts::DLL_PREFIX,
+            env::consts::DLL_SUFFIX
+        ))
+    }
+
     /// Path to a debug binary.
     /// ex: `/path/to/cargo/target/cit/t0/foo/target/debug/foo`
     pub fn bin(&self, b: &str) -> PathBuf {
