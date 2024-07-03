@@ -2031,7 +2031,7 @@ impl ConfigError {
     }
 
     fn is_missing_field(&self) -> bool {
-        self.error.downcast_ref::<MissingField>().is_some()
+        self.error.downcast_ref::<MissingFieldError>().is_some()
     }
 
     fn missing(key: &ConfigKey) -> ConfigError {
@@ -2067,15 +2067,15 @@ impl fmt::Display for ConfigError {
 }
 
 #[derive(Debug)]
-struct MissingField(String);
+struct MissingFieldError(String);
 
-impl fmt::Display for MissingField {
+impl fmt::Display for MissingFieldError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "missing field `{}`", self.0)
     }
 }
 
-impl std::error::Error for MissingField {}
+impl std::error::Error for MissingFieldError {}
 
 impl serde::de::Error for ConfigError {
     fn custom<T: fmt::Display>(msg: T) -> Self {
@@ -2087,7 +2087,7 @@ impl serde::de::Error for ConfigError {
 
     fn missing_field(field: &'static str) -> Self {
         ConfigError {
-            error: anyhow::Error::new(MissingField(field.to_string())),
+            error: anyhow::Error::new(MissingFieldError(field.to_string())),
             definition: None,
         }
     }

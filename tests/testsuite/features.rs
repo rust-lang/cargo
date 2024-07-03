@@ -257,10 +257,13 @@ fn invalid6() {
     p.cargo("check --features foo")
         .with_status(101)
         .with_stderr_data(str![[r#"
+[ERROR] feature `foo` includes `bar/baz`, but `bar` is not a dependency
+ --> Cargo.toml:9:23
+  |
+9 |                 foo = ["bar/baz"]
+  |                       ^^^^^^^^^^^
+  |
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `foo` includes `bar/baz`, but `bar` is not a dependency
 
 "#]])
         .run();
@@ -289,10 +292,13 @@ fn invalid7() {
     p.cargo("check --features foo")
         .with_status(101)
         .with_stderr_data(str![[r#"
+[ERROR] feature `foo` includes `bar/baz`, but `bar` is not a dependency
+ --> Cargo.toml:9:23
+  |
+9 |                 foo = ["bar/baz"]
+  |                       ^^^^^^^^^^^
+  |
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `foo` includes `bar/baz`, but `bar` is not a dependency
 
 "#]])
         .run();

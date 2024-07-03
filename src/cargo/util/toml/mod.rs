@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::{self, FromStr};
 
+use crate::core::summary::MissingDependencyError;
 use crate::AlreadyPrintedError;
 use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
@@ -14,6 +15,7 @@ use cargo_util_schemas::manifest::{RustVersion, StringOrBool};
 use itertools::Itertools;
 use lazycell::LazyCell;
 use pathdiff::diff_paths;
+use toml_edit::ImDocument;
 use url::Url;
 
 use crate::core::compiler::{CompileKind, CompileTarget};
@@ -28,6 +30,7 @@ use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, Worksp
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
+use crate::util::lints::{get_span, rel_cwd_manifest_path};
 use crate::util::{self, context::ConfigRelativePath, GlobalContext, IntoUrl, OptVersionReq};
 
 mod embedded;
@@ -1435,24 +1438,42 @@ fn to_real_manifest(
             .unwrap_or_else(|| semver::Version::new(0, 0, 0)),
         source_id,
     );
-    let summary = Summary::new(
-        pkgid,
-        deps,
-        &resolved_toml
-            .features
-            .as_ref()
-            .unwrap_or(&Default::default())
-            .iter()
-            .map(|(k, v)| {
-                (
-                    InternedString::new(k),
-                    v.iter().map(InternedString::from).collect(),
-                )
-            })
-            .collect(),
-        resolved_package.links.as_deref(),
-        rust_version.clone(),
-    )?;
+    let summary = {
+        let summary = Summary::new(
+            pkgid,
+            deps,
+            &resolved_toml
+                .features
+                .as_ref()
+                .unwrap_or(&Default::default())
+                .iter()
+                .map(|(k, v)| {
+                    (
+                        InternedString::new(k),
+                        v.iter().map(InternedString::from).collect(),
+                    )
+                })
+                .collect(),
+            resolved_package.links.as_deref(),
+            rust_version.clone(),
+        );
+        // editon2024 stops exposing implicit features, which will strip weak optional dependencies from `dependencies`,
+        // need to check whether `dep_name` is stripped as unused dependency
+        if let Err(ref err) = summary {
+            if let Some(missing_dep) = err.downcast_ref::<MissingDependencyError>() {
+                missing_dep_diagnostic(
+                    missing_dep,
+                    &original_toml,
+                    &document,
+                    &contents,
+                    manifest_file,
+                    gctx,
+                )?;
+            }
+        }
+        summary?
+    };
+
     if summary.features().contains_key("default-features") {
         warnings.push(
             "`default-features = [\"..\"]` was found in [features]. \
@@ -1556,6 +1577,85 @@ fn to_real_manifest(
     manifest.feature_gate()?;
 
     Ok(manifest)
+}
+
+fn missing_dep_diagnostic(
+    missing_dep: &MissingDependencyError,
+    orig_toml: &TomlManifest,
+    document: &ImDocument<String>,
+    contents: &str,
+    manifest_file: &Path,
+    gctx: &GlobalContext,
+) -> CargoResult<()> {
+    let dep_name = missing_dep.dep_name;
+    let manifest_path = rel_cwd_manifest_path(manifest_file, gctx);
+    let feature_value_span =
+        get_span(&document, &["features", missing_dep.feature.as_str()], true).unwrap();
+
+    let title = format!(
+        "feature `{}` includes `{}`, but `{}` is not a dependency",
+        missing_dep.feature, missing_dep.feature_value, &dep_name
+    );
+    let help = format!("enable the dependency with `dep:{dep_name}`");
+    let info_label = format!(
+        "`{}` is an unused optional dependency since no feature enables it",
+        &dep_name
+    );
+    let message = Level::Error.title(&title);
+    let snippet = Snippet::source(&contents)
+        .origin(&manifest_path)
+        .fold(true)
+        .annotation(Level::Error.span(feature_value_span.start..feature_value_span.end));
+    let message = if missing_dep.weak_optional {
+        let mut orig_deps = vec![
+            (
+                orig_toml.dependencies.as_ref(),
+                vec![DepKind::Normal.kind_table()],
+            ),
+            (
+                orig_toml.build_dependencies.as_ref(),
+                vec![DepKind::Build.kind_table()],
+            ),
+        ];
+        for (name, platform) in orig_toml.target.iter().flatten() {
+            orig_deps.push((
+                platform.dependencies.as_ref(),
+                vec!["target", name, DepKind::Normal.kind_table()],
+            ));
+            orig_deps.push((
+                platform.build_dependencies.as_ref(),
+                vec!["target", name, DepKind::Normal.kind_table()],
+            ));
+        }
+
+        if let Some((_, toml_path)) = orig_deps.iter().find(|(deps, _)| {
+            if let Some(deps) = deps {
+                deps.keys().any(|p| *p.as_str() == *dep_name)
+            } else {
+                false
+            }
+        }) {
+            let toml_path = toml_path
+                .iter()
+                .map(|s| *s)
+                .chain(std::iter::once(dep_name.as_str()))
+                .collect::<Vec<_>>();
+            let dep_span = get_span(&document, &toml_path, false).unwrap();
+
+            message
+                .snippet(snippet.annotation(Level::Warning.span(dep_span).label(&info_label)))
+                .footer(Level::Help.title(&help))
+        } else {
+            message.snippet(snippet)
+        }
+    } else {
+        message.snippet(snippet)
+    };
+
+    if let Err(err) = gctx.shell().print_message(message) {
+        return Err(err.into());
+    }
+    Err(AlreadyPrintedError::new(anyhow!("").into()).into())
 }
 
 fn to_virtual_manifest(
