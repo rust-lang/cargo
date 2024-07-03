@@ -254,10 +254,13 @@ fn inactive_weak_optional_dep() {
         .masquerade_as_nightly_cargo(&["cargo-lints", "edition2024"])
         .with_status(101)
         .with_stderr_data(str![[r#"
+[ERROR] feature `foo_feature` includes `dep_name?/dep_feature`, but `dep_name` is not a dependency
+  --> Cargo.toml:11:27
+   |
+11 |             foo_feature = ["dep_name?/dep_feature"]
+   |                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `foo_feature` includes `dep_name?/dep_feature`, but `dep_name` is not a dependency
 
 "#]])
         .run();
@@ -287,10 +290,18 @@ Caused by:
         .masquerade_as_nightly_cargo(&["cargo-lints", "edition2024"])
         .with_status(101)
         .with_stderr_data(str![[r#"
+[ERROR] feature `foo_feature` includes `dep_name?/dep_feature`, but `dep_name` is not a dependency
+  --> Cargo.toml:12:31
+   |
+ 9 |                 dep_name = { version = "0.1.0", optional = true }
+   |                 -------- `dep_name` is an unused optional dependency since no feature enables it
+10 | 
+11 |                 [features]
+12 |                 foo_feature = ["dep_name?/dep_feature"]
+   |                               ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = [HELP] enable the dependency with `dep:dep_name`
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `foo_feature` includes `dep_name?/dep_feature`, but missing `dep:dep_name` to activate it
 
 "#]])
         .run();
@@ -319,10 +330,18 @@ Caused by:
         .masquerade_as_nightly_cargo(&["cargo-lints", "edition2024"])
         .with_status(101)
         .with_stderr_data(str![[r#"
+[ERROR] feature `foo_feature` includes `dep_name?/dep_feature`, but `dep_name` is not a dependency
+  --> Cargo.toml:12:27
+   |
+ 9 |             dep_name = { version = "0.1.0", optional = true }
+   |             -------- `dep_name` is an unused optional dependency since no feature enables it
+10 | 
+11 |             [features]
+12 |             foo_feature = ["dep_name?/dep_feature"]
+   |                           ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = [HELP] enable the dependency with `dep:dep_name`
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  feature `foo_feature` includes `dep_name?/dep_feature`, but missing `dep:dep_name` to activate it
 
 "#]])
         .run();

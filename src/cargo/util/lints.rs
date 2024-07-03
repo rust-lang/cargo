@@ -199,7 +199,11 @@ fn verify_feature_enabled(
     Ok(())
 }
 
-fn get_span(document: &ImDocument<String>, path: &[&str], get_value: bool) -> Option<Range<usize>> {
+pub fn get_span(
+    document: &ImDocument<String>,
+    path: &[&str],
+    get_value: bool,
+) -> Option<Range<usize>> {
     let mut table = document.as_item().as_table_like()?;
     let mut iter = path.into_iter().peekable();
     while let Some(key) = iter.next() {
@@ -240,7 +244,7 @@ fn get_span(document: &ImDocument<String>, path: &[&str], get_value: bool) -> Op
 
 /// Gets the relative path to a manifest from the current working directory, or
 /// the absolute path of the manifest if a relative path cannot be constructed
-fn rel_cwd_manifest_path(path: &Path, gctx: &GlobalContext) -> String {
+pub fn rel_cwd_manifest_path(path: &Path, gctx: &GlobalContext) -> String {
     diff_paths(path, gctx.cwd())
         .unwrap_or_else(|| path.to_path_buf())
         .display()

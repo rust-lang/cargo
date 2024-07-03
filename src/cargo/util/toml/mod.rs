@@ -15,6 +15,7 @@ use cargo_util_schemas::manifest::{RustVersion, StringOrBool};
 use itertools::Itertools;
 use lazycell::LazyCell;
 use pathdiff::diff_paths;
+use toml_edit::ImDocument;
 use url::Url;
 
 use crate::core::compiler::{CompileKind, CompileTarget};
@@ -29,6 +30,7 @@ use crate::core::{GitReference, PackageIdSpec, SourceId, WorkspaceConfig, Worksp
 use crate::sources::{CRATES_IO_INDEX, CRATES_IO_REGISTRY};
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
+use crate::util::lints::{get_span, rel_cwd_manifest_path};
 use crate::util::{self, context::ConfigRelativePath, GlobalContext, IntoUrl, OptVersionReq};
 
 mod embedded;
@@ -1459,7 +1461,14 @@ fn to_real_manifest(
         // need to check whether `dep_name` is stripped as unused dependency
         if let Err(ref err) = summary {
             if let Some(missing_dep) = err.downcast_ref::<MissingDependencyError>() {
-                check_weak_optional_dep_unused(&original_toml, missing_dep)?;
+                missing_dep_diagnostic(
+                    missing_dep,
+                    &original_toml,
+                    &document,
+                    &contents,
+                    manifest_file,
+                    gctx,
+                )?;
             }
         }
         summary?
@@ -1570,37 +1579,83 @@ fn to_real_manifest(
     Ok(manifest)
 }
 
-fn check_weak_optional_dep_unused(
-    original_toml: &TomlManifest,
+fn missing_dep_diagnostic(
     missing_dep: &MissingDependencyError,
+    orig_toml: &TomlManifest,
+    document: &ImDocument<String>,
+    contents: &str,
+    manifest_file: &Path,
+    gctx: &GlobalContext,
 ) -> CargoResult<()> {
-    if missing_dep.weak_optional {
-        // dev-dependencies are not allowed to be optional
-        let mut orig_deps = vec![
-            original_toml.dependencies.as_ref(),
-            original_toml.build_dependencies.as_ref(),
-        ];
-        for (_, platform) in original_toml.target.iter().flatten() {
-            orig_deps.extend(vec![
-                platform.dependencies.as_ref(),
-                platform.build_dependencies.as_ref(),
-            ]);
-        }
-        for deps in orig_deps {
-            if let Some(deps) = deps {
-                if deps.keys().any(|p| *p.as_str() == *missing_dep.dep_name) {
-                    bail!(
-                            "feature `{feature}` includes `{feature_value}`, but missing `dep:{dep_name}` to activate it",
-                            feature = missing_dep.feature,
-                            feature_value = missing_dep.feature_value,
-                            dep_name = missing_dep.dep_name,
-                        )
-                }
-            }
-        }
-    }
+    let dep_name = missing_dep.dep_name;
+    let manifest_path = rel_cwd_manifest_path(manifest_file, gctx);
+    let feature_value_span =
+        get_span(&document, &["features", missing_dep.feature.as_str()], true).unwrap();
 
-    Ok(())
+    let title = format!(
+        "feature `{}` includes `{}`, but `{}` is not a dependency",
+        missing_dep.feature, missing_dep.feature_value, &dep_name
+    );
+    let help = format!("enable the dependency with `dep:{dep_name}`");
+    let info_label = format!(
+        "`{}` is an unused optional dependency since no feature enables it",
+        &dep_name
+    );
+    let message = Level::Error.title(&title);
+    let snippet = Snippet::source(&contents)
+        .origin(&manifest_path)
+        .fold(true)
+        .annotation(Level::Error.span(feature_value_span.start..feature_value_span.end));
+    let message = if missing_dep.weak_optional {
+        let mut orig_deps = vec![
+            (
+                orig_toml.dependencies.as_ref(),
+                vec![DepKind::Normal.kind_table()],
+            ),
+            (
+                orig_toml.build_dependencies.as_ref(),
+                vec![DepKind::Build.kind_table()],
+            ),
+        ];
+        for (name, platform) in orig_toml.target.iter().flatten() {
+            orig_deps.push((
+                platform.dependencies.as_ref(),
+                vec!["target", name, DepKind::Normal.kind_table()],
+            ));
+            orig_deps.push((
+                platform.build_dependencies.as_ref(),
+                vec!["target", name, DepKind::Normal.kind_table()],
+            ));
+        }
+
+        if let Some((_, toml_path)) = orig_deps.iter().find(|(deps, _)| {
+            if let Some(deps) = deps {
+                deps.keys().any(|p| *p.as_str() == *dep_name)
+            } else {
+                false
+            }
+        }) {
+            let toml_path = toml_path
+                .iter()
+                .map(|s| *s)
+                .chain(std::iter::once(dep_name.as_str()))
+                .collect::<Vec<_>>();
+            let dep_span = get_span(&document, &toml_path, false).unwrap();
+
+            message
+                .snippet(snippet.annotation(Level::Warning.span(dep_span).label(&info_label)))
+                .footer(Level::Help.title(&help))
+        } else {
+            message.snippet(snippet)
+        }
+    } else {
+        message.snippet(snippet)
+    };
+
+    if let Err(err) = gctx.shell().print_message(message) {
+        return Err(err.into());
+    }
+    Err(AlreadyPrintedError::new(anyhow!("").into()).into())
 }
 
 fn to_virtual_manifest(
