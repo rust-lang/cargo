@@ -1,10 +1,8 @@
 //! Tests for cfg() expressions.
 
-#![allow(deprecated)]
-
 use cargo_test_support::registry::Package;
 use cargo_test_support::rustc_host;
-use cargo_test_support::{basic_manifest, project};
+use cargo_test_support::{basic_manifest, project, str};
 
 #[cargo_test]
 fn cfg_easy() {
@@ -56,13 +54,12 @@ fn dont_include() {
         .file("b/src/lib.rs", "")
         .build();
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[CHECKING] a v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -95,19 +92,18 @@ fn works_through_the_registry() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
-[UPDATING] [..] index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] [..]
-[DOWNLOADED] [..]
+[DOWNLOADED] baz v0.1.0 (registry `dummy-registry`)
+[DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [CHECKING] baz v0.1.0
 [CHECKING] bar v0.1.0
-[CHECKING] foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -145,18 +141,17 @@ fn ignore_version_from_other_platform() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
-[UPDATING] [..] index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest compatible versions
 [ADDING] bar v0.1.0 (latest: v0.2.0)
 [DOWNLOADING] crates ...
-[DOWNLOADED] [..]
+[DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [CHECKING] bar v0.1.0
-[CHECKING] foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -181,14 +176,13 @@ fn bad_target_spec() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  failed to parse `4` as a cfg expression: unexpected character `4` in cfg, [..]
-",
-        )
+  failed to parse `4` as a cfg expression: unexpected character `4` in cfg, expected parens, a comma, an identifier, or a string
+
+"#]])
         .run();
 }
 
@@ -213,14 +207,13 @@ fn bad_target_spec2() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   failed to parse `bar =` as a cfg expression: expected a string, but cfg expression ended
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -404,95 +397,89 @@ fn bad_cfg_discovery() {
         .env("RUSTC", &funky_rustc)
         .env("FUNKY_MODE", "bad-version")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] `rustc -vV` didn't have a line for `host:`, got:
 foo
 
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("check")
         .env("RUSTC", &funky_rustc)
         .env("FUNKY_MODE", "no-crate-types")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] malformed output when learning about crate-type bin information
-command was: `[..]compiler[..] --crate-name ___ [..]`
+command was: `[ROOT]/compiler/target/debug/compiler[..] --crate-name ___ [..]`
 (no output received)
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("check")
         .env("RUSTC", &funky_rustc)
         .env("FUNKY_MODE", "no-sysroot")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] output of --print=sysroot missing when learning about target-specific information from rustc
-command was: `[..]compiler[..]--crate-type [..]`
+command was: `[ROOT]/compiler/target/debug/compiler[..]--crate-type [..]`
 
 --- stdout
-[..]___[..]
-[..]___[..]
-[..]___[..]
-[..]___[..]
-[..]___[..]
-[..]___[..]
+___[EXE]
+lib___.rlib
+[..]___.[..]
+[..]___.[..]
+[..]___.[..]
+[..]___.[..]
 
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("check")
         .env("RUSTC", &funky_rustc)
         .env("FUNKY_MODE", "no-split-debuginfo")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] output of --print=split-debuginfo missing when learning about target-specific information from rustc
-command was: `[..]compiler[..]--crate-type [..]`
+command was: `[ROOT]/compiler/target/debug/compiler[..]--crate-type [..]`
 
 --- stdout
-[..]___[..]
-[..]___[..]
-[..]___[..]
-[..]___[..]
-[..]___[..]
-[..]___[..]
-[..]
+___[EXE]
+lib___.rlib
+[..]___.[..]
+[..]___.[..]
+[..]___.[..]
+[..]___.[..]
+[..]rust[..]
 
-",
-        )
+
+"#]])
         .run();
 
     p.cargo("check")
         .env("RUSTC", &funky_rustc)
         .env("FUNKY_MODE", "bad-cfg")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] failed to parse the cfg from `rustc --print=cfg`, got:
-[..]___[..]
-[..]___[..]
-[..]___[..]
-[..]___[..]
-[..]___[..]
-[..]___[..]
-[..]
+___[EXE]
+lib___.rlib
+[..]___.[..]
+[..]___.[..]
+[..]___.[..]
+[..]___.[..]
+[..]rust[..]
 [..],[..]
 ___
 123
 
 
 Caused by:
-  failed to parse `123` as a cfg expression: unexpected character `1` in cfg, \
-  expected parens, a comma, an identifier, or a string
-",
-        )
+  failed to parse `123` as a cfg expression: unexpected character `1` in cfg, expected parens, a comma, an identifier, or a string
+
+"#]])
         .run();
 }
 
@@ -526,6 +513,10 @@ fn exclusive_dep_kinds() {
     p.cargo("check")
         .with_status(101)
         // can't find crate for `bar`
-        .with_stderr_contains("[..]E0463[..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+error[E0463]: can't find crate for `bar`
+...
+"#]])
         .run();
 }
