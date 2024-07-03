@@ -172,7 +172,7 @@ native library using [FFI].
 
 The `LIB` string is passed directly to rustc, so it supports any syntax that
 `-l` does. \
-Currently the full supported syntax for `LIB` is `[KIND[:MODIFIERS]=]NAME[:RENAME]`.
+Currently the fully supported syntax for `LIB` is `[KIND[:MODIFIERS]=]NAME[:RENAME]`.
 
 The `-l` flag is only passed to the library target of the package, unless
 there is no library target, in which case it is passed to all targets. This is

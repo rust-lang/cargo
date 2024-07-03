@@ -501,7 +501,7 @@ solutions.
 
 ### Why was a dependency included?
 
-Say you see dependency `rand` in the `cargo check` output but don't think its needed and want to understand why its being pulled in.
+Say you see dependency `rand` in the `cargo check` output but don't think it's needed and want to understand why it's being pulled in.
 
 You can run
 ```console

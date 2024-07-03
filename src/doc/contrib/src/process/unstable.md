@@ -9,7 +9,7 @@ with the Cargo team first.
 
 For features that require behavior changes or new syntax in `Cargo.toml`, then
 it will need a `cargo-features` value placed at the top of `Cargo.toml` to
-enable it. The process for doing adding a new feature is described in the
+enable it. The process for adding a new feature is described in the
 [`features` module]. Code that implements the feature will need to manually
 check that the feature is enabled for the current manifest.
 
