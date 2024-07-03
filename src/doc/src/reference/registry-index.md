@@ -179,7 +179,7 @@ explaining the format of the entry.
     // An unsigned 32-bit integer value indicating the schema version of this
     // entry.
     //
-    // If this not specified, it should be interpreted as the default of 1.
+    // If this is not specified, it should be interpreted as the default of 1.
     //
     // Cargo (starting with version 1.51) will ignore versions it does not
     // recognize. This provides a method to safely introduce changes to index

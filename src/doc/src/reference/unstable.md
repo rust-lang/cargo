@@ -594,7 +594,7 @@ cargo +nightly -Ztarget-applies-to-host build --target x86_64-unknown-linux-gnu
 * Original Pull Request: [#9322](https://github.com/rust-lang/cargo/pull/9322)
 * Tracking Issue: [#9452](https://github.com/rust-lang/cargo/issues/9452)
 
-The `host` key in a config file can be used pass flags to host build targets
+The `host` key in a config file can be used to pass flags to host build targets
 such as build scripts that must run on the host system instead of the target
 system when cross compiling. It supports both generic and host arch specific
 tables. Matching host arch tables take precedence over generic host tables.
@@ -614,7 +614,7 @@ rustflags = ["-Clink-arg=--verbose"]
 linker = "/path/to/target/linker"
 ```
 
-The generic `host` table above will be entirely ignored when building on a
+The generic `host` table above will be entirely ignored when building on an
 `x86_64-unknown-linux-gnu` host as the `host.x86_64-unknown-linux-gnu` table
 takes precedence.
 
