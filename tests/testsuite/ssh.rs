@@ -5,11 +5,9 @@
 //!
 //! NOTE: The container tests almost certainly won't work on Windows.
 
-#![allow(deprecated)]
-
 use cargo_test_support::containers::{Container, ContainerHandle, MkFile};
 use cargo_test_support::git::cargo_uses_gitoxide;
-use cargo_test_support::{paths, process, project, Project};
+use cargo_test_support::{paths, process, project, str, Project};
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
@@ -131,10 +129,9 @@ fn no_known_host() {
     let p = foo_bar_project(&url);
     p.cargo("fetch")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`
-error: failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
   failed to load source for dependency `bar`
@@ -143,15 +140,13 @@ Caused by:
   Unable to update ssh://testuser@127.0.0.1:[..]/repos/bar.git
 
 Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/bar-[..]
+  failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
 
 Caused by:
-  error: unknown SSH host key
+  [ERROR] unknown SSH host key
   The SSH host key for `[127.0.0.1]:[..]` is not known and cannot be validated.
 
-  To resolve this issue, add the host key to the `net.ssh.known-hosts` array in \
-  your Cargo configuration (such as [ROOT]/home/.cargo/config.toml) or in your \
-  OpenSSH known_hosts file at [ROOT]/home/.ssh/known_hosts
+  To resolve this issue, add the host key to the `net.ssh.known-hosts` array in your Cargo configuration (such as [ROOT]/home/.cargo/config.toml) or in your OpenSSH known_hosts file at [ROOT]/home/.ssh/known_hosts
 
   The key to add is:
 
@@ -160,10 +155,9 @@ Caused by:
   The ECDSA key fingerprint is: SHA256:[..]
   This fingerprint should be validated with the server administrator that it is correct.
 
-  See https://doc.rust-lang.org/stable/cargo/appendix/git-authentication.html#ssh-known-hosts \
-  for more information.
-",
-        )
+  See https://doc.rust-lang.org/stable/cargo/appendix/git-authentication.html#ssh-known-hosts for more information.
+
+"#]])
         .run();
 }
 
@@ -205,12 +199,11 @@ fn known_host_works() {
     fs::write(agent.ssh_dir.join("known_hosts"), key).unwrap();
     p.cargo("fetch")
         .env("SSH_AUTH_SOCK", &agent.sock)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`
 [LOCKING] 2 packages to latest compatible versions
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -228,10 +221,9 @@ fn same_key_different_hostname() {
     let p = foo_bar_project(&url);
     p.cargo("fetch")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`
-error: failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
   failed to load source for dependency `bar`
@@ -240,15 +232,13 @@ Caused by:
   Unable to update ssh://testuser@127.0.0.1:[..]/repos/bar.git
 
 Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/bar-[..]
+  failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
 
 Caused by:
-  error: unknown SSH host key
+  [ERROR] unknown SSH host key
   The SSH host key for `[127.0.0.1]:[..]` is not known and cannot be validated.
 
-  To resolve this issue, add the host key to the `net.ssh.known-hosts` array in \
-  your Cargo configuration (such as [ROOT]/home/.cargo/config.toml) or in your \
-  OpenSSH known_hosts file at [ROOT]/home/.ssh/known_hosts
+  To resolve this issue, add the host key to the `net.ssh.known-hosts` array in your Cargo configuration (such as [ROOT]/home/.cargo/config.toml) or in your OpenSSH known_hosts file at [ROOT]/home/.ssh/known_hosts
 
   The key to add is:
 
@@ -259,10 +249,9 @@ Caused by:
   Note: This host key was found, but is associated with a different host:
       [ROOT]/home/.ssh/known_hosts line 1: example.com
 
-  See https://doc.rust-lang.org/stable/cargo/appendix/git-authentication.html#ssh-known-hosts \
-  for more information.
-",
-        )
+  See https://doc.rust-lang.org/stable/cargo/appendix/git-authentication.html#ssh-known-hosts for more information.
+
+"#]])
         .run();
 }
 
@@ -282,12 +271,11 @@ fn known_host_without_port() {
     let p = foo_bar_project(&url);
     p.cargo("fetch")
         .env("SSH_AUTH_SOCK", &agent.sock)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`
 [LOCKING] 2 packages to latest compatible versions
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -319,7 +307,7 @@ fn hostname_case_insensitive() {
     let p = foo_bar_project(&url);
     p.cargo("fetch")
         .env("SSH_AUTH_SOCK", &agent.sock)
-        .with_stderr(&format!(
+        .with_stderr_data(&format!(
             "\
 [UPDATING] git repository `ssh://testuser@{hostname}:{port}/repos/bar.git`
 [LOCKING] 2 packages to latest compatible versions
@@ -346,9 +334,9 @@ fn invalid_key_error() {
     p.cargo("fetch")
         .env("SSH_AUTH_SOCK", &agent.sock)
         .with_status(101)
-        .with_stderr(&format!("\
+        .with_stderr_data(&format!("\
 [UPDATING] git repository `ssh://testuser@127.0.0.1:{port}/repos/bar.git`
-error: failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
   failed to load source for dependency `bar`
@@ -357,10 +345,10 @@ Caused by:
   Unable to update ssh://testuser@127.0.0.1:{port}/repos/bar.git
 
 Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/bar-[..]
+  failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
 
 Caused by:
-  error: SSH host key has changed for `[127.0.0.1]:{port}`
+  [ERROR] SSH host key has changed for `[127.0.0.1]:{port}`
   *********************************
   * WARNING: HOST KEY HAS CHANGED *
   *********************************
@@ -369,15 +357,9 @@ Caused by:
   The ECDSA fingerprint for the key from the remote host is:
   SHA256:[..]
 
-  You are strongly encouraged to contact the server administrator for `[127.0.0.1]:{port}` \
-  to verify that this new key is correct.
+  You are strongly encouraged to contact the server administrator for `[127.0.0.1]:{port}` to verify that this new key is correct.
 
-  If you can verify that the server has a new key, you can resolve this error by \
-  removing the old ecdsa-sha2-nistp256 key for `[127.0.0.1]:{port}` located at \
-  [ROOT]/home/.ssh/known_hosts line 1, and adding the new key to the \
-  `net.ssh.known-hosts` array in your Cargo configuration (such as \
-  [ROOT]/home/.cargo/config.toml) or in your OpenSSH known_hosts file at \
-  [ROOT]/home/.ssh/known_hosts
+  If you can verify that the server has a new key, you can resolve this error by removing the old ecdsa-sha2-nistp256 key for `[127.0.0.1]:{port}` located at [ROOT]/home/.ssh/known_hosts line 1, and adding the new key to the `net.ssh.known-hosts` array in your Cargo configuration (such as [ROOT]/home/.cargo/config.toml) or in your OpenSSH known_hosts file at [ROOT]/home/.ssh/known_hosts
 
   The key provided by the remote host is:
 
@@ -397,12 +379,11 @@ Caused by:
     drop(f);
     p.cargo("fetch")
         .env("SSH_AUTH_SOCK", &agent.sock)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`
 [LOCKING] 2 packages to latest compatible versions
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -437,10 +418,18 @@ fn invalid_github_key() {
         .build();
     p.cargo("fetch")
         .with_status(101)
-        .with_stderr_contains(if cargo_uses_gitoxide() {
-            "  git@github.com: Permission denied (publickey)."
+        .with_stderr_data(if cargo_uses_gitoxide() {
+            str![[r#"
+...
+  git@github.com: Permission denied (publickey).
+...
+"#]]
         } else {
-            "  error: SSH host key has changed for `github.com`"
+            str![[r#"
+...
+  [ERROR] SSH host key has changed for `github.com`
+...
+"#]]
         })
         .run();
 }
@@ -474,9 +463,10 @@ fn bundled_github_works() {
         )
         .file("src/lib.rs", "")
         .build();
-    let shared_stderr = "\
+    let expected = if cargo_uses_gitoxide() {
+        str![[r#"
 [UPDATING] git repository `ssh://git@github.com/rust-lang/bitflags.git`
-error: failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
+[ERROR] failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
   failed to load source for dependency `bitflags`
@@ -485,47 +475,60 @@ Caused by:
   Unable to update ssh://git@github.com/rust-lang/bitflags.git?tag=1.3.2
 
 Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[..]
+  failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]
 
 Caused by:
   failed to authenticate when downloading repository
 
-  *";
-    let expected = if cargo_uses_gitoxide() {
-        format!(
-            "{shared_stderr} attempted to find username/password via `credential.helper`, but maybe the found credentials were incorrect
+  * attempted to find username/password via `credential.helper`, but maybe the found credentials were incorrect
 
   if the git CLI succeeds then `net.git-fetch-with-cli` may help here
   https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
 
 Caused by:
-  Credentials provided for \"ssh://git@github.com/rust-lang/bitflags.git\" were not accepted by the remote
+[CREDENTIAL]s provided for "ssh://git@github.com/rust-lang/bitflags.git" were not accepted by the remote
 
 Caused by:
   git@github.com: Permission denied (publickey).
-"
-        )
+
+"#]]
     } else {
-        format!(
-            "{shared_stderr} attempted ssh-agent authentication, but no usernames succeeded: `git`
+        str![[r#"
+[UPDATING] git repository `ssh://git@github.com/rust-lang/bitflags.git`
+[ERROR] failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
+
+Caused by:
+  failed to load source for dependency `bitflags`
+
+Caused by:
+  Unable to update ssh://git@github.com/rust-lang/bitflags.git?tag=1.3.2
+
+Caused by:
+  failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]
+
+Caused by:
+  failed to authenticate when downloading repository
+
+  * attempted ssh-agent authentication, but no usernames succeeded: `git`
 
   if the git CLI succeeds then `net.git-fetch-with-cli` may help here
   https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
 
 Caused by:
   no authentication methods succeeded
-"
-        )
+
+"#]]
     };
     p.cargo("fetch")
         .env("SSH_AUTH_SOCK", &bogus_auth_sock)
         .with_status(101)
-        .with_stderr(&expected)
+        .with_stderr_data(expected)
         .run();
 
-    let shared_stderr = "\
+    let expected = if cargo_uses_gitoxide() {
+        str![[r#"
 [UPDATING] git repository `ssh://git@github.com:22/rust-lang/bitflags.git`
-error: failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
+[ERROR] failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
   failed to load source for dependency `bitflags`
@@ -534,38 +537,49 @@ Caused by:
   Unable to update ssh://git@github.com:22/rust-lang/bitflags.git?tag=1.3.2
 
 Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[..]
+  failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]
 
 Caused by:
   failed to authenticate when downloading repository
 
-  *";
-
-    let expected = if cargo_uses_gitoxide() {
-        format!(
-            "{shared_stderr} attempted to find username/password via `credential.helper`, but maybe the found credentials were incorrect
+  * attempted to find username/password via `credential.helper`, but maybe the found credentials were incorrect
 
   if the git CLI succeeds then `net.git-fetch-with-cli` may help here
   https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
 
 Caused by:
-  Credentials provided for \"ssh://git@github.com:22/rust-lang/bitflags.git\" were not accepted by the remote
+[CREDENTIAL]s provided for "ssh://git@github.com:22/rust-lang/bitflags.git" were not accepted by the remote
 
 Caused by:
   git@github.com: Permission denied (publickey).
-"
-        )
+
+"#]]
     } else {
-        format!(
-            "{shared_stderr} attempted ssh-agent authentication, but no usernames succeeded: `git`
+        str![[r#"
+[UPDATING] git repository `ssh://git@github.com:22/rust-lang/bitflags.git`
+[ERROR] failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
+
+Caused by:
+  failed to load source for dependency `bitflags`
+
+Caused by:
+  Unable to update ssh://git@github.com:22/rust-lang/bitflags.git?tag=1.3.2
+
+Caused by:
+  failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]
+
+Caused by:
+  failed to authenticate when downloading repository
+
+  * attempted ssh-agent authentication, but no usernames succeeded: `git`
 
   if the git CLI succeeds then `net.git-fetch-with-cli` may help here
   https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli
 
 Caused by:
   no authentication methods succeeded
-"
-        )
+
+"#]]
     };
 
     // Explicit :22 should also work with bundled.
@@ -584,7 +598,7 @@ Caused by:
     p.cargo("fetch")
         .env("SSH_AUTH_SOCK", &bogus_auth_sock)
         .with_status(101)
-        .with_stderr(&expected)
+        .with_stderr_data(expected)
         .run();
 }
 
@@ -610,11 +624,10 @@ fn ssh_key_in_config() {
     );
     p.cargo("fetch")
         .env("SSH_AUTH_SOCK", &agent.sock)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`
 [LOCKING] 2 packages to latest compatible versions
-",
-        )
+
+"#]])
         .run();
 }
