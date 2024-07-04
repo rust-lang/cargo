@@ -862,6 +862,7 @@ fn new_unit_dep_with_profile(
             .target_config(kind)
             .links_overrides
             .clone(),
+        state.target_data.info(kind).linker.clone(),
         state.is_std,
         /*dep_hash*/ 0,
         artifact.map_or(IsArtifact::No, |_| IsArtifact::Yes),

@@ -178,7 +178,17 @@ pub fn print<'a>(
         if index != 0 {
             drop_println!(gctx);
         }
-        let target_info = TargetInfo::new(gctx, &build_config.requested_kinds, &rustc, *kind)?;
+        let target_config = match kind {
+            CompileKind::Host => gctx.target_cfg_triple(&rustc.host),
+            CompileKind::Target(target) => gctx.target_cfg_triple(target.short_name()),
+        }?;
+        let target_info = TargetInfo::new(
+            gctx,
+            &build_config.requested_kinds,
+            &rustc,
+            *kind,
+            &target_config,
+        )?;
         let mut process = rustc.process();
         process.args(&target_info.rustflags);
         if let Some(args) = target_rustc_args {
@@ -699,6 +709,7 @@ fn traverse_and_share(
             unit.rustflags.clone(),
             unit.rustdocflags.clone(),
             unit.links_overrides.clone(),
+            unit.linker.clone(),
             unit.is_std,
             unit.dep_hash,
             unit.artifact,
@@ -727,6 +738,7 @@ fn traverse_and_share(
         unit.rustflags.clone(),
         unit.rustdocflags.clone(),
         unit.links_overrides.clone(),
+        unit.linker.clone(),
         unit.is_std,
         new_dep_hash,
         unit.artifact,
@@ -891,6 +903,7 @@ fn override_rustc_crate_types(
             unit.rustflags.clone(),
             unit.rustdocflags.clone(),
             unit.links_overrides.clone(),
+            unit.linker.clone(),
             unit.is_std,
             unit.dep_hash,
             unit.artifact,

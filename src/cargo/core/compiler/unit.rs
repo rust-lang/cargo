@@ -13,6 +13,7 @@ use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -90,6 +91,8 @@ pub struct UnitInner {
     /// running its build script and instead use the given output from the
     /// config file.
     pub links_overrides: Rc<BTreeMap<String, BuildOutput>>,
+    /// Linker (if any) to pass to `rustc`, if not specified rustc chooses a default.
+    pub linker: Option<Rc<PathBuf>>,
     // if `true`, the dependency is an artifact dependency, requiring special handling when
     // calculating output directories, linkage and environment variables provided to builds.
     pub artifact: IsArtifact,
@@ -185,6 +188,7 @@ impl fmt::Debug for Unit {
             .field("rustflags", &self.rustflags)
             .field("rustdocflags", &self.rustdocflags)
             .field("links_overrides", &self.links_overrides)
+            .field("linker", &self.linker)
             .field("artifact", &self.artifact.is_true())
             .field(
                 "artifact_target_for_features",
@@ -235,6 +239,7 @@ impl UnitInterner {
         rustflags: Arc<[String]>,
         rustdocflags: Arc<[String]>,
         links_overrides: Rc<BTreeMap<String, BuildOutput>>,
+        linker: Option<Rc<PathBuf>>,
         is_std: bool,
         dep_hash: u64,
         artifact: IsArtifact,
@@ -271,6 +276,7 @@ impl UnitInterner {
             rustflags,
             rustdocflags,
             links_overrides,
+            linker,
             is_std,
             dep_hash,
             artifact,

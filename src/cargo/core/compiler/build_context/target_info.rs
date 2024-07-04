@@ -20,10 +20,12 @@ use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::str::{self, FromStr};
 use std::sync::Arc;
 
-/// Information about the platform target gleaned from querying rustc.
+/// Information about the platform target gleaned from querying rustc and from
+/// merging configs.
 ///
 /// [`RustcTargetData`] keeps several of these, one for the host and the others
 /// for other specified targets. If no target is specified, it uses a clone from
@@ -54,6 +56,8 @@ pub struct TargetInfo {
     pub rustflags: Arc<[String]>,
     /// Extra flags to pass to `rustdoc`, see [`extra_args`].
     pub rustdocflags: Arc<[String]>,
+    /// Linker to use. If the value is `None` it is left up to rustc.
+    pub linker: Option<Rc<PathBuf>>,
     /// Whether or not rustc (stably) supports the `--check-cfg` flag.
     ///
     /// Can be removed once the minimum supported rustc version of Cargo is
@@ -157,6 +161,11 @@ impl TargetInfo {
         requested_kinds: &[CompileKind],
         rustc: &Rustc,
         kind: CompileKind,
+        // This config is used for `links_overrides` and `linker`.
+        //
+        // In the case of target_applies_to_host=true (default) it may contain
+        // incorrect rustflags.
+        target_config: &TargetConfig,
     ) -> CargoResult<TargetInfo> {
         let mut rustflags =
             extra_args(gctx, requested_kinds, &rustc.host, None, kind, Flags::Rust)?;
@@ -321,6 +330,7 @@ impl TargetInfo {
                     Flags::Rustdoc,
                 )?
                 .into(),
+                linker: target_linker(gctx, &cfg, target_config)?.map(Rc::new),
                 cfg,
                 support_split_debuginfo,
                 support_check_cfg,
@@ -826,6 +836,42 @@ fn rustflags_from_target(
     }
 }
 
+/// Gets the user-specified linker for a particular host or target from the configuration.
+fn target_linker(
+    gctx: &GlobalContext,
+    target_cfg: &[Cfg],
+    target_config: &TargetConfig,
+) -> CargoResult<Option<PathBuf>> {
+    // Try host.linker and target.{}.linker.
+    if let Some(path) = target_config
+        .linker
+        .as_ref()
+        .map(|l| l.val.clone().resolve_program(gctx))
+    {
+        return Ok(Some(path));
+    }
+
+    // Try target.'cfg(...)'.linker.
+    let mut cfgs = gctx
+        .target_cfgs()?
+        .iter()
+        .filter_map(|(key, cfg)| cfg.linker.as_ref().map(|linker| (key, linker)))
+        .filter(|(key, _linker)| CfgExpr::matches_key(key, target_cfg));
+    let matching_linker = cfgs.next();
+    if let Some((key, linker)) = cfgs.next() {
+        anyhow::bail!(
+            "several matching instances of `target.'cfg(..)'.linker` in configurations\n\
+             first match `{}` located in {}\n\
+             second match `{}` located in {}",
+            matching_linker.unwrap().0,
+            matching_linker.unwrap().1.definition,
+            key,
+            linker.definition
+        );
+    }
+    Ok(matching_linker.map(|(_k, linker)| linker.val.clone().resolve_program(gctx)))
+}
+
 /// Gets compiler flags from `[host]` section in the config.
 /// See [`extra_args`] for more.
 fn rustflags_from_host(
@@ -893,7 +939,6 @@ impl<'gctx> RustcTargetData<'gctx> {
         let mut target_info = HashMap::new();
         let target_applies_to_host = gctx.target_applies_to_host()?;
         let host_target = CompileTarget::new(&rustc.host)?;
-        let host_info = TargetInfo::new(gctx, requested_kinds, &rustc, CompileKind::Host)?;
 
         // This config is used for link overrides and choosing a linker.
         let host_config = if target_applies_to_host {
@@ -901,6 +946,13 @@ impl<'gctx> RustcTargetData<'gctx> {
         } else {
             gctx.host_cfg_triple(&rustc.host)?
         };
+        let host_info = TargetInfo::new(
+            gctx,
+            requested_kinds,
+            &rustc,
+            CompileKind::Host,
+            &host_config,
+        )?;
 
         // This is a hack. The unit_dependency graph builder "pretends" that
         // `CompileKind::Host` is `CompileKind::Target(host)` if the
@@ -908,7 +960,7 @@ impl<'gctx> RustcTargetData<'gctx> {
         // needs access to the target config data, create a copy so that it
         // can be found. See `rebuild_unit_graph_shared` for why this is done.
         if requested_kinds.iter().any(CompileKind::is_host) {
-            target_config.insert(host_target, gctx.target_cfg_triple(&rustc.host)?);
+            let host_target_config = gctx.target_cfg_triple(&rustc.host)?;
 
             // If target_applies_to_host is true, the host_info is the target info,
             // otherwise we need to build target info for the target.
@@ -920,9 +972,12 @@ impl<'gctx> RustcTargetData<'gctx> {
                     requested_kinds,
                     &rustc,
                     CompileKind::Target(host_target),
+                    &host_target_config,
                 )?;
                 target_info.insert(host_target, host_target_info);
             }
+
+            target_config.insert(host_target, host_target_config);
         };
 
         let mut res = RustcTargetData {
@@ -969,14 +1024,20 @@ impl<'gctx> RustcTargetData<'gctx> {
     /// Insert `kind` into our `target_info` and `target_config` members if it isn't present yet.
     pub fn merge_compile_kind(&mut self, kind: CompileKind) -> CargoResult<()> {
         if let CompileKind::Target(target) = kind {
-            if !self.target_config.contains_key(&target) {
-                self.target_config
-                    .insert(target, self.gctx.target_cfg_triple(target.short_name())?);
-            }
+            let target_config: &TargetConfig = match self.target_config.entry(target) {
+                Entry::Occupied(o) => o.into_mut(),
+                Entry::Vacant(v) => v.insert(self.gctx.target_cfg_triple(target.short_name())?),
+            };
             if !self.target_info.contains_key(&target) {
                 self.target_info.insert(
                     target,
-                    TargetInfo::new(self.gctx, &self.requested_kinds, &self.rustc, kind)?,
+                    TargetInfo::new(
+                        self.gctx,
+                        &self.requested_kinds,
+                        &self.rustc,
+                        kind,
+                        target_config,
+                    )?,
                 );
             }
         }

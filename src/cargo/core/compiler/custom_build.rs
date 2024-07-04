@@ -300,8 +300,8 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         cmd.env(&var, value);
     }
 
-    if let Some(linker) = &build_runner.compilation.target_linker(unit.kind) {
-        cmd.env("RUSTC_LINKER", linker);
+    if let Some(linker) = &unit.linker {
+        cmd.env("RUSTC_LINKER", linker.as_ref());
     }
 
     if let Some(links) = unit.pkg.manifest().links() {

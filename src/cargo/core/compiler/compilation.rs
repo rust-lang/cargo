@@ -40,8 +40,6 @@ pub struct Doctest {
     pub args: Vec<OsString>,
     /// Whether or not -Zunstable-options is needed.
     pub unstable_opts: bool,
-    /// The -Clinker value to use.
-    pub linker: Option<PathBuf>,
     /// The script metadata, if this unit's package has a build script.
     ///
     /// This is used for indexing [`Compilation::extra_env`].
@@ -120,8 +118,6 @@ pub struct Compilation<'gctx> {
     primary_rustc_process: Option<ProcessBuilder>,
 
     target_runners: HashMap<CompileKind, Option<(PathBuf, Vec<String>)>>,
-    /// The linker to use for each host or target.
-    target_linkers: HashMap<CompileKind, Option<PathBuf>>,
 }
 
 impl<'gctx> Compilation<'gctx> {
@@ -161,13 +157,6 @@ impl<'gctx> Compilation<'gctx> {
                 .iter()
                 .chain(Some(&CompileKind::Host))
                 .map(|kind| Ok((*kind, target_runner(bcx, *kind)?)))
-                .collect::<CargoResult<HashMap<_, _>>>()?,
-            target_linkers: bcx
-                .build_config
-                .requested_kinds
-                .iter()
-                .chain(Some(&CompileKind::Host))
-                .map(|kind| Ok((*kind, target_linker(bcx, *kind)?)))
                 .collect::<CargoResult<HashMap<_, _>>>()?,
         })
     }
@@ -238,11 +227,6 @@ impl<'gctx> Compilation<'gctx> {
 
     pub fn target_runner(&self, kind: CompileKind) -> Option<&(PathBuf, Vec<String>)> {
         self.target_runners.get(&kind).and_then(|x| x.as_ref())
-    }
-
-    /// Gets the user-specified linker for a particular host or target.
-    pub fn target_linker(&self, kind: CompileKind) -> Option<PathBuf> {
-        self.target_linkers.get(&kind).and_then(|x| x.clone())
     }
 
     /// Returns a [`ProcessBuilder`] appropriate for running a process for the
@@ -483,40 +467,4 @@ fn target_runner(
             runner.val.args.clone(),
         )
     }))
-}
-
-/// Gets the user-specified linker for a particular host or target from the configuration.
-fn target_linker(bcx: &BuildContext<'_, '_>, kind: CompileKind) -> CargoResult<Option<PathBuf>> {
-    // Try host.linker and target.{}.linker.
-    if let Some(path) = bcx
-        .target_data
-        .target_config(kind)
-        .linker
-        .as_ref()
-        .map(|l| l.val.clone().resolve_program(bcx.gctx))
-    {
-        return Ok(Some(path));
-    }
-
-    // Try target.'cfg(...)'.linker.
-    let target_cfg = bcx.target_data.info(kind).cfg();
-    let mut cfgs = bcx
-        .gctx
-        .target_cfgs()?
-        .iter()
-        .filter_map(|(key, cfg)| cfg.linker.as_ref().map(|linker| (key, linker)))
-        .filter(|(key, _linker)| CfgExpr::matches_key(key, target_cfg));
-    let matching_linker = cfgs.next();
-    if let Some((key, linker)) = cfgs.next() {
-        anyhow::bail!(
-            "several matching instances of `target.'cfg(..)'.linker` in configurations\n\
-             first match `{}` located in {}\n\
-             second match `{}` located in {}",
-            matching_linker.unwrap().0,
-            matching_linker.unwrap().1.definition,
-            key,
-            linker.definition
-        );
-    }
-    Ok(matching_linker.map(|(_k, linker)| linker.val.clone().resolve_program(bcx.gctx)))
 }

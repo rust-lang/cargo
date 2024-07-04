@@ -513,13 +513,13 @@ fn custom_linker_target_applies_to_host() {
         .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .arg("-Ztarget-applies-to-host")
         .env("CARGO_TARGET_APPLIES_TO_HOST", "false")
-        .with_status(0)
+        .with_status(101)
         .with_stderr_data(
             "\
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[RUNNING] `rustc [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
+[RUNNING] `rustc [..] -C linker=nonexistent-linker [..]
+[ERROR] linker `nonexistent-linker` not found
+...",
         )
         .run();
 }

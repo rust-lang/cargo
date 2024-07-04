@@ -1454,8 +1454,8 @@ fn calculate_normal(
     let m = unit.pkg.manifest().metadata();
     let metadata = util::hash_u64((&m.authors, &m.description, &m.homepage, &m.repository));
     let mut config = StableHasher::new();
-    if let Some(linker) = build_runner.compilation.target_linker(unit.kind) {
-        linker.hash(&mut config);
+    if let Some(linker) = &unit.linker {
+        linker.as_ref().hash(&mut config);
     }
     if unit.mode.is_doc() && build_runner.bcx.gctx.cli_unstable().rustdoc_map {
         if let Ok(map) = build_runner.bcx.gctx.doc_extern_map() {

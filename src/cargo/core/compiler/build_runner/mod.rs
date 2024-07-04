@@ -284,7 +284,6 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
                     unit: unit.clone(),
                     args,
                     unstable_opts,
-                    linker: self.compilation.target_linker(unit.kind).clone(),
                     script_meta,
                     env: artifact::get_env(&self, self.unit_deps(unit))?,
                 });

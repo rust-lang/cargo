@@ -220,6 +220,7 @@ pub fn generate_std_roots(
                 target_data.info(*kind).rustflags.clone(),
                 target_data.info(*kind).rustdocflags.clone(),
                 target_data.target_config(*kind).links_overrides.clone(),
+                target_data.info(*kind).linker.clone(),
                 /*is_std*/ true,
                 /*dep_hash*/ 0,
                 IsArtifact::No,
