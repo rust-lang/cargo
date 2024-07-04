@@ -134,32 +134,6 @@ impl<'a, 'gctx> BuildContext<'a, 'gctx> {
         self.build_config.jobs
     }
 
-    /// Extra compiler flags to pass to `rustc` for a given unit.
-    ///
-    /// Although it depends on the caller, in the current Cargo implementation,
-    /// these flags take precedence over those from [`BuildContext::extra_args_for`].
-    ///
-    /// As of now, these flags come from environment variables and configurations.
-    /// See [`TargetInfo.rustflags`] for more on how Cargo collects them.
-    ///
-    /// [`TargetInfo.rustflags`]: TargetInfo::rustflags
-    pub fn rustflags_args(&self, unit: &Unit) -> &[String] {
-        &self.target_data.info(unit.kind).rustflags
-    }
-
-    /// Extra compiler flags to pass to `rustdoc` for a given unit.
-    ///
-    /// Although it depends on the caller, in the current Cargo implementation,
-    /// these flags take precedence over those from [`BuildContext::extra_args_for`].
-    ///
-    /// As of now, these flags come from environment variables and configurations.
-    /// See [`TargetInfo.rustdocflags`] for more on how Cargo collects them.
-    ///
-    /// [`TargetInfo.rustdocflags`]: TargetInfo::rustdocflags
-    pub fn rustdocflags_args(&self, unit: &Unit) -> &[String] {
-        &self.target_data.info(unit.kind).rustdocflags
-    }
-
     /// Extra compiler args for either `rustc` or `rustdoc`.
     ///
     /// As of now, these flags come from the trailing args of either

@@ -859,6 +859,8 @@ fn new_unit_dep_with_profile(
         kind,
         mode,
         features,
+        state.target_data.info(kind).rustflags.clone(),
+        state.target_data.info(kind).rustdocflags.clone(),
         state.is_std,
         /*dep_hash*/ 0,
         artifact.map_or(IsArtifact::No, |_| IsArtifact::Yes),

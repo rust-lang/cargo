@@ -4,8 +4,8 @@ use std::fmt::Write;
 
 use crate::core::compiler::rustdoc::RustdocScrapeExamples;
 use crate::core::compiler::unit_dependencies::IsArtifact;
-use crate::core::compiler::UnitInterner;
 use crate::core::compiler::{CompileKind, CompileMode, Unit};
+use crate::core::compiler::{RustcTargetData, UnitInterner};
 use crate::core::dependency::DepKind;
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{self, FeaturesFor};
@@ -47,6 +47,7 @@ struct Proposal<'a> {
 pub(super) struct UnitGenerator<'a, 'gctx> {
     pub ws: &'a Workspace<'gctx>,
     pub packages: &'a [&'a Package],
+    pub target_data: &'a RustcTargetData<'gctx>,
     pub filter: &'a CompileFilter,
     pub requested_kinds: &'a [CompileKind],
     pub explicit_host_kind: CompileKind,
@@ -162,13 +163,16 @@ impl<'a> UnitGenerator<'a, '_> {
                     unit_for,
                     kind,
                 );
+                let kind = kind.for_target(target);
                 self.interner.intern(
                     pkg,
                     target,
                     profile,
-                    kind.for_target(target),
+                    kind,
                     target_mode,
                     features.clone(),
+                    self.target_data.info(kind).rustflags.clone(),
+                    self.target_data.info(kind).rustdocflags.clone(),
                     /*is_std*/ false,
                     /*dep_hash*/ 0,
                     IsArtifact::No,

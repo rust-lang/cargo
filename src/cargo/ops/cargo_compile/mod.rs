@@ -360,6 +360,7 @@ pub fn create_bcx<'a, 'gctx>(
     let generator = UnitGenerator {
         ws,
         packages: &to_builds,
+        target_data: &target_data,
         filter,
         requested_kinds: &build_config.requested_kinds,
         explicit_host_kind,
@@ -399,6 +400,7 @@ pub fn create_bcx<'a, 'gctx>(
             &pkg_set,
             interner,
             &profiles,
+            &target_data,
         )?
     } else {
         Default::default()
@@ -694,6 +696,8 @@ fn traverse_and_share(
             to_host.unwrap(),
             unit.mode,
             unit.features.clone(),
+            unit.rustflags.clone(),
+            unit.rustdocflags.clone(),
             unit.is_std,
             unit.dep_hash,
             unit.artifact,
@@ -719,6 +723,8 @@ fn traverse_and_share(
         canonical_kind,
         unit.mode,
         unit.features.clone(),
+        unit.rustflags.clone(),
+        unit.rustdocflags.clone(),
         unit.is_std,
         new_dep_hash,
         unit.artifact,
@@ -880,6 +886,8 @@ fn override_rustc_crate_types(
             unit.kind,
             unit.mode,
             unit.features.clone(),
+            unit.rustflags.clone(),
+            unit.rustdocflags.clone(),
             unit.is_std,
             unit.dep_hash,
             unit.artifact,

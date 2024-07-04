@@ -1415,9 +1415,9 @@ fn calculate_normal(
     // hashed to take up less space on disk as we just need to know when things
     // change.
     let extra_flags = if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
-        build_runner.bcx.rustdocflags_args(unit)
+        &unit.rustdocflags
     } else {
-        build_runner.bcx.rustflags_args(unit)
+        &unit.rustflags
     }
     .to_vec();
 
@@ -1512,7 +1512,7 @@ fn calculate_run_custom_build(
 An I/O error happened. Please make sure you can access the file.
 
 By default, if your project contains a build script, cargo scans all files in
-it to determine whether a rebuild is needed. If you don't expect to access the 
+it to determine whether a rebuild is needed. If you don't expect to access the
 file, specify `rerun-if-changed` in your build script.
 See https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-changed for more information.";
             pkg_fingerprint(build_runner.bcx, &unit.pkg).map_err(|err| {
@@ -1542,7 +1542,7 @@ See https://doc.rust-lang.org/cargo/reference/build-scripts.html#rerun-if-change
             .collect::<CargoResult<Vec<_>>>()?
     };
 
-    let rustflags = build_runner.bcx.rustflags_args(unit).to_vec();
+    let rustflags = unit.rustflags.to_vec();
 
     Ok(Fingerprint {
         local: Mutex::new(local),
