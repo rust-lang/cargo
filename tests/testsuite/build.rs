@@ -5199,7 +5199,7 @@ fn rustc_wrapper_queries() {
         .env("RUSTC_WRAPPER", &wrapper)
         .with_stderr_contains("[..]running [..]rustc-echo-wrapper[EXE] rustc -vV[..]")
         .with_stderr_contains(
-            "[..]running [..]rustc-echo-wrapper[EXE] rustc - --crate-name ___ --print[..]",
+            "[..]running [..]rustc-echo-wrapper[EXE] rustc - --crate-name ___ -Zunstable-options --print[..]",
         )
         .run();
     p.build_dir().rm_rf();
@@ -5208,7 +5208,7 @@ fn rustc_wrapper_queries() {
         .env("RUSTC_WORKSPACE_WRAPPER", &wrapper)
         .with_stderr_contains("[..]running [..]rustc-echo-wrapper[EXE] rustc -vV[..]")
         .with_stderr_contains(
-            "[..]running [..]rustc-echo-wrapper[EXE] rustc - --crate-name ___ --print[..]",
+            "[..]running [..]rustc-echo-wrapper[EXE] rustc - --crate-name ___ -Zunstable-options --print[..]",
         )
         .run();
 }

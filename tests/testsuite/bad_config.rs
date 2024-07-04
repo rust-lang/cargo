@@ -425,7 +425,7 @@ fn bad_crate_type() {
 [ERROR] failed to run `rustc` to learn about crate-type bad_type information
 
 Caused by:
-  process didn't exit successfully: `rustc - --crate-name ___ --print=file-names --crate-type bad_type` ([EXIT_STATUS]: 1)
+  process didn't exit successfully: `rustc - --crate-name ___ -Zunstable-options --print=file-names --crate-type bad_type` ([EXIT_STATUS]: 1)
   --- stderr
   [ERROR] unknown crate type: `bad_type`
 
