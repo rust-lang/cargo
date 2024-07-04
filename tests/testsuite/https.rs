@@ -3,10 +3,9 @@
 //! Note that these tests will generally require setting CARGO_CONTAINER_TESTS
 //! or CARGO_PUBLIC_NETWORK_TESTS.
 
-#![allow(deprecated)]
-
 use cargo_test_support::containers::Container;
 use cargo_test_support::project;
+use cargo_test_support::str;
 
 #[cargo_test(container_test)]
 fn self_signed_should_fail() {
@@ -43,10 +42,10 @@ fn self_signed_should_fail() {
     };
     p.cargo("fetch")
         .with_status(101)
-        .with_stderr(&format!(
+        .with_stderr_data(&format!(
             "\
 [UPDATING] git repository `https://127.0.0.1:[..]/repos/bar.git`
-error: failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
+[ERROR] failed to get `bar` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
 
 Caused by:
   failed to load source for dependency `bar`
@@ -55,7 +54,7 @@ Caused by:
   Unable to update https://127.0.0.1:[..]/repos/bar.git
 
 Caused by:
-  failed to clone into: [ROOT]/home/.cargo/git/db/bar-[..]
+  failed to clone into: [ROOT]/home/.cargo/git/db/bar-[HASH]
 
 Caused by:
   network failure seems to have happened
@@ -129,12 +128,11 @@ fn self_signed_with_cacert() {
         .file("server.crt", &server_crt)
         .build();
     p.cargo("fetch")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] git repository `https://127.0.0.1:[..]/repos/bar.git`
 [LOCKING] 2 packages to latest compatible versions
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -157,11 +155,10 @@ fn github_works() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("fetch")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] git repository `https://github.com/rust-lang/bitflags.git`
 [LOCKING] 2 packages to latest compatible versions
-",
-        )
+
+"#]])
         .run();
 }
