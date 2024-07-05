@@ -1,9 +1,9 @@
 //! Tests for progress bar.
 
-#![allow(deprecated)]
-
+use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 
 #[cargo_test]
 fn bad_progress_config_unknown_when() {
@@ -20,15 +20,13 @@ fn bad_progress_config_unknown_when() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] error in [..].cargo/config.toml: \
-could not load config key `term.progress.when`
+        .with_stderr_data(str![[r#"
+[ERROR] error in [ROOT]/foo/.cargo/config.toml: could not load config key `term.progress.when`
 
 Caused by:
   unknown variant `unknown`, expected one of `auto`, `never`, `always`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -47,11 +45,10 @@ fn bad_progress_config_missing_width() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] \"always\" progress requires a `width` key
-",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] "always" progress requires a `width` key
+
+"#]])
         .run();
 }
 
@@ -70,14 +67,13 @@ fn bad_progress_config_missing_when() {
 
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "\
-error: error in [..]: could not load config key `term.progress`
+        .with_stderr_data(str![[r#"
+[ERROR] error in [ROOT]/foo/.cargo/config.toml: could not load config key `term.progress`
 
 Caused by:
   missing field `when`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -116,12 +112,23 @@ fn always_shows_progress() {
         .build();
 
     p.cargo("check")
-        .with_stderr_contains("[DOWNLOADING] [..] crates [..]")
-        .with_stderr_contains("[..][DOWNLOADED] 3 crates ([..]) in [..]")
-        .with_stderr_contains("[BUILDING] [..] [..]/4: [..]")
+        .with_stderr_data(
+            str![[r#"
+[DOWNLOADING] 1 crate                                                                              
+[DOWNLOADING] 2 crates                                                                             
+[DOWNLOADING] 3 crates                                                                             
+[DOWNLOADED] 3 crates ([..]KB) in [..]s
+[BUILDING] [..] 0/4: [..]
+[BUILDING] [..] 3/4: foo                                             
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+...
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn never_progress() {
     const N: usize = 3;
