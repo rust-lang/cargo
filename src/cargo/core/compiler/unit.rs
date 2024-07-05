@@ -9,12 +9,14 @@ use crate::util::hex::short_hash;
 use crate::util::interning::InternedString;
 use crate::util::GlobalContext;
 use std::cell::RefCell;
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::rc::Rc;
 use std::sync::Arc;
+
+use super::BuildOutput;
 
 /// All information needed to define a unit.
 ///
@@ -82,6 +84,12 @@ pub struct UnitInner {
     /// [`BuildContext::extra_args_for`]: crate::core::compiler::build_context::BuildContext::extra_args_for
     /// [`TargetInfo.rustdocflags`]: crate::core::compiler::build_context::TargetInfo::rustdocflags
     pub rustdocflags: Arc<[String]>,
+    /// Build script override for the given library name.
+    ///
+    /// Any package with a `links` value for the given library name will skip
+    /// running its build script and instead use the given output from the
+    /// config file.
+    pub links_overrides: Rc<BTreeMap<String, BuildOutput>>,
     // if `true`, the dependency is an artifact dependency, requiring special handling when
     // calculating output directories, linkage and environment variables provided to builds.
     pub artifact: IsArtifact,
@@ -176,6 +184,7 @@ impl fmt::Debug for Unit {
             .field("features", &self.features)
             .field("rustflags", &self.rustflags)
             .field("rustdocflags", &self.rustdocflags)
+            .field("links_overrides", &self.links_overrides)
             .field("artifact", &self.artifact.is_true())
             .field(
                 "artifact_target_for_features",
@@ -225,6 +234,7 @@ impl UnitInterner {
         features: Vec<InternedString>,
         rustflags: Arc<[String]>,
         rustdocflags: Arc<[String]>,
+        links_overrides: Rc<BTreeMap<String, BuildOutput>>,
         is_std: bool,
         dep_hash: u64,
         artifact: IsArtifact,
@@ -260,6 +270,7 @@ impl UnitInterner {
             features,
             rustflags,
             rustdocflags,
+            links_overrides,
             is_std,
             dep_hash,
             artifact,

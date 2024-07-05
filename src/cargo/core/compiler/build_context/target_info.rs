@@ -8,9 +8,7 @@
 //! * [`TargetInfo::rustc_outputs`] to get a list of supported file types.
 
 use crate::core::compiler::apply_env_config;
-use crate::core::compiler::{
-    BuildOutput, BuildRunner, CompileKind, CompileMode, CompileTarget, CrateType,
-};
+use crate::core::compiler::{BuildRunner, CompileKind, CompileMode, CompileTarget, CrateType};
 use crate::core::{Dependency, Package, Target, TargetKind, Workspace};
 use crate::util::context::{GlobalContext, StringList, TargetConfig};
 use crate::util::interning::InternedString;
@@ -1037,14 +1035,6 @@ impl<'gctx> RustcTargetData<'gctx> {
             CompileKind::Host => &self.host_config,
             CompileKind::Target(s) => &self.target_config[&s],
         }
-    }
-
-    /// If a build script is overridden, this returns the `BuildOutput` to use.
-    ///
-    /// `lib_name` is the `links` library name and `kind` is whether it is for
-    /// Host or Target.
-    pub fn script_override(&self, lib_name: &str, kind: CompileKind) -> Option<&BuildOutput> {
-        self.target_config(kind).links_overrides.get(lib_name)
     }
 }
 

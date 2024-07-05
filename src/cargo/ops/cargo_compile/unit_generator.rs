@@ -173,6 +173,7 @@ impl<'a> UnitGenerator<'a, '_> {
                     features.clone(),
                     self.target_data.info(kind).rustflags.clone(),
                     self.target_data.info(kind).rustdocflags.clone(),
+                    self.target_data.target_config(kind).links_overrides.clone(),
                     /*is_std*/ false,
                     /*dep_hash*/ 0,
                     IsArtifact::No,

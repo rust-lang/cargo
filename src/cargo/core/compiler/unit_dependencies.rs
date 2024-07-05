@@ -457,11 +457,7 @@ fn compute_deps_custom_build(
     state: &State<'_, '_>,
 ) -> CargoResult<Vec<UnitDep>> {
     if let Some(links) = unit.pkg.manifest().links() {
-        if state
-            .target_data
-            .script_override(links, unit.kind)
-            .is_some()
-        {
+        if unit.links_overrides.get(links).is_some() {
             // Overridden build scripts don't have any dependencies.
             return Ok(Vec::new());
         }
@@ -861,6 +857,11 @@ fn new_unit_dep_with_profile(
         features,
         state.target_data.info(kind).rustflags.clone(),
         state.target_data.info(kind).rustdocflags.clone(),
+        state
+            .target_data
+            .target_config(kind)
+            .links_overrides
+            .clone(),
         state.is_std,
         /*dep_hash*/ 0,
         artifact.map_or(IsArtifact::No, |_| IsArtifact::Yes),

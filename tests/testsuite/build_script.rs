@@ -5807,11 +5807,11 @@ fn links_overrides_with_target_applies_to_host() {
             "--config",
             &format!(r#"target.{}.mylib.rustc-link-search=["foo"]"#, rustc_host()),
         ])
-        .with_status(101)
-        .with_stderr_data(
-            "thread 'main' panicked at src/cargo/core/compiler/custom_build.rs:256:10:
-running a script not depending on an actual script
-...",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] mylib-sys v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name mylib_sys [..] -L foo`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
