@@ -1,7 +1,5 @@
 //! Tests for the jobserver protocol.
 
-#![allow(deprecated)]
-
 use cargo_util::is_ci;
 use std::env;
 use std::net::TcpListener;
@@ -12,8 +10,7 @@ use cargo_test_support::basic_bin_manifest;
 use cargo_test_support::cargo_exe;
 use cargo_test_support::install::assert_has_installed_exe;
 use cargo_test_support::install::cargo_home;
-use cargo_test_support::project;
-use cargo_test_support::rustc_host;
+use cargo_test_support::{project, rustc_host, str};
 
 const EXE_CONTENT: &str = r#"
 use std::env;
@@ -156,6 +153,7 @@ fn runner_inherits_jobserver() {
                     [package]
                     name = "{name}"
                     version = "0.0.1"
+                    edition = "2015"
                 "#
             ),
         )
@@ -200,7 +198,12 @@ test-runner:
         .env("CARGO", cargo_exe())
         .arg("run-runner")
         .arg("-j2")
-        .with_stderr_contains("[..]this is a runner[..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `runner target/debug/cargo-jobserver-check[EXE]`
+this is a runner
+
+"#]])
         .run();
     p.process(make)
         .env("CARGO", cargo_exe())
@@ -212,33 +215,104 @@ test-runner:
         .env("CARGO", cargo_exe())
         .arg("test-runner")
         .arg("-j2")
-        .with_stderr_contains("[..]this is a runner[..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/cargo_jobserver_check-[HASH][EXE])
+this is a runner
+
+"#]])
         .run();
 
     // but not from `-j` flag
     p.cargo("run -j2")
         .with_status(101)
-        .with_stderr_contains("[..]no jobserver from env[..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/cargo-jobserver-check[EXE]`
+thread 'main' panicked at src/main.rs:5:43:
+no jobserver from env: NotPresent
+[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+...
+
+"#]])
         .run();
     p.cargo("run -j2")
         .env("PATH", path)
         .arg("--config")
         .arg(config_value)
         .with_status(101)
-        .with_stderr_contains("[..]this is a runner[..]")
-        .with_stderr_contains("[..]no jobserver from env[..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `runner target/debug/cargo-jobserver-check[EXE]`
+this is a runner
+thread 'main' panicked at src/main.rs:5:43:
+no jobserver from env: NotPresent
+[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+thread 'main' panicked at src/main.rs:6:17:
+assertion failed: status.success()
+[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+...
+
+"#]])
         .run();
     p.cargo("test -j2")
         .with_status(101)
-        .with_stdout_contains("[..]no jobserver from env[..]")
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test test ... FAILED
+
+failures:
+
+---- test stdout ----
+thread 'test' panicked at src/lib.rs:4:42:
+no jobserver from env: NotPresent
+[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    test
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
     p.cargo("test -j2")
         .env("PATH", path)
         .arg("--config")
         .arg(config_value)
         .with_status(101)
-        .with_stderr_contains("[..]this is a runner[..]")
-        .with_stdout_contains("[..]no jobserver from env[..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/cargo_jobserver_check-[HASH][EXE])
+this is a runner
+thread 'main' panicked at src/main.rs:6:17:
+assertion failed: status.success()
+[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+[ERROR] test failed, to rerun pass `--lib`
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test test ... FAILED
+
+failures:
+
+---- test stdout ----
+thread 'test' panicked at src/lib.rs:4:42:
+no jobserver from env: NotPresent
+[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    test
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -371,13 +445,11 @@ all:
     p.process(make)
         .env("CARGO", cargo_exe())
         .arg("-j2")
-        .with_stderr(
-            "\
-warning: a `-j` argument was passed to Cargo but Cargo is also configured \
-with an external jobserver in its environment, ignoring the `-j` parameter
-[COMPILING] [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[WARNING] a `-j` argument was passed to Cargo but Cargo is also configured with an external jobserver in its environment, ignoring the `-j` parameter
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
