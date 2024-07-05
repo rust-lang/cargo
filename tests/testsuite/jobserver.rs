@@ -156,6 +156,7 @@ fn runner_inherits_jobserver() {
                     [package]
                     name = "{name}"
                     version = "0.0.1"
+                    edition = "2015"
                 "#
             ),
         )
