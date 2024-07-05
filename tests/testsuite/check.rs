@@ -1,13 +1,11 @@
 //! Tests for the `cargo check` command.
 
-#![allow(deprecated)]
-
 use std::fmt::{self, Write};
 
-use crate::messages::raw_rustc_output;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::install::exe;
 use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 use cargo_test_support::tools;
@@ -72,7 +70,11 @@ fn check_fail() {
 
     foo.cargo("check")
         .with_status(101)
-        .with_stderr_contains("[..]this function takes 0[..]")
+        .with_stderr_data(str![[r#"
+...
+error[E0061]: this function takes 0 arguments but 1 argument was supplied
+...
+"#]])
         .run();
 }
 
@@ -218,7 +220,13 @@ fn issue_3418() {
         .build();
 
     foo.cargo("check -v")
-        .with_stderr_contains("[..] --emit=[..]metadata [..]")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] src/lib.rs [..]--emit=[..]metadata [..]`
+[RUNNING] `rustc --crate-name foo [..] src/main.rs [..]--emit=[..]metadata [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -245,18 +253,20 @@ fn dylib_check_preserves_build_cache() {
         .build();
 
     p.cargo("build")
-        .with_stderr(
-            "\
-[..]Compiling foo v0.1.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("check").run();
 
     p.cargo("build")
-        .with_stderr("[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -293,26 +303,26 @@ fn rustc_check() {
     // Verify compatible usage of --profile with --release, issue #7488
     foo.cargo("rustc --profile check --release -- --emit=metadata")
         .with_status(1)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] the argument '--profile <PROFILE-NAME>' cannot be used with '--release'
 
 Usage: cargo[EXE] rustc --profile <PROFILE-NAME> [ARGS]...
 
-For more information, try '--help'.",
-        )
+For more information, try '--help'.
+
+"#]])
         .run();
 
     foo.cargo("rustc --profile test --release -- --emit=metadata")
         .with_status(1)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] the argument '--profile <PROFILE-NAME>' cannot be used with '--release'
 
 Usage: cargo[EXE] rustc --profile <PROFILE-NAME> [ARGS]...
 
-For more information, try '--help'.",
-        )
+For more information, try '--help'.
+
+"#]])
         .run();
 }
 
@@ -345,10 +355,13 @@ fn rustc_check_err() {
 
     foo.cargo("rustc --profile check -- --emit=metadata")
         .with_status(101)
-        .with_stderr_contains("[CHECKING] bar [..]")
-        .with_stderr_contains("[CHECKING] foo [..]")
-        .with_stderr_contains("[..]cannot find function `qux`[..]")
-        .with_stderr_contains("[..]in crate `bar`")
+        .with_stderr_data(str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+[CHECKING] bar v0.1.0 ([ROOT]/bar)
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+error[E0425]: [..]
+...
+"#]])
         .run();
 }
 
@@ -379,10 +392,18 @@ fn check_all() {
         .build();
 
     p.cargo("check --workspace -v")
-        .with_stderr_contains("[..] --crate-name foo [..] src/lib.rs [..]")
-        .with_stderr_contains("[..] --crate-name foo [..] src/main.rs [..]")
-        .with_stderr_contains("[..] --crate-name b [..] b/src/lib.rs [..]")
-        .with_stderr_contains("[..] --crate-name b [..] b/src/main.rs [..]")
+        .with_stderr_data(
+            str![[r#"
+[CHECKING] b v0.0.1 ([ROOT]/foo/b)
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] src/lib.rs [..]`
+[RUNNING] `rustc --crate-name foo [..] src/main.rs [..]`
+[RUNNING] `rustc --crate-name b [..] b/src/lib.rs [..]`
+[RUNNING] `rustc --crate-name b [..] b/src/main.rs [..]`
+...
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -403,14 +424,14 @@ fn check_all_exclude() {
         .build();
 
     p.cargo("check --workspace --exclude baz")
-        .with_stderr_does_not_contain("[CHECKING] baz v0.1.0 [..]")
-        .with_stderr(
-            "\
+        // does_not_contain
+        // [CHECKING] baz v0.1.0 [..]
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[CHECKING] bar v0.1.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -431,14 +452,14 @@ fn check_all_exclude_glob() {
         .build();
 
     p.cargo("check --workspace --exclude '*z'")
-        .with_stderr_does_not_contain("[CHECKING] baz v0.1.0 [..]")
-        .with_stderr(
-            "\
+        // does_not_contain
+        // [CHECKING] baz v0.1.0 [..]
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[CHECKING] bar v0.1.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -459,8 +480,18 @@ fn check_virtual_all_implied() {
         .build();
 
     p.cargo("check -v")
-        .with_stderr_contains("[..] --crate-name bar [..] bar/src/lib.rs [..]")
-        .with_stderr_contains("[..] --crate-name baz [..] baz/src/lib.rs [..]")
+        .with_stderr_data(
+            str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+[CHECKING] baz v0.1.0 ([ROOT]/foo/baz)
+[CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
+[RUNNING] `rustc --crate-name baz [..] baz/src/lib.rs [..]`
+[RUNNING] `rustc --crate-name bar [..] bar/src/lib.rs [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -481,14 +512,14 @@ fn check_virtual_manifest_one_project() {
         .build();
 
     p.cargo("check -p bar")
-        .with_stderr_does_not_contain("[CHECKING] baz v0.1.0 [..]")
-        .with_stderr(
-            "\
+        // does_not_contain
+        // [CHECKING] baz v0.1.0 [..]
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[CHECKING] bar v0.1.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -509,14 +540,14 @@ fn check_virtual_manifest_glob() {
         .build();
 
     p.cargo("check -p '*z'")
-        .with_stderr_does_not_contain("[CHECKING] bar v0.1.0 [..]")
-        .with_stderr(
-            "\
+        // does_not_contain
+        // [CHECKING] bar v0.1.0 [..]
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[CHECKING] baz v0.1.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] baz v0.1.0 ([ROOT]/foo/baz)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -524,14 +555,13 @@ fn check_virtual_manifest_glob() {
 fn exclude_warns_on_non_existing_package() {
     let p = project().file("src/lib.rs", "").build();
     p.cargo("check --workspace --exclude bar")
-        .with_stdout("")
-        .with_stderr(
-            "\
-[WARNING] excluded package(s) `bar` not found in workspace `[CWD]`
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[WARNING] excluded package(s) `bar` not found in workspace `[ROOT]/foo`
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -546,11 +576,17 @@ fn targets_selected_default() {
         .build();
 
     foo.cargo("check -v")
-        .with_stderr_contains("[..] --crate-name foo [..] src/lib.rs [..]")
-        .with_stderr_contains("[..] --crate-name foo [..] src/main.rs [..]")
-        .with_stderr_does_not_contain("[..] --crate-name example1 [..] examples/example1.rs [..]")
-        .with_stderr_does_not_contain("[..] --crate-name test2 [..] tests/test2.rs [..]")
-        .with_stderr_does_not_contain("[..] --crate-name bench3 [..] benches/bench3.rs [..]")
+        // shold not contain
+        // [..] --crate-name example1 [..] examples/example1.rs [..]
+        // [..] --crate-name test2 [..] tests/test2.rs [..]
+        // [..] --crate-name bench3 [..] benches/bench3.rs [..]
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] src/lib.rs [..]`
+[RUNNING] `rustc --crate-name foo [..] src/main.rs [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -565,11 +601,18 @@ fn targets_selected_all() {
         .build();
 
     foo.cargo("check --all-targets -v")
-        .with_stderr_contains("[..] --crate-name foo [..] src/lib.rs [..]")
-        .with_stderr_contains("[..] --crate-name foo [..] src/main.rs [..]")
-        .with_stderr_contains("[..] --crate-name example1 [..] examples/example1.rs [..]")
-        .with_stderr_contains("[..] --crate-name test2 [..] tests/test2.rs [..]")
-        .with_stderr_contains("[..] --crate-name bench3 [..] benches/bench3.rs [..]")
+        .with_stderr_data(
+            str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] src/lib.rs [..]`
+[RUNNING] `rustc --crate-name foo [..] src/main.rs [..]`
+[RUNNING] `rustc --crate-name example1 [..] examples/example1.rs [..]`
+[RUNNING] `rustc --crate-name test2 [..] tests/test2.rs [..]`
+[RUNNING] `rustc --crate-name bench3 [..] benches/bench3.rs [..]`
+...
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -593,10 +636,15 @@ fn check_unit_test_profile() {
     foo.cargo("check").run();
     foo.cargo("check --profile test")
         .with_status(101)
-        .with_stderr_contains("[..]badtext[..]")
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+error[E0425]: cannot find value `badtext` in this scope
+...
+"#]])
         .run();
 }
 
+#[allow(deprecated)]
 // Verify what is checked with various command-line filters.
 #[cargo_test]
 fn check_filters() {
@@ -775,12 +823,12 @@ fn short_message_format() {
         .build();
     foo.cargo("check --message-format=short")
         .with_status(101)
-        .with_stderr_contains(
-            "\
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
 src/lib.rs:1:27: error[E0308]: mismatched types
-error: could not compile `foo` (lib) due to 1 previous error
-",
-        )
+[ERROR] could not compile `foo` (lib) due to 1 previous error
+
+"#]])
         .run();
 }
 
@@ -838,8 +886,14 @@ fn check_keep_going() {
     // Due to -j1, without --keep-going only one of the two bins would be built.
     foo.cargo("check -j1 --keep-going")
         .with_status(101)
-        .with_stderr_contains("error: ONE")
-        .with_stderr_contains("error: TWO")
+        .with_stderr_data(
+            str![[r#"
+[ERROR] ONE
+[ERROR] TWO
+...
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -879,9 +933,10 @@ fn error_from_deep_recursion() -> Result<(), fmt::Error> {
     let p = project().file("src/lib.rs", &big_macro).build();
     p.cargo("check --message-format=json")
         .with_status(101)
-        .with_stdout_contains(
-            "[..]\"message\":\"recursion limit reached while expanding [..]`m[..]`\"[..]",
-        )
+        .with_stdout_data(str![[r#"
+{"reason":"compiler-message",[..]"message":"recursion limit reached while expanding `m!`",[..]rendered":"[..]recursion limit reached while expanding `m!`[..]"}}
+...
+"#]])
         .run();
 
     Ok(())
@@ -905,8 +960,14 @@ fn rustc_workspace_wrapper_affects_all_workspace_members() {
 
     p.cargo("check")
         .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
-        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
-        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name baz [..]")
+        .with_stderr_data(
+            str![[r#"
+WRAPPER CALLED: rustc --crate-name bar [..]
+WRAPPER CALLED: rustc --crate-name baz [..]
+...
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -938,9 +999,15 @@ fn rustc_workspace_wrapper_includes_path_deps() {
 
     p.cargo("check --workspace")
         .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
-        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name foo [..]")
-        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
-        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name baz [..]")
+        .with_stderr_data(
+            str![[r#"
+WRAPPER CALLED: rustc --crate-name bar [..]
+WRAPPER CALLED: rustc --crate-name baz [..]
+WRAPPER CALLED: rustc --crate-name foo [..]
+...
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -962,8 +1029,15 @@ fn rustc_workspace_wrapper_respects_primary_units() {
 
     p.cargo("check -p bar")
         .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
-        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
-        .with_stdout_does_not_contain("WRAPPER CALLED: rustc --crate-name baz [..]")
+        // should not contain
+        // WRAPPER CALLED: rustc --crate-name baz [..]
+        .with_stderr_data(str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+[CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
+WRAPPER CALLED: rustc --crate-name bar [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -995,10 +1069,27 @@ fn rustc_workspace_wrapper_excludes_published_deps() {
 
     p.cargo("check --workspace -v")
         .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
-        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name foo [..]")
-        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
-        .with_stderr_contains("[CHECKING] baz [..]")
-        .with_stdout_does_not_contain("WRAPPER CALLED: rustc --crate-name baz [..]")
+        // does_not_contain
+        // WRAPPER CALLED: rustc --crate-name baz [..]
+        .with_stderr_data(
+            str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 3 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[DOWNLOADED] baz v1.0.0 (registry `dummy-registry`)
+[CHECKING] baz v1.0.0
+[CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `[..]`
+[RUNNING] `[..]`
+[RUNNING] `[..]`
+WRAPPER CALLED: rustc --crate-name bar [..]
+WRAPPER CALLED: rustc --crate-name foo [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -1018,13 +1109,12 @@ fn warn_manifest_with_project() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] `[project]` is deprecated in favor of `[package]`
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1048,14 +1138,13 @@ fn error_manifest_with_project_on_2024() {
     p.cargo("check")
         .masquerade_as_nightly_cargo(&["edition2024"])
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[CWD]/Cargo.toml`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   `[project]` is not supported as of the 2024 Edition, please use `[package]`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1080,13 +1169,12 @@ fn warn_manifest_package_and_project() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] `[project]` is deprecated in favor of `[package]`
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1133,15 +1221,14 @@ fn git_manifest_package_and_project() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
-[UPDATING] git repository `[..]`
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/bar`
 [LOCKING] 2 packages to latest compatible versions
-[CHECKING] bar v0.0.1 ([..])
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] bar v0.0.1 ([ROOTURL]/bar#[..])
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1183,15 +1270,14 @@ fn git_manifest_with_project() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
-[UPDATING] git repository `[..]`
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `[ROOTURL]/bar`
 [LOCKING] 2 packages to latest compatible versions
-[CHECKING] bar v0.0.1 ([..])
-[CHECKING] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[CHECKING] bar v0.0.1 ([ROOTURL]/bar#[..])
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1211,7 +1297,11 @@ fn check_fixable_warning() {
         .build();
 
     foo.cargo("check")
-        .with_stderr_contains("[..] (run `cargo fix --lib -p foo` to apply 1 suggestion)")
+        .with_stderr_data(str![[r#"
+...
+[WARNING] `foo` (lib) generated 1 warning (run `cargo fix --lib -p foo` to apply 1 suggestion)
+...
+"#]])
         .run();
 }
 
@@ -1241,7 +1331,11 @@ mod tests {
         .build();
 
     foo.cargo("check --all-targets")
-        .with_stderr_contains("[..] (run `cargo fix --lib -p foo --tests` to apply 1 suggestion)")
+        .with_stderr_data(str![[r#"
+...
+[WARNING] `foo` (lib test) generated 1 warning (run `cargo fix --lib -p foo --tests` to apply 1 suggestion)
+...
+"#]])
         .run();
     foo.cargo("fix --lib -p foo --tests --allow-no-vcs").run();
     assert!(!foo.read_file("src/lib.rs").contains("use std::io;"));
@@ -1265,19 +1359,19 @@ fn check_fixable_error_no_fix() {
         )
         .build();
 
-    let rustc_message = raw_rustc_output(&foo, "src/lib.rs", &[]);
-    let expected_output = format!(
-        "\
-[CHECKING] foo v0.0.1 ([..])
-{}\
-[WARNING] `foo` (lib) generated 1 warning
-[ERROR] could not compile `foo` (lib) due to 1 previous error; 1 warning emitted
-",
-        rustc_message
-    );
     foo.cargo("check")
         .with_status(101)
-        .with_stderr(expected_output)
+        .with_stderr_data(
+            str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[ERROR] traits in `#[derive(...)]` don't accept arguments
+[WARNING] unused import: `std::io`
+[WARNING] `foo` (lib) generated 1 warning
+[ERROR] could not compile `foo` (lib) due to 1 previous error; 1 warning emitted
+...
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -1317,8 +1411,14 @@ fn check_fixable_warning_workspace() {
         .build();
 
     p.cargo("check")
-        .with_stderr_contains("[..] (run `cargo fix --lib -p foo` to apply 1 suggestion)")
-        .with_stderr_contains("[..] (run `cargo fix --lib -p bar` to apply 1 suggestion)")
+        .with_stderr_data(
+            str![[r#"
+[WARNING] `foo` (lib) generated 1 warning (run `cargo fix --lib -p foo` to apply 1 suggestion)
+[WARNING] `bar` (lib) generated 1 warning (run `cargo fix --lib -p bar` to apply 1 suggestion)
+...
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -1341,7 +1441,11 @@ fn check_fixable_example() {
         .file("examples/ex1.rs", "use std::fmt; fn main() {}")
         .build();
     p.cargo("check --all-targets")
-        .with_stderr_contains("[..] (run `cargo fix --example \"ex1\"` to apply 1 suggestion)")
+        .with_stderr_data(str![[r#"
+...
+[WARNING] `foo` (example "ex1") generated 1 warning (run `cargo fix --example "ex1"` to apply 1 suggestion)
+...
+"#]])
         .run();
 }
 
@@ -1383,7 +1487,11 @@ fn check_fixable_bench() {
         )
         .build();
     p.cargo("check --all-targets")
-        .with_stderr_contains("[..] (run `cargo fix --bench \"bench\"` to apply 1 suggestion)")
+        .with_stderr_data(str![[r#"
+...
+[WARNING] `foo` (bench "bench") generated 1 warning (run `cargo fix --bench "bench"` to apply 1 suggestion)
+...
+"#]])
         .run();
 }
 
@@ -1430,9 +1538,12 @@ fn check_fixable_mixed() {
         )
         .build();
     p.cargo("check --all-targets")
-        .with_stderr_contains("[..] (run `cargo fix --bin \"foo\" --tests` to apply 2 suggestions)")
-        .with_stderr_contains("[..] (run `cargo fix --example \"ex1\"` to apply 1 suggestion)")
-        .with_stderr_contains("[..] (run `cargo fix --bench \"bench\"` to apply 1 suggestion)")
+        .with_stderr_data(str![[r#"
+[WARNING] `foo` (example "ex1") generated 1 warning (run `cargo fix --example "ex1"` to apply 1 suggestion)
+[WARNING] `foo` (bench "bench") generated 1 warning (run `cargo fix --bench "bench"` to apply 1 suggestion)
+[WARNING] `foo` (bin "foo" test) generated 2 warnings (run `cargo fix --bin "foo" --tests` to apply 2 suggestions)
+...
+"#]].unordered())
         .run();
 }
 
@@ -1457,7 +1568,11 @@ fn check_fixable_warning_for_clippy() {
     foo.cargo("check")
         // We can't use `clippy` so we use a `rustc` workspace wrapper instead
         .env("RUSTC_WORKSPACE_WRAPPER", tools::wrapped_clippy_driver())
-        .with_stderr_contains("[..] (run `cargo clippy --fix --lib -p foo` to apply 1 suggestion)")
+        .with_stderr_data(str![[r#"
+...
+[WARNING] `foo` (lib) generated 1 warning (run `cargo clippy --fix --lib -p foo` to apply 1 suggestion)
+...
+"#]])
         .run();
 }
 
@@ -1489,7 +1604,7 @@ fn check_unused_manifest_keys() {
             [target.'cfg(windows)'.dependencies]
             foo = { version = "0.1.0", wxz = "wxz" }
 
-            [target.x86_64-pc-windows-gnu.dev-dependencies]
+            [target.wasm32-wasip1.dev-dependencies]
             foo = { version = "0.1.0", wxz = "wxz" }
 
             [target.bar.build-dependencies]
@@ -1500,25 +1615,27 @@ fn check_unused_manifest_keys() {
         .build();
 
     p.cargo("check")
-        .with_stderr(
-            "\
+        .with_stderr_data(
+            str![[r#"
 [WARNING] unused manifest key: dependencies.dep.wxz
 [WARNING] unused manifest key: dependencies.foo.abc
 [WARNING] unused manifest key: dev-dependencies.foo.wxz
 [WARNING] unused manifest key: build-dependencies.foo.wxz
 [WARNING] unused manifest key: target.bar.build-dependencies.foo.wxz
 [WARNING] unused manifest key: target.cfg(windows).dependencies.foo.wxz
-[WARNING] unused manifest key: target.x86_64-pc-windows-gnu.dev-dependencies.foo.wxz
-[UPDATING] `[..]` index
+[WARNING] unused manifest key: target.wasm32-wasip1.dev-dependencies.foo.wxz
+[UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] foo v0.1.0 ([..])
-[DOWNLOADED] dep v0.1.0 ([..])
-[CHECKING] [..]
-[CHECKING] [..]
-[CHECKING] bar v0.2.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
+[DOWNLOADED] foo v0.1.0 (registry `dummy-registry`)
+[DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
+[CHECKING] foo v0.1.0
+[CHECKING] dep v0.1.0
+[CHECKING] bar v0.2.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
         )
         .run();
 }
@@ -1538,12 +1655,11 @@ fn versionless_package() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("check")
-        .with_stderr(
-            "\
-[CHECKING] foo v0.0.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1583,10 +1699,10 @@ fn pkgid_querystring_works() {
 
     p.cargo("build -p")
         .arg(gitdep_pkgid)
-        .with_stderr(
-            "\
-[COMPILING] gitdep v1.0.0 (file:///[..]/gitdep?branch=master#[..])
-[FINISHED] `dev` profile [..]",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] gitdep v1.0.0 ([ROOTURL]/gitdep?branch=master#[..])
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
