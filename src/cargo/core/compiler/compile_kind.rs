@@ -131,7 +131,7 @@ impl CompileTarget {
         if name.is_empty() {
             anyhow::bail!("target was empty");
         }
-        if !name.ends_with(".json") {
+        if !Self::name_ends_with_json(name) {
             return Ok(CompileTarget { name: name.into() });
         }
 
@@ -170,7 +170,7 @@ impl CompileTarget {
         // name without ".json") as a short name for this target. Note that the
         // `unwrap()` here should never trigger since we have a nonempty name
         // and it starts as utf-8 so it's always utf-8
-        if self.name.ends_with(".json") {
+        if self.is_json_file() {
             Path::new(&self.name).file_stem().unwrap().to_str().unwrap()
         } else {
             &self.name
@@ -180,11 +180,7 @@ impl CompileTarget {
     /// See [`CompileKind::fingerprint_hash`].
     pub fn fingerprint_hash(&self) -> u64 {
         let mut hasher = StableHasher::new();
-        match self
-            .name
-            .ends_with(".json")
-            .then(|| fs::read_to_string(self.name))
-        {
+        match self.is_json_file().then(|| fs::read_to_string(self.name)) {
             Some(Ok(contents)) => {
                 // This may have some performance concerns, since it is called
                 // fairly often. If that ever seems worth fixing, consider
@@ -196,5 +192,26 @@ impl CompileTarget {
             }
         }
         hasher.finish()
+    }
+
+    /// Checks if name of `self` contains a filename with json ext.
+    /// Does not check if the path exists.
+    ///
+    /// Same as [`Self::name_ends_with_json`], use it to check strings if create `CompileTarget` isn't a way.
+    #[inline]
+    pub fn is_json_file(&self) -> bool {
+        Self::name_ends_with_json(self.name)
+    }
+
+    /// Helper function to check if the `name` ends with ".json" (case-insensitive).
+    /// Does not check if the path exists.
+    pub fn name_ends_with_json<S: AsRef<str>>(name: S) -> bool {
+        const EXT: &'static str = ".json";
+        name.as_ref().ends_with(EXT) || {
+            let s = name.as_ref();
+            s.get((s.len() - 5)..)
+                .map(|ext| ext.eq_ignore_ascii_case(EXT))
+                .unwrap_or_default()
+        }
     }
 }
