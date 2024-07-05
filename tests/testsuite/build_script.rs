@@ -1,10 +1,9 @@
 //! Tests for build.rs scripts.
 
-#![allow(deprecated)]
-
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::install::cargo_home;
 use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 use cargo_test_support::tools;
@@ -13,6 +12,7 @@ use cargo_test_support::{
 };
 use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier, symlink_supported};
 use cargo_util::paths::{self, remove_dir_all};
+use snapbox::data::Inline;
 use std::env;
 use std::fs;
 use std::io;
@@ -38,16 +38,16 @@ fn custom_build_script_failed() {
         .build();
     p.cargo("build -v")
         .with_status(101)
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]`
-[RUNNING] `[..]/build-script-build`
-[ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[ERROR] failed to run custom build command for `foo v0.5.0 ([ROOT]/foo)`
 
 Caused by:
-  process didn't exit successfully: `[..]/build-script-build` (exit [..]: 101)",
-        )
+  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
+
+"#]])
         .run();
 }
 
@@ -76,34 +76,32 @@ fn custom_build_script_failed_backtraces_message() {
     p.cargo("build -v")
         .env("RUST_BACKTRACE", "1")
         .with_status(101)
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]`
-[RUNNING] `[..]/build-script-build`
-[ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
-note: To improve backtraces for build dependencies, set the \
-CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG=true environment variable [..]
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[ERROR] failed to run custom build command for `foo v0.5.0 ([ROOT]/foo)`
+[NOTE] To improve backtraces for build dependencies, set the CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG=true environment variable to enable debug information generation.
 
 Caused by:
-  process didn't exit successfully: `[..]/build-script-build` (exit [..]: 101)",
-        )
+  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
+
+"#]])
         .run();
 
     p.cargo("check -v")
         .env("RUST_BACKTRACE", "1")
         .with_status(101)
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `[..]/build-script-build`
-[ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
-note: To improve backtraces for build dependencies, set the \
-CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG=true environment variable [..]
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[ERROR] failed to run custom build command for `foo v0.5.0 ([ROOT]/foo)`
+[NOTE] To improve backtraces for build dependencies, set the CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG=true environment variable to enable debug information generation.
 
 Caused by:
-  process didn't exit successfully: `[..]/build-script-build` (exit [..]: 101)",
-        )
+  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
+
+"#]])
         .run();
 }
 
@@ -132,16 +130,16 @@ fn custom_build_script_failed_backtraces_message_with_debuginfo() {
         .env("RUST_BACKTRACE", "1")
         .env("CARGO_PROFILE_DEV_BUILD_OVERRIDE_DEBUG", "true")
         .with_status(101)
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]`
-[RUNNING] `[..]/build-script-build`
-[ERROR] failed to run custom build command for `foo v0.5.0 ([CWD])`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[ERROR] failed to run custom build command for `foo v0.5.0 ([ROOT]/foo)`
 
 Caused by:
-  process didn't exit successfully: `[..]/build-script-build` (exit [..]: 101)",
-        )
+  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
+
+"#]])
         .run();
 }
 
@@ -521,13 +519,12 @@ fn custom_build_env_var_rustc_linker_bad_host_target() {
     // build.rs should fail since host == target when no target is set
     p.cargo("build --verbose")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/linker [..]`
 [ERROR] linker `[..]/path/to/linker` not found
-"
-        )
+...
+"#]])
         .run();
 }
 
@@ -626,11 +623,10 @@ fn custom_build_invalid_host_config_feature_flag() {
         .arg(&target)
         .masquerade_as_nightly_cargo(&["host-config"])
         .with_status(101)
-        .with_stderr_contains(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] the -Zhost-config flag requires the -Ztarget-applies-to-host flag to be set
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -656,17 +652,16 @@ fn custom_build_linker_host_target_with_bad_host_config() {
 
     // build.rs should fail due to bad host linker being set
     p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
-            .arg(&target)
-            .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
-            .with_status(101)
-            .with_stderr_contains(
-                "\
-[COMPILING] foo v0.0.1 ([CWD])
+        .arg(&target)
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/linker [..]`
 [ERROR] linker `[..]/path/to/host/linker` not found
-"
-            )
-            .run();
+...
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -691,17 +686,16 @@ fn custom_build_linker_bad_host() {
 
     // build.rs should fail due to bad host linker being set
     p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
-            .arg(&target)
-            .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
-            .with_status(101)
-            .with_stderr_contains(
-                "\
-[COMPILING] foo v0.0.1 ([CWD])
+        .arg(&target)
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/linker [..]`
 [ERROR] linker `[..]/path/to/host/linker` not found
-"
-            )
-            .run();
+...
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -728,17 +722,16 @@ fn custom_build_linker_bad_host_with_arch() {
 
     // build.rs should fail due to bad host linker being set
     p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
-            .arg(&target)
-            .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
-            .with_status(101)
-            .with_stderr_contains(
-                "\
-[COMPILING] foo v0.0.1 ([CWD])
+        .arg(&target)
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/arch/linker [..]`
 [ERROR] linker `[..]/path/to/host/arch/linker` not found
-"
-            )
-            .run();
+...
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -804,17 +797,16 @@ fn custom_build_linker_bad_cross_arch_host() {
 
     // build.rs should fail due to bad host linker being set
     p.cargo("build -Z target-applies-to-host -Z host-config --verbose --target")
-            .arg(&target)
-            .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
-            .with_status(101)
-            .with_stderr_contains(
-                "\
-[COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..]-C linker=[..]/path/to/host/linker [..]`
+        .arg(&target)
+        .masquerade_as_nightly_cargo(&["target-applies-to-host", "host-config"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin [..] -C linker=[..]/path/to/host/linker [..]`
 [ERROR] linker `[..]/path/to/host/linker` not found
-"
-            )
-            .run();
+...
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -841,10 +833,11 @@ fn custom_build_script_wrong_rustc_flags() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr_contains(
-            "[ERROR] Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ([CWD])`: \
-             `-aaa -bbb`",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[ERROR] Only `-l` and `-L` flags are allowed in build script of `foo v0.5.0 ([ROOT]/foo)`: `-aaa -bbb`
+
+"#]])
         .run();
 }
 
@@ -889,25 +882,17 @@ fn custom_build_script_rustc_flags() {
         )
         .build();
 
-    p.cargo("build --verbose")
-        .with_stderr(
-            "\
+    p.cargo("build --verbose").with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] foo [..]
-[RUNNING] `rustc --crate-name build_script_build --edition=2015 foo/build.rs [..]
-[RUNNING] `[..]build-script-build`
-[RUNNING] `rustc --crate-name foo --edition=2015 foo/src/lib.rs [..]\
-    -L dependency=[CWD]/target/debug/deps \
-    -L /dummy/path1 -L /dummy/path2 -l nonexistinglib`
-[COMPILING] bar [..]
-[RUNNING] `rustc --crate-name bar --edition=2015 src/main.rs [..]\
-    -L dependency=[CWD]/target/debug/deps \
-    --extern foo=[..]libfoo-[..] \
-    -L /dummy/path1 -L /dummy/path2`
-[FINISHED] `dev` profile [..]
-",
-        )
-        .run();
+[COMPILING] foo v0.5.0 ([ROOT]/foo/foo)
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 foo/build.rs [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo --edition=2015 foo/src/lib.rs [..]-L dependency=[ROOT]/foo/target/debug/deps -L /dummy/path1 -L /dummy/path2 -l nonexistinglib`
+[COMPILING] bar v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name bar --edition=2015 src/main.rs [..]-L dependency=[ROOT]/foo/target/debug/deps --extern foo=[ROOT]/foo/target/debug/deps/libfoo-[HASH].rlib -L /dummy/path1 -L /dummy/path2`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -951,25 +936,17 @@ fn custom_build_script_rustc_flags_no_space() {
         )
         .build();
 
-    p.cargo("build --verbose")
-        .with_stderr(
-            "\
+    p.cargo("build --verbose").with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] foo [..]
-[RUNNING] `rustc --crate-name build_script_build --edition=2015 foo/build.rs [..]
-[RUNNING] `[..]build-script-build`
-[RUNNING] `rustc --crate-name foo --edition=2015 foo/src/lib.rs [..]\
-    -L dependency=[CWD]/target/debug/deps \
-    -L /dummy/path1 -L /dummy/path2 -l nonexistinglib`
-[COMPILING] bar [..]
-[RUNNING] `rustc --crate-name bar --edition=2015 src/main.rs [..]\
-    -L dependency=[CWD]/target/debug/deps \
-    --extern foo=[..]libfoo-[..] \
-    -L /dummy/path1 -L /dummy/path2`
-[FINISHED] `dev` profile [..]
-",
-        )
-        .run();
+[COMPILING] foo v0.5.0 ([ROOT]/foo/foo)
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 foo/build.rs [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo --edition=2015 foo/src/lib.rs [..]-L dependency=[ROOT]/foo/target/debug/deps -L /dummy/path1 -L /dummy/path2 -l nonexistinglib`
+[COMPILING] bar v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name bar --edition=2015 src/main.rs [..]-L dependency=[ROOT]/foo/target/debug/deps --extern foo=[ROOT]/foo/target/debug/deps/libfoo-[HASH].rlib -L /dummy/path1 -L /dummy/path2`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -991,14 +968,13 @@ fn links_no_build_cmd() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[..]/foo/Cargo.toml`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   package specifies that it links to `a` but does not have a custom build script
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1039,18 +1015,21 @@ fn links_duplicates() {
         .file("a-sys/build.rs", "")
         .build();
 
-    p.cargo("build").with_status(101)
-                       .with_stderr("\
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
 [ERROR] failed to select a version for `a-sys`.
-    ... required by package `foo v0.5.0 ([..])`
+    ... required by package `foo v0.5.0 ([ROOT]/foo)`
 versions that meet the requirements `*` are: 0.5.0
 
 the package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
-package `foo v0.5.0 ([..])`
-Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = \"a\"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
+package `foo v0.5.0 ([ROOT]/foo)`
+Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
 
 failed to select a version for `a-sys` which could resolve this conflict
-").run();
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -1091,23 +1070,21 @@ fn links_duplicates_old_registry() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.1.0 ([..])
-[ERROR] multiple packages link to native library `a`, \
-    but a native library can be linked only once
+[DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
+[ERROR] multiple packages link to native library `a`, but a native library can be linked only once
 
 package `bar v0.1.0`
-    ... which satisfies dependency `bar = \"^0.1\"` (locked to 0.1.0) of package `foo v0.1.0 ([..]foo)`
+    ... which satisfies dependency `bar = "^0.1"` (locked to 0.1.0) of package `foo v0.1.0 ([ROOT]/foo)`
 links to native library `a`
 
-package `foo v0.1.0 ([..]foo)`
+package `foo v0.1.0 ([ROOT]/foo)`
 also links to native library `a`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1164,19 +1141,22 @@ fn links_duplicates_deep_dependency() {
         .file("a/a-sys/build.rs", "")
         .build();
 
-    p.cargo("build").with_status(101)
-                       .with_stderr("\
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
 [ERROR] failed to select a version for `a-sys`.
-    ... required by package `a v0.5.0 ([..])`
-    ... which satisfies path dependency `a` of package `foo v0.5.0 ([..])`
+    ... required by package `a v0.5.0 ([ROOT]/foo/a)`
+    ... which satisfies path dependency `a` of package `foo v0.5.0 ([ROOT]/foo)`
 versions that meet the requirements `*` are: 0.5.0
 
 the package `a-sys` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
-package `foo v0.5.0 ([..])`
-Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = \"a\"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
+package `foo v0.5.0 ([ROOT]/foo)`
+Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
 
 failed to select a version for `a-sys` which could resolve this conflict
-").run();
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -1240,17 +1220,19 @@ fn overrides_and_links() {
         .build();
 
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[..]
-[..]
-[..]
-[..]
-[..]
-[..]
+        .with_stderr_data(
+            str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+[COMPILING] a v0.5.0 ([ROOT]/foo/a)
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..]`
+[RUNNING] `rustc --crate-name a [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..] -L foo -L bar`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
         )
         .run();
 }
@@ -1374,15 +1356,14 @@ fn only_rerun_build_script() {
     p.root().move_into_the_past();
 
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[DIRTY] foo v0.5.0 ([CWD]): the precalculated components changed
-[COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `[..]/build-script-build`
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.5.0 ([ROOT]/foo): the precalculated components changed
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1484,43 +1465,53 @@ fn testing_and_such() {
 
     println!("test");
     p.cargo("test -vj1")
-        .with_stderr(
-            "\
-[DIRTY] foo v0.5.0 ([CWD]): the precalculated components changed
-[COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `[..]/build-script-build`
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.5.0 ([ROOT]/foo): the precalculated components changed
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]`
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]/foo-[..][EXE]`
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
 [DOCTEST] foo
-[RUNNING] `rustdoc [..]--test [..]`",
-        )
-        .with_stdout_contains_n("running 0 tests", 2)
+[RUNNING] `rustdoc [..]--test [..]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 
     println!("doc");
     p.cargo("doc -v")
-        .with_stderr(
-            "\
-[DOCUMENTING] foo v0.5.0 ([CWD])
+        .with_stderr_data(str![[r#"
+[DOCUMENTING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustdoc [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[GENERATED] [CWD]/target/doc/foo/index.html
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
         .run();
 
     p.change_file("src/main.rs", "fn main() {}");
     println!("run");
     p.cargo("run")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -1588,13 +1579,14 @@ fn propagation_of_l_flags() {
         .build();
 
     p.cargo("build -v -j1")
-        .with_stderr_contains(
-            "\
-[RUNNING] `rustc --crate-name a [..] -L bar[..]-L foo[..]`
-[COMPILING] foo v0.5.0 ([CWD])
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustc --crate-name a [..] -L bar -L foo`
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..] -L bar -L foo`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1666,13 +1658,14 @@ fn propagation_of_l_flags_new() {
         .build();
 
     p.cargo("build -v -j1")
-        .with_stderr_contains(
-            "\
-[RUNNING] `rustc --crate-name a [..] -L bar[..]-L foo[..]`
-[COMPILING] foo v0.5.0 ([CWD])
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustc --crate-name a [..] -L bar -L foo`
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..] -L bar -L foo`
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1705,20 +1698,17 @@ fn build_deps_simple() {
         .file("a/src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
-        .with_stderr(
-            "\
+    p.cargo("build -v").with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] a v0.5.0 ([CWD]/a)
+[COMPILING] a v0.5.0 ([ROOT]/foo/a)
 [RUNNING] `rustc --crate-name a [..]`
-[COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc [..] build.rs [..] --extern a=[..]`
-[RUNNING] `[..]/foo-[..]/build-script-build`
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..] build.rs [..] --extern a=[ROOT]/foo/target/debug/deps/liba-[HASH].rlib`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -1757,14 +1747,17 @@ fn build_deps_not_for_normal() {
     p.cargo("build -v --target")
         .arg(&target)
         .with_status(101)
-        .with_stderr_contains("[..]can't find crate for `aaaaa`[..]")
-        .with_stderr_contains(
-            "\
+        .with_stderr_data(
+            str![[r#"
+...
+error[E0463]: can't find crate for `aaaaa`
 [ERROR] could not compile `foo` (lib) due to 1 previous error
 
 Caused by:
-  process didn't exit successfully: [..]
-",
+  process didn't exit successfully: `rustc --crate-name foo[..]` ([EXIT_STATUS]: 1)
+
+"#]]
+            .unordered(),
         )
         .run();
 }
@@ -1818,36 +1811,21 @@ fn build_cmd_with_a_build_cmd() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("build -v")
-        .with_stderr(
-            "\
+    p.cargo("build -v").with_stderr_data(str![[r#"
 [LOCKING] 3 packages to latest compatible versions
-[COMPILING] b v0.5.0 ([CWD]/b)
+[COMPILING] b v0.5.0 ([ROOT]/foo/b)
 [RUNNING] `rustc --crate-name b [..]`
-[COMPILING] a v0.5.0 ([CWD]/a)
-[RUNNING] `rustc [..] a/build.rs [..] --extern b=[..]`
-[RUNNING] `[..]/a-[..]/build-script-build`
-[RUNNING] `rustc --crate-name a [..]lib.rs [..]--crate-type lib \
-    --emit=[..]link[..] \
-    -C metadata=[..] \
-    --out-dir [..]target/debug/deps \
-    -L [..]target/debug/deps`
-[COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin \
-    --emit=[..]link[..]\
-    -C metadata=[..] --out-dir [..] \
-    -L [..]target/debug/deps \
-    --extern a=[..]liba[..].rlib`
-[RUNNING] `[..]/foo-[..]/build-script-build`
-[RUNNING] `rustc --crate-name foo [..]lib.rs [..]--crate-type lib \
-    --emit=[..]link[..]-C debuginfo=2 [..]\
-    -C metadata=[..] \
-    --out-dir [..] \
-    -L [..]target/debug/deps`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
-        .run();
+[COMPILING] a v0.5.0 ([ROOT]/foo/a)
+[RUNNING] `rustc --crate-name build_script_build [..] a/build.rs [..] --extern b=[ROOT]/foo/target/debug/deps/libb-[HASH].rlib`
+[RUNNING] `[ROOT]/foo/target/debug/build/a-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name a [..]a/src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps`
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--crate-type bin --emit=[..]link[..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/build/foo-[HASH] -L dependency=[ROOT]/foo/target/debug/deps --extern a=[ROOT]/foo/target/debug/deps/liba-[HASH].rlib`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -1896,40 +1874,37 @@ fn out_dir_is_preserved() {
         "#,
     );
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[DIRTY] foo [..]: the file `build.rs` has changed ([..])
-[COMPILING] foo [..]
-[RUNNING] `rustc --crate-name build_script_build [..]
-[RUNNING] `[..]/build-script-build`
-[RUNNING] `rustc --crate-name foo [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.5.0 ([ROOT]/foo): the file `build.rs` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     // Run a fresh build where file should be preserved
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[FRESH] foo [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     // One last time to make sure it's still there.
     p.change_file("foo", "");
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[DIRTY] foo [..]: the precalculated components changed
-[COMPILING] foo [..]
-[RUNNING] `[..]build-script-build`
-[RUNNING] `rustc --crate-name foo [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.5.0 ([ROOT]/foo): the precalculated components changed
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1960,15 +1935,14 @@ fn output_separate_lines() {
         .build();
     p.cargo("build -v")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc [..] build.rs [..]`
-[RUNNING] `[..]/foo-[..]/build-script-build`
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..] -L foo -l static=foo`
-[ERROR] could not find native static library [..]
-",
-        )
+[ERROR] could not find native static library `foo`, perhaps an -L flag is missing?
+...
+"#]])
         .run();
 }
 
@@ -2002,15 +1976,14 @@ fn output_separate_lines_new() {
     // The order of the arguments passed to rustc is important.
     p.cargo("build -v")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
-[RUNNING] `rustc [..] build.rs [..]`
-[RUNNING] `[..]/foo-[..]/build-script-build`
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [RUNNING] `rustc --crate-name foo [..] -L foo -L bar -l static=foo -l bar`
-[ERROR] could not find native static library [..]
-",
-        )
+[ERROR] could not find native static library `foo`, perhaps an -L flag is missing?
+...
+"#]])
         .run();
 }
 
@@ -2060,13 +2033,16 @@ fn code_generation() {
         .build();
 
     p.cargo("run")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `target/debug/foo[EXE]`",
-        )
-        .with_stdout("Hello, World!")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+Hello, World!
+
+"#]])
         .run();
 
     p.cargo("test").run();
@@ -2116,14 +2092,14 @@ fn build_script_only() {
         .build();
     p.cargo("build -v")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   no targets specified in the manifest
-  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present",
-        )
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+
+"#]])
         .run();
 }
 
@@ -2587,23 +2563,41 @@ fn cfg_test() {
         .file("tests/test.rs", "#[cfg(foo)] #[test] fn test_bar() {}")
         .build();
     p.cargo("test -v")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] [..] build.rs [..]
-[RUNNING] `[..]/build-script-build`
-[RUNNING] [..] --cfg foo[..]
-[RUNNING] [..] --cfg foo[..]
-[RUNNING] [..] --cfg foo[..]
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]/foo-[..][EXE]`
-[RUNNING] `[..]/test-[..][EXE]`
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..] --cfg foo[..]`
+[RUNNING] `rustc --crate-name foo [..] --cfg foo[..]`
+[RUNNING] `rustc --crate-name test [..] --cfg foo[..]`
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/deps/test-[HASH][EXE]`
 [DOCTEST] foo
-[RUNNING] [..] --cfg foo[..]",
-        )
-        .with_stdout_contains("test test_foo ... ok")
-        .with_stdout_contains("test test_bar ... ok")
-        .with_stdout_contains_n("test [..] ... ok", 3)
+[RUNNING] `rustdoc [..]--cfg foo[..]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test test_foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test test_bar ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test src/lib.rs - foo (line 3) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -2706,21 +2700,39 @@ fn cfg_override_test() {
         .file("tests/test.rs", "#[cfg(foo)] #[test] fn test_bar() {}")
         .build();
     p.cargo("test -v")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `[..]`
-[RUNNING] `[..]`
-[RUNNING] `[..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]/foo-[..][EXE]`
-[RUNNING] `[..]/test-[..][EXE]`
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo[..]`
+[RUNNING] `rustc --crate-name foo[..]`
+[RUNNING] `rustc --crate-name test[..]`
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/deps/test-[HASH][EXE]`
 [DOCTEST] foo
-[RUNNING] [..] --cfg foo[..]",
-        )
-        .with_stdout_contains("test test_foo ... ok")
-        .with_stdout_contains("test test_bar ... ok")
-        .with_stdout_contains_n("test [..] ... ok", 3)
+[RUNNING] `rustdoc [..] --cfg foo[..]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 1 test
+test test_foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test test_bar ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test src/lib.rs - foo (line 3) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -2806,7 +2818,12 @@ fn env_build() {
         )
         .build();
     p.cargo("build -v").run();
-    p.cargo("run -v").with_stdout("foo\n").run();
+    p.cargo("run -v")
+        .with_stdout_data(str![[r#"
+foo
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -2844,22 +2861,39 @@ fn env_test() {
         )
         .build();
     p.cargo("test -v")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] [..] build.rs [..]
-[RUNNING] `[..]/build-script-build`
-[RUNNING] [..] --crate-name foo[..]
-[RUNNING] [..] --crate-name foo[..]
-[RUNNING] [..] --crate-name test[..]
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]/foo-[..][EXE]`
-[RUNNING] `[..]/test-[..][EXE]`
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build[..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo[..]`
+[RUNNING] `rustc --crate-name foo[..]`
+[RUNNING] `rustc --crate-name test[..]`
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/debug/deps/test-[HASH][EXE]`
 [DOCTEST] foo
-[RUNNING] [..] --crate-name foo[..]",
-        )
-        .with_stdout_contains_n("running 0 tests", 2)
-        .with_stdout_contains("test test_foo ... ok")
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo[..]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 1 test
+test test_foo ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -2946,34 +2980,48 @@ fn flags_go_into_tests() {
         .build();
 
     p.cargo("test -v --test=foo")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 3 packages to latest compatible versions
-[COMPILING] a v0.5.0 ([..]
+[COMPILING] a v0.5.0 ([ROOT]/foo/a)
 [RUNNING] `rustc [..] a/build.rs [..]`
-[RUNNING] `[..]/build-script-build`
-[RUNNING] `rustc [..] a/src/lib.rs [..] -L test[..]`
-[COMPILING] b v0.5.0 ([..]
-[RUNNING] `rustc [..] b/src/lib.rs [..] -L test[..]`
-[COMPILING] foo v0.5.0 ([..]
-[RUNNING] `rustc [..] src/lib.rs [..] -L test[..]`
-[RUNNING] `rustc [..] tests/foo.rs [..] -L test[..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]/foo-[..][EXE]`",
-        )
-        .with_stdout_contains("running 0 tests")
+[RUNNING] `[ROOT]/foo/target/debug/build/a-[HASH]/build-script-build`
+[RUNNING] `rustc [..] a/src/lib.rs [..] -L test`
+[COMPILING] b v0.5.0 ([ROOT]/foo/b)
+[RUNNING] `rustc [..] b/src/lib.rs [..] -L test`
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc [..] src/lib.rs [..] -L test`
+[RUNNING] `rustc [..] tests/foo.rs [..] -L test`
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 
     p.cargo("test -v -pb --lib")
-        .with_stderr(
-            "\
-[FRESH] a v0.5.0 ([..]
-[COMPILING] b v0.5.0 ([..]
-[RUNNING] `rustc [..] b/src/lib.rs [..] -L test[..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]/b-[..][EXE]`",
-        )
-        .with_stdout_contains("running 0 tests")
+        .with_stderr_data(str![[r#"
+[FRESH] a v0.5.0 ([ROOT]/foo/a)
+[COMPILING] b v0.5.0 ([ROOT]/foo/b)
+[RUNNING] `rustc --crate-name b [..] -L test`
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/target/debug/deps/b-[HASH][EXE]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 }
 
@@ -3046,22 +3094,21 @@ fn diamond_passes_args_only_once() {
         .build();
 
     p.cargo("build -v")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 4 packages to latest compatible versions
-[COMPILING] c v0.5.0 ([..]
-[RUNNING] `rustc [..]`
-[RUNNING] `[..]`
-[RUNNING] `rustc [..]`
-[COMPILING] b v0.5.0 ([..]
-[RUNNING] `rustc [..]`
-[COMPILING] a v0.5.0 ([..]
-[RUNNING] `rustc [..]`
-[COMPILING] foo v0.5.0 ([..]
-[RUNNING] `[..]rmeta -L native=test`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[COMPILING] c v0.5.0 ([ROOT]/foo/c)
+[RUNNING] `rustc --crate-name build_script_build [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/c-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name c [..] -L native=test`
+[COMPILING] b v0.5.0 ([ROOT]/foo/b)
+[RUNNING] `rustc --crate-name b [..] -L native=test`
+[COMPILING] a v0.5.0 ([ROOT]/foo/a)
+[RUNNING] `rustc --crate-name a [..] -L native=test`
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] -L native=test`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -3094,15 +3141,14 @@ fn adding_an_override_invalidates() {
         .build();
 
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([..]
-[RUNNING] `rustc [..]`
-[RUNNING] `[..]`
-[RUNNING] `rustc [..] -L native=foo`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..] -L native=foo`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.change_file(
@@ -3117,13 +3163,12 @@ fn adding_an_override_invalidates() {
     );
 
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([..]
-[RUNNING] `rustc [..] -L native=bar`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] -L native=bar`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -3158,13 +3203,12 @@ fn changing_an_override_invalidates() {
         .build();
 
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([..]
-[RUNNING] `rustc [..] -L native=foo`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] -L native=foo`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.change_file(
@@ -3179,14 +3223,13 @@ fn changing_an_override_invalidates() {
     );
 
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[DIRTY] foo v0.5.0 ([..]): the precalculated components changed
-[COMPILING] foo v0.5.0 ([..]
-[RUNNING] `rustc [..] -L native=bar`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.5.0 ([ROOT]/foo): the precalculated components changed
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] -L native=bar`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -3224,22 +3267,20 @@ fn fresh_builds_possible_with_link_libs() {
         .build();
 
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([..]
-[RUNNING] `rustc [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc [..] src/lib.rs [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[FRESH] foo v0.5.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -3279,22 +3320,20 @@ fn fresh_builds_possible_with_multiple_metadata_overrides() {
         .build();
 
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([..]
-[RUNNING] `rustc [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc [..] src/lib.rs [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[FRESH] foo v0.5.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -3476,15 +3515,14 @@ fn rebuild_only_on_explicit_paths() {
     // files don't exist, so should always rerun if they don't exist
     println!("run without");
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[DIRTY] foo v0.5.0 ([..]): the file `foo` is missing
-[COMPILING] foo v0.5.0 ([..])
-[RUNNING] `[..]/build-script-build`
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.5.0 ([ROOT]/foo): the file `foo` is missing
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     sleep_ms(1000);
@@ -3495,25 +3533,23 @@ fn rebuild_only_on_explicit_paths() {
     // now the exist, so run once, catch the mtime, then shouldn't run again
     println!("run with");
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[DIRTY] foo v0.5.0 ([..]): the file `foo` has changed ([..])
-[COMPILING] foo v0.5.0 ([..])
-[RUNNING] `[..]/build-script-build`
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.5.0 ([ROOT]/foo): the file `foo` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     println!("run with2");
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[FRESH] foo v0.5.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     sleep_ms(1000);
@@ -3522,42 +3558,39 @@ fn rebuild_only_on_explicit_paths() {
     println!("run baz");
     p.change_file("baz", "// modified");
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[FRESH] foo v0.5.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[FRESH] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     // but changing dependent files does
     println!("run foo change");
     p.change_file("foo", "// modified");
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[DIRTY] foo v0.5.0 ([..]): the file `foo` has changed ([..])
-[COMPILING] foo v0.5.0 ([..])
-[RUNNING] `[..]/build-script-build`
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.5.0 ([ROOT]/foo): the file `foo` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     // .. as does deleting a file
     println!("run bar delete");
     fs::remove_file(p.root().join("bar")).unwrap();
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[DIRTY] foo v0.5.0 ([..]): the file `bar` is missing
-[COMPILING] foo v0.5.0 ([..])
-[RUNNING] `[..]/build-script-build`
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.5.0 ([ROOT]/foo): the file `bar` is missing
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [RUNNING] `rustc [..] src/lib.rs [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -3601,9 +3634,11 @@ fn doctest_receives_build_link_args() {
         .build();
 
     p.cargo("test -v")
-        .with_stderr_contains(
-            "[RUNNING] `rustdoc [..]--crate-name foo --test [..]-L native=bar[..]`",
-        )
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc [..]--crate-name foo --test [..]-L native=bar[..]`
+
+"#]])
         .run();
 }
 
@@ -3657,7 +3692,11 @@ fn please_respect_the_dag() {
         .build();
 
     p.cargo("build -v")
-        .with_stderr_contains("[RUNNING] `rustc [..] -L native=foo -L native=bar[..]`")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustc --crate-name foo [..] -L native=foo -L native=bar`
+...
+"#]])
         .run();
 }
 
@@ -3741,6 +3780,7 @@ fn custom_target_dir() {
     p.cargo("build -v").run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn panic_abort_with_build_scripts() {
     let p = project()
@@ -3833,17 +3873,16 @@ fn warnings_emitted() {
         .build();
 
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([..])
-[RUNNING] `rustc [..]`
-[RUNNING] `[..]`
-warning: foo@0.5.0: foo
-warning: foo@0.5.0: bar
-[RUNNING] `rustc [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[WARNING] foo@0.5.0: foo
+[WARNING] foo@0.5.0: bar
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -3876,8 +3915,13 @@ fn warnings_emitted_when_build_script_panics() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stdout("")
-        .with_stderr_contains("warning: foo@0.5.0: foo\nwarning: foo@0.5.0: bar")
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+...
+[WARNING] foo@0.5.0: foo
+[WARNING] foo@0.5.0: bar
+...
+"#]])
         .run();
 }
 
@@ -3925,21 +3969,20 @@ fn warnings_hidden_for_upstream() {
         .build();
 
     p.cargo("build -v")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.1.0 ([..])
+[DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [COMPILING] bar v0.1.0
-[RUNNING] `rustc [..]`
-[RUNNING] `[..]`
-[RUNNING] `rustc [..]`
-[COMPILING] foo v0.5.0 ([..])
-[RUNNING] `rustc [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[RUNNING] `rustc --crate-name build_script_build [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/bar-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name bar [..]`
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -3987,23 +4030,22 @@ fn warnings_printed_on_vv() {
         .build();
 
     p.cargo("build -vv")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.1.0 ([..])
+[DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [COMPILING] bar v0.1.0
-[RUNNING] `[..] rustc [..]`
-[RUNNING] `[..]`
-warning: bar@0.1.0: foo
-warning: bar@0.1.0: bar
-[RUNNING] `[..] rustc [..]`
-[COMPILING] foo v0.5.0 ([..])
-[RUNNING] `[..] rustc [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[RUNNING] `[..] rustc --crate-name build_script_build [..]`
+[RUNNING] `[..] [ROOT]/foo/target/debug/build/bar-[HASH]/build-script-build`
+[WARNING] bar@0.1.0: foo
+[WARNING] bar@0.1.0: bar
+[RUNNING] `[..] rustc --crate-name bar [..]`
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `[..] rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -4036,17 +4078,19 @@ fn output_shows_on_vv() {
         .build();
 
     p.cargo("build -vv")
-        .with_stdout("[foo 0.5.0] stdout")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([..])
-[RUNNING] `[..] rustc [..]`
-[RUNNING] `[..]`
+        .with_stdout_data(str![[r#"
+[foo 0.5.0] stdout
+
+"#]])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `[..] rustc --crate-name build_script_build [..]`
+[RUNNING] `[..] [ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
 [foo 0.5.0] stderr
-[RUNNING] `[..] rustc [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[RUNNING] `[..] rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -4089,7 +4133,12 @@ fn links_with_dots() {
         .build();
 
     p.cargo("build -v")
-        .with_stderr_contains("[RUNNING] `rustc --crate-name foo [..] [..] -L foo[..]`")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] -L foo`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -4204,13 +4253,26 @@ fn switch_features_rerun() {
         .build();
 
     p.cargo("build -v --features=foo").run();
-    p.rename_run("foo", "with_foo").with_stdout("foo\n").run();
+    p.rename_run("foo", "with_foo")
+        .with_stdout_data(str![[r#"
+foo
+
+"#]])
+        .run();
     p.cargo("build -v").run();
     p.rename_run("foo", "without_foo")
-        .with_stdout("bar\n")
+        .with_stdout_data(str![[r#"
+bar
+
+"#]])
         .run();
     p.cargo("build -v --features=foo").run();
-    p.rename_run("foo", "with_foo2").with_stdout("foo\n").run();
+    p.rename_run("foo", "with_foo2")
+        .with_stdout_data(str![[r#"
+foo
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -4390,14 +4452,11 @@ fn deterministic_rustc_dependency_flags() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build -v")
-        .with_stderr_contains(
-            "\
-[RUNNING] `rustc --crate-name foo [..] -L native=test1 -L native=test2 \
--L native=test3 -L native=test4`
-",
-        )
-        .run();
+    p.cargo("build -v").with_stderr_data(str![[r#"
+...
+[RUNNING] `rustc --crate-name foo [..] -L native=test1 -L native=test2 -L native=test3 -L native=test4`
+...
+"#]]).run();
 }
 
 #[cargo_test]
@@ -4454,23 +4513,33 @@ fn links_duplicates_with_cycle() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("build").with_status(101)
-                       .with_stderr("\
+    p.cargo("build")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
 [ERROR] failed to select a version for `a`.
-    ... required by package `foo v0.5.0 ([..])`
+    ... required by package `foo v0.5.0 ([ROOT]/foo)`
 versions that meet the requirements `*` are: 0.5.0
 
 the package `a` links to the native library `a`, but it conflicts with a previous package which links to `a` as well:
-package `foo v0.5.0 ([..])`
-Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = \"a\"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
+package `foo v0.5.0 ([ROOT]/foo)`
+Only one package in the dependency graph may specify the same links value. This helps ensure that only one copy of a native library is linked in the final binary. Try to adjust your dependencies so that only one package uses the `links = "a"` value. For more information, see https://doc.rust-lang.org/cargo/reference/resolver.html#links.
 
 failed to select a version for `a` which could resolve this conflict
-").run();
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
 fn rename_with_link_search_path() {
-    _rename_with_link_search_path(false);
+    _rename_with_link_search_path(
+        false,
+        str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/bar[EXE]`
+
+"#]],
+    );
 }
 
 #[cargo_test]
@@ -4483,10 +4552,17 @@ fn rename_with_link_search_path_cross() {
         return;
     }
 
-    _rename_with_link_search_path(true);
+    _rename_with_link_search_path(
+        true,
+        str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/[ALT_TARGET]/debug/bar[EXE]`
+
+"#]],
+    );
 }
 
-fn _rename_with_link_search_path(cross: bool) {
+fn _rename_with_link_search_path(cross: bool, expected: Inline) {
     let target_arg = if cross {
         format!(" --target={}", cross_compile::alternate())
     } else {
@@ -4623,12 +4699,7 @@ fn _rename_with_link_search_path(cross: bool) {
 
     p2.cargo(&format!("run{}", target_arg))
         .cwd(&new)
-        .with_stderr(
-            "\
-[FINISHED] [..]
-[RUNNING] [..]
-",
-        )
+        .with_stderr_data(expected)
         .run();
 }
 
@@ -4681,8 +4752,18 @@ fn optional_build_script_dep() {
         .file("bar/src/lib.rs", "pub fn bar() -> u32 { 1 }");
     let p = p.build();
 
-    p.cargo("run").with_stdout("0\n").run();
-    p.cargo("run --features bar").with_stdout("1\n").run();
+    p.cargo("run")
+        .with_stdout_data(str![[r#"
+0
+
+"#]])
+        .run();
+    p.cargo("run --features bar")
+        .with_stdout_data(str![[r#"
+1
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -4726,26 +4807,32 @@ fn optional_build_dep_and_required_normal_dep() {
     let p = p.build();
 
     p.cargo("run")
-        .with_stdout("0")
-        .with_stderr(
-            "\
+        .with_stdout_data(str![[r#"
+0
+
+"#]])
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] bar v0.5.0 ([..])
-[COMPILING] foo v0.1.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]foo[EXE]`",
-        )
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
         .run();
 
     p.cargo("run --all-features")
-        .with_stdout("1")
-        .with_stderr(
-            "\
-[COMPILING] bar v0.5.0 ([..])
-[COMPILING] foo v0.1.0 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]foo[EXE]`",
-        )
+        .with_stdout_data(str![[r#"
+1
+
+"#]])
+        .with_stderr_data(str![[r#"
+[COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
         .run();
 }
 
@@ -4774,7 +4861,12 @@ fn using_rerun_if_changed_does_not_rebuild() {
         .build();
 
     p.cargo("build").run();
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("build")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -4850,7 +4942,11 @@ fn links_interrupted_can_restart() {
     // Set SOMEVAR to trigger a rebuild.
     p.cargo("build")
         .env("SOMEVAR", "1")
-        .with_stderr_contains("[..]Crash![..]")
+        .with_stderr_data(str![[r#"
+...
+  Crash!
+...
+"#]])
         .with_status(101)
         .run();
     fs::remove_file(p.root().join("abort")).unwrap();
@@ -4858,7 +4954,11 @@ fn links_interrupted_can_restart() {
     // ***This is currently broken, the script does not re-run.
     p.cargo("build -v")
         .env("SOMEVAR", "1")
-        .with_stderr_contains("[RUNNING] [..]/foo-[..]/build-script-build[..]")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+...
+"#]])
         .run();
 }
 
@@ -4921,44 +5021,39 @@ fn rerun_if_directory() {
         )
         .build();
 
-    let dirty = |dirty_line: &str, compile_build_script: bool| {
-        let mut dirty_line = dirty_line.to_string();
-
-        if !dirty_line.is_empty() {
-            dirty_line.push('\n');
-        }
-
-        let compile_build_script_line = if compile_build_script {
-            "[RUNNING] `rustc --crate-name build_script_build [..]\n"
-        } else {
-            ""
-        };
-
-        p.cargo("check -v")
-            .with_stderr(format!(
-                "\
-{dirty_line}\
-[COMPILING] foo [..]
-{compile_build_script_line}\
-[RUNNING] `[..]build-script-build[..]`
-[RUNNING] `rustc --crate-name foo [..]
-[FINISHED] [..]",
-            ))
-            .run();
+    let dirty = |expected| {
+        p.cargo("check -v").with_stderr_data(expected).run();
     };
 
     let fresh = || {
-        p.cargo("check").with_stderr("[FINISHED] [..]").run();
+        p.cargo("check")
+            .with_stderr_data(
+                "\
+[FINISHED] [..]
+",
+            )
+            .run();
     };
 
     // Start with a missing directory.
-    dirty("", true);
+    dirty(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build[..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]);
     // Because the directory doesn't exist, it will trigger a rebuild every time.
     // https://github.com/rust-lang/cargo/issues/6003
-    dirty(
-        "[DIRTY] foo v0.1.0 ([..]): the file `somedir` is missing",
-        false,
-    );
+    dirty(str![[r#"
+[DIRTY] foo v0.1.0 ([ROOT]/foo): the file `somedir` is missing
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]);
 
     if is_coarse_mtime() {
         sleep_ms(1000);
@@ -4966,10 +5061,14 @@ fn rerun_if_directory() {
 
     // Empty directory.
     fs::create_dir(p.root().join("somedir")).unwrap();
-    dirty(
-        "[DIRTY] foo v0.1.0 ([..]): the file `somedir` has changed ([..])",
-        false,
-    );
+    dirty(str![[r#"
+[DIRTY] foo v0.1.0 ([ROOT]/foo): the file `somedir` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]);
     fresh();
 
     if is_coarse_mtime() {
@@ -4979,10 +5078,14 @@ fn rerun_if_directory() {
     // Add a file.
     p.change_file("somedir/foo", "");
     p.change_file("somedir/bar", "");
-    dirty(
-        "[DIRTY] foo v0.1.0 ([..]): the file `somedir` has changed ([..])",
-        false,
-    );
+    dirty(str![[r#"
+[DIRTY] foo v0.1.0 ([ROOT]/foo): the file `somedir` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]);
     fresh();
 
     if is_coarse_mtime() {
@@ -4991,10 +5094,14 @@ fn rerun_if_directory() {
 
     // Add a symlink.
     p.symlink("foo", "somedir/link");
-    dirty(
-        "[DIRTY] foo v0.1.0 ([..]): the file `somedir` has changed ([..])",
-        false,
-    );
+    dirty(str![[r#"
+[DIRTY] foo v0.1.0 ([ROOT]/foo): the file `somedir` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]);
     fresh();
 
     if is_coarse_mtime() {
@@ -5004,10 +5111,14 @@ fn rerun_if_directory() {
     // Move the symlink.
     fs::remove_file(p.root().join("somedir/link")).unwrap();
     p.symlink("bar", "somedir/link");
-    dirty(
-        "[DIRTY] foo v0.1.0 ([..]): the file `somedir` has changed ([..])",
-        false,
-    );
+    dirty(str![[r#"
+[DIRTY] foo v0.1.0 ([ROOT]/foo): the file `somedir` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]);
     fresh();
 
     if is_coarse_mtime() {
@@ -5016,10 +5127,14 @@ fn rerun_if_directory() {
 
     // Remove a file.
     fs::remove_file(p.root().join("somedir/foo")).unwrap();
-    dirty(
-        "[DIRTY] foo v0.1.0 ([..]): the file `somedir` has changed ([..])",
-        false,
-    );
+    dirty(str![[r#"
+[DIRTY] foo v0.1.0 ([ROOT]/foo): the file `somedir` has changed ([TIME_DIFF_AFTER_LAST_BUILD])
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]);
     fresh();
 }
 
@@ -5062,13 +5177,12 @@ fn rerun_if_published_directory() {
     cargo_home().join("registry/src").rm_rf();
 
     p.cargo("check --verbose")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [FRESH] mylib-sys v1.0.0
-[FRESH] foo v0.0.1 ([CWD])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[FRESH] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     // Upgrade of a package should still trigger a rebuild
@@ -5089,16 +5203,16 @@ fn rerun_if_published_directory() {
     p.cargo("fetch").run();
 
     p.cargo("check -v")
-        .with_stderr(format!(
-            "\
-[COMPILING] mylib-sys [..]
-[RUNNING] `rustc --crate-name build_script_build [..]
-[RUNNING] `[..]build-script-build[..]`
-[RUNNING] `rustc --crate-name mylib_sys [..]
-[CHECKING] foo [..]
-[RUNNING] `rustc --crate-name foo [..]
-[FINISHED] [..]",
-        ))
+        .with_stderr_data(str![[r#"
+[COMPILING] mylib-sys v1.0.1
+[RUNNING] `rustc --crate-name build_script_build [..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/mylib-sys-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name mylib_sys [..]`
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -5232,14 +5346,22 @@ fn duplicate_script_with_extra_env() {
 
     p.cargo("test --workspace --target")
         .arg(&target)
-        .with_stdout_contains("test check_target ... ok")
+        .with_stdout_data(str![[r#"
+...
+test check_target ... ok
+...
+"#]])
         .run();
 
     if cargo_test_support::is_nightly() {
         p.cargo("test --workspace -Z doctest-xcompile --doc --target")
             .arg(&target)
             .masquerade_as_nightly_cargo(&["doctest-xcompile"])
-            .with_stdout_contains("test foo/src/lib.rs - (line 2) ... ok")
+            .with_stdout_data(str![[r#"
+...
+test foo/src/lib.rs - (line 2) ... ok
+...
+"#]])
             .run();
     }
 }
@@ -5260,15 +5382,13 @@ fn wrong_output() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr(
-            "\
-[COMPILING] foo [..]
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo::example`
 Expected a line with `cargo::KEY=VALUE` with an `=` character, but none was found.
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
-for more information about build script outputs.
-",
-        )
+See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+
+"#]])
         .run();
 }
 
@@ -5331,7 +5451,12 @@ fn test_old_syntax() {
         )
         .build();
     p.cargo("build -v").run();
-    p.cargo("run -v").with_stdout("foo\n").run();
+    p.cargo("run -v")
+        .with_stdout_data(str![[r#"
+foo
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -5350,15 +5475,13 @@ fn test_invalid_old_syntax() {
         .build();
     p.cargo("build")
         .with_status(101)
-        .with_stderr(
-            "\
-[COMPILING] foo [..]
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo:foo`
 Expected a line with `cargo:KEY=VALUE` with an `=` character, but none was found.
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
-for more information about build script outputs.
-",
-        )
+See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+
+"#]])
         .run();
 }
 
@@ -5379,15 +5502,13 @@ fn test_invalid_new_syntax() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr(
-            "\
-[COMPILING] foo [..]
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo::metadata=foo`
 Expected a line with `cargo::metadata=KEY=VALUE` with an `=` character, but none was found.
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
-for more information about build script outputs.
-",
-        )
+See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+
+"#]])
         .run();
     // `cargo::` can not be used with the unknown key.
     let p = project()
@@ -5404,15 +5525,13 @@ for more information about build script outputs.
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr(
-            "\
-[COMPILING] foo [..]
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] invalid output in build script of `foo v0.0.1 ([ROOT]/foo)`: `cargo::foo=bar`
 Unknown key: `foo`.
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
-for more information about build script outputs.
-",
-        )
+See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+
+"#]])
         .run();
 }
 
@@ -5444,16 +5563,13 @@ fn test_new_syntax_with_old_msrv() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[COMPILING] foo [..]
-[ERROR] the `cargo::` syntax for build script output instructions was added in Rust 1.77.0, \
-but the minimum supported Rust version of `foo v0.5.0 ([ROOT]/foo)` is 1.60.0.
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[ERROR] the `cargo::` syntax for build script output instructions was added in Rust 1.77.0, but the minimum supported Rust version of `foo v0.5.0 ([ROOT]/foo)` is 1.60.0.
 Switch to the old `cargo:foo=bar` syntax instead of `cargo::metadata=foo=bar` (note the single colon).
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
-for more information about build script outputs.
-",
-        )
+See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+
+"#]])
         .run();
 }
 
@@ -5485,16 +5601,13 @@ fn test_new_syntax_with_old_msrv_and_reserved_prefix() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[COMPILING] foo [..]
-[ERROR] the `cargo::` syntax for build script output instructions was added in Rust 1.77.0, \
-but the minimum supported Rust version of `foo v0.5.0 ([ROOT]/foo)` is 1.60.0.
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[ERROR] the `cargo::` syntax for build script output instructions was added in Rust 1.77.0, but the minimum supported Rust version of `foo v0.5.0 ([ROOT]/foo)` is 1.60.0.
 Switch to the old `cargo:rustc-check-cfg=cfg(foo)` syntax (note the single colon).
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
-for more information about build script outputs.
-",
-        )
+See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+
+"#]])
         .run();
 }
 
@@ -5526,15 +5639,12 @@ fn test_new_syntax_with_old_msrv_and_unknown_prefix() {
 
     p.cargo("build")
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[COMPILING] foo [..]
-[ERROR] the `cargo::` syntax for build script output instructions was added in Rust 1.77.0, \
-but the minimum supported Rust version of `foo v0.5.0 ([ROOT]/foo)` is 1.60.0.
-See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script \
-for more information about build script outputs.
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[ERROR] the `cargo::` syntax for build script output instructions was added in Rust 1.77.0, but the minimum supported Rust version of `foo v0.5.0 ([ROOT]/foo)` is 1.60.0.
+See https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script for more information about build script outputs.
+
+"#]])
         .run();
 }
 
@@ -5563,11 +5673,11 @@ fn test_new_syntax_with_compatible_partial_msrv() {
         .build();
 
     p.cargo("check")
-        .with_stderr_contains(
-            "\
-[COMPILING] foo [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -5604,7 +5714,12 @@ fn test_old_syntax_with_old_msrv() {
         )
         .build();
     p.cargo("build -v").run();
-    p.cargo("run -v").with_stdout("foo\n").run();
+    p.cargo("run -v")
+        .with_stdout_data(str![[r#"
+foo
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -5639,28 +5754,26 @@ fn build_script_rerun_when_target_rustflags_change() {
 
     p.cargo("run --target")
         .arg(&target)
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] [..]
-[RUNNING] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/[HOST_TARGET]/debug/foo[EXE]`
+
+"#]])
         .run();
 
     p.cargo("run --target")
         .arg(&target)
         .env("RUSTFLAGS", "-C opt-level=3")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] [..]
-[RUNNING] [..]
-",
-        )
-        .with_stdout(
-            "\
-hello",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/[HOST_TARGET]/debug/foo[EXE]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+hello
+
+"#]])
         .run();
 }

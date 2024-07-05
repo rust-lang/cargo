@@ -1,9 +1,8 @@
 //! Tests for --build-plan feature.
 
-#![allow(deprecated)]
-
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_bin_manifest, basic_manifest, main_file, project};
+use cargo_test_support::{basic_bin_manifest, basic_manifest, main_file, project, str};
 
 #[cargo_test]
 fn cargo_build_plan_simple() {
@@ -14,30 +13,33 @@ fn cargo_build_plan_simple() {
 
     p.cargo("build --build-plan -Zunstable-options")
         .masquerade_as_nightly_cargo(&["build-plan"])
-        .with_json(
-            r#"
-            {
-                "inputs": [
-                    "[..]/foo/Cargo.toml"
-                ],
-                "invocations": [
-                    {
-                        "args": "{...}",
-                        "cwd": "[..]/cit/[..]/foo",
-                        "deps": [],
-                        "env": "{...}",
-                        "kind": null,
-                        "links": "{...}",
-                        "outputs": "{...}",
-                        "package_name": "foo",
-                        "package_version": "0.5.0",
-                        "program": "rustc",
-                        "target_kind": ["bin"],
-                        "compile_mode": "build"
-                    }
-                ]
-            }
-            "#,
+        .with_stdout_data(
+            str![[r#"
+{
+  "inputs": [
+    "[ROOT]/foo/Cargo.toml"
+  ],
+  "invocations": [
+    {
+      "args": "{...}",
+      "compile_mode": "build",
+      "cwd": "[ROOT]/foo",
+      "deps": [],
+      "env": "{...}",
+      "kind": null,
+      "links": "{...}",
+      "outputs": "{...}",
+      "package_name": "foo",
+      "package_version": "0.5.0",
+      "program": "rustc",
+      "target_kind": [
+        "bin"
+      ]
+    }
+  ]
+}
+"#]]
+            .json(),
         )
         .run();
     assert!(!p.bin("foo").is_file());
@@ -73,51 +75,58 @@ fn cargo_build_plan_single_dep() {
         .build();
     p.cargo("build --build-plan -Zunstable-options")
         .masquerade_as_nightly_cargo(&["build-plan"])
-        .with_json(
-            r#"
-            {
-                "inputs": [
-                    "[..]/foo/Cargo.toml",
-                    "[..]/foo/bar/Cargo.toml"
-                ],
-                "invocations": [
-                    {
-                        "args": "{...}",
-                        "cwd": "[..]/cit/[..]/foo",
-                        "deps": [],
-                        "env": "{...}",
-                        "kind": null,
-                        "links": "{...}",
-                        "outputs": [
-                            "[..]/foo/target/debug/deps/libbar-[..].rlib",
-                            "[..]/foo/target/debug/deps/libbar-[..].rmeta"
-                        ],
-                        "package_name": "bar",
-                        "package_version": "0.0.1",
-                        "program": "rustc",
-                        "target_kind": ["lib"],
-                        "compile_mode": "build"
-                    },
-                    {
-                        "args": "{...}",
-                        "cwd": "[..]/cit/[..]/foo",
-                        "deps": [0],
-                        "env": "{...}",
-                        "kind": null,
-                        "links": "{...}",
-                        "outputs": [
-                            "[..]/foo/target/debug/deps/libfoo-[..].rlib",
-                            "[..]/foo/target/debug/deps/libfoo-[..].rmeta"
-                        ],
-                        "package_name": "foo",
-                        "package_version": "0.5.0",
-                        "program": "rustc",
-                        "target_kind": ["lib"],
-                        "compile_mode": "build"
-                    }
-                ]
-            }
-            "#,
+        .with_stdout_data(
+            str![[r#"
+{
+  "inputs": [
+    "[ROOT]/foo/Cargo.toml",
+    "[ROOT]/foo/bar/Cargo.toml"
+  ],
+  "invocations": [
+    {
+      "args": "{...}",
+      "compile_mode": "build",
+      "cwd": "[ROOT]/foo",
+      "deps": [],
+      "env": "{...}",
+      "kind": null,
+      "links": {},
+      "outputs": [
+        "[ROOT]/foo/target/debug/deps/libbar-[HASH].rlib",
+        "[ROOT]/foo/target/debug/deps/libbar-[HASH].rmeta"
+      ],
+      "package_name": "bar",
+      "package_version": "0.0.1",
+      "program": "rustc",
+      "target_kind": [
+        "lib"
+      ]
+    },
+    {
+      "args": "{...}",
+      "compile_mode": "build",
+      "cwd": "[ROOT]/foo",
+      "deps": [
+        0
+      ],
+      "env": "{...}",
+      "kind": null,
+      "links": "{...}",
+      "outputs": [
+        "[ROOT]/foo/target/debug/deps/libfoo-[HASH].rlib",
+        "[ROOT]/foo/target/debug/deps/libfoo-[HASH].rmeta"
+      ],
+      "package_name": "foo",
+      "package_version": "0.5.0",
+      "program": "rustc",
+      "target_kind": [
+        "lib"
+      ]
+    }
+  ]
+}
+"#]]
+            .json(),
         )
         .run();
 }
@@ -142,58 +151,69 @@ fn cargo_build_plan_build_script() {
 
     p.cargo("build --build-plan -Zunstable-options")
         .masquerade_as_nightly_cargo(&["build-plan"])
-        .with_json(
-            r#"
-            {
-                "inputs": [
-                    "[..]/foo/Cargo.toml"
-                ],
-                "invocations": [
-                    {
-                        "args": "{...}",
-                        "cwd": "[..]/cit/[..]/foo",
-                        "deps": [],
-                        "env": "{...}",
-                        "kind": null,
-                        "links": "{...}",
-                        "outputs": "{...}",
-                        "package_name": "foo",
-                        "package_version": "0.5.0",
-                        "program": "rustc",
-                        "target_kind": ["custom-build"],
-                        "compile_mode": "build"
-                    },
-                    {
-                        "args": "{...}",
-                        "cwd": "[..]/cit/[..]/foo",
-                        "deps": [0],
-                        "env": "{...}",
-                        "kind": null,
-                        "links": "{...}",
-                        "outputs": [],
-                        "package_name": "foo",
-                        "package_version": "0.5.0",
-                        "program": "[..]/build-script-build",
-                        "target_kind": ["custom-build"],
-                        "compile_mode": "run-custom-build"
-                    },
-                    {
-                        "args": "{...}",
-                        "cwd": "[..]/cit/[..]/foo",
-                        "deps": [1],
-                        "env": "{...}",
-                        "kind": null,
-                        "links": "{...}",
-                        "outputs": "{...}",
-                        "package_name": "foo",
-                        "package_version": "0.5.0",
-                        "program": "rustc",
-                        "target_kind": ["bin"],
-                        "compile_mode": "build"
-                    }
-                ]
-            }
-            "#,
+        .with_stdout_data(
+            str![[r#"
+{
+  "inputs": [
+    "[ROOT]/foo/Cargo.toml"
+  ],
+  "invocations": [
+    {
+      "args": "{...}",
+      "compile_mode": "build",
+      "cwd": "[ROOT]/foo",
+      "deps": [],
+      "env": "{...}",
+      "kind": null,
+      "links": "{...}",
+      "outputs": "{...}",
+      "package_name": "foo",
+      "package_version": "0.5.0",
+      "program": "rustc",
+      "target_kind": [
+        "custom-build"
+      ]
+    },
+    {
+      "args": "{...}",
+      "compile_mode": "run-custom-build",
+      "cwd": "[ROOT]/foo",
+      "deps": [
+        0
+      ],
+      "env": "{...}",
+      "kind": null,
+      "links": {},
+      "outputs": [],
+      "package_name": "foo",
+      "package_version": "0.5.0",
+      "program": "[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build",
+      "target_kind": [
+        "custom-build"
+      ]
+    },
+    {
+      "args": "{...}",
+      "compile_mode": "build",
+      "cwd": "[ROOT]/foo",
+      "deps": [
+        1
+      ],
+      "env": "{...}",
+      "kind": null,
+      "links": "{...}",
+      "outputs": "{...}",
+      "package_name": "foo",
+      "package_version": "0.5.0",
+      "program": "rustc",
+      "target_kind": [
+        "bin"
+      ]
+    }
+  ]
+}
+"#]]
+            .json(),
         )
         .run();
 }
