@@ -209,7 +209,7 @@ impl CompileTarget {
         const EXT: &'static str = ".json";
         name.as_ref().ends_with(EXT) || {
             let s = name.as_ref();
-            s.get((s.len() - 5)..)
+            s.get(s.len().wrapping_sub(EXT.len())..)
                 .map(|ext| ext.eq_ignore_ascii_case(EXT))
                 .unwrap_or_default()
         }
