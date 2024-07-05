@@ -1,10 +1,9 @@
 //! Tests for the `cargo pkgid` command.
 
-#![allow(deprecated)]
-
 use cargo_test_support::basic_lib_manifest;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git;
+use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
@@ -40,38 +39,36 @@ fn local() {
     p.cargo("generate-lockfile").run();
 
     p.cargo("pkgid foo")
-        .with_stdout(format!(
-            "path+file://[..]{}#0.1.0",
-            p.root().to_str().unwrap()
-        ))
+        .with_stdout_data(str![[r#"
+path+[ROOTURL]/foo#0.1.0
+
+"#]])
         .run();
 
     // Bad file URL.
     p.cargo("pkgid ./Cargo.toml")
         .with_status(101)
-        .with_stderr(
-            "\
-error: invalid package ID specification: `./Cargo.toml`
+        .with_stderr_data(str![[r#"
+[ERROR] invalid package ID specification: `./Cargo.toml`
 
 Caused by:
-  package ID specification `./Cargo.toml` looks like a file path, maybe try file://[..]/Cargo.toml
-",
-        )
+  package ID specification `./Cargo.toml` looks like a file path, maybe try [ROOTURL]/foo/Cargo.toml
+
+"#]])
         .run();
 
     // Bad file URL with similar name.
     p.cargo("pkgid './bar'")
         .with_status(101)
-        .with_stderr(
-            "\
-error: invalid package ID specification: `./bar`
+        .with_stderr_data(str![[r#"
+[ERROR] invalid package ID specification: `./bar`
 
-<tab>Did you mean `bar`?
+	Did you mean `bar`?
 
 Caused by:
-  package ID specification `./bar` looks like a file path, maybe try file://[..]/bar
-",
-        )
+  package ID specification `./bar` looks like a file path, maybe try [ROOTURL]/foo/bar
+
+"#]])
         .run();
 }
 
@@ -98,32 +95,33 @@ fn registry() {
     p.cargo("generate-lockfile").run();
 
     p.cargo("pkgid crates-io")
-        .with_stdout("registry+https://github.com/rust-lang/crates.io-index#crates-io@0.1.0")
+        .with_stdout_data(str![[r#"
+registry+https://github.com/rust-lang/crates.io-index#crates-io@0.1.0
+
+"#]])
         .run();
 
     // Bad URL.
     p.cargo("pkgid https://example.com/crates-io")
         .with_status(101)
-        .with_stderr(
-            "\
-error: package ID specification `https://example.com/crates-io` did not match any packages
+        .with_stderr_data(str![[r#"
+[ERROR] package ID specification `https://example.com/crates-io` did not match any packages
 Did you mean one of these?
 
   crates-io@0.1.0
-",
-        )
+
+"#]])
         .run();
 
     // Bad name.
     p.cargo("pkgid crates_io")
         .with_status(101)
-        .with_stderr(
-            "\
-error: package ID specification `crates_io` did not match any packages
+        .with_stderr_data(str![[r#"
+[ERROR] package ID specification `crates_io` did not match any packages
 
-<tab>Did you mean `crates-io`?
-",
-        )
+	Did you mean `crates-io`?
+
+"#]])
         .run();
 }
 
@@ -152,56 +150,55 @@ fn multiple_versions() {
     p.cargo("generate-lockfile").run();
 
     p.cargo("pkgid two-ver:0.2.0")
-        .with_stdout("registry+https://github.com/rust-lang/crates.io-index#two-ver@0.2.0")
+        .with_stdout_data(str![[r#"
+registry+https://github.com/rust-lang/crates.io-index#two-ver@0.2.0
+
+"#]])
         .run();
 
     // Incomplete version.
     p.cargo("pkgid two-ver@0")
         .with_status(101)
-        .with_stderr(
-            "\
-error: There are multiple `two-ver` packages in your project, and the specification `two-ver@0` is ambiguous.
+        .with_stderr_data(str![[r#"
+[ERROR] There are multiple `two-ver` packages in your project, and the specification `two-ver@0` is ambiguous.
 Please re-run this command with one of the following specifications:
   two-ver@0.1.0
   two-ver@0.2.0
-",
-        )
+
+"#]])
         .run();
 
     // Incomplete version.
     p.cargo("pkgid two-ver@0.2")
-        .with_stdout(
-            "\
+        .with_stdout_data(str![[r#"
 registry+https://github.com/rust-lang/crates.io-index#two-ver@0.2.0
-",
-        )
+
+"#]])
         .run();
 
     // Ambiguous.
     p.cargo("pkgid two-ver")
         .with_status(101)
-        .with_stderr(
-            "\
-error: There are multiple `two-ver` packages in your project, and the specification `two-ver` is ambiguous.
+        .with_stderr_data(str![[r#"
+[ERROR] There are multiple `two-ver` packages in your project, and the specification `two-ver` is ambiguous.
 Please re-run this command with one of the following specifications:
   two-ver@0.1.0
   two-ver@0.2.0
-",
-        )
+
+"#]])
         .run();
 
     // Bad version.
     p.cargo("pkgid two-ver:0.3.0")
         .with_status(101)
-        .with_stderr(
-            "\
-error: package ID specification `two-ver@0.3.0` did not match any packages
+        .with_stderr_data(str![[r#"
+[ERROR] package ID specification `two-ver@0.3.0` did not match any packages
 Did you mean one of these?
 
   two-ver@0.1.0
   two-ver@0.2.0
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -260,12 +257,12 @@ fn multiple_git_same_version() {
 
     p.cargo("check").run();
     p.cargo("tree")
-        .with_stdout(&format!(
+        .with_stdout_data(&format!(
             "\
-foo v0.1.0 ([..]/foo)
-├── bar v0.1.0 ([..]/foo/bar)
-│   └── xyz v0.5.0 (file://[..]/xyz?rev={}#{})
-└── xyz v0.5.0 (file://[..]/xyz?rev={}#{})
+foo v0.1.0 ([ROOT]/foo)
+├── bar v0.1.0 ([ROOT]/foo/bar)
+│   └── xyz v0.5.0 ([ROOTURL]/xyz?rev={}#{})
+└── xyz v0.5.0 ([ROOTURL]/xyz?rev={}#{})
 ",
             rev2,
             &rev2.to_string()[..8],
@@ -277,14 +274,13 @@ foo v0.1.0 ([..]/foo)
     // possible pkgids are also ambiguous.
     p.cargo("pkgid xyz")
         .with_status(101)
-        .with_stderr(
-            "\
-error: There are multiple `xyz` packages in your project, and the specification `xyz` is ambiguous.
+        .with_stderr_data(str![[r#"
+[ERROR] There are multiple `xyz` packages in your project, and the specification `xyz` is ambiguous.
 Please re-run this command with one of the following specifications:
-  git+file://[..]/xyz?rev=[..]#0.5.0
-  git+file://[..]/xyz?rev=[..]#0.5.0
-",
-        )
+  git+[ROOTURL]/xyz?rev=[..]#0.5.0
+  git+[ROOTURL]/xyz?rev=[..]#0.5.0
+
+"#]])
         .run();
     // TODO, what should the `-p` value be here?
     //p.cargo("update -p")
@@ -310,6 +306,7 @@ fn pkgid_json_message_metadata_consistency() {
     let pkgid = pkgid.trim();
     assert_e2e().eq(pkgid, str!["path+[ROOTURL]/foo#0.5.0"]);
 
+    #[allow(deprecated)]
     p.cargo("check --message-format=json")
         .with_json(
             &r#"
@@ -373,13 +370,15 @@ fn pkgid_json_message_metadata_consistency() {
         .run();
 
     p.cargo("metadata")
-        .with_json(
-            &r#"
+        .with_stdout_data(
+            str![[r#"
 {
   "metadata": null,
   "packages": [
     {
-      "authors": "{...}",
+      "authors": [
+        "wycats@example.com"
+      ],
       "categories": [],
       "default_run": null,
       "dependencies": [],
@@ -388,12 +387,12 @@ fn pkgid_json_message_metadata_consistency() {
       "edition": "2015",
       "features": {},
       "homepage": null,
-      "id": "$PKGID",
+      "id": "path+[ROOTURL]/foo#0.5.0",
       "keywords": [],
       "license": null,
       "license_file": null,
       "links": null,
-      "manifest_path": "[..]",
+      "manifest_path": "[ROOT]/foo/Cargo.toml",
       "metadata": null,
       "name": "foo",
       "publish": null,
@@ -411,23 +410,23 @@ fn pkgid_json_message_metadata_consistency() {
         "dependencies": [],
         "deps": [],
         "features": [],
-        "id": "$PKGID"
+        "id": "path+[ROOTURL]/foo#0.5.0"
       }
     ],
-    "root": "$PKGID"
+    "root": "path+[ROOTURL]/foo#0.5.0"
   },
-  "target_directory": "[..]",
+  "target_directory": "[ROOT]/foo/target",
   "version": 1,
   "workspace_default_members": [
-    "$PKGID"
+    "path+[ROOTURL]/foo#0.5.0"
   ],
   "workspace_members": [
-    "$PKGID"
+    "path+[ROOTURL]/foo#0.5.0"
   ],
-  "workspace_root": "[..]"
+  "workspace_root": "[ROOT]/foo"
 }
-            "#
-            .replace("$PKGID", pkgid),
+"#]]
+            .json(),
         )
         .run()
 }
