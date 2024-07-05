@@ -1,7 +1,9 @@
 //! Tests for configuration values that point to programs.
 
 use cargo_test_support::prelude::*;
-use cargo_test_support::{basic_lib_manifest, project, rustc_host, rustc_host_env, str};
+use cargo_test_support::{
+    basic_bin_manifest, basic_lib_manifest, project, rustc_host, rustc_host_env, str,
+};
 
 #[cargo_test]
 fn pathless_tools() {
@@ -483,5 +485,41 @@ fn cfg_ignored_fields() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
+        .run();
+}
+
+#[cargo_test]
+fn custom_linker_target_applies_to_host() {
+    let target = rustc_host();
+
+    let foo = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                    [target.{}]
+                    linker = "nonexistent-linker"
+                "#,
+                target
+            ),
+        )
+        .build();
+
+    // Since we're building a binary this would error if
+    // linker was being passed to cargo.
+    foo.cargo("build --verbose")
+        .masquerade_as_nightly_cargo(&["target-applies-to-host"])
+        .arg("-Ztarget-applies-to-host")
+        .env("CARGO_TARGET_APPLIES_TO_HOST", "false")
+        .with_status(0)
+        .with_stderr_data(
+            "\
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[RUNNING] `rustc [..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
+",
+        )
         .run();
 }
