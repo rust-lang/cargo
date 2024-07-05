@@ -407,6 +407,7 @@ fn check_all() {
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn check_all_exclude() {
     let p = project()
@@ -424,8 +425,7 @@ fn check_all_exclude() {
         .build();
 
     p.cargo("check --workspace --exclude baz")
-        // does_not_contain
-        // [CHECKING] baz v0.1.0 [..]
+        .with_stderr_does_not_contain("[CHECKING] baz v0.1.0 [..]")
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
@@ -435,6 +435,7 @@ fn check_all_exclude() {
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn check_all_exclude_glob() {
     let p = project()
@@ -452,8 +453,7 @@ fn check_all_exclude_glob() {
         .build();
 
     p.cargo("check --workspace --exclude '*z'")
-        // does_not_contain
-        // [CHECKING] baz v0.1.0 [..]
+        .with_stderr_does_not_contain("[CHECKING] baz v0.1.0 [..]")
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
@@ -495,6 +495,7 @@ fn check_virtual_all_implied() {
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn check_virtual_manifest_one_project() {
     let p = project()
@@ -512,8 +513,7 @@ fn check_virtual_manifest_one_project() {
         .build();
 
     p.cargo("check -p bar")
-        // does_not_contain
-        // [CHECKING] baz v0.1.0 [..]
+        .with_stderr_does_not_contain("[CHECKING] baz v0.1.0 [..]")
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
@@ -523,6 +523,7 @@ fn check_virtual_manifest_one_project() {
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn check_virtual_manifest_glob() {
     let p = project()
@@ -540,8 +541,7 @@ fn check_virtual_manifest_glob() {
         .build();
 
     p.cargo("check -p '*z'")
-        // does_not_contain
-        // [CHECKING] bar v0.1.0 [..]
+        .with_stderr_does_not_contain("[CHECKING] bar v0.1.0 [..]")
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] baz v0.1.0 ([ROOT]/foo/baz)
@@ -565,6 +565,7 @@ fn exclude_warns_on_non_existing_package() {
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn targets_selected_default() {
     let foo = project()
@@ -576,17 +577,11 @@ fn targets_selected_default() {
         .build();
 
     foo.cargo("check -v")
-        // shold not contain
-        // [..] --crate-name example1 [..] examples/example1.rs [..]
-        // [..] --crate-name test2 [..] tests/test2.rs [..]
-        // [..] --crate-name bench3 [..] benches/bench3.rs [..]
-        .with_stderr_data(str![[r#"
-[CHECKING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..] src/lib.rs [..]`
-[RUNNING] `rustc --crate-name foo [..] src/main.rs [..]`
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
-"#]])
+        .with_stderr_contains("[..] --crate-name foo [..] src/lib.rs [..]")
+        .with_stderr_contains("[..] --crate-name foo [..] src/main.rs [..]")
+        .with_stderr_does_not_contain("[..] --crate-name example1 [..] examples/example1.rs [..]")
+        .with_stderr_does_not_contain("[..] --crate-name test2 [..] tests/test2.rs [..]")
+        .with_stderr_does_not_contain("[..] --crate-name bench3 [..] benches/bench3.rs [..]")
         .run();
 }
 
@@ -1011,6 +1006,7 @@ WRAPPER CALLED: rustc --crate-name foo [..]
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn rustc_workspace_wrapper_respects_primary_units() {
     let p = project()
@@ -1029,18 +1025,12 @@ fn rustc_workspace_wrapper_respects_primary_units() {
 
     p.cargo("check -p bar")
         .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
-        // should not contain
-        // WRAPPER CALLED: rustc --crate-name baz [..]
-        .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
-[CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
-WRAPPER CALLED: rustc --crate-name bar [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
-"#]])
+        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
+        .with_stdout_does_not_contain("WRAPPER CALLED: rustc --crate-name baz [..]")
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn rustc_workspace_wrapper_excludes_published_deps() {
     let p = project()
@@ -1069,27 +1059,10 @@ fn rustc_workspace_wrapper_excludes_published_deps() {
 
     p.cargo("check --workspace -v")
         .env("RUSTC_WORKSPACE_WRAPPER", tools::echo_wrapper())
-        // does_not_contain
-        // WRAPPER CALLED: rustc --crate-name baz [..]
-        .with_stderr_data(
-            str![[r#"
-[UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
-[DOWNLOADING] crates ...
-[DOWNLOADED] baz v1.0.0 (registry `dummy-registry`)
-[CHECKING] baz v1.0.0
-[CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
-[CHECKING] foo v0.1.0 ([ROOT]/foo)
-[RUNNING] `[..]`
-[RUNNING] `[..]`
-[RUNNING] `[..]`
-WRAPPER CALLED: rustc --crate-name bar [..]
-WRAPPER CALLED: rustc --crate-name foo [..]
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-
-"#]]
-            .unordered(),
-        )
+        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name foo [..]")
+        .with_stderr_contains("WRAPPER CALLED: rustc --crate-name bar [..]")
+        .with_stderr_contains("[CHECKING] baz [..]")
+        .with_stdout_does_not_contain("WRAPPER CALLED: rustc --crate-name baz [..]")
         .run();
 }
 
