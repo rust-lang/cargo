@@ -5777,3 +5777,41 @@ hello
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn links_overrides_with_target_applies_to_host() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "mylib-sys"
+                edition = "2021"
+                version = "0.0.1"
+                authors = []
+                links = "mylib"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("build.rs", "bad file")
+        .build();
+
+    p.cargo("build -v")
+        .masquerade_as_nightly_cargo(&["target-applies-to-host"])
+        .args(&[
+            "-Ztarget-applies-to-host",
+            "--config",
+            "target-applies-to-host=false",
+        ])
+        .args(&[
+            "--config",
+            &format!(r#"target.{}.mylib.rustc-link-search=["foo"]"#, rustc_host()),
+        ])
+        .with_status(101)
+        .with_stderr_data(
+            "thread 'main' panicked at src/cargo/core/compiler/custom_build.rs:256:10:
+running a script not depending on an actual script
+...",
+        )
+        .run();
+}
