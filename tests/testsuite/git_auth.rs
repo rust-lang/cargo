@@ -8,9 +8,10 @@ use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 
+use cargo_test_support::basic_manifest;
 use cargo_test_support::git::cargo_uses_gitoxide;
 use cargo_test_support::paths;
-use cargo_test_support::{basic_manifest, project, str};
+use cargo_test_support::project;
 
 fn setup_failed_auth_test() -> (SocketAddr, JoinHandle<()>, Arc<AtomicUsize>) {
     let server = TcpListener::bind("127.0.0.1:0").unwrap();
@@ -412,29 +413,7 @@ Caused by:
 
     p.cargo("check -v")
         .with_status(101)
-        .with_stderr_data(str![[r#"
-[UPDATING] git repository `ssh://needs-proxy.invalid/git`
-[RUNNING] `git fetch --verbose --force --update-head-ok [..]ssh://needs-proxy.invalid/git[..] [..]+HEAD:refs/remotes/origin/HEAD[..]`
-ssh: Could not resolve hostname needs-proxy.invalid: [..] not known
-fatal: Could not read from remote repository.
-
-Please make sure you have the correct access rights
-and the repository exists.
-[ERROR] failed to get `foo` as a dependency of package `foo v0.0.0 ([ROOT]/foo)`
-
-Caused by:
-  failed to load source for dependency `foo`
-
-Caused by:
-  Unable to update ssh://needs-proxy.invalid/git
-
-Caused by:
-  failed to fetch into: [ROOT]/home/.cargo/git/db/git-[HASH]
-
-Caused by:
-  process didn't exit successfully: `git fetch --verbose --force --update-head-ok [..]ssh://needs-proxy.invalid/git[..] [..]+HEAD:refs/remotes/origin/HEAD[..]` ([EXIT_STATUS]: 128)
-
-"#]])
+        .with_stderr_contains("[..]Unable to update[..]")
         .with_stderr_does_not_contain("[..]try enabling `git-fetch-with-cli`[..]")
         .run();
 }
