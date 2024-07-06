@@ -49,6 +49,37 @@ fn simple() {
 }
 
 #[cargo_test]
+fn enable_in_unstable_config() {
+    // config-include enabled in the unstable config table:
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        include = 'other.toml'
+        key1 = 1
+        key2 = 2
+
+        [unstable]
+        config-include = true
+        ",
+    );
+    write_config_at(
+        ".cargo/other.toml",
+        "
+        key2 = 3
+        key3 = 4
+        ",
+    );
+    let gctx = GlobalContextBuilder::new()
+        .nightly_features_allowed(true)
+        .build();
+    // On this commit, enabling `config-include` in the top-level
+    // configuration does not yet work.
+    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
+    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
+    assert_eq!(gctx.get::<i32>("key3").ok(), None);
+}
+
+#[cargo_test]
 fn works_with_cli() {
     write_config_at(
         ".cargo/config.toml",
