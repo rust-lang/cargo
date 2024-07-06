@@ -1035,6 +1035,11 @@ impl GlobalContext {
             self.cli_config = Some(cli_config.iter().map(|s| s.to_string()).collect());
             self.merge_cli_args()?;
         }
+
+        // Load the unstable flags from config file here first, as the config
+        // file itself may enable inclusion of other configs. In that case, we
+        // want to re-load configs with includes enabled:
+        self.load_unstable_flags_from_config()?;
         if self.unstable_flags.config_include {
             // If the config was already loaded (like when fetching the
             // `[alias]` table), it was loaded with includes disabled because
@@ -1090,8 +1095,6 @@ impl GlobalContext {
                 .unwrap_or(false);
         let cli_target_dir = target_dir.as_ref().map(|dir| Filesystem::new(dir.clone()));
         self.target_dir = cli_target_dir;
-
-        self.load_unstable_flags_from_config()?;
 
         Ok(())
     }

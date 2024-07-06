@@ -72,11 +72,9 @@ fn enable_in_unstable_config() {
     let gctx = GlobalContextBuilder::new()
         .nightly_features_allowed(true)
         .build();
-    // On this commit, enabling `config-include` in the top-level
-    // configuration does not yet work.
     assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
     assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
-    assert_eq!(gctx.get::<i32>("key3").ok(), None);
+    assert_eq!(gctx.get::<i32>("key3").unwrap(), 4);
 }
 
 #[cargo_test]
@@ -200,15 +198,18 @@ fn mix_of_hierarchy_and_include_with_enable_in_unstable_config() {
         .cwd("foo")
         .nightly_features_allowed(true)
         .build();
-    // On this commit, enabling `config-include` in the top-level
-    // configuration does not yet work.
     assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
-    assert_eq!(gctx.get::<i32>("key2").unwrap(), 3);
+    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
     assert_eq!(gctx.get::<i32>("key3").unwrap(), 3);
-    assert_eq!(gctx.get::<i32>("key4").ok(), None);
+    assert_eq!(gctx.get::<i32>("key4").unwrap(), 4);
     assert_eq!(
         gctx.get::<Vec<String>>("unstable.features").unwrap(),
-        vec!["3".to_string(), "1".to_string()]
+        vec![
+            "4".to_string(),
+            "3".to_string(),
+            "2".to_string(),
+            "1".to_string()
+        ]
     );
 }
 
