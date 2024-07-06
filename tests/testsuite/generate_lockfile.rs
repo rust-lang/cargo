@@ -215,6 +215,7 @@ fn duplicate_entries_in_lockfile() {
             name = "b"
             authors = []
             version = "0.0.1"
+            edition = "2015"
 
             [dependencies]
             common = {path="common"}
