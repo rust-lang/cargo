@@ -1,9 +1,7 @@
 //! Tests for the -Zrustdoc-map feature.
 
-#![allow(deprecated)]
-
 use cargo_test_support::registry::{self, Package};
-use cargo_test_support::{paths, project, Project};
+use cargo_test_support::{paths, project, str, Project};
 
 fn basic_project() -> Project {
     Package::new("bar", "1.0.0")
@@ -34,6 +32,7 @@ fn basic_project() -> Project {
         .build()
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn ignores_on_stable() {
     // Requires -Zrustdoc-map to use.
@@ -49,14 +48,19 @@ fn simple() {
     let p = basic_project();
     p.cargo("doc -v --no-deps -Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
-        .with_stderr_contains(
-            "[RUNNING] `rustdoc [..]--crate-name foo [..]bar=https://docs.rs/bar/1.0.0/[..]",
-        )
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc [..]--crate-name foo [..]--extern-html-root-url [..]bar=https://docs.rs/bar/1.0.0/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
         .run();
     let myfun = p.read_file("target/doc/foo/fn.myfun.html");
     assert!(myfun.contains(r#"href="https://docs.rs/bar/1.0.0/bar/struct.Straw.html""#));
 }
 
+#[allow(deprecated)]
 #[ignore = "Broken, temporarily disabled until https://github.com/rust-lang/rust/pull/82776 is resolved."]
 #[cargo_test]
 // #[cargo_test(nightly, reason = "--extern-html-root-url is unstable")]
@@ -139,9 +143,13 @@ fn renamed_dep() {
         .build();
     p.cargo("doc -v --no-deps -Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
-        .with_stderr_contains(
-            "[RUNNING] `rustdoc [..]--crate-name foo [..]bar=https://docs.rs/bar/1.0.0/[..]",
-        )
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc [..]--crate-name foo [..]--extern-html-root-url [..]bar=https://docs.rs/bar/1.0.0/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
         .run();
     let myfun = p.read_file("target/doc/foo/fn.myfun.html");
     assert!(myfun.contains(r#"href="https://docs.rs/bar/1.0.0/bar/struct.Straw.html""#));
@@ -188,9 +196,13 @@ fn lib_name() {
         .build();
     p.cargo("doc -v --no-deps -Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
-        .with_stderr_contains(
-            "[RUNNING] `rustdoc [..]--crate-name foo [..]rumpelstiltskin=https://docs.rs/bar/1.0.0/[..]",
-        )
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc [..]--crate-name foo [..]--extern-html-root-url [..]rumpelstiltskin=https://docs.rs/bar/1.0.0/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
         .run();
     let myfun = p.read_file("target/doc/foo/fn.myfun.html");
     assert!(myfun.contains(r#"href="https://docs.rs/bar/1.0.0/rumpelstiltskin/struct.Straw.html""#));
@@ -253,10 +265,13 @@ fn alt_registry() {
         .build();
     p.cargo("doc -v --no-deps -Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
-        .with_stderr_contains(
-            "[RUNNING] `rustdoc [..]--crate-name foo \
-            [..]bar=https://example.com/bar/1.0.0/[..]grimm=https://docs.rs/grimm/1.0.0/[..]",
-        )
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc [..]--crate-name foo [..]--extern-html-root-url [..]bar=https://example.com/bar/1.0.0/[..] --extern-html-root-url [..]baz=https://example.com/baz/1.0.0/[..] --extern-html-root-url [..]grimm=https://docs.rs/grimm/1.0.0/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
         .run();
     let queen = p.read_file("target/doc/foo/fn.queen.html");
     assert!(queen.contains(r#"href="https://example.com/bar/1.0.0/bar/struct.Queen.html""#));
@@ -303,10 +318,13 @@ fn multiple_versions() {
         .build();
     p.cargo("doc -v --no-deps -Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
-        .with_stderr_contains(
-            "[RUNNING] `rustdoc [..]--crate-name foo \
-            [..]bar=https://docs.rs/bar/1.0.0/[..]bar=https://docs.rs/bar/2.0.0/[..]",
-        )
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc [..]--crate-name foo [..]--extern-html-root-url [..]bar=https://docs.rs/bar/1.0.0/[..] --extern-html-root-url [..]bar=https://docs.rs/bar/2.0.0/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
         .run();
     let fn1 = p.read_file("target/doc/foo/fn.fn1.html");
     // This should be 1.0.0, rustdoc seems to use the last entry when there
@@ -322,7 +340,13 @@ fn rebuilds_when_changing() {
     let p = basic_project();
     p.cargo("doc -v --no-deps -Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
-        .with_stderr_contains("[..]--extern-html-root-url[..]")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc [..]--extern-html-root-url[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
         .run();
 
     // This also tests that the map for docs.rs can be overridden.
@@ -335,9 +359,13 @@ fn rebuilds_when_changing() {
     );
     p.cargo("doc -v --no-deps -Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
-        .with_stderr_contains(
-            "[RUNNING] `rustdoc [..]--extern-html-root-url [..]bar=https://example.com/bar/1.0.0/[..]",
-        )
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc [..]--extern-html-root-url [..]bar=https://example.com/bar/1.0.0/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
         .run();
 }
 
@@ -404,10 +432,13 @@ fn alt_sparse_registry() {
         .build();
     p.cargo("doc -v --no-deps -Zrustdoc-map")
         .masquerade_as_nightly_cargo(&["rustdoc-map"])
-        .with_stderr_contains(
-            "[RUNNING] `rustdoc [..]--crate-name foo \
-            [..]bar=https://example.com/bar/1.0.0/[..]grimm=https://docs.rs/grimm/1.0.0/[..]",
-        )
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `rustdoc [..]--crate-name foo [..]--extern-html-root-url [..]bar=https://example.com/bar/1.0.0/[..] --extern-html-root-url [..]baz=https://example.com/baz/1.0.0/[..] --extern-html-root-url [..]grimm=https://docs.rs/grimm/1.0.0/[..]`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[GENERATED] [ROOT]/foo/target/doc/foo/index.html
+
+"#]])
         .run();
     let queen = p.read_file("target/doc/foo/fn.queen.html");
     assert!(queen.contains(r#"href="https://example.com/bar/1.0.0/bar/struct.Queen.html""#));
@@ -419,6 +450,7 @@ fn alt_sparse_registry() {
     assert!(gold.contains(r#"href="https://docs.rs/grimm/1.0.0/grimm/struct.Gold.html""#));
 }
 
+#[allow(deprecated)]
 #[cargo_test(nightly, reason = "--extern-html-root-url is unstable")]
 fn same_deps_multi_occurrence_in_dep_tree() {
     // rust-lang/cargo#13543

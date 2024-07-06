@@ -1,56 +1,7 @@
 //! Tests for the `cargo read-manifest` command.
 
-#![allow(deprecated)]
-
-use cargo_test_support::{basic_bin_manifest, main_file, project};
-
-fn manifest_output(readme_value: &str) -> String {
-    format!(
-        r#"
-{{
-    "authors": [
-        "wycats@example.com"
-    ],
-    "categories": [],
-    "default_run": null,
-    "name":"foo",
-    "readme": {},
-    "homepage": null,
-    "documentation": null,
-    "repository": null,
-    "rust_version": null,
-    "version":"0.5.0",
-    "id":"path+file://[..]/foo#0.5.0",
-    "keywords": [],
-    "license": null,
-    "license_file": null,
-    "links": null,
-    "description": null,
-    "edition": "2015",
-    "source":null,
-    "dependencies":[],
-    "targets":[{{
-        "kind":["bin"],
-        "crate_types":["bin"],
-        "doc": true,
-        "doctest": false,
-        "test": true,
-        "edition": "2015",
-        "name":"foo",
-        "src_path":"[..]/foo/src/foo.rs"
-    }}],
-    "features":{{}},
-    "manifest_path":"[..]Cargo.toml",
-    "metadata": null,
-    "publish": null
-}}"#,
-        readme_value
-    )
-}
-
-fn manifest_output_no_readme() -> String {
-    manifest_output("null")
-}
+use cargo_test_support::prelude::*;
+use cargo_test_support::{basic_bin_manifest, main_file, project, str};
 
 pub fn basic_bin_manifest_with_readme(name: &str, readme_filename: &str) -> String {
     format!(
@@ -79,7 +30,15 @@ fn cargo_read_manifest_path_to_cargo_toml_relative() {
 
     p.cargo("read-manifest --manifest-path foo/Cargo.toml")
         .cwd(p.root().parent().unwrap())
-        .with_json(&manifest_output_no_readme())
+        .with_stdout_data(
+            str![[r#"
+{
+  "readme": null,
+  "...": "{...}"
+}
+"#]]
+            .json(),
+        )
         .run();
 }
 
@@ -93,7 +52,15 @@ fn cargo_read_manifest_path_to_cargo_toml_absolute() {
     p.cargo("read-manifest --manifest-path")
         .arg(p.root().join("Cargo.toml"))
         .cwd(p.root().parent().unwrap())
-        .with_json(&manifest_output_no_readme())
+        .with_stdout_data(
+            str![[r#"
+{
+  "readme": null,
+  "...": "{...}"
+}
+"#]]
+            .json(),
+        )
         .run();
 }
 
@@ -107,10 +74,10 @@ fn cargo_read_manifest_path_to_cargo_toml_parent_relative() {
     p.cargo("read-manifest --manifest-path foo")
         .cwd(p.root().parent().unwrap())
         .with_status(101)
-        .with_stderr(
-            "[ERROR] the manifest-path must be \
-             a path to a Cargo.toml file",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] the manifest-path must be a path to a Cargo.toml file
+
+"#]])
         .run();
 }
 
@@ -125,10 +92,10 @@ fn cargo_read_manifest_path_to_cargo_toml_parent_absolute() {
         .arg(p.root())
         .cwd(p.root().parent().unwrap())
         .with_status(101)
-        .with_stderr(
-            "[ERROR] the manifest-path must be \
-             a path to a Cargo.toml file",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] the manifest-path must be a path to a Cargo.toml file
+
+"#]])
         .run();
 }
 
@@ -140,7 +107,15 @@ fn cargo_read_manifest_cwd() {
         .build();
 
     p.cargo("read-manifest")
-        .with_json(&manifest_output_no_readme())
+        .with_stdout_data(
+            str![[r#"
+{
+  "readme": null,
+  "...": "{...}"
+}
+"#]]
+            .json(),
+        )
         .run();
 }
 
@@ -156,25 +131,62 @@ fn cargo_read_manifest_with_specified_readme() {
         .build();
 
     p.cargo("read-manifest")
-        .with_json(&manifest_output(&format!(r#""{}""#, "SomeReadme.txt")))
+        .with_stdout_data(
+            str![[r#"
+{
+  "readme": "SomeReadme.txt",
+  "...": "{...}"
+}
+"#]]
+            .json(),
+        )
         .run();
 }
 
 #[cargo_test]
 fn cargo_read_manifest_default_readme() {
-    let readme_filenames = ["README.md", "README.txt", "README"];
-
-    for readme in readme_filenames.iter() {
+    let assert_output = |readme, expected| {
         let p = project()
             .file("Cargo.toml", &basic_bin_manifest("foo"))
             .file(readme, "Sample project")
             .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
             .build();
 
-        p.cargo("read-manifest")
-            .with_json(&manifest_output(&format!(r#""{}""#, readme)))
-            .run();
-    }
+        p.cargo("read-manifest").with_stdout_data(expected).run();
+    };
+
+    assert_output(
+        "README.md",
+        str![[r#"
+{
+  "readme": "README.md",
+  "...": "{...}"
+}
+"#]]
+        .json(),
+    );
+
+    assert_output(
+        "README.txt",
+        str![[r#"
+{
+  "readme": "README.txt",
+  "...": "{...}"
+}
+"#]]
+        .json(),
+    );
+
+    assert_output(
+        "README",
+        str![[r#"
+{
+  "readme": "README",
+  "...": "{...}"
+}
+"#]]
+        .json(),
+    );
 }
 
 #[cargo_test]
@@ -189,7 +201,15 @@ fn cargo_read_manifest_suppress_default_readme() {
         .build();
 
     p.cargo("read-manifest")
-        .with_json(&manifest_output_no_readme())
+        .with_stdout_data(
+            str![[r#"
+{
+  "readme": null,
+  "...": "{...}"
+}
+"#]]
+            .json(),
+        )
         .run();
 }
 
@@ -203,6 +223,14 @@ fn cargo_read_manifest_defaults_readme_if_true() {
         .build();
 
     p.cargo("read-manifest")
-        .with_json(&manifest_output(r#""README.md""#))
+        .with_stdout_data(
+            str![[r#"
+{
+  "readme": "README.md",
+  "...": "{...}"
+}
+"#]]
+            .json(),
+        )
         .run();
 }

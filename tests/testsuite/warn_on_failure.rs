@@ -1,9 +1,7 @@
 //! Tests for whether or not warnings are displayed for build scripts.
 
-#![allow(deprecated)]
-
 use cargo_test_support::registry::Package;
-use cargo_test_support::{project, Project};
+use cargo_test_support::{project, str, Project};
 
 static WARNING1: &str = "Hello! I'm a warning. :)";
 static WARNING2: &str = "And one more!";
@@ -65,20 +63,20 @@ fn no_warning_on_success() {
     let upstream = make_upstream("");
     upstream
         .cargo("build")
-        .with_stderr(
-            "\
-[UPDATING] `[..]` index
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v0.0.1 ([..])
+[DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
 [COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn no_warning_on_bin_failure() {
     make_lib("");
@@ -97,6 +95,7 @@ fn no_warning_on_bin_failure() {
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn warning_on_lib_failure() {
     make_lib("err()");
