@@ -7,6 +7,7 @@ use crate::util::{try_canonicalize, GlobalContext, StableHasher};
 use anyhow::Context as _;
 use serde::Serialize;
 use std::collections::BTreeSet;
+use std::ffi::OsStr;
 use std::fs;
 use std::hash::{Hash, Hasher};
 use std::path::Path;
@@ -131,7 +132,7 @@ impl CompileTarget {
         if name.is_empty() {
             anyhow::bail!("target was empty");
         }
-        if !Self::name_ends_with_json(name) {
+        if !name.has_json_ext_ignore_case() {
             return Ok(CompileTarget { name: name.into() });
         }
 
@@ -170,7 +171,7 @@ impl CompileTarget {
         // name without ".json") as a short name for this target. Note that the
         // `unwrap()` here should never trigger since we have a nonempty name
         // and it starts as utf-8 so it's always utf-8
-        if self.is_json_file() {
+        if self.has_json_ext_ignore_case() {
             Path::new(&self.name).file_stem().unwrap().to_str().unwrap()
         } else {
             &self.name
@@ -180,7 +181,10 @@ impl CompileTarget {
     /// See [`CompileKind::fingerprint_hash`].
     pub fn fingerprint_hash(&self) -> u64 {
         let mut hasher = StableHasher::new();
-        match self.is_json_file().then(|| fs::read_to_string(self.name)) {
+        match self
+            .has_json_ext_ignore_case()
+            .then(|| fs::read_to_string(self.name))
+        {
             Some(Ok(contents)) => {
                 // This may have some performance concerns, since it is called
                 // fairly often. If that ever seems worth fixing, consider
@@ -193,25 +197,56 @@ impl CompileTarget {
         }
         hasher.finish()
     }
+}
 
-    /// Checks if name of `self` contains a filename with json ext.
+pub trait HasExtIgnoreCase {
+    /// Checks if the `self` ends with `ext` __case-insensitive__.
+    /// The `ext` should not have leading dot.
+    ///
     /// Does not check if the path exists.
     ///
-    /// Same as [`Self::name_ends_with_json`], use it to check strings if create `CompileTarget` isn't a way.
-    #[inline]
-    pub fn is_json_file(&self) -> bool {
-        Self::name_ends_with_json(self.name)
-    }
+    /// Use it only for user's input like target names,
+    /// but not in algorithms like filesystem traversal because on case-sensitive fs it may lead logical errors
+    /// if you'll have met two files "a.foo" and "a.FOO", for example.
+    fn has_ext_ignore_case<Ext: AsRef<OsStr>>(&self, ext: Ext) -> bool;
 
-    /// Helper function to check if the `name` ends with ".json" (case-insensitive).
-    /// Does not check if the path exists.
-    pub fn name_ends_with_json<S: AsRef<str>>(name: S) -> bool {
-        const EXT: &'static str = ".json";
-        name.as_ref().ends_with(EXT) || {
-            let s = name.as_ref();
-            s.get(s.len().wrapping_sub(EXT.len())..)
-                .map(|ext| ext.eq_ignore_ascii_case(EXT))
-                .unwrap_or_default()
+    /// Checks if the `self` ends with ".json" (case-insensitive).
+    ///
+    /// See [`has_ext_ignore_case`][HasExtIgnoreCase::has_ext_ignore_case],
+    /// used as default implementation.
+    #[inline]
+    fn has_json_ext_ignore_case(&self) -> bool {
+        self.has_ext_ignore_case("json")
+    }
+}
+
+impl<T: AsRef<OsStr>> HasExtIgnoreCase for T {
+    fn has_ext_ignore_case<Ext: AsRef<OsStr>>(&self, ext: Ext) -> bool {
+        Path::new(self)
+            .extension()
+            .is_some_and(|s| s.eq_ignore_ascii_case(ext))
+    }
+}
+
+impl HasExtIgnoreCase for CompileTarget {
+    /// Checks if the name of `self` ends with `ext` __case-insensitive__.
+    /// The `ext` should not have leading dot.
+    ///
+    /// See [`has_ext_ignore_case`][HasExtIgnoreCase::has_ext_ignore_case],
+    fn has_ext_ignore_case<Ext: AsRef<OsStr>>(&self, ext: Ext) -> bool {
+        self.name.has_ext_ignore_case(ext)
+    }
+}
+
+impl HasExtIgnoreCase for CompileKind {
+    /// Checks if the `self`'s target name ends with `ext` __case-insensitive__.
+    /// The `ext` should not have leading dot.
+    ///
+    /// See [`has_ext_ignore_case`][HasExtIgnoreCase::has_ext_ignore_case],
+    fn has_ext_ignore_case<Ext: AsRef<OsStr>>(&self, ext: Ext) -> bool {
+        match self {
+            CompileKind::Host => false,
+            CompileKind::Target(target) => target.has_ext_ignore_case(ext),
         }
     }
 }
