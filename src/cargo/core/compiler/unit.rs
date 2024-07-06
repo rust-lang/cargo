@@ -175,6 +175,7 @@ impl fmt::Debug for Unit {
             .field("mode", &self.mode)
             .field("features", &self.features)
             .field("rustflags", &self.rustflags)
+            .field("rustdocflags", &self.rustdocflags)
             .field("artifact", &self.artifact.is_true())
             .field(
                 "artifact_target_for_features",
