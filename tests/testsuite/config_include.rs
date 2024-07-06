@@ -49,6 +49,171 @@ fn simple() {
 }
 
 #[cargo_test]
+fn enable_in_unstable_config() {
+    // config-include enabled in the unstable config table:
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        include = 'other.toml'
+        key1 = 1
+        key2 = 2
+
+        [unstable]
+        config-include = true
+        ",
+    );
+    write_config_at(
+        ".cargo/other.toml",
+        "
+        key2 = 3
+        key3 = 4
+        ",
+    );
+    let gctx = GlobalContextBuilder::new()
+        .nightly_features_allowed(true)
+        .build();
+    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
+    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
+    assert_eq!(gctx.get::<i32>("key3").unwrap(), 4);
+}
+
+#[cargo_test]
+fn mix_of_hierarchy_and_include() {
+    write_config_at(
+        "foo/.cargo/config.toml",
+        "
+        include = 'other.toml'
+        key1 = 1
+
+        # also make sure unstable flags merge in the correct order
+        [unstable]
+        features = ['1']
+        ",
+    );
+    write_config_at(
+        "foo/.cargo/other.toml",
+        "
+        key1 = 2
+        key2 = 2
+
+        [unstable]
+        features = ['2']
+        ",
+    );
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        include = 'other.toml'
+        key1 = 3
+        key2 = 3
+        key3 = 3
+
+        [unstable]
+        features = ['3']
+        ",
+    );
+    write_config_at(
+        ".cargo/other.toml",
+        "
+        key1 = 4
+        key2 = 4
+        key3 = 4
+        key4 = 4
+
+        [unstable]
+        features = ['4']
+        ",
+    );
+    let gctx = GlobalContextBuilder::new()
+        .unstable_flag("config-include")
+        .cwd("foo")
+        .nightly_features_allowed(true)
+        .build();
+    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
+    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
+    assert_eq!(gctx.get::<i32>("key3").unwrap(), 3);
+    assert_eq!(gctx.get::<i32>("key4").unwrap(), 4);
+    assert_eq!(
+        gctx.get::<Vec<String>>("unstable.features").unwrap(),
+        vec![
+            "4".to_string(),
+            "3".to_string(),
+            "2".to_string(),
+            "1".to_string()
+        ]
+    );
+}
+
+#[cargo_test]
+fn mix_of_hierarchy_and_include_with_enable_in_unstable_config() {
+    // `mix_of_hierarchy_and_include`, but with the config-include
+    // feature itself enabled in the unstable config table:
+    write_config_at(
+        "foo/.cargo/config.toml",
+        "
+        include = 'other.toml'
+        key1 = 1
+
+        # also make sure unstable flags merge in the correct order
+        [unstable]
+        features = ['1']
+        config-include = true
+        ",
+    );
+    write_config_at(
+        "foo/.cargo/other.toml",
+        "
+        key1 = 2
+        key2 = 2
+
+        [unstable]
+        features = ['2']
+        ",
+    );
+    write_config_at(
+        ".cargo/config.toml",
+        "
+        include = 'other.toml'
+        key1 = 3
+        key2 = 3
+        key3 = 3
+
+        [unstable]
+        features = ['3']
+        ",
+    );
+    write_config_at(
+        ".cargo/other.toml",
+        "
+        key1 = 4
+        key2 = 4
+        key3 = 4
+        key4 = 4
+
+        [unstable]
+        features = ['4']
+        ",
+    );
+    let gctx = GlobalContextBuilder::new()
+        .cwd("foo")
+        .nightly_features_allowed(true)
+        .build();
+    assert_eq!(gctx.get::<i32>("key1").unwrap(), 1);
+    assert_eq!(gctx.get::<i32>("key2").unwrap(), 2);
+    assert_eq!(gctx.get::<i32>("key3").unwrap(), 3);
+    assert_eq!(gctx.get::<i32>("key4").unwrap(), 4);
+    assert_eq!(
+        gctx.get::<Vec<String>>("unstable.features").unwrap(),
+        vec![
+            "4".to_string(),
+            "3".to_string(),
+            "2".to_string(),
+            "1".to_string()
+        ]
+    );
+}
+
+#[cargo_test]
 fn works_with_cli() {
     write_config_at(
         ".cargo/config.toml",
