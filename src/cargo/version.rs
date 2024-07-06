@@ -15,7 +15,7 @@ pub struct VersionInfo {
     pub version: String,
     /// The release channel we were built for (stable/beta/nightly/dev).
     ///
-    /// `None` if not built via rustbuild.
+    /// `None` if not built via bootstrap.
     pub release_channel: Option<String>,
     /// Information about the Git repository we may have been built from.
     ///
@@ -42,9 +42,9 @@ pub fn version() -> VersionInfo {
         };
     }
 
-    // This is the version set in rustbuild, which we use to match rustc.
+    // This is the version set in bootstrap, which we use to match rustc.
     let version = option_env_str!("CFG_RELEASE").unwrap_or_else(|| {
-        // If cargo is not being built by rustbuild, then we just use the
+        // If cargo is not being built by bootstrap, then we just use the
         // version from cargo's own `Cargo.toml`.
         //
         // There are two versions at play here:
