@@ -10,7 +10,7 @@
 use crate::core::compiler::apply_env_config;
 use crate::core::compiler::{BuildRunner, CompileKind, CompileMode, CompileTarget, CrateType};
 use crate::core::{Dependency, Package, Target, TargetKind, Workspace};
-use crate::util::context::{GlobalContext, StringList, TargetConfig};
+use crate::util::context::{GlobalContext, TargetConfig};
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Rustc};
 use anyhow::Context as _;
@@ -161,14 +161,16 @@ impl TargetInfo {
         requested_kinds: &[CompileKind],
         rustc: &Rustc,
         kind: CompileKind,
-        // This config is used for `links_overrides` and `linker`.
-        //
-        // In the case of target_applies_to_host=true (default) it may contain
-        // incorrect rustflags.
         target_config: &TargetConfig,
     ) -> CargoResult<TargetInfo> {
-        let mut rustflags =
-            extra_args(gctx, requested_kinds, &rustc.host, None, kind, Flags::Rust)?;
+        let mut rustflags = extra_args(
+            gctx,
+            requested_kinds,
+            None,
+            target_config,
+            kind,
+            Flags::Rust,
+        )?;
         let mut turn = 0;
         loop {
             let extra_fingerprint = kind.fingerprint_hash();
@@ -290,8 +292,8 @@ impl TargetInfo {
             let new_flags = extra_args(
                 gctx,
                 requested_kinds,
-                &rustc.host,
                 Some(&cfg),
+                target_config,
                 kind,
                 Flags::Rust,
             )?;
@@ -324,8 +326,8 @@ impl TargetInfo {
                 rustdocflags: extra_args(
                     gctx,
                     requested_kinds,
-                    &rustc.host,
                     Some(&cfg),
+                    target_config,
                     kind,
                     Flags::Rustdoc,
                 )?
@@ -678,13 +680,6 @@ enum Flags {
 }
 
 impl Flags {
-    fn as_key(self) -> &'static str {
-        match self {
-            Flags::Rust => "rustflags",
-            Flags::Rustdoc => "rustdocflags",
-        }
-    }
-
     fn as_env(self) -> &'static str {
         match self {
             Flags::Rust => "RUSTFLAGS",
@@ -721,8 +716,8 @@ impl Flags {
 fn extra_args(
     gctx: &GlobalContext,
     requested_kinds: &[CompileKind],
-    host_triple: &str,
     target_cfg: Option<&[Cfg]>,
+    target_config: &TargetConfig,
     kind: CompileKind,
     flags: Flags,
 ) -> CargoResult<Vec<String>> {
@@ -742,7 +737,7 @@ fn extra_args(
             // --target. Or, phrased differently, no `--target` behaves the same as `--target
             // <host>`, and host artifacts are always "special" (they don't pick up `RUSTFLAGS` for
             // example).
-            return Ok(rustflags_from_host(gctx, flags, host_triple)?.unwrap_or_else(Vec::new));
+            return Ok(rustflags_from_host(target_config, flags)?.unwrap_or_else(Vec::new));
         }
     }
 
@@ -752,9 +747,7 @@ fn extra_args(
 
     if let Some(rustflags) = rustflags_from_env(gctx, flags) {
         Ok(rustflags)
-    } else if let Some(rustflags) =
-        rustflags_from_target(gctx, host_triple, target_cfg, kind, flags)?
-    {
+    } else if let Some(rustflags) = rustflags_from_target(gctx, target_cfg, target_config, flags)? {
         Ok(rustflags)
     } else if let Some(rustflags) = rustflags_from_build(gctx, flags)? {
         Ok(rustflags)
@@ -793,21 +786,18 @@ fn rustflags_from_env(gctx: &GlobalContext, flags: Flags) -> Option<Vec<String>>
 /// See [`extra_args`] for more.
 fn rustflags_from_target(
     gctx: &GlobalContext,
-    host_triple: &str,
     target_cfg: Option<&[Cfg]>,
-    kind: CompileKind,
+    target_config: &TargetConfig,
     flag: Flags,
 ) -> CargoResult<Option<Vec<String>>> {
     let mut rustflags = Vec::new();
 
-    // Then the target.*.rustflags value...
-    let target = match &kind {
-        CompileKind::Host => host_triple,
-        CompileKind::Target(target) => target.short_name(),
+    let config_flags = match flag {
+        Flags::Rust => &target_config.rustflags,
+        Flags::Rustdoc => &target_config.rustdocflags,
     };
-    let key = format!("target.{}.{}", target, flag.as_key());
-    if let Some(args) = gctx.get::<Option<StringList>>(&key)? {
-        rustflags.extend(args.as_slice().iter().cloned());
+    if let Some(args) = config_flags {
+        rustflags.extend(args.val.as_slice().iter().cloned());
     }
     // ...including target.'cfg(...)'.rustflags
     if let Some(target_cfg) = target_cfg {
@@ -875,13 +865,11 @@ fn target_linker(
 /// Gets compiler flags from `[host]` section in the config.
 /// See [`extra_args`] for more.
 fn rustflags_from_host(
-    gctx: &GlobalContext,
+    target_config: &TargetConfig,
     flag: Flags,
-    host_triple: &str,
 ) -> CargoResult<Option<Vec<String>>> {
-    let target_cfg = gctx.host_cfg_triple(host_triple)?;
     let list = match flag {
-        Flags::Rust => &target_cfg.rustflags,
+        Flags::Rust => &target_config.rustflags,
         Flags::Rustdoc => {
             // host.rustdocflags is not a thing, since it does not make sense
             return Ok(None);
@@ -940,9 +928,14 @@ impl<'gctx> RustcTargetData<'gctx> {
         let target_applies_to_host = gctx.target_applies_to_host()?;
         let host_target = CompileTarget::new(&rustc.host)?;
 
-        // This config is used for link overrides and choosing a linker.
         let host_config = if target_applies_to_host {
-            gctx.target_cfg_triple(&rustc.host)?
+            let mut config = gctx.target_cfg_triple(&rustc.host)?;
+            if requested_kinds != [CompileKind::Host] {
+                // When an explicit target flag is passed rustflags are ignored for host artifacts.
+                config.rustflags = None;
+                config.rustdocflags = None;
+            }
+            config
         } else {
             gctx.host_cfg_triple(&rustc.host)?
         };
