@@ -1,8 +1,7 @@
 //! Tests for network configuration.
 
-#![allow(deprecated)]
-
 use cargo_test_support::project;
+use cargo_test_support::str;
 
 #[cargo_test]
 fn net_retry_loads_from_config() {
@@ -33,10 +32,11 @@ fn net_retry_loads_from_config() {
 
     p.cargo("check -v")
         .with_status(101)
-        .with_stderr_contains(
-            "[WARNING] spurious network error \
-             (1 tries remaining): [..]",
-        )
+        .with_stderr_data(str![[r#"
+...
+[WARNING] spurious network error (1 tries remaining): [..]
+...
+"#]])
         .run();
 }
 
@@ -67,10 +67,11 @@ fn net_retry_git_outputs_warning() {
 
     p.cargo("check -v -j 1")
         .with_status(101)
-        .with_stderr_contains(
-            "[WARNING] spurious network error \
-             (2 tries remaining): [..]",
-        )
-        .with_stderr_contains("[WARNING] spurious network error (1 tries remaining): [..]")
+        .with_stderr_data(str![[r#"
+...
+[WARNING] spurious network error (2 tries remaining): [..]
+[WARNING] spurious network error (1 tries remaining): [..]
+...
+"#]])
         .run();
 }
