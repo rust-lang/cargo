@@ -20,6 +20,7 @@ use cargo_test_support::{
     thread_wait_timeout, Execs, Project,
 };
 use itertools::Itertools;
+use std::env;
 use std::fmt::Write;
 use std::path::Path;
 use std::path::PathBuf;
@@ -169,12 +170,19 @@ fn populate_cache(
     (cache_dir, src_dir)
 }
 
+/// Returns an `Execs` that will run the rustup `cargo` proxy from the global
+/// system's cargo home directory.
 fn rustup_cargo() -> Execs {
-    // Get the path to the rustup cargo wrapper. This is necessary because
-    // cargo adds the "deps" directory into PATH on Windows, which points to
-    // the wrong cargo.
-    let rustup_cargo = Path::new(&std::env::var_os("CARGO_HOME").unwrap()).join("bin/cargo");
-    execs().with_process_builder(process(rustup_cargo))
+    // Modify the PATH to ensure that `cargo` and `rustc` comes from
+    // CARGO_HOME. This is necessary because cargo adds the "deps" directory
+    // into PATH on Windows, which points to the wrong cargo.
+    let real_cargo_home_bin = Path::new(&std::env::var_os("CARGO_HOME").unwrap()).join("bin");
+    let mut paths = vec![real_cargo_home_bin];
+    paths.extend(env::split_paths(&env::var_os("PATH").unwrap_or_default()));
+    let path = env::join_paths(paths).unwrap();
+    let mut e = execs().with_process_builder(process("cargo"));
+    e.env("PATH", path);
+    e
 }
 
 #[cargo_test]
