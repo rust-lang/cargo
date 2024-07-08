@@ -258,6 +258,7 @@ Similar, but not identical to, build
         .with_stdout_data(str![[r#"
 ...
     biuld
+...
     build                Compile a local package and all of its dependencies
 ..."#]])
         .run();
