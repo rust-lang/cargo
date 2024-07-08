@@ -6,7 +6,7 @@ use crate::core::dependency::DepKind;
 use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::Resolve;
 use crate::core::{FeatureMap, FeatureValue, Package, PackageId, PackageIdSpec, Workspace};
-use crate::util::interning::InternedString;
+use crate::util::interning::{InternedString, INTERNED_DEFAULT};
 use crate::util::CargoResult;
 use std::collections::{HashMap, HashSet};
 
@@ -415,7 +415,7 @@ fn add_pkg(
                 if dep.uses_default_features() {
                     add_feature(
                         graph,
-                        InternedString::new("default"),
+                        INTERNED_DEFAULT,
                         Some(from_index),
                         dep_index,
                         EdgeKind::Dep(dep.kind()),
@@ -505,7 +505,7 @@ fn add_cli_features(
     }
 
     if cli_features.uses_default_features {
-        to_add.insert(FeatureValue::Feature(InternedString::new("default")));
+        to_add.insert(FeatureValue::Feature(INTERNED_DEFAULT));
     }
     to_add.extend(cli_features.features.iter().cloned());
 

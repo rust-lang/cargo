@@ -21,7 +21,7 @@ use crate::core::{
 };
 use crate::sources::source::QueryKind;
 use crate::util::errors::CargoResult;
-use crate::util::interning::InternedString;
+use crate::util::interning::{InternedString, INTERNED_DEFAULT};
 
 use anyhow::Context as _;
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -348,7 +348,7 @@ fn build_requirements<'a, 'b: 'a>(
 
     let handle_default = |uses_default_features, reqs: &mut Requirements<'_>| {
         if uses_default_features && s.features().contains_key("default") {
-            if let Err(e) = reqs.require_feature(InternedString::new("default")) {
+            if let Err(e) = reqs.require_feature(INTERNED_DEFAULT) {
                 return Err(e.into_activate_error(parent, s));
             }
         }
