@@ -43,7 +43,7 @@ use crate::core::dependency::{ArtifactTarget, DepKind, Dependency};
 use crate::core::resolver::types::FeaturesSet;
 use crate::core::resolver::{Resolve, ResolveBehavior};
 use crate::core::{FeatureValue, PackageId, PackageIdSpec, PackageSet, Workspace};
-use crate::util::interning::InternedString;
+use crate::util::interning::{InternedString, INTERNED_DEFAULT};
 use crate::util::CargoResult;
 use anyhow::{bail, Context};
 use itertools::Itertools;
@@ -745,9 +745,8 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
             .iter()
             .map(|f| FeatureValue::new(*f))
             .collect();
-        let default = InternedString::new("default");
-        if dep.uses_default_features() && feature_map.contains_key(&default) {
-            result.push(FeatureValue::Feature(default));
+        if dep.uses_default_features() && feature_map.contains_key(&INTERNED_DEFAULT) {
+            result.push(FeatureValue::Feature(INTERNED_DEFAULT));
         }
         result
     }
@@ -762,9 +761,8 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
         let feature_map = summary.features();
 
         let mut result: Vec<FeatureValue> = cli_features.features.iter().cloned().collect();
-        let default = InternedString::new("default");
-        if cli_features.uses_default_features && feature_map.contains_key(&default) {
-            result.push(FeatureValue::Feature(default));
+        if cli_features.uses_default_features && feature_map.contains_key(&INTERNED_DEFAULT) {
+            result.push(FeatureValue::Feature(INTERNED_DEFAULT));
         }
 
         if cli_features.all_features {

@@ -13,7 +13,19 @@ use std::str;
 use std::sync::Mutex;
 use std::sync::OnceLock;
 
-static STRING_CACHE: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
+pub static INTERNED_DEFAULT: InternedString = InternedString { inner: "default" };
+
+fn interned_storage() -> std::sync::MutexGuard<'static, HashSet<&'static str>> {
+    static STRING_CACHE: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
+    STRING_CACHE
+        .get_or_init(|| {
+            let mut out: HashSet<&'static str> = Default::default();
+            out.insert(INTERNED_DEFAULT.as_str());
+            Mutex::new(out)
+        })
+        .lock()
+        .unwrap()
+}
 
 #[derive(Clone, Copy)]
 pub struct InternedString {
@@ -60,8 +72,8 @@ impl Eq for InternedString {}
 
 impl InternedString {
     pub fn new(str: &str) -> InternedString {
-        let mut cache = STRING_CACHE.get_or_init(Default::default).lock().unwrap();
-        let s = cache.get(str).cloned().unwrap_or_else(|| {
+        let mut cache = interned_storage();
+        let s = cache.get(str).copied().unwrap_or_else(|| {
             let s = str.to_string().leak();
             cache.insert(s);
             s
