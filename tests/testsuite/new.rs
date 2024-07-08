@@ -1,9 +1,8 @@
 //! Tests for the `cargo new` command.
 
-#![allow(deprecated)]
-
 use cargo_test_support::cargo_process;
 use cargo_test_support::paths;
+use cargo_test_support::str;
 use std::env;
 use std::fs::{self, File};
 
@@ -29,10 +28,11 @@ fn create_default_gitconfig() {
 #[cargo_test]
 fn simple_lib() {
     cargo_process("new --lib foo --vcs none --edition 2015")
-        .with_stderr("\
+        .with_stderr_data(str![[r#"
 [CREATING] library `foo` package
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-")
+
+"#]])
         .run();
 
     assert!(paths::root().join("foo").is_dir());
@@ -67,10 +67,11 @@ mod tests {
 #[cargo_test]
 fn simple_bin() {
     cargo_process("new --bin foo --edition 2015")
-        .with_stderr("\
+        .with_stderr_data(str![[r#"
 [CREATING] binary (application) `foo` package
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-")
+
+"#]])
         .run();
 
     assert!(paths::root().join("foo").is_dir());
@@ -87,10 +88,10 @@ fn simple_bin() {
 fn both_lib_and_bin() {
     cargo_process("new --lib --bin foo")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] can't specify both lib and binary outputs",
-        )
+        .with_stderr_data(str![[r#"
+[ERROR] can't specify both lib and binary outputs
+
+"#]])
         .run();
 }
 
@@ -132,12 +133,11 @@ fn simple_hg() {
 fn no_argument() {
     cargo_process("new")
         .with_status(1)
-        .with_stderr_contains(
-            "\
-error: the following required arguments were not provided:
+        .with_stderr_data(str![[r#"
+[ERROR] the following required arguments were not provided:
   <PATH>
-",
-        )
+...
+"#]])
         .run();
 }
 
@@ -147,12 +147,13 @@ fn existing() {
     fs::create_dir(&dst).unwrap();
     cargo_process("new foo")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [CREATING] binary (application) `foo` package
-[ERROR] destination `[CWD]/foo` already exists\n\n\
-Use `cargo init` to initialize the directory",
-        )
+[ERROR] destination `[ROOT]/foo` already exists
+
+Use `cargo init` to initialize the directory
+
+"#]])
         .run();
 }
 
@@ -160,22 +161,18 @@ Use `cargo init` to initialize the directory",
 fn invalid_characters() {
     cargo_process("new foo.rs")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [CREATING] binary (application) `foo.rs` package
-[ERROR] invalid character `.` in package name: `foo.rs`, [..]
+[ERROR] invalid character `.` in package name: `foo.rs`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
 If you need a package name to not match the directory name, consider using --name flag.
-If you need a binary with the name \"foo.rs\", use a valid package name, \
-and set the binary name to be different from the package. \
-This can be done by setting the binary filename to `src/bin/foo.rs.rs` \
-or change the name in Cargo.toml with:
+If you need a binary with the name "foo.rs", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/foo.rs.rs` or change the name in Cargo.toml with:
 
     [[bin]]
-    name = \"foo.rs\"
-    path = \"src/main.rs\"
+    name = "foo.rs"
+    path = "src/main.rs"
 
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -183,22 +180,18 @@ or change the name in Cargo.toml with:
 fn reserved_name() {
     cargo_process("new test")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [CREATING] binary (application) `test` package
-[ERROR] the name `test` cannot be used as a package name, it conflicts [..]
+[ERROR] the name `test` cannot be used as a package name, it conflicts with Rust's built-in test library
 If you need a package name to not match the directory name, consider using --name flag.
-If you need a binary with the name \"test\", use a valid package name, \
-and set the binary name to be different from the package. \
-This can be done by setting the binary filename to `src/bin/test.rs` \
-or change the name in Cargo.toml with:
+If you need a binary with the name "test", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/test.rs` or change the name in Cargo.toml with:
 
     [[bin]]
-    name = \"test\"
-    path = \"src/main.rs\"
+    name = "test"
+    path = "src/main.rs"
 
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -206,24 +199,21 @@ or change the name in Cargo.toml with:
 fn reserved_binary_name() {
     cargo_process("new --bin incremental")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [CREATING] binary (application) `incremental` package
-[ERROR] the name `incremental` cannot be used as a package name, it conflicts [..]
+[ERROR] the name `incremental` cannot be used as a package name, it conflicts with cargo's build directory names
 If you need a package name to not match the directory name, consider using --name flag.
-",
-        )
+
+"#]])
         .run();
 
     cargo_process("new --lib incremental")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [CREATING] library `incremental` package
-[WARNING] the name `incremental` will not support binary executables with that name, \
-it conflicts with cargo's build directory names
+[WARNING] the name `incremental` will not support binary executables with that name, it conflicts with cargo's build directory names
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -231,47 +221,37 @@ it conflicts with cargo's build directory names
 fn keyword_name() {
     cargo_process("new pub")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [CREATING] binary (application) `pub` package
 [ERROR] the name `pub` cannot be used as a package name, it is a Rust keyword
 If you need a package name to not match the directory name, consider using --name flag.
-If you need a binary with the name \"pub\", use a valid package name, \
-and set the binary name to be different from the package. \
-This can be done by setting the binary filename to `src/bin/pub.rs` \
-or change the name in Cargo.toml with:
+If you need a binary with the name "pub", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/pub.rs` or change the name in Cargo.toml with:
 
     [[bin]]
-    name = \"pub\"
-    path = \"src/main.rs\"
+    name = "pub"
+    path = "src/main.rs"
 
-",
-        )
+
+"#]])
         .run();
 }
 
 #[cargo_test]
 fn std_name() {
-    cargo_process("new core")
-        .with_stderr(
-            "\
+    cargo_process("new core").with_stderr_data(str![[r#"
 [CREATING] binary (application) `core` package
 [WARNING] the name `core` is part of Rust's standard library
 It is recommended to use a different name to avoid problems.
 If you need a package name to not match the directory name, consider using --name flag.
-If you need a binary with the name \"core\", use a valid package name, \
-and set the binary name to be different from the package. \
-This can be done by setting the binary filename to `src/bin/core.rs` \
-or change the name in Cargo.toml with:
+If you need a binary with the name "core", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/core.rs` or change the name in Cargo.toml with:
 
     [[bin]]
-    name = \"core\"
-    path = \"src/main.rs\"
+    name = "core"
+    path = "src/main.rs"
 
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-",
-        )
-        .run();
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -357,7 +337,10 @@ fn subpackage_git_with_vcs_arg() {
 fn unknown_flags() {
     cargo_process("new foo --flag")
         .with_status(1)
-        .with_stderr_contains("error: unexpected argument '--flag' found")
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected argument '--flag' found
+...
+"#]])
         .run();
 }
 
@@ -365,31 +348,28 @@ fn unknown_flags() {
 fn explicit_invalid_name_not_suggested() {
     cargo_process("new --name 10-invalid a")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [CREATING] binary (application) `10-invalid` package
 [ERROR] invalid character `1` in package name: `10-invalid`, the name cannot start with a digit
-If you need a binary with the name \"10-invalid\", use a valid package name, \
-and set the binary name to be different from the package. \
-This can be done by setting the binary filename to `src/bin/10-invalid.rs` \
-or change the name in Cargo.toml with:
+If you need a binary with the name "10-invalid", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/10-invalid.rs` or change the name in Cargo.toml with:
 
     [[bin]]
-    name = \"10-invalid\"
-    path = \"src/main.rs\"
+    name = "10-invalid"
+    path = "src/main.rs"
 
-",
-        )
+
+"#]])
         .run();
 }
 
 #[cargo_test]
 fn explicit_project_name() {
     cargo_process("new --lib foo --name bar")
-        .with_stderr("\
+        .with_stderr_data(str![[r#"
 [CREATING] library `bar` package
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-")
+
+"#]])
         .run();
 }
 
@@ -417,7 +397,10 @@ fn new_default_edition() {
 #[cargo_test]
 fn new_with_bad_edition() {
     cargo_process("new --edition something_else foo")
-        .with_stderr_contains("error: invalid value 'something_else' for '--edition <YEAR>'")
+        .with_stderr_data(str![[r#"
+[ERROR] invalid value 'something_else' for '--edition <YEAR>'
+...
+"#]])
         .with_status(1)
         .run();
 }
@@ -438,41 +421,34 @@ fn restricted_windows_name() {
     if cfg!(windows) {
         cargo_process("new nul")
             .with_status(101)
-            .with_stderr(
-                "\
+            .with_stderr_data(str![[r#"
 [CREATING] binary (application) `nul` package
 [ERROR] cannot use name `nul`, it is a reserved Windows filename
 If you need a package name to not match the directory name, consider using --name flag.
-",
-            )
+
+"#]])
             .run();
     } else {
-        cargo_process("new nul")
-            .with_stderr(
-                "\
+        cargo_process("new nul").with_stderr_data(str![[r#"
 [CREATING] binary (application) `nul` package
 [WARNING] the name `nul` is a reserved Windows filename
 This package will not work on Windows platforms.
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-",
-            )
-            .run();
+
+"#]]).run();
     }
 }
 
 #[cargo_test]
 fn non_ascii_name() {
-    cargo_process("new Привет")
-        .with_stderr(
-            "\
+    cargo_process("new Привет").with_stderr_data(str![[r#"
 [CREATING] binary (application) `Привет` package
 [WARNING] the name `Привет` contains non-ASCII characters
 Non-ASCII crate names are not supported by Rust.
 [WARNING] the name `Привет` is not snake_case or kebab-case which is recommended for package names, consider `привет`
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-",
-        )
-        .run();
+
+"#]]).run();
 }
 
 #[cargo_test]
@@ -480,69 +456,57 @@ fn non_ascii_name_invalid() {
     // These are alphanumeric characters, but not Unicode XID.
     cargo_process("new ⒶⒷⒸ")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [CREATING] binary (application) `ⒶⒷⒸ` package
-[ERROR] invalid character `Ⓐ` in package name: `ⒶⒷⒸ`, \
-the first character must be a Unicode XID start character (most letters or `_`)
+[ERROR] invalid character `Ⓐ` in package name: `ⒶⒷⒸ`, the first character must be a Unicode XID start character (most letters or `_`)
 If you need a package name to not match the directory name, consider using --name flag.
-If you need a binary with the name \"ⒶⒷⒸ\", use a valid package name, \
-and set the binary name to be different from the package. \
-This can be done by setting the binary filename to `src/bin/ⒶⒷⒸ.rs` \
-or change the name in Cargo.toml with:
+If you need a binary with the name "ⒶⒷⒸ", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/ⒶⒷⒸ.rs` or change the name in Cargo.toml with:
 
     [[bin]]
-    name = \"ⒶⒷⒸ\"
-    path = \"src/main.rs\"
+    name = "ⒶⒷⒸ"
+    path = "src/main.rs"
 
-",
-        )
+
+"#]])
         .run();
 
     cargo_process("new a¼")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [CREATING] binary (application) `a¼` package
-[ERROR] invalid character `¼` in package name: `a¼`, \
-characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
+[ERROR] invalid character `¼` in package name: `a¼`, characters must be Unicode XID characters (numbers, `-`, `_`, or most letters)
 If you need a package name to not match the directory name, consider using --name flag.
-If you need a binary with the name \"a¼\", use a valid package name, \
-and set the binary name to be different from the package. \
-This can be done by setting the binary filename to `src/bin/a¼.rs` \
-or change the name in Cargo.toml with:
+If you need a binary with the name "a¼", use a valid package name, and set the binary name to be different from the package. This can be done by setting the binary filename to `src/bin/a¼.rs` or change the name in Cargo.toml with:
 
     [[bin]]
-    name = \"a¼\"
-    path = \"src/main.rs\"
+    name = "a¼"
+    path = "src/main.rs"
 
-",
-        )
+
+"#]])
         .run();
 }
 
 #[cargo_test]
 fn non_snake_case_name() {
     cargo_process("new UPPERcase_name")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [CREATING] binary (application) `UPPERcase_name` package
 [WARNING] the name `UPPERcase_name` is not snake_case or kebab-case which is recommended for package names, consider `uppercase_name`
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-",
-        )
+
+"#]])
         .run();
 }
 
 #[cargo_test]
 fn kebab_case_name_is_accepted() {
     cargo_process("new kebab-case-is-valid")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [CREATING] binary (application) `kebab-case-is-valid` package
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -579,15 +543,14 @@ fn non_utf8_str_in_ignore_file() {
 
     cargo_process(&format!("init {} --vcs git", paths::home().display()))
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [CREATING] binary (application) package
-error: Failed to create package `home` at `[..]`
+[ERROR] Failed to create package `home` at `[ROOT]/home`
 
 Caused by:
   Character at line 0 is invalid. Cargo only supports UTF-8.
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -595,13 +558,12 @@ Caused by:
 #[cargo_test]
 fn path_with_invalid_character() {
     cargo_process("new --name testing test:ing")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [CREATING] binary (application) `testing` package
-[WARNING] the path `[CWD]/test:ing` contains invalid PATH characters (usually `:`, `;`, or `\"`)
+[WARNING] the path `[ROOT]/test:ing` contains invalid PATH characters (usually `:`, `;`, or `"`)
 It is recommended to use a different name to avoid problems.
 [NOTE] see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-",
-        )
+
+"#]])
         .run();
 }
