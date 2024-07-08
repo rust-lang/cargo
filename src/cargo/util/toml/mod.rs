@@ -291,7 +291,7 @@ fn resolve_toml(
         dev_dependencies2: None,
         build_dependencies: None,
         build_dependencies2: None,
-        features: original_toml.features.clone(),
+        features: None,
         target: None,
         replace: original_toml.replace.clone(),
         patch: original_toml.patch.clone(),
@@ -321,6 +321,8 @@ fn resolve_toml(
                 Edition::from_str(&e).unwrap_or_default()
             });
         resolved_toml.package = Some(resolved_package);
+
+        resolved_toml.features = resolve_features(original_toml.features.as_ref())?;
 
         resolved_toml.lib = targets::resolve_lib(
             original_toml.lib.as_ref(),
@@ -684,6 +686,17 @@ fn default_readme_from_package_root(package_root: &Path) -> Option<String> {
     }
 
     None
+}
+
+#[tracing::instrument(skip_all)]
+fn resolve_features(
+    original_features: Option<&BTreeMap<manifest::FeatureName, Vec<String>>>,
+) -> CargoResult<Option<BTreeMap<manifest::FeatureName, Vec<String>>>> {
+    let Some(resolved_features) = original_features.cloned() else {
+        return Ok(None);
+    };
+
+    Ok(Some(resolved_features))
 }
 
 #[tracing::instrument(skip_all)]
