@@ -12,7 +12,6 @@ use cargo_test_support::{
 };
 use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier, symlink_supported};
 use cargo_util::paths::{self, remove_dir_all};
-use snapbox::data::Inline;
 use std::env;
 use std::fs;
 use std::io;
@@ -4562,7 +4561,7 @@ fn rename_with_link_search_path_cross() {
     );
 }
 
-fn _rename_with_link_search_path(cross: bool, expected: Inline) {
+fn _rename_with_link_search_path(cross: bool, expected: impl IntoData) {
     let target_arg = if cross {
         format!(" --target={}", cross_compile::alternate())
     } else {
