@@ -1,11 +1,9 @@
 //! Tests for the `cargo fetch` command.
 
-#![allow(deprecated)]
-
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::rustc_host;
-use cargo_test_support::{basic_manifest, cross_compile, project};
+use cargo_test_support::{basic_manifest, cross_compile, project, str};
 
 #[cargo_test]
 fn no_deps() {
@@ -14,7 +12,7 @@ fn no_deps() {
         .file("src/a.rs", "")
         .build();
 
-    p.cargo("fetch").with_stderr("").run();
+    p.cargo("fetch").with_stderr_data("").run();
 }
 
 #[cargo_test]
@@ -60,11 +58,16 @@ fn fetch_all_platform_dependencies_when_no_target_is_given() {
         .build();
 
     p.cargo("fetch")
-        .with_stderr_contains("[DOWNLOADED] d1 v1.2.3 [..]")
-        .with_stderr_contains("[DOWNLOADED] d2 v0.1.2 [..]")
+        .with_stderr_data(str![[r#"
+...
+[DOWNLOADED] d1 v1.2.3 (registry `dummy-registry`)
+[DOWNLOADED] d2 v0.1.2 (registry `dummy-registry`)
+...
+"#]])
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn fetch_platform_specific_dependencies() {
     if cross_compile::disabled() {
@@ -136,6 +139,9 @@ fn fetch_warning() {
         .file("src/lib.rs", "")
         .build();
     p.cargo("fetch")
-        .with_stderr("[WARNING] unused manifest key: package.misspelled")
+        .with_stderr_data(str![[r#"
+[WARNING] unused manifest key: package.misspelled
+
+"#]])
         .run();
 }
