@@ -62,17 +62,16 @@ something is only partially implemented, it may have both
 ## Pre-Stabilization 
 
 Once an unstable feature is "complete", the search for users to test
-and give feedback begins. Testing notes should be written up to give users an
-idea of how to test the new feature. An example being the 
-[workspace inheritance testing notes] for workspace inheritance. Once testing
-notes have been written up you should make posts in various rust communities
-([rust subreddit], [users], [internals], etc). Example posts made for workspace
-inheritance: [reddit post], [users post], [internals post]. The unstable feature
-should also be added to [This Week in Rust]. This should be done by adding the
-label `call-for-testing` to the RFC for the feature and making a comment with a
-link to the testing notes and the tracking issue (as needed). If there is not an
-RFC, a pull request should be made to the [TWiR repo] adding the feature to the
-`Call for Testing` section ([example]).
+and give feedback begins:
+1. Write up test instructions for users, summarizing where the feature is useful, how to use it (with links to the unstable documentation), and if there are any areas of particular concern
+  - This could be on the tracking issue or in a dedicated issue for feedback
+  - e.g. [workspace inheritance testing notes]
+2. Call for testing
+  - In the RFC, link to the test instructions and label it with with `call-for-testing` to be picked up by [This Week in Rust]
+    - If there is not an RFC, a pull request should be made to the [TWiR repo]
+      adding the feature to the `Call for Testing` section ([example]).
+  - Post on various Rust communities ([rust subreddit], [users], [internals], etc)
+  - e.g. [reddit post], [users post], [internals post]
 
 [workspace inheritance testing notes]: https://github.com/rust-lang/cargo/blob/6d6dd9d9be9c91390da620adf43581619c2fa90e/src/doc/src/reference/unstable.md#testing-notes
 [rust subreddit]: https://www.reddit.com/r/rust/
