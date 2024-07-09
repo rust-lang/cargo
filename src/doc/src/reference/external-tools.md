@@ -54,6 +54,8 @@ details.
 If you are using Rust, the [cargo_metadata] crate can be used to parse these
 messages.
 
+> **MSRV:** 1.77 is required for `package_id` to be a Package ID Specification. Before that, it was opaque.
+
 [build command documentation]: ../commands/cargo-build.md
 [cargo_metadata]: https://crates.io/crates/cargo_metadata
 [Package ID Specifications]: ./pkgid-spec.md

@@ -111,6 +111,8 @@ breaking change.
 
 This field is optional and defaults to `0.0.0`.  The field is required for publishing packages.
 
+> **MSRV:** Before 1.75, this field was required
+
 [Resolver]: resolver.md
 [SemVer compatibility]: semver.md
 
@@ -188,6 +190,8 @@ the package, including test suites, benchmarks, binaries, examples, etc.
 To find the minimum `rust-version` compatible with your project, you can use third-party tools like [`cargo-msrv`](https://crates.io/crates/cargo-msrv).
 
 When used on packages that get published, we recommend [verifying the `rust-version`](../guide/continuous-integration.md#verifying-rust-version).
+
+> **MSRV:** Respected as of 1.56
 
 ### The `description` field
 
@@ -588,6 +592,8 @@ Generally, these will only affect local development of the current package.
 Cargo only applies these to the current package and not to dependencies.
 As for dependents, Cargo suppresses lints from non-path dependencies with features like
 [`--cap-lints`](../../rustc/lints/levels.html#capping-lints).
+
+> **MSRV:** Respected as of 1.74
 
 ## The `[badges]` section
 
