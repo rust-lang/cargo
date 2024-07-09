@@ -23,6 +23,7 @@ been passed.
 
 Every unstable feature should have a section added to the [unstable chapter]
 describing how to use the feature.
+This can also serve as a place for the final documentation to live until its stabilized.
 
 [unstable chapter]: https://github.com/rust-lang/cargo/blob/master/src/doc/src/reference/unstable.md
 
