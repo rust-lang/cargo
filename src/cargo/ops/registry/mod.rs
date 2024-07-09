@@ -191,31 +191,67 @@ fn get_source_id(
     gctx: &GlobalContext,
     reg_or_index: Option<&RegistryOrIndex>,
 ) -> CargoResult<RegistrySourceIds> {
-    let sid = match reg_or_index {
-        None => SourceId::crates_io(gctx)?,
-        Some(RegistryOrIndex::Index(url)) => SourceId::for_registry(url)?,
-        Some(RegistryOrIndex::Registry(r)) => SourceId::alt_registry(gctx, r)?,
-    };
-    // Load source replacements that are built-in to Cargo.
-    let builtin_replacement_sid = SourceConfigMap::empty(gctx)?
-        .load(sid, &HashSet::new())?
-        .replaced_source_id();
-    let replacement_sid = SourceConfigMap::new(gctx)?
-        .load(sid, &HashSet::new())?
-        .replaced_source_id();
+    let sid = get_initial_source_id(gctx, reg_or_index)?;
+    let (builtin_replacement_sid, replacement_sid) = get_replacement_source_ids(gctx, sid)?;
+
     if reg_or_index.is_none() && replacement_sid != builtin_replacement_sid {
-        // Neither --registry nor --index was passed and the user has configured source-replacement.
-        if let Some(replacement_name) = replacement_sid.alt_registry_key() {
-            bail!("crates-io is replaced with remote registry {replacement_name};\ninclude `--registry {replacement_name}` or `--registry crates-io`");
-        } else {
-            bail!("crates-io is replaced with non-remote-registry source {replacement_sid};\ninclude `--registry crates-io` to use crates.io");
-        }
+        bail!(gen_replacement_error(replacement_sid));
     } else {
         Ok(RegistrySourceIds {
             original: sid,
             replacement: builtin_replacement_sid,
         })
     }
+}
+
+fn get_initial_source_id(
+    gctx: &GlobalContext,
+    reg_or_index: Option<&RegistryOrIndex>,
+) -> CargoResult<SourceId> {
+    match reg_or_index {
+        None => SourceId::crates_io(gctx),
+        Some(reg_or_index) => get_initial_source_id_from_registry_or_index(gctx, reg_or_index),
+    }
+}
+
+fn get_initial_source_id_from_registry_or_index(
+    gctx: &GlobalContext,
+    reg_or_index: &RegistryOrIndex,
+) -> CargoResult<SourceId> {
+    match reg_or_index {
+        RegistryOrIndex::Index(url) => SourceId::for_registry(url),
+        RegistryOrIndex::Registry(r) => SourceId::alt_registry(gctx, r),
+    }
+}
+
+fn get_replacement_source_ids(
+    gctx: &GlobalContext,
+    sid: SourceId,
+) -> CargoResult<(SourceId, SourceId)> {
+    let builtin_replacement_sid = SourceConfigMap::empty(gctx)?
+        .load(sid, &HashSet::new())?
+        .replaced_source_id();
+    let replacement_sid = SourceConfigMap::new(gctx)?
+        .load(sid, &HashSet::new())?
+        .replaced_source_id();
+    Ok((builtin_replacement_sid, replacement_sid))
+}
+
+fn gen_replacement_error(replacement_sid: SourceId) -> String {
+    // Neither --registry nor --index was passed and the user has configured source-replacement.
+    let error_message = if let Some(replacement_name) = replacement_sid.alt_registry_key() {
+        format!(
+            "crates-io is replaced with remote registry {};\ninclude `--registry {}` or `--registry crates-io`",
+            replacement_name, replacement_name
+        )
+    } else {
+        format!(
+            "crates-io is replaced with non-remote-registry source {};\ninclude `--registry crates-io` to use crates.io",
+            replacement_sid
+        )
+    };
+
+    error_message
 }
 
 struct RegistrySourceIds {
