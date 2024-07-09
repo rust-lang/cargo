@@ -5,7 +5,7 @@ use serde::Serialize;
 use std::borrow::Cow;
 use std::fmt;
 use std::path::PathBuf;
-use std::rc::Rc;
+use std::sync::Arc;
 use tracing::trace;
 
 use crate::core::compiler::{CompileKind, CompileTarget};
@@ -18,7 +18,7 @@ use crate::util::OptVersionReq;
 /// Cheap to copy.
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct Dependency {
-    inner: Rc<Inner>,
+    inner: Arc<Inner>,
 }
 
 /// The data underlying a `Dependency`.
@@ -152,7 +152,7 @@ impl Dependency {
 
         let mut ret = Dependency::new_override(name, source_id);
         {
-            let ptr = Rc::make_mut(&mut ret.inner);
+            let ptr = Arc::make_mut(&mut ret.inner);
             ptr.only_match_name = false;
             ptr.req = version_req;
             ptr.specified_req = specified_req;
@@ -163,7 +163,7 @@ impl Dependency {
     pub fn new_override(name: InternedString, source_id: SourceId) -> Dependency {
         assert!(!name.is_empty());
         Dependency {
-            inner: Rc::new(Inner {
+            inner: Arc::new(Inner {
                 name,
                 source_id,
                 registry_id: None,
@@ -241,7 +241,7 @@ impl Dependency {
     }
 
     pub fn set_registry_id(&mut self, registry_id: SourceId) -> &mut Dependency {
-        Rc::make_mut(&mut self.inner).registry_id = Some(registry_id);
+        Arc::make_mut(&mut self.inner).registry_id = Some(registry_id);
         self
     }
 
@@ -259,7 +259,7 @@ impl Dependency {
             // Setting 'public' only makes sense for normal dependencies
             assert_eq!(self.kind(), DepKind::Normal);
         }
-        Rc::make_mut(&mut self.inner).public = public;
+        Arc::make_mut(&mut self.inner).public = public;
         self
     }
 
@@ -286,7 +286,7 @@ impl Dependency {
             // Setting 'public' only makes sense for normal dependencies
             assert_eq!(kind, DepKind::Normal);
         }
-        Rc::make_mut(&mut self.inner).kind = kind;
+        Arc::make_mut(&mut self.inner).kind = kind;
         self
     }
 
@@ -295,36 +295,36 @@ impl Dependency {
         &mut self,
         features: impl IntoIterator<Item = impl Into<InternedString>>,
     ) -> &mut Dependency {
-        Rc::make_mut(&mut self.inner).features = features.into_iter().map(|s| s.into()).collect();
+        Arc::make_mut(&mut self.inner).features = features.into_iter().map(|s| s.into()).collect();
         self
     }
 
     /// Sets whether the dependency requests default features of the package.
     pub fn set_default_features(&mut self, default_features: bool) -> &mut Dependency {
-        Rc::make_mut(&mut self.inner).default_features = default_features;
+        Arc::make_mut(&mut self.inner).default_features = default_features;
         self
     }
 
     /// Sets whether the dependency is optional.
     pub fn set_optional(&mut self, optional: bool) -> &mut Dependency {
-        Rc::make_mut(&mut self.inner).optional = optional;
+        Arc::make_mut(&mut self.inner).optional = optional;
         self
     }
 
     /// Sets the source ID for this dependency.
     pub fn set_source_id(&mut self, id: SourceId) -> &mut Dependency {
-        Rc::make_mut(&mut self.inner).source_id = id;
+        Arc::make_mut(&mut self.inner).source_id = id;
         self
     }
 
     /// Sets the version requirement for this dependency.
     pub fn set_version_req(&mut self, req: OptVersionReq) -> &mut Dependency {
-        Rc::make_mut(&mut self.inner).req = req;
+        Arc::make_mut(&mut self.inner).req = req;
         self
     }
 
     pub fn set_platform(&mut self, platform: Option<Platform>) -> &mut Dependency {
-        Rc::make_mut(&mut self.inner).platform = platform;
+        Arc::make_mut(&mut self.inner).platform = platform;
         self
     }
 
@@ -332,7 +332,7 @@ impl Dependency {
         &mut self,
         name: impl Into<InternedString>,
     ) -> &mut Dependency {
-        Rc::make_mut(&mut self.inner).explicit_name_in_toml = Some(name.into());
+        Arc::make_mut(&mut self.inner).explicit_name_in_toml = Some(name.into());
         self
     }
 
@@ -346,7 +346,7 @@ impl Dependency {
             self.source_id(),
             id
         );
-        let me = Rc::make_mut(&mut self.inner);
+        let me = Arc::make_mut(&mut self.inner);
         me.req.lock_to(id.version());
 
         // Only update the `precise` of this source to preserve other
@@ -361,7 +361,7 @@ impl Dependency {
     /// Mainly used in dependency patching like `[patch]` or `[replace]`, which
     /// doesn't need to lock the entire dependency to a specific [`PackageId`].
     pub fn lock_version(&mut self, version: &semver::Version) -> &mut Dependency {
-        let me = Rc::make_mut(&mut self.inner);
+        let me = Arc::make_mut(&mut self.inner);
         me.req.lock_to(version);
         self
     }
@@ -430,7 +430,7 @@ impl Dependency {
     }
 
     pub(crate) fn set_artifact(&mut self, artifact: Artifact) {
-        Rc::make_mut(&mut self.inner).artifact = Some(artifact);
+        Arc::make_mut(&mut self.inner).artifact = Some(artifact);
     }
 
     pub(crate) fn artifact(&self) -> Option<&Artifact> {
@@ -453,7 +453,7 @@ impl Dependency {
 /// This information represents a requirement in the package this dependency refers to.
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct Artifact {
-    inner: Rc<Vec<ArtifactKind>>,
+    inner: Arc<Vec<ArtifactKind>>,
     is_lib: bool,
     target: Option<ArtifactTarget>,
 }
@@ -492,7 +492,7 @@ impl Artifact {
                 .collect::<Result<Vec<_>, _>>()?,
         )?;
         Ok(Artifact {
-            inner: Rc::new(kinds),
+            inner: Arc::new(kinds),
             is_lib,
             target: target.map(ArtifactTarget::parse).transpose()?,
         })
