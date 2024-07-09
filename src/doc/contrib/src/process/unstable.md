@@ -41,6 +41,12 @@ something is only partially implemented, it may have both
 
 See [Working on Cargo](working-on-cargo.md).
 
+During implementation and testing, you may find reasons to deviate from the RFC.
+Please call these out in the tracking issue, with links to more information justifying the change
+(e.g. see [workspace inheritance tracking issue]).
+
+[workspace inheritance tracking issue]: https://github.com/rust-lang/cargo/issues/8415
+
 #### Unstable feature opt-in
 
 For features that require behavior changes or new syntax in `Cargo.toml`, then
