@@ -1,8 +1,6 @@
 //! Tests for packages/target filter flags giving suggestions on which
 //! packages/targets are available.
 
-#![allow(deprecated)]
-
 use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 
@@ -28,9 +26,9 @@ fn list_availables_test(command: &str, targets: u8) {
     if targets & EXAMPLE != 0 {
         full_project
             .cargo(&format!("{} --example", command))
-            .with_stderr(
+            .with_stderr_data(
                 "\
-error: \"--example\" takes one argument.
+[ERROR] \"--example\" takes one argument.
 Available examples:
     a
     b
@@ -44,9 +42,9 @@ Available examples:
     if targets & BIN != 0 {
         full_project
             .cargo(&format!("{} --bin", command))
-            .with_stderr(
+            .with_stderr_data(
                 "\
-error: \"--bin\" takes one argument.
+[ERROR] \"--bin\" takes one argument.
 Available binaries:
     foo
 
@@ -59,9 +57,9 @@ Available binaries:
     if targets & BENCH != 0 {
         full_project
             .cargo(&format!("{} --bench", command))
-            .with_stderr(
+            .with_stderr_data(
                 "\
-error: \"--bench\" takes one argument.
+[ERROR] \"--bench\" takes one argument.
 Available bench targets:
     bench1
     bench2
@@ -75,9 +73,9 @@ Available bench targets:
     if targets & TEST != 0 {
         full_project
             .cargo(&format!("{} --test", command))
-            .with_stderr(
+            .with_stderr_data(
                 "\
-error: \"--test\" takes one argument.
+[ERROR] \"--test\" takes one argument.
 Available test targets:
     test1
     test2
@@ -91,7 +89,7 @@ Available test targets:
     if targets & PACKAGE != 0 {
         full_project
             .cargo(&format!("{} -p", command))
-            .with_stderr(
+            .with_stderr_data(
                 "\
 [ERROR] \"--package <SPEC>\" requires a SPEC format value, \
 which can be any package ID specifier in the dependency graph.
@@ -111,9 +109,9 @@ Possible packages/workspace members:
     if targets & EXAMPLE != 0 {
         empty_project
             .cargo(&format!("{} --example", command))
-            .with_stderr(
+            .with_stderr_data(
                 "\
-error: \"--example\" takes one argument.
+[ERROR] \"--example\" takes one argument.
 No examples available.
 
 ",
@@ -125,9 +123,9 @@ No examples available.
     if targets & BIN != 0 {
         empty_project
             .cargo(&format!("{} --bin", command))
-            .with_stderr(
+            .with_stderr_data(
                 "\
-error: \"--bin\" takes one argument.
+[ERROR] \"--bin\" takes one argument.
 No binaries available.
 
 ",
@@ -139,9 +137,9 @@ No binaries available.
     if targets & BENCH != 0 {
         empty_project
             .cargo(&format!("{} --bench", command))
-            .with_stderr(
+            .with_stderr_data(
                 "\
-error: \"--bench\" takes one argument.
+[ERROR] \"--bench\" takes one argument.
 No bench targets available.
 
 ",
@@ -153,9 +151,9 @@ No bench targets available.
     if targets & TEST != 0 {
         empty_project
             .cargo(&format!("{} --test", command))
-            .with_stderr(
+            .with_stderr_data(
                 "\
-error: \"--test\" takes one argument.
+[ERROR] \"--test\" takes one argument.
 No test targets available.
 
 ",
@@ -167,9 +165,9 @@ No test targets available.
     if targets & TARGET != 0 {
         empty_project
             .cargo(&format!("{} --target", command))
-            .with_stderr(
+            .with_stderr_data(
                 "\
-error: \"--target\" takes a target architecture as an argument.
+[ERROR] \"--target\" takes a target architecture as an argument.
 
 Run `[..]` to see possible targets.
 ",
