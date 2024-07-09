@@ -20,8 +20,9 @@ pub fn search(
     reg_or_index: Option<RegistryOrIndex>,
     limit: u32,
 ) -> CargoResult<()> {
-    let (mut registry, source_ids) =
-        super::registry(gctx, None, reg_or_index.as_ref(), false, None)?;
+    let source_ids = super::get_source_id(gctx, reg_or_index.as_ref())?;
+    let mut registry =
+        super::registry(gctx, &source_ids, None, reg_or_index.as_ref(), false, None)?;
     let (crates, total_crates) = registry.search(query, limit).with_context(|| {
         format!(
             "failed to retrieve search results from the registry at {}",

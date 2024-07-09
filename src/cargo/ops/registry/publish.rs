@@ -130,14 +130,16 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         }
         val => val,
     };
-    let (mut registry, reg_ids) = super::registry(
+    let source_ids = super::get_source_id(opts.gctx, reg_or_index.as_ref())?;
+    let mut registry = super::registry(
         opts.gctx,
+        &source_ids,
         opts.token.as_ref().map(Secret::as_deref),
         reg_or_index.as_ref(),
         true,
         Some(operation).filter(|_| !opts.dry_run),
     )?;
-    verify_dependencies(pkg, &registry, reg_ids.original)?;
+    verify_dependencies(pkg, &registry, source_ids.original)?;
 
     // Prepare a tarball, with a non-suppressible warning if metadata
     // is missing since this is being put online.
@@ -169,7 +171,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         };
         registry.set_token(Some(auth::auth_token(
             &opts.gctx,
-            &reg_ids.original,
+            &source_ids.original,
             None,
             operation,
             vec![],
@@ -185,7 +187,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         pkg,
         tarball.file(),
         &mut registry,
-        reg_ids.original,
+        source_ids.original,
         opts.dry_run,
     )?;
     if !opts.dry_run {
@@ -198,7 +200,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         };
         if 0 < timeout {
             let timeout = Duration::from_secs(timeout);
-            wait_for_publish(opts.gctx, reg_ids.original, pkg, timeout)?;
+            wait_for_publish(opts.gctx, source_ids.original, pkg, timeout)?;
         }
     }
 

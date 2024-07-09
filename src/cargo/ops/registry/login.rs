@@ -26,8 +26,15 @@ pub fn registry_login(
 ) -> CargoResult<()> {
     let source_ids = get_source_id(gctx, reg_or_index)?;
 
-    let login_url = match registry(gctx, token_from_cmdline.clone(), reg_or_index, false, None) {
-        Ok((registry, _)) => Some(format!("{}/me", registry.host())),
+    let login_url = match registry(
+        gctx,
+        &source_ids,
+        token_from_cmdline.clone(),
+        reg_or_index,
+        false,
+        None,
+    ) {
+        Ok(registry) => Some(format!("{}/me", registry.host())),
         Err(e) if e.is::<AuthorizationError>() => e
             .downcast::<AuthorizationError>()
             .unwrap()

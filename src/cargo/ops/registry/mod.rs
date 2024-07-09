@@ -107,6 +107,8 @@ impl RegistryCredentialConfig {
 
 /// Returns the `Registry` and `Source` based on command-line and config settings.
 ///
+/// * `source_ids`: The source IDs for the registry. It contains the original source ID and
+///   the replacement source ID.
 /// * `token_from_cmdline`: The token from the command-line. If not set, uses the token
 ///   from the config.
 /// * `index`: The index URL from the command-line.
@@ -116,13 +118,12 @@ impl RegistryCredentialConfig {
 /// * `token_required`: If `true`, the token will be set.
 fn registry(
     gctx: &GlobalContext,
+    source_ids: &RegistrySourceIds,
     token_from_cmdline: Option<Secret<&str>>,
     reg_or_index: Option<&RegistryOrIndex>,
     force_update: bool,
     token_required: Option<Operation<'_>>,
-) -> CargoResult<(Registry, RegistrySourceIds)> {
-    let source_ids = get_source_id(gctx, reg_or_index)?;
-
+) -> CargoResult<Registry> {
     let is_index = reg_or_index.map(|v| v.is_index()).unwrap_or_default();
     if is_index && token_required.is_some() && token_from_cmdline.is_none() {
         bail!("command-line argument --index requires --token to be specified");
@@ -165,9 +166,11 @@ fn registry(
         None
     };
     let handle = http_handle(gctx)?;
-    Ok((
-        Registry::new_handle(api_host, token, handle, cfg.auth_required),
-        source_ids,
+    Ok(Registry::new_handle(
+        api_host,
+        token,
+        handle,
+        cfg.auth_required,
     ))
 }
 
