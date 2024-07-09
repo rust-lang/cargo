@@ -5,28 +5,6 @@ feature will only be usable on the nightly channel, and requires a specific
 opt-in by the user. Small changes can skip this process, but please consult
 with the Cargo team first.
 
-## Unstable feature opt-in
-
-For features that require behavior changes or new syntax in `Cargo.toml`, then
-it will need a `cargo-features` value placed at the top of `Cargo.toml` to
-enable it. The process for adding a new feature is described in the
-[`features` module]. Code that implements the feature will need to manually
-check that the feature is enabled for the current manifest.
-
-For features that add new command-line flags, config options, or environment
-variables, then the `-Z` flags will be needed to enable them. The [`features`
-module] also describes how to add these. New flags should use the
-`fail_if_stable_opt` method to check if the `-Z unstable-options` flag has
-been passed.
-
-## Unstable documentation
-
-Every unstable feature should have a section added to the [unstable chapter]
-describing how to use the feature.
-This can also serve as a place for the final documentation to live until its stabilized.
-
-[unstable chapter]: https://github.com/rust-lang/cargo/blob/master/src/doc/src/reference/unstable.md
-
 ## Tracking issues
 
 Each unstable feature should get a [tracking issue]. These issues are
@@ -58,6 +36,28 @@ something is only partially implemented, it may have both
 [S-needs-mentor]: https://github.com/rust-lang/cargo/labels/S-needs-mentor
 [S-accepted]: https://github.com/rust-lang/cargo/labels/S-accepted
 [S-waiting-on-feedback]: https://github.com/rust-lang/cargo/labels/S-waiting-on-feedback
+
+## Unstable feature opt-in
+
+For features that require behavior changes or new syntax in `Cargo.toml`, then
+it will need a `cargo-features` value placed at the top of `Cargo.toml` to
+enable it. The process for adding a new feature is described in the
+[`features` module]. Code that implements the feature will need to manually
+check that the feature is enabled for the current manifest.
+
+For features that add new command-line flags, config options, or environment
+variables, then the `-Z` flags will be needed to enable them. The [`features`
+module] also describes how to add these. New flags should use the
+`fail_if_stable_opt` method to check if the `-Z unstable-options` flag has
+been passed.
+
+## Unstable documentation
+
+Every unstable feature should have a section added to the [unstable chapter]
+describing how to use the feature.
+This can also serve as a place for the final documentation to live until its stabilized.
+
+[unstable chapter]: https://github.com/rust-lang/cargo/blob/master/src/doc/src/reference/unstable.md
 
 ## Pre-Stabilization 
 
