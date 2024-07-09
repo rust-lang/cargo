@@ -1812,7 +1812,7 @@ fn doc_private_ws() {
 }
 
 const BAD_INTRA_LINK_LIB: &str = r#"
-#![deny(broken_intra_doc_links)]
+#![deny(rustdoc::broken_intra_doc_links)]
 
 /// [bad_link]
 pub fn foo() {}
