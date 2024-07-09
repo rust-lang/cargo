@@ -1,3 +1,4 @@
+![Link to Add repository – My Home Assistant](https://github.com/rust-lang/cargo/assets/141981960/f448db6b-3a14-464e-a5b8-115e9e7767ce)
 # Configuration
 
 This document explains how Cargo’s configuration system works, as well as
