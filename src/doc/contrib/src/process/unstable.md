@@ -37,7 +37,9 @@ something is only partially implemented, it may have both
 [S-accepted]: https://github.com/rust-lang/cargo/labels/S-accepted
 [S-waiting-on-feedback]: https://github.com/rust-lang/cargo/labels/S-waiting-on-feedback
 
-## Unstable feature opt-in
+## Implementation
+
+#### Unstable feature opt-in
 
 For features that require behavior changes or new syntax in `Cargo.toml`, then
 it will need a `cargo-features` value placed at the top of `Cargo.toml` to
@@ -51,7 +53,7 @@ module] also describes how to add these. New flags should use the
 `fail_if_stable_opt` method to check if the `-Z unstable-options` flag has
 been passed.
 
-## Unstable documentation
+#### Unstable documentation
 
 Every unstable feature should have a section added to the [unstable chapter]
 describing how to use the feature.
