@@ -10,7 +10,6 @@ use cargo_test_support::registry::{
 use cargo_test_support::{basic_manifest, project, str};
 use cargo_test_support::{git, install::cargo_home, t};
 use cargo_util::paths::remove_dir_all;
-use snapbox::data::Inline;
 use std::fmt::Write;
 use std::fs::{self, File};
 use std::path::Path;
@@ -72,8 +71,7 @@ fn simple_git() {
     );
 }
 
-// fn simple() {
-fn simple(e1: Inline, e2: Inline) {
+fn simple(pre_clean_expected: impl IntoData, post_clean_expected: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -93,14 +91,14 @@ fn simple(e1: Inline, e2: Inline) {
 
     Package::new("bar", "0.0.1").publish();
 
-    p.cargo("check").with_stderr_data(e1).run();
+    p.cargo("check").with_stderr_data(pre_clean_expected).run();
 
     p.cargo("clean").run();
 
     assert!(paths::home().join(".cargo/registry/CACHEDIR.TAG").is_file());
 
     // Don't download a second time
-    p.cargo("check").with_stderr_data(e2).run();
+    p.cargo("check").with_stderr_data(post_clean_expected).run();
 }
 
 #[cargo_test]
@@ -136,7 +134,7 @@ fn deps_git() {
 "#]]);
 }
 
-fn deps(e1: Inline) {
+fn deps(expected: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -157,7 +155,7 @@ fn deps(e1: Inline) {
     Package::new("baz", "0.0.1").publish();
     Package::new("bar", "0.0.1").dep("baz", "*").publish();
 
-    p.cargo("check").with_stderr_data(e1).run();
+    p.cargo("check").with_stderr_data(expected).run();
 
     assert!(paths::home().join(".cargo/registry/CACHEDIR.TAG").is_file());
 }
@@ -185,7 +183,7 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 "#]]);
 }
 
-fn nonexistent(expected: Inline) {
+fn nonexistent(expected: impl IntoData) {
     Package::new("init", "0.0.1").publish();
 
     let p = project()
@@ -238,7 +236,7 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 "#]]);
 }
 
-fn wrong_case(expected: Inline) {
+fn wrong_case(expected: impl IntoData) {
     Package::new("init", "0.0.1").publish();
 
     let p = project()
@@ -292,7 +290,7 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
 "#]]);
 }
 
-fn mis_hyphenated(expected: Inline) {
+fn mis_hyphenated(expected: impl IntoData) {
     Package::new("mis-hyphenated", "0.0.1").publish();
 
     let p = project()
@@ -368,7 +366,7 @@ perhaps a crate was updated and forgotten to be re-vendored?
     );
 }
 
-fn wrong_version(e1: Inline, e2: Inline) {
+fn wrong_version(pre_publish_expected: impl IntoData, post_publish_expected: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -389,12 +387,18 @@ fn wrong_version(e1: Inline, e2: Inline) {
     Package::new("foo", "0.0.1").publish();
     Package::new("foo", "0.0.2").publish();
 
-    p.cargo("check").with_status(101).with_stderr_data(e1).run();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(pre_publish_expected)
+        .run();
 
     Package::new("foo", "0.0.3").publish();
     Package::new("foo", "0.0.4").publish();
 
-    p.cargo("check").with_status(101).with_stderr_data(e2).run();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(post_publish_expected)
+        .run();
 }
 
 #[cargo_test]
@@ -428,7 +432,7 @@ Caused by:
 "#]]);
 }
 
-fn bad_cksum(expected: Inline) {
+fn bad_cksum(expected: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -503,7 +507,7 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
     );
 }
 
-fn update_registry(e1: Inline, e2: Inline) {
+fn update_registry(pre_publish_expected: impl IntoData, post_publish_expected: impl IntoData) {
     Package::new("init", "0.0.1").publish();
 
     let p = project()
@@ -523,11 +527,16 @@ fn update_registry(e1: Inline, e2: Inline) {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("check").with_status(101).with_stderr_data(e1).run();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(pre_publish_expected)
+        .run();
 
     Package::new("notyet", "0.0.1").publish();
 
-    p.cargo("check").with_stderr_data(e2).run();
+    p.cargo("check")
+        .with_stderr_data(post_publish_expected)
+        .run();
 }
 
 #[cargo_test]
@@ -589,7 +598,10 @@ Caused by:
     );
 }
 
-fn package_with_path_deps(e1: Inline, e2: Inline) {
+fn package_with_path_deps(
+    pre_publish_expected: impl IntoData,
+    post_publish_expected: impl IntoData,
+) {
     Package::new("init", "0.0.1").publish();
 
     let p = project()
@@ -617,12 +629,14 @@ fn package_with_path_deps(e1: Inline, e2: Inline) {
 
     p.cargo("package")
         .with_status(101)
-        .with_stderr_data(e1)
+        .with_stderr_data(pre_publish_expected)
         .run();
 
     Package::new("notyet", "0.0.1").publish();
 
-    p.cargo("package").with_stderr_data(e2).run();
+    p.cargo("package")
+        .with_stderr_data(post_publish_expected)
+        .run();
 }
 
 #[cargo_test]
@@ -666,7 +680,7 @@ fn lockfile_locks_git() {
     );
 }
 
-fn lockfile_locks(e1: Inline, e2: Inline) {
+fn lockfile_locks(pre_publish_expected: impl IntoData, post_publish_expected: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -686,12 +700,16 @@ fn lockfile_locks(e1: Inline, e2: Inline) {
 
     Package::new("bar", "0.0.1").publish();
 
-    p.cargo("check").with_stderr_data(e1).run();
+    p.cargo("check")
+        .with_stderr_data(pre_publish_expected)
+        .run();
 
     p.root().move_into_the_past();
     Package::new("bar", "0.0.2").publish();
 
-    p.cargo("check").with_stderr_data(e2).run();
+    p.cargo("check")
+        .with_stderr_data(post_publish_expected)
+        .run();
 }
 
 #[cargo_test]
@@ -739,7 +757,10 @@ fn lockfile_locks_transitively_git() {
     );
 }
 
-fn lockfile_locks_transitively(e1: Inline, e2: Inline) {
+fn lockfile_locks_transitively(
+    pre_publish_expected: impl IntoData,
+    post_publish_expected: impl IntoData,
+) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -760,13 +781,17 @@ fn lockfile_locks_transitively(e1: Inline, e2: Inline) {
     Package::new("baz", "0.0.1").publish();
     Package::new("bar", "0.0.1").dep("baz", "*").publish();
 
-    p.cargo("check").with_stderr_data(e1).run();
+    p.cargo("check")
+        .with_stderr_data(pre_publish_expected)
+        .run();
 
     p.root().move_into_the_past();
     Package::new("baz", "0.0.2").publish();
     Package::new("bar", "0.0.2").dep("baz", "*").publish();
 
-    p.cargo("check").with_stderr_data(e2).run();
+    p.cargo("check")
+        .with_stderr_data(post_publish_expected)
+        .run();
 }
 
 #[cargo_test]
@@ -802,7 +827,7 @@ fn yanks_are_not_used_git() {
 "#]]);
 }
 
-fn yanks_are_not_used(expected: Inline) {
+fn yanks_are_not_used(expected: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -860,7 +885,7 @@ perhaps a crate was updated and forgotten to be re-vendored?
 "#]]);
 }
 
-fn relying_on_a_yank_is_bad(expected: Inline) {
+fn relying_on_a_yank_is_bad(expected: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -923,7 +948,7 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
     );
 }
 
-fn yanks_in_lockfiles_are_ok(e1: Inline, e2: Inline) {
+fn yanks_in_lockfiles_are_ok(expected_check: impl IntoData, expected_update: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -949,11 +974,11 @@ fn yanks_in_lockfiles_are_ok(e1: Inline, e2: Inline) {
 
     Package::new("bar", "0.0.1").yanked(true).publish();
 
-    p.cargo("check").with_stderr_data(e1).run();
+    p.cargo("check").with_stderr_data(expected_check).run();
 
     p.cargo("update")
         .with_status(101)
-        .with_stderr_data(e2)
+        .with_stderr_data(expected_update)
         .run();
 }
 
@@ -1004,7 +1029,11 @@ required by package `foo v0.0.1 ([ROOT]/foo)`
     );
 }
 
-fn yanks_in_lockfiles_are_ok_for_other_update(e1: Inline, e2: Inline, e3: Inline) {
+fn yanks_in_lockfiles_are_ok_for_other_update(
+    expected_check: impl IntoData,
+    expected_update: impl IntoData,
+    expected_other_update: impl IntoData,
+) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1033,16 +1062,18 @@ fn yanks_in_lockfiles_are_ok_for_other_update(e1: Inline, e2: Inline, e3: Inline
     Package::new("bar", "0.0.1").yanked(true).publish();
     Package::new("baz", "0.0.1").publish();
 
-    p.cargo("check").with_stderr_data(e1).run();
+    p.cargo("check").with_stderr_data(expected_check).run();
 
     Package::new("baz", "0.0.2").publish();
 
     p.cargo("update")
         .with_status(101)
-        .with_stderr_data(e2)
+        .with_stderr_data(expected_update)
         .run();
 
-    p.cargo("update baz").with_stderr_data(e3).run();
+    p.cargo("update baz")
+        .with_stderr_data(expected_other_update)
+        .run();
 }
 
 #[cargo_test]
@@ -1076,7 +1107,7 @@ fn yanks_in_lockfiles_are_ok_with_new_dep_git() {
 "#]]);
 }
 
-fn yanks_in_lockfiles_are_ok_with_new_dep(expected: Inline) {
+fn yanks_in_lockfiles_are_ok_with_new_dep(expected: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1144,7 +1175,7 @@ fn update_with_lockfile_if_packages_missing_git() {
 "#]]);
 }
 
-fn update_with_lockfile_if_packages_missing(expected: Inline) {
+fn update_with_lockfile_if_packages_missing(expected: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1265,7 +1296,14 @@ fn update_lockfile_git() {
     );
 }
 
-fn update_lockfile(e1: Inline, e2: Inline, e3: Inline, e4: Inline, e5: Inline, e6: Inline) {
+fn update_lockfile(
+    expected_update: impl IntoData,
+    expected_check: impl IntoData,
+    expected_other_update: impl IntoData,
+    expected_other_check: impl IntoData,
+    expected_new_update: impl IntoData,
+    expected_new_check: impl IntoData,
+) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1292,26 +1330,34 @@ fn update_lockfile(e1: Inline, e2: Inline, e3: Inline, e4: Inline, e5: Inline, e
     paths::home().join(".cargo/registry").rm_rf();
     println!("0.0.2 update");
     p.cargo("update bar --precise 0.0.2")
-        .with_stderr_data(e1)
+        .with_stderr_data(expected_update)
         .run();
 
     println!("0.0.2 build");
-    p.cargo("check").with_stderr_data(e2).run();
+    p.cargo("check").with_stderr_data(expected_check).run();
 
     println!("0.0.3 update");
-    p.cargo("update bar").with_stderr_data(e3).run();
+    p.cargo("update bar")
+        .with_stderr_data(expected_other_update)
+        .run();
 
     println!("0.0.3 build");
-    p.cargo("check").with_stderr_data(e4).run();
+    p.cargo("check")
+        .with_stderr_data(expected_other_check)
+        .run();
 
     println!("new dependencies update");
     Package::new("bar", "0.0.4").dep("spam", "0.2.5").publish();
     Package::new("spam", "0.2.5").publish();
-    p.cargo("update bar").with_stderr_data(e5).run();
+    p.cargo("update bar")
+        .with_stderr_data(expected_new_update)
+        .run();
 
     println!("new dependencies update");
     Package::new("bar", "0.0.5").publish();
-    p.cargo("update bar").with_stderr_data(e6).run();
+    p.cargo("update bar")
+        .with_stderr_data(expected_new_check)
+        .run();
 }
 
 #[cargo_test]
@@ -1343,7 +1389,7 @@ fn dev_dependency_not_used_git() {
 "#]]);
 }
 
-fn dev_dependency_not_used(expected: Inline) {
+fn dev_dependency_not_used(expected: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1393,7 +1439,7 @@ fn bad_license_file_git() {
     );
 }
 
-fn bad_license_file(registry: &TestRegistry, expected: Inline) {
+fn bad_license_file(registry: &TestRegistry, expected: impl IntoData) {
     Package::new("foo", "1.0.0").publish();
     let p = project()
         .file(
@@ -1477,7 +1523,7 @@ fn updating_a_dep_git() {
     );
 }
 
-fn updating_a_dep(e1: Inline, e2: Inline) {
+fn updating_a_dep(pre_update_expected: impl IntoData, post_update_expected: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1511,7 +1557,7 @@ fn updating_a_dep(e1: Inline, e2: Inline) {
 
     Package::new("bar", "0.0.1").publish();
 
-    p.cargo("check").with_stderr_data(e1).run();
+    p.cargo("check").with_stderr_data(pre_update_expected).run();
     assert!(paths::home().join(".cargo/registry/CACHEDIR.TAG").is_file());
 
     // Now delete the CACHEDIR.TAG file: this is the situation we'll be in after
@@ -1536,7 +1582,9 @@ fn updating_a_dep(e1: Inline, e2: Inline) {
     Package::new("bar", "0.1.0").publish();
 
     println!("second");
-    p.cargo("check").with_stderr_data(e2).run();
+    p.cargo("check")
+        .with_stderr_data(post_update_expected)
+        .run();
 
     assert!(
         paths::home().join(".cargo/registry/CACHEDIR.TAG").is_file(),
@@ -1589,7 +1637,7 @@ fn git_and_registry_dep_git() {
     );
 }
 
-fn git_and_registry_dep(e1: Inline, e2: Inline) {
+fn git_and_registry_dep(pre_move_expected: impl IntoData, post_move_expected: impl IntoData) {
     let b = git::repo(&paths::root().join("b"))
         .file(
             "Cargo.toml",
@@ -1632,11 +1680,11 @@ fn git_and_registry_dep(e1: Inline, e2: Inline) {
     Package::new("a", "0.0.1").publish();
 
     p.root().move_into_the_past();
-    p.cargo("check").with_stderr_data(e1).run();
+    p.cargo("check").with_stderr_data(pre_move_expected).run();
     p.root().move_into_the_past();
 
     println!("second");
-    p.cargo("check").with_stderr_data(e2).run();
+    p.cargo("check").with_stderr_data(post_move_expected).run();
 }
 
 #[cargo_test]
@@ -1666,7 +1714,7 @@ fn update_publish_then_update_git() {
 "#]]);
 }
 
-fn update_publish_then_update(expected: Inline) {
+fn update_publish_then_update(expected: impl IntoData) {
     // First generate a Cargo.lock and a clone of the registry index at the
     // "head" of the current registry.
     let p = project()
@@ -1751,7 +1799,7 @@ fn fetch_downloads_git() {
 "#]]);
 }
 
-fn fetch_downloads(expected: Inline) {
+fn fetch_downloads(expected: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1817,7 +1865,7 @@ fn update_transitive_dependency_git() {
     );
 }
 
-fn update_transitive_dependency(e1: Inline, e2: Inline) {
+fn update_transitive_dependency(expected_update: impl IntoData, expected_check: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1842,9 +1890,9 @@ fn update_transitive_dependency(e1: Inline, e2: Inline) {
 
     Package::new("b", "0.1.1").publish();
 
-    p.cargo("update b").with_stderr_data(e1).run();
+    p.cargo("update b").with_stderr_data(expected_update).run();
 
-    p.cargo("check").with_stderr_data(e2).run();
+    p.cargo("check").with_stderr_data(expected_check).run();
 }
 
 #[cargo_test]
@@ -1870,7 +1918,7 @@ fn update_backtracking_ok_git() {
 "#]]);
 }
 
-fn update_backtracking_ok(expected: Inline) {
+fn update_backtracking_ok(expected: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -1976,7 +2024,11 @@ fn update_multiple_packages_git() {
     );
 }
 
-fn update_multiple_packages(e1: Inline, e2: Inline, e3: Inline) {
+fn update_multiple_packages(
+    expected_update: impl IntoData,
+    expected_other_update: impl IntoData,
+    expected_check: impl IntoData,
+) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2006,12 +2058,16 @@ fn update_multiple_packages(e1: Inline, e2: Inline, e3: Inline) {
     Package::new("b", "0.1.1").publish();
     Package::new("c", "0.1.1").publish();
 
-    p.cargo("update a b").with_stderr_data(e1).run();
+    p.cargo("update a b")
+        .with_stderr_data(expected_update)
+        .run();
 
-    p.cargo("update b c").with_stderr_data(e2).run();
+    p.cargo("update b c")
+        .with_stderr_data(expected_other_update)
+        .run();
 
     p.cargo("check")
-        .with_stderr_data(IntoData::unordered(e3))
+        .with_stderr_data(IntoData::unordered(expected_check))
         .run();
 }
 
@@ -2168,7 +2224,7 @@ if you are looking for the prerelease package it needs to be specified explicitl
 "#]]);
 }
 
-fn use_semver_package_incorrectly(expected: Inline) {
+fn use_semver_package_incorrectly(expected: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2239,7 +2295,7 @@ fn only_download_relevant_git() {
 "#]]);
 }
 
-fn only_download_relevant(expected: Inline) {
+fn only_download_relevant(expected: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2324,7 +2380,7 @@ fn upstream_warnings_on_extra_verbose_git() {
 "#]]);
 }
 
-fn upstream_warnings_on_extra_verbose(expected: Inline) {
+fn upstream_warnings_on_extra_verbose(expected: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2445,7 +2501,7 @@ fn add_dep_dont_update_registry_git() {
 "#]]);
 }
 
-fn add_dep_dont_update_registry(expected: Inline) {
+fn add_dep_dont_update_registry(expected: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2522,7 +2578,7 @@ fn bump_version_dont_update_registry_git() {
 "#]]);
 }
 
-fn bump_version_dont_update_registry(expected: Inline) {
+fn bump_version_dont_update_registry(expected: impl IntoData) {
     let p = project()
         .file(
             "Cargo.toml",
@@ -2702,7 +2758,7 @@ Caused by:
 "#]]);
 }
 
-fn bad_and_or_malicious_packages_rejected(expected: Inline) {
+fn bad_and_or_malicious_packages_rejected(expected: impl IntoData) {
     Package::new("foo", "0.2.0")
         .extra_file("foo-0.1.0/src/lib.rs", "")
         .publish();
@@ -2982,7 +3038,7 @@ Use `[source]` replacement to alter the default index for crates.io.
     );
 }
 
-fn registry_index_rejected(e1: Inline, e2: Inline) {
+fn registry_index_rejected(expected_check: impl IntoData, expected_login: impl IntoData) {
     Package::new("dep", "0.1.0").publish();
 
     let p = project()
@@ -3008,9 +3064,15 @@ fn registry_index_rejected(e1: Inline, e2: Inline) {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("check").with_status(101).with_stderr_data(e1).run();
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(expected_check)
+        .run();
 
-    p.cargo("login").with_status(101).with_stderr_data(e2).run();
+    p.cargo("login")
+        .with_status(101)
+        .with_stderr_data(expected_login)
+        .run();
 }
 
 #[cargo_test]
@@ -3113,7 +3175,7 @@ foo v0.1.0 ([ROOT]/foo)
 "#]]);
 }
 
-fn ignores_unknown_index_version(expected: Inline) {
+fn ignores_unknown_index_version(expected: impl IntoData) {
     // If the version field is not understood, it is ignored.
     Package::new("bar", "1.0.0").publish();
     Package::new("bar", "1.0.1")

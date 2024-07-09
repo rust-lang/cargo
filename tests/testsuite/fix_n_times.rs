@@ -15,7 +15,7 @@
 //! up, and verifying the results.
 
 use cargo_test_support::{basic_manifest, paths, project, str, tools, Execs};
-use snapbox::data::Inline;
+use snapbox::IntoData;
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 
@@ -59,7 +59,7 @@ enum Step {
 fn expect_fix_runs_rustc_n_times(
     sequence: &[Step],
     extra_execs: impl FnOnce(&mut Execs),
-    expected_stderr: Inline,
+    expected_stderr: impl IntoData,
     expected_lib_rs: &str,
 ) {
     let rustc = rustc_for_cargo_fix();
