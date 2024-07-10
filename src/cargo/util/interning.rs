@@ -46,7 +46,14 @@ impl<'a> From<&'a String> for InternedString {
 
 impl From<String> for InternedString {
     fn from(item: String) -> Self {
-        InternedString::new(&item)
+        let mut cache = interned_storage();
+        let s = cache.get(item.as_str()).copied().unwrap_or_else(|| {
+            let s = item.leak();
+            cache.insert(s);
+            s
+        });
+
+        InternedString { inner: s }
     }
 }
 
