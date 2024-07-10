@@ -77,7 +77,7 @@ and give feedback begins:
   - This could be on the tracking issue or in a dedicated issue for feedback
   - e.g. [workspace inheritance testing notes]
 2. Call for testing
-  - In the RFC, link to the test instructions and label it with with `call-for-testing` to be picked up by [This Week in Rust]
+  - In the RFC, link to the test instructions and label it with `call-for-testing` to be picked up by [This Week in Rust]
     - If there is not an RFC, a pull request should be made to the [TWiR repo]
       adding the feature to the `Call for Testing` section ([example]).
   - Post on various Rust communities ([rust subreddit], [users], [internals], etc)

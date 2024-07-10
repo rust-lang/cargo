@@ -237,7 +237,7 @@ impl<'gctx> PackageRegistry<'gctx> {
             }
 
             // If the previous source has the same precise version as we do,
-            // then we're done, otherwise we need to need to move forward
+            // then we're done, otherwise we need to move forward
             // updating this source.
             Some((previous, _)) => {
                 if previous.has_same_precise_as(namespace) {

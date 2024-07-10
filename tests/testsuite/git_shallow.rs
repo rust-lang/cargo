@@ -443,7 +443,7 @@ fn gitoxide_shallow_clone_followed_by_non_shallow_update() -> anyhow::Result<()>
 
     assert_eq!(
         max_history_depth, 3,
-        "we see the previous shallow checkout as well as new new unshallow one"
+        "we see the previous shallow checkout as well as new unshallow one"
     );
 
     Ok(())
