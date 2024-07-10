@@ -5,27 +5,6 @@ feature will only be usable on the nightly channel, and requires a specific
 opt-in by the user. Small changes can skip this process, but please consult
 with the Cargo team first.
 
-## Unstable feature opt-in
-
-For features that require behavior changes or new syntax in `Cargo.toml`, then
-it will need a `cargo-features` value placed at the top of `Cargo.toml` to
-enable it. The process for adding a new feature is described in the
-[`features` module]. Code that implements the feature will need to manually
-check that the feature is enabled for the current manifest.
-
-For features that add new command-line flags, config options, or environment
-variables, then the `-Z` flags will be needed to enable them. The [`features`
-module] also describes how to add these. New flags should use the
-`fail_if_stable_opt` method to check if the `-Z unstable-options` flag has
-been passed.
-
-## Unstable documentation
-
-Every unstable feature should have a section added to the [unstable chapter]
-describing how to use the feature.
-
-[unstable chapter]: https://github.com/rust-lang/cargo/blob/master/src/doc/src/reference/unstable.md
-
 ## Tracking issues
 
 Each unstable feature should get a [tracking issue]. These issues are
@@ -58,20 +37,51 @@ something is only partially implemented, it may have both
 [S-accepted]: https://github.com/rust-lang/cargo/labels/S-accepted
 [S-waiting-on-feedback]: https://github.com/rust-lang/cargo/labels/S-waiting-on-feedback
 
+## Implementation
+
+See [Working on Cargo](working-on-cargo.md).
+
+During implementation and testing, you may find reasons to deviate from the RFC.
+Please call these out in the tracking issue, with links to more information justifying the change
+(e.g. see [workspace inheritance tracking issue]).
+
+[workspace inheritance tracking issue]: https://github.com/rust-lang/cargo/issues/8415
+
+#### Unstable feature opt-in
+
+For features that require behavior changes or new syntax in `Cargo.toml`, then
+it will need a `cargo-features` value placed at the top of `Cargo.toml` to
+enable it. The process for adding a new feature is described in the
+[`features` module]. Code that implements the feature will need to manually
+check that the feature is enabled for the current manifest.
+
+For features that add new command-line flags, config options, or environment
+variables, then the `-Z` flags will be needed to enable them. The [`features`
+module] also describes how to add these. New flags should use the
+`fail_if_stable_opt` method to check if the `-Z unstable-options` flag has
+been passed.
+
+#### Unstable documentation
+
+Every unstable feature should have a section added to the [unstable chapter]
+describing how to use the feature.
+This can also serve as a place for the final documentation to live until its stabilized.
+
+[unstable chapter]: https://github.com/rust-lang/cargo/blob/master/src/doc/src/reference/unstable.md
+
 ## Pre-Stabilization 
 
 Once an unstable feature is "complete", the search for users to test
-and give feedback begins. Testing notes should be written up to give users an
-idea of how to test the new feature. An example being the 
-[workspace inheritance testing notes] for workspace inheritance. Once testing
-notes have been written up you should make posts in various rust communities
-([rust subreddit], [users], [internals], etc). Example posts made for workspace
-inheritance: [reddit post], [users post], [internals post]. The unstable feature
-should also be added to [This Week in Rust]. This should be done by adding the
-label `call-for-testing` to the RFC for the feature and making a comment with a
-link to the testing notes and the tracking issue (as needed). If there is not an
-RFC, a pull request should be made to the [TWiR repo] adding the feature to the
-`Call for Testing` section ([example]).
+and give feedback begins:
+1. Write up test instructions for users, summarizing where the feature is useful, how to use it (with links to the unstable documentation), and if there are any areas of particular concern
+  - This could be on the tracking issue or in a dedicated issue for feedback
+  - e.g. [workspace inheritance testing notes]
+2. Call for testing
+  - In the RFC, link to the test instructions and label it with with `call-for-testing` to be picked up by [This Week in Rust]
+    - If there is not an RFC, a pull request should be made to the [TWiR repo]
+      adding the feature to the `Call for Testing` section ([example]).
+  - Post on various Rust communities ([rust subreddit], [users], [internals], etc)
+  - e.g. [reddit post], [users post], [internals post]
 
 [workspace inheritance testing notes]: https://github.com/rust-lang/cargo/blob/6d6dd9d9be9c91390da620adf43581619c2fa90e/src/doc/src/reference/unstable.md#testing-notes
 [rust subreddit]: https://www.reddit.com/r/rust/

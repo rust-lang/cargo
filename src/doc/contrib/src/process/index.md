@@ -114,6 +114,6 @@ on how this works.
 [issue-feature-request]: https://github.com/rust-lang/cargo/labels/C-feature-request
 [Feature accepted]: https://github.com/rust-lang/cargo/labels/Feature%20accepted
 [design principles chapter]: ../design.md
-[RFC process]: https://github.com/rust-lang/rfcs/
+[RFC process]: ./rfc.md
 [irlo]: https://internals.rust-lang.org/
 [subcommands]: https://doc.rust-lang.org/cargo/reference/external-tools.html#custom-subcommands
