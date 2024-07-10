@@ -285,7 +285,7 @@ impl TomlPackage {
 #[derive(Serialize, Copy, Clone, Debug)]
 #[serde(untagged)]
 pub enum InheritableField<T> {
-    /// The type that that is used when not inheriting from a workspace.
+    /// The type that is used when not inheriting from a workspace.
     Value(T),
     /// The type when inheriting from a workspace.
     Inherit(TomlInheritedField),
@@ -582,7 +582,7 @@ impl From<WorkspaceValue> for bool {
 #[derive(Serialize, Clone, Debug)]
 #[serde(untagged)]
 pub enum InheritableDependency {
-    /// The type that that is used when not inheriting from a workspace.
+    /// The type that is used when not inheriting from a workspace.
     Value(TomlDependency),
     /// The type when inheriting from a workspace.
     Inherit(TomlInheritedDependency),
