@@ -466,7 +466,9 @@ fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathBuf>>
             return list_files_gix(pkg, &repo, &filter, gctx);
         }
     }
-    list_files_walk(pkg, &filter, gctx)
+    let mut ret = Vec::new();
+    list_files_walk(pkg.root(), &mut ret, true, &filter, gctx)?;
+    Ok(ret)
 }
 
 /// Returns [`Some(gix::Repository)`](gix::Repository) if the discovered repository
@@ -637,7 +639,7 @@ fn list_files_gix(
                     files.extend(list_files_gix(pkg, &sub_repo, filter, gctx)?);
                 }
                 Err(_) => {
-                    walk(&file_path, &mut files, false, filter, gctx)?;
+                    list_files_walk(&file_path, &mut files, false, filter, gctx)?;
                 }
             }
         } else if (filter)(&file_path, is_dir) {
@@ -656,17 +658,6 @@ fn list_files_gix(
 /// This is a fallback for [`list_files_gix`] when the package
 /// is not tracked under a Git repository.
 fn list_files_walk(
-    pkg: &Package,
-    filter: &dyn Fn(&Path, bool) -> bool,
-    gctx: &GlobalContext,
-) -> CargoResult<Vec<PathBuf>> {
-    let mut ret = Vec::new();
-    walk(pkg.root(), &mut ret, true, filter, gctx)?;
-    Ok(ret)
-}
-
-/// Helper recursive function for [`list_files_walk`].
-fn walk(
     path: &Path,
     ret: &mut Vec<PathBuf>,
     is_root: bool,
