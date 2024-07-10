@@ -256,10 +256,6 @@ impl<'gctx> RecursivePathSource<'gctx> {
         Ok(self.packages.clone())
     }
 
-    fn read_packages_inner(&self) -> CargoResult<Vec<Package>> {
-        read_packages(&self.path, self.source_id, self.gctx)
-    }
-
     /// List all files relevant to building this package inside this source.
     ///
     /// This function will use the appropriate methods to determine the
@@ -293,7 +289,7 @@ impl<'gctx> RecursivePathSource<'gctx> {
     /// Discovers packages inside this source if it hasn't yet done.
     pub fn load(&mut self) -> CargoResult<()> {
         if !self.loaded {
-            self.packages = self.read_packages_inner()?;
+            self.packages = read_packages(&self.path, self.source_id, self.gctx)?;
             self.loaded = true;
         }
 
