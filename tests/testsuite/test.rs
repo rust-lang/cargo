@@ -1,11 +1,10 @@
 //! Tests for the `cargo test` command.
 
-#![allow(deprecated)]
-
 use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
-    basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project,
+    basic_bin_manifest, basic_lib_manifest, basic_manifest, cargo_exe, project, str,
 };
 use cargo_test_support::{cross_compile, paths};
 use cargo_test_support::{rustc_host, rustc_host_env, sleep_ms};
@@ -38,16 +37,25 @@ fn cargo_test_simple() {
     p.cargo("build").run();
     assert!(p.bin("foo").is_file());
 
-    p.process(&p.bin("foo")).with_stdout("hello\n").run();
+    p.process(&p.bin("foo"))
+        .with_stdout_data(str![[r#"
+hello
+
+"#]])
+        .run();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains("test test_hello ... ok")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/main.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+test test_hello ... ok
+...
+"#]])
         .run();
 }
 
@@ -91,23 +99,30 @@ fn cargo_test_release() {
         .build();
 
     p.cargo("test -v --release")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] bar v0.0.1 ([CWD]/bar)
-[RUNNING] [..] -C opt-level=3 [..]
-[COMPILING] foo v0.1.0 ([CWD])
-[RUNNING] [..] -C opt-level=3 [..]
-[RUNNING] [..] -C opt-level=3 [..]
-[RUNNING] [..] -C opt-level=3 [..]
-[FINISHED] `release` profile [optimized] target(s) in [..]
-[RUNNING] `[..]target/release/deps/foo-[..][EXE]`
-[RUNNING] `[..]target/release/deps/test-[..][EXE]`
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[RUNNING] `rustc [..]-C opt-level=3 [..]`
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[RUNNING] `rustc [..]-C opt-level=3 [..]`
+[RUNNING] `rustc [..]-C opt-level=3 [..]`
+[RUNNING] `rustc [..]-C opt-level=3 [..]`
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/target/release/deps/foo-[HASH][EXE]`
+[RUNNING] `[ROOT]/foo/target/release/deps/test-[HASH][EXE]`
 [DOCTEST] foo
-[RUNNING] `rustdoc [..]--test [..]lib.rs[..]`",
+[RUNNING] `rustdoc [..]--test src/lib.rs[..]`
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+test test ... ok
+test test ... ok
+running 0 tests
+...
+"#]]
+            .unordered(),
         )
-        .with_stdout_contains_n("test test ... ok", 2)
-        .with_stdout_contains("running 0 tests")
         .run();
 }
 
@@ -147,7 +162,7 @@ fn cargo_test_overflow_checks() {
     p.cargo("build --release").run();
     assert!(p.release_bin("foo").is_file());
 
-    p.process(&p.release_bin("foo")).with_stdout("").run();
+    p.process(&p.release_bin("foo")).with_stdout_data("").run();
 }
 
 #[cargo_test]
@@ -178,15 +193,15 @@ fn cargo_test_quiet_with_harness() {
         .build();
 
     p.cargo("test -q")
-        .with_stdout(
-            "
+        .with_stdout_data(str![[r#"
+
 running 1 test
 .
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
 
-",
-        )
-        .with_stderr("")
+
+"#]])
+        .with_stderr_data("")
         .run();
 }
 
@@ -221,7 +236,10 @@ fn cargo_test_quiet_no_harness() {
         )
         .build();
 
-    p.cargo("test -q").with_stdout("").with_stderr("").run();
+    p.cargo("test -q")
+        .with_stdout_data("")
+        .with_stderr_data("")
+        .run();
 }
 
 #[cargo_test]
@@ -275,20 +293,20 @@ fn cargo_doc_test_quiet() {
         .build();
 
     p.cargo("test -q")
-        .with_stdout(
-            "
+        .with_stdout_data(str![[r#"
+
 running 1 test
 .
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
 
 
 running 3 tests
 ...
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
 
-",
-        )
-        .with_stderr("")
+
+"#]])
+        .with_stderr_data("")
         .run();
 }
 
@@ -306,15 +324,18 @@ fn cargo_test_verbose() {
         .build();
 
     p.cargo("test -v hello")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc [..] src/main.rs [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[CWD]/target/debug/deps/foo-[..] hello`
-",
-        )
-        .with_stdout_contains("test test_hello ... ok")
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE] hello`
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+test test_hello ... ok
+...
+"#]])
         .run();
 }
 
@@ -346,9 +367,15 @@ fn many_similar_names() {
         .build();
 
     p.cargo("test -v")
-        .with_stdout_contains("test bin_test ... ok")
-        .with_stdout_contains("test lib_test ... ok")
-        .with_stdout_contains("test test_test ... ok")
+        .with_stdout_data(
+            str![[r#"
+test bin_test ... ok
+test lib_test ... ok
+test test_test ... ok
+...
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -378,36 +405,38 @@ fn cargo_test_failing_test_in_bin() {
     p.cargo("build").run();
     assert!(p.bin("foo").is_file());
 
-    p.process(&p.bin("foo")).with_stdout("hello\n").run();
+    p.process(&p.bin("foo"))
+        .with_stdout_data(str![[r#"
+hello
+
+"#]])
+        .run();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[ERROR] test failed, to rerun pass `--bin foo`",
-        )
-        .with_stdout_contains(
-            "
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/main.rs (target/debug/deps/foo-[HASH][EXE])
+[ERROR] test failed, to rerun pass `--bin foo`
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
 running 1 test
 test test_hello ... FAILED
 
 failures:
 
 ---- test_hello stdout ----
-[..]thread '[..]' panicked at [..]",
-        )
-        .with_stdout_contains("[..]assertion [..]failed[..]")
-        .with_stdout_contains("[..]left == right[..]")
-        .with_stdout_contains("[..]left: [..]\"hello\"[..]")
-        .with_stdout_contains("[..]right: [..]\"nope\"[..]")
-        .with_stdout_contains("[..]src/main.rs:12[..]")
-        .with_stdout_contains(
-            "\
+thread 'test_hello' panicked at src/main.rs:12:17:
+assertion `left == right` failed
+  left: "hello"
+ right: "nope"
 failures:
     test_hello
-",
+...
+"#]]
+            .unordered(),
         )
         .with_status(101)
         .run();
@@ -427,35 +456,39 @@ fn cargo_test_failing_test_in_test() {
     p.cargo("build").run();
     assert!(p.bin("foo").is_file());
 
-    p.process(&p.bin("foo")).with_stdout("hello\n").run();
+    p.process(&p.bin("foo"))
+        .with_stdout_data(str![[r#"
+hello
+
+"#]])
+        .run();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[RUNNING] [..] (target/debug/deps/footest-[..][EXE])
-[ERROR] test failed, to rerun pass `--test footest`",
-        )
-        .with_stdout_contains("running 0 tests")
-        .with_stdout_contains(
-            "\
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/main.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] tests/footest.rs (target/debug/deps/footest-[HASH][EXE])
+[ERROR] test failed, to rerun pass `--test footest`
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+...
+running 0 tests
 running 1 test
 test test_hello ... FAILED
 
 failures:
 
 ---- test_hello stdout ----
-[..]thread '[..]' panicked at [..]tests/footest.rs:1:[..]
-",
-        )
-        .with_stdout_contains("[..]assertion failed[..]")
-        .with_stdout_contains(
-            "\
+thread 'test_hello' panicked at tests/footest.rs:1:27:
+assertion failed: false
 failures:
     test_hello
-",
+...
+"#]]
+            .unordered(),
         )
         .with_status(101)
         .run();
@@ -469,30 +502,27 @@ fn cargo_test_failing_test_in_lib() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.5.0 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[ERROR] test failed, to rerun pass `--lib`",
-        )
-        .with_stdout_contains(
-            "\
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[ERROR] test failed, to rerun pass `--lib`
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
 test test_hello ... FAILED
 
 failures:
 
 ---- test_hello stdout ----
-[..]thread '[..]' panicked at [..]src/lib.rs:1:[..]
-",
-        )
-        .with_stdout_contains("[..]assertion failed[..]")
-        .with_stdout_contains(
-            "\
+thread 'test_hello' panicked at src/lib.rs:1:27:
+assertion failed: false
+...
 failures:
     test_hello
-",
-        )
+...
+"#]])
         .with_status(101)
         .run();
 }
@@ -544,17 +574,23 @@ fn test_with_lib_dep() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[RUNNING] [..] (target/debug/deps/baz-[..][EXE])
-[DOCTEST] foo",
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/debug/deps/baz-[HASH][EXE])
+[DOCTEST] foo
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+test lib_test ... ok
+test bin_test ... ok
+test [..] ... ok
+...
+"#]]
+            .unordered(),
         )
-        .with_stdout_contains("test lib_test ... ok")
-        .with_stdout_contains("test bin_test ... ok")
-        .with_stdout_contains_n("test [..] ... ok", 3)
         .run();
 }
 
@@ -598,17 +634,23 @@ fn test_with_deep_lib_dep() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] bar v0.0.1 ([..])
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target[..])
-[DOCTEST] foo",
+[COMPILING] bar v0.0.1 ([ROOT]/bar)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[DOCTEST] foo
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+test bar_test ... ok
+test [..] ... ok
+...
+"#]]
+            .unordered(),
         )
-        .with_stdout_contains("test bar_test ... ok")
-        .with_stdout_contains_n("test [..] ... ok", 2)
         .run();
 }
 
@@ -650,17 +692,23 @@ fn external_test_explicit() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[RUNNING] [..] (target/debug/deps/test-[..][EXE])
-[DOCTEST] foo",
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] src/test.rs (target/debug/deps/test-[HASH][EXE])
+[DOCTEST] foo
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+test internal_test ... ok
+test external_test ... ok
+running 0 tests
+...
+"#]]
+            .unordered(),
         )
-        .with_stdout_contains("test internal_test ... ok")
-        .with_stdout_contains("test external_test ... ok")
-        .with_stdout_contains("running 0 tests")
         .run();
 }
 
@@ -711,17 +759,23 @@ fn external_test_implicit() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[RUNNING] [..] (target/debug/deps/external-[..][EXE])
-[DOCTEST] foo",
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] tests/external.rs (target/debug/deps/external-[HASH][EXE])
+[DOCTEST] foo
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+test internal_test ... ok
+test external_test ... ok
+running 0 tests
+...
+"#]]
+            .unordered(),
         )
-        .with_stdout_contains("test internal_test ... ok")
-        .with_stdout_contains("test external_test ... ok")
-        .with_stdout_contains("running 0 tests")
         .run();
 }
 
@@ -770,41 +824,52 @@ fn pass_through_escaped() {
         .build();
 
     p.cargo("test -- bar")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
 [DOCTEST] foo
-",
-        )
-        .with_stdout_contains("running 1 test")
-        .with_stdout_contains("test test_bar ... ok")
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+running 1 test
+test test_bar ... ok
+...
+"#]])
         .run();
 
     p.cargo("test -- foo")
-        .with_stderr(
-            "\
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
 [DOCTEST] foo
-",
-        )
-        .with_stdout_contains("running 1 test")
-        .with_stdout_contains("test test_foo ... ok")
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+running 1 test
+test test_foo ... ok
+...
+"#]])
         .run();
 
     p.cargo("test -- foo bar")
-        .with_stderr(
-            "\
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
 [DOCTEST] foo
-",
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+running 2 tests
+test test_foo ... ok
+test test_bar ... ok
+...
+"#]]
+            .unordered(),
         )
-        .with_stdout_contains("running 2 tests")
-        .with_stdout_contains("test test_foo ... ok")
-        .with_stdout_contains("test test_bar ... ok")
         .run();
 }
 
@@ -840,38 +905,49 @@ fn pass_through_testname() {
         .build();
 
     p.cargo("test bar")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-",
-        )
-        .with_stdout_contains("running 1 test")
-        .with_stdout_contains("test test_bar ... ok")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+running 1 test
+test test_bar ... ok
+...
+"#]])
         .run();
 
     p.cargo("test foo")
-        .with_stderr(
-            "\
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-",
-        )
-        .with_stdout_contains("running 1 test")
-        .with_stdout_contains("test test_foo ... ok")
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+running 1 test
+test test_foo ... ok
+...
+"#]])
         .run();
 
     p.cargo("test foo -- bar")
-        .with_stderr(
-            "\
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-",
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+running 2 tests
+test test_bar ... ok
+test test_foo ... ok
+...
+"#]]
+            .unordered(),
         )
-        .with_stdout_contains("running 2 tests")
-        .with_stdout_contains("test test_foo ... ok")
-        .with_stdout_contains("test test_bar ... ok")
         .run();
 }
 
@@ -929,16 +1005,23 @@ fn lib_bin_same_name() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[DOCTEST] foo",
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/debug/deps/foo-[HASH][EXE])
+[DOCTEST] foo
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+test lib_test ... ok
+test bin_test ... ok
+running 0 tests
+...
+"#]]
+            .unordered(),
         )
-        .with_stdout_contains_n("test [..] ... ok", 2)
-        .with_stdout_contains("running 0 tests")
         .run();
 }
 
@@ -970,17 +1053,23 @@ fn lib_with_standard_name() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] syntax v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/syntax-[..][EXE])
-[RUNNING] [..] (target/debug/deps/test-[..][EXE])
-[DOCTEST] syntax",
+        .with_stderr_data(str![[r#"
+[COMPILING] syntax v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/syntax-[HASH][EXE])
+[RUNNING] tests/test.rs (target/debug/deps/test-[HASH][EXE])
+[DOCTEST] syntax
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+test foo_test ... ok
+test test ... ok
+test [..] ... ok
+...
+"#]]
+            .unordered(),
         )
-        .with_stdout_contains("test foo_test ... ok")
-        .with_stdout_contains("test test ... ok")
-        .with_stdout_contains_n("test [..] ... ok", 3)
         .run();
 }
 
@@ -1017,13 +1106,17 @@ fn lib_with_standard_name2() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] syntax v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/syntax-[..][EXE])",
-        )
-        .with_stdout_contains("test test ... ok")
+        .with_stderr_data(str![[r#"
+[COMPILING] syntax v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/main.rs (target/debug/deps/syntax-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+test test ... ok
+...
+"#]])
         .run();
 }
 
@@ -1059,13 +1152,17 @@ fn lib_without_name() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] syntax v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/syntax-[..][EXE])",
-        )
-        .with_stdout_contains("test test ... ok")
+        .with_stderr_data(str![[r#"
+[COMPILING] syntax v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/main.rs (target/debug/deps/syntax-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+test test ... ok
+...
+"#]])
         .run();
 }
 
@@ -1105,13 +1202,13 @@ fn bin_without_name() {
 
     p.cargo("test")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  binary target bin.name is required",
-        )
+  binary target bin.name is required
+
+"#]])
         .run();
 }
 
@@ -1162,13 +1259,13 @@ fn bench_without_name() {
 
     p.cargo("test")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  benchmark target bench.name is required",
-        )
+  benchmark target bench.name is required
+
+"#]])
         .run();
 }
 
@@ -1223,13 +1320,13 @@ fn test_without_name() {
 
     p.cargo("test")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  test target test.name is required",
-        )
+  test target test.name is required
+
+"#]])
         .run();
 }
 
@@ -1279,13 +1376,13 @@ fn example_without_name() {
 
     p.cargo("test")
         .with_status(101)
-        .with_stderr(
-            "\
-[ERROR] failed to parse manifest at `[..]`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  example target example.name is required",
-        )
+  example target example.name is required
+
+"#]])
         .run();
 }
 
@@ -1313,8 +1410,14 @@ fn bin_there_for_integration() {
         .build();
 
     p.cargo("test -v")
-        .with_stdout_contains("test main_test ... ok")
-        .with_stdout_contains("test test_test ... ok")
+        .with_stdout_data(
+            str![[r#"
+test main_test ... ok
+test test_test ... ok
+...
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -1376,27 +1479,41 @@ fn test_dylib() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] bar v0.0.1 ([CWD]/bar)
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[RUNNING] [..] (target/debug/deps/test-[..][EXE])",
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] tests/test.rs (target/debug/deps/test-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+test foo ... ok
+test foo ... ok
+...
+"#]]
+            .unordered(),
         )
-        .with_stdout_contains_n("test foo ... ok", 2)
         .run();
 
     p.root().move_into_the_past();
     p.cargo("test")
-        .with_stderr(
-            "\
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[RUNNING] [..] (target/debug/deps/test-[..][EXE])",
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] tests/test.rs (target/debug/deps/test-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+test foo ... ok
+test foo ... ok
+...
+"#]]
+            .unordered(),
         )
-        .with_stdout_contains_n("test foo ... ok", 2)
         .run();
 }
 
@@ -1419,26 +1536,38 @@ fn test_twice_with_build_cmd() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[DOCTEST] foo",
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[DOCTEST] foo
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+test foo ... ok
+running 0 tests
+...
+"#]]
+            .unordered(),
         )
-        .with_stdout_contains("test foo ... ok")
-        .with_stdout_contains("running 0 tests")
         .run();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[DOCTEST] foo",
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[DOCTEST] foo
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+test foo ... ok
+running 0 tests
+...
+"#]]
+            .unordered(),
         )
-        .with_stdout_contains("test foo ... ok")
-        .with_stdout_contains("running 0 tests")
         .run();
 }
 
@@ -1447,18 +1576,29 @@ fn test_then_build() {
     let p = project().file("src/lib.rs", "#[test] fn foo() {}").build();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])
-[DOCTEST] foo",
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[DOCTEST] foo
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+test foo ... ok
+running 0 tests
+...
+"#]]
+            .unordered(),
         )
-        .with_stdout_contains("test foo ... ok")
-        .with_stdout_contains("running 0 tests")
         .run();
 
-    p.cargo("build").with_stderr("[FINISHED] [..]").run();
+    p.cargo("build")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -1468,13 +1608,12 @@ fn test_no_run() {
         .build();
 
     p.cargo("test --no-run")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[..][EXE])
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[EXECUTABLE] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
         .run();
 }
 
@@ -1485,12 +1624,11 @@ fn test_no_run_emit_json() {
         .build();
 
     p.cargo("test --no-run --message-format json")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -1520,13 +1658,17 @@ fn test_run_specific_bin_target() {
         .build();
 
     prj.cargo("test --bin bin2")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/bin2-[..][EXE])",
-        )
-        .with_stdout_contains("test test2 ... ok")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/bin2.rs (target/debug/deps/bin2-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+test test2 ... ok
+...
+"#]])
         .run();
 }
 
@@ -1562,13 +1704,17 @@ fn test_run_implicit_bin_target() {
         .build();
 
     prj.cargo("test --bins")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/mybin-[..][EXE])",
-        )
-        .with_stdout_contains("test test_in_bin ... ok")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/mybin.rs (target/debug/deps/mybin-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+test test_in_bin ... ok
+...
+"#]])
         .run();
 }
 
@@ -1582,13 +1728,17 @@ fn test_run_specific_test_target() {
         .build();
 
     prj.cargo("test --test b")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/b-[..][EXE])",
-        )
-        .with_stdout_contains("test test_b ... ok")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] tests/b.rs (target/debug/deps/b-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+test test_b ... ok
+...
+"#]])
         .run();
 }
 
@@ -1623,14 +1773,18 @@ fn test_run_implicit_test_target() {
         .build();
 
     prj.cargo("test --tests")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/mybin-[..][EXE])
-[RUNNING] [..] (target/debug/deps/mytest-[..][EXE])",
-        )
-        .with_stdout_contains("test test_in_test ... ok")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/mybin.rs (target/debug/deps/mybin-[HASH][EXE])
+[RUNNING] tests/mytest.rs (target/debug/deps/mytest-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+test test_in_test ... ok
+...
+"#]])
         .run();
 }
 
@@ -1665,17 +1819,22 @@ fn test_run_implicit_bench_target() {
         .build();
 
     prj.cargo("test --benches")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/mybin-[..][EXE])
-[RUNNING] [..] (target/debug/deps/mybench-[..][EXE])",
-        )
-        .with_stdout_contains("test test_in_bench ... ok")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/mybin.rs (target/debug/deps/mybin-[HASH][EXE])
+[RUNNING] benches/mybench.rs (target/debug/deps/mybench-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+test test_in_bench ... ok
+...
+"#]])
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn test_run_implicit_example_target() {
     let prj = project()
@@ -1735,22 +1894,35 @@ fn test_run_implicit_example_target() {
 
     // Tests all examples.
     prj.cargo("test --examples")
-        .with_stderr_contains("[RUNNING] [..]target/debug/examples/myexm1-[..]")
-        .with_stderr_contains("[RUNNING] [..]target/debug/examples/myexm2-[..]")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] unittests examples/myexm1.rs (target/debug/examples/myexm1-[HASH][EXE])
+[RUNNING] unittests examples/myexm2.rs (target/debug/examples/myexm2-[HASH][EXE])
+...
+"#]])
         .run();
 
     // Test an example, even without `test` set.
     prj.cargo("test --example myexm1")
-        .with_stderr_contains("[RUNNING] [..]target/debug/examples/myexm1-[..]")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] unittests examples/myexm1.rs (target/debug/examples/myexm1-[HASH][EXE])
+...
+"#]])
         .run();
 
     // Tests all examples.
     prj.cargo("test --all-targets")
-        .with_stderr_contains("[RUNNING] [..]target/debug/examples/myexm1-[..]")
-        .with_stderr_contains("[RUNNING] [..]target/debug/examples/myexm2-[..]")
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] unittests examples/myexm1.rs (target/debug/examples/myexm1-[HASH][EXE])
+[RUNNING] unittests examples/myexm2.rs (target/debug/examples/myexm2-[HASH][EXE])
+...
+"#]])
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn test_filtered_excludes_compiling_examples() {
     let p = project()
@@ -1790,32 +1962,34 @@ fn test_filtered_excludes_compiling_examples() {
         .build();
 
     p.cargo("test -v test_in_")
-        .with_stdout(
-            "
+        .with_stdout_data(str![[r#"
+
 running 1 test
 test tests::test_in_lib ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
 
 
 running 1 test
 test test_in_test ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
 
-",
-        )
-        .with_stderr_unordered(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
+
+"#]])
+        .with_stderr_data(
+            str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..] --crate-type lib [..]`
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..] --test [..]`
 [RUNNING] `rustc --crate-name mybin --edition=2015 src/bin/mybin.rs [..] --crate-type bin [..]`
 [RUNNING] `rustc --crate-name mytest --edition=2015 tests/mytest.rs [..] --test [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[CWD]/target/debug/deps/foo-[..] test_in_`
-[RUNNING] `[CWD]/target/debug/deps/mytest-[..] test_in_`
-",
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE] test_in_`
+[RUNNING] `[ROOT]/foo/target/debug/deps/mytest-[HASH][EXE] test_in_`
+
+"#]]
+            .unordered(),
         )
         .with_stderr_does_not_contain("[RUNNING][..]rustc[..]myexm1[..]")
         .with_stderr_does_not_contain("[RUNNING][..]deps/mybin-[..] test_in_")
@@ -1849,13 +2023,12 @@ fn test_no_harness() {
         .build();
 
     p.cargo("test -- --nocapture")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/bar-[..][EXE])
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] foo.rs (target/debug/deps/bar-[HASH][EXE])
+
+"#]])
         .run();
 }
 
@@ -1924,38 +2097,56 @@ fn selective_testing() {
 
     println!("d1");
     p.cargo("test -p d1")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 3 packages to latest compatible versions
-[COMPILING] d1 v0.0.1 ([CWD]/d1)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/d1-[..][EXE])
-[RUNNING] [..] (target/debug/deps/d1-[..][EXE])",
+[COMPILING] d1 v0.0.1 ([ROOT]/foo/d1)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/d1-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/debug/deps/d1-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+running 0 tests
+running 0 tests
+...
+"#]]
+            .unordered(),
         )
-        .with_stdout_contains_n("running 0 tests", 2)
         .run();
 
     println!("d2");
     p.cargo("test -p d2")
-        .with_stderr(
-            "\
-[COMPILING] d2 v0.0.1 ([CWD]/d2)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/d2-[..][EXE])
-[RUNNING] [..] (target/debug/deps/d2-[..][EXE])",
+        .with_stderr_data(str![[r#"
+[COMPILING] d2 v0.0.1 ([ROOT]/foo/d2)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/d2-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/debug/deps/d2-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+running 0 tests
+running 0 tests
+...
+"#]]
+            .unordered(),
         )
-        .with_stdout_contains_n("running 0 tests", 2)
         .run();
 
     println!("whole");
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..][EXE])",
-        )
-        .with_stdout_contains("running 0 tests")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+running 0 tests
+...
+"#]])
         .run();
 }
 
@@ -2136,15 +2327,22 @@ fn selective_testing_with_docs() {
     let p = p.build();
 
     p.cargo("test -p d1")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] d1 v0.0.1 ([CWD]/d1)
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/d1[..][EXE])
-[DOCTEST] d1",
+[COMPILING] d1 v0.0.1 ([ROOT]/foo/d1)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests d1.rs (target/debug/deps/d1-[HASH][EXE])
+[DOCTEST] d1
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+running 0 tests
+running 0 tests
+...
+"#]]
+            .unordered(),
         )
-        .with_stdout_contains_n("running 0 tests", 2)
         .run();
 }
 
@@ -2156,32 +2354,37 @@ fn example_bin_same_name() {
         .build();
 
     p.cargo("test --no-run -v")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
 [RUNNING] `rustc [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
-",
-        )
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+
+"#]])
         .run();
 
     assert!(!p.bin("foo").is_file());
     assert!(p.bin("examples/foo").is_file());
 
     p.process(&p.bin("examples/foo"))
-        .with_stdout("example\n")
+        .with_stdout_data(str![[r#"
+example
+
+"#]])
         .run();
 
     p.cargo("run")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..]",
-        )
-        .with_stdout("bin")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .with_stdout_data(str![[r#"
+bin
+
+"#]])
         .run();
     assert!(p.bin("foo").is_file());
 }
@@ -2232,16 +2435,18 @@ fn example_with_dev_dep() {
         .build();
 
     p.cargo("test -v")
-        .with_stderr(
-            "\
+        .with_stderr_data(
+            str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[..]
-[..]
-[..]
-[..]
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] a v0.0.1 ([ROOT]/foo/a)
+[RUNNING] `rustc --crate-name foo [..]`
+[RUNNING] `rustc --crate-name a [..]`
 [RUNNING] `rustc --crate-name ex [..] --extern a=[..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-",
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
         )
         .run();
 }
@@ -2268,21 +2473,19 @@ fn bad_example() {
 
     p.cargo("run --example foo")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] no example target named `foo`.
 
-",
-        )
+
+"#]])
         .run();
     p.cargo("run --bin foo")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [ERROR] no bin target named `foo`.
 
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -2314,15 +2517,21 @@ fn doctest_feature() {
         .build();
 
     p.cargo("test --features bar")
-        .with_stderr(
-            "\
-[COMPILING] foo [..]
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo[..][EXE])
-[DOCTEST] foo",
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[DOCTEST] foo
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+running 0 tests
+test [..] ... ok
+...
+"#]]
+            .unordered(),
         )
-        .with_stdout_contains("running 0 tests")
-        .with_stdout_contains("test [..] ... ok")
         .run();
 }
 
@@ -2392,13 +2601,17 @@ fn filter_no_doc_tests() {
         .build();
 
     p.cargo("test --test=foo")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo[..][EXE])",
-        )
-        .with_stdout_contains("running 0 tests")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] tests/foo.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+running 0 tests
+...
+"#]])
         .run();
 }
 
@@ -2432,13 +2645,17 @@ fn dylib_doctest() {
         .build();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[DOCTEST] foo",
-        )
-        .with_stdout_contains("test [..] ... ok")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[DOCTEST] foo
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+test [..] ... ok
+...
+"#]])
         .run();
 }
 
@@ -2472,7 +2689,12 @@ fn dylib_doctest2() {
         )
         .build();
 
-    p.cargo("test").with_stderr("[FINISHED] [..]").run();
+    p.cargo("test")
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
@@ -2521,17 +2743,23 @@ fn cyclic_dev_dep_doc_test() {
         )
         .build();
     p.cargo("test")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] foo v0.0.1 ([..])
-[COMPILING] bar v0.0.1 ([..])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo[..][EXE])
-[DOCTEST] foo",
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[DOCTEST] foo
+
+"#]])
+        .with_stdout_data(
+            str![[r#"
+running 0 tests
+test [..] ... ok
+...
+"#]]
+            .unordered(),
         )
-        .with_stdout_contains("running 0 tests")
-        .with_stdout_contains("test [..] ... ok")
         .run();
 }
 
@@ -2621,23 +2849,26 @@ fn no_fail_fast() {
         .build();
     p.cargo("test --no-fail-fast")
         .with_status(101)
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 [..]
-[FINISHED] `test` profile [..]
-[RUNNING] unittests src/lib.rs (target/debug/deps/foo[..])
-[RUNNING] tests/test_add_one.rs (target/debug/deps/test_add_one[..])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+[RUNNING] tests/test_add_one.rs (target/debug/deps/test_add_one-[HASH][EXE])
 [ERROR] test failed, to rerun pass `--test test_add_one`
-[RUNNING] tests/test_sub_one.rs (target/debug/deps/test_sub_one[..])
+[RUNNING] tests/test_sub_one.rs (target/debug/deps/test_sub_one-[HASH][EXE])
 [DOCTEST] foo
 [ERROR] 1 target failed:
     `--test test_add_one`
-",
-        )
-        .with_stdout_contains("running 0 tests")
-        .with_stdout_contains("test result: FAILED. [..]")
-        .with_stdout_contains("test sub_one_test ... ok")
-        .with_stdout_contains_n("test [..] ... ok", 3)
+
+"#]])
+        .with_stdout_data(str![[r#"
+running 0 tests
+test add_one_test ... ok
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+test sub_one_test ... ok
+test [..] ... ok
+...
+"#]].unordered())
         .run();
 }
 
@@ -2697,9 +2928,20 @@ fn test_multiple_packages() {
     let p = p.build();
 
     p.cargo("test -p d1 -p d2")
-        .with_stderr_contains("[RUNNING] [..] (target/debug/deps/d1-[..][EXE])")
-        .with_stderr_contains("[RUNNING] [..] (target/debug/deps/d2-[..][EXE])")
-        .with_stdout_contains_n("running 0 tests", 2)
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] unittests src/lib.rs (target/debug/deps/d1-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/deps/d2-[HASH][EXE])
+...
+"#]])
+        .with_stdout_data(
+            str![[r#"
+running 0 tests
+running 0 tests
+...
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -2717,18 +2959,17 @@ fn bin_does_not_rebuild_tests() {
     fs::write(p.root().join("src/main.rs"), "fn main() { 3; }").unwrap();
 
     p.cargo("test -v --no-run")
-        .with_stderr(
-            "\
-[DIRTY] foo v0.0.1 ([..]): the file `src/main.rs` has changed ([..])
-[COMPILING] foo v0.0.1 ([..])
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the file `src/main.rs` has changed ([..])
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..] src/main.rs [..]`
 [RUNNING] `rustc [..] src/main.rs [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
-[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
-[EXECUTABLE] `[..]/target/debug/deps/foo-[..][EXE]`
-",
-        )
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+[EXECUTABLE] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+
+"#]])
         .run();
 }
 
@@ -2781,16 +3022,15 @@ fn selective_test_optional_dep() {
     let p = p.build();
 
     p.cargo("test -v --no-run --features a -p a")
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] a v0.0.1 ([..])
+[COMPILING] a v0.0.1 ([ROOT]/foo/a)
 [RUNNING] `rustc [..] a/src/lib.rs [..]`
 [RUNNING] `rustc [..] a/src/lib.rs [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[EXECUTABLE] `[..]/target/debug/deps/a-[..][EXE]`
-",
-        )
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[EXECUTABLE] `[ROOT]/foo/target/debug/deps/a-[HASH][EXE]`
+
+"#]])
         .run();
 }
 
@@ -2817,13 +3057,17 @@ fn only_test_docs() {
     let p = p.build();
 
     p.cargo("test --doc")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([..])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[DOCTEST] foo",
-        )
-        .with_stdout_contains("test [..] ... ok")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[DOCTEST] foo
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+test [..] ... ok
+...
+"#]])
         .run();
 }
 
@@ -2931,15 +3175,17 @@ fn cfg_test_even_with_no_harness() {
         )
         .build();
     p.cargo("test -v")
-        .with_stdout("hello!\n")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([..])
+        .with_stdout_data(str![[r#"
+hello!
+
+"#]])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]`
-",
-        )
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
+
+"#]])
         .run();
 }
 
@@ -3052,19 +3298,21 @@ fn pass_correct_cfgs_flags_to_rustdoc() {
     let p = p.build();
 
     p.cargo("test --package feature_a --verbose")
-        .with_stderr_contains(
-            "\
+        .with_stderr_data(str![[r#"
+...
 [DOCTEST] feature_a
-[RUNNING] `rustdoc [..]--test [..]mock_serde_codegen[..]`",
-        )
+[RUNNING] `rustdoc [..]--test [..]mock_serde_codegen[..]`
+...
+"#]])
         .run();
 
     p.cargo("test --verbose")
-        .with_stderr_contains(
-            "\
+        .with_stderr_data(str![[r#"
+...
 [DOCTEST] foo
-[RUNNING] `rustdoc [..]--test [..]feature_a[..]`",
-        )
+[RUNNING] `rustdoc [..]--test [..]feature_a[..]`
+...
+"#]])
         .run();
 }
 
@@ -3154,8 +3402,14 @@ fn test_all_workspace() {
         .build();
 
     p.cargo("test --workspace")
-        .with_stdout_contains("test foo_test ... ok")
-        .with_stdout_contains("test bar_test ... ok")
+        .with_stdout_data(
+            str![[r#"
+test foo_test ... ok
+test bar_test ... ok
+...
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -3182,10 +3436,12 @@ fn test_all_exclude() {
         .build();
 
     p.cargo("test --workspace --exclude baz")
-        .with_stdout_contains(
-            "running 1 test
-test bar ... ok",
-        )
+        .with_stdout_data(str![[r#"
+...
+running 1 test
+test bar ... ok
+...
+"#]])
         .run();
 }
 
@@ -3210,11 +3466,17 @@ fn test_all_exclude_not_found() {
         .build();
 
     p.cargo("test --workspace --exclude baz")
-        .with_stderr_contains("[WARNING] excluded package(s) `baz` not found in workspace [..]")
-        .with_stdout_contains(
-            "running 1 test
-test bar ... ok",
-        )
+        .with_stderr_data(str![[r#"
+...
+[WARNING] excluded package(s) `baz` not found in workspace `[ROOT]/foo`
+...
+"#]])
+        .with_stdout_data(str![[r#"
+...
+running 1 test
+test bar ... ok
+...
+"#]])
         .run();
 }
 
@@ -3241,10 +3503,12 @@ fn test_all_exclude_glob() {
         .build();
 
     p.cargo("test --workspace --exclude '*z'")
-        .with_stdout_contains(
-            "running 1 test
-test bar ... ok",
-        )
+        .with_stdout_data(str![[r#"
+...
+running 1 test
+test bar ... ok
+...
+"#]])
         .run();
 }
 
@@ -3269,13 +3533,17 @@ fn test_all_exclude_glob_not_found() {
         .build();
 
     p.cargo("test --workspace --exclude '*z'")
-        .with_stderr_contains(
-            "[WARNING] excluded package pattern(s) `*z` not found in workspace [..]",
-        )
-        .with_stdout_contains(
-            "running 1 test
-test bar ... ok",
-        )
+        .with_stderr_data(str![[r#"
+...
+[WARNING] excluded package pattern(s) `*z` not found in workspace `[ROOT]/foo`
+...
+"#]])
+        .with_stdout_data(str![[r#"
+...
+running 1 test
+test bar ... ok
+...
+"#]])
         .run();
 }
 
@@ -3285,7 +3553,11 @@ fn test_all_exclude_broken_glob() {
 
     p.cargo("test --workspace --exclude '[*z'")
         .with_status(101)
-        .with_stderr_contains("[ERROR] cannot build glob pattern from `[*z`")
+        .with_stderr_data(str![[r#"
+...
+[ERROR] cannot build glob pattern from `[*z`
+...
+"#]])
         .run();
 }
 
@@ -3306,8 +3578,16 @@ fn test_all_virtual_manifest() {
         .build();
 
     p.cargo("test --workspace")
-        .with_stdout_contains("running 1 test\ntest a ... ok")
-        .with_stdout_contains("running 1 test\ntest b ... ok")
+        .with_stdout_data(
+            str![[r#"
+running 1 test
+test a ... ok
+running 1 test
+test b ... ok
+...
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -3328,11 +3608,20 @@ fn test_virtual_manifest_all_implied() {
         .build();
 
     p.cargo("test")
-        .with_stdout_contains("running 1 test\ntest a ... ok")
-        .with_stdout_contains("running 1 test\ntest b ... ok")
+        .with_stdout_data(
+            str![[r#"
+running 1 test
+test a ... ok
+running 1 test
+test b ... ok
+...
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn test_virtual_manifest_one_project() {
     let p = project()
@@ -3355,6 +3644,7 @@ fn test_virtual_manifest_one_project() {
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn test_virtual_manifest_glob() {
     let p = project()
@@ -3393,7 +3683,10 @@ fn test_virtual_manifest_glob_not_found() {
 
     p.cargo("test -p bar -p '*z'")
         .with_status(101)
-        .with_stderr("[ERROR] package pattern(s) `*z` not found in workspace [..]")
+        .with_stderr_data(str![[r#"
+[ERROR] package pattern(s) `*z` not found in workspace `[ROOT]/foo`
+...
+"#]])
         .run();
 }
 
@@ -3413,7 +3706,10 @@ fn test_virtual_manifest_broken_glob() {
 
     p.cargo("test -p '[*z'")
         .with_status(101)
-        .with_stderr_contains("[ERROR] cannot build glob pattern from `[*z`")
+        .with_stderr_data(str![[r#"
+[ERROR] cannot build glob pattern from `[*z`
+...
+"#]])
         .run();
 }
 
@@ -3445,7 +3741,11 @@ fn test_all_member_dependency_same_name() {
     Package::new("a", "0.1.0").publish();
 
     p.cargo("test --workspace")
-        .with_stdout_contains("test a ... ok")
+        .with_stdout_data(str![[r#"
+...
+test a ... ok
+...
+"#]])
         .run();
 }
 
@@ -3527,12 +3827,24 @@ fn test_many_targets() {
         .build();
 
     p.cargo("test --verbose --bin a --bin b --example a --example b --test a --test b")
-        .with_stdout_contains("test bin_a ... ok")
-        .with_stdout_contains("test bin_b ... ok")
-        .with_stdout_contains("test test_a ... ok")
-        .with_stdout_contains("test test_b ... ok")
-        .with_stderr_contains("[RUNNING] `rustc --crate-name a --edition=2015 examples/a.rs [..]`")
-        .with_stderr_contains("[RUNNING] `rustc --crate-name b --edition=2015 examples/b.rs [..]`")
+        .with_stdout_data(
+            str![[r#"
+test bin_a ... ok
+test bin_b ... ok
+test test_a ... ok
+test test_b ... ok
+...
+"#]]
+            .unordered(),
+        )
+        .with_stderr_data(
+            str![[r#"
+[RUNNING] `rustc --crate-name a --edition=2015 examples/a.rs [..]`
+[RUNNING] `rustc --crate-name b --edition=2015 examples/b.rs [..]`
+...
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -3585,6 +3897,7 @@ fn doctest_and_registry() {
     p.cargo("test --workspace -v").run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn cargo_test_env() {
     let src = format!(
@@ -3608,7 +3921,11 @@ fn cargo_test_env() {
     let cargo = cargo_exe().canonicalize().unwrap();
     p.cargo("test --lib -- --nocapture")
         .with_stderr_contains(cargo.to_str().unwrap())
-        .with_stdout_contains("test env_test ... ok")
+        .with_stdout_data(str![[r#"
+...
+test env_test ... ok
+...
+"#]])
         .run();
 
     // Check that `cargo test` propagates the environment's $CARGO
@@ -3621,7 +3938,11 @@ fn cargo_test_env() {
         // we use rustc since $CARGO is only used if it points to a path that exists
         .env(cargo::CARGO_ENV, rustc)
         .with_stderr_contains(rustc)
-        .with_stdout_contains("test env_test ... ok")
+        .with_stdout_data(str![[r#"
+...
+test env_test ... ok
+...
+"#]])
         .run();
 }
 
@@ -3634,26 +3955,26 @@ fn test_order() {
         .build();
 
     p.cargo("test --workspace")
-        .with_stdout_contains(
-            "
+        .with_stdout_data(str![[r#"
+
 running 1 test
 test test_lib ... ok
 
-test result: ok. [..]
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
 
 
 running 1 test
 test test_a ... ok
 
-test result: ok. [..]
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
 
 
 running 1 test
 test test_z ... ok
 
-test result: ok. [..]
-",
-        )
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+...
+"#]])
         .run();
 }
 
@@ -3700,16 +4021,17 @@ fn cyclical_dep_with_missing_feature() {
         .build();
     p.cargo("check")
         .with_status(101)
-        .with_stderr(
-            "error: failed to select a version for `foo`.
-    ... required by package `foo v0.1.0 ([..]/foo)`
+        .with_stderr_data(str![[r#"
+[ERROR] failed to select a version for `foo`.
+    ... required by package `foo v0.1.0 ([ROOT]/foo)`
 versions that meet the requirements `*` are: 0.1.0
 
 the package `foo` depends on `foo`, with features: `missing` but `foo` does not have these features.
 
 
-failed to select a version for `foo` which could resolve this conflict",
-        )
+failed to select a version for `foo` which could resolve this conflict
+
+"#]])
         .run();
 }
 
@@ -3852,9 +4174,19 @@ fn test_hint_not_masked_by_doctest() {
         .build();
     p.cargo("test --no-fail-fast")
         .with_status(101)
-        .with_stdout_contains("test this_fails ... FAILED")
-        .with_stdout_contains("[..]this_works (line [..]ok")
-        .with_stderr_contains("[ERROR] test failed, to rerun pass `--test integ`")
+        .with_stdout_data(
+            str![[r#"
+test this_fails ... FAILED
+test [..]this_works (line [..]) ... ok
+...
+"#]]
+            .unordered(),
+        )
+        .with_stderr_data(str![[r#"
+...
+[ERROR] test failed, to rerun pass `--test integ`
+...
+"#]])
         .run();
 }
 
@@ -3920,42 +4252,42 @@ fn test_hint_workspace_virtual() {
 
     // This depends on Units being sorted so that `b` fails first.
     p.cargo("test")
-        .with_stderr_unordered(
-            "\
+        .with_stderr_data(
+            str![[r#"
 [LOCKING] 3 packages to latest compatible versions
-[COMPILING] c v0.1.0 [..]
-[COMPILING] a v0.1.0 [..]
-[COMPILING] b v0.1.0 [..]
-[FINISHED] `test` profile [..]
-[RUNNING] unittests src/lib.rs (target/debug/deps/a[..])
-[RUNNING] unittests src/lib.rs (target/debug/deps/b[..])
+[COMPILING] c v0.1.0 ([ROOT]/foo/c)
+[COMPILING] a v0.1.0 ([ROOT]/foo/a)
+[COMPILING] b v0.1.0 ([ROOT]/foo/b)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/a-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/deps/b-[HASH][EXE])
 [ERROR] test failed, to rerun pass `-p b --lib`
-",
+
+"#]]
+            .unordered(),
         )
         .with_status(101)
         .run();
     p.cargo("test")
         .cwd("b")
-        .with_stderr(
-            "\
-[FINISHED] `test` profile [..]
-[RUNNING] unittests src/lib.rs ([ROOT]/foo/target/debug/deps/b[..])
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs ([ROOT]/foo/target/debug/deps/b-[HASH][EXE])
 [ERROR] test failed, to rerun pass `--lib`
-",
-        )
+
+"#]])
         .with_status(101)
         .run();
     p.cargo("test --no-fail-fast")
-        .with_stderr(
-            "\
-[FINISHED] `test` profile [..]
-[RUNNING] unittests src/lib.rs (target/debug/deps/a[..])
-[RUNNING] unittests src/lib.rs (target/debug/deps/b[..])
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/a-[HASH][EXE])
+[RUNNING] unittests src/lib.rs (target/debug/deps/b-[HASH][EXE])
 [ERROR] test failed, to rerun pass `-p b --lib`
-[RUNNING] unittests src/lib.rs (target/debug/deps/c[..])
-[RUNNING] unittests src/main.rs (target/debug/deps/c[..])
+[RUNNING] unittests src/lib.rs (target/debug/deps/c-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/debug/deps/c-[HASH][EXE])
 [ERROR] test failed, to rerun pass `-p c --bin c`
-[RUNNING] tests/t1.rs (target/debug/deps/t1[..])
+[RUNNING] tests/t1.rs (target/debug/deps/t1-[HASH][EXE])
 [ERROR] test failed, to rerun pass `-p c --test t1`
 [DOCTEST] a
 [DOCTEST] b
@@ -3966,29 +4298,28 @@ fn test_hint_workspace_virtual() {
     `-p c --bin c`
     `-p c --test t1`
     `-p c --doc`
-",
-        )
+
+"#]])
         .with_status(101)
         .run();
     // Check others that are not in the default set.
     p.cargo("test -p c --examples --benches --no-fail-fast")
-        .with_stderr(
-            "\
-[COMPILING] c v0.1.0 [..]
-[FINISHED] `test` profile [..]
-[RUNNING] unittests src/lib.rs (target/debug/deps/c[..])
-[RUNNING] unittests src/main.rs (target/debug/deps/c[..])
+        .with_stderr_data(str![[r#"
+[COMPILING] c v0.1.0 ([ROOT]/foo/c)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/c-[HASH][EXE])
+[RUNNING] unittests src/main.rs (target/debug/deps/c-[HASH][EXE])
 [ERROR] test failed, to rerun pass `-p c --bin c`
-[RUNNING] benches/b1.rs (target/debug/deps/b1[..])
+[RUNNING] benches/b1.rs (target/debug/deps/b1-[HASH][EXE])
 [ERROR] test failed, to rerun pass `-p c --bench b1`
-[RUNNING] unittests examples/ex1.rs (target/debug/examples/ex1[..])
+[RUNNING] unittests examples/ex1.rs (target/debug/examples/ex1-[HASH][EXE])
 [ERROR] test failed, to rerun pass `-p c --example ex1`
 [ERROR] 3 targets failed:
     `-p c --bin c`
     `-p c --bench b1`
     `-p c --example ex1`
-",
-        )
+
+"#]])
         .with_status(101)
         .run()
 }
@@ -4014,15 +4345,24 @@ fn test_hint_workspace_nonvirtual() {
         .build();
 
     p.cargo("test --workspace")
-        .with_stderr_contains("[ERROR] test failed, to rerun pass `-p a --lib`")
+        .with_stderr_data(str![[r#"
+...
+[ERROR] test failed, to rerun pass `-p a --lib`
+...
+"#]])
         .with_status(101)
         .run();
     p.cargo("test -p a")
-        .with_stderr_contains("[ERROR] test failed, to rerun pass `-p a --lib`")
+        .with_stderr_data(str![[r#"
+...
+[ERROR] test failed, to rerun pass `-p a --lib`
+...
+"#]])
         .with_status(101)
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn json_artifact_includes_test_flag() {
     // Verify that the JSON artifact output includes `test` flag.
@@ -4079,6 +4419,7 @@ fn json_artifact_includes_test_flag() {
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn json_artifact_includes_executable_for_library_tests() {
     let p = project()
@@ -4116,6 +4457,7 @@ fn json_artifact_includes_executable_for_library_tests() {
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn json_artifact_includes_executable_for_integration_tests() {
     let p = project()
@@ -4205,23 +4547,24 @@ fn doctest_skip_staticlib() {
 
     p.cargo("test --doc")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [WARNING] doc tests are not supported for crate type(s) `staticlib` in package `foo`
-[ERROR] no library targets found in package `foo`",
-        )
+[ERROR] no library targets found in package `foo`
+
+"#]])
         .run();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] foo [..]
-[FINISHED] `test` profile [..]
-[RUNNING] [..] (target/debug/deps/foo-[..])",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn can_not_mix_doc_tests_and_regular_tests() {
     let p = project()
@@ -4241,44 +4584,45 @@ pub fn foo() -> u8 { 1 }
         .build();
 
     p.cargo("test")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
 [DOCTEST] foo
-",
-        )
-        .with_stdout(
-            "
+
+"#]])
+        .with_stdout_data(str![[r#"
+
 running 1 test
 test tests::it_works ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
 
 
 running 1 test
 test src/lib.rs - foo (line 1) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
-\n",
-        )
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 
     p.cargo("test --lib")
-        .with_stderr(
-            "\
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] [..] (target/debug/deps/foo-[..])\n",
-        )
-        .with_stdout(
-            "
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
+        .with_stdout_data(str![[r#"
+
 running 1 test
 test tests::it_works ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
-\n",
-        )
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+
+
+"#]])
         .run();
 
     // This has been modified to attempt to diagnose spurious errors on CI.
@@ -4287,22 +4631,29 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
     // See https://github.com/rust-lang/cargo/issues/6887
     p.cargo("test --doc -vv")
         .with_stderr_does_not_contain("[COMPILING] foo [..]")
-        .with_stderr_contains("[DOCTEST] foo")
-        .with_stdout(
-            "
+        .with_stderr_data(str![[r#"
+...
+[DOCTEST] foo
+...
+"#]])
+        .with_stdout_data(str![[r#"
+
 running 1 test
 test src/lib.rs - foo (line 1) ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
 
-",
-        )
+
+"#]])
         .env("CARGO_LOG", "cargo=trace")
         .run();
 
     p.cargo("test --lib --doc")
         .with_status(101)
-        .with_stderr("[ERROR] Can't mix --doc with other target selecting options\n")
+        .with_stderr_data(str![[r#"
+[ERROR] Can't mix --doc with other target selecting options
+
+"#]])
         .run();
 }
 
@@ -4322,7 +4673,10 @@ fn can_not_no_run_doc_tests() {
 
     p.cargo("test --doc --no-run")
         .with_status(101)
-        .with_stderr("[ERROR] Can't skip running doc tests with --no-run")
+        .with_stderr_data(str![[r#"
+[ERROR] Can't skip running doc tests with --no-run
+
+"#]])
         .run();
 }
 
@@ -4331,13 +4685,12 @@ fn test_all_targets_lib() {
     let p = project().file("src/lib.rs", "").build();
 
     p.cargo("test --all-targets")
-        .with_stderr(
-            "\
-[COMPILING] foo [..]
-[FINISHED] `test` profile [..]
-[RUNNING] [..]foo[..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH][EXE])
+
+"#]])
         .run();
 }
 
@@ -4375,12 +4728,11 @@ fn test_dep_with_dev() {
 
     p.cargo("test -p bar")
         .with_status(101)
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[ERROR] package `bar` cannot be tested because it requires dev-dependencies \
-and is not a member of the workspace",
-        )
+[ERROR] package `bar` cannot be tested because it requires dev-dependencies and is not a member of the workspace
+
+"#]])
         .run();
 }
 
@@ -4406,32 +4758,41 @@ fn cargo_test_doctest_xcompile_ignores() {
     p.cargo("build").run();
     #[cfg(not(target_arch = "x86_64"))]
     p.cargo("test")
-        .with_stdout_contains(
-            "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]",
-        )
+        .with_stdout_data(str![[r#"
+...
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+...
+"#]])
         .run();
     #[cfg(target_arch = "x86_64")]
     p.cargo("test")
         .with_status(101)
-        .with_stdout_contains(
-            "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out[..]",
+        .with_stdout_data(str![[r#"
+...
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+...
+"#]],
         )
         .run();
 
     #[cfg(not(target_arch = "x86_64"))]
     p.cargo("test -Zdoctest-xcompile")
         .masquerade_as_nightly_cargo(&["doctest-xcompile"])
-        .with_stdout_contains(
-            "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]",
-        )
+        .with_stdout_data(str![[r#"
+...
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+...
+"#]])
         .run();
 
     #[cfg(target_arch = "x86_64")]
     p.cargo("test -Zdoctest-xcompile")
         .masquerade_as_nightly_cargo(&["doctest-xcompile"])
-        .with_stdout_contains(
-            "test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out[..]",
-        )
+        .with_stdout_data(str![[r#"
+...
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+...
+"#]])
         .run();
 }
 
@@ -4458,16 +4819,22 @@ fn cargo_test_doctest_xcompile() {
 
     p.cargo("build").run();
     p.cargo(&format!("test --target {}", cross_compile::alternate()))
-        .with_stdout_contains("running 0 tests")
+        .with_stdout_data(str![[r#"
+...
+running 0 tests
+...
+"#]])
         .run();
     p.cargo(&format!(
         "test --target {} -Zdoctest-xcompile",
         cross_compile::alternate()
     ))
     .masquerade_as_nightly_cargo(&["doctest-xcompile"])
-    .with_stdout_contains(
-        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]",
-    )
+    .with_stdout_data(str![[r#"
+...
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+...
+"#]])
     .run();
 }
 
@@ -4534,17 +4901,27 @@ fn cargo_test_doctest_xcompile_runner() {
 
     p.cargo("build").run();
     p.cargo(&format!("test --target {}", cross_compile::alternate()))
-        .with_stdout_contains("running 0 tests")
+        .with_stdout_data(str![[r#"
+...
+running 0 tests
+...
+"#]])
         .run();
     p.cargo(&format!(
         "test --target {} -Zdoctest-xcompile",
         cross_compile::alternate()
     ))
     .masquerade_as_nightly_cargo(&["doctest-xcompile"])
-    .with_stdout_contains(
-        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]",
-    )
-    .with_stderr_contains("this is a runner")
+    .with_stdout_data(str![[r#"
+...
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+...
+"#]])
+    .with_stderr_data(str![[r#"
+...
+this is a runner
+...
+"#]])
     .run();
 }
 
@@ -4574,16 +4951,22 @@ fn cargo_test_doctest_xcompile_no_runner() {
 
     p.cargo("build").run();
     p.cargo(&format!("test --target {}", cross_compile::alternate()))
-        .with_stdout_contains("running 0 tests")
+        .with_stdout_data(str![[r#"
+...
+running 0 tests
+...
+"#]])
         .run();
     p.cargo(&format!(
         "test --target {} -Zdoctest-xcompile",
         cross_compile::alternate()
     ))
     .masquerade_as_nightly_cargo(&["doctest-xcompile"])
-    .with_stdout_contains(
-        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out[..]",
-    )
+    .with_stdout_data(str![[r#"
+...
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
+...
+"#]])
     .run();
 }
 
@@ -4621,9 +5004,15 @@ fn panic_abort_tests() {
         .build();
 
     p.cargo("test -Z panic-abort-tests -v")
-        .with_stderr_contains("[..]--crate-name a [..]-C panic=abort[..]")
-        .with_stderr_contains("[..]--crate-name foo [..]-C panic=abort[..]")
-        .with_stderr_contains("[..]--crate-name foo [..]-C panic=abort[..]--test[..]")
+        .with_stderr_data(
+            str![[r#"
+[RUNNING] `[..]--crate-name a [..]-C panic=abort[..]`
+[RUNNING] `[..]--crate-name foo [..]-C panic=abort[..]`
+[RUNNING] `[..]--crate-name foo [..]-C panic=abort[..]--test[..]`
+...
+"#]]
+            .unordered(),
+        )
         .masquerade_as_nightly_cargo(&["panic-abort-tests"])
         .run();
 }
@@ -4654,8 +5043,14 @@ fn panic_abort_doc_tests() {
         .build();
 
     p.cargo("test --doc -Z panic-abort-tests -v")
-        .with_stderr_contains("[..]rustc[..]--crate-name foo [..]-C panic=abort[..]")
-        .with_stderr_contains("[..]rustdoc[..]--crate-name foo [..]--test[..]-C panic=abort[..]")
+        .with_stderr_data(
+            str![[r#"
+[RUNNING] `[..]rustc[..] --crate-name foo [..]-C panic=abort[..]`
+[RUNNING] `[..]rustdoc[..] --crate-name foo [..]--test[..]-C panic=abort[..]`
+...
+"#]]
+            .unordered(),
+        )
         .masquerade_as_nightly_cargo(&["panic-abort-tests"])
         .run();
 }
@@ -4692,7 +5087,10 @@ fn panic_abort_only_test() {
         .build();
 
     p.cargo("test -Z panic-abort-tests -v")
-        .with_stderr_contains("warning: `panic` setting is ignored for `test` profile")
+        .with_stderr_data(str![[r#"
+[WARNING] `panic` setting is ignored for `test` profile
+...
+"#]])
         .masquerade_as_nightly_cargo(&["panic-abort-tests"])
         .run();
 }
@@ -4877,47 +5275,109 @@ fn test_workspaces_cwd() {
         .build();
 
     p.cargo("test --workspace --all")
-        .with_stderr_contains("[DOCTEST] root_crate")
-        .with_stderr_contains("[DOCTEST] nested_crate")
-        .with_stderr_contains("[DOCTEST] deep_crate")
-        .with_stdout_contains("test test_unit_root_cwd ... ok")
-        .with_stdout_contains("test test_unit_nested_cwd ... ok")
-        .with_stdout_contains("test test_unit_deep_cwd ... ok")
-        .with_stdout_contains("test test_integration_root_cwd ... ok")
-        .with_stdout_contains("test test_integration_nested_cwd ... ok")
-        .with_stdout_contains("test test_integration_deep_cwd ... ok")
+        .with_stderr_data(
+            str![[r#"
+[DOCTEST] root_crate
+[DOCTEST] nested_crate
+[DOCTEST] deep_crate
+...
+"#]]
+            .unordered(),
+        )
+        .with_stdout_data(
+            str![[r#"
+test test_unit_root_cwd ... ok
+test test_unit_nested_cwd ... ok
+test test_unit_deep_cwd ... ok
+test test_integration_root_cwd ... ok
+test test_integration_nested_cwd ... ok
+test test_integration_deep_cwd ... ok
+...
+"#]]
+            .unordered(),
+        )
         .run();
 
     p.cargo("test -p root-crate --all")
-        .with_stderr_contains("[DOCTEST] root_crate")
-        .with_stdout_contains("test test_unit_root_cwd ... ok")
-        .with_stdout_contains("test test_integration_root_cwd ... ok")
+        .with_stderr_data(str![[r#"
+...
+[DOCTEST] root_crate
+...
+"#]])
+        .with_stdout_data(
+            str![[r#"
+test test_unit_root_cwd ... ok
+test test_integration_root_cwd ... ok
+...
+"#]]
+            .unordered(),
+        )
         .run();
 
     p.cargo("test -p nested-crate --all")
-        .with_stderr_contains("[DOCTEST] nested_crate")
-        .with_stdout_contains("test test_unit_nested_cwd ... ok")
-        .with_stdout_contains("test test_integration_nested_cwd ... ok")
+        .with_stderr_data(str![[r#"
+...
+[DOCTEST] nested_crate
+...
+"#]])
+        .with_stdout_data(
+            str![[r#"
+test test_unit_nested_cwd ... ok
+test test_integration_nested_cwd ... ok
+...
+"#]]
+            .unordered(),
+        )
         .run();
 
     p.cargo("test -p deep-crate --all")
-        .with_stderr_contains("[DOCTEST] deep_crate")
-        .with_stdout_contains("test test_unit_deep_cwd ... ok")
-        .with_stdout_contains("test test_integration_deep_cwd ... ok")
+        .with_stderr_data(str![[r#"
+...
+[DOCTEST] deep_crate
+...
+"#]])
+        .with_stdout_data(
+            str![[r#"
+test test_unit_deep_cwd ... ok
+test test_integration_deep_cwd ... ok
+...
+"#]]
+            .unordered(),
+        )
         .run();
 
     p.cargo("test --all")
         .cwd("nested-crate")
-        .with_stderr_contains("[DOCTEST] nested_crate")
-        .with_stdout_contains("test test_unit_nested_cwd ... ok")
-        .with_stdout_contains("test test_integration_nested_cwd ... ok")
+        .with_stderr_data(str![[r#"
+...
+[DOCTEST] nested_crate
+...
+"#]])
+        .with_stdout_data(
+            str![[r#"
+test test_unit_nested_cwd ... ok
+test test_integration_nested_cwd ... ok
+...
+"#]]
+            .unordered(),
+        )
         .run();
 
     p.cargo("test --all")
         .cwd("very/deeply/nested/deep-crate")
-        .with_stderr_contains("[DOCTEST] deep_crate")
-        .with_stdout_contains("test test_unit_deep_cwd ... ok")
-        .with_stdout_contains("test test_integration_deep_cwd ... ok")
+        .with_stderr_data(str![[r#"
+...
+[DOCTEST] deep_crate
+...
+"#]])
+        .with_stdout_data(
+            str![[r#"
+test test_unit_deep_cwd ... ok
+test test_integration_deep_cwd ... ok
+...
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
@@ -4939,24 +5399,24 @@ fn execution_error() {
         // The actual error is usually "no such file", but on Windows it has a
         // custom message. Since matching against the error string produced by
         // Rust is not very reliable, this just uses `[..]`.
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 [..]
-[FINISHED] `test` profile [..]
-[RUNNING] tests/t1.rs (target/debug/deps/t1[..])
-error: test failed, to rerun pass `--test t1`
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] tests/t1.rs (target/debug/deps/t1-[HASH][EXE])
+[ERROR] test failed, to rerun pass `--test t1`
 
 Caused by:
-  could not execute process `does_not_exist [ROOT]/foo/target/debug/deps/t1[..]` (never executed)
+  could not execute process `does_not_exist [ROOT]/foo/target/debug/deps/t1-[HASH][EXE]` (never executed)
 
 Caused by:
-  [..]
-",
-        )
+  [NOT_FOUND]
+
+"#]])
         .with_status(101)
         .run();
 }
 
+#[allow(deprecated)]
 #[cargo_test]
 fn nonzero_exit_status() {
     // Tests for nonzero exit codes from tests.
@@ -4978,77 +5438,83 @@ fn nonzero_exit_status() {
         .build();
 
     p.cargo("test --test t1")
-        .with_stderr(
-            "\
-[COMPILING] foo [..]
-[FINISHED] `test` profile [..]
-[RUNNING] tests/t1.rs (target/debug/deps/t1[..])
-error: test failed, to rerun pass `--test t1`
-",
-        )
-        .with_stdout_contains("[..]this is a normal error[..]")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] tests/t1.rs (target/debug/deps/t1-[HASH][EXE])
+[ERROR] test failed, to rerun pass `--test t1`
+
+"#]])
+        .with_stdout_data(str![[r#"
+...
+this is a normal error
+...
+"#]])
         .with_status(101)
         .run();
 
     p.cargo("test --test t2")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 [..]
-[FINISHED] `test` profile [..]
-[RUNNING] tests/t2.rs (target/debug/deps/t2[..])
-error: test failed, to rerun pass `--test t2`
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] tests/t2.rs (target/debug/deps/t2-[HASH][EXE])
+[ERROR] test failed, to rerun pass `--test t2`
 
 Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2[..]` (exit [..]: 4)
-note: test exited abnormally; to see the full output pass --nocapture to the harness.
-",
-        )
+  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH][EXE]` ([EXIT_STATUS]: 4)
+[NOTE] test exited abnormally; to see the full output pass --nocapture to the harness.
+
+"#]])
         .with_status(4)
         .run();
 
     p.cargo("test --test t2 -- --nocapture")
-        .with_stderr(
-            "\
-[FINISHED] `test` profile [..]
-[RUNNING] tests/t2.rs (target/debug/deps/t2[..])
-error: test failed, to rerun pass `--test t2`
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] tests/t2.rs (target/debug/deps/t2-[HASH][EXE])
+[ERROR] test failed, to rerun pass `--test t2`
 
 Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2[..]` (exit [..]: 4)
-",
-        )
+  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH][EXE] --nocapture` ([EXIT_STATUS]: 4)
+
+"#]])
         .with_status(4)
         .run();
 
     // no-fail-fast always uses 101
     p.cargo("test --no-fail-fast")
-        .with_stderr(
-            "\
-[FINISHED] `test` profile [..]
-[RUNNING] tests/t1.rs (target/debug/deps/t1[..])
-error: test failed, to rerun pass `--test t1`
-[RUNNING] tests/t2.rs (target/debug/deps/t2[..])
-error: test failed, to rerun pass `--test t2`
+        .with_stderr_data(str![[r#"
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] tests/t1.rs (target/debug/deps/t1-[HASH][EXE])
+[ERROR] test failed, to rerun pass `--test t1`
+[RUNNING] tests/t2.rs (target/debug/deps/t2-[HASH][EXE])
+[ERROR] test failed, to rerun pass `--test t2`
 
 Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2[..]` (exit [..]: 4)
-note: test exited abnormally; to see the full output pass --nocapture to the harness.
-error: 2 targets failed:
+  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH][EXE]` ([EXIT_STATUS]: 4)
+[NOTE] test exited abnormally; to see the full output pass --nocapture to the harness.
+[ERROR] 2 targets failed:
     `--test t1`
     `--test t2`
-",
-        )
+
+"#]])
         .with_status(101)
         .run();
 
     p.cargo("test --no-fail-fast -- --nocapture")
-    .env_remove("RUST_BACKTRACE")
-    .with_stderr_does_not_contain("test exited abnormally; to see the full output pass --nocapture to the harness.")
-    .with_stderr_contains("[..]thread 't' panicked [..] tests/t1[..]")
-    .with_stderr_contains("note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace")
-    .with_stderr_contains("[..]process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2[..]` (exit [..]: 4)")
-    .with_status(101)
-    .run();
+        .env_remove("RUST_BACKTRACE")
+        .with_stderr_does_not_contain(
+            "test exited abnormally; to see the full output pass --nocapture to the harness.",
+        )
+        .with_stderr_data(str![[r#"
+thread 't' panicked at tests/t1.rs:3:26:
+[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Caused by:
+  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH][EXE] --nocapture` ([EXIT_STATUS]: 4)
+...
+"#]].unordered())
+        .with_status(101)
+        .run();
 }
 
 #[cargo_test]
@@ -5058,18 +5524,16 @@ fn cargo_test_print_env_verbose() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("test -vv")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.0.1 ([CWD])
-[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] rustc --crate-name foo[..]`
-[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] rustc --crate-name foo[..]`
-[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [..]
-[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] [CWD]/target/debug/deps/foo-[..][EXE]`
+    p.cargo("test -vv").with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[ROOT]/foo[..] rustc --crate-name foo[..]`
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[ROOT]/foo[..] rustc --crate-name foo[..]`
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[ROOT]/foo[..] [ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
 [DOCTEST] foo
-[RUNNING] `[..]CARGO_MANIFEST_DIR=[CWD][..] rustdoc --edition=2015 --crate-type lib --crate-name foo[..]",
-        )
-        .run();
+[RUNNING] `[..]CARGO_MANIFEST_DIR=[ROOT]/foo[..] rustdoc --edition=2015 --crate-type lib --crate-name foo[..]`
+
+"#]]).run();
 }
 
 #[cargo_test]
