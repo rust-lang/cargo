@@ -191,6 +191,8 @@ description.workspace = true
 documentation.workspace = true
 ```
 
+> **MSRV:** Requires 1.74+
+
 ## The `dependencies` table
 
 The `workspace.dependencies` table is where you define dependencies to be
@@ -230,6 +232,8 @@ cc.workspace = true
 rand.workspace = true
 ```
 
+> **MSRV:** Requires 1.74+
+
 ## The `lints` table
 
 The `workspace.lints` table is where you define lint configuration to be inherited by members of a workspace.
@@ -256,6 +260,8 @@ version = "0.1.0"
 [lints]
 workspace = true
 ```
+
+> **MSRV:** Respected as of 1.74
 
 ## The `metadata` table
 

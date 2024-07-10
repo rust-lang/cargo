@@ -78,6 +78,8 @@ For more information on what each option does see `rustc`'s docs on [debuginfo].
 You may wish to also configure the [`split-debuginfo`](#split-debuginfo) option
 depending on your needs as well.
 
+> **MSRV:** 1.71 is required for `none`, `limited`, `full`, `line-directives-only`, and `line-tables-only`
+
 [`-C debuginfo` flag]: ../../rustc/codegen-options/index.html#debuginfo
 [debuginfo]: ../../rustc/codegen-options/index.html#debuginfo
 [profiling]: https://reviews.llvm.org/D46061
