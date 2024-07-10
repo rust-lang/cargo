@@ -244,12 +244,9 @@ impl<'gctx> RecursivePathSource<'gctx> {
 
     /// Returns the packages discovered by this source. It may walk the
     /// filesystem if package information haven't yet loaded.
-    pub fn read_packages(&self) -> CargoResult<Vec<Package>> {
-        if self.loaded {
-            Ok(self.packages.clone())
-        } else {
-            self.read_packages_inner()
-        }
+    pub fn read_packages(&mut self) -> CargoResult<Vec<Package>> {
+        self.load()?;
+        Ok(self.packages.clone())
     }
 
     fn read_packages_inner(&self) -> CargoResult<Vec<Package>> {
