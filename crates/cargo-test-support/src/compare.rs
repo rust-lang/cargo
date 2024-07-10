@@ -832,6 +832,10 @@ impl fmt::Debug for WildStr<'_> {
 
 #[cfg(test)]
 mod test {
+    use snapbox::assert_data_eq;
+    use snapbox::prelude::*;
+    use snapbox::str;
+
     use super::*;
 
     #[test]
@@ -958,6 +962,21 @@ B", false,
             "\
 [DIRTY-MSVC] a",
             false,
+        );
+    }
+
+    #[test]
+    fn redact_elapsed_time() {
+        let mut subs = snapbox::Redactions::new();
+        add_regex_redactions(&mut subs);
+
+        assert_data_eq!(
+            subs.redact("[FINISHED] `release` profile [optimized] target(s) in 5.5s"),
+            str!["[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s"].raw()
+        );
+        assert_data_eq!(
+            subs.redact("[FINISHED] `release` profile [optimized] target(s) in 1m 05s"),
+            str!["[FINISHED] `release` profile [optimized] target(s) in 1m 05s"].raw()
         );
     }
 }
