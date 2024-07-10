@@ -822,129 +822,134 @@ impl fmt::Debug for WildStr<'_> {
     }
 }
 
-#[test]
-fn wild_str_cmp() {
-    for (a, b) in &[
-        ("a b", "a b"),
-        ("a[..]b", "a b"),
-        ("a[..]", "a b"),
-        ("[..]", "a b"),
-        ("[..]b", "a b"),
-    ] {
-        assert_eq!(WildStr::new(a), WildStr::new(b));
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn wild_str_cmp() {
+        for (a, b) in &[
+            ("a b", "a b"),
+            ("a[..]b", "a b"),
+            ("a[..]", "a b"),
+            ("[..]", "a b"),
+            ("[..]b", "a b"),
+        ] {
+            assert_eq!(WildStr::new(a), WildStr::new(b));
+        }
+        for (a, b) in &[("[..]b", "c"), ("b", "c"), ("b", "cb")] {
+            assert_ne!(WildStr::new(a), WildStr::new(b));
+        }
     }
-    for (a, b) in &[("[..]b", "c"), ("b", "c"), ("b", "cb")] {
-        assert_ne!(WildStr::new(a), WildStr::new(b));
-    }
-}
 
-#[test]
-fn dirty_msvc() {
-    let case = |expected: &str, wild: &str, msvc: bool| {
-        assert_eq!(expected, &replace_dirty_msvc_impl(wild, msvc));
-    };
+    #[test]
+    fn dirty_msvc() {
+        let case = |expected: &str, wild: &str, msvc: bool| {
+            assert_eq!(expected, &replace_dirty_msvc_impl(wild, msvc));
+        };
 
-    // no replacements
-    case("aa", "aa", false);
-    case("aa", "aa", true);
+        // no replacements
+        case("aa", "aa", false);
+        case("aa", "aa", true);
 
-    // with replacements
-    case(
-        "\
+        // with replacements
+        case(
+            "\
 [DIRTY] a",
-        "\
+            "\
 [DIRTY-MSVC] a",
-        true,
-    );
-    case(
-        "",
-        "\
+            true,
+        );
+        case(
+            "",
+            "\
 [DIRTY-MSVC] a",
-        false,
-    );
-    case(
-        "\
+            false,
+        );
+        case(
+            "\
 [DIRTY] a
 [COMPILING] a",
-        "\
+            "\
 [DIRTY-MSVC] a
 [COMPILING] a",
-        true,
-    );
-    case(
-        "\
+            true,
+        );
+        case(
+            "\
 [COMPILING] a",
-        "\
+            "\
 [DIRTY-MSVC] a
 [COMPILING] a",
-        false,
-    );
+            false,
+        );
 
-    // test trailing newline behavior
-    case(
-        "\
+        // test trailing newline behavior
+        case(
+            "\
 A
 B
 ", "\
 A
 B
 ", true,
-    );
+        );
 
-    case(
-        "\
+        case(
+            "\
 A
 B
 ", "\
 A
 B
 ", false,
-    );
+        );
 
-    case(
-        "\
+        case(
+            "\
 A
 B", "\
 A
 B", true,
-    );
+        );
 
-    case(
-        "\
+        case(
+            "\
 A
 B", "\
 A
 B", false,
-    );
+        );
 
-    case(
-        "\
+        case(
+            "\
 [DIRTY] a
 ",
-        "\
+            "\
 [DIRTY-MSVC] a
 ",
-        true,
-    );
-    case(
-        "\n",
-        "\
+            true,
+        );
+        case(
+            "\n",
+            "\
 [DIRTY-MSVC] a
 ",
-        false,
-    );
+            false,
+        );
 
-    case(
-        "\
+        case(
+            "\
 [DIRTY] a",
-        "\
+            "\
 [DIRTY-MSVC] a",
-        true,
-    );
-    case(
-        "",
-        "\
+            true,
+        );
+        case(
+            "",
+            "\
 [DIRTY-MSVC] a",
-        false,
-    );
+            false,
+        );
+    }
 }
