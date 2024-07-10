@@ -226,7 +226,7 @@ pub struct RecursivePathSource<'gctx> {
     /// Whether this source has loaded all package information it may contain.
     loaded: bool,
     /// Packages that this sources has discovered.
-    packages: Vec<Package>,
+    packages: HashMap<PackageId, Package>,
     gctx: &'gctx GlobalContext,
 }
 
@@ -244,7 +244,7 @@ impl<'gctx> RecursivePathSource<'gctx> {
             source_id,
             path: root.to_path_buf(),
             loaded: false,
-            packages: Vec::new(),
+            packages: Default::default(),
             gctx,
         }
     }
@@ -253,7 +253,7 @@ impl<'gctx> RecursivePathSource<'gctx> {
     /// filesystem if package information haven't yet loaded.
     pub fn read_packages(&mut self) -> CargoResult<Vec<Package>> {
         self.load()?;
-        Ok(self.packages.clone())
+        Ok(self.packages.iter().map(|(_, v)| v.clone()).collect())
     }
 
     /// List all files relevant to building this package inside this source.
@@ -311,7 +311,7 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
         f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
         self.load()?;
-        for s in self.packages.iter().map(|p| p.summary()) {
+        for s in self.packages.values().map(|p| p.summary()) {
             let matched = match kind {
                 QueryKind::Exact => dep.matches(s),
                 QueryKind::Alternatives => true,
@@ -339,7 +339,7 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
     fn download(&mut self, id: PackageId) -> CargoResult<MaybePackage> {
         trace!("getting packages; id={}", id);
         self.load()?;
-        let pkg = self.packages.iter().find(|pkg| pkg.package_id() == id);
+        let pkg = self.packages.get(&id);
         pkg.cloned()
             .map(MaybePackage::Ready)
             .ok_or_else(|| internal(format!("failed to find {} in path source", id)))
@@ -758,7 +758,7 @@ fn read_packages(
     path: &Path,
     source_id: SourceId,
     gctx: &GlobalContext,
-) -> CargoResult<Vec<Package>> {
+) -> CargoResult<HashMap<PackageId, Package>> {
     let mut all_packages = HashMap::new();
     let mut visited = HashSet::<PathBuf>::new();
     let mut errors = Vec::<anyhow::Error>::new();
@@ -823,7 +823,7 @@ fn read_packages(
             }
         }
     } else {
-        Ok(all_packages.into_iter().map(|(_, v)| v).collect())
+        Ok(all_packages)
     }
 }
 
