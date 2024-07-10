@@ -78,6 +78,7 @@ use crate::util::cache_lock::CacheLockMode;
 use crate::util::errors::CargoResult;
 use crate::util::CanonicalUrl;
 use anyhow::Context as _;
+use cargo_util::paths;
 use std::collections::{HashMap, HashSet};
 use tracing::{debug, trace};
 
@@ -454,7 +455,7 @@ pub fn add_overrides<'a>(
         // The path listed next to the string is the config file in which the
         // key was located, so we want to pop off the `.cargo/config` component
         // to get the directory containing the `.cargo` folder.
-        (def.root(gctx).join(s), def)
+        (paths::normalize_path(&def.root(gctx).join(s)), def)
     });
 
     for (path, definition) in paths {
