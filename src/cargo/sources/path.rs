@@ -1,14 +1,21 @@
+use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Debug, Formatter};
+use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::task::Poll;
 
-use crate::core::{Dependency, Package, PackageId, SourceId};
+use crate::core::{Dependency, EitherManifest, Manifest, Package, PackageId, SourceId};
 use crate::ops;
 use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
 use crate::sources::IndexSummary;
-use crate::util::{internal, CargoResult, GlobalContext};
+use crate::util::errors::CargoResult;
+use crate::util::important_paths::find_project_manifest_exact;
+use crate::util::internal;
+use crate::util::toml::read_manifest;
+use crate::util::GlobalContext;
 use anyhow::Context as _;
 use cargo_util::paths;
 use filetime::FileTime;
@@ -16,7 +23,7 @@ use gix::bstr::{BString, ByteVec};
 use gix::dir::entry::Status;
 use gix::index::entry::Stage;
 use ignore::gitignore::GitignoreBuilder;
-use tracing::{debug, trace, warn};
+use tracing::{debug, info, trace, warn};
 use walkdir::WalkDir;
 
 /// A source that represents a package gathered at the root
@@ -250,7 +257,7 @@ impl<'gctx> RecursivePathSource<'gctx> {
     }
 
     fn read_packages_inner(&self) -> CargoResult<Vec<Package>> {
-        ops::read_packages(&self.path, self.source_id, self.gctx)
+        read_packages(&self.path, self.source_id, self.gctx)
     }
 
     /// List all files relevant to building this package inside this source.
@@ -749,4 +756,242 @@ fn last_modified_file(
     }
     trace!("last modified file {}: {}", path.display(), max);
     Ok((max, max_path))
+}
+
+fn read_packages(
+    path: &Path,
+    source_id: SourceId,
+    gctx: &GlobalContext,
+) -> CargoResult<Vec<Package>> {
+    let mut all_packages = HashMap::new();
+    let mut visited = HashSet::<PathBuf>::new();
+    let mut errors = Vec::<anyhow::Error>::new();
+
+    trace!(
+        "looking for root package: {}, source_id={}",
+        path.display(),
+        source_id
+    );
+
+    walk(path, &mut |dir| {
+        trace!("looking for child package: {}", dir.display());
+
+        // Don't recurse into hidden/dot directories unless we're at the toplevel
+        if dir != path {
+            let name = dir.file_name().and_then(|s| s.to_str());
+            if name.map(|s| s.starts_with('.')) == Some(true) {
+                return Ok(false);
+            }
+
+            // Don't automatically discover packages across git submodules
+            if dir.join(".git").exists() {
+                return Ok(false);
+            }
+        }
+
+        // Don't ever look at target directories
+        if dir.file_name().and_then(|s| s.to_str()) == Some("target")
+            && has_manifest(dir.parent().unwrap())
+        {
+            return Ok(false);
+        }
+
+        if has_manifest(dir) {
+            read_nested_packages(
+                dir,
+                &mut all_packages,
+                source_id,
+                gctx,
+                &mut visited,
+                &mut errors,
+            )?;
+        }
+        Ok(true)
+    })?;
+
+    if all_packages.is_empty() {
+        match errors.pop() {
+            Some(err) => Err(err),
+            None => {
+                if find_project_manifest_exact(path, "cargo.toml").is_ok() {
+                    Err(anyhow::format_err!(
+                "Could not find Cargo.toml in `{}`, but found cargo.toml please try to rename it to Cargo.toml",
+                path.display()
+            ))
+                } else {
+                    Err(anyhow::format_err!(
+                        "Could not find Cargo.toml in `{}`",
+                        path.display()
+                    ))
+                }
+            }
+        }
+    } else {
+        Ok(all_packages.into_iter().map(|(_, v)| v).collect())
+    }
+}
+
+fn nested_paths(manifest: &Manifest) -> Vec<PathBuf> {
+    let mut nested_paths = Vec::new();
+    let resolved = manifest.resolved_toml();
+    let dependencies = resolved
+        .dependencies
+        .iter()
+        .chain(resolved.build_dependencies())
+        .chain(resolved.dev_dependencies())
+        .chain(
+            resolved
+                .target
+                .as_ref()
+                .into_iter()
+                .flat_map(|t| t.values())
+                .flat_map(|t| {
+                    t.dependencies
+                        .iter()
+                        .chain(t.build_dependencies())
+                        .chain(t.dev_dependencies())
+                }),
+        );
+    for dep_table in dependencies {
+        for dep in dep_table.values() {
+            let cargo_util_schemas::manifest::InheritableDependency::Value(dep) = dep else {
+                continue;
+            };
+            let cargo_util_schemas::manifest::TomlDependency::Detailed(dep) = dep else {
+                continue;
+            };
+            let Some(path) = dep.path.as_ref() else {
+                continue;
+            };
+            nested_paths.push(PathBuf::from(path.as_str()));
+        }
+    }
+    nested_paths
+}
+
+fn walk(path: &Path, callback: &mut dyn FnMut(&Path) -> CargoResult<bool>) -> CargoResult<()> {
+    if !callback(path)? {
+        trace!("not processing {}", path.display());
+        return Ok(());
+    }
+
+    // Ignore any permission denied errors because temporary directories
+    // can often have some weird permissions on them.
+    let dirs = match fs::read_dir(path) {
+        Ok(dirs) => dirs,
+        Err(ref e) if e.kind() == io::ErrorKind::PermissionDenied => return Ok(()),
+        Err(e) => {
+            let cx = format!("failed to read directory `{}`", path.display());
+            let e = anyhow::Error::from(e);
+            return Err(e.context(cx));
+        }
+    };
+    for dir in dirs {
+        let dir = dir?;
+        if dir.file_type()?.is_dir() {
+            walk(&dir.path(), callback)?;
+        }
+    }
+    Ok(())
+}
+
+fn has_manifest(path: &Path) -> bool {
+    find_project_manifest_exact(path, "Cargo.toml").is_ok()
+}
+
+fn read_nested_packages(
+    path: &Path,
+    all_packages: &mut HashMap<PackageId, Package>,
+    source_id: SourceId,
+    gctx: &GlobalContext,
+    visited: &mut HashSet<PathBuf>,
+    errors: &mut Vec<anyhow::Error>,
+) -> CargoResult<()> {
+    if !visited.insert(path.to_path_buf()) {
+        return Ok(());
+    }
+
+    let manifest_path = find_project_manifest_exact(path, "Cargo.toml")?;
+
+    let manifest = match read_manifest(&manifest_path, source_id, gctx) {
+        Err(err) => {
+            // Ignore malformed manifests found on git repositories
+            //
+            // git source try to find and read all manifests from the repository
+            // but since it's not possible to exclude folders from this search
+            // it's safer to ignore malformed manifests to avoid
+            //
+            // TODO: Add a way to exclude folders?
+            info!(
+                "skipping malformed package found at `{}`",
+                path.to_string_lossy()
+            );
+            errors.push(err.into());
+            return Ok(());
+        }
+        Ok(tuple) => tuple,
+    };
+
+    let manifest = match manifest {
+        EitherManifest::Real(manifest) => manifest,
+        EitherManifest::Virtual(..) => return Ok(()),
+    };
+    let nested = nested_paths(&manifest);
+    let pkg = Package::new(manifest, &manifest_path);
+
+    let pkg_id = pkg.package_id();
+    use std::collections::hash_map::Entry;
+    match all_packages.entry(pkg_id) {
+        Entry::Vacant(v) => {
+            v.insert(pkg);
+        }
+        Entry::Occupied(_) => {
+            // We can assume a package with publish = false isn't intended to be seen
+            // by users so we can hide the warning about those since the user is unlikely
+            // to care about those cases.
+            if pkg.publish().is_none() {
+                let _ = gctx.shell().warn(format!(
+                    "skipping duplicate package `{}` found at `{}`",
+                    pkg.name(),
+                    path.display()
+                ));
+            }
+        }
+    }
+
+    // Registry sources are not allowed to have `path=` dependencies because
+    // they're all translated to actual registry dependencies.
+    //
+    // We normalize the path here ensure that we don't infinitely walk around
+    // looking for crates. By normalizing we ensure that we visit this crate at
+    // most once.
+    //
+    // TODO: filesystem/symlink implications?
+    if !source_id.is_registry() {
+        for p in nested.iter() {
+            let path = paths::normalize_path(&path.join(p));
+            let result =
+                read_nested_packages(&path, all_packages, source_id, gctx, visited, errors);
+            // Ignore broken manifests found on git repositories.
+            //
+            // A well formed manifest might still fail to load due to reasons
+            // like referring to a "path" that requires an extra build step.
+            //
+            // See https://github.com/rust-lang/cargo/issues/6822.
+            if let Err(err) = result {
+                if source_id.is_git() {
+                    info!(
+                        "skipping nested package found at `{}`: {:?}",
+                        path.display(),
+                        &err,
+                    );
+                    errors.push(err);
+                } else {
+                    return Err(err);
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
