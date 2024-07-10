@@ -1183,12 +1183,14 @@ fn ambiguous_published_deps() {
     p.cargo("build").run();
     p.cargo("run")
         .with_stderr_data(str![[r#"
-[WARNING] skipping duplicate package `duplicate` found at `[ROOT]/home/.cargo/git/checkouts/dep-[HASH]/e916fc8/duplicate2`
+[WARNING] skipping duplicate package `duplicate v0.5.0 ([ROOTURL]/dep#[..])`:
+  [ROOT]/home/.cargo/git/checkouts/dep-[HASH]/[..]/duplicate2/Cargo.toml
+in favor of [ROOT]/home/.cargo/git/checkouts/dep-[HASH]/[..]/duplicate1/Cargo.toml
+
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 
-"#]],
-        )
+"#]])
         .run();
 }
 
@@ -1277,12 +1279,15 @@ fn unused_ambiguous_published_deps() {
         .with_stderr_data(str![[r#"
 [ERROR] invalid table header
 expected `.`, `]`
- --> ../home/.cargo/git/checkouts/dep-[HASH]/caf7f52/invalid/Cargo.toml:2:29
+ --> ../home/.cargo/git/checkouts/dep-[HASH]/[..]/invalid/Cargo.toml:2:29
   |
 2 |                     [package
   |                             ^
   |
-[WARNING] skipping duplicate package `duplicate` found at `[ROOT]/home/.cargo/git/checkouts/dep-[HASH]/caf7f52/duplicate2`
+[WARNING] skipping duplicate package `duplicate v0.5.0 ([ROOTURL]/dep#[..])`:
+  [ROOT]/home/.cargo/git/checkouts/dep-[HASH]/[..]/duplicate2/Cargo.toml
+in favor of [ROOT]/home/.cargo/git/checkouts/dep-[HASH]/[..]/duplicate1/Cargo.toml
+
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 

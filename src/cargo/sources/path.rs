@@ -226,7 +226,9 @@ pub struct RecursivePathSource<'gctx> {
     /// Whether this source has loaded all package information it may contain.
     loaded: bool,
     /// Packages that this sources has discovered.
-    packages: HashMap<PackageId, Package>,
+    ///
+    /// Tracking all packages for a given ID to warn on-demand for unused packages
+    packages: HashMap<PackageId, Vec<Package>>,
     gctx: &'gctx GlobalContext,
 }
 
@@ -253,7 +255,7 @@ impl<'gctx> RecursivePathSource<'gctx> {
     /// filesystem if package information haven't yet loaded.
     pub fn read_packages(&mut self) -> CargoResult<Vec<Package>> {
         self.load()?;
-        Ok(self.packages.iter().map(|(_, v)| v.clone()).collect())
+        Ok(self.packages.iter().map(|(_, v)| v[0].clone()).collect())
     }
 
     /// List all files relevant to building this package inside this source.
@@ -290,6 +292,32 @@ impl<'gctx> RecursivePathSource<'gctx> {
     pub fn load(&mut self) -> CargoResult<()> {
         if !self.loaded {
             self.packages = read_packages(&self.path, self.source_id, self.gctx)?;
+            for (pkg_id, pkgs) in self.packages.iter() {
+                if 1 < pkgs.len() {
+                    let ignored = pkgs[1..]
+                        .iter()
+                        // We can assume a package with publish = false isn't intended to be seen
+                        // by users so we can hide the warning about those since the user is unlikely
+                        // to care about those cases.
+                        .filter(|pkg| pkg.publish().is_none())
+                        .collect::<Vec<_>>();
+                    if !ignored.is_empty() {
+                        use std::fmt::Write as _;
+
+                        let plural = if ignored.len() == 1 { "" } else { "s" };
+                        let mut msg = String::new();
+                        let _ =
+                            writeln!(&mut msg, "skipping duplicate package{plural} `{pkg_id}`:");
+                        for ignored in ignored {
+                            let manifest_path = ignored.manifest_path().display();
+                            let _ = writeln!(&mut msg, "  {manifest_path}");
+                        }
+                        let manifest_path = pkgs[0].manifest_path().display();
+                        let _ = writeln!(&mut msg, "in favor of {manifest_path}");
+                        let _ = self.gctx.shell().warn(msg);
+                    }
+                }
+            }
             self.loaded = true;
         }
 
@@ -311,7 +339,12 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
         f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
         self.load()?;
-        for s in self.packages.values().map(|p| p.summary()) {
+        for s in self
+            .packages
+            .values()
+            .map(|pkgs| &pkgs[0])
+            .map(|p| p.summary())
+        {
             let matched = match kind {
                 QueryKind::Exact => dep.matches(s),
                 QueryKind::Alternatives => true,
@@ -340,7 +373,7 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
         trace!("getting packages; id={}", id);
         self.load()?;
         let pkg = self.packages.get(&id);
-        pkg.cloned()
+        pkg.map(|pkgs| pkgs[0].clone())
             .map(MaybePackage::Ready)
             .ok_or_else(|| internal(format!("failed to find {} in path source", id)))
     }
@@ -758,7 +791,7 @@ fn read_packages(
     path: &Path,
     source_id: SourceId,
     gctx: &GlobalContext,
-) -> CargoResult<HashMap<PackageId, Package>> {
+) -> CargoResult<HashMap<PackageId, Vec<Package>>> {
     let mut all_packages = HashMap::new();
     let mut visited = HashSet::<PathBuf>::new();
     let mut errors = Vec::<anyhow::Error>::new();
@@ -899,7 +932,7 @@ fn has_manifest(path: &Path) -> bool {
 
 fn read_nested_packages(
     path: &Path,
-    all_packages: &mut HashMap<PackageId, Package>,
+    all_packages: &mut HashMap<PackageId, Vec<Package>>,
     source_id: SourceId,
     gctx: &GlobalContext,
     visited: &mut HashSet<PathBuf>,
@@ -938,24 +971,7 @@ fn read_nested_packages(
     let pkg = Package::new(manifest, &manifest_path);
 
     let pkg_id = pkg.package_id();
-    use std::collections::hash_map::Entry;
-    match all_packages.entry(pkg_id) {
-        Entry::Vacant(v) => {
-            v.insert(pkg);
-        }
-        Entry::Occupied(_) => {
-            // We can assume a package with publish = false isn't intended to be seen
-            // by users so we can hide the warning about those since the user is unlikely
-            // to care about those cases.
-            if pkg.publish().is_none() {
-                let _ = gctx.shell().warn(format!(
-                    "skipping duplicate package `{}` found at `{}`",
-                    pkg.name(),
-                    path.display()
-                ));
-            }
-        }
-    }
+    all_packages.entry(pkg_id).or_default().push(pkg);
 
     // Registry sources are not allowed to have `path=` dependencies because
     // they're all translated to actual registry dependencies.
