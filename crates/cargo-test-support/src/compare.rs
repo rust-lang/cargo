@@ -161,19 +161,19 @@ fn add_regex_redactions(subs: &mut snapbox::Redactions) {
     // For e2e tests
     subs.insert(
         "[ELAPSED]",
-        regex!(r"\[FINISHED\].*in (?<redacted>[0-9]+(\.[0-9]+))s"),
+        regex!(r"\[FINISHED\].*in (?<redacted>[0-9]+(\.[0-9]+)?(m [0-9]+)?)s"),
     )
     .unwrap();
     // for UI tests
     subs.insert(
         "[ELAPSED]",
-        regex!(r"Finished.*in (?<redacted>[0-9]+(\.[0-9]+))s"),
+        regex!(r"Finished.*in (?<redacted>[0-9]+(\.[0-9]+)?(m [0-9]+)?)s"),
     )
     .unwrap();
     // output from libtest
     subs.insert(
         "[ELAPSED]",
-        regex!(r"; finished in (?<redacted>[0-9]+(\.[0-9]+))s"),
+        regex!(r"; finished in (?<redacted>[0-9]+(\.[0-9]+)?(m [0-9]+)?)s"),
     )
     .unwrap();
     subs.insert(
@@ -976,7 +976,7 @@ B", false,
         );
         assert_data_eq!(
             subs.redact("[FINISHED] `release` profile [optimized] target(s) in 1m 05s"),
-            str!["[FINISHED] `release` profile [optimized] target(s) in 1m 05s"].raw()
+            str!["[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s"].raw()
         );
     }
 }
