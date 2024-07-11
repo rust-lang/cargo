@@ -325,6 +325,7 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
         for s in self
             .packages
             .iter()
+            .filter(|(pkg_id, _)| pkg_id.name() == dep.package_name())
             .map(|(pkg_id, pkgs)| {
                 first_package(*pkg_id, pkgs, &mut self.warned_duplicate, self.gctx)
             })
