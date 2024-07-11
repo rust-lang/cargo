@@ -12,7 +12,7 @@ pub use self::cargo_new::{init, new, NewOptions, NewProjectKind, VersionControl}
 pub use self::cargo_output_metadata::{output_metadata, ExportInfo, OutputMetadataOptions};
 pub use self::cargo_package::{check_yanked, package, package_one, PackageOpts};
 pub use self::cargo_pkgid::pkgid;
-pub use self::cargo_read_manifest::{read_package, read_packages};
+pub use self::cargo_read_manifest::read_package;
 pub use self::cargo_run::run;
 pub use self::cargo_test::{run_benches, run_tests, TestOptions};
 pub use self::cargo_uninstall::uninstall;
