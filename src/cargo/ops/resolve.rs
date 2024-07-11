@@ -387,6 +387,7 @@ pub fn resolve_with_previous<'gctx>(
         register_previous_locks(ws, registry, r, &keep, dev_deps);
 
         // Prefer to use anything in the previous lock file, aka we want to have conservative updates.
+        let _span = tracing::span!(tracing::Level::TRACE, "prefer_package_id").entered();
         for id in r.iter().filter(keep) {
             debug!("attempting to prefer {}", id);
             version_prefs.prefer_package_id(id);
@@ -397,20 +398,22 @@ pub fn resolve_with_previous<'gctx>(
         registry.lock_patches();
     }
 
-    let summaries: Vec<(Summary, ResolveOpts)> = ws
-        .members_with_features(specs, cli_features)?
-        .into_iter()
-        .map(|(member, features)| {
-            let summary = registry.lock(member.summary().clone());
-            (
-                summary,
-                ResolveOpts {
-                    dev_deps,
-                    features: RequestedFeatures::CliFeatures(features),
-                },
-            )
-        })
-        .collect();
+    let summaries: Vec<(Summary, ResolveOpts)> = {
+        let _span = tracing::span!(tracing::Level::TRACE, "registry.lock").entered();
+        ws.members_with_features(specs, cli_features)?
+            .into_iter()
+            .map(|(member, features)| {
+                let summary = registry.lock(member.summary().clone());
+                (
+                    summary,
+                    ResolveOpts {
+                        dev_deps,
+                        features: RequestedFeatures::CliFeatures(features),
+                    },
+                )
+            })
+            .collect()
+    };
 
     let replace = lock_replacements(ws, previous, &keep);
 
@@ -498,6 +501,7 @@ pub fn get_resolved_packages<'gctx>(
 ///
 /// Note that this function, at the time of this writing, is basically the
 /// entire fix for issue #4127.
+#[tracing::instrument(skip_all)]
 fn register_previous_locks(
     ws: &Workspace<'_>,
     registry: &mut PackageRegistry<'_>,
@@ -578,60 +582,63 @@ fn register_previous_locks(
     // crates from crates.io* are not locked (aka added to `avoid_locking`).
     // For dependencies like `log` their previous version in the lock file will
     // come up first before newer version, if newer version are available.
-    let mut path_deps = ws.members().cloned().collect::<Vec<_>>();
-    let mut visited = HashSet::new();
-    while let Some(member) = path_deps.pop() {
-        if !visited.insert(member.package_id()) {
-            continue;
-        }
-        let is_ws_member = ws.is_member(&member);
-        for dep in member.dependencies() {
-            // If this dependency didn't match anything special then we may want
-            // to poison the source as it may have been added. If this path
-            // dependencies is **not** a workspace member, however, and it's an
-            // optional/non-transitive dependency then it won't be necessarily
-            // be in our lock file. If this shows up then we avoid poisoning
-            // this source as otherwise we'd repeatedly update the registry.
-            //
-            // TODO: this breaks adding an optional dependency in a
-            // non-workspace member and then simultaneously editing the
-            // dependency on that crate to enable the feature. For now,
-            // this bug is better than the always-updating registry though.
-            if !is_ws_member && (dep.is_optional() || !dep.is_transitive()) {
+    {
+        let _span = tracing::span!(tracing::Level::TRACE, "poison").entered();
+        let mut path_deps = ws.members().cloned().collect::<Vec<_>>();
+        let mut visited = HashSet::new();
+        while let Some(member) = path_deps.pop() {
+            if !visited.insert(member.package_id()) {
                 continue;
             }
+            let is_ws_member = ws.is_member(&member);
+            for dep in member.dependencies() {
+                // If this dependency didn't match anything special then we may want
+                // to poison the source as it may have been added. If this path
+                // dependencies is **not** a workspace member, however, and it's an
+                // optional/non-transitive dependency then it won't be necessarily
+                // be in our lock file. If this shows up then we avoid poisoning
+                // this source as otherwise we'd repeatedly update the registry.
+                //
+                // TODO: this breaks adding an optional dependency in a
+                // non-workspace member and then simultaneously editing the
+                // dependency on that crate to enable the feature. For now,
+                // this bug is better than the always-updating registry though.
+                if !is_ws_member && (dep.is_optional() || !dep.is_transitive()) {
+                    continue;
+                }
 
-            // If dev-dependencies aren't being resolved, skip them.
-            if !dep.is_transitive() && !dev_deps {
-                continue;
-            }
+                // If dev-dependencies aren't being resolved, skip them.
+                if !dep.is_transitive() && !dev_deps {
+                    continue;
+                }
 
-            // If this is a path dependency, then try to push it onto our
-            // worklist.
-            if let Some(pkg) = path_pkg(dep.source_id()) {
-                path_deps.push(pkg);
-                continue;
-            }
+                // If this is a path dependency, then try to push it onto our
+                // worklist.
+                if let Some(pkg) = path_pkg(dep.source_id()) {
+                    path_deps.push(pkg);
+                    continue;
+                }
 
-            // If we match *anything* in the dependency graph then we consider
-            // ourselves all ok, and assume that we'll resolve to that.
-            if resolve.iter().any(|id| dep.matches_ignoring_source(id)) {
-                continue;
-            }
+                // If we match *anything* in the dependency graph then we consider
+                // ourselves all ok, and assume that we'll resolve to that.
+                if resolve.iter().any(|id| dep.matches_ignoring_source(id)) {
+                    continue;
+                }
 
-            // Ok if nothing matches, then we poison the source of these
-            // dependencies and the previous lock file.
-            debug!(
-                "poisoning {} because {} looks like it changed {}",
-                dep.source_id(),
-                member.package_id(),
-                dep.package_name()
-            );
-            for id in resolve
-                .iter()
-                .filter(|id| id.source_id() == dep.source_id())
-            {
-                add_deps(resolve, id, &mut avoid_locking);
+                // Ok if nothing matches, then we poison the source of these
+                // dependencies and the previous lock file.
+                debug!(
+                    "poisoning {} because {} looks like it changed {}",
+                    dep.source_id(),
+                    member.package_id(),
+                    dep.package_name()
+                );
+                for id in resolve
+                    .iter()
+                    .filter(|id| id.source_id() == dep.source_id())
+                {
+                    add_deps(resolve, id, &mut avoid_locking);
+                }
             }
         }
     }
@@ -661,28 +668,31 @@ fn register_previous_locks(
     let keep = |id: &PackageId| keep(id) && !avoid_locking.contains(id);
 
     registry.clear_lock();
-    for node in resolve.iter().filter(keep) {
-        let deps = resolve
-            .deps_not_replaced(node)
-            .map(|p| p.0)
-            .filter(keep)
-            .collect::<Vec<_>>();
+    {
+        let _span = tracing::span!(tracing::Level::TRACE, "register_lock").entered();
+        for node in resolve.iter().filter(keep) {
+            let deps = resolve
+                .deps_not_replaced(node)
+                .map(|p| p.0)
+                .filter(keep)
+                .collect::<Vec<_>>();
 
-        // In the v2 lockfile format and prior the `branch=master` dependency
-        // directive was serialized the same way as the no-branch-listed
-        // directive. Nowadays in Cargo, however, these two directives are
-        // considered distinct and are no longer represented the same way. To
-        // maintain compatibility with older lock files we register locked nodes
-        // for *both* the master branch and the default branch.
-        //
-        // Note that this is only applicable for loading older resolves now at
-        // this point. All new lock files are encoded as v3-or-later, so this is
-        // just compat for loading an old lock file successfully.
-        if let Some(node) = master_branch_git_source(node, resolve) {
-            registry.register_lock(node, deps.clone());
+            // In the v2 lockfile format and prior the `branch=master` dependency
+            // directive was serialized the same way as the no-branch-listed
+            // directive. Nowadays in Cargo, however, these two directives are
+            // considered distinct and are no longer represented the same way. To
+            // maintain compatibility with older lock files we register locked nodes
+            // for *both* the master branch and the default branch.
+            //
+            // Note that this is only applicable for loading older resolves now at
+            // this point. All new lock files are encoded as v3-or-later, so this is
+            // just compat for loading an old lock file successfully.
+            if let Some(node) = master_branch_git_source(node, resolve) {
+                registry.register_lock(node, deps.clone());
+            }
+
+            registry.register_lock(node, deps);
         }
-
-        registry.register_lock(node, deps);
     }
 
     /// Recursively add `node` and all its transitive dependencies to `set`.

@@ -723,6 +723,7 @@ impl<'gctx> Workspace<'gctx> {
     /// verifies that those are all valid packages to point to. Otherwise, this
     /// will transitively follow all `path` dependencies looking for members of
     /// the workspace.
+    #[tracing::instrument(skip_all)]
     fn find_members(&mut self) -> CargoResult<()> {
         let Some(workspace_config) = self.load_workspace_config()? else {
             debug!("find_members - only me as a member");
@@ -886,6 +887,7 @@ impl<'gctx> Workspace<'gctx> {
     /// 1. A workspace only has one root.
     /// 2. All workspace members agree on this one root as the root.
     /// 3. The current crate is a member of this workspace.
+    #[tracing::instrument(skip_all)]
     fn validate(&mut self) -> CargoResult<()> {
         // The rest of the checks require a VirtualManifest or multiple members.
         if self.root_manifest.is_none() {
@@ -954,6 +956,7 @@ impl<'gctx> Workspace<'gctx> {
         }
     }
 
+    #[tracing::instrument(skip_all)]
     fn validate_members(&mut self) -> CargoResult<()> {
         for member in self.members.clone() {
             let root = self.find_root(&member)?;
@@ -1812,6 +1815,7 @@ impl WorkspaceRootConfig {
         self.members.is_some()
     }
 
+    #[tracing::instrument(skip_all)]
     fn members_paths(&self, globs: &[String]) -> CargoResult<Vec<PathBuf>> {
         let mut expanded_list = Vec::new();
 

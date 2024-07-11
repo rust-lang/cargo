@@ -336,6 +336,7 @@ impl<'gctx> PackageRegistry<'gctx> {
     /// The return value is a `Vec` of patches that should *not* be locked.
     /// This happens when the patch is locked, but the patch has been updated
     /// so the locked value is no longer correct.
+    #[tracing::instrument(skip(self, patch_deps))]
     pub fn patch(
         &mut self,
         url: &Url,
@@ -784,6 +785,7 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
         }
     }
 
+    #[tracing::instrument(skip_all)]
     fn block_until_ready(&mut self) -> CargoResult<()> {
         if cfg!(debug_assertions) {
             // Force borrow to catch invalid borrows, regardless of which source is used and how it

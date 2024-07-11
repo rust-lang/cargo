@@ -164,6 +164,7 @@ impl GitRemote {
 
 impl GitDatabase {
     /// Checkouts to a revision at `dest`ination from this database.
+    #[tracing::instrument(skip(self, gctx))]
     pub fn copy_to(
         &self,
         rev: git2::Oid,

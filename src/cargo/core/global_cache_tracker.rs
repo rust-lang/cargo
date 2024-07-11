@@ -1799,6 +1799,7 @@ pub fn is_silent_error(e: &anyhow::Error) -> bool {
 }
 
 /// Returns the disk usage for a git checkout directory.
+#[tracing::instrument]
 pub fn du_git_checkout(path: &Path) -> CargoResult<u64> {
     // !.git is used because clones typically use hardlinks for the git
     // contents. TODO: Verify behavior on Windows.
