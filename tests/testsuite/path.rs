@@ -964,9 +964,8 @@ fn override_and_depend() {
         .cwd("b")
         .with_stderr_data(str![[r#"
 [LOCKING] 3 packages to latest compatible versions
-[WARNING] skipping duplicate package `a2` found at `[ROOT]/foo/[..]`
-[CHECKING] a2 v0.5.0 ([ROOT]/foo/[..])
-[CHECKING] a1 v0.5.0 ([ROOT]/foo/[..])
+[CHECKING] a2 v0.5.0 ([ROOT]/foo/a)
+[CHECKING] a1 v0.5.0 ([ROOT]/foo/a)
 [CHECKING] b v0.5.0 ([ROOT]/foo/b)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -987,10 +986,10 @@ fn missing_path_dependency() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to update path override `[ROOT]/foo/../whoa-this-does-not-exist` (defined in `[ROOT]/foo/.cargo/config.toml`)
+[ERROR] failed to update path override `[ROOT]/whoa-this-does-not-exist` (defined in `[ROOT]/foo/.cargo/config.toml`)
 
 Caused by:
-  failed to read directory `[ROOT]/foo/../whoa-this-does-not-exist`
+  failed to read directory `[ROOT]/whoa-this-does-not-exist`
 
 Caused by:
   [NOT_FOUND]
