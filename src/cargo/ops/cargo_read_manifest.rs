@@ -34,6 +34,7 @@ pub fn read_package(
     Ok(Package::new(manifest, path))
 }
 
+#[tracing::instrument(skip(source_id, gctx))]
 pub fn read_packages(
     path: &Path,
     source_id: SourceId,
