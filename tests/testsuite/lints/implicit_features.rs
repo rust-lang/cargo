@@ -1,7 +1,6 @@
-#![allow(deprecated)]
-
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
+use cargo_test_support::str;
 
 #[cargo_test]
 fn default() {
@@ -24,14 +23,13 @@ bar = { version = "0.1.0", optional = true }
 
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
-        .with_stderr(
-            "\
-[UPDATING] [..]
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
-[CHECKING] foo v0.1.0 ([CWD])
-[FINISHED] [..]
-",
-        )
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -67,33 +65,32 @@ implicit_features = "warn"
 
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints"])
-        .with_stderr(
-            "\
-warning: implicit features for optional dependencies is deprecated and will be unavailable in the 2024 edition
+        .with_stderr_data(str![[r#"
+[WARNING] implicit features for optional dependencies is deprecated and will be unavailable in the 2024 edition
  --> Cargo.toml:8:1
   |
-8 | bar = { version = \"0.1.0\", optional = true }
+8 | bar = { version = "0.1.0", optional = true }
   | ---
   |
-  = note: `cargo::implicit_features` is set to `warn` in `[lints]`
-warning: implicit features for optional dependencies is deprecated and will be unavailable in the 2024 edition
+  = [NOTE] `cargo::implicit_features` is set to `warn` in `[lints]`
+[WARNING] implicit features for optional dependencies is deprecated and will be unavailable in the 2024 edition
   --> Cargo.toml:11:1
    |
-11 | baz = { version = \"0.1.0\", optional = true }
+11 | baz = { version = "0.1.0", optional = true }
    | ---
    |
-warning: implicit features for optional dependencies is deprecated and will be unavailable in the 2024 edition
+[WARNING] implicit features for optional dependencies is deprecated and will be unavailable in the 2024 edition
   --> Cargo.toml:14:1
    |
-14 | target-dep = { version = \"0.1.0\", optional = true }
+14 | target-dep = { version = "0.1.0", optional = true }
    | ----------
    |
-[UPDATING] [..]
+[UPDATING] `dummy-registry` index
 [LOCKING] 4 packages to latest compatible versions
-[CHECKING] foo v0.1.0 ([CWD])
-[FINISHED] [..]
-",
-        )
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
 
@@ -127,13 +124,12 @@ unused_optional_dependency = "allow"
 
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["cargo-lints", "edition2024"])
-        .with_stderr(
-            "\
-[UPDATING] [..]
-[LOCKING] 2 packages to latest Rust [..] compatible versions
-[CHECKING] foo v0.1.0 ([CWD])
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 2 packages to latest Rust 1.81.0-nightly compatible versions
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
