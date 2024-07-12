@@ -882,6 +882,8 @@ fn walk(path: &Path, callback: &mut dyn FnMut(&Path) -> CargoResult<bool>) -> Ca
             return Err(e.context(cx));
         }
     };
+    let mut dirs = dirs.collect::<Vec<_>>();
+    dirs.sort_unstable_by_key(|d| d.as_ref().ok().map(|d| d.file_name()));
     for dir in dirs {
         let dir = dir?;
         if dir.file_type()?.is_dir() {
