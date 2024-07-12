@@ -1,12 +1,14 @@
 //! Tests for Cargo's behavior under Rustup.
 
-use cargo_test_support::paths::{home, root, CargoPathExt};
-use cargo_test_support::{cargo_process, process, project, str};
 use std::env;
 use std::env::consts::EXE_EXTENSION;
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use cargo_test_support::paths::{home, root, CargoPathExt};
+use cargo_test_support::prelude::*;
+use cargo_test_support::{cargo_process, process, project, str};
 
 /// Helper to generate an executable.
 fn make_exe(dest: &Path, name: &str, contents: &str, env: &[(&str, PathBuf)]) -> PathBuf {

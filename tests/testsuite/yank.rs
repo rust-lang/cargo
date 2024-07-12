@@ -3,6 +3,7 @@
 use std::fs;
 
 use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::registry;
 use cargo_test_support::str;

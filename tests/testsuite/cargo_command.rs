@@ -9,6 +9,7 @@ use std::str;
 
 use cargo_test_support::basic_manifest;
 use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 use cargo_test_support::tools::echo_subcommand;

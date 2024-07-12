@@ -1,5 +1,6 @@
 //! Tests for setting custom rustdoc flags.
 
+use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::rustc_host;
 use cargo_test_support::rustc_host_env;

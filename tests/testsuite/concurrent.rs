@@ -10,6 +10,7 @@ use std::{env, str};
 use cargo_test_support::cargo_process;
 use cargo_test_support::git;
 use cargo_test_support::install::{assert_has_installed_exe, cargo_home};
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, execs, project, slow_cpu_multiplier};

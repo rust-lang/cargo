@@ -1,5 +1,12 @@
 //! Tests for config settings.
 
+use std::borrow::Borrow;
+use std::collections::{BTreeMap, HashMap};
+use std::fs;
+use std::io;
+use std::os;
+use std::path::{Path, PathBuf};
+
 use cargo::core::features::{GitFeatures, GitoxideFeatures};
 use cargo::core::{PackageIdSpec, Shell};
 use cargo::util::context::{
@@ -14,12 +21,6 @@ use cargo_util_schemas::manifest::TomlTrimPaths;
 use cargo_util_schemas::manifest::TomlTrimPathsValue;
 use cargo_util_schemas::manifest::{self as cargo_toml, TomlDebugInfo, VecStringOrBool as VSOB};
 use serde::Deserialize;
-use std::borrow::Borrow;
-use std::collections::{BTreeMap, HashMap};
-use std::fs;
-use std::io;
-use std::os;
-use std::path::{Path, PathBuf};
 
 /// Helper for constructing a `GlobalContext` object.
 pub struct GlobalContextBuilder {

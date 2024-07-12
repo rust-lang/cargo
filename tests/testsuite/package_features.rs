@@ -1,10 +1,12 @@
 //! Tests for feature selection on the command-line.
 
-use super::features2::switch_to_resolver_2;
+use std::fmt::Write;
+
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::{basic_manifest, project, str};
-use std::fmt::Write;
+
+use super::features2::switch_to_resolver_2;
 
 #[cargo_test]
 fn virtual_no_default_features() {

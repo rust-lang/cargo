@@ -1,5 +1,6 @@
 //! Tests for the -Zrustdoc-map feature.
 
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{paths, project, str, Project};
 

@@ -1,12 +1,13 @@
 //! Tests for alternative registries.
 
+use std::fs;
+
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::prelude::*;
 use cargo_test_support::publish::validate_alt_upload;
 use cargo_test_support::registry::{self, Package, RegistryBuilder};
 use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, paths, project};
-use std::fs;
 
 #[cargo_test]
 fn depend_on_alt_registry() {

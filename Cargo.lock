@@ -279,7 +279,6 @@ dependencies = [
  "cargo-credential-macos-keychain",
  "cargo-credential-wincred",
  "cargo-platform 0.1.8",
- "cargo-test-macro",
  "cargo-test-support",
  "cargo-util",
  "cargo-util-schemas",

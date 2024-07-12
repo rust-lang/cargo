@@ -21,7 +21,7 @@
 #![allow(clippy::disallowed_methods)]
 
 use cargo_test_support::prelude::*;
-use cargo_test_support::*;
+use cargo_test_support::{basic_manifest, paths, project, rustc_host, str, Execs};
 use std::env;
 use std::path::Path;
 

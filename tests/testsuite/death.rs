@@ -1,11 +1,13 @@
 //! Tests for ctrl-C handling.
 
-use cargo_test_support::{project, slow_cpu_multiplier};
 use std::fs;
 use std::io::{self, Read};
 use std::net::TcpListener;
 use std::process::{Child, Stdio};
 use std::thread;
+
+use cargo_test_support::prelude::*;
+use cargo_test_support::{project, slow_cpu_multiplier};
 
 #[cargo_test]
 fn ctrl_c_kills_everyone() {

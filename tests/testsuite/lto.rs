@@ -1,8 +1,9 @@
+use std::process::Output;
+
 use cargo::core::compiler::Lto;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, project, str, Project};
-use std::process::Output;
 
 #[cargo_test]
 fn with_deps() {

@@ -1,6 +1,7 @@
 //! Tests for `[env]` config.
 
 use cargo_test_support::basic_manifest;
+use cargo_test_support::prelude::*;
 use cargo_test_support::str;
 use cargo_test_support::{basic_bin_manifest, project};
 

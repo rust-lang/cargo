@@ -1,11 +1,13 @@
 //! Tests for the `cargo publish` command.
 
-use cargo_test_support::git::{self, repo};
-use cargo_test_support::paths;
-use cargo_test_support::registry::{self, Package, RegistryBuilder, Response};
-use cargo_test_support::{basic_manifest, project, publish, str};
 use std::fs;
 use std::sync::{Arc, Mutex};
+
+use cargo_test_support::git::{self, repo};
+use cargo_test_support::paths;
+use cargo_test_support::prelude::*;
+use cargo_test_support::registry::{self, Package, RegistryBuilder, Response};
+use cargo_test_support::{basic_manifest, project, publish, str};
 
 const CLEAN_FOO_JSON: &str = r#"
     {

@@ -1,5 +1,10 @@
 //! Tests for the `cargo build` command.
 
+use std::env;
+use std::fs;
+use std::io::Read;
+use std::process::Stdio;
+
 use cargo::{
     core::compiler::CompileMode,
     core::{Shell, Workspace},
@@ -17,10 +22,6 @@ use cargo_test_support::{
     tools, Execs, ProjectBuilder,
 };
 use cargo_util::paths::dylib_path_envvar;
-use std::env;
-use std::fs;
-use std::io::Read;
-use std::process::Stdio;
 
 #[cargo_test]
 fn cargo_compile_simple() {

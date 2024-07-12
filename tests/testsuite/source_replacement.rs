@@ -2,6 +2,7 @@
 
 use std::fs;
 
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{Package, RegistryBuilder, TestRegistry};
 use cargo_test_support::{cargo_process, paths, project, str, t};
 

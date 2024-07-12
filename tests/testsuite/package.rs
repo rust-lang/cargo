@@ -1,5 +1,8 @@
 //! Tests for the `cargo package` command.
 
+use std::fs::{self, read_to_string, File};
+use std::path::Path;
+
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::prelude::*;
 use cargo_test_support::publish::validate_crate_contents;
@@ -9,8 +12,6 @@ use cargo_test_support::{
     symlink_supported, t, ProjectBuilder,
 };
 use flate2::read::GzDecoder;
-use std::fs::{self, read_to_string, File};
-use std::path::Path;
 use tar::Archive;
 
 #[cargo_test]

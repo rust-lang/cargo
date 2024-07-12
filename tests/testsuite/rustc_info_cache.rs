@@ -1,8 +1,10 @@
 //! Tests for the cache file for the rustc version info.
 
+use std::env;
+
+use cargo_test_support::prelude::*;
 use cargo_test_support::{basic_bin_manifest, paths::CargoPathExt};
 use cargo_test_support::{basic_manifest, project};
-use std::env;
 
 const MISS: &str = "[..] rustc info cache miss[..]";
 const HIT: &str = "[..]rustc info cache hit[..]";

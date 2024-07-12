@@ -1,14 +1,15 @@
 //! Tests for `cargo install` where it upgrades a package if it is out-of-date.
 
-use cargo::core::PackageId;
 use std::collections::BTreeSet;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use cargo::core::PackageId;
 use cargo_test_support::install::{cargo_home, exe};
 use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{
     basic_manifest, cargo_process, cross_compile, execs, git, process, project, str, Execs,

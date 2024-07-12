@@ -1,11 +1,13 @@
 //! Tests for the `cargo search` command.
 
+use std::collections::HashSet;
+
 use cargo::util::cache_lock::CacheLockMode;
 use cargo_test_support::cargo_process;
 use cargo_test_support::paths;
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{RegistryBuilder, Response};
 use cargo_test_support::str;
-use std::collections::HashSet;
 
 const SEARCH_API_RESPONSE: &[u8] = br#"
 {

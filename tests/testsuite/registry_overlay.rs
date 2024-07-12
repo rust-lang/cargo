@@ -1,5 +1,6 @@
 //! Tests for local-registry sources.
 
+use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::registry::{Package, RegistryBuilder, TestRegistry};
 

@@ -1,11 +1,13 @@
 //! Tests for cargo's help output.
 
-use cargo_test_support::registry::Package;
-use cargo_test_support::str;
-use cargo_test_support::{basic_manifest, cargo_exe, cargo_process, paths, process, project};
 use std::fs;
 use std::path::Path;
 use std::str::from_utf8;
+
+use cargo_test_support::prelude::*;
+use cargo_test_support::registry::Package;
+use cargo_test_support::str;
+use cargo_test_support::{basic_manifest, cargo_exe, cargo_process, paths, process, project};
 
 #[cargo_test]
 fn help() {

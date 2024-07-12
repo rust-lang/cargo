@@ -7,9 +7,11 @@
 //! So we pick some random lint that will likely always be the same
 //! over time.
 
-use super::config::write_config_toml;
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, project, str, Project};
+
+use super::config::write_config_toml;
 
 // An arbitrary lint (unused_variables) that triggers a lint.
 // We use a special flag to force it to generate a report.

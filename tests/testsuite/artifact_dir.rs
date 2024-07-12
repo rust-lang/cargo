@@ -1,12 +1,13 @@
 //! Tests for --artifact-dir flag.
 
+use std::env;
+use std::fs;
+use std::path::Path;
+
 use cargo_test_support::prelude::*;
 use cargo_test_support::sleep_ms;
 use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, project};
-use std::env;
-use std::fs;
-use std::path::Path;
 
 #[cargo_test]
 fn binary_with_debug() {

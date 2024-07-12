@@ -2,9 +2,6 @@
 #![allow(clippy::print_stderr)]
 #![allow(clippy::print_stdout)]
 
-#[macro_use]
-extern crate cargo_test_macro;
-
 mod advanced_env;
 mod alt_registry;
 mod artifact_dep;
@@ -185,6 +182,8 @@ mod warn_on_failure;
 mod weak_dep_features;
 mod workspaces;
 mod yank;
+
+use cargo_test_support::prelude::*;
 
 #[cargo_test]
 fn aaa_trigger_cross_compile_disabled_check() {
