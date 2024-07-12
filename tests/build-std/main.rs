@@ -19,8 +19,8 @@
 //! Otherwise the tests are skipped.
 
 #![allow(clippy::disallowed_methods)]
-#![allow(deprecated)]
 
+use cargo_test_support::prelude::*;
 use cargo_test_support::*;
 use std::env;
 use std::path::Path;
@@ -113,10 +113,11 @@ fn basic() {
         .target_host()
         // Importantly, this should not say [UPDATING]
         // There have been multiple bugs where every build triggers and update.
-        .with_stderr(
-            "[COMPILING] foo v0.0.1 [..]\n\
-             [FINISHED] `dev` profile [..]",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
     p.cargo("run").build_std().target_host().run();
     p.cargo("test").build_std().target_host().run();
@@ -261,15 +262,18 @@ fn remap_path_scope() {
         .build_std()
         .target_host()
         .with_status(101)
-        .with_stderr_contains(
-            "\
-[FINISHED] `release` profile [optimized + debuginfo] [..]
-[RUNNING] [..]
-[..]thread '[..]' panicked at [..]src/main.rs:3:[..]",
+        .with_stderr_data(
+            str![[r#"
+[FINISHED] `release` profile [optimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/[HOST_TARGET]/release/foo`
+[..]thread '[..]' panicked at [..]src/main.rs:3:[..]:
+remap to /rustc/<hash>
+             at /rustc/[..]/library/std/src/[..]
+             at ./src/main.rs:3:[..]
+             at /rustc/[..]/library/core/src/[..]
+...
+"#]]
+            .unordered(),
         )
-        .with_stderr_contains("remap to /rustc/<hash>")
-        .with_stderr_contains("[..]at /rustc/[..]/library/std/src/[..]")
-        .with_stderr_contains("[..]at src/main.rs:3[..]")
-        .with_stderr_contains("[..]at /rustc/[..]/library/core/src/[..]")
         .run();
 }
