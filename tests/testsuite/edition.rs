@@ -1,6 +1,7 @@
 //! Tests for edition setting.
 
 use cargo::core::Edition;
+use cargo_test_support::prelude::*;
 use cargo_test_support::{basic_lib_manifest, project, str};
 
 #[cargo_test]

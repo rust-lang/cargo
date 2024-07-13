@@ -1,5 +1,10 @@
 //! Tests for build.rs scripts.
 
+use std::env;
+use std::fs;
+use std::io;
+use std::thread;
+
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::install::cargo_home;
 use cargo_test_support::paths::CargoPathExt;
@@ -12,10 +17,6 @@ use cargo_test_support::{
 };
 use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier, symlink_supported};
 use cargo_util::paths::{self, remove_dir_all};
-use std::env;
-use std::fs;
-use std::io;
-use std::thread;
 
 #[cargo_test]
 fn custom_build_script_failed() {

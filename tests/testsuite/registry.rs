@@ -1,5 +1,11 @@
 //! Tests for normal registry dependencies.
 
+use std::fmt::Write;
+use std::fs::{self, File};
+use std::path::Path;
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use cargo::core::SourceId;
 use cargo_test_support::cargo_process;
 use cargo_test_support::paths::{self, CargoPathExt};
@@ -10,11 +16,6 @@ use cargo_test_support::registry::{
 use cargo_test_support::{basic_manifest, project, str};
 use cargo_test_support::{git, install::cargo_home, t};
 use cargo_util::paths::remove_dir_all;
-use std::fmt::Write;
-use std::fs::{self, File};
-use std::path::Path;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 fn setup_http() -> TestRegistry {
     RegistryBuilder::new().http_index().build()

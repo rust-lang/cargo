@@ -1,10 +1,12 @@
 //! Tests for the `cargo tree` command.
 
-use super::features2::switch_to_resolver_2;
 use cargo_test_support::cross_compile::{self, alternate};
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::str;
 use cargo_test_support::{basic_manifest, git, project, rustc_host, Project};
+
+use super::features2::switch_to_resolver_2;
 
 fn make_simple_proj() -> Project {
     Package::new("c", "1.0.0").publish();

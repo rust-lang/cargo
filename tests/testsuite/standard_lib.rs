@@ -4,10 +4,12 @@
 //! rebuild the real one. There is a separate integration test `build-std`
 //! which builds the real thing, but that should be avoided if possible.
 
+use std::path::{Path, PathBuf};
+
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::ProjectBuilder;
 use cargo_test_support::{paths, project, rustc_host, str, Execs};
-use std::path::{Path, PathBuf};
 
 struct Setup {
     rustc_wrapper: PathBuf,

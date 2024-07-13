@@ -1,5 +1,6 @@
 //! Tests for whether or not warnings are displayed for build scripts.
 
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{project, str, Project};
 

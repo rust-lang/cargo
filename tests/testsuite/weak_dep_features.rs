@@ -1,11 +1,14 @@
 //! Tests for weak-dep-features.
 
-use super::features2::switch_to_resolver_2;
+use std::fmt::Write;
+
 use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{Dependency, Package, RegistryBuilder};
 use cargo_test_support::str;
 use cargo_test_support::{project, publish};
-use std::fmt::Write;
+
+use super::features2::switch_to_resolver_2;
 
 // Helper to create lib.rs files that check features.
 fn require(enabled_features: &[&str], disabled_features: &[&str]) -> String {

@@ -1,5 +1,7 @@
 //! Tests for the `cargo test` command.
 
+use std::fs;
+
 use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
@@ -9,7 +11,6 @@ use cargo_test_support::{
 use cargo_test_support::{cross_compile, paths};
 use cargo_test_support::{rustc_host, rustc_host_env, sleep_ms};
 use cargo_util::paths::dylib_path_envvar;
-use std::fs;
 
 #[cargo_test]
 fn cargo_test_simple() {

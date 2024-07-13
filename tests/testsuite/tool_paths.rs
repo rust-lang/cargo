@@ -1,5 +1,6 @@
 //! Tests for configuration values that point to programs.
 
+use cargo_test_support::prelude::*;
 use cargo_test_support::{basic_lib_manifest, project, rustc_host, rustc_host_env, str};
 
 #[cargo_test]

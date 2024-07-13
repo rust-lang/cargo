@@ -4,6 +4,7 @@
 // because MSVC link.exe just gives a warning on unknown flags (how helpful!),
 // and other linkers will return an error.
 
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project};

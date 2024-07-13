@@ -8,18 +8,6 @@
 
 #![allow(deprecated)]
 
-use super::config::GlobalContextBuilder;
-use cargo::core::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCacheTracker};
-use cargo::util::cache_lock::CacheLockMode;
-use cargo::util::interning::InternedString;
-use cargo::GlobalContext;
-use cargo_test_support::paths::{self, CargoPathExt};
-use cargo_test_support::registry::{Package, RegistryBuilder};
-use cargo_test_support::{
-    basic_manifest, cargo_process, execs, git, process, project, retry, sleep_ms,
-    thread_wait_timeout, Execs, Project,
-};
-use itertools::Itertools;
 use std::env;
 use std::fmt::Write;
 use std::path::Path;
@@ -27,6 +15,21 @@ use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::OnceLock;
 use std::time::{Duration, SystemTime};
+
+use cargo::core::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCacheTracker};
+use cargo::util::cache_lock::CacheLockMode;
+use cargo::util::interning::InternedString;
+use cargo::GlobalContext;
+use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::prelude::*;
+use cargo_test_support::registry::{Package, RegistryBuilder};
+use cargo_test_support::{
+    basic_manifest, cargo_process, execs, git, process, project, retry, sleep_ms,
+    thread_wait_timeout, Execs, Project,
+};
+use itertools::Itertools;
+
+use super::config::GlobalContextBuilder;
 
 /// Helper to create a simple `foo` project which depends on a registry
 /// dependency called `bar`.

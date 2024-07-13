@@ -4,6 +4,7 @@
 //! or CARGO_PUBLIC_NETWORK_TESTS.
 
 use cargo_test_support::containers::Container;
+use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::str;
 

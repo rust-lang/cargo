@@ -1,5 +1,6 @@
 //! Tests specifically related to target handling (lib, bins, examples, tests, benches).
 
+use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::str;
 

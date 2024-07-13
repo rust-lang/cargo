@@ -1,6 +1,7 @@
 //! General error tests that don't belong anywhere else.
 
 use cargo_test_support::cargo_process;
+use cargo_test_support::prelude::*;
 
 #[cargo_test]
 fn internal_error() {

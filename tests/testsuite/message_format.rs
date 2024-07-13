@@ -1,5 +1,6 @@
 //! Tests for --message-format flag.
 
+use cargo_test_support::prelude::*;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, project, str};
 
 #[cargo_test]

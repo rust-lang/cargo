@@ -1,8 +1,10 @@
 //! Tests for setting custom rustc flags.
 
+use std::fs;
+
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, paths, project, project_in_home, rustc_host, str};
-use std::fs;
 
 #[cargo_test]
 fn env_rustflags_normal_source() {

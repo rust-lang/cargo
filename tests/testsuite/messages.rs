@@ -4,6 +4,7 @@
 
 #![allow(deprecated)]
 
+use cargo_test_support::prelude::*;
 use cargo_test_support::{process, project, Project};
 use cargo_util::ProcessError;
 

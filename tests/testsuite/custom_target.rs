@@ -1,7 +1,9 @@
 //! Tests for custom json target specifications.
 
-use cargo_test_support::{basic_manifest, project, str};
 use std::fs;
+
+use cargo_test_support::prelude::*;
+use cargo_test_support::{basic_manifest, project, str};
 
 const MINIMAL_LIB: &str = r#"
 #![allow(internal_features)]

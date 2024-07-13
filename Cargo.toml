@@ -237,7 +237,6 @@ features = [
 
 [dev-dependencies]
 annotate-snippets = { workspace = true, features = ["testing-colors"] }
-cargo-test-macro.workspace = true
 cargo-test-support.workspace = true
 gix = { workspace = true, features = ["revision"] }
 same-file.workspace = true

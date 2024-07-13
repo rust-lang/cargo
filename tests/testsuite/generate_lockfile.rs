@@ -1,9 +1,10 @@
 //! Tests for the `cargo generate-lockfile` command.
 
+use std::fs;
+
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::{basic_manifest, paths, project, str, ProjectBuilder};
-use snapbox::IntoData;
-use std::fs;
 
 #[cargo_test]
 fn adding_and_removing_packages() {

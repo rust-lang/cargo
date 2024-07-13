@@ -1,17 +1,19 @@
 //! Tests for dep-info files. This includes the dep-info file Cargo creates in
 //! the output directory, and the ones stored in the fingerprint.
 
+use std::fs;
+use std::path::Path;
+use std::str;
+
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 use cargo_test_support::{
     basic_bin_manifest, basic_manifest, main_file, project, rustc_host, Project,
 };
 use filetime::FileTime;
-use std::fs;
-use std::path::Path;
-use std::str;
 
 // Helper for testing dep-info files in the fingerprint dir.
 #[track_caller]

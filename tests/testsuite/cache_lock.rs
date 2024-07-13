@@ -1,10 +1,13 @@
 //! Tests for `CacheLock`.
 
-use crate::config::GlobalContextBuilder;
+use std::thread::JoinHandle;
+
 use cargo::util::cache_lock::{CacheLockMode, CacheLocker};
 use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::prelude::*;
 use cargo_test_support::{retry, thread_wait_timeout, threaded_timeout};
-use std::thread::JoinHandle;
+
+use crate::config::GlobalContextBuilder;
 
 /// Helper to verify that it is OK to acquire the given lock (it shouldn't block).
 fn verify_lock_is_ok(mode: CacheLockMode) {

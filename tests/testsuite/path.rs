@@ -1,11 +1,13 @@
 //! Tests for `path` dependencies.
 
+use std::fs;
+
 use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, main_file, project};
 use cargo_test_support::{sleep_ms, t};
-use std::fs;
 
 #[cargo_test]
 // I have no idea why this is failing spuriously on Windows;

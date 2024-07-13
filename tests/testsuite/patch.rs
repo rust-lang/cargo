@@ -1,11 +1,12 @@
 //! Tests for `[patch]` table source replacement.
 
+use std::fs;
+
 use cargo_test_support::git;
 use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{basic_manifest, project, str};
-use std::fs;
 
 #[cargo_test]
 fn replace() {

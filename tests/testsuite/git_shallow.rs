@@ -1,6 +1,8 @@
-use crate::git_gc::find_index;
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_manifest, git, paths, project};
+
+use crate::git_gc::find_index;
 
 enum RepoMode {
     Shallow,

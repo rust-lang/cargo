@@ -1,8 +1,10 @@
 //! Tests for the `cargo install` command.
 
+use std::env;
 use std::fs::{self, OpenOptions};
 use std::io::prelude::*;
 use std::path::Path;
+use std::path::PathBuf;
 use std::thread;
 
 use cargo_test_support::compare::assert_e2e;
@@ -20,8 +22,6 @@ use cargo_test_support::install::{
     assert_has_installed_exe, assert_has_not_installed_exe, cargo_home, exe,
 };
 use cargo_test_support::paths::{self, CargoPathExt};
-use std::env;
-use std::path::PathBuf;
 
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)

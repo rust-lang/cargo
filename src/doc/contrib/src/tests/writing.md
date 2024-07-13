@@ -30,6 +30,8 @@ stdout and stderr output against the expected output.
 
 Generally, a functional test will be placed in `tests/testsuite/<command>.rs` and will look roughly like:
 ```rust,ignore
+use cargo_test_support::prelude::*;
+
 #[cargo_test]
 fn <description>() {
     let p = project()

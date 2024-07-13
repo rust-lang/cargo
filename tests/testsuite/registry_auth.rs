@@ -1,6 +1,7 @@
 //! Tests for registry authentication.
 
 use cargo_test_support::compare::assert_e2e;
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{Package, RegistryBuilder, Token};
 use cargo_test_support::str;
 use cargo_test_support::{project, Execs, Project};

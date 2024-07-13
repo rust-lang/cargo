@@ -12,6 +12,7 @@ use std::thread;
 use cargo_test_support::git::cargo_uses_gitoxide;
 use cargo_test_support::paths::{self, CargoPathExt};
 use cargo_test_support::prelude::IntoData;
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
 use cargo_test_support::{sleep_ms, str, t, Project};

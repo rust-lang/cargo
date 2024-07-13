@@ -2,6 +2,7 @@
 
 use std::env;
 
+use cargo_test_support::prelude::*;
 use cargo_test_support::str;
 use cargo_test_support::tools::echo_subcommand;
 use cargo_test_support::{basic_bin_manifest, project};

@@ -1,9 +1,11 @@
 //! Tests for caching compiler diagnostics.
 
-use super::messages::raw_rustc_output;
+use cargo_test_support::prelude::*;
 use cargo_test_support::str;
 use cargo_test_support::tools;
 use cargo_test_support::{basic_manifest, is_coarse_mtime, project, registry::Package, sleep_ms};
+
+use super::messages::raw_rustc_output;
 
 fn as_str(bytes: &[u8]) -> &str {
     std::str::from_utf8(bytes).expect("valid utf-8")

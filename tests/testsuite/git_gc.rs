@@ -7,9 +7,9 @@ use std::path::PathBuf;
 use cargo_test_support::git;
 use cargo_test_support::git::cargo_uses_gitoxide;
 use cargo_test_support::paths;
+use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
-
 use url::Url;
 
 pub fn find_index() -> PathBuf {

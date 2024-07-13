@@ -3,6 +3,7 @@
 
 #![allow(deprecated)]
 
+use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 
 const EXAMPLE: u8 = 1 << 0;

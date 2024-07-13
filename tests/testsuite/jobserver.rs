@@ -1,6 +1,5 @@
 //! Tests for the jobserver protocol.
 
-use cargo_util::is_ci;
 use std::env;
 use std::net::TcpListener;
 use std::process::Command;
@@ -10,7 +9,9 @@ use cargo_test_support::basic_bin_manifest;
 use cargo_test_support::cargo_exe;
 use cargo_test_support::install::assert_has_installed_exe;
 use cargo_test_support::install::cargo_home;
+use cargo_test_support::prelude::*;
 use cargo_test_support::{project, rustc_host, str};
+use cargo_util::is_ci;
 
 const EXE_CONTENT: &str = r#"
 use std::env;

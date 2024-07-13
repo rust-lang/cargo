@@ -1,7 +1,5 @@
 //! Tests for fingerprinting (rebuild detection).
 
-use filetime::FileTime;
-use snapbox::IntoData;
 use std::fs::{self, OpenOptions};
 use std::io;
 use std::io::prelude::*;
@@ -11,13 +9,16 @@ use std::process::Stdio;
 use std::thread;
 use std::time::SystemTime;
 
-use super::death;
 use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
     basic_lib_manifest, basic_manifest, is_coarse_mtime, project, rustc_host, rustc_host_env,
     sleep_ms, str,
 };
+use filetime::FileTime;
+
+use super::death;
 
 #[cargo_test]
 fn modifying_and_moving() {

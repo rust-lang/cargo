@@ -1,5 +1,6 @@
 //! Tests for the `cargo verify-project` command.
 
+use cargo_test_support::prelude::*;
 use cargo_test_support::{basic_bin_manifest, main_file, project, str};
 
 #[cargo_test]

@@ -1,13 +1,16 @@
 //! Tests for the --config CLI option.
 
-use super::config::{
-    assert_error, read_output, write_config_at, write_config_toml, GlobalContextBuilder,
-};
+use std::{collections::HashMap, fs};
+
 use cargo::util::context::Definition;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::paths;
+use cargo_test_support::prelude::*;
 use cargo_test_support::str;
-use std::{collections::HashMap, fs};
+
+use super::config::{
+    assert_error, read_output, write_config_at, write_config_toml, GlobalContextBuilder,
+};
 
 #[cargo_test]
 fn basic() {

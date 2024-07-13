@@ -14,10 +14,11 @@
 //! The [`expect_fix_runs_rustc_n_times`] function handles setting everything
 //! up, and verifying the results.
 
-use cargo_test_support::{basic_manifest, paths, project, str, tools, Execs};
-use snapbox::IntoData;
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
+
+use cargo_test_support::prelude::*;
+use cargo_test_support::{basic_manifest, paths, project, str, tools, Execs};
 
 /// The action that the `rustc` shim should take in the current sequence of
 /// events.

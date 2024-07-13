@@ -1,11 +1,13 @@
 //! Tests for --offline flag.
 
+use std::fs;
+
+use cargo_test_support::prelude::*;
 use cargo_test_support::{
     basic_manifest, git, main_file, project,
     registry::{Package, RegistryBuilder},
     str, Execs,
 };
-use std::fs;
 
 #[allow(deprecated)]
 #[cargo_test]

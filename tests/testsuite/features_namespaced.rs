@@ -1,10 +1,11 @@
 //! Tests for namespaced features.
 
-use super::features2::switch_to_resolver_2;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{Dependency, Package, RegistryBuilder};
 use cargo_test_support::str;
 use cargo_test_support::{project, publish};
+
+use super::features2::switch_to_resolver_2;
 
 #[cargo_test]
 fn dependency_with_crate_syntax() {

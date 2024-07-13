@@ -2,6 +2,7 @@
 //!
 //! Note: Some tests are located in the resolver-tests package.
 
+use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
