@@ -381,7 +381,6 @@ use serde::de;
 use serde::ser;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
-use twox_hash::XxHash64;
 
 use crate::core::compiler::unit_graph::UnitDep;
 use crate::core::Package;
@@ -2516,14 +2515,13 @@ pub fn parse_rustc_dep_info(rustc_dep_info: &Path) -> CargoResult<RustcDepInfo> 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum ChecksumAlgo {
     Sha256,
-    XxHash,
+    Blake3,
 }
 
 impl ChecksumAlgo {
     fn hash_len(&self) -> usize {
         match self {
-            ChecksumAlgo::Sha256 => 32,
-            ChecksumAlgo::XxHash => 8,
+            ChecksumAlgo::Sha256 | ChecksumAlgo::Blake3 => 32,
         }
     }
 }
@@ -2534,7 +2532,7 @@ impl FromStr for ChecksumAlgo {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "sha256" => Ok(Self::Sha256),
-            "xxhash" => Ok(Self::XxHash),
+            "blake3" => Ok(Self::Blake3),
             _ => Err(InvalidChecksumAlgo {}),
         }
     }
@@ -2544,7 +2542,7 @@ impl Display for ChecksumAlgo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
             ChecksumAlgo::Sha256 => "sha256",
-            ChecksumAlgo::XxHash => "xxhash",
+            ChecksumAlgo::Blake3 => "blake3",
         })
     }
 }
@@ -2554,7 +2552,7 @@ pub struct InvalidChecksumAlgo {}
 
 impl Display for InvalidChecksumAlgo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "expected `sha256`, or `xxhash`")
+        write!(f, "expected `sha256`, or `blake3`")
     }
 }
 
@@ -2573,11 +2571,9 @@ impl Checksum {
     }
 
     pub fn compute(algo: ChecksumAlgo, contents: impl Read) -> Result<Self, io::Error> {
-        // Buffer size is the same as default for std::io::BufReader.
-        // This was completely arbitrary and can probably be improved upon.
-        //
-        // Mostly I just don't want to read the entire file into memory at once if it's massive.
-        let mut buf = vec![0; 8 * 1024];
+        // Buffer size is the recommended amount to fully leverage SIMD instructions on AVX-512 as per
+        // blake3 documentation.
+        let mut buf = vec![0; 16 * 1024];
         let mut ret = Self {
             algo,
             value: [0; 32],
@@ -2617,13 +2613,13 @@ impl Checksum {
                     value,
                 )?;
             }
-            ChecksumAlgo::XxHash => {
+            ChecksumAlgo::Blake3 => {
                 digest(
-                    XxHash64::with_seed(0),
+                    blake3::Hasher::new(),
                     |h, b| {
-                        h.write(b);
+                        h.update(b);
                     },
-                    |h, out| out.copy_from_slice(&h.finish().to_be_bytes()),
+                    |h, out| out.copy_from_slice(h.finalize().as_bytes()),
                     contents,
                     &mut buf,
                     value,

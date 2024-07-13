@@ -688,7 +688,7 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
         base.arg("-Z").arg("binary-dep-depinfo");
     }
     if build_runner.bcx.gctx.cli_unstable().checksum_freshness {
-        base.arg("-Z").arg("checksum-hash-algorithm=xxhash");
+        base.arg("-Z").arg("checksum-hash-algorithm=blake3");
     }
 
     if is_primary {
