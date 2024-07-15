@@ -1478,9 +1478,10 @@ pub fn cargo_process(arg_line: &str) -> Execs {
     execs().with_process_builder(p)
 }
 
-pub fn git_process(s: &str) -> ProcessBuilder {
+/// Run `git $arg_line`, see [`ProcessBuilder`]
+pub fn git_process(arg_line: &str) -> ProcessBuilder {
     let mut p = process("git");
-    p.arg_line(s);
+    p.arg_line(arg_line);
     p
 }
 
