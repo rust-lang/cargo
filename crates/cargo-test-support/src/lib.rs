@@ -1469,11 +1469,12 @@ impl ArgLineCommandExt for snapbox::cmd::Command {
     }
 }
 
-pub fn cargo_process(s: &str) -> Execs {
+/// Run `cargo $arg_line`, see [`Execs`]
+pub fn cargo_process(arg_line: &str) -> Execs {
     let cargo = cargo_exe();
     let mut p = process(&cargo);
     p.env("CARGO", cargo);
-    p.arg_line(s);
+    p.arg_line(arg_line);
     execs().with_process_builder(p)
 }
 
