@@ -566,10 +566,12 @@ pub fn cargo_exe() -> PathBuf {
 /// does not have access to the raw `ExitStatus` because `ProcessError` needs
 /// to be serializable (for the Rustc cache), and `ExitStatus` does not
 /// provide a constructor.
-pub struct RawOutput {
-    pub code: Option<i32>,
-    pub stdout: Vec<u8>,
-    pub stderr: Vec<u8>,
+struct RawOutput {
+    #[allow(dead_code)]
+    code: Option<i32>,
+    stdout: Vec<u8>,
+    #[allow(dead_code)]
+    stderr: Vec<u8>,
 }
 
 #[must_use]
