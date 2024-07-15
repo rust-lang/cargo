@@ -12,9 +12,8 @@ and verify its behavior, located in the [`testsuite`] directory.  The
 There are two styles of tests that can roughly be categorized as
 - functional tests
   - The fixture is programmatically defined
-  - The assertions are regular string comparisons
+  - The assertions may be in-source snapshots, hard-coded strings, or programmatically generated
   - Easier to share in an issue as a code block is completely self-contained
-  - More resilient to insignificant changes though ui tests are easy to update when a change does occur
 - ui tests
   - The fixture is file-based
   - The assertions use file-backed snapshots that can be updated with an env variable
