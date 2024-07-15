@@ -604,7 +604,10 @@ impl Execs {
         self.process_builder = Some(p);
         self
     }
+}
 
+/// # Configure assertions
+impl Execs {
     /// Verifies that stdout is equal to the given lines.
     /// See [`compare`] for supported patterns.
     #[deprecated(note = "replaced with `Execs::with_stdout_data(expected)`")]
@@ -834,7 +837,10 @@ impl Execs {
         }
         self
     }
+}
 
+/// # Configure the process
+impl Execs {
     /// Forward subordinate process stdout/stderr to the terminal.
     /// Useful for printf debugging of the tests.
     /// CAUTION: CI will fail if you leave this in your test!
@@ -888,20 +894,6 @@ impl Execs {
         self
     }
 
-    pub fn exec_with_output(&mut self) -> Result<Output> {
-        self.ran = true;
-        // TODO avoid unwrap
-        let p = (&self.process_builder).clone().unwrap();
-        p.exec_with_output()
-    }
-
-    pub fn build_command(&mut self) -> Command {
-        self.ran = true;
-        // TODO avoid unwrap
-        let p = (&self.process_builder).clone().unwrap();
-        p.build_command()
-    }
-
     /// Enables nightly features for testing
     ///
     /// The list of reasons should be why nightly cargo is needed. If it is
@@ -949,6 +941,23 @@ impl Execs {
             return self.enable_split_debuginfo_packed();
         }
         self
+    }
+}
+
+/// # Run and verify the process
+impl Execs {
+    pub fn exec_with_output(&mut self) -> Result<Output> {
+        self.ran = true;
+        // TODO avoid unwrap
+        let p = (&self.process_builder).clone().unwrap();
+        p.exec_with_output()
+    }
+
+    pub fn build_command(&mut self) -> Command {
+        self.ran = true;
+        // TODO avoid unwrap
+        let p = (&self.process_builder).clone().unwrap();
+        p.build_command()
     }
 
     #[track_caller]
