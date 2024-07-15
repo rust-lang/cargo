@@ -24,7 +24,7 @@ use std::thread::JoinHandle;
 use std::time::{self, Duration};
 
 use anyhow::{bail, Result};
-use cargo_util::{is_ci, ProcessBuilder, ProcessError};
+use cargo_util::{is_ci, ProcessError};
 use snapbox::IntoData as _;
 use url::Url;
 
@@ -40,6 +40,7 @@ macro_rules! t {
     };
 }
 
+pub use cargo_util::ProcessBuilder;
 pub use snapbox::file;
 pub use snapbox::str;
 pub use snapbox::utils::current_dir;
