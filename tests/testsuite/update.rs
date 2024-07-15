@@ -2619,3 +2619,97 @@ fn update_breaking_mixed_pinning_renaming() {
             "#]],
     );
 }
+
+#[cargo_test]
+fn update_breaking_pre_release_downgrade() {
+    Package::new("bar", "2.0.0-beta.21").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+        [package]
+        name  =  "foo"
+        version  =  "0.0.1"
+        edition  =  "2015"
+        authors  =  []
+
+        [dependencies]
+        bar = "2.0.0-beta.21"
+    "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    // The purpose of this test is
+    // to demonstrate that `update --breaking` will not try to downgrade to the latest stable version (1.7.0),
+    // but will rather keep the latest pre-release (2.0.0-beta.21).
+    Package::new("bar", "1.7.0").publish();
+    p.cargo("update -Zunstable-options --breaking bar")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[UPGRADING] bar ^2.0.0-beta.21 -> ^1.7.0
+[LOCKING] 1 package to latest compatible version
+[DOWNGRADING] bar v2.0.0-beta.21 -> v1.7.0
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn update_breaking_pre_release_upgrade() {
+    Package::new("bar", "2.0.0-beta.21").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+        [package]
+        name  =  "foo"
+        version  =  "0.0.1"
+        edition  =  "2015"
+        authors  =  []
+
+        [dependencies]
+        bar = "2.0.0-beta.21"
+    "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    // TODO: `2.0.0-beta.21` can be upgraded to `2.0.0-beta.22`
+    Package::new("bar", "2.0.0-beta.22").publish();
+    p.cargo("update -Zunstable-options --breaking bar")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+
+"#]])
+        .run();
+    // TODO: `2.0.0-beta.21` can be upgraded to `2.0.0`
+    Package::new("bar", "2.0.0").publish();
+    p.cargo("update -Zunstable-options --breaking bar")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+
+"#]])
+        .run();
+
+    Package::new("bar", "3.0.0").publish();
+    p.cargo("update -Zunstable-options --breaking bar")
+        .masquerade_as_nightly_cargo(&["update-breaking"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[UPGRADING] bar ^2.0.0-beta.21 -> ^3.0.0
+[LOCKING] 1 package to latest compatible version
+[UPDATING] bar v2.0.0-beta.21 -> v3.0.0
+
+"#]])
+        .run();
+}

@@ -217,5 +217,10 @@ mod test {
             assert_req_bump("1.1.1", "=1.0.0", "=1.1.1");
             assert_req_bump("2.0.0", "=1.0.0", "=2.0.0");
         }
+
+        #[test]
+        fn caret_prerelease() {
+            assert_req_bump("1.7.0", "2.0.0-beta.21", "1.7.0");
+        }
     }
 }
