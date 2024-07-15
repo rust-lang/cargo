@@ -2,7 +2,16 @@
 //!
 //! See <https://rust-lang.github.io/cargo/contrib/> for a guide on writing tests.
 //!
-//! WARNING: You might not want to use this outside of Cargo.
+//! There are two places you can find API documentation
+//!
+//! - <https://docs.rs/cargo-test-support>:
+//!   targeted at external tool developers testing cargo-related code
+//!   - Released with every rustc release
+//! - <https://doc.rust-lang.org/nightly/nightly-rustc/cargo_test_support>:
+//!   targeted at cargo contributors
+//!   - Updated on each update of the `cargo` submodule in `rust-lang/rust`
+//!
+//! **WARNING:** You might not want to use this outside of Cargo.
 //!
 //! * This is designed for testing Cargo itself. Use at your own risk.
 //! * No guarantee on any stability across versions.
