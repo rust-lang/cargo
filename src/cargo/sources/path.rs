@@ -226,7 +226,11 @@ pub struct RecursivePathSource<'gctx> {
     /// Whether this source has loaded all package information it may contain.
     loaded: bool,
     /// Packages that this sources has discovered.
-    packages: HashMap<PackageId, Package>,
+    ///
+    /// Tracking all packages for a given ID to warn on-demand for unused packages
+    packages: HashMap<PackageId, Vec<Package>>,
+    /// Avoid redundant unused package warnings
+    warned_duplicate: HashSet<PackageId>,
     gctx: &'gctx GlobalContext,
 }
 
@@ -245,6 +249,7 @@ impl<'gctx> RecursivePathSource<'gctx> {
             path: root.to_path_buf(),
             loaded: false,
             packages: Default::default(),
+            warned_duplicate: Default::default(),
             gctx,
         }
     }
@@ -253,7 +258,13 @@ impl<'gctx> RecursivePathSource<'gctx> {
     /// filesystem if package information haven't yet loaded.
     pub fn read_packages(&mut self) -> CargoResult<Vec<Package>> {
         self.load()?;
-        Ok(self.packages.iter().map(|(_, v)| v.clone()).collect())
+        Ok(self
+            .packages
+            .iter()
+            .map(|(pkg_id, v)| {
+                first_package(*pkg_id, v, &mut self.warned_duplicate, self.gctx).clone()
+            })
+            .collect())
     }
 
     /// List all files relevant to building this package inside this source.
@@ -311,7 +322,15 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
         f: &mut dyn FnMut(IndexSummary),
     ) -> Poll<CargoResult<()>> {
         self.load()?;
-        for s in self.packages.values().map(|p| p.summary()) {
+        for s in self
+            .packages
+            .iter()
+            .filter(|(pkg_id, _)| pkg_id.name() == dep.package_name())
+            .map(|(pkg_id, pkgs)| {
+                first_package(*pkg_id, pkgs, &mut self.warned_duplicate, self.gctx)
+            })
+            .map(|p| p.summary())
+        {
             let matched = match kind {
                 QueryKind::Exact => dep.matches(s),
                 QueryKind::Alternatives => true,
@@ -340,7 +359,7 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
         trace!("getting packages; id={}", id);
         self.load()?;
         let pkg = self.packages.get(&id);
-        pkg.cloned()
+        pkg.map(|pkgs| first_package(id, pkgs, &mut self.warned_duplicate, self.gctx).clone())
             .map(MaybePackage::Ready)
             .ok_or_else(|| internal(format!("failed to find {} in path source", id)))
     }
@@ -382,6 +401,38 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
     fn set_quiet(&mut self, _quiet: bool) {
         // Path source does not display status
     }
+}
+
+fn first_package<'p>(
+    pkg_id: PackageId,
+    pkgs: &'p Vec<Package>,
+    warned_duplicate: &mut HashSet<PackageId>,
+    gctx: &GlobalContext,
+) -> &'p Package {
+    if pkgs.len() != 1 && warned_duplicate.insert(pkg_id) {
+        let ignored = pkgs[1..]
+            .iter()
+            // We can assume a package with publish = false isn't intended to be seen
+            // by users so we can hide the warning about those since the user is unlikely
+            // to care about those cases.
+            .filter(|pkg| pkg.publish().is_none())
+            .collect::<Vec<_>>();
+        if !ignored.is_empty() {
+            use std::fmt::Write as _;
+
+            let plural = if ignored.len() == 1 { "" } else { "s" };
+            let mut msg = String::new();
+            let _ = writeln!(&mut msg, "skipping duplicate package{plural} `{pkg_id}`:");
+            for ignored in ignored {
+                let manifest_path = ignored.manifest_path().display();
+                let _ = writeln!(&mut msg, "  {manifest_path}");
+            }
+            let manifest_path = pkgs[0].manifest_path().display();
+            let _ = writeln!(&mut msg, "in favor of {manifest_path}");
+            let _ = gctx.shell().warn(msg);
+        }
+    }
+    &pkgs[0]
 }
 
 /// List all files relevant to building this package inside this source.
@@ -758,7 +809,7 @@ fn read_packages(
     path: &Path,
     source_id: SourceId,
     gctx: &GlobalContext,
-) -> CargoResult<HashMap<PackageId, Package>> {
+) -> CargoResult<HashMap<PackageId, Vec<Package>>> {
     let mut all_packages = HashMap::new();
     let mut visited = HashSet::<PathBuf>::new();
     let mut errors = Vec::<anyhow::Error>::new();
@@ -882,6 +933,8 @@ fn walk(path: &Path, callback: &mut dyn FnMut(&Path) -> CargoResult<bool>) -> Ca
             return Err(e.context(cx));
         }
     };
+    let mut dirs = dirs.collect::<Vec<_>>();
+    dirs.sort_unstable_by_key(|d| d.as_ref().ok().map(|d| d.file_name()));
     for dir in dirs {
         let dir = dir?;
         if dir.file_type()?.is_dir() {
@@ -897,7 +950,7 @@ fn has_manifest(path: &Path) -> bool {
 
 fn read_nested_packages(
     path: &Path,
-    all_packages: &mut HashMap<PackageId, Package>,
+    all_packages: &mut HashMap<PackageId, Vec<Package>>,
     source_id: SourceId,
     gctx: &GlobalContext,
     visited: &mut HashSet<PathBuf>,
@@ -936,24 +989,7 @@ fn read_nested_packages(
     let pkg = Package::new(manifest, &manifest_path);
 
     let pkg_id = pkg.package_id();
-    use std::collections::hash_map::Entry;
-    match all_packages.entry(pkg_id) {
-        Entry::Vacant(v) => {
-            v.insert(pkg);
-        }
-        Entry::Occupied(_) => {
-            // We can assume a package with publish = false isn't intended to be seen
-            // by users so we can hide the warning about those since the user is unlikely
-            // to care about those cases.
-            if pkg.publish().is_none() {
-                let _ = gctx.shell().warn(format!(
-                    "skipping duplicate package `{}` found at `{}`",
-                    pkg.name(),
-                    path.display()
-                ));
-            }
-        }
-    }
+    all_packages.entry(pkg_id).or_default().push(pkg);
 
     // Registry sources are not allowed to have `path=` dependencies because
     // they're all translated to actual registry dependencies.
