@@ -145,13 +145,13 @@ impl<'gctx> GitSource<'gctx> {
         self.path_source.as_mut().unwrap().read_packages()
     }
 
-    fn mark_used(&self, size: Option<u64>) -> CargoResult<()> {
+    fn mark_used(&self) -> CargoResult<()> {
         self.gctx
             .deferred_global_last_use()?
             .mark_git_checkout_used(global_cache_tracker::GitCheckout {
                 encoded_git_name: self.ident,
                 short_name: self.short_id.expect("update before download"),
-                size,
+                size: None,
             });
         Ok(())
     }
@@ -268,7 +268,7 @@ impl<'gctx> Source for GitSource<'gctx> {
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
         if self.path_source.is_some() {
-            self.mark_used(None)?;
+            self.mark_used()?;
             return Ok(());
         }
 
@@ -363,11 +363,7 @@ impl<'gctx> Source for GitSource<'gctx> {
         self.locked_rev = Revision::Locked(actual_rev);
         self.path_source.as_mut().unwrap().load()?;
 
-        // Hopefully this shouldn't incur too much of a performance hit since
-        // most of this should already be in cache since it was just
-        // extracted.
-        let size = global_cache_tracker::du_git_checkout(&checkout_path)?;
-        self.mark_used(Some(size))?;
+        self.mark_used()?;
         Ok(())
     }
 
@@ -377,7 +373,7 @@ impl<'gctx> Source for GitSource<'gctx> {
             id,
             self.remote
         );
-        self.mark_used(None)?;
+        self.mark_used()?;
         self.path_source
             .as_mut()
             .expect("BUG: `update()` must be called before `get()`")
