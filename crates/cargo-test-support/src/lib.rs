@@ -16,6 +16,30 @@
 //! * This is designed for testing Cargo itself. Use at your own risk.
 //! * No guarantee on any stability across versions.
 //! * No feature request would be accepted unless proved useful for testing Cargo.
+//!
+//! # Example
+//!
+//! ```rust,no_run
+//! use cargo_test_support::prelude::*;
+//! use cargo_test_support::str;
+//! use cargo_test_support::project;
+//!
+//! #[cargo_test]
+//! fn some_test() {
+//!     let p = project()
+//!         .file("src/main.rs", r#"fn main() { println!("hi!"); }"#)
+//!         .build();
+//!
+//!     p.cargo("run --bin foo")
+//!         .with_stderr_data(str![[r#"
+//! [COMPILING] foo [..]
+//! [FINISHED] [..]
+//! [RUNNING] `target/debug/foo`
+//! "#]])
+//!         .with_stdout_data(str![["hi!"]])
+//!         .run();
+//! }
+//! ```
 
 #![allow(clippy::disallowed_methods)]
 #![allow(clippy::print_stderr)]
