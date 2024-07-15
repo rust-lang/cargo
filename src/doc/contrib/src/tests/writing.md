@@ -30,6 +30,8 @@ stdout and stderr output against the expected output.
 Generally, a functional test will be placed in `tests/testsuite/<command>.rs` and will look roughly like:
 ```rust,ignore
 use cargo_test_support::prelude::*;
+use cargo_test_support::str;
+use cargo_test_support::project;
 
 #[cargo_test]
 fn <description>() {
@@ -38,16 +40,13 @@ fn <description>() {
         .build();
 
     p.cargo("run --bin foo")
-        .with_stderr(
-            "\
-    [COMPILING] foo [..]
-    [FINISHED] [..]
-    [RUNNING] `target/debug/foo`
-    ",
-        )
-        .with_stdout("hi!")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo [..]
+[FINISHED] [..]
+[RUNNING] `target/debug/foo`
+"#]])
+        .with_stdout_data(str![["hi!"]])
         .run();
-    }
 }
 ```
 
