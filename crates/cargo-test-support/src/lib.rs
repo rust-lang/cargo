@@ -554,6 +554,7 @@ pub fn main_file(println: &str, deps: &[&str]) -> String {
     buf
 }
 
+/// Path to the cargo binary
 pub fn cargo_exe() -> PathBuf {
     snapbox::cmd::cargo_bin("cargo")
 }
