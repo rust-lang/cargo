@@ -99,11 +99,6 @@ impl BuildConfig {
             },
         };
 
-        if gctx.cli_unstable().build_std.is_some() && requested_kinds[0].is_host() {
-            // TODO: This should eventually be fixed.
-            anyhow::bail!("-Zbuild-std requires --target");
-        }
-
         Ok(BuildConfig {
             requested_kinds,
             jobs,
