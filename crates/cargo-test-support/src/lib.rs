@@ -574,6 +574,12 @@ struct RawOutput {
     stderr: Vec<u8>,
 }
 
+/// Run and verify a [`ProcessBuilder`]
+///
+/// Construct with
+/// - [`execs`]
+/// - [`cargo_process`]
+/// - [`Project`] methods
 #[must_use]
 #[derive(Clone)]
 pub struct Execs {
@@ -1166,6 +1172,7 @@ impl Drop for Execs {
     }
 }
 
+/// Run and verify a process, see [`Execs`]
 pub fn execs() -> Execs {
     Execs {
         ran: false,
