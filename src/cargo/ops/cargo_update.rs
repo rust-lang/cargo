@@ -9,6 +9,7 @@ use crate::ops;
 use crate::sources::source::QueryKind;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::GlobalContext;
+use crate::util::interning::InternedString;
 use crate::util::toml_mut::dependency::{MaybeWorkspace, Source};
 use crate::util::toml_mut::manifest::LocalManifest;
 use crate::util::toml_mut::upgrade::upgrade_requirement;
@@ -20,12 +21,25 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use tracing::{debug, trace};
 
-pub type UpgradeMap = HashMap<(String, SourceId), Version>;
+/// A map of all breaking upgrades which is filled in by
+/// upgrade_manifests/upgrade_dependency when going through workspace member
+/// manifests, and later used by write_manifest_upgrades in order to know which
+/// upgrades to write to manifest files on disk. Also used by update_lockfile to
+/// know which dependencies to keep unchanged if any have been upgraded (we will
+/// do either breaking or non-breaking updates, but not both).
+pub type UpgradeMap = HashMap<
+    // The key is a package identifier consisting of the name and the source id.
+    (InternedString, SourceId),
+    // The value is the original version requirement before upgrade, and the
+    // upgraded version.
+    (VersionReq, Version),
+>;
 
 pub struct UpdateOptions<'a> {
     pub gctx: &'a GlobalContext,
     pub to_update: Vec<String>,
     pub precise: Option<&'a str>,
+    pub breaking: bool,
     pub recursive: bool,
     pub dry_run: bool,
     pub workspace: bool,
@@ -49,7 +63,11 @@ pub fn generate_lockfile(ws: &Workspace<'_>) -> CargoResult<()> {
     Ok(())
 }
 
-pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoResult<()> {
+pub fn update_lockfile(
+    ws: &Workspace<'_>,
+    opts: &UpdateOptions<'_>,
+    upgrades: &UpgradeMap,
+) -> CargoResult<()> {
     if opts.recursive && opts.precise.is_some() {
         anyhow::bail!("cannot specify both recursive and precise simultaneously")
     }
@@ -91,7 +109,38 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
     let mut registry = ws.package_registry()?;
     let mut to_avoid = HashSet::new();
 
-    if opts.to_update.is_empty() {
+    if opts.breaking {
+        // We don't necessarily want to update all specified packages. If we are
+        // doing a breaking update (or precise upgrades, coming in #14140), we
+        // don't want to touch any packages that have no breaking updates. So we
+        // want to only avoid all packages that got upgraded.
+
+        for name in opts.to_update.iter() {
+            // We still want to query any specified package, for the sake of
+            // outputting errors if they don't exist.
+            previous_resolve.query(name)?;
+        }
+
+        for ((name, source_id), (version_req, _)) in upgrades.iter() {
+            if let Some(matching_dep) = previous_resolve.iter().find(|dep| {
+                dep.name() == *name
+                    && dep.source_id() == *source_id
+                    && version_req.matches(dep.version())
+            }) {
+                let spec = PackageIdSpec::new(name.to_string())
+                    .with_url(source_id.url().clone())
+                    .with_version(matching_dep.version().clone().into())
+                    .to_string();
+                let pid = previous_resolve.query(&spec)?;
+                to_avoid.insert(pid);
+            } else {
+                // Should never happen
+                anyhow::bail!(
+                    "no package named `{name}` with source `{source_id}` and version matching `{version_req}` in the previous lockfile",
+                )
+            }
+        }
+    } else if opts.to_update.is_empty() {
         if !opts.workspace {
             to_avoid.extend(previous_resolve.iter());
             to_avoid.extend(previous_resolve.unused_patches());
@@ -185,11 +234,7 @@ pub fn update_lockfile(ws: &Workspace<'_>, opts: &UpdateOptions<'_>) -> CargoRes
         opts.precise.is_some(),
         &mut registry,
     )?;
-    if opts.dry_run {
-        opts.gctx
-            .shell()
-            .warn("not updating lockfile due to dry run")?;
-    } else {
+    if !opts.dry_run {
         ops::write_pkg_lockfile(ws, &mut resolve)?;
     }
     Ok(())
@@ -361,7 +406,10 @@ fn upgrade_dependency(
             .status_with_color("Upgrading", &upgrade_message, &style::GOOD)?;
     }
 
-    upgrades.insert((name.to_string(), dependency.source_id()), latest.clone());
+    upgrades.insert(
+        (name, dependency.source_id()),
+        (current.clone(), latest.clone()),
+    );
 
     let req = OptVersionReq::Req(VersionReq::parse(&latest.to_string())?);
     let mut dep = dependency.clone();
@@ -433,7 +481,7 @@ pub fn write_manifest_upgrades(
                     continue;
                 };
 
-                let Some(latest) = upgrades.get(&(name.to_owned(), source_id)) else {
+                let Some((_, latest)) = upgrades.get(&(name.into(), source_id)) else {
                     trace!("skipping dependency without an upgrade: {name}");
                     continue;
                 };

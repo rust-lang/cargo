@@ -925,7 +925,7 @@ fn dry_run_update() {
 [LOCKING] 1 package to latest compatible version
 [UPDATING] serde v0.1.0 -> v0.1.1
 [NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
-[WARNING] not updating lockfile due to dry run
+[WARNING] aborting update due to dry run
 
 "#]])
         .run();
@@ -1524,7 +1524,7 @@ fn report_behind() {
 [LOCKING] 1 package to latest compatible version
 [UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.0)
 [NOTE] pass `--verbose` to see 2 unchanged dependencies behind latest
-[WARNING] not updating lockfile due to dry run
+[WARNING] aborting update due to dry run
 
 "#]])
         .run();
@@ -1537,7 +1537,7 @@ fn report_behind() {
 [UNCHANGED] pre v1.0.0-alpha.0 (latest: v1.0.0-alpha.1)
 [UNCHANGED] two-ver v0.1.0 (latest: v0.2.0)
 [NOTE] to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`
-[WARNING] not updating lockfile due to dry run
+[WARNING] aborting update due to dry run
 
 "#]])
         .run();
@@ -1549,7 +1549,7 @@ fn report_behind() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 0 packages to latest compatible versions
 [NOTE] pass `--verbose` to see 3 unchanged dependencies behind latest
-[WARNING] not updating lockfile due to dry run
+[WARNING] aborting update due to dry run
 
 "#]])
         .run();
@@ -1562,7 +1562,7 @@ fn report_behind() {
 [UNCHANGED] pre v1.0.0-alpha.0 (latest: v1.0.0-alpha.1)
 [UNCHANGED] two-ver v0.1.0 (latest: v0.2.0)
 [NOTE] to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`
-[WARNING] not updating lockfile due to dry run
+[WARNING] aborting update due to dry run
 
 "#]])
         .run();
@@ -1912,10 +1912,13 @@ fn update_breaking() {
 [UPDATING] multiple-registries v2.0.0 (registry `alternative`) -> v3.0.0
 [UPDATING] multiple-registries v1.0.0 -> v2.0.0
 [UPDATING] multiple-source-types v1.0.0 -> v2.0.0
+[REMOVING] multiple-versions v1.0.0
+[REMOVING] multiple-versions v2.0.0
 [ADDING] multiple-versions v3.0.0
 [UPDATING] platform-specific v1.0.0 -> v2.0.0
 [UPDATING] shared v1.0.0 -> v2.0.0
 [UPDATING] ws v1.0.0 -> v2.0.0
+[NOTE] pass `--verbose` to see 4 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -2108,6 +2111,7 @@ fn update_breaking_specific_packages() {
 [UPDATING] transitive-compatible v1.0.0 -> v1.0.1
 [UPDATING] transitive-incompatible v1.0.0 -> v2.0.0
 [UPDATING] ws v1.0.0 -> v2.0.0
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -2163,6 +2167,8 @@ fn update_breaking_specific_packages_that_wont_update() {
         .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[LOCKING] 0 packages to latest compatible versions
+[NOTE] pass `--verbose` to see 5 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -2271,13 +2277,27 @@ fn update_breaking_spec_version() {
     // Spec version not matching our current dependencies
     p.cargo("update -Zunstable-options --breaking incompatible@2.0.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr_data(str![[r#""#]])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] package ID specification `incompatible@2.0.0` did not match any packages
+Did you mean one of these?
+
+  incompatible@1.0.0
+
+"#]])
         .run();
 
     // Spec source not matching our current dependencies
     p.cargo("update -Zunstable-options --breaking https://alternative.com#incompatible@1.0.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr_data(str![[r#""#]])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] package ID specification `https://alternative.com/#incompatible@1.0.0` did not match any packages
+Did you mean one of these?
+
+  incompatible@1.0.0
+
+"#]])
         .run();
 
     // Accepted spec
@@ -2288,6 +2308,7 @@ fn update_breaking_spec_version() {
 [UPGRADING] incompatible ^1.0 -> ^2.0
 [LOCKING] 1 package to latest compatible version
 [UPDATING] incompatible v1.0.0 -> v2.0.0
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -2301,6 +2322,7 @@ fn update_breaking_spec_version() {
 [UPGRADING] incompatible ^2.0 -> ^3.0
 [LOCKING] 1 package to latest compatible version
 [UPDATING] incompatible v2.0.0 -> v3.0.0
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -2310,6 +2332,8 @@ fn update_breaking_spec_version() {
         .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[LOCKING] 0 packages to latest compatible versions
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -2317,12 +2341,26 @@ fn update_breaking_spec_version() {
     // Non-existing versions
     p.cargo("update -Zunstable-options --breaking incompatible@9.0.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr_data(str![[r#""#]])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] package ID specification `incompatible@9.0.0` did not match any packages
+Did you mean one of these?
+
+  incompatible@3.0.0
+
+"#]])
         .run();
 
     p.cargo("update -Zunstable-options --breaking compatible@9.0.0")
         .masquerade_as_nightly_cargo(&["update-breaking"])
-        .with_stderr_data(str![[r#""#]])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] package ID specification `compatible@9.0.0` did not match any packages
+Did you mean one of these?
+
+  compatible@1.0.0
+
+"#]])
         .run();
 }
 
@@ -2376,6 +2414,7 @@ fn update_breaking_spec_version_transitive() {
 [UPGRADING] dep ^1.0 -> ^3.0
 [LOCKING] 1 package to latest compatible version
 [UPDATING] dep v1.0.0 -> v3.0.0
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -2385,6 +2424,8 @@ fn update_breaking_spec_version_transitive() {
         .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
+[LOCKING] 0 packages to latest compatible versions
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -2453,6 +2494,8 @@ fn update_breaking_mixed_compatibility() {
 [UPDATING] `dummy-registry` index
 [UPGRADING] mixed-compatibility ^1.0 -> ^2.0
 [LOCKING] 1 package to latest compatible version
+[REMOVING] mixed-compatibility v1.0.0
+[REMOVING] mixed-compatibility v2.0.0
 [ADDING] mixed-compatibility v2.0.1
 
 "#]])
@@ -2544,6 +2587,7 @@ fn update_breaking_mixed_pinning_renaming() {
 [ADDING] mixed-pinned v2.0.0
 [ADDING] mixed-ws-pinned v2.0.0
 [ADDING] renamed-from v2.0.0
+[NOTE] pass `--verbose` to see 3 unchanged dependencies behind latest
 
 "#]])
         .run();
