@@ -178,6 +178,12 @@ impl Hash for Summary {
     }
 }
 
+// A check that only compiles if Summary is Sync
+const _: fn() = || {
+    fn is_sync<T: Sync>() {}
+    is_sync::<Summary>();
+};
+
 /// Checks features for errors, bailing out a CargoResult:Err if invalid,
 /// and creates FeatureValues for each feature.
 fn build_feature_map(
