@@ -106,7 +106,7 @@ pub fn read_manifest(
                 &mut errors,
             )
             .map(EitherManifest::Real)
-        } else {
+        } else if resolved_toml.workspace.is_some() {
             to_virtual_manifest(
                 contents,
                 document,
@@ -121,6 +121,8 @@ pub fn read_manifest(
                 &mut errors,
             )
             .map(EitherManifest::Virtual)
+        } else {
+            anyhow::bail!("manifest is missing either a `[package]` or a `[workspace]`")
         }
     })()
     .map_err(|err| {
