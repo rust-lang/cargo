@@ -9,7 +9,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::mem;
-use std::rc::Rc;
+use std::sync::Arc;
 
 /// Subset of a `Manifest`. Contains only the most important information about
 /// a package.
@@ -17,14 +17,14 @@ use std::rc::Rc;
 /// Summaries are cloned, and should not be mutated after creation
 #[derive(Debug, Clone)]
 pub struct Summary {
-    inner: Rc<Inner>,
+    inner: Arc<Inner>,
 }
 
 #[derive(Debug, Clone)]
 struct Inner {
     package_id: PackageId,
     dependencies: Vec<Dependency>,
-    features: Rc<FeatureMap>,
+    features: Arc<FeatureMap>,
     checksum: Option<String>,
     links: Option<InternedString>,
     rust_version: Option<RustVersion>,
@@ -82,10 +82,10 @@ impl Summary {
         }
         let feature_map = build_feature_map(features, &dependencies)?;
         Ok(Summary {
-            inner: Rc::new(Inner {
+            inner: Arc::new(Inner {
                 package_id: pkg_id,
                 dependencies,
-                features: Rc::new(feature_map),
+                features: Arc::new(feature_map),
                 checksum: None,
                 links: links.map(|l| l.into()),
                 rust_version,
@@ -124,12 +124,12 @@ impl Summary {
     }
 
     pub fn override_id(mut self, id: PackageId) -> Summary {
-        Rc::make_mut(&mut self.inner).package_id = id;
+        Arc::make_mut(&mut self.inner).package_id = id;
         self
     }
 
     pub fn set_checksum(&mut self, cksum: String) {
-        Rc::make_mut(&mut self.inner).checksum = Some(cksum);
+        Arc::make_mut(&mut self.inner).checksum = Some(cksum);
     }
 
     pub fn map_dependencies<F>(self, mut f: F) -> Summary
@@ -144,7 +144,7 @@ impl Summary {
         F: FnMut(Dependency) -> CargoResult<Dependency>,
     {
         {
-            let slot = &mut Rc::make_mut(&mut self.inner).dependencies;
+            let slot = &mut Arc::make_mut(&mut self.inner).dependencies;
             *slot = mem::take(slot)
                 .into_iter()
                 .map(f)
@@ -177,6 +177,12 @@ impl Hash for Summary {
         self.inner.package_id.hash(state);
     }
 }
+
+// A check that only compiles if Summary is Sync
+const _: fn() = || {
+    fn is_sync<T: Sync>() {}
+    is_sync::<Summary>();
+};
 
 /// Checks features for errors, bailing out a CargoResult:Err if invalid,
 /// and creates FeatureValues for each feature.
