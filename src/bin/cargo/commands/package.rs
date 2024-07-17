@@ -1,16 +1,22 @@
 use crate::command_prelude::*;
 
-use cargo::ops::{self, PackageOpts};
+use cargo::ops::{self, ListMode, PackageOpts};
+use clap::builder::PossibleValuesParser;
 
 pub fn cli() -> Command {
     subcommand("package")
         .about("Assemble the local package into a distributable tarball")
         .arg(
-            flag(
+            opt(
                 "list",
                 "Print files included in a package without making one",
             )
-            .short('l'),
+            .short('l')
+            .default_missing_value("basic")
+            .num_args(0..=1)
+            .require_equals(true)
+            .value_name("MODE")
+            .value_parser(PossibleValuesParser::new(["basic", "json"])),
         )
         .arg(flag(
             "no-verify",
@@ -56,7 +62,11 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         &PackageOpts {
             gctx,
             verify: !args.flag("no-verify"),
-            list: args.flag("list"),
+            list: match args.get_one::<String>("list").map(String::as_str) {
+                Some("json") => ListMode::Json,
+                Some(_) => ListMode::Basic,
+                None => ListMode::Disabled,
+            },
             check_metadata: !args.flag("no-metadata"),
             allow_dirty: args.flag("allow-dirty"),
             to_package: specs,

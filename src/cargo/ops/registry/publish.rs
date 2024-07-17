@@ -27,6 +27,7 @@ use crate::core::PackageIdSpecQuery;
 use crate::core::SourceId;
 use crate::core::Workspace;
 use crate::ops;
+use crate::ops::ListMode;
 use crate::ops::PackageOpts;
 use crate::ops::Packages;
 use crate::sources::source::QueryKind;
@@ -149,7 +150,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         &PackageOpts {
             gctx: opts.gctx,
             verify: opts.verify,
-            list: false,
+            list: ListMode::Disabled,
             check_metadata: true,
             allow_dirty: opts.allow_dirty,
             to_package: Packages::Default,

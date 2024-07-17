@@ -78,6 +78,11 @@ There is no guarantee that the source code in the tarball matches the VCS inform
 <dd class="option-desc">Print files included in a package without making one.</dd>
 
 
+<dt class="option-term" id="option-cargo-package--l=json"><a class="option-anchor" href="#option-cargo-package--l=json"></a><code>-l=json</code></dt>
+<dt class="option-term" id="option-cargo-package---list=json"><a class="option-anchor" href="#option-cargo-package---list=json"></a><code>--list=json</code></dt>
+<dd class="option-desc">Output the files included in a package in JSON form, without actually building the package.</dd>
+
+
 <dt class="option-term" id="option-cargo-package---no-verify"><a class="option-anchor" href="#option-cargo-package---no-verify"></a><code>--no-verify</code></dt>
 <dd class="option-desc">Don’t verify the contents by building them.</dd>
 

@@ -76,6 +76,10 @@ OPTIONS
        -l, --list
            Print files included in a package without making one.
 
+       -l=json, --list=json
+           Output the files included in a package in JSON form, without
+           actually building the package.
+
        --no-verify
            Don’t verify the contents by building them.
 

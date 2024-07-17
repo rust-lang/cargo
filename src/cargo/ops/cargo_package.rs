@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io::SeekFrom;
@@ -31,7 +31,7 @@ use unicase::Ascii as UncasedAscii;
 #[derive(Clone)]
 pub struct PackageOpts<'gctx> {
     pub gctx: &'gctx GlobalContext,
-    pub list: bool,
+    pub list: ListMode,
     pub check_metadata: bool,
     pub allow_dirty: bool,
     pub verify: bool,
@@ -40,6 +40,25 @@ pub struct PackageOpts<'gctx> {
     pub to_package: ops::Packages,
     pub targets: Vec<String>,
     pub cli_features: CliFeatures,
+}
+
+/// Possible values for the --list flag.
+#[derive(Clone, Copy)]
+pub enum ListMode {
+    /// Basic mode: just output the paths that would be included in the package file.
+    Basic,
+
+    /// JSON mode: output the paths that would be included and their sources.
+    Json,
+
+    /// Listing disabled; normal package operation.
+    Disabled,
+}
+
+impl ListMode {
+    fn is_disabled(&self) -> bool {
+        matches!(self, &ListMode::Disabled)
+    }
 }
 
 const ORIGINAL_MANIFEST_FILE: &str = "Cargo.toml.orig";
@@ -55,6 +74,7 @@ struct ArchiveFile {
     contents: FileContents,
 }
 
+#[derive(Serialize)]
 enum FileContents {
     /// Absolute path to the file on disk to add to the archive.
     OnDisk(PathBuf),
@@ -62,6 +82,7 @@ enum FileContents {
     Generated(GeneratedFile),
 }
 
+#[derive(Serialize)]
 enum GeneratedFile {
     /// Generates `Cargo.toml` by rewriting the original.
     Manifest,
@@ -98,7 +119,7 @@ pub fn package_one(
     pkg: &Package,
     opts: &PackageOpts<'_>,
 ) -> CargoResult<FileLock> {
-    assert!(!opts.list);
+    assert!(opts.list.is_disabled());
 
     let ar_files = prepare_archive(ws, pkg, opts)?;
     let tarball = create_package(ws, pkg, ar_files)?;
@@ -194,25 +215,36 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Option
         };
         let ar_files = prepare_archive(ws, pkg, &opts)?;
 
-        if opts.list {
-            for ar_file in ar_files {
-                drop_println!(ws.gctx(), "{}", ar_file.rel_str);
+        match opts.list {
+            ListMode::Basic => {
+                for ar_file in ar_files {
+                    drop_println!(ws.gctx(), "{}", ar_file.rel_str);
+                }
             }
-        } else {
-            let tarball = create_package(ws, pkg, ar_files)?;
-            if opts.verify {
-                run_verify(ws, pkg, &tarball, &opts)
-                    .with_context(|| "failed to verify package tarball")?;
+            ListMode::Json => {
+                let file_list: BTreeMap<PathBuf, FileContents> = ar_files
+                    .into_iter()
+                    .map(|ar_file| (ar_file.rel_path, ar_file.contents))
+                    .collect();
+
+                serde_json::to_writer_pretty(ws.gctx().shell().out(), &file_list)?;
             }
-            dsts.push(tarball);
+            ListMode::Disabled => {
+                let tarball = create_package(ws, pkg, ar_files)?;
+                if opts.verify {
+                    run_verify(ws, pkg, &tarball, &opts)
+                        .with_context(|| "failed to verify package tarball")?;
+                }
+                dsts.push(tarball);
+            }
         }
     }
 
-    if opts.list {
+    if opts.list.is_disabled() {
+        Ok(Some(dsts))
+    } else {
         // We're just listing, so there's no file output
         Ok(None)
-    } else {
-        Ok(Some(dsts))
     }
 }
 

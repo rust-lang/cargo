@@ -82,6 +82,10 @@ There is no guarantee that the source code in the tarball matches the VCS inform
 Print files included in a package without making one.
 {{/option}}
 
+{{#option "`-l=json`" "`--list=json`" }}
+Output the files included in a package in JSON form, without actually building the package.
+{{/option}}
+
 {{#option "`--no-verify`" }}
 Don't verify the contents by building them.
 {{/option}}
