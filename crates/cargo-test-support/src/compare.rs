@@ -188,7 +188,7 @@ fn add_regex_redactions(subs: &mut snapbox::Redactions) {
     .unwrap();
     subs.insert(
         "[HASH]",
-        regex!(r"home/\.cargo/registry/src/-(?<redacted>[a-z0-9]+)"),
+        regex!(r"home/\.cargo/registry/(cache|index|src)/-(?<redacted>[a-z0-9]+)"),
     )
     .unwrap();
     subs.insert(
