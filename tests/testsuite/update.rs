@@ -2651,9 +2651,6 @@ fn update_breaking_pre_release_downgrade() {
         .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[UPGRADING] bar ^2.0.0-beta.21 -> ^1.7.0
-[LOCKING] 1 package to latest compatible version
-[DOWNGRADING] bar v2.0.0-beta.21 -> v1.7.0
 
 "#]])
         .run();
