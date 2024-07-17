@@ -34,6 +34,7 @@ mod cargo_fix;
 mod cargo_generate_lockfile;
 mod cargo_git_checkout;
 mod cargo_help;
+mod cargo_info;
 mod cargo_init;
 mod cargo_install;
 mod cargo_locate_project;
