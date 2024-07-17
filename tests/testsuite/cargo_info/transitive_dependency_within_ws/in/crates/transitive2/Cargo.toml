@@ -1,0 +1,8 @@
+[package]
+name = "transitive2"
+version = "0.0.0"
+rust-version = "1.0.0"
+
+
+[dependencies]
+dep2 = "1"
