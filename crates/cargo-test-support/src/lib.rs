@@ -75,10 +75,10 @@ pub mod tools;
 pub mod prelude {
     pub use crate::cargo_test;
     pub use crate::paths::CargoPathExt;
-    pub use crate::ArgLine;
-    pub use crate::CargoCommand;
-    pub use crate::ChannelChanger;
-    pub use crate::TestEnv;
+    pub use crate::ArgLineCommandExt;
+    pub use crate::CargoCommandExt;
+    pub use crate::ChannelChangerCommandExt;
+    pub use crate::TestEnvCommandExt;
     pub use snapbox::IntoData;
 }
 
@@ -1247,27 +1247,27 @@ fn _process(t: &OsStr) -> ProcessBuilder {
 }
 
 /// Enable nightly features for testing
-pub trait ChannelChanger {
+pub trait ChannelChangerCommandExt {
     /// The list of reasons should be why nightly cargo is needed. If it is
     /// because of an unstable feature put the name of the feature as the reason,
     /// e.g. `&["print-im-a-teapot"]`.
     fn masquerade_as_nightly_cargo(self, _reasons: &[&str]) -> Self;
 }
 
-impl ChannelChanger for &mut ProcessBuilder {
+impl ChannelChangerCommandExt for &mut ProcessBuilder {
     fn masquerade_as_nightly_cargo(self, _reasons: &[&str]) -> Self {
         self.env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly")
     }
 }
 
-impl ChannelChanger for snapbox::cmd::Command {
+impl ChannelChangerCommandExt for snapbox::cmd::Command {
     fn masquerade_as_nightly_cargo(self, _reasons: &[&str]) -> Self {
         self.env("__CARGO_TEST_CHANNEL_OVERRIDE_DO_NOT_USE_THIS", "nightly")
     }
 }
 
 /// Establish a process's test environment
-pub trait TestEnv: Sized {
+pub trait TestEnvCommandExt: Sized {
     fn test_env(mut self) -> Self {
         // In general just clear out all cargo-specific configuration already in the
         // environment. Our tests all assume a "default configuration" unless
@@ -1357,7 +1357,7 @@ pub trait TestEnv: Sized {
     fn env_remove(self, key: &str) -> Self;
 }
 
-impl TestEnv for &mut ProcessBuilder {
+impl TestEnvCommandExt for &mut ProcessBuilder {
     fn current_dir<S: AsRef<std::path::Path>>(self, path: S) -> Self {
         let path = path.as_ref();
         self.cwd(path)
@@ -1370,7 +1370,7 @@ impl TestEnv for &mut ProcessBuilder {
     }
 }
 
-impl TestEnv for snapbox::cmd::Command {
+impl TestEnvCommandExt for snapbox::cmd::Command {
     fn current_dir<S: AsRef<std::path::Path>>(self, path: S) -> Self {
         self.current_dir(path)
     }
@@ -1383,11 +1383,11 @@ impl TestEnv for snapbox::cmd::Command {
 }
 
 /// Test the cargo command
-pub trait CargoCommand {
+pub trait CargoCommandExt {
     fn cargo_ui() -> Self;
 }
 
-impl CargoCommand for snapbox::cmd::Command {
+impl CargoCommandExt for snapbox::cmd::Command {
     fn cargo_ui() -> Self {
         Self::new(cargo_exe())
             .with_assert(compare::assert_ui())
@@ -1397,7 +1397,7 @@ impl CargoCommand for snapbox::cmd::Command {
 }
 
 /// Add a list of arguments as a line
-pub trait ArgLine: Sized {
+pub trait ArgLineCommandExt: Sized {
     fn arg_line(mut self, s: &str) -> Self {
         for mut arg in s.split_whitespace() {
             if (arg.starts_with('"') && arg.ends_with('"'))
@@ -1415,13 +1415,13 @@ pub trait ArgLine: Sized {
     fn arg<S: AsRef<std::ffi::OsStr>>(self, s: S) -> Self;
 }
 
-impl ArgLine for &mut ProcessBuilder {
+impl ArgLineCommandExt for &mut ProcessBuilder {
     fn arg<S: AsRef<std::ffi::OsStr>>(self, s: S) -> Self {
         self.arg(s)
     }
 }
 
-impl ArgLine for snapbox::cmd::Command {
+impl ArgLineCommandExt for snapbox::cmd::Command {
     fn arg<S: AsRef<std::ffi::OsStr>>(self, s: S) -> Self {
         self.arg(s)
     }
