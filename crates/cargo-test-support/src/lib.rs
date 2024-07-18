@@ -524,17 +524,17 @@ impl Project {
     }
 }
 
-// Generates a project layout
+/// Generates a project layout, see [`ProjectBuilder`]
 pub fn project() -> ProjectBuilder {
     ProjectBuilder::new(paths::root().join("foo"))
 }
 
-// Generates a project layout in given directory
+/// Generates a project layout in given directory, see [`ProjectBuilder`]
 pub fn project_in(dir: &str) -> ProjectBuilder {
     ProjectBuilder::new(paths::root().join(dir).join("foo"))
 }
 
-// Generates a project layout inside our fake home dir
+/// Generates a project layout inside our fake home dir, see [`ProjectBuilder`]
 pub fn project_in_home(name: &str) -> ProjectBuilder {
     ProjectBuilder::new(paths::home().join(name))
 }
