@@ -357,7 +357,9 @@ mod dirty_reason;
 
 use std::collections::hash_map::{Entry, HashMap};
 
+use std::collections::BTreeMap;
 use std::env;
+use std::ffi::OsString;
 use std::hash::{self, Hash, Hasher};
 use std::io;
 use std::path::{Path, PathBuf};
@@ -768,14 +770,35 @@ pub enum StaleItem {
 impl LocalFingerprint {
     /// Read the environment variable of the given env `key`, and creates a new
     /// [`LocalFingerprint::RerunIfEnvChanged`] for it.
-    ///
-    // TODO: This is allowed at this moment. Should figure out if it makes
-    // sense if permitting to read env from the config system.
     #[allow(clippy::disallowed_methods)]
-    fn from_env<K: AsRef<str>>(key: K) -> LocalFingerprint {
-        let key = key.as_ref();
+    fn from_env<K: AsRef<str>>(
+        key: K,
+        envs: &BTreeMap<String, Option<OsString>>,
+    ) -> LocalFingerprint {
+        fn get_envs_case_insensitive(
+            key: &str,
+            envs: &BTreeMap<String, Option<OsString>>,
+        ) -> Option<OsString> {
+            let upper_case_key: String = key.to_uppercase();
+            for (k, v) in envs {
+                if k.to_uppercase().eq(&upper_case_key) {
+                    return v.to_owned();
+                }
+            }
+            None
+        }
+
+        let key: &str = key.as_ref();
         let var = key.to_owned();
-        let val = env::var(key).ok();
+
+        let val: Option<String> = if cfg!(windows) {
+            get_envs_case_insensitive(key, envs)
+        } else {
+            envs.get(key).and_then(|v| v.to_owned())
+        }
+        .or(env::var_os(key))
+        .and_then(|os_str| os_str.into_string().ok());
+
         LocalFingerprint::RerunIfEnvChanged { var, val }
     }
 
@@ -1608,6 +1631,12 @@ fn build_script_local_fingerprints(
     bool,
 ) {
     assert!(unit.mode.is_run_custom_build());
+    let envs = build_runner
+        .bcx
+        .target_data
+        .info(unit.kind)
+        .get_target_envs()
+        .clone();
     // First up, if this build script is entirely overridden, then we just
     // return the hash of what we overrode it with. This is the easy case!
     if let Some(fingerprint) = build_script_override_fingerprint(build_runner, unit) {
@@ -1660,7 +1689,12 @@ fn build_script_local_fingerprints(
             // Ok so now we're in "new mode" where we can have files listed as
             // dependencies as well as env vars listed as dependencies. Process
             // them all here.
-            Ok(Some(local_fingerprints_deps(deps, &target_dir, &pkg_root)))
+            Ok(Some(local_fingerprints_deps(
+                deps,
+                &target_dir,
+                &pkg_root,
+                &envs,
+            )))
         };
 
     // Note that `false` == "not overridden"
@@ -1695,6 +1729,7 @@ fn local_fingerprints_deps(
     deps: &BuildDeps,
     target_root: &Path,
     pkg_root: &Path,
+    envs: &BTreeMap<String, Option<OsString>>,
 ) -> Vec<LocalFingerprint> {
     debug!("new local fingerprints deps {:?}", pkg_root);
     let mut local = Vec::new();
@@ -1719,7 +1754,7 @@ fn local_fingerprints_deps(
     local.extend(
         deps.rerun_if_env_changed
             .iter()
-            .map(LocalFingerprint::from_env),
+            .map(|v| LocalFingerprint::from_env(v, &envs)),
     );
 
     local
