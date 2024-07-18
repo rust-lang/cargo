@@ -1,4 +1,7 @@
-//! Tests for the `cargo update` command.
+//! Duplicating tests for `cargo update --precise` with unstable-options
+//! enabled. This will make sure we check backward compatibility when the
+//! capability of making breaking changes has been implemented. When that
+//! feature is stabilized, this file can be deleted.
 
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::prelude::*;
@@ -113,7 +116,8 @@ fn transitive_minor_update() {
     //
     // Also note that this is probably counterintuitive and weird. We may wish
     // to change this one day.
-    p.cargo("update serde")
+    p.cargo("update -Zunstable-options serde")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 0 packages to latest compatible versions
@@ -166,7 +170,8 @@ fn conservative() {
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.1.1").dep("log", "0.1").publish();
 
-    p.cargo("update serde")
+    p.cargo("update -Zunstable-options serde")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
@@ -402,7 +407,8 @@ fn update_precise_downgrade() {
 
     Package::new("serde", "0.2.0").publish();
 
-    p.cargo("update serde:0.2.1 --precise 0.2.0")
+    p.cargo("update -Zunstable-options serde:0.2.1 --precise 0.2.0")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [DOWNGRADING] serde v0.2.1 -> v0.2.0
@@ -438,7 +444,8 @@ fn update_precise_mismatched() {
     p.cargo("check").run();
 
     // `1.6.0` does not match `"~1.2"`
-    p.cargo("update serde:1.2 --precise 1.6.0")
+    p.cargo("update -Zunstable-options serde:1.2 --precise 1.6.0")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `serde = "~1.2"`
@@ -452,7 +459,8 @@ perhaps a crate was updated and forgotten to be re-vendored?
         .run();
 
     // `1.9.0` does not exist
-    p.cargo("update serde:1.2 --precise 1.9.0")
+    p.cargo("update -Zunstable-options serde:1.2 --precise 1.9.0")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         // This terrible error message has been the same for a long time. A fix is more than welcome!
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
@@ -487,9 +495,12 @@ fn update_precise_build_metadata() {
         .build();
 
     p.cargo("generate-lockfile").run();
-    p.cargo("update serde --precise 0.0.1+first").run();
+    p.cargo("update -Zunstable-options serde --precise 0.0.1+first")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
+        .run();
 
-    p.cargo("update serde --precise 0.0.1+second")
+    p.cargo("update -Zunstable-options serde --precise 0.0.1+second")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPDATING] serde v0.0.1+first -> v0.0.1+second
@@ -499,7 +510,8 @@ fn update_precise_build_metadata() {
 
     // This is not considered "Downgrading". Build metadata are not assumed to
     // be ordered.
-    p.cargo("update serde --precise 0.0.1+first")
+    p.cargo("update -Zunstable-options serde --precise 0.0.1+first")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPDATING] serde v0.0.1+second -> v0.0.1+first
@@ -535,7 +547,8 @@ fn update_precise_do_not_force_update_deps() {
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.2.2").dep("log", "0.1").publish();
 
-    p.cargo("update serde:0.2.1 --precise 0.2.2")
+    p.cargo("update -Zunstable-options serde:0.2.1 --precise 0.2.2")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPDATING] serde v0.2.1 -> v0.2.2
@@ -572,7 +585,8 @@ fn update_recursive() {
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.2.2").dep("log", "0.1").publish();
 
-    p.cargo("update serde:0.2.1 --recursive")
+    p.cargo("update -Zunstable-options serde:0.2.1 --recursive")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
@@ -610,7 +624,8 @@ fn update_aggressive_alias_for_recursive() {
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.2.2").dep("log", "0.1").publish();
 
-    p.cargo("update serde:0.2.1 --aggressive")
+    p.cargo("update -Zunstable-options serde:0.2.1 --aggressive")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
@@ -648,12 +663,13 @@ fn update_recursive_conflicts_with_precise() {
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.2.2").dep("log", "0.1").publish();
 
-    p.cargo("update serde:0.2.1 --precise 0.2.2 --recursive")
+    p.cargo("update -Zunstable-options serde:0.2.1 --precise 0.2.2 --recursive")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_status(1)
         .with_stderr_data(str![[r#"
 [ERROR] the argument '--precise <PRECISE>' cannot be used with '--recursive'
 
-Usage: cargo[EXE] update --precise <PRECISE> <SPEC|--package [<SPEC>]>
+Usage: cargo update -Z <FLAG> --precise <PRECISE> <SPEC|--package [<SPEC>]>
 
 For more information, try '--help'.
 
@@ -686,7 +702,8 @@ fn update_precise_first_run() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("update serde --precise 0.2.0")
+    p.cargo("update -Zunstable-options serde --precise 0.2.0")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [DOWNGRADING] serde v0.2.1 -> v0.2.0
@@ -842,7 +859,8 @@ fn update_precise_first_run() {
         )
         .run();
 
-    p.cargo("update serde --precise 0.2.0")
+    p.cargo("update -Zunstable-options serde --precise 0.2.0")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 
@@ -854,7 +872,9 @@ fn update_precise_first_run() {
 fn preserve_top_comment() {
     let p = project().file("src/lib.rs", "").build();
 
-    p.cargo("update").run();
+    p.cargo("update -Zunstable-options")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
+        .run();
 
     let lockfile = p.read_lockfile();
     assert!(lockfile.starts_with("# This file is automatically @generated by Cargo.\n# It is not intended for manual editing.\n"));
@@ -867,7 +887,9 @@ fn preserve_top_comment() {
 
     p.change_file("Cargo.lock", &lockfile);
 
-    p.cargo("update").run();
+    p.cargo("update -Zunstable-options")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
+        .run();
 
     let lockfile2 = p.read_lockfile();
     println!("loaded Cargo.lock contents:\n{}", lockfile2);
@@ -919,7 +941,8 @@ fn dry_run_update() {
     Package::new("log", "0.1.1").publish();
     Package::new("serde", "0.1.1").dep("log", "0.1").publish();
 
-    p.cargo("update serde --dry-run")
+    p.cargo("update -Zunstable-options serde --dry-run")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
@@ -949,7 +972,9 @@ fn workspace_only() {
             edition = "2015"
         "#,
     );
-    p.cargo("update --workspace").run();
+    p.cargo("update -Zunstable-options --workspace")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
+        .run();
     let lock2 = p.read_lockfile();
 
     assert_ne!(lock1, lock2);
@@ -982,7 +1007,8 @@ fn precise_with_build_metadata() {
     Package::new("bar", "0.1.1+extra-stuff.1").publish();
     Package::new("bar", "0.1.2+extra-stuff.2").publish();
 
-    p.cargo("update bar --precise 0.1")
+    p.cargo("update -Zunstable-options bar --precise 0.1")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] invalid version format for precise version `0.1`
@@ -993,7 +1019,8 @@ Caused by:
 "#]])
         .run();
 
-    p.cargo("update bar --precise 0.1.1+does-not-match")
+    p.cargo("update -Zunstable-options bar --precise 0.1.1+does-not-match")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
@@ -1004,7 +1031,8 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
 "#]])
         .run();
 
-    p.cargo("update bar --precise 0.1.1")
+    p.cargo("update -Zunstable-options bar --precise 0.1.1")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPDATING] bar v0.1.0+extra-stuff.0 -> v0.1.1+extra-stuff.1
@@ -1013,7 +1041,8 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
         .run();
 
     Package::new("bar", "0.1.3").publish();
-    p.cargo("update bar --precise 0.1.3+foo")
+    p.cargo("update -Zunstable-options bar --precise 0.1.3+foo")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
@@ -1024,7 +1053,8 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
 "#]])
         .run();
 
-    p.cargo("update bar --precise 0.1.3")
+    p.cargo("update -Zunstable-options bar --precise 0.1.3")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPDATING] bar v0.1.1+extra-stuff.1 -> v0.1.3
@@ -1113,7 +1143,8 @@ rustdns.workspace = true
     git::commit(&repo);
     p.change_file("Cargo.toml", &workspace_toml.replace("2.29.8", "2.29.81"));
 
-    p.cargo("update -p rootcrate")
+    p.cargo("update -Zunstable-options -p rootcrate")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [UPDATING] rootcrate v2.29.8 ([ROOT]/foo/rootcrate) -> v2.29.81
@@ -1203,7 +1234,8 @@ rustdns.workspace = true
     git::commit(&repo);
     p.change_file("Cargo.toml", &workspace_toml.replace("2.29.8", "2.29.81"));
 
-    p.cargo("update -p crate2")
+    p.cargo("update -Zunstable-options -p crate2")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [UPDATING] crate1 v2.29.8 ([ROOT]/foo/crate1) -> v2.29.81
@@ -1293,7 +1325,8 @@ rustdns.workspace = true
     git::commit(&repo);
     p.change_file("Cargo.toml", &workspace_toml.replace("2.29.8", "2.29.81"));
 
-    p.cargo("update --workspace")
+    p.cargo("update -Zunstable-options --workspace")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [UPDATING] crate1 v2.29.8 ([ROOT]/foo/crate1) -> v2.29.81
@@ -1347,7 +1380,8 @@ fn update_precise_git_revisions() {
 
     assert!(p.read_lockfile().contains(&head_id));
 
-    p.cargo("update git --precise")
+    p.cargo("update -Zunstable-options git --precise")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .arg(tag_name)
         .with_stderr_data(format!(
             "\
@@ -1361,7 +1395,8 @@ fn update_precise_git_revisions() {
     assert!(p.read_lockfile().contains(&tag_commit_id));
     assert!(!p.read_lockfile().contains(&head_id));
 
-    p.cargo("update git --precise")
+    p.cargo("update -Zunstable-options git --precise")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .arg(short_id)
         .with_stderr_data(format!(
             "\
@@ -1376,7 +1411,8 @@ fn update_precise_git_revisions() {
 
     // updating back to tag still requires a git fetch,
     // as the ref may change over time.
-    p.cargo("update git --precise")
+    p.cargo("update -Zunstable-options git --precise")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .arg(tag_name)
         .with_stderr_data(format!(
             "\
@@ -1395,7 +1431,8 @@ fn update_precise_git_revisions() {
     let arbitrary_tag: String = std::iter::repeat('a').take(head_id.len()).collect();
     git::tag(&git_repo, &arbitrary_tag);
 
-    p.cargo("update git --precise")
+    p.cargo("update -Zunstable-options git --precise")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .arg(&arbitrary_tag)
         .with_stderr_data(format!(
             "\
@@ -1434,7 +1471,8 @@ fn update_precise_yanked() {
     let lockfile = p.read_lockfile();
     assert!(lockfile.contains("\nname = \"bar\"\nversion = \"0.1.0\""));
 
-    p.cargo("update --precise 0.1.1 bar")
+    p.cargo("update -Zunstable-options --precise 0.1.1 bar")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [WARNING] selected package `bar@0.1.1` was yanked by the author
@@ -1474,7 +1512,8 @@ fn update_precise_yanked_multiple_presence() {
     let lockfile = p.read_lockfile();
     assert!(lockfile.contains("\nname = \"bar\"\nversion = \"0.1.0\""));
 
-    p.cargo("update --precise 0.1.1 bar")
+    p.cargo("update -Zunstable-options --precise 0.1.1 bar")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [WARNING] selected package `bar@0.1.1` was yanked by the author
@@ -1518,7 +1557,8 @@ fn report_behind() {
     p.cargo("generate-lockfile").run();
     Package::new("breaking", "0.1.1").publish();
 
-    p.cargo("update --dry-run")
+    p.cargo("update -Zunstable-options --dry-run")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
@@ -1529,7 +1569,8 @@ fn report_behind() {
 "#]])
         .run();
 
-    p.cargo("update --dry-run --verbose")
+    p.cargo("update -Zunstable-options --dry-run --verbose")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
@@ -1542,9 +1583,12 @@ fn report_behind() {
 "#]])
         .run();
 
-    p.cargo("update").run();
+    p.cargo("update -Zunstable-options")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
+        .run();
 
-    p.cargo("update --dry-run")
+    p.cargo("update -Zunstable-options --dry-run")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 0 packages to latest compatible versions
@@ -1554,7 +1598,8 @@ fn report_behind() {
 "#]])
         .run();
 
-    p.cargo("update --dry-run --verbose")
+    p.cargo("update -Zunstable-options --dry-run --verbose")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 0 packages to latest compatible versions
@@ -1594,7 +1639,8 @@ fn update_with_missing_feature() {
     // Publish an update that is missing the feature.
     Package::new("bar", "0.1.1").publish();
 
-    p.cargo("update")
+    p.cargo("update -Zunstable-options")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 0 packages to latest compatible versions
@@ -1605,7 +1651,8 @@ fn update_with_missing_feature() {
 
     // Publish a fixed version, should not warn.
     Package::new("bar", "0.1.2").feature("feat1", &[]).publish();
-    p.cargo("update")
+    p.cargo("update -Zunstable-options")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
@@ -2004,7 +2051,8 @@ fn update_breaking() {
             "#]],
     );
 
-    p.cargo("update")
+    p.cargo("update -Zunstable-options")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [UPDATING] `dummy-registry` index
@@ -2431,7 +2479,8 @@ fn update_breaking_spec_version_transitive() {
         .run();
 
     // A non-breaking update is different, as it will update transitive dependencies
-    p.cargo("update dep@2.0")
+    p.cargo("update -Zunstable-options dep@2.0")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
