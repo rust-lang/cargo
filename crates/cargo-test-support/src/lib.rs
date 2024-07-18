@@ -1198,6 +1198,7 @@ pub fn execs() -> Execs {
     }
 }
 
+/// Generate a basic `Cargo.toml`
 pub fn basic_manifest(name: &str, version: &str) -> String {
     format!(
         r#"
@@ -1211,6 +1212,7 @@ pub fn basic_manifest(name: &str, version: &str) -> String {
     )
 }
 
+/// Generate a `Cargo.toml` with the specified `bin.name`
 pub fn basic_bin_manifest(name: &str) -> String {
     format!(
         r#"
@@ -1229,6 +1231,7 @@ pub fn basic_bin_manifest(name: &str) -> String {
     )
 }
 
+/// Generate a `Cargo.toml` with the specified `lib.name`
 pub fn basic_lib_manifest(name: &str) -> String {
     format!(
         r#"
