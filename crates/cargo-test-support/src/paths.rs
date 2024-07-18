@@ -211,6 +211,26 @@ impl CargoPathExt for Path {
     }
 }
 
+impl CargoPathExt for PathBuf {
+    fn rm_rf(&self) {
+        self.as_path().rm_rf()
+    }
+    fn mkdir_p(&self) {
+        self.as_path().mkdir_p()
+    }
+
+    fn ls_r(&self) -> Vec<PathBuf> {
+        self.as_path().ls_r()
+    }
+
+    fn move_in_time<F>(&self, travel_amount: F)
+    where
+        F: Fn(i64, u32) -> (i64, u32),
+    {
+        self.as_path().move_in_time(travel_amount)
+    }
+}
+
 fn do_op<F>(path: &Path, desc: &str, mut f: F)
 where
     F: FnMut(&Path) -> io::Result<()>,
