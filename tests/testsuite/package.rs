@@ -7,8 +7,8 @@ use cargo_test_support::prelude::*;
 use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{
-    basic_manifest, cargo_process, git, path2url, paths, project, rustc_host, str,
-    symlink_supported, t, ProjectBuilder,
+    basic_manifest, cargo_process, git, paths, project, rustc_host, str, symlink_supported, t,
+    ProjectBuilder,
 };
 use flate2::read::GzDecoder;
 use tar::Archive;
@@ -607,7 +607,7 @@ fn package_git_submodule() {
     });
 
     let repository = git2::Repository::open(&project.root()).unwrap();
-    let url = path2url(library.root()).to_string();
+    let url = library.root().to_url().to_string();
     git::add_submodule(&repository, &url, Path::new("bar"));
     git::commit(&repository);
 
@@ -655,7 +655,7 @@ fn package_symlink_to_submodule() {
     });
 
     let repository = git2::Repository::open(&project.root()).unwrap();
-    let url = path2url(library.root()).to_string();
+    let url = library.root().to_url().to_string();
     git::add_submodule(&repository, &url, Path::new("submodule"));
     t!(symlink(
         &project.root().join("submodule"),

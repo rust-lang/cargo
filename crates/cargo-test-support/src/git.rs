@@ -38,7 +38,7 @@ use some of the helper functions in this file to interact with the repository.
 
 */
 
-use crate::{path2url, project, Project, ProjectBuilder, SymlinkBuilder};
+use crate::{paths::CargoPathExt, project, Project, ProjectBuilder, SymlinkBuilder};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Once;
@@ -118,7 +118,7 @@ impl Repository {
     }
 
     pub fn url(&self) -> Url {
-        path2url(self.0.workdir().unwrap().to_path_buf())
+        self.0.workdir().unwrap().to_url()
     }
 
     pub fn revparse_head(&self) -> String {

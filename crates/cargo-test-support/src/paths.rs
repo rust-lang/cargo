@@ -111,6 +111,8 @@ pub fn home() -> PathBuf {
 }
 
 pub trait CargoPathExt {
+    fn to_url(&self) -> url::Url;
+
     fn rm_rf(&self);
     fn mkdir_p(&self);
 
@@ -132,6 +134,10 @@ pub trait CargoPathExt {
 }
 
 impl CargoPathExt for Path {
+    fn to_url(&self) -> url::Url {
+        url::Url::from_file_path(self).ok().unwrap()
+    }
+
     fn rm_rf(&self) {
         let meta = match self.symlink_metadata() {
             Ok(meta) => meta,
@@ -212,6 +218,10 @@ impl CargoPathExt for Path {
 }
 
 impl CargoPathExt for PathBuf {
+    fn to_url(&self) -> url::Url {
+        self.as_path().to_url()
+    }
+
     fn rm_rf(&self) {
         self.as_path().rm_rf()
     }
