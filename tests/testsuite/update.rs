@@ -1785,7 +1785,7 @@ fn update_precise_breaking_alternative() {
 }
 
 #[cargo_test]
-fn update_precise_breaking_pre_release_cannot_upgrade_nonexplicit_version_req() {
+fn update_precise_breaking_pre_release() {
     Package::new("pre", "0.1.0").publish();
 
     let p = project()
@@ -1811,9 +1811,9 @@ fn update_precise_breaking_pre_release_cannot_upgrade_nonexplicit_version_req() 
 
     p.cargo("update -Zunstable-options pre --precise 0.2.0-beta")
         .masquerade_as_nightly_cargo(&["update-precise-breaking"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] new requirement ^0.2 is invalid, because it doesn't match 0.2.0-beta
+[UPGRADING] pre ^0.1 -> ^0.2.0-beta
+[UPDATING] `dummy-registry` index
 
 "#]])
         .run();

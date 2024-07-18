@@ -1,7 +1,5 @@
 use std::fmt::Display;
 
-use anyhow::bail;
-
 use crate::CargoResult;
 
 /// Upgrade an existing requirement to a new version.
@@ -23,14 +21,17 @@ pub(crate) fn upgrade_requirement(
             .map(|p| set_comparator(p, version))
             .collect();
         let comparators = comparators?;
-        let new_req = semver::VersionReq { comparators };
+        let mut new_req = semver::VersionReq { comparators };
+        // Validate contract
+        if !new_req.matches(version) {
+            // If req is ^0.1 and version is 0.2.0-beta, new_req becomes ^0.2.
+            // This does not match version. In such cases, we should let new_req
+            // be ^version.
+            new_req = semver::VersionReq::parse(&format!("^{version}"))?;
+        }
         let mut new_req_text = new_req.to_string();
         if new_req_text.starts_with('^') && !req.starts_with('^') {
             new_req_text.remove(0);
-        }
-        // Validate contract
-        if !new_req.matches(version) {
-            bail!("new requirement {new_req_text} is invalid, because it doesn't match {version}")
         }
         if new_req_text == req_text {
             Ok(None)
