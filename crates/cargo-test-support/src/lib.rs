@@ -1300,8 +1300,13 @@ pub fn is_nightly() -> bool {
         && (vv.contains("-nightly") || vv.contains("-dev"))
 }
 
-pub fn process<T: AsRef<OsStr>>(t: T) -> ProcessBuilder {
-    _process(t.as_ref())
+/// Run `$bin` in the test's environment, see [`ProcessBuilder`]
+///
+/// For more on the test environment, see
+/// - [`paths::root`]
+/// - [`TestEnvCommandExt`]
+pub fn process<T: AsRef<OsStr>>(bin: T) -> ProcessBuilder {
+    _process(bin.as_ref())
 }
 
 fn _process(t: &OsStr) -> ProcessBuilder {
