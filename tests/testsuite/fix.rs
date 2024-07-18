@@ -3,7 +3,7 @@
 use cargo::core::Edition;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git::{self, init};
-use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{Dependency, Package};
 use cargo_test_support::str;

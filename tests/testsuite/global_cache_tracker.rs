@@ -18,7 +18,7 @@ use cargo::core::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCache
 use cargo::util::cache_lock::CacheLockMode;
 use cargo::util::interning::InternedString;
 use cargo::GlobalContext;
-use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::{

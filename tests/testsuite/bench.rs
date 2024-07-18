@@ -1,6 +1,5 @@
 //! Tests for the `cargo bench` command.
 
-use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::prelude::*;
 use cargo_test_support::{basic_bin_manifest, basic_lib_manifest, basic_manifest, project, str};
 

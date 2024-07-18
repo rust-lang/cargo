@@ -21,7 +21,7 @@ use cargo_util::{ProcessBuilder, ProcessError};
 use cargo_test_support::install::{
     assert_has_installed_exe, assert_has_not_installed_exe, cargo_home, exe,
 };
-use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::paths;
 
 fn pkg(name: &str, vers: &str) {
     Package::new(name, vers)

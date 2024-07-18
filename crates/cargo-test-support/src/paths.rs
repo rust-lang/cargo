@@ -111,6 +111,8 @@ pub fn home() -> PathBuf {
 }
 
 pub trait CargoPathExt {
+    fn to_url(&self) -> url::Url;
+
     fn rm_rf(&self);
     fn mkdir_p(&self);
 
@@ -132,6 +134,10 @@ pub trait CargoPathExt {
 }
 
 impl CargoPathExt for Path {
+    fn to_url(&self) -> url::Url {
+        url::Url::from_file_path(self).ok().unwrap()
+    }
+
     fn rm_rf(&self) {
         let meta = match self.symlink_metadata() {
             Ok(meta) => meta,
@@ -208,6 +214,30 @@ impl CargoPathExt for Path {
                 filetime::set_file_times(path, newtime, newtime)
             });
         }
+    }
+}
+
+impl CargoPathExt for PathBuf {
+    fn to_url(&self) -> url::Url {
+        self.as_path().to_url()
+    }
+
+    fn rm_rf(&self) {
+        self.as_path().rm_rf()
+    }
+    fn mkdir_p(&self) {
+        self.as_path().mkdir_p()
+    }
+
+    fn ls_r(&self) -> Vec<PathBuf> {
+        self.as_path().ls_r()
+    }
+
+    fn move_in_time<F>(&self, travel_amount: F)
+    where
+        F: Fn(i64, u32) -> (i64, u32),
+    {
+        self.as_path().move_in_time(travel_amount)
     }
 }
 

@@ -1,6 +1,5 @@
 //! Tests for named profiles.
 
-use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::prelude::*;
 use cargo_test_support::{basic_lib_manifest, project, str};
 

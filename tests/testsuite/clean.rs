@@ -1,6 +1,5 @@
 //! Tests for the `cargo clean` command.
 
-use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;

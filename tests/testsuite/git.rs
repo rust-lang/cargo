@@ -10,11 +10,11 @@ use std::sync::Arc;
 use std::thread;
 
 use cargo_test_support::git::cargo_uses_gitoxide;
-use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::paths;
 use cargo_test_support::prelude::IntoData;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_lib_manifest, basic_manifest, git, main_file, path2url, project};
+use cargo_test_support::{basic_lib_manifest, basic_manifest, git, main_file, project};
 use cargo_test_support::{sleep_ms, str, t, Project};
 
 #[cargo_test]
@@ -878,7 +878,7 @@ fn dep_with_submodule() {
     let git_project2 = git::new("dep2", |project| project.file("lib.rs", "pub fn dep() {}"));
 
     let repo = git2::Repository::open(&git_project.root()).unwrap();
-    let url = path2url(git_project2.root()).to_string();
+    let url = git_project2.root().to_url().to_string();
     git::add_submodule(&repo, &url, Path::new("src"));
     git::commit(&repo);
 
@@ -1000,7 +1000,7 @@ fn dep_with_bad_submodule() {
     let git_project2 = git::new("dep2", |project| project.file("lib.rs", "pub fn dep() {}"));
 
     let repo = git2::Repository::open(&git_project.root()).unwrap();
-    let url = path2url(git_project2.root()).to_string();
+    let url = git_project2.root().to_url().to_string();
     git::add_submodule(&repo, &url, Path::new("src"));
     git::commit(&repo);
 
@@ -2441,12 +2441,12 @@ fn dont_require_submodules_are_checked_out() {
     let git2 = git::new("dep2", |p| p);
 
     let repo = git2::Repository::open(&git1.root()).unwrap();
-    let url = path2url(git2.root()).to_string();
+    let url = git2.root().to_url().to_string();
     git::add_submodule(&repo, &url, Path::new("a/submodule"));
     git::commit(&repo);
 
     git2::Repository::init(&p.root()).unwrap();
-    let url = path2url(git1.root()).to_string();
+    let url = git1.root().to_url().to_string();
     let dst = paths::home().join("foo");
     git2::Repository::clone(&url, &dst).unwrap();
 
@@ -2863,7 +2863,7 @@ fn failed_submodule_checkout() {
     drop((repo, url));
 
     let repo = git2::Repository::open(&git_project.root()).unwrap();
-    let url = path2url(git_project2.root()).to_string();
+    let url = git_project2.root().to_url().to_string();
     git::add_submodule(&repo, &url, Path::new("src"));
     git::commit(&repo);
     drop(repo);
@@ -3152,7 +3152,7 @@ fn dirty_submodule() {
         project.no_manifest().file("lib.rs", "pub fn f() {}")
     });
 
-    let url = path2url(git_project2.root()).to_string();
+    let url = git_project2.root().to_url().to_string();
     git::add_submodule(&repo, &url, Path::new("src"));
 
     // Submodule added, but not committed.
@@ -3200,7 +3200,7 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
 
     // Try with a nested submodule.
     let git_project3 = git::new("bar", |project| project.no_manifest().file("mod.rs", ""));
-    let url = path2url(git_project3.root()).to_string();
+    let url = git_project3.root().to_url().to_string();
     git::add_submodule(&sub_repo, &url, Path::new("bar"));
     git_project
         .cargo("package --no-verify")
@@ -4085,7 +4085,7 @@ fn git_worktree_with_bare_original_repo() {
             .bare(true)
             .clone_local(git2::build::CloneLocal::Local)
             .clone(
-                path2url(git_project.root()).as_str(),
+                git_project.root().to_url().as_str(),
                 &paths::root().join("foo-bare"),
             )
             .unwrap()

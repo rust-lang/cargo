@@ -74,6 +74,7 @@ pub mod tools;
 
 pub mod prelude {
     pub use crate::cargo_test;
+    pub use crate::paths::CargoPathExt;
     pub use crate::ArgLine;
     pub use crate::CargoCommand;
     pub use crate::ChannelChanger;
@@ -339,7 +340,8 @@ impl Project {
 
     /// File url for root, ex: `file:///path/to/cargo/target/cit/t0/foo`
     pub fn url(&self) -> Url {
-        path2url(self.root())
+        use paths::CargoPathExt;
+        self.root().to_url()
     }
 
     /// Path to an example built as a library.
@@ -1182,10 +1184,6 @@ pub fn basic_lib_manifest(name: &str) -> String {
     "#,
         name, name
     )
-}
-
-pub fn path2url<P: AsRef<Path>>(p: P) -> Url {
-    Url::from_file_path(p).ok().unwrap()
 }
 
 struct RustcInfo {

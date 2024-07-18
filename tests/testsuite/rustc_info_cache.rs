@@ -2,8 +2,8 @@
 
 use std::env;
 
+use cargo_test_support::basic_bin_manifest;
 use cargo_test_support::prelude::*;
-use cargo_test_support::{basic_bin_manifest, paths::CargoPathExt};
 use cargo_test_support::{basic_manifest, project};
 
 const MISS: &str = "[..] rustc info cache miss[..]";
