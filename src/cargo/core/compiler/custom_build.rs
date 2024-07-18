@@ -61,7 +61,7 @@ const OLD_CARGO_WARNING_SYNTAX: &str = "cargo:warning=";
 /// [the doc]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#cargo-warning
 const NEW_CARGO_WARNING_SYNTAX: &str = "cargo::warning=";
 /// Contains the parsed output of a custom build script.
-#[derive(Clone, Debug, Hash, Default)]
+#[derive(Clone, Debug, Hash, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct BuildOutput {
     /// Paths to pass to rustc with the `-L` flag.
     pub library_paths: Vec<PathBuf>,
@@ -160,7 +160,7 @@ pub struct BuildDeps {
 /// See the [build script documentation][1] for more.
 ///
 /// [1]: https://doc.rust-lang.org/nightly/cargo/reference/build-scripts.html#cargorustc-link-argflag
-#[derive(Clone, Hash, Debug, PartialEq, Eq)]
+#[derive(Clone, Hash, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LinkArgTarget {
     /// Represents `cargo::rustc-link-arg=FLAG`.
     All,
@@ -1168,11 +1168,7 @@ pub fn build_map(build_runner: &mut BuildRunner<'_, '_>) -> CargoResult<()> {
         // If there is a build script override, pre-fill the build output.
         if unit.mode.is_run_custom_build() {
             if let Some(links) = unit.pkg.manifest().links() {
-                if let Some(output) = build_runner
-                    .bcx
-                    .target_data
-                    .script_override(links, unit.kind)
-                {
+                if let Some(output) = unit.links_overrides.get(links) {
                     let metadata = build_runner.get_run_build_script_metadata(unit);
                     build_runner.build_script_outputs.lock().unwrap().insert(
                         unit.pkg.package_id(),
