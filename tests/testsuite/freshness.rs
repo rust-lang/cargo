@@ -9,7 +9,7 @@ use std::process::Stdio;
 use std::thread;
 use std::time::SystemTime;
 
-use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{

@@ -8,7 +8,7 @@ use std::sync::Mutex;
 
 use cargo::core::SourceId;
 use cargo_test_support::cargo_process;
-use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{
     self, registry_path, Dependency, Package, RegistryBuilder, Response, TestRegistry,

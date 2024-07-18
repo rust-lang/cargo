@@ -1,6 +1,5 @@
 //! Tests for profiles defined in config files.
 
-use cargo_test_support::paths::CargoPathExt;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, paths, project, str};

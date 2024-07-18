@@ -3,7 +3,7 @@
 use std::thread::JoinHandle;
 
 use cargo::util::cache_lock::{CacheLockMode, CacheLocker};
-use cargo_test_support::paths::{self, CargoPathExt};
+use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
 use cargo_test_support::{retry, thread_wait_timeout, threaded_timeout};
 

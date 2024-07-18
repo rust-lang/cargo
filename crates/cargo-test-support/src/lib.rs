@@ -74,6 +74,7 @@ pub mod tools;
 
 pub mod prelude {
     pub use crate::cargo_test;
+    pub use crate::paths::CargoPathExt;
     pub use crate::ArgLine;
     pub use crate::CargoCommand;
     pub use crate::ChannelChanger;
