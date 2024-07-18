@@ -86,6 +86,7 @@ pub use snapbox::file;
 pub use snapbox::str;
 pub use snapbox::utils::current_dir;
 
+/// `panic!`, reporting the specified error , see also [`t!`]
 #[track_caller]
 pub fn panic_error(what: &str, err: impl Into<anyhow::Error>) -> ! {
     let err = err.into();
