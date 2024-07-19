@@ -1,9 +1,8 @@
 //! Tests for targets with `required-features`.
 
-use cargo_test_support::install::{
-    assert_has_installed_exe, assert_has_not_installed_exe, cargo_home,
-};
+use cargo_test_support::install::{assert_has_installed_exe, assert_has_not_installed_exe};
 use cargo_test_support::is_nightly;
+use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::str;
@@ -742,7 +741,7 @@ fn install_default_features() {
         .build();
 
     p.cargo("install --path .").run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --no-default-features")
@@ -756,10 +755,10 @@ Consider enabling some of the needed features by passing, e.g., `--features="a"`
 
 "#]])
         .run();
-    assert_has_not_installed_exe(cargo_home(), "foo");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo");
 
     p.cargo("install --path . --bin=foo").run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --bin=foo --no-default-features")
@@ -775,10 +774,10 @@ Caused by:
 
 "#]])
         .run();
-    assert_has_not_installed_exe(cargo_home(), "foo");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo");
 
     p.cargo("install --path . --example=foo").run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --example=foo --no-default-features")
@@ -794,7 +793,7 @@ Caused by:
 
 "#]])
         .run();
-    assert_has_not_installed_exe(cargo_home(), "foo");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -821,7 +820,7 @@ fn install_arg_features() {
         .build();
 
     p.cargo("install --features a").run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
     p.cargo("uninstall foo").run();
 }
 
@@ -871,32 +870,32 @@ fn install_multiple_required_features() {
         .build();
 
     p.cargo("install --path .").run();
-    assert_has_not_installed_exe(cargo_home(), "foo_1");
-    assert_has_installed_exe(cargo_home(), "foo_2");
-    assert_has_not_installed_exe(cargo_home(), "foo_3");
-    assert_has_not_installed_exe(cargo_home(), "foo_4");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo_1");
+    assert_has_installed_exe(paths::cargo_home(), "foo_2");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo_3");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo_4");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --bins --examples").run();
-    assert_has_not_installed_exe(cargo_home(), "foo_1");
-    assert_has_installed_exe(cargo_home(), "foo_2");
-    assert_has_not_installed_exe(cargo_home(), "foo_3");
-    assert_has_installed_exe(cargo_home(), "foo_4");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo_1");
+    assert_has_installed_exe(paths::cargo_home(), "foo_2");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo_3");
+    assert_has_installed_exe(paths::cargo_home(), "foo_4");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --features c").run();
-    assert_has_installed_exe(cargo_home(), "foo_1");
-    assert_has_installed_exe(cargo_home(), "foo_2");
-    assert_has_not_installed_exe(cargo_home(), "foo_3");
-    assert_has_not_installed_exe(cargo_home(), "foo_4");
+    assert_has_installed_exe(paths::cargo_home(), "foo_1");
+    assert_has_installed_exe(paths::cargo_home(), "foo_2");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo_3");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo_4");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --features c --bins --examples")
         .run();
-    assert_has_installed_exe(cargo_home(), "foo_1");
-    assert_has_installed_exe(cargo_home(), "foo_2");
-    assert_has_installed_exe(cargo_home(), "foo_3");
-    assert_has_installed_exe(cargo_home(), "foo_4");
+    assert_has_installed_exe(paths::cargo_home(), "foo_1");
+    assert_has_installed_exe(paths::cargo_home(), "foo_2");
+    assert_has_installed_exe(paths::cargo_home(), "foo_3");
+    assert_has_installed_exe(paths::cargo_home(), "foo_4");
     p.cargo("uninstall foo").run();
 
     p.cargo("install --path . --no-default-features")
@@ -954,10 +953,10 @@ Consider enabling some of the needed features by passing, e.g., `--features="b c
 
 "#]])
         .run();
-    assert_has_not_installed_exe(cargo_home(), "foo_1");
-    assert_has_not_installed_exe(cargo_home(), "foo_2");
-    assert_has_not_installed_exe(cargo_home(), "foo_3");
-    assert_has_not_installed_exe(cargo_home(), "foo_4");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo_1");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo_2");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo_3");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo_4");
 }
 
 #[cargo_test]
@@ -1075,7 +1074,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 1 measured; 0 filtered out; fini
 
     // install
     p.cargo("install").run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
     p.cargo("uninstall foo").run();
 }
 
@@ -1261,10 +1260,10 @@ Consider enabling some of the needed features by passing, e.g., `--features="bar
 
 "#]])
         .run();
-    assert_has_not_installed_exe(cargo_home(), "foo");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo");
 
     p.cargo("install --features bar/a").run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
     p.cargo("uninstall foo").run();
 }
 

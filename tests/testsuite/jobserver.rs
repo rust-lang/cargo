@@ -8,7 +8,7 @@ use std::thread;
 use cargo_test_support::basic_bin_manifest;
 use cargo_test_support::cargo_exe;
 use cargo_test_support::install::assert_has_installed_exe;
-use cargo_test_support::install::cargo_home;
+use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
 use cargo_test_support::{project, rustc_host, str};
 use cargo_util::is_ci;
@@ -105,7 +105,7 @@ all:
         .build();
 
     p.cargo("install --path .").run();
-    assert_has_installed_exe(cargo_home(), name);
+    assert_has_installed_exe(paths::cargo_home(), name);
 
     p.process(make).env("CARGO", cargo_exe()).arg("-j2").run();
 }
@@ -138,9 +138,9 @@ fn runner_inherits_jobserver() {
 
     // Add .cargo/bin to PATH
     let mut path: Vec<_> = env::split_paths(&env::var_os("PATH").unwrap_or_default()).collect();
-    path.push(cargo_home().join("bin"));
+    path.push(paths::cargo_home().join("bin"));
     let path = &env::join_paths(path).unwrap();
-    assert_has_installed_exe(cargo_home(), runner);
+    assert_has_installed_exe(paths::cargo_home(), runner);
 
     let host = rustc_host();
     let config_value = &format!("target.{host}.runner = \"{runner}\"");

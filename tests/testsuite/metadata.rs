@@ -1,7 +1,6 @@
 //! Tests for the `cargo metadata` command.
 
-use cargo_test_support::install::cargo_home;
-use cargo_test_support::paths::CargoPathExt;
+use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
@@ -3640,8 +3639,8 @@ fn filter_platform() {
     // We're going to be checking that we don't download excessively,
     // so we need to ensure that downloads will happen.
     let clear = || {
-        cargo_home().join("registry/cache").rm_rf();
-        cargo_home().join("registry/src").rm_rf();
+        paths::cargo_home().join("registry/cache").rm_rf();
+        paths::cargo_home().join("registry/src").rm_rf();
         p.build_dir().rm_rf();
     };
 

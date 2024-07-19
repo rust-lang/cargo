@@ -110,6 +110,10 @@ pub fn home() -> PathBuf {
     path
 }
 
+pub fn cargo_home() -> PathBuf {
+    home().join(".cargo")
+}
+
 pub trait CargoPathExt {
     fn to_url(&self) -> url::Url;
 

@@ -7,7 +7,8 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use cargo::core::PackageId;
-use cargo_test_support::install::{cargo_home, exe};
+use cargo_test_support::install::exe;
+use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{
@@ -30,11 +31,11 @@ fn pkg(name: &str, vers: &str) {
 }
 
 fn v1_path() -> PathBuf {
-    cargo_home().join(".crates.toml")
+    paths::cargo_home().join(".crates.toml")
 }
 
 fn v2_path() -> PathBuf {
-    cargo_home().join(".crates2.json")
+    paths::cargo_home().join(".crates2.json")
 }
 
 fn load_crates1() -> toml::Value {
@@ -46,7 +47,7 @@ fn load_crates2() -> serde_json::Value {
 }
 
 fn installed_exe(name: &str) -> PathBuf {
-    cargo_home().join("bin").join(exe(name))
+    paths::cargo_home().join("bin").join(exe(name))
 }
 
 /// Helper for executing binaries installed by cargo.
@@ -531,7 +532,7 @@ fn forwards_compatible() {
     pkg("bar", "1.0.0");
     cargo_process("install foo").run();
     let key = "foo 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)";
-    let v2 = cargo_home().join(".crates2.json");
+    let v2 = paths::cargo_home().join(".crates2.json");
     let mut data = load_crates2();
     data["newfield"] = serde_json::Value::Bool(true);
     data["installs"][key]["moreinfo"] = serde_json::Value::String("shazam".to_string());

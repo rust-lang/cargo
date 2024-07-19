@@ -18,9 +18,7 @@ use cargo_test_support::{
 };
 use cargo_util::{ProcessBuilder, ProcessError};
 
-use cargo_test_support::install::{
-    assert_has_installed_exe, assert_has_not_installed_exe, cargo_home, exe,
-};
+use cargo_test_support::install::{assert_has_installed_exe, assert_has_not_installed_exe, exe};
 use cargo_test_support::paths;
 
 fn pkg(name: &str, vers: &str) {
@@ -49,7 +47,7 @@ fn simple() {
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]]).run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 
     cargo_process("uninstall foo")
         .with_stderr_data(str![[r#"
@@ -57,7 +55,7 @@ fn simple() {
 
 "#]])
         .run();
-    assert_has_not_installed_exe(cargo_home(), "foo");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -78,7 +76,7 @@ fn install_the_same_version_twice() {
 
 "#]])
         .run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -182,7 +180,7 @@ fn simple_with_message_format() {
             "#,
         )
         .run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -205,7 +203,7 @@ fn with_index() {
 
 "#]])
         .run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 
     cargo_process("uninstall foo")
         .with_stderr_data(str![[r#"
@@ -213,7 +211,7 @@ fn with_index() {
 
 "#]])
         .run();
-    assert_has_not_installed_exe(cargo_home(), "foo");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -246,8 +244,8 @@ fn multiple_pkgs() {
 
 "#]])
         .run();
-    assert_has_installed_exe(cargo_home(), "foo");
-    assert_has_installed_exe(cargo_home(), "bar");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "bar");
 
     cargo_process("uninstall foo bar")
         .with_stderr_data(str![[r#"
@@ -258,8 +256,8 @@ fn multiple_pkgs() {
 "#]])
         .run();
 
-    assert_has_not_installed_exe(cargo_home(), "foo");
-    assert_has_not_installed_exe(cargo_home(), "bar");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo");
+    assert_has_not_installed_exe(paths::cargo_home(), "bar");
 }
 
 fn path() -> Vec<PathBuf> {
@@ -276,7 +274,7 @@ fn multiple_pkgs_path_set() {
 
     // add CARGO_HOME/bin to path
     let mut path = path();
-    path.push(cargo_home().join("bin"));
+    path.push(paths::cargo_home().join("bin"));
     let new_path = env::join_paths(path).unwrap();
     cargo_process("install foo bar baz")
         .env("PATH", new_path)
@@ -303,8 +301,8 @@ fn multiple_pkgs_path_set() {
 
 "#]])
         .run();
-    assert_has_installed_exe(cargo_home(), "foo");
-    assert_has_installed_exe(cargo_home(), "bar");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "bar");
 
     cargo_process("uninstall foo bar")
         .with_stderr_data(str![[r#"
@@ -315,8 +313,8 @@ fn multiple_pkgs_path_set() {
 "#]])
         .run();
 
-    assert_has_not_installed_exe(cargo_home(), "foo");
-    assert_has_not_installed_exe(cargo_home(), "bar");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo");
+    assert_has_not_installed_exe(paths::cargo_home(), "bar");
 }
 
 #[cargo_test]
@@ -339,7 +337,7 @@ fn pick_max_version() {
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]]).run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -353,7 +351,7 @@ fn installs_beta_version_by_explicit_name_from_git() {
         .arg(p.url().to_string())
         .arg("foo")
         .run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -439,7 +437,7 @@ fn install_location_precedence() {
     let t1 = root.join("t1");
     let t2 = root.join("t2");
     let t3 = root.join("t3");
-    let t4 = cargo_home();
+    let t4 = paths::cargo_home();
 
     fs::create_dir(root.join(".cargo")).unwrap();
     fs::write(
@@ -489,7 +487,7 @@ fn install_path() {
     let p = project().file("src/main.rs", "fn main() {}").build();
 
     cargo_process("install --path").arg(p.root()).run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
     // path-style installs force a reinstall
     p.cargo("install --path .").with_stderr_data(str![[r#"
 [INSTALLING] foo v0.0.1 ([ROOT]/foo)
@@ -680,7 +678,7 @@ fn multiple_binaries_in_selected_package_installs_all() {
         .arg("bar")
         .run();
 
-    let cargo_home = cargo_home();
+    let cargo_home = paths::cargo_home();
     assert_has_installed_exe(&cargo_home, "bin1");
     assert_has_installed_exe(&cargo_home, "bin2");
 }
@@ -700,7 +698,7 @@ fn multiple_binaries_in_selected_package_with_bin_option_installs_only_one() {
         .arg("bar")
         .run();
 
-    let cargo_home = cargo_home();
+    let cargo_home = paths::cargo_home();
     assert_has_installed_exe(&cargo_home, "bin1");
     assert_has_not_installed_exe(&cargo_home, "bin2");
 }
@@ -718,14 +716,14 @@ fn multiple_crates_select() {
         .arg(p.url().to_string())
         .arg("foo")
         .run();
-    assert_has_installed_exe(cargo_home(), "foo");
-    assert_has_not_installed_exe(cargo_home(), "bar");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
+    assert_has_not_installed_exe(paths::cargo_home(), "bar");
 
     cargo_process("install --git")
         .arg(p.url().to_string())
         .arg("bar")
         .run();
-    assert_has_installed_exe(cargo_home(), "bar");
+    assert_has_installed_exe(paths::cargo_home(), "bar");
 }
 
 #[cargo_test]
@@ -774,7 +772,7 @@ fn multiple_crates_auto_binaries() {
         .build();
 
     cargo_process("install --path").arg(p.root()).run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -809,7 +807,7 @@ fn multiple_crates_auto_examples() {
         .arg(p.root())
         .arg("--example=foo")
         .run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -873,7 +871,7 @@ fn examples() {
         .arg(p.root())
         .arg("--example=foo")
         .run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -1031,8 +1029,8 @@ fn git_repo() {
 
 "#]])
         .run();
-    assert_has_installed_exe(cargo_home(), "foo");
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -1087,7 +1085,7 @@ foo v0.0.1:
 
 "#]])
         .run();
-    let mut worldfile_path = cargo_home();
+    let mut worldfile_path = paths::cargo_home();
     worldfile_path.push(".crates.toml");
     let mut worldfile = OpenOptions::new()
         .write(true)
@@ -1147,8 +1145,8 @@ fn uninstall_piecemeal() {
         .build();
 
     cargo_process("install --path").arg(p.root()).run();
-    assert_has_installed_exe(cargo_home(), "foo");
-    assert_has_installed_exe(cargo_home(), "bar");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "bar");
 
     cargo_process("uninstall foo --bin=bar")
         .with_stderr_data(str![[r#"
@@ -1157,8 +1155,8 @@ fn uninstall_piecemeal() {
 "#]])
         .run();
 
-    assert_has_installed_exe(cargo_home(), "foo");
-    assert_has_not_installed_exe(cargo_home(), "bar");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
+    assert_has_not_installed_exe(paths::cargo_home(), "bar");
 
     cargo_process("uninstall foo --bin=foo")
         .with_stderr_data(str![[r#"
@@ -1166,7 +1164,7 @@ fn uninstall_piecemeal() {
 
 "#]])
         .run();
-    assert_has_not_installed_exe(cargo_home(), "foo");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo");
 
     cargo_process("uninstall foo")
         .with_status(101)
@@ -1206,7 +1204,7 @@ fn installs_from_cwd_by_default() {
 [WARNING] Using `cargo install` to install the binaries from the package in current working directory is deprecated, use `cargo install --path .` instead. Use `cargo build` if you want to simply build the package.
 ...
 "#]]).run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -1232,7 +1230,7 @@ fn installs_from_cwd_with_2018_warnings() {
 
 "#]])
         .run();
-    assert_has_not_installed_exe(cargo_home(), "foo");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -1247,7 +1245,7 @@ fn uninstall_cwd() {
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]]).run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 
     p.cargo("uninstall")
         .with_stdout_data("")
@@ -1256,7 +1254,7 @@ fn uninstall_cwd() {
 
 "#]])
         .run();
-    assert_has_not_installed_exe(cargo_home(), "foo");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -1306,7 +1304,7 @@ fn do_not_rebuilds_on_local_install() {
 
     assert!(p.build_dir().exists());
     assert!(p.release_bin("foo").exists());
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -1393,7 +1391,7 @@ fn readonly_dir() {
     fs::set_permissions(dir, perms).unwrap();
 
     cargo_process("install foo").cwd(dir).run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -1590,7 +1588,7 @@ fn install_target_native() {
     cargo_process("install foo --target")
         .arg(cargo_test_support::rustc_host())
         .run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -1604,7 +1602,7 @@ fn install_target_foreign() {
     cargo_process("install foo --target")
         .arg(cross_compile::alternate())
         .run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -1768,8 +1766,8 @@ fn uninstall_multiple_and_some_pkg_does_not_exist() {
 "#]])
         .run();
 
-    assert_has_not_installed_exe(cargo_home(), "foo");
-    assert_has_not_installed_exe(cargo_home(), "bar");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo");
+    assert_has_not_installed_exe(paths::cargo_home(), "bar");
 }
 
 #[cargo_test]
@@ -2010,7 +2008,7 @@ fn install_ignores_local_cargo_config() {
         .build();
 
     p.cargo("install bar").run();
-    assert_has_installed_exe(cargo_home(), "bar");
+    assert_has_installed_exe(paths::cargo_home(), "bar");
 }
 
 #[cargo_test]
@@ -2031,14 +2029,14 @@ fn install_ignores_unstable_table_in_local_cargo_config() {
     p.cargo("install bar")
         .masquerade_as_nightly_cargo(&["build-std"])
         .run();
-    assert_has_installed_exe(cargo_home(), "bar");
+    assert_has_installed_exe(paths::cargo_home(), "bar");
 }
 
 #[cargo_test]
 fn install_global_cargo_config() {
     pkg("bar", "0.0.1");
 
-    let config = cargo_home().join("config.toml");
+    let config = paths::cargo_home().join("config.toml");
     let mut toml = fs::read_to_string(&config).unwrap_or_default();
 
     toml.push_str(
@@ -2271,7 +2269,7 @@ workspace: [ROOT]/foo/Cargo.toml
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]]).run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -2376,7 +2374,7 @@ fn no_auto_fix_note() {
 
 "#]])
         .run();
-    assert_has_installed_exe(cargo_home(), "auto_fix");
+    assert_has_installed_exe(paths::cargo_home(), "auto_fix");
 
     cargo_process("uninstall auto_fix")
         .with_stderr_data(str![[r#"
@@ -2384,7 +2382,7 @@ fn no_auto_fix_note() {
 
 "#]])
         .run();
-    assert_has_not_installed_exe(cargo_home(), "auto_fix");
+    assert_has_not_installed_exe(paths::cargo_home(), "auto_fix");
 }
 
 #[cargo_test]
@@ -2447,7 +2445,7 @@ fn sparse_install() {
 
 "#]])
         .run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
     let assert_v1 = |expected| {
         let v1 = fs::read_to_string(paths::home().join(".cargo/.crates.toml")).unwrap();
         assert_e2e().eq(&v1, expected);
@@ -2458,7 +2456,7 @@ fn sparse_install() {
 
 "#]]);
     cargo_process("install bar").run();
-    assert_has_installed_exe(cargo_home(), "bar");
+    assert_has_installed_exe(paths::cargo_home(), "bar");
     assert_v1(str![[r#"
 [v1]
 "bar 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = ["bar[EXE]"]
@@ -2472,7 +2470,7 @@ fn sparse_install() {
 
 "#]])
         .run();
-    assert_has_not_installed_exe(cargo_home(), "bar");
+    assert_has_not_installed_exe(paths::cargo_home(), "bar");
     assert_v1(str![[r#"
 [v1]
 "foo 0.0.1 (sparse+http://127.0.0.1:[..]/index/)" = ["foo[EXE]"]
@@ -2484,7 +2482,7 @@ fn sparse_install() {
 
 "#]])
         .run();
-    assert_has_not_installed_exe(cargo_home(), "foo");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo");
     assert_v1(str![[r#"
 [v1]
 
@@ -2523,7 +2521,7 @@ fn self_referential() {
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]]).run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -2568,7 +2566,7 @@ fn ambiguous_registry_vs_local_package() {
 
 "#]])
         .run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -2614,10 +2612,12 @@ fn install_incompat_msrv() {
 
 fn assert_tracker_noexistence(key: &str) {
     let v1_data: toml::Value =
-        toml::from_str(&fs::read_to_string(cargo_home().join(".crates.toml")).unwrap()).unwrap();
-    let v2_data: serde_json::Value =
-        serde_json::from_str(&fs::read_to_string(cargo_home().join(".crates2.json")).unwrap())
+        toml::from_str(&fs::read_to_string(paths::cargo_home().join(".crates.toml")).unwrap())
             .unwrap();
+    let v2_data: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(paths::cargo_home().join(".crates2.json")).unwrap(),
+    )
+    .unwrap();
 
     assert!(v1_data["v1"].get(key).is_none());
     assert!(v2_data["installs"][key].is_null());
@@ -2666,9 +2666,9 @@ fn uninstall_running_binary() {
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]]).run();
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 
-    let foo_bin = cargo_home().join("bin").join(exe("foo"));
+    let foo_bin = paths::cargo_home().join("bin").join(exe("foo"));
     let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = l.local_addr().unwrap().to_string();
     let t = thread::spawn(move || {
@@ -2716,7 +2716,7 @@ fn uninstall_running_binary() {
         t.join().unwrap();
     };
 
-    assert_has_not_installed_exe(cargo_home(), "foo");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo");
     assert_tracker_noexistence(key);
 
     cargo_process("install foo").with_stderr_data(str![[r#"

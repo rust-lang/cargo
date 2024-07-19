@@ -3,7 +3,7 @@
 use std::fs::File;
 
 use cargo_test_support::cross_compile::{self, alternate};
-use cargo_test_support::install::cargo_home;
+use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
 use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{Dependency, Package};
@@ -2208,8 +2208,8 @@ fn minimal_download() {
         .build();
 
     let clear = || {
-        cargo_home().join("registry/cache").rm_rf();
-        cargo_home().join("registry/src").rm_rf();
+        paths::cargo_home().join("registry/cache").rm_rf();
+        paths::cargo_home().join("registry/src").rm_rf();
         p.build_dir().rm_rf();
     };
 
