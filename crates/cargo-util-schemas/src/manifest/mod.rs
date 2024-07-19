@@ -111,7 +111,7 @@ impl TomlManifest {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct TomlWorkspace {
     pub members: Option<Vec<String>>,
@@ -199,6 +199,44 @@ pub struct TomlPackage {
 }
 
 impl TomlPackage {
+    pub fn new(name: PackageName) -> Self {
+        Self {
+            name,
+
+            edition: None,
+            rust_version: None,
+            version: None,
+            authors: None,
+            build: None,
+            metabuild: None,
+            default_target: None,
+            forced_target: None,
+            links: None,
+            exclude: None,
+            include: None,
+            publish: None,
+            workspace: None,
+            im_a_teapot: None,
+            autobins: None,
+            autoexamples: None,
+            autotests: None,
+            autobenches: None,
+            default_run: None,
+            description: None,
+            homepage: None,
+            documentation: None,
+            readme: None,
+            keywords: None,
+            categories: None,
+            license: None,
+            license_file: None,
+            repository: None,
+            resolver: None,
+            metadata: None,
+            _invalid_cargo_features: None,
+        }
+    }
+
     pub fn resolved_edition(&self) -> Result<Option<&String>, UnresolvedError> {
         self.edition.as_ref().map(|v| v.resolved()).transpose()
     }
