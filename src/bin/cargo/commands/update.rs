@@ -49,6 +49,7 @@ pub fn cli() -> Command {
                 .help_heading(heading::PACKAGE_SELECTION),
         )
         .arg_manifest_path()
+        .arg_lockfile_path()
         .arg_ignore_rust_version_with_help(
             "Ignore `rust-version` specification in packages (unstable)",
         )

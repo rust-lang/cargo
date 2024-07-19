@@ -87,6 +87,7 @@ Example uses:
 - Depend on crates with the same name from different registries"),
         ])
         .arg_manifest_path_without_unsupported_path_tip()
+        .arg_lockfile_path()
         .arg_package("Package to modify")
         .arg_ignore_rust_version()
         .arg_dry_run("Don't actually write the manifest")

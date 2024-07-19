@@ -37,6 +37,7 @@ pub fn cli() -> Command {
         .arg_target_dir()
         .arg_parallel()
         .arg_manifest_path()
+        .arg_lockfile_path()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help package</>` for more detailed information.\n"
         ))
