@@ -21,7 +21,8 @@ fn bad1() {
     p.cargo("check -v --target=nonexistent-target")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] expected table for configuration key `target.nonexistent-target`, but found string in [ROOT]/foo/.cargo/config.toml
+[ERROR] invalid configuration for key `target.nonexistent-target`
+expected a table, but found a string for `target.nonexistent-target` in [ROOT]/foo/.cargo/config.toml
 
 "#]])
         .run();

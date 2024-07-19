@@ -182,7 +182,6 @@ fn run_doc_tests(
             args,
             unstable_opts,
             unit,
-            linker,
             script_meta,
             env,
         } = doctest_info;
@@ -236,9 +235,9 @@ fn run_doc_tests(
                     p.arg("--runtool-arg").arg(arg);
                 }
             }
-            if let Some(linker) = linker {
+            if let Some(linker) = &unit.linker {
                 let mut joined = OsString::from("linker=");
-                joined.push(linker);
+                joined.push(linker.as_ref());
                 p.arg("-C").arg(joined);
             }
         }

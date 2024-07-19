@@ -1156,11 +1156,7 @@ fn build_base_args(
         cmd,
         "-C",
         "linker=",
-        build_runner
-            .compilation
-            .target_linker(unit.kind)
-            .as_ref()
-            .map(|s| s.as_ref()),
+        unit.linker.as_ref().map(|s| s.as_ref().as_ref()),
     );
     if incremental {
         let dir = build_runner
