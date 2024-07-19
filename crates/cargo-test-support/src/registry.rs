@@ -279,7 +279,7 @@ impl RegistryBuilder {
     /// Initializes the registry.
     #[must_use]
     pub fn build(self) -> TestRegistry {
-        let config_path = paths::home().join(".cargo/config.toml");
+        let config_path = paths::cargo_home().join("config.toml");
         t!(fs::create_dir_all(config_path.parent().unwrap()));
         let prefix = if let Some(alternative) = &self.alternative {
             format!("{alternative}-")
@@ -391,7 +391,7 @@ impl RegistryBuilder {
         }
 
         if self.configure_token {
-            let credentials = paths::home().join(".cargo/credentials.toml");
+            let credentials = paths::cargo_home().join("credentials.toml");
             match &registry.token {
                 Token::Plaintext(token) => {
                     if let Some(alternative) = &self.alternative {
@@ -1195,7 +1195,7 @@ impl Package {
     /// Creates a new package builder.
     /// Call `publish()` to finalize and build the package.
     pub fn new(name: &str, vers: &str) -> Package {
-        let config = paths::home().join(".cargo/config.toml");
+        let config = paths::cargo_home().join("config.toml");
         if !config.exists() {
             init();
         }
