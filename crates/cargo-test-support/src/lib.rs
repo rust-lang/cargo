@@ -243,12 +243,16 @@ pub struct ProjectBuilder {
 }
 
 impl ProjectBuilder {
-    /// Root of the project, ex: `/path/to/cargo/target/cit/t0/foo`
+    /// Root of the project
+    ///
+    /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/foo`
     pub fn root(&self) -> PathBuf {
         self.root.root()
     }
 
-    /// Project's debug dir, ex: `/path/to/cargo/target/cit/t0/foo/target/debug`
+    /// Project's debug dir
+    ///
+    /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/foo/target/debug`
     pub fn target_debug_dir(&self) -> PathBuf {
         self.root.target_debug_dir()
     }
@@ -366,30 +370,40 @@ impl Project {
         Self { root: project_root }
     }
 
-    /// Root of the project, ex: `/path/to/cargo/target/cit/t0/foo`
+    /// Root of the project
+    ///
+    /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/foo`
     pub fn root(&self) -> PathBuf {
         self.root.clone()
     }
 
-    /// Project's target dir, ex: `/path/to/cargo/target/cit/t0/foo/target`
+    /// Project's target dir
+    ///
+    /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/foo/target`
     pub fn build_dir(&self) -> PathBuf {
         self.root().join("target")
     }
 
-    /// Project's debug dir, ex: `/path/to/cargo/target/cit/t0/foo/target/debug`
+    /// Project's debug dir
+    ///
+    /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/foo/target/debug`
     pub fn target_debug_dir(&self) -> PathBuf {
         self.build_dir().join("debug")
     }
 
-    /// File url for root, ex: `file:///path/to/cargo/target/cit/t0/foo`
+    /// File url for root
+    ///
+    /// ex: `file://$CARGO_TARGET_TMPDIR/cit/t0/foo`
     pub fn url(&self) -> Url {
         use paths::CargoPathExt;
         self.root().to_url()
     }
 
     /// Path to an example built as a library.
+    ///
     /// `kind` should be one of: "lib", "rlib", "staticlib", "dylib", "proc-macro"
-    /// ex: `/path/to/cargo/target/cit/t0/foo/target/debug/examples/libex.rlib`
+    ///
+    /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/foo/target/debug/examples/libex.rlib`
     pub fn example_lib(&self, name: &str, kind: &str) -> PathBuf {
         self.target_debug_dir()
             .join("examples")
@@ -397,7 +411,8 @@ impl Project {
     }
 
     /// Path to a debug binary.
-    /// ex: `/path/to/cargo/target/cit/t0/foo/target/debug/foo`
+    ///
+    /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/foo/target/debug/foo`
     pub fn bin(&self, b: &str) -> PathBuf {
         self.build_dir()
             .join("debug")
@@ -405,7 +420,8 @@ impl Project {
     }
 
     /// Path to a release binary.
-    /// ex: `/path/to/cargo/target/cit/t0/foo/target/release/foo`
+    ///
+    /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/foo/target/release/foo`
     pub fn release_bin(&self, b: &str) -> PathBuf {
         self.build_dir()
             .join("release")
@@ -413,7 +429,8 @@ impl Project {
     }
 
     /// Path to a debug binary for a specific target triple.
-    /// ex: `/path/to/cargo/target/cit/t0/foo/target/i686-apple-darwin/debug/foo`
+    ///
+    /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/foo/target/i686-apple-darwin/debug/foo`
     pub fn target_bin(&self, target: &str, b: &str) -> PathBuf {
         self.build_dir().join(target).join("debug").join(&format!(
             "{}{}",
@@ -422,25 +439,36 @@ impl Project {
         ))
     }
 
-    /// Returns an iterator of paths matching the glob pattern, which is
-    /// relative to the project root.
+    /// Returns an iterator of paths within [`Project::root`] matching the glob pattern
     pub fn glob<P: AsRef<Path>>(&self, pattern: P) -> glob::Paths {
         let pattern = self.root().join(pattern);
         glob::glob(pattern.to_str().expect("failed to convert pattern to str"))
             .expect("failed to glob")
     }
 
-    /// Changes the contents of an existing file.
+    /// Overwrite a file with new content
+    ///
+    // # Example:
+    ///
+    /// ```no_run
+    /// # let p = cargo_test_support::project().build();
+    /// p.change_file("src/lib.rs", "fn new_fn() {}");
+    /// ```
     pub fn change_file(&self, path: &str, body: &str) {
         FileBuilder::new(self.root().join(path), body, false).mk()
     }
 
     /// Creates a `ProcessBuilder` to run a program in the project
     /// and wrap it in an Execs to assert on the execution.
-    /// Example:
-    ///         p.process(&p.bin("foo"))
-    ///             .with_stdout("bar\n")
-    ///             .run();
+    ///
+    /// # Example:
+    ///
+    /// ```no_run
+    /// # let p = cargo_test_support::project().build();
+    /// p.process(&p.bin("foo"))
+    ///     .with_stdout("bar\n")
+    ///     .run();
+    /// ```
     pub fn process<T: AsRef<OsStr>>(&self, program: T) -> Execs {
         let mut p = process(program);
         p.cwd(self.root());
@@ -448,9 +476,17 @@ impl Project {
     }
 
     /// Creates a `ProcessBuilder` to run cargo.
+    ///
     /// Arguments can be separated by spaces.
-    /// Example:
-    ///     p.cargo("build --bin foo").run();
+    ///
+    /// For `cargo run`, see [`Project::rename_run`].
+    ///
+    /// # Example:
+    ///
+    /// ```no_run
+    /// # let p = cargo_test_support::project().build();
+    /// p.cargo("build --bin foo").run();
+    /// ```
     pub fn cargo(&self, cmd: &str) -> Execs {
         let cargo = cargo_exe();
         let mut execs = self.process(&cargo);
