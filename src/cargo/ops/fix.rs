@@ -121,6 +121,9 @@ pub fn fix(
     }
     let mut ws = Workspace::new(&root_manifest, gctx)?;
     ws.set_resolve_honors_rust_version(Some(original_ws.resolve_honors_rust_version()));
+    if let Some(p) = original_ws.requested_lockfile_path() {
+        ws.set_requested_lockfile_path(Some(p.clone()))
+    }
 
     // Spin up our lock server, which our subprocesses will use to synchronize fixes.
     let lock_server = LockServer::new()?;

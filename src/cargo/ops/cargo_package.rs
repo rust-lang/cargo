@@ -248,7 +248,12 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Vec<Fi
     }
     let pkgs = ws.members_with_features(specs, &opts.cli_features)?;
 
-    if ws.root().join("Cargo.lock").exists() {
+    let default_lockfile = ws.root().join("Cargo.lock");
+    if ws
+        .requested_lockfile_path()
+        .unwrap_or_else(|| &default_lockfile)
+        .exists()
+    {
         // Make sure the Cargo.lock is up-to-date and valid.
         let dry_run = false;
         let _ = ops::resolve_ws(ws, dry_run)?;

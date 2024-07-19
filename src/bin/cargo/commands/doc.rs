@@ -39,6 +39,7 @@ pub fn cli() -> Command {
         .arg_unit_graph()
         .arg_timings()
         .arg_manifest_path()
+        .arg_lockfile_path()
         .arg_ignore_rust_version()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help doc</>` for more detailed information.\n"
