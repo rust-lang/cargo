@@ -14,7 +14,7 @@ use cargo_test_support::registry::{
     self, registry_path, Dependency, Package, RegistryBuilder, Response, TestRegistry,
 };
 use cargo_test_support::{basic_manifest, project, str};
-use cargo_test_support::{git, install::cargo_home, t};
+use cargo_test_support::{git, t};
 use cargo_util::paths::remove_dir_all;
 
 fn setup_http() -> TestRegistry {
@@ -3105,7 +3105,7 @@ fn package_lock_inside_package_is_overwritten() {
 
     let id = SourceId::for_registry(registry.index_url()).unwrap();
     let hash = cargo::util::hex::short_hash(&id);
-    let ok = cargo_home()
+    let ok = paths::cargo_home()
         .join("registry")
         .join("src")
         .join(format!("-{}", hash))
@@ -3144,7 +3144,7 @@ fn package_lock_as_a_symlink_inside_package_is_overwritten() {
 
     let id = SourceId::for_registry(registry.index_url()).unwrap();
     let hash = cargo::util::hex::short_hash(&id);
-    let pkg_root = cargo_home()
+    let pkg_root = paths::cargo_home()
         .join("registry")
         .join("src")
         .join(format!("-{}", hash))
@@ -3872,7 +3872,7 @@ or use environment variable CARGO_REGISTRIES_ALTERNATIVE_TOKEN
 
     // Test the output with the default.
     cargo_util::paths::append(
-        &cargo_home().join("config.toml"),
+        &paths::cargo_home().join("config.toml"),
         br#"
             [registry]
             default = "alternative"

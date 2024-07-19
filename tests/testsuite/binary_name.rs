@@ -2,7 +2,7 @@
 
 use cargo_test_support::install::assert_has_installed_exe;
 use cargo_test_support::install::assert_has_not_installed_exe;
-use cargo_test_support::install::cargo_home;
+use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::str;
@@ -221,7 +221,7 @@ Hello, crabs!
         .masquerade_as_nightly_cargo(&["different-binary-name"])
         .run();
 
-    assert_has_installed_exe(cargo_home(), "007bar");
+    assert_has_installed_exe(paths::cargo_home(), "007bar");
 
     p.cargo("uninstall")
         .with_stderr_data(str![[r#"
@@ -231,7 +231,7 @@ Hello, crabs!
         .masquerade_as_nightly_cargo(&["different-binary-name"])
         .run();
 
-    assert_has_not_installed_exe(cargo_home(), "007bar");
+    assert_has_not_installed_exe(paths::cargo_home(), "007bar");
 }
 
 #[cargo_test]

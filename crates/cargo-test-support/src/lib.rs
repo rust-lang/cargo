@@ -1308,7 +1308,7 @@ pub trait TestEnvCommandExt: Sized {
         self = self
             .current_dir(&paths::root())
             .env("HOME", paths::home())
-            .env("CARGO_HOME", paths::home().join(".cargo"))
+            .env("CARGO_HOME", paths::cargo_home())
             .env("__CARGO_TEST_ROOT", paths::global_root())
             // Force Cargo to think it's on the stable channel for all tests, this
             // should hopefully not surprise us as we add cargo features over time and

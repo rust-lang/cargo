@@ -9,7 +9,8 @@ use std::{env, str};
 
 use cargo_test_support::cargo_process;
 use cargo_test_support::git;
-use cargo_test_support::install::{assert_has_installed_exe, cargo_home};
+use cargo_test_support::install::assert_has_installed_exe;
+use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
@@ -46,8 +47,8 @@ fn multiple_installs() {
     execs().run_output(&a);
     execs().run_output(&b);
 
-    assert_has_installed_exe(cargo_home(), "foo");
-    assert_has_installed_exe(cargo_home(), "bar");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "bar");
 }
 
 #[cargo_test]
@@ -75,8 +76,8 @@ fn concurrent_installs() {
     execs().run_output(&a);
     execs().run_output(&b);
 
-    assert_has_installed_exe(cargo_home(), "foo");
-    assert_has_installed_exe(cargo_home(), "bar");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "bar");
 }
 
 #[cargo_test]
@@ -104,7 +105,7 @@ fn one_install_should_be_bad() {
     execs().run_output(&a);
     execs().run_output(&b);
 
-    assert_has_installed_exe(cargo_home(), "foo");
+    assert_has_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
