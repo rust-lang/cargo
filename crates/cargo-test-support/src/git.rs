@@ -1,42 +1,42 @@
-/*
-# Git Testing Support
-
-## Creating a git dependency
-`git::new()` is an easy way to create a new git repository containing a
-project that you can then use as a dependency. It will automatically add all
-the files you specify in the project and commit them to the repository.
-Example:
-
-```
-let git_project = git::new("dep1", |project| {
-    project
-        .file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
-        .file("src/lib.rs", r#"pub fn f() { println!("hi!"); } "#)
-});
-
-// Use the `url()` method to get the file url to the new repository.
-let p = project()
-    .file("Cargo.toml", &format!(r#"
-        [package]
-        name = "a"
-        version = "1.0.0"
-
-        [dependencies]
-        dep1 = {{ git = '{}' }}
-    "#, git_project.url()))
-    .file("src/lib.rs", "extern crate dep1;")
-    .build();
-```
-
-## Manually creating repositories
-`git::repo()` can be used to create a `RepoBuilder` which provides a way of
-adding files to a blank repository and committing them.
-
-If you want to then manipulate the repository (such as adding new files or
-tags), you can use `git2::Repository::open()` to open the repository and then
-use some of the helper functions in this file to interact with the repository.
-
-*/
+//! # Git Testing Support
+//!
+//! ## Creating a git dependency
+//! `git::new()` is an easy way to create a new git repository containing a
+//! project that you can then use as a dependency. It will automatically add all
+//! the files you specify in the project and commit them to the repository.
+//! Example:
+//!
+//! ```no_run
+//! # use cargo_test_support::project;
+//! # use cargo_test_support::basic_manifest;
+//! # use cargo_test_support::git;
+//! let git_project = git::new("dep1", |project| {
+//!     project
+//!         .file("Cargo.toml", &basic_manifest("dep1", "1.0.0"))
+//!         .file("src/lib.rs", r#"pub fn f() { println!("hi!"); } "#)
+//! });
+//!
+//! // Use the `url()` method to get the file url to the new repository.
+//! let p = project()
+//!     .file("Cargo.toml", &format!(r#"
+//!         [package]
+//!         name = "a"
+//!         version = "1.0.0"
+//!
+//!         [dependencies]
+//!         dep1 = {{ git = '{}' }}
+//!     "#, git_project.url()))
+//!     .file("src/lib.rs", "extern crate dep1;")
+//!     .build();
+//! ```
+//!
+//! ## Manually creating repositories
+//! `git::repo()` can be used to create a `RepoBuilder` which provides a way of
+//! adding files to a blank repository and committing them.
+//!
+//! If you want to then manipulate the repository (such as adding new files or
+//! tags), you can use `git2::Repository::open()` to open the repository and then
+//! use some of the helper functions in this file to interact with the repository.
 
 use crate::{paths::CargoPathExt, project, Project, ProjectBuilder, SymlinkBuilder};
 use std::fs;
