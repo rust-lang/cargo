@@ -1,3 +1,62 @@
+//! Helpers for testing `cargo package` / `cargo publish`
+//!
+//! # Example
+//!
+//! ```no_run
+//! # use cargo_test_support::registry::RegistryBuilder;
+//! # use cargo_test_support::publish::validate_upload;
+//! # use cargo_test_support::project;
+//! // This replaces `registry::init()` and must be called before `Package::new().publish()`
+//! let registry = RegistryBuilder::new().http_api().http_index().build();
+//!
+//! let p = project()
+//!     .file(
+//!         "Cargo.toml",
+//!         r#"
+//!             [package]
+//!             name = "foo"
+//!             version = "0.0.1"
+//!             edition = "2015"
+//!             authors = []
+//!             license = "MIT"
+//!             description = "foo"
+//!         "#,
+//!     )
+//!     .file("src/main.rs", "fn main() {}")
+//!     .build();
+//!
+//! p.cargo("publish --no-verify")
+//!     .replace_crates_io(registry.index_url())
+//!     .run();
+//!
+//! validate_upload(
+//!     r#"
+//!     {
+//!       "authors": [],
+//!       "badges": {},
+//!       "categories": [],
+//!       "deps": [],
+//!       "description": "foo",
+//!       "documentation": null,
+//!       "features": {},
+//!       "homepage": null,
+//!       "keywords": [],
+//!       "license": "MIT",
+//!       "license_file": null,
+//!       "links": null,
+//!       "name": "foo",
+//!       "readme": null,
+//!       "readme_file": null,
+//!       "repository": null,
+//!       "rust_version": null,
+//!       "vers": "0.0.1"
+//!       }
+//!     "#,
+//!     "foo-0.0.1.crate",
+//!     &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+//! );
+//! ```
+
 use crate::compare::{assert_match_exact, find_json_mismatch};
 use crate::registry::{self, alt_api_path, FeatureMap};
 use flate2::read::GzDecoder;
@@ -17,7 +76,7 @@ where
     Ok(u32::from_le_bytes(buf))
 }
 
-/// Checks the result of a crate publish.
+/// Check the `cargo publish` API call
 pub fn validate_upload(expected_json: &str, expected_crate_name: &str, expected_files: &[&str]) {
     let new_path = registry::api_path().join("api/v1/crates/new");
     _validate_upload(
@@ -29,7 +88,7 @@ pub fn validate_upload(expected_json: &str, expected_crate_name: &str, expected_
     );
 }
 
-/// Checks the result of a crate publish, along with the contents of the files.
+/// Check the `cargo publish` API call, with file contents
 pub fn validate_upload_with_contents(
     expected_json: &str,
     expected_crate_name: &str,
@@ -46,7 +105,7 @@ pub fn validate_upload_with_contents(
     );
 }
 
-/// Checks the result of a crate publish to an alternative registry.
+/// Check the `cargo publish` API call to the alternative test registry
 pub fn validate_alt_upload(
     expected_json: &str,
     expected_crate_name: &str,
