@@ -233,7 +233,13 @@ pub struct Project {
 
 /// Create a project to run tests against
 ///
-/// The project can be constructed programmatically or from the filesystem with [`Project::from_template`]
+/// - Creates a [`basic_manifest`] if one isn't supplied
+///
+/// To get started, see:
+/// - [`project`]
+/// - [`project_in`]
+/// - [`project_in_home`]
+/// - [`Project::from_template`]
 #[must_use]
 pub struct ProjectBuilder {
     root: Project,
@@ -257,6 +263,7 @@ impl ProjectBuilder {
         self.root.target_debug_dir()
     }
 
+    /// Create project in `root`
     pub fn new(root: PathBuf) -> ProjectBuilder {
         ProjectBuilder {
             root: Project { root },
@@ -266,6 +273,7 @@ impl ProjectBuilder {
         }
     }
 
+    /// Create project, relative to [`paths::root`]
     pub fn at<P: AsRef<Path>>(mut self, path: P) -> Self {
         self.root = Project {
             root: paths::root().join(path),
