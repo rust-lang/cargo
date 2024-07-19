@@ -3,7 +3,7 @@ use cargo_test_support::current_dir;
 use cargo_test_support::file;
 use cargo_test_support::prelude::*;
 use cargo_test_support::str;
-use cargo_test_support::CargoCommand;
+use cargo_test_support::CargoCommandExt;
 use cargo_test_support::Project;
 
 #[cargo_test]

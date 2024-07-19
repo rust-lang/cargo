@@ -6,7 +6,7 @@ use cargo_test_support::git;
 use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::str;
-use cargo_test_support::CargoCommand;
+use cargo_test_support::CargoCommandExt;
 
 #[cargo_test]
 fn case() {
