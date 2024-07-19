@@ -1,6 +1,11 @@
 //! Routines for comparing and diffing output.
 //!
-//! # Patterns
+//! # Deprecated comparisons
+//!
+//! Cargo's tests are in transition from internal-only pattern and normalization routines used in
+//! asserts like [`crate::Execs::with_stdout`] to [`assert_e2e`] and [`assert_ui`].
+//!
+//! ## Patterns
 //!
 //! Many of these functions support special markup to assist with comparing
 //! text that may vary or is otherwise uninteresting for the test at hand. The
@@ -22,7 +27,7 @@
 //!   can use this to avoid duplicating the `with_stderr` call like:
 //!   `if cfg!(target_env = "msvc") {e.with_stderr("...[DIRTY]...");} else {e.with_stderr("...");}`.
 //!
-//! # Normalization
+//! ## Normalization
 //!
 //! In addition to the patterns described above, the strings are normalized
 //! in such a way to avoid unwanted differences. The normalizations are:
@@ -86,6 +91,19 @@ macro_rules! regex {
 ///   Other heuristics are applied to try to ensure Windows-style paths aren't
 ///   a problem.
 /// - Carriage returns are removed, which can help when running on Windows.
+///
+/// # Example
+///
+/// ```no_run
+/// # use cargo_test_support::compare::assert_e2e;
+/// # use cargo_test_support::file;
+/// # let p = cargo_test_support::project().build();
+/// # let stdout = "";
+/// assert_e2e().eq(stdout, file!["stderr.term.svg"]);
+/// ```
+/// ```console
+/// $ SNAPSHOTS=overwrite cargo test
+/// ```
 pub fn assert_ui() -> snapbox::Assert {
     let mut subs = snapbox::Redactions::new();
     subs.extend(MIN_LITERAL_REDACTIONS.into_iter().cloned())
@@ -129,6 +147,18 @@ pub fn assert_ui() -> snapbox::Assert {
 ///   Other heuristics are applied to try to ensure Windows-style paths aren't
 ///   a problem.
 /// - Carriage returns are removed, which can help when running on Windows.
+///
+/// # Example
+///
+/// ```no_run
+/// # use cargo_test_support::compare::assert_e2e;
+/// # use cargo_test_support::str;
+/// # let p = cargo_test_support::project().build();
+/// assert_e2e().eq(p.read_lockfile(), str![]);
+/// ```
+/// ```console
+/// $ SNAPSHOTS=overwrite cargo test
+/// ```
 pub fn assert_e2e() -> snapbox::Assert {
     let mut subs = snapbox::Redactions::new();
     subs.extend(MIN_LITERAL_REDACTIONS.into_iter().cloned())
