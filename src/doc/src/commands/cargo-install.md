@@ -132,6 +132,12 @@ useful if something has changed on the system that you want to rebuild with,
 such as a newer version of <code>rustc</code>.</dd>
 
 
+<dt class="option-term" id="option-cargo-install---no-path-check"><a class="option-anchor" href="#option-cargo-install---no-path-check"></a><code>--no-path-check</code></dt>
+<dd class="option-desc">By default, Cargo will check if installed programs are available in the
+configured <code>PATH</code> and generate a warning if this is not the case. This flag
+tells Cargo not to perform any path checks.</dd>
+
+
 <dt class="option-term" id="option-cargo-install---no-track"><a class="option-anchor" href="#option-cargo-install---no-track"></a><code>--no-track</code></dt>
 <dd class="option-desc">By default, Cargo keeps track of the installed packages with a metadata file
 stored in the installation root directory. This flag tells Cargo not to use or
