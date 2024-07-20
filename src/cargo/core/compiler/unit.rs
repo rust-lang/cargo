@@ -14,7 +14,6 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::rc::Rc;
-use std::sync::Arc;
 
 use super::BuildOutput;
 
@@ -72,7 +71,7 @@ pub struct UnitInner {
     ///
     /// [`BuildContext::extra_args_for`]: crate::core::compiler::build_context::BuildContext::extra_args_for
     /// [`TargetInfo.rustflags`]: crate::core::compiler::build_context::TargetInfo::rustflags
-    pub rustflags: Arc<[String]>,
+    pub rustflags: Rc<[String]>,
     /// Extra compiler flags to pass to `rustdoc` for a given unit.
     ///
     /// Although it depends on the caller, in the current Cargo implementation,
@@ -83,7 +82,7 @@ pub struct UnitInner {
     ///
     /// [`BuildContext::extra_args_for`]: crate::core::compiler::build_context::BuildContext::extra_args_for
     /// [`TargetInfo.rustdocflags`]: crate::core::compiler::build_context::TargetInfo::rustdocflags
-    pub rustdocflags: Arc<[String]>,
+    pub rustdocflags: Rc<[String]>,
     /// Build script override for the given library name.
     ///
     /// Any package with a `links` value for the given library name will skip
@@ -232,8 +231,8 @@ impl UnitInterner {
         kind: CompileKind,
         mode: CompileMode,
         features: Vec<InternedString>,
-        rustflags: Arc<[String]>,
-        rustdocflags: Arc<[String]>,
+        rustflags: Rc<[String]>,
+        rustdocflags: Rc<[String]>,
         links_overrides: Rc<BTreeMap<String, BuildOutput>>,
         is_std: bool,
         dep_hash: u64,
