@@ -20,8 +20,8 @@ use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::hash_map::{Entry, HashMap};
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::str::{self, FromStr};
-use std::sync::Arc;
 
 /// Information about the platform target gleaned from querying rustc.
 ///
@@ -51,9 +51,9 @@ pub struct TargetInfo {
     /// target libraries.
     pub sysroot_target_libdir: PathBuf,
     /// Extra flags to pass to `rustc`, see [`extra_args`].
-    pub rustflags: Arc<[String]>,
+    pub rustflags: Rc<[String]>,
     /// Extra flags to pass to `rustdoc`, see [`extra_args`].
-    pub rustdocflags: Arc<[String]>,
+    pub rustdocflags: Rc<[String]>,
     /// Whether or not rustc (stably) supports the `--check-cfg` flag.
     ///
     /// Can be removed once the minimum supported rustc version of Cargo is
