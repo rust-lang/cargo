@@ -63,6 +63,7 @@ _cargo()
 	local opt__fix="$opt_common $opt_pkg_spec $opt_feat $opt_mani $opt_parallel $opt_targets $opt_lock --release --target --message-format --broken-code --edition --edition-idioms --allow-no-vcs --allow-dirty --allow-staged --profile --target-dir --ignore-rust-version"
 	local opt__generate_lockfile="$opt_common $opt_mani $opt_lock"
 	local opt__help="$opt_help"
+	local opt__info="$opt_common $opt_lock --registry --index"
 	local opt__init="$opt_common $opt_lock --bin --lib --name --vcs --edition --registry"
 	local opt__install="$opt_common $opt_feat $opt_parallel $opt_lock $opt_force --bin --bins --branch --debug --example --examples --git --list --path --rev --root --tag --version --registry --target --profile --no-track --ignore-rust-version"
 	local opt__locate_project="$opt_common $opt_mani $opt_lock --message-format --workspace"
