@@ -56,6 +56,10 @@ COMMANDS
        cargo-generate-lockfile(1)
            Generate Cargo.lock for a project.
 
+       cargo-info(1)
+           Display information about a package in the registry. Default
+       registry is crates.io.
+
        cargo-locate-project(1)
            Print a JSON representation of a Cargo.toml file’s location.
 
