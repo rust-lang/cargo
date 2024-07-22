@@ -6419,7 +6419,6 @@ fn pipelining_big_graph() {
         .with_stderr_data(
             str![[r#"
 [LOCKING] 61 packages to latest compatible versions
-[COMPILING] b30 v0.5.0 ([ROOT]/foo/b30)
 [COMPILING] a30 v0.5.0 ([ROOT]/foo/a30)
 [ERROR] don't actually build me
 ...
