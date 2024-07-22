@@ -2,11 +2,44 @@
 //!
 //! See <https://rust-lang.github.io/cargo/contrib/> for a guide on writing tests.
 //!
-//! WARNING: You might not want to use this outside of Cargo.
+//! There are two places you can find API documentation
+//!
+//! - <https://docs.rs/cargo-test-support>:
+//!   targeted at external tool developers testing cargo-related code
+//!   - Released with every rustc release
+//! - <https://doc.rust-lang.org/nightly/nightly-rustc/cargo_test_support>:
+//!   targeted at cargo contributors
+//!   - Updated on each update of the `cargo` submodule in `rust-lang/rust`
+//!
+//! **WARNING:** You might not want to use this outside of Cargo.
 //!
 //! * This is designed for testing Cargo itself. Use at your own risk.
 //! * No guarantee on any stability across versions.
 //! * No feature request would be accepted unless proved useful for testing Cargo.
+//!
+//! # Example
+//!
+//! ```rust,no_run
+//! use cargo_test_support::prelude::*;
+//! use cargo_test_support::str;
+//! use cargo_test_support::project;
+//!
+//! #[cargo_test]
+//! fn some_test() {
+//!     let p = project()
+//!         .file("src/main.rs", r#"fn main() { println!("hi!"); }"#)
+//!         .build();
+//!
+//!     p.cargo("run --bin foo")
+//!         .with_stderr_data(str![[r#"
+//! [COMPILING] foo [..]
+//! [FINISHED] [..]
+//! [RUNNING] `target/debug/foo`
+//! "#]])
+//!         .with_stdout_data(str![["hi!"]])
+//!         .run();
+//! }
+//! ```
 
 #![allow(clippy::disallowed_methods)]
 #![allow(clippy::print_stderr)]
@@ -30,6 +63,14 @@ use url::Url;
 
 use self::paths::CargoPathExt;
 
+/// Unwrap a `Result` with a useful panic message
+///
+/// # Example
+///
+/// ```rust
+/// use cargo_test_support::t;
+/// t!(std::fs::read_to_string("Cargo.toml"));
+/// ```
 #[macro_export]
 macro_rules! t {
     ($e:expr) => {
@@ -45,6 +86,7 @@ pub use snapbox::file;
 pub use snapbox::str;
 pub use snapbox::utils::current_dir;
 
+/// `panic!`, reporting the specified error , see also [`t!`]
 #[track_caller]
 pub fn panic_error(what: &str, err: impl Into<anyhow::Error>) -> ! {
     let err = err.into();
@@ -191,7 +233,13 @@ pub struct Project {
 
 /// Create a project to run tests against
 ///
-/// The project can be constructed programmatically or from the filesystem with [`Project::from_template`]
+/// - Creates a [`basic_manifest`] if one isn't supplied
+///
+/// To get started, see:
+/// - [`project`]
+/// - [`project_in`]
+/// - [`project_in_home`]
+/// - [`Project::from_template`]
 #[must_use]
 pub struct ProjectBuilder {
     root: Project,
@@ -201,16 +249,21 @@ pub struct ProjectBuilder {
 }
 
 impl ProjectBuilder {
-    /// Root of the project, ex: `/path/to/cargo/target/cit/t0/foo`
+    /// Root of the project
+    ///
+    /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/foo`
     pub fn root(&self) -> PathBuf {
         self.root.root()
     }
 
-    /// Project's debug dir, ex: `/path/to/cargo/target/cit/t0/foo/target/debug`
+    /// Project's debug dir
+    ///
+    /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/foo/target/debug`
     pub fn target_debug_dir(&self) -> PathBuf {
         self.root.target_debug_dir()
     }
 
+    /// Create project in `root`
     pub fn new(root: PathBuf) -> ProjectBuilder {
         ProjectBuilder {
             root: Project { root },
@@ -220,6 +273,7 @@ impl ProjectBuilder {
         }
     }
 
+    /// Create project, relative to [`paths::root`]
     pub fn at<P: AsRef<Path>>(mut self, path: P) -> Self {
         self.root = Project {
             root: paths::root().join(path),
@@ -324,30 +378,40 @@ impl Project {
         Self { root: project_root }
     }
 
-    /// Root of the project, ex: `/path/to/cargo/target/cit/t0/foo`
+    /// Root of the project
+    ///
+    /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/foo`
     pub fn root(&self) -> PathBuf {
         self.root.clone()
     }
 
-    /// Project's target dir, ex: `/path/to/cargo/target/cit/t0/foo/target`
+    /// Project's target dir
+    ///
+    /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/foo/target`
     pub fn build_dir(&self) -> PathBuf {
         self.root().join("target")
     }
 
-    /// Project's debug dir, ex: `/path/to/cargo/target/cit/t0/foo/target/debug`
+    /// Project's debug dir
+    ///
+    /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/foo/target/debug`
     pub fn target_debug_dir(&self) -> PathBuf {
         self.build_dir().join("debug")
     }
 
-    /// File url for root, ex: `file:///path/to/cargo/target/cit/t0/foo`
+    /// File url for root
+    ///
+    /// ex: `file://$CARGO_TARGET_TMPDIR/cit/t0/foo`
     pub fn url(&self) -> Url {
         use paths::CargoPathExt;
         self.root().to_url()
     }
 
     /// Path to an example built as a library.
+    ///
     /// `kind` should be one of: "lib", "rlib", "staticlib", "dylib", "proc-macro"
-    /// ex: `/path/to/cargo/target/cit/t0/foo/target/debug/examples/libex.rlib`
+    ///
+    /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/foo/target/debug/examples/libex.rlib`
     pub fn example_lib(&self, name: &str, kind: &str) -> PathBuf {
         self.target_debug_dir()
             .join("examples")
@@ -355,7 +419,8 @@ impl Project {
     }
 
     /// Path to a debug binary.
-    /// ex: `/path/to/cargo/target/cit/t0/foo/target/debug/foo`
+    ///
+    /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/foo/target/debug/foo`
     pub fn bin(&self, b: &str) -> PathBuf {
         self.build_dir()
             .join("debug")
@@ -363,7 +428,8 @@ impl Project {
     }
 
     /// Path to a release binary.
-    /// ex: `/path/to/cargo/target/cit/t0/foo/target/release/foo`
+    ///
+    /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/foo/target/release/foo`
     pub fn release_bin(&self, b: &str) -> PathBuf {
         self.build_dir()
             .join("release")
@@ -371,7 +437,8 @@ impl Project {
     }
 
     /// Path to a debug binary for a specific target triple.
-    /// ex: `/path/to/cargo/target/cit/t0/foo/target/i686-apple-darwin/debug/foo`
+    ///
+    /// ex: `$CARGO_TARGET_TMPDIR/cit/t0/foo/target/i686-apple-darwin/debug/foo`
     pub fn target_bin(&self, target: &str, b: &str) -> PathBuf {
         self.build_dir().join(target).join("debug").join(&format!(
             "{}{}",
@@ -380,25 +447,36 @@ impl Project {
         ))
     }
 
-    /// Returns an iterator of paths matching the glob pattern, which is
-    /// relative to the project root.
+    /// Returns an iterator of paths within [`Project::root`] matching the glob pattern
     pub fn glob<P: AsRef<Path>>(&self, pattern: P) -> glob::Paths {
         let pattern = self.root().join(pattern);
         glob::glob(pattern.to_str().expect("failed to convert pattern to str"))
             .expect("failed to glob")
     }
 
-    /// Changes the contents of an existing file.
+    /// Overwrite a file with new content
+    ///
+    // # Example:
+    ///
+    /// ```no_run
+    /// # let p = cargo_test_support::project().build();
+    /// p.change_file("src/lib.rs", "fn new_fn() {}");
+    /// ```
     pub fn change_file(&self, path: &str, body: &str) {
         FileBuilder::new(self.root().join(path), body, false).mk()
     }
 
     /// Creates a `ProcessBuilder` to run a program in the project
     /// and wrap it in an Execs to assert on the execution.
-    /// Example:
-    ///         p.process(&p.bin("foo"))
-    ///             .with_stdout("bar\n")
-    ///             .run();
+    ///
+    /// # Example:
+    ///
+    /// ```no_run
+    /// # let p = cargo_test_support::project().build();
+    /// p.process(&p.bin("foo"))
+    ///     .with_stdout("bar\n")
+    ///     .run();
+    /// ```
     pub fn process<T: AsRef<OsStr>>(&self, program: T) -> Execs {
         let mut p = process(program);
         p.cwd(self.root());
@@ -406,9 +484,17 @@ impl Project {
     }
 
     /// Creates a `ProcessBuilder` to run cargo.
+    ///
     /// Arguments can be separated by spaces.
-    /// Example:
-    ///     p.cargo("build --bin foo").run();
+    ///
+    /// For `cargo run`, see [`Project::rename_run`].
+    ///
+    /// # Example:
+    ///
+    /// ```no_run
+    /// # let p = cargo_test_support::project().build();
+    /// p.cargo("build --bin foo").run();
+    /// ```
     pub fn cargo(&self, cmd: &str) -> Execs {
         let cargo = cargo_exe();
         let mut execs = self.process(&cargo);
@@ -482,27 +568,41 @@ impl Project {
     }
 }
 
-// Generates a project layout
+/// Generates a project layout, see [`ProjectBuilder`]
 pub fn project() -> ProjectBuilder {
     ProjectBuilder::new(paths::root().join("foo"))
 }
 
-// Generates a project layout in given directory
+/// Generates a project layout in given directory, see [`ProjectBuilder`]
 pub fn project_in(dir: &str) -> ProjectBuilder {
     ProjectBuilder::new(paths::root().join(dir).join("foo"))
 }
 
-// Generates a project layout inside our fake home dir
+/// Generates a project layout inside our fake home dir, see [`ProjectBuilder`]
 pub fn project_in_home(name: &str) -> ProjectBuilder {
     ProjectBuilder::new(paths::home().join(name))
 }
 
 // === Helpers ===
 
-pub fn main_file(println: &str, deps: &[&str]) -> String {
+/// Generate a `main.rs` printing the specified text
+///
+/// ```rust
+/// # use cargo_test_support::main_file;
+/// # mod dep {
+/// #     fn bar() -> &'static str {
+/// #         "world"
+/// #     }
+/// # }
+/// main_file(
+///     r#""hello {}", dep::bar()"#,
+///     &[]
+/// );
+/// ```
+pub fn main_file(println: &str, externed_deps: &[&str]) -> String {
     let mut buf = String::new();
 
-    for dep in deps.iter() {
+    for dep in externed_deps.iter() {
         buf.push_str(&format!("extern crate {};\n", dep));
     }
 
@@ -513,6 +613,7 @@ pub fn main_file(println: &str, deps: &[&str]) -> String {
     buf
 }
 
+/// Path to the cargo binary
 pub fn cargo_exe() -> PathBuf {
     snapbox::cmd::cargo_bin("cargo")
 }
@@ -524,12 +625,20 @@ pub fn cargo_exe() -> PathBuf {
 /// does not have access to the raw `ExitStatus` because `ProcessError` needs
 /// to be serializable (for the Rustc cache), and `ExitStatus` does not
 /// provide a constructor.
-pub struct RawOutput {
-    pub code: Option<i32>,
-    pub stdout: Vec<u8>,
-    pub stderr: Vec<u8>,
+struct RawOutput {
+    #[allow(dead_code)]
+    code: Option<i32>,
+    stdout: Vec<u8>,
+    #[allow(dead_code)]
+    stderr: Vec<u8>,
 }
 
+/// Run and verify a [`ProcessBuilder`]
+///
+/// Construct with
+/// - [`execs`]
+/// - [`cargo_process`]
+/// - [`Project`] methods
 #[must_use]
 #[derive(Clone)]
 pub struct Execs {
@@ -560,7 +669,10 @@ impl Execs {
         self.process_builder = Some(p);
         self
     }
+}
 
+/// # Configure assertions
+impl Execs {
     /// Verifies that stdout is equal to the given lines.
     /// See [`compare`] for supported patterns.
     #[deprecated(note = "replaced with `Execs::with_stdout_data(expected)`")]
@@ -790,7 +902,10 @@ impl Execs {
         }
         self
     }
+}
 
+/// # Configure the process
+impl Execs {
     /// Forward subordinate process stdout/stderr to the terminal.
     /// Useful for printf debugging of the tests.
     /// CAUTION: CI will fail if you leave this in your test!
@@ -844,20 +959,6 @@ impl Execs {
         self
     }
 
-    pub fn exec_with_output(&mut self) -> Result<Output> {
-        self.ran = true;
-        // TODO avoid unwrap
-        let p = (&self.process_builder).clone().unwrap();
-        p.exec_with_output()
-    }
-
-    pub fn build_command(&mut self) -> Command {
-        self.ran = true;
-        // TODO avoid unwrap
-        let p = (&self.process_builder).clone().unwrap();
-        p.build_command()
-    }
-
     /// Enables nightly features for testing
     ///
     /// The list of reasons should be why nightly cargo is needed. If it is
@@ -905,6 +1006,23 @@ impl Execs {
             return self.enable_split_debuginfo_packed();
         }
         self
+    }
+}
+
+/// # Run and verify the process
+impl Execs {
+    pub fn exec_with_output(&mut self) -> Result<Output> {
+        self.ran = true;
+        // TODO avoid unwrap
+        let p = (&self.process_builder).clone().unwrap();
+        p.exec_with_output()
+    }
+
+    pub fn build_command(&mut self) -> Command {
+        self.ran = true;
+        // TODO avoid unwrap
+        let p = (&self.process_builder).clone().unwrap();
+        p.build_command()
     }
 
     #[track_caller]
@@ -1113,6 +1231,7 @@ impl Drop for Execs {
     }
 }
 
+/// Run and verify a process, see [`Execs`]
 pub fn execs() -> Execs {
     Execs {
         ran: false,
@@ -1138,6 +1257,7 @@ pub fn execs() -> Execs {
     }
 }
 
+/// Generate a basic `Cargo.toml`
 pub fn basic_manifest(name: &str, version: &str) -> String {
     format!(
         r#"
@@ -1151,6 +1271,7 @@ pub fn basic_manifest(name: &str, version: &str) -> String {
     )
 }
 
+/// Generate a `Cargo.toml` with the specified `bin.name`
 pub fn basic_bin_manifest(name: &str) -> String {
     format!(
         r#"
@@ -1169,6 +1290,7 @@ pub fn basic_bin_manifest(name: &str) -> String {
     )
 }
 
+/// Generate a `Cargo.toml` with the specified `lib.name`
 pub fn basic_lib_manifest(name: &str) -> String {
     format!(
         r#"
@@ -1237,8 +1359,13 @@ pub fn is_nightly() -> bool {
         && (vv.contains("-nightly") || vv.contains("-dev"))
 }
 
-pub fn process<T: AsRef<OsStr>>(t: T) -> ProcessBuilder {
-    _process(t.as_ref())
+/// Run `$bin` in the test's environment, see [`ProcessBuilder`]
+///
+/// For more on the test environment, see
+/// - [`paths::root`]
+/// - [`TestEnvCommandExt`]
+pub fn process<T: AsRef<OsStr>>(bin: T) -> ProcessBuilder {
+    _process(bin.as_ref())
 }
 
 fn _process(t: &OsStr) -> ProcessBuilder {
@@ -1428,17 +1555,19 @@ impl ArgLineCommandExt for snapbox::cmd::Command {
     }
 }
 
-pub fn cargo_process(s: &str) -> Execs {
+/// Run `cargo $arg_line`, see [`Execs`]
+pub fn cargo_process(arg_line: &str) -> Execs {
     let cargo = cargo_exe();
     let mut p = process(&cargo);
     p.env("CARGO", cargo);
-    p.arg_line(s);
+    p.arg_line(arg_line);
     execs().with_process_builder(p)
 }
 
-pub fn git_process(s: &str) -> ProcessBuilder {
+/// Run `git $arg_line`, see [`ProcessBuilder`]
+pub fn git_process(arg_line: &str) -> ProcessBuilder {
     let mut p = process("git");
-    p.arg_line(s);
+    p.arg_line(arg_line);
     p
 }
 

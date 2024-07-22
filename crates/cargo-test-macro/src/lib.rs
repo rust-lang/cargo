@@ -14,6 +14,49 @@ use std::path::Path;
 use std::process::Command;
 use std::sync::Once;
 
+/// Replacement for `#[test]`
+///
+/// The `#[cargo_test]` attribute extends `#[test]` with some setup before starting the test.
+/// It will create a filesystem "sandbox" under the "cargo integration test" directory for each test, such as `/path/to/cargo/target/tmp/cit/t123/`.
+/// The sandbox will contain a `home` directory that will be used instead of your normal home directory.
+///
+/// The `#[cargo_test]` attribute takes several options that will affect how the test is generated.
+/// They are listed in parentheses separated with commas, such as:
+///
+/// ```rust,ignore
+/// #[cargo_test(nightly, reason = "-Zfoo is unstable")]
+/// ```
+///
+/// The options it supports are:
+///
+/// * `>=1.64` --- This indicates that the test will only run with the given version of `rustc` or newer.
+///   This can be used when a new `rustc` feature has been stabilized that the test depends on.
+///   If this is specified, a `reason` is required to explain why it is being checked.
+/// * `nightly` --- This will cause the test to be ignored if not running on the nightly toolchain.
+///   This is useful for tests that use unstable options in `rustc` or `rustdoc`.
+///   These tests are run in Cargo's CI, but are disabled in rust-lang/rust's CI due to the difficulty of updating both repos simultaneously.
+///   A `reason` field is required to explain why it is nightly-only.
+/// * `requires_<cmd>` --- This indicates a command that is required to be installed to be run.
+///   For example, `requires_rustfmt` means the test will only run if the executable `rustfmt` is installed.
+///   These tests are *always* run on CI.
+///   This is mainly used to avoid requiring contributors from having every dependency installed.
+/// * `build_std_real` --- This is a "real" `-Zbuild-std` test (in the `build_std` integration test).
+///   This only runs on nightly, and only if the environment variable `CARGO_RUN_BUILD_STD_TESTS` is set (these tests on run on Linux).
+/// * `build_std_mock` --- This is a "mock" `-Zbuild-std` test (which uses a mock standard library).
+///   This only runs on nightly, and is disabled for windows-gnu.
+/// * `public_network_test` --- This tests contacts the public internet.
+///   These tests are disabled unless the `CARGO_PUBLIC_NETWORK_TESTS` environment variable is set.
+///   Use of this should be *extremely rare*, please avoid using it if possible.
+///   The hosts it contacts should have a relatively high confidence that they are reliable and stable (such as github.com), especially in CI.
+///   The tests should be carefully considered for developer security and privacy as well.
+/// * `container_test` --- This indicates that it is a test that uses Docker.
+///   These tests are disabled unless the `CARGO_CONTAINER_TESTS` environment variable is set.
+///   This requires that you have Docker installed.
+///   The SSH tests also assume that you have OpenSSH installed.
+///   These should work on Linux, macOS, and Windows where possible.
+///   Unfortunately these tests are not run in CI for macOS or Windows (no Docker on macOS, and Windows does not support Linux images).
+///   See [`cargo-test-support::containers`](https://doc.rust-lang.org/nightly/nightly-rustc/cargo_test_support/containers) for more on writing these tests.
+/// * `ignore_windows="reason"` --- Indicates that the test should be ignored on windows for the given reason.
 #[proc_macro_attribute]
 pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Ideally these options would be embedded in the test itself. However, I

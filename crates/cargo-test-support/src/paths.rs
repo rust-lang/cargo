@@ -1,3 +1,5 @@
+//! Access common paths and manipulate the filesystem
+
 use filetime::FileTime;
 
 use std::cell::RefCell;
@@ -41,6 +43,9 @@ fn set_global_root(tmp_dir: Option<&'static str>) {
     }
 }
 
+/// Path to the parent directory of all test [`root`]s
+///
+/// ex: `$CARGO_TARGET_TMPDIR/cit`
 pub fn global_root() -> PathBuf {
     let lock = GLOBAL_ROOT
         .get_or_init(|| Default::default())
@@ -64,10 +69,12 @@ thread_local! {
     static TEST_ID: RefCell<Option<usize>> = RefCell::new(None);
 }
 
+/// See [`init_root`]
 pub struct TestIdGuard {
     _private: (),
 }
 
+/// For test harnesses like [`crate::cargo_test`]
 pub fn init_root(tmp_dir: Option<&'static str>) -> TestIdGuard {
     static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
 
@@ -90,6 +97,9 @@ impl Drop for TestIdGuard {
     }
 }
 
+/// Path to the test's filesystem scratchpad
+///
+/// ex: `$CARGO_TARGET_TMPDIR/cit/t0`
 pub fn root() -> PathBuf {
     let id = TEST_ID.with(|n| {
         n.borrow().expect(
@@ -103,6 +113,9 @@ pub fn root() -> PathBuf {
     root
 }
 
+/// Path to the current test's `$HOME`
+///
+/// ex: `$CARGO_TARGET_TMPDIR/cit/t0/home`
 pub fn home() -> PathBuf {
     let mut path = root();
     path.push("home");
@@ -110,10 +123,14 @@ pub fn home() -> PathBuf {
     path
 }
 
+/// Path to the current test's `$CARGO_HOME`
+///
+/// ex: `$CARGO_TARGET_TMPDIR/cit/t0/home/.cargo`
 pub fn cargo_home() -> PathBuf {
     home().join(".cargo")
 }
 
+/// Common path and file operations
 pub trait CargoPathExt {
     fn to_url(&self) -> url::Url;
 
@@ -275,18 +292,29 @@ where
 
 /// Get the filename for a library.
 ///
-/// `kind` should be one of: "lib", "rlib", "staticlib", "dylib", "proc-macro"
+/// `kind` should be one of:
+/// - `lib`
+/// - `rlib`
+/// - `staticlib`
+/// - `dylib`
+/// - `proc-macro`
 ///
-/// For example, dynamic library named "foo" would return:
-/// - macOS: "libfoo.dylib"
-/// - Windows: "foo.dll"
-/// - Unix: "libfoo.so"
+/// # Examples
+/// ```
+/// # use cargo_test_support::paths::get_lib_filename;
+/// get_lib_filename("foo", "dylib");
+/// ```
+/// would return:
+/// - macOS: `"libfoo.dylib"`
+/// - Windows: `"foo.dll"`
+/// - Unix: `"libfoo.so"`
 pub fn get_lib_filename(name: &str, kind: &str) -> String {
     let prefix = get_lib_prefix(kind);
     let extension = get_lib_extension(kind);
     format!("{}{}.{}", prefix, name, extension)
 }
 
+/// See [`get_lib_filename`] for more details
 pub fn get_lib_prefix(kind: &str) -> &str {
     match kind {
         "lib" | "rlib" => "lib",
@@ -301,6 +329,7 @@ pub fn get_lib_prefix(kind: &str) -> &str {
     }
 }
 
+/// See [`get_lib_filename`] for more details
 pub fn get_lib_extension(kind: &str) -> &str {
     match kind {
         "lib" | "rlib" => "rlib",
@@ -324,7 +353,7 @@ pub fn get_lib_extension(kind: &str) -> &str {
     }
 }
 
-/// Returns the sysroot as queried from rustc.
+/// Path to `rustc`s sysroot
 pub fn sysroot() -> String {
     let output = Command::new("rustc")
         .arg("--print=sysroot")

@@ -8,9 +8,6 @@ homepage.workspace = true
 repository.workspace = true
 description = "Testing framework for Cargo's testsuite."
 
-[lib]
-doctest = false
-
 [dependencies]
 anstream.workspace = true
 anstyle.workspace = true

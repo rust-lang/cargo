@@ -1,3 +1,46 @@
+//! Interact with the [`TestRegistry`]
+//!
+//! # Example
+//!
+//! ```no_run
+//! use cargo_test_support::registry::Package;
+//! use cargo_test_support::project;
+//!
+//! // Publish package "a" depending on "b".
+//! Package::new("a", "1.0.0")
+//!     .dep("b", "1.0.0")
+//!     .file("src/lib.rs", r#"
+//!         extern crate b;
+//!         pub fn f() -> i32 { b::f() * 2 }
+//!     "#)
+//!     .publish();
+//!
+//! // Publish package "b".
+//! Package::new("b", "1.0.0")
+//!     .file("src/lib.rs", r#"
+//!         pub fn f() -> i32 { 12 }
+//!     "#)
+//!     .publish();
+//!
+//! // Create a project that uses package "a".
+//! let p = project()
+//!     .file("Cargo.toml", r#"
+//!         [package]
+//!         name = "foo"
+//!         version = "0.0.1"
+//!
+//!         [dependencies]
+//!         a = "1.0"
+//!     "#)
+//!     .file("src/main.rs", r#"
+//!         extern crate a;
+//!         fn main() { println!("{}", a::f()); }
+//!     "#)
+//!     .build();
+//!
+//! p.cargo("run").with_stdout("24").run();
+//! ```
+
 use crate::git::repo;
 use crate::paths;
 use crate::publish::{create_index_line, write_to_index};
@@ -20,39 +63,64 @@ use time::format_description::well_known::Rfc3339;
 use time::{Duration, OffsetDateTime};
 use url::Url;
 
-/// Gets the path to the local index pretending to be crates.io. This is a Git repo
+/// Path to the local index for psuedo-crates.io.
+///
+/// This is a Git repo
 /// initialized with a `config.json` file pointing to `dl_path` for downloads
 /// and `api_path` for uploads.
+///
+/// ex: `$CARGO_TARGET_TMPDIR/cit/t0/registry`
 pub fn registry_path() -> PathBuf {
     generate_path("registry")
 }
-/// Gets the path for local web API uploads. Cargo will place the contents of a web API
+
+/// Path to the local web API uploads
+///
+/// Cargo will place the contents of a web API
 /// request here. For example, `api/v1/crates/new` is the result of publishing a crate.
+///
+/// ex: `$CARGO_TARGET_TMPDIR/cit/t0/api`
 pub fn api_path() -> PathBuf {
     generate_path("api")
 }
-/// Gets the path where crates can be downloaded using the web API endpoint. Crates
+
+/// Path to download `.crate` files using the web API endpoint.
+///
+/// Crates
 /// should be organized as `{name}/{version}/download` to match the web API
 /// endpoint. This is rarely used and must be manually set up.
-fn dl_path() -> PathBuf {
+///
+/// ex: `$CARGO_TARGET_TMPDIR/cit/t0/dl`
+pub fn dl_path() -> PathBuf {
     generate_path("dl")
 }
-/// Gets the alternative-registry version of `registry_path`.
-fn alt_registry_path() -> PathBuf {
+
+/// Path to the alternative-registry version of [`registry_path`]
+///
+/// ex: `$CARGO_TARGET_TMPDIR/cit/t0/alternative-registry`
+pub fn alt_registry_path() -> PathBuf {
     generate_path("alternative-registry")
 }
-/// Gets the alternative-registry version of `registry_url`.
+
+/// URL to the alternative-registry version of `registry_url`
 fn alt_registry_url() -> Url {
     generate_url("alternative-registry")
 }
-/// Gets the alternative-registry version of `dl_path`.
+
+/// Path to the alternative-registry version of [`dl_path`]
+///
+/// ex: `$CARGO_TARGET_TMPDIR/cit/t0/alternative-dl`
 pub fn alt_dl_path() -> PathBuf {
     generate_path("alternative-dl")
 }
-/// Gets the alternative-registry version of `api_path`.
+
+/// Path to the alternative-registry version of [`api_path`]
+///
+/// ex: `$CARGO_TARGET_TMPDIR/cit/t0/alternative-api`
 pub fn alt_api_path() -> PathBuf {
     generate_path("alternative-api")
 }
+
 fn generate_path(name: &str) -> PathBuf {
     paths::root().join(name)
 }
@@ -60,6 +128,7 @@ fn generate_url(name: &str) -> Url {
     Url::from_file_path(generate_path(name)).ok().unwrap()
 }
 
+/// Auth-token for publishing, see [`RegistryBuilder::token`]
 #[derive(Clone)]
 pub enum Token {
     Plaintext(String),
@@ -68,6 +137,7 @@ pub enum Token {
 
 impl Token {
     /// This is a valid PASETO secret key.
+    ///
     /// This one is already publicly available as part of the text of the RFC so is safe to use for tests.
     pub fn rfc_key() -> Token {
         Token::Keys(
@@ -80,7 +150,9 @@ impl Token {
 
 type RequestCallback = Box<dyn Send + Fn(&Request, &HttpServer) -> Response>;
 
-/// A builder for initializing registries.
+/// Prepare a local [`TestRegistry`] fixture
+///
+/// See also [`init`] and [`alt_init`]
 pub struct RegistryBuilder {
     /// If set, configures an alternate registry with the given name.
     alternative: Option<String>,
@@ -108,6 +180,9 @@ pub struct RegistryBuilder {
     credential_provider: Option<String>,
 }
 
+/// A local registry fixture
+///
+/// Most tests won't need to call this directly but instead interact with [`Package`]
 pub struct TestRegistry {
     server: Option<HttpServerHandle>,
     index_url: Url,
@@ -459,71 +534,31 @@ impl RegistryBuilder {
     }
 }
 
-/// A builder for creating a new package in a registry.
+/// Published package builder for [`TestRegistry`]
 ///
 /// This uses "source replacement" using an automatically generated
 /// `.cargo/config` file to ensure that dependencies will use these packages
 /// instead of contacting crates.io. See `source-replacement.md` for more
 /// details on how source replacement works.
 ///
-/// Call `publish` to finalize and create the package.
+/// Call [`Package::publish`] to finalize and create the package.
 ///
 /// If no files are specified, an empty `lib.rs` file is automatically created.
 ///
 /// The `Cargo.toml` file is automatically generated based on the methods
-/// called on `Package` (for example, calling `dep()` will add to the
+/// called on `Package` (for example, calling [`Package::dep()`] will add to the
 /// `[dependencies]` automatically). You may also specify a `Cargo.toml` file
 /// to override the generated one.
 ///
 /// This supports different registry types:
 /// - Regular source replacement that replaces `crates.io` (the default).
 /// - A "local registry" which is a subset for vendoring (see
-///   `Package::local`).
+///   [`Package::local`]).
 /// - An "alternative registry" which requires specifying the registry name
-///   (see `Package::alternative`).
+///   (see [`Package::alternative`]).
 ///
 /// This does not support "directory sources". See `directory.rs` for
 /// `VendorPackage` which implements directory sources.
-///
-/// # Example
-/// ```no_run
-/// use cargo_test_support::registry::Package;
-/// use cargo_test_support::project;
-///
-/// // Publish package "a" depending on "b".
-/// Package::new("a", "1.0.0")
-///     .dep("b", "1.0.0")
-///     .file("src/lib.rs", r#"
-///         extern crate b;
-///         pub fn f() -> i32 { b::f() * 2 }
-///     "#)
-///     .publish();
-///
-/// // Publish package "b".
-/// Package::new("b", "1.0.0")
-///     .file("src/lib.rs", r#"
-///         pub fn f() -> i32 { 12 }
-///     "#)
-///     .publish();
-///
-/// // Create a project that uses package "a".
-/// let p = project()
-///     .file("Cargo.toml", r#"
-///         [package]
-///         name = "foo"
-///         version = "0.0.1"
-///
-///         [dependencies]
-///         a = "1.0"
-///     "#)
-///     .file("src/main.rs", r#"
-///         extern crate a;
-///         fn main() { println!("{}", a::f()); }
-///     "#)
-///     .build();
-///
-/// p.cargo("run").with_stdout("24").run();
-/// ```
 #[must_use]
 pub struct Package {
     name: String,
@@ -544,6 +579,7 @@ pub struct Package {
 
 pub(crate) type FeatureMap = BTreeMap<String, Vec<String>>;
 
+/// Published package dependency builder, see [`Package::add_dep`]
 #[derive(Clone)]
 pub struct Dependency {
     name: String,
@@ -582,14 +618,18 @@ struct PackageFile {
 
 const DEFAULT_MODE: u32 = 0o644;
 
-/// Initializes the on-disk registry and sets up the config so that crates.io
-/// is replaced with the one on disk.
+/// Setup a local psuedo-crates.io [`TestRegistry`]
+///
+/// This is implicitly called by [`Package::new`].
+///
+/// When calling `cargo publish`, see instead [`crate::publish`].
 pub fn init() -> TestRegistry {
     RegistryBuilder::new().build()
 }
 
-/// Variant of `init` that initializes the "alternative" registry and crates.io
-/// replacement.
+/// Setup a local "alternative" [`TestRegistry`]
+///
+/// When calling `cargo publish`, see instead [`crate::publish`].
 pub fn alt_init() -> TestRegistry {
     init();
     RegistryBuilder::new().alternative().build()
@@ -1234,6 +1274,8 @@ impl Package {
     /// See `src/doc/src/reference/registries.md` for more details on
     /// alternative registries. See `alt_registry.rs` for the tests that use
     /// this.
+    ///
+    /// **Requires:** [`alt_init`]
     pub fn alternative(&mut self, alternative: bool) -> &mut Package {
         self.alternative = alternative;
         self
@@ -1666,6 +1708,7 @@ impl Package {
     }
 }
 
+/// Generate a checksum
 pub fn cksum(s: &[u8]) -> String {
     Sha256::new().update(s).finish_hex()
 }
