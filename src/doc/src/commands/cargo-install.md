@@ -124,6 +124,11 @@ treated as a caret requirement like Cargo dependencies are.</dd>
 <dd class="option-desc">List all installed packages and their versions.</dd>
 
 
+<dt class="option-term" id="option-cargo-install--n"><a class="option-anchor" href="#option-cargo-install--n"></a><code>-n</code></dt>
+<dt class="option-term" id="option-cargo-install---dry-run"><a class="option-anchor" href="#option-cargo-install---dry-run"></a><code>--dry-run</code></dt>
+<dd class="option-desc">(unstable) Perform all checks without installing.</dd>
+
+
 <dt class="option-term" id="option-cargo-install--f"><a class="option-anchor" href="#option-cargo-install--f"></a><code>-f</code></dt>
 <dt class="option-term" id="option-cargo-install---force"><a class="option-anchor" href="#option-cargo-install---force"></a><code>--force</code></dt>
 <dd class="option-desc">Force overwriting existing crates or binaries. This can be used if a package

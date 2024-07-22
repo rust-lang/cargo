@@ -126,6 +126,27 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         })
     }
 
+    /// Dry-run the compilation without actually running it.
+    ///
+    /// This is expected to collect information like the location of output artifacts.
+    /// Please keep in sync with non-compilation part in [`BuildRunner::compile`].
+    pub fn dry_run(mut self) -> CargoResult<Compilation<'gctx>> {
+        let _lock = self
+            .bcx
+            .gctx
+            .acquire_package_cache_lock(CacheLockMode::Shared)?;
+        self.lto = super::lto::generate(self.bcx)?;
+        self.prepare_units()?;
+        self.prepare()?;
+        self.check_collisions()?;
+
+        for unit in &self.bcx.roots {
+            self.collect_tests_and_executables(unit)?;
+        }
+
+        Ok(self.compilation)
+    }
+
     /// Starts compilation, waits for it to finish, and returns information
     /// about the result of compilation.
     ///
