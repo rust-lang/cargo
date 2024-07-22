@@ -2739,21 +2739,17 @@ fn uninstall_running_binary() {
 fn dry_run() {
     pkg("foo", "0.0.1");
 
-    cargo_process("install foo")
+    cargo_process("-Z unstable-options install --dry-run foo")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
-[COMPILING] foo v0.0.1
-[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
-[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
         .run();
-    assert_has_installed_exe(paths::cargo_home(), "foo");
+    assert_has_not_installed_exe(paths::cargo_home(), "foo");
 }
 
 #[cargo_test]
@@ -2770,7 +2766,8 @@ fn dry_run_incompatible_package() {
         )
         .publish();
 
-    cargo_process("install some-package-from-the-distant-future")
+    cargo_process("-Z unstable-options install --dry-run some-package-from-the-distant-future")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index

@@ -297,7 +297,7 @@ impl<'gctx> InstallablePackage<'gctx> {
         Ok(duplicates)
     }
 
-    fn install_one(mut self) -> CargoResult<bool> {
+    fn install_one(mut self, dry_run: bool) -> CargoResult<bool> {
         self.gctx.shell().status("Installing", &self.pkg)?;
 
         let dst = self.root.join("bin").into_path_unlocked();
@@ -321,6 +321,7 @@ impl<'gctx> InstallablePackage<'gctx> {
         self.check_yanked_install()?;
 
         let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
+        self.opts.build_config.dry_run = dry_run;
         let compile = ops::compile_ws(&self.ws, &self.opts, &exec).with_context(|| {
             if let Some(td) = td_opt.take() {
                 // preserve the temporary directory, so the user can inspect it
@@ -385,7 +386,7 @@ impl<'gctx> InstallablePackage<'gctx> {
                 .iter()
                 .filter(|t| t.is_executable())
                 .collect();
-            if !binaries.is_empty() {
+            if !binaries.is_empty() && !dry_run {
                 self.gctx
                     .shell()
                     .warn(make_warning_about_missing_features(&binaries))?;
@@ -620,6 +621,7 @@ pub fn install(
     opts: &ops::CompileOptions,
     force: bool,
     no_track: bool,
+    dry_run: bool,
 ) -> CargoResult<()> {
     let root = resolve_root(root, gctx)?;
     let dst = root.join("bin").into_path_unlocked();
@@ -654,7 +656,7 @@ pub fn install(
         )?;
         let mut installed_anything = true;
         if let Some(installable_pkg) = installable_pkg {
-            installed_anything = installable_pkg.install_one()?;
+            installed_anything = installable_pkg.install_one(dry_run)?;
         }
         (installed_anything, false)
     } else {
@@ -705,7 +707,7 @@ pub fn install(
 
         let install_results: Vec<_> = pkgs_to_install
             .into_iter()
-            .map(|(krate, installable_pkg)| (krate, installable_pkg.install_one()))
+            .map(|(krate, installable_pkg)| (krate, installable_pkg.install_one(dry_run)))
             .collect();
 
         for (krate, result) in install_results {
@@ -745,7 +747,7 @@ pub fn install(
         let path = gctx.get_env_os("PATH").unwrap_or_default();
         let dst_in_path = env::split_paths(&path).any(|path| path == dst);
 
-        if !dst_in_path {
+        if !dst_in_path && !dry_run {
             gctx.shell().warn(&format!(
                 "be sure to add `{}` to your PATH to be \
              able to run the installed binaries",
