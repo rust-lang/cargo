@@ -2734,3 +2734,132 @@ fn uninstall_running_binary() {
 
 "#]]).run();
 }
+
+#[cargo_test]
+fn dry_run() {
+    pkg("foo", "0.0.1");
+
+    cargo_process("install foo")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
+[INSTALLING] foo v0.0.1
+[COMPILING] foo v0.0.1
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+    assert_has_installed_exe(paths::cargo_home(), "foo");
+}
+
+#[cargo_test]
+fn dry_run_incompatible_package() {
+    Package::new("some-package-from-the-distant-future", "0.0.1")
+        .rust_version("1.2345.0")
+        .file("src/lib.rs", "")
+        .file(
+            "src/main.rs",
+            &format!(
+                "extern crate {}; fn main() {{}}",
+                "some-package-from-the-distant-future"
+            ),
+        )
+        .publish();
+
+    cargo_process("install some-package-from-the-distant-future")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] cannot install package `some-package-from-the-distant-future 0.0.1`, it requires rustc 1.2345.0 or newer, while the currently active rustc version is [..]
+
+"#]])
+        .run();
+    assert_has_not_installed_exe(paths::cargo_home(), "some-package-from-the-distant-future");
+}
+
+#[cargo_test]
+fn dry_run_upgrade() {
+    pkg("foo", "0.0.1");
+    cargo_process("install foo").run();
+    assert_has_installed_exe(paths::cargo_home(), "foo");
+
+    pkg("foo", "0.0.2");
+    cargo_process("install foo")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.2 (registry `dummy-registry`)
+[INSTALLING] foo v0.0.2
+[COMPILING] foo v0.0.2
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
+[REPLACED] package `foo v0.0.1` with `foo v0.0.2` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+    assert_has_installed_exe(paths::cargo_home(), "foo");
+}
+
+#[cargo_test]
+fn dry_run_remove_orphan() {
+    Package::new("bar", "1.0.0")
+        .file("src/lib.rs", "")
+        .file(
+            "src/bin/client.rs",
+            &format!("extern crate {}; fn main() {{}}", "bar"),
+        )
+        .file(
+            "src/bin/server.rs",
+            &format!("extern crate {}; fn main() {{}}", "bar"),
+        )
+        .publish();
+
+    cargo_process("install bar")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[INSTALLING] bar v1.0.0
+[COMPILING] bar v1.0.0
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/client[EXE]
+[INSTALLING] [ROOT]/home/.cargo/bin/server[EXE]
+[INSTALLED] package `bar v1.0.0` (executables `client[EXE]`, `server[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+    assert_has_installed_exe(paths::cargo_home(), "client");
+    assert_has_installed_exe(paths::cargo_home(), "server");
+
+    Package::new("bar", "2.0.0")
+        .file("src/lib.rs", "")
+        .file(
+            "src/bin/client.rs",
+            &format!("extern crate {}; fn main() {{}}", "bar"),
+        )
+        .publish();
+
+    cargo_process("install bar")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v2.0.0 (registry `dummy-registry`)
+[INSTALLING] bar v2.0.0
+[COMPILING] bar v2.0.0
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[REPLACING] [ROOT]/home/.cargo/bin/client[EXE]
+[REMOVING] executable `[ROOT]/home/.cargo/bin/server[EXE]` from previous version bar v1.0.0
+[REPLACED] package `bar v1.0.0` with `bar v2.0.0` (executable `client[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+    assert_has_installed_exe(paths::cargo_home(), "client");
+    assert_has_not_installed_exe(paths::cargo_home(), "server");
+}
