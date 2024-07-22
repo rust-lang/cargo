@@ -14,6 +14,7 @@ use crate::util::toml_mut::manifest::LocalManifest;
 use crate::util::toml_mut::upgrade::upgrade_requirement;
 use crate::util::{style, OptVersionReq};
 use crate::util::{CargoResult, VersionExt};
+use anyhow::Context as _;
 use itertools::Itertools;
 use semver::{Op, Version, VersionReq};
 use std::cmp::Ordering;
@@ -224,7 +225,10 @@ pub fn upgrade_manifests(
 
     let to_update = to_update
         .iter()
-        .map(|s| PackageIdSpec::parse(s))
+        .map(|spec| {
+            PackageIdSpec::parse(spec)
+                .with_context(|| format!("invalid package ID specification: `{spec}`"))
+        })
         .collect::<Result<Vec<_>, _>>()?;
 
     // Updates often require a lot of modifications to the registry, so ensure

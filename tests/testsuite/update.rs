@@ -2263,7 +2263,10 @@ fn update_breaking_spec_version() {
         .masquerade_as_nightly_cargo(&["update-breaking"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] expected a version like "1.32"
+[ERROR] invalid package ID specification: `incompatible@foo`
+
+Caused by:
+  expected a version like "1.32"
 
 "#]])
         .run();
