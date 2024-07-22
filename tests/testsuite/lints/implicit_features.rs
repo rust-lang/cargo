@@ -127,7 +127,7 @@ unused_optional_dependency = "allow"
         .masquerade_as_nightly_cargo(&["cargo-lints", "edition2024"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest Rust 1.81.0-nightly compatible versions
+[LOCKING] 2 packages to latest Rust [..] compatible versions
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
