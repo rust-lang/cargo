@@ -1,5 +1,42 @@
 # Changelog
 
+## Cargo 1.82 (2024-10-17)
+[a2b58c3d...HEAD](https://github.com/rust-lang/cargo/compare/a2b58c3d...HEAD)
+
+### Added
+
+### Changed
+
+- Improved error message for missing both `[package]` and `[workspace]` in Cargo.toml.
+  [#14261](https://github.com/rust-lang/cargo/pull/14261)
+
+### Fixed
+
+### Nightly only
+
+- `-Ztarget-applies-to-host`: Fixed passing of links-overrides with
+  target-applies-to-host and an implicit target
+  [#14205](https://github.com/rust-lang/cargo/pull/14205)
+
+### Documentation
+
+### Internal
+
+- cargo-util-schemas: Added `TomlPackage::new`, `Default` for `TomlWorkspace`
+  [#14271](https://github.com/rust-lang/cargo/pull/14271)
+- Enhanced `cargo-test-support` usability and documentation.
+  [#14266](https://github.com/rust-lang/cargo/pull/14266)
+  [#14268](https://github.com/rust-lang/cargo/pull/14268)
+  [#14269](https://github.com/rust-lang/cargo/pull/14269)
+  [#14270](https://github.com/rust-lang/cargo/pull/14270)
+  [#14272](https://github.com/rust-lang/cargo/pull/14272)
+- Made summary sync by using Arc instead of Rc
+  [#14260](https://github.com/rust-lang/cargo/pull/14260)
+- Used `Rc` instead of `Arc` for storing rustflags
+  [#14273](https://github.com/rust-lang/cargo/pull/14273)
+- test: Migrated `global_cache_tracker` snapbox
+  [#14244](https://github.com/rust-lang/cargo/pull/14244)
+
 ## Cargo 1.81 (2024-09-05)
 [34a6a87d...rust-1.81.0](https://github.com/rust-lang/cargo/compare/34a6a87d...rust-1.81.0)
 
