@@ -386,7 +386,7 @@ impl<'gctx> InstallablePackage<'gctx> {
                 .iter()
                 .filter(|t| t.is_executable())
                 .collect();
-            if !binaries.is_empty() && !dry_run {
+            if !binaries.is_empty() {
                 self.gctx
                     .shell()
                     .warn(make_warning_about_missing_features(&binaries))?;
@@ -423,7 +423,7 @@ impl<'gctx> InstallablePackage<'gctx> {
         for &(bin, src) in binaries.iter() {
             let dst = staging_dir.path().join(bin);
             // Try to move if `target_dir` is transient.
-            if !self.source_id.is_path() && fs::rename(src, &dst).is_ok() {
+            if (!self.source_id.is_path() && fs::rename(src, &dst).is_ok()) || dry_run {
                 continue;
             }
             paths::copy(src, &dst)?;
@@ -442,9 +442,11 @@ impl<'gctx> InstallablePackage<'gctx> {
             let src = staging_dir.path().join(bin);
             let dst = dst.join(bin);
             self.gctx.shell().status("Installing", dst.display())?;
-            fs::rename(&src, &dst).with_context(|| {
-                format!("failed to move `{}` to `{}`", src.display(), dst.display())
-            })?;
+            if !dry_run {
+                fs::rename(&src, &dst).with_context(|| {
+                    format!("failed to move `{}` to `{}`", src.display(), dst.display())
+                })?;
+            }
             installed.bins.push(dst);
             successful_bins.insert(bin.to_string());
         }
@@ -747,7 +749,7 @@ pub fn install(
         let path = gctx.get_env_os("PATH").unwrap_or_default();
         let dst_in_path = env::split_paths(&path).any(|path| path == dst);
 
-        if !dst_in_path && !dry_run {
+        if !dst_in_path {
             gctx.shell().warn(&format!(
                 "be sure to add `{}` to your PATH to be \
              able to run the installed binaries",

@@ -155,7 +155,8 @@ pub fn compile_ws<'a>(
         return Compilation::new(&bcx);
     }
     if options.build_config.dry_run {
-        return Compilation::new(&bcx);
+        let build_runner = BuildRunner::new(&bcx)?;
+        return build_runner.dry_run();
     }
     crate::core::gc::auto_gc(bcx.gctx);
     let build_runner = BuildRunner::new(&bcx)?;

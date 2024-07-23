@@ -2746,6 +2746,9 @@ fn dry_run() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
         .run();
