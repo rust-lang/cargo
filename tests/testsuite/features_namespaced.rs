@@ -640,7 +640,7 @@ fn json_exposed() {
 }
 
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }

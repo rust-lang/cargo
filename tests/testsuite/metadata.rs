@@ -87,7 +87,7 @@ fn cargo_metadata_simple() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -200,7 +200,7 @@ crate-type = ["lib", "staticlib"]
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -303,7 +303,7 @@ optional_feat = []
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -622,7 +622,7 @@ fn cargo_metadata_with_deps_and_version() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -729,7 +729,7 @@ name = "ex"
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -838,7 +838,7 @@ crate-type = ["rlib", "dylib"]
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -1000,7 +1000,7 @@ fn workspace_metadata() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -1224,7 +1224,7 @@ fn workspace_metadata_with_dependencies_no_deps() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -1860,7 +1860,7 @@ fn workspace_metadata_with_dependencies_and_resolve() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -2094,7 +2094,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_relative() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -2170,7 +2170,7 @@ fn cargo_metadata_no_deps_path_to_cargo_toml_absolute() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -2279,7 +2279,7 @@ fn cargo_metadata_no_deps_cwd() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -2419,7 +2419,7 @@ fn package_metadata() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -2513,7 +2513,7 @@ fn package_publish() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -2610,7 +2610,7 @@ fn cargo_metadata_path_to_cargo_toml_project() {
   "workspace_root": "[ROOT]/foo/target/package/bar-0.5.0"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -2702,7 +2702,7 @@ fn package_edition_2018() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -2854,7 +2854,7 @@ fn target_edition_2018() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -3094,7 +3094,7 @@ fn rename_dependency() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -3199,7 +3199,7 @@ fn metadata_links() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run()
 }
@@ -3306,7 +3306,7 @@ fn deps_with_bin_only() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -4149,7 +4149,7 @@ fn dep_kinds() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -4268,7 +4268,7 @@ fn dep_kinds_workspace() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -4536,7 +4536,7 @@ fn workspace_metadata_with_dependencies_no_deps_artifact() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -4819,7 +4819,7 @@ fn versionless_packages() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -4929,7 +4929,7 @@ local-time = 1979-05-27
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }

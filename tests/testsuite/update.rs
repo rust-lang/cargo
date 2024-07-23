@@ -838,7 +838,7 @@ fn update_precise_first_run() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 

@@ -426,7 +426,7 @@ fn pkgid_json_message_metadata_consistency() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run()
 }

@@ -334,7 +334,7 @@ fn verify_project_dir_containing_cargo_toml() {
 {"invalid":"the manifest-path must be a path to a Cargo.toml file"}
 
 "#]]
-            .json_lines(),
+            .is_jsonlines(),
         )
         .run();
 }
@@ -354,7 +354,7 @@ fn verify_project_dir_plus_file() {
 {"invalid":"the manifest-path must be a path to a Cargo.toml file"}
 
 "#]]
-            .json_lines(),
+            .is_jsonlines(),
         )
         .run();
 }
@@ -374,7 +374,7 @@ fn verify_project_dir_plus_path() {
 {"invalid":"the manifest-path must be a path to a Cargo.toml file"}
 
 "#]]
-            .json_lines(),
+            .is_jsonlines(),
         )
         .run();
 }
@@ -390,7 +390,7 @@ fn verify_project_dir_to_nonexistent_cargo_toml() {
 {"invalid":"manifest path `foo/bar/baz/Cargo.toml` does not exist"}
 
 "#]]
-            .json_lines(),
+            .is_jsonlines(),
         )
         .run();
 }

@@ -2116,7 +2116,7 @@ fn json_artifact_includes_executable_for_benchmark() {
 {"reason":"build-finished","success":true}
 
 "#]]
-            .json_lines(),
+            .is_jsonlines(),
         )
         .run();
 }

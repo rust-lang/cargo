@@ -98,7 +98,7 @@ fn implicit_lib_within_namespace() {
   "version": "0.0.1"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .with_stderr_data("")
         .run()
@@ -167,7 +167,7 @@ fn implicit_bin_within_namespace() {
   "version": "0.0.1"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .with_stderr_data("")
         .run()
@@ -254,7 +254,7 @@ fn explicit_bin_within_namespace() {
   "version": "0.0.1"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .with_stderr_data("")
         .run()
@@ -322,7 +322,7 @@ fn main() {}
   "version": "0.0.0"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .with_stderr_data("")
         .run();

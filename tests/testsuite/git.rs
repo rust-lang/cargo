@@ -3656,7 +3656,7 @@ fn metadata_master_consistency() {
 
     let bar_source = "git+[ROOTURL]/bar?branch=master";
     p.cargo("metadata")
-        .with_stdout_data(&metadata(&bar_source).json())
+        .with_stdout_data(&metadata(&bar_source).is_json())
         .run();
 
     // Conversely, remove branch="master" from Cargo.toml, but use a new Cargo.lock that has ?branch=master.
@@ -3702,7 +3702,7 @@ fn metadata_master_consistency() {
     // No ?branch=master!
     let bar_source = "git+[ROOTURL]/bar";
     p.cargo("metadata")
-        .with_stdout_data(&metadata(&bar_source).json())
+        .with_stdout_data(&metadata(&bar_source).is_json())
         .run();
 }
 

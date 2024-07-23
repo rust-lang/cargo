@@ -319,6 +319,6 @@ fn check_msg_format_json() {
 {"executable":"[ROOT]/foo/target/debug/007bar[EXE]","features":[],"filenames":"{...}","fresh":false,"manifest_path":"[ROOT]/foo/Cargo.toml","package_id":"path+[ROOTURL]/foo#0.0.1","profile":"{...}","reason":"compiler-artifact","target":"{...}"}
 {"reason":"build-finished","success":true}
 
-"#]].json_lines())
+"#]].is_jsonlines())
         .run();
 }

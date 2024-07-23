@@ -1115,7 +1115,7 @@ fn cmd_metadata_with_embedded() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
@@ -1177,7 +1177,7 @@ fn cmd_read_manifest_with_embedded() {
   "version": "0.0.0"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`
@@ -1258,7 +1258,7 @@ fn cmd_verify_project_with_embedded() {
   "success": "true"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2021`

@@ -15,7 +15,7 @@ fn simple() {
   "root": "[ROOT]/foo/Cargo.toml"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -38,7 +38,7 @@ fn message_format() {
   "root": "[ROOT]/foo/Cargo.toml"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 
@@ -84,7 +84,7 @@ fn workspace() {
   "root": "[ROOT]/foo/Cargo.toml"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 
@@ -96,7 +96,7 @@ fn workspace() {
   "root": "[ROOT]/foo/inner/Cargo.toml"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 
@@ -107,7 +107,7 @@ fn workspace() {
   "root": "[ROOT]/foo/Cargo.toml"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 
@@ -119,7 +119,7 @@ fn workspace() {
   "root": "[ROOT]/foo/Cargo.toml"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }

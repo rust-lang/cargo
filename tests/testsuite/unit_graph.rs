@@ -230,7 +230,7 @@ fn simple() {
   "version": 1
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }

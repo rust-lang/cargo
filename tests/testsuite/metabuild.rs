@@ -586,7 +586,7 @@ fn metabuild_build_plan() {
   ]
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 

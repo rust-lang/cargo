@@ -989,7 +989,7 @@ fn alt_reg_metadata() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 
@@ -1353,7 +1353,7 @@ fn alt_reg_metadata() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -1615,7 +1615,7 @@ fn unknown_registry() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }

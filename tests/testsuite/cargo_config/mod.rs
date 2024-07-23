@@ -217,7 +217,7 @@ fn get_json() {
 }
 
 "#
-            .json(),
+            .is_json(),
         )
         .with_stderr_data(str![[r#"
 [NOTE] The following environment variables may affect the loaded values.
@@ -270,7 +270,7 @@ CARGO_HOME=[ROOT]/home/.cargo
 }
   
 "#
-            .json(),
+            .is_json(),
         )
         .with_stderr_data(str![[r#"
 [NOTE] The following environment variables may affect the loaded values.
