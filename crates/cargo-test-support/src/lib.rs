@@ -747,17 +747,6 @@ impl Execs {
         self
     }
 
-    /// Verifies that stdout contains the given contiguous lines somewhere in
-    /// its output, and should be repeated `number` times.
-    ///
-    /// See [`compare`] for supported patterns.
-    #[deprecated(note = "replaced with `Execs::with_stdout_data(expected)`")]
-    pub fn with_stdout_contains_n<S: ToString>(&mut self, expected: S, number: usize) -> &mut Self {
-        self.expect_stdout_contains_n
-            .push((expected.to_string(), number));
-        self
-    }
-
     /// Verifies that stdout does not contain the given contiguous lines.
     ///
     /// See [`compare`] for supported patterns.
