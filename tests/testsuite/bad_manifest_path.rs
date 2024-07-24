@@ -331,10 +331,14 @@ fn verify_project_dir_containing_cargo_toml() {
         .with_status(1)
         .with_stdout_data(
             str![[r#"
-{"invalid":"the manifest-path must be a path to a Cargo.toml file"}
-
+[
+  {
+    "invalid": "the manifest-path must be a path to a Cargo.toml file"
+  }
+]
 "#]]
-            .json_lines(),
+            .is_json()
+            .against_jsonlines(),
         )
         .run();
 }
@@ -351,10 +355,14 @@ fn verify_project_dir_plus_file() {
         .with_status(1)
         .with_stdout_data(
             str![[r#"
-{"invalid":"the manifest-path must be a path to a Cargo.toml file"}
-
+[
+  {
+    "invalid": "the manifest-path must be a path to a Cargo.toml file"
+  }
+]
 "#]]
-            .json_lines(),
+            .is_json()
+            .against_jsonlines(),
         )
         .run();
 }
@@ -371,10 +379,14 @@ fn verify_project_dir_plus_path() {
         .with_status(1)
         .with_stdout_data(
             str![[r#"
-{"invalid":"the manifest-path must be a path to a Cargo.toml file"}
-
+[
+  {
+    "invalid": "the manifest-path must be a path to a Cargo.toml file"
+  }
+]
 "#]]
-            .json_lines(),
+            .is_json()
+            .against_jsonlines(),
         )
         .run();
 }
@@ -387,10 +399,14 @@ fn verify_project_dir_to_nonexistent_cargo_toml() {
         .with_status(1)
         .with_stdout_data(
             str![[r#"
-{"invalid":"manifest path `foo/bar/baz/Cargo.toml` does not exist"}
-
+[
+  {
+    "invalid": "manifest path `foo/bar/baz/Cargo.toml` does not exist"
+  }
+]
 "#]]
-            .json_lines(),
+            .is_json()
+            .against_jsonlines(),
         )
         .run();
 }

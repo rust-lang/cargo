@@ -37,7 +37,7 @@ fn cargo_read_manifest_path_to_cargo_toml_relative() {
   "...": "{...}"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -59,7 +59,7 @@ fn cargo_read_manifest_path_to_cargo_toml_absolute() {
   "...": "{...}"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -114,7 +114,7 @@ fn cargo_read_manifest_cwd() {
   "...": "{...}"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -138,7 +138,7 @@ fn cargo_read_manifest_with_specified_readme() {
   "...": "{...}"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -163,7 +163,7 @@ fn cargo_read_manifest_default_readme() {
   "...": "{...}"
 }
 "#]]
-        .json(),
+        .is_json(),
     );
 
     assert_output(
@@ -174,7 +174,7 @@ fn cargo_read_manifest_default_readme() {
   "...": "{...}"
 }
 "#]]
-        .json(),
+        .is_json(),
     );
 
     assert_output(
@@ -185,7 +185,7 @@ fn cargo_read_manifest_default_readme() {
   "...": "{...}"
 }
 "#]]
-        .json(),
+        .is_json(),
     );
 }
 
@@ -208,7 +208,7 @@ fn cargo_read_manifest_suppress_default_readme() {
   "...": "{...}"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -230,7 +230,7 @@ fn cargo_read_manifest_defaults_readme_if_true() {
   "...": "{...}"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }

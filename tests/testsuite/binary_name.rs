@@ -315,10 +315,28 @@ fn check_msg_format_json() {
     // Run cargo build.
     p.cargo("build --message-format=json")
         .masquerade_as_nightly_cargo(&["different-binary-name"])
-        .with_stdout_data(str![[r#"
-{"executable":"[ROOT]/foo/target/debug/007bar[EXE]","features":[],"filenames":"{...}","fresh":false,"manifest_path":"[ROOT]/foo/Cargo.toml","package_id":"path+[ROOTURL]/foo#0.0.1","profile":"{...}","reason":"compiler-artifact","target":"{...}"}
-{"reason":"build-finished","success":true}
-
-"#]].json_lines())
+        .with_stdout_data(
+            str![[r#"
+[
+  {
+    "executable": "[ROOT]/foo/target/debug/007bar[EXE]",
+    "features": [],
+    "filenames": "{...}",
+    "fresh": false,
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "package_id": "path+[ROOTURL]/foo#0.0.1",
+    "profile": "{...}",
+    "reason": "compiler-artifact",
+    "target": "{...}"
+  },
+  {
+    "reason": "build-finished",
+    "success": true
+  }
+]
+"#]]
+            .is_json()
+            .against_jsonlines(),
+        )
         .run();
 }

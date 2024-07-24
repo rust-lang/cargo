@@ -2112,11 +2112,39 @@ fn json_artifact_includes_executable_for_benchmark() {
     p.cargo("bench --no-run --message-format=json")
         .with_stdout_data(
             str![[r#"
-{"executable":"[ROOT]/foo/target/release/deps/benchmark-[HASH][EXE]","features":[],"filenames":"{...}","fresh":false,"manifest_path":"[ROOT]/foo/Cargo.toml","package_id":"path+[ROOTURL]/foo#0.0.1","profile":"{...}","reason":"compiler-artifact","target":{"crate_types":["bin"],"doc":false,"doctest":false,"edition":"2015","kind":["bench"],"name":"benchmark","src_path":"[ROOT]/foo/benches/benchmark.rs","test":false}}
-{"reason":"build-finished","success":true}
-
+[
+  {
+    "executable": "[..]",
+    "features": [],
+    "filenames": "{...}",
+    "fresh": false,
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "package_id": "path+[ROOTURL]/foo#0.0.1",
+    "profile": "{...}",
+    "reason": "compiler-artifact",
+    "target": {
+      "crate_types": [
+        "bin"
+      ],
+      "doc": false,
+      "doctest": false,
+      "edition": "2015",
+      "kind": [
+        "bench"
+      ],
+      "name": "benchmark",
+      "src_path": "[ROOT]/foo/benches/benchmark.rs",
+      "test": false
+    }
+  },
+  {
+    "reason": "build-finished",
+    "success": true
+  }
+]
 "#]]
-            .json_lines(),
+            .is_json()
+            .against_jsonlines(),
         )
         .run();
 }

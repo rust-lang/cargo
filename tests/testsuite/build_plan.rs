@@ -39,7 +39,7 @@ fn cargo_build_plan_simple() {
   ]
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
     assert!(!p.bin("foo").is_file());
@@ -126,7 +126,7 @@ fn cargo_build_plan_single_dep() {
   ]
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }
@@ -213,7 +213,7 @@ fn cargo_build_plan_build_script() {
   ]
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run();
 }

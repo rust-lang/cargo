@@ -106,7 +106,6 @@ fn url() {
         .run();
 }
 
-#[allow(deprecated)]
 #[cargo_test]
 fn simple_with_message_format() {
     pkg("foo", "0.0.1");
@@ -124,60 +123,65 @@ fn simple_with_message_format() {
 [WARNING] be sure to add `[..]` to your PATH to be able to run the installed binaries
 
 "#]])
-        .with_json(
-            r#"
-            {
-                "reason": "compiler-artifact",
-                "package_id": "registry+https://[..]#foo@0.0.1",
-                "manifest_path": "[..]",
-                "target": {
-                    "kind": [
-                        "lib"
-                    ],
-                    "crate_types": [
-                        "lib"
-                    ],
-                    "name": "foo",
-                    "src_path": "[..]/foo-0.0.1/src/lib.rs",
-                    "edition": "2015",
-                    "doc": true,
-                    "doctest": true,
-                    "test": true
-                },
-                "profile": "{...}",
-                "features": [],
-                "filenames": "{...}",
-                "executable": null,
-                "fresh": false
-            }
-
-            {
-                "reason": "compiler-artifact",
-                "package_id": "registry+https://[..]#foo@0.0.1",
-                "manifest_path": "[..]",
-                "target": {
-                    "kind": [
-                        "bin"
-                    ],
-                    "crate_types": [
-                        "bin"
-                    ],
-                    "name": "foo",
-                    "src_path": "[..]/foo-0.0.1/src/main.rs",
-                    "edition": "2015",
-                    "doc": true,
-                    "doctest": false,
-                    "test": true
-                },
-                "profile": "{...}",
-                "features": [],
-                "filenames": "{...}",
-                "executable": "[..]",
-                "fresh": false
-            }
-
-            {"reason":"build-finished","success":true}
-            "#,
+        .with_stdout_data(
+            str![[r#"
+[
+  {
+    "executable": null,
+    "features": [],
+    "filenames": "{...}",
+    "fresh": false,
+    "manifest_path": "[ROOT]/home/.cargo/registry/src/-[HASH]/foo-0.0.1/Cargo.toml",
+    "package_id": "registry+https://github.com/rust-lang/crates.io-index#foo@0.0.1",
+    "profile": "{...}",
+    "reason": "compiler-artifact",
+    "target": {
+      "crate_types": [
+        "lib"
+      ],
+      "doc": true,
+      "doctest": true,
+      "edition": "2015",
+      "kind": [
+        "lib"
+      ],
+      "name": "foo",
+      "src_path": "[ROOT]/home/.cargo/registry/src/-[HASH]/foo-0.0.1/src/lib.rs",
+      "test": true
+    }
+  },
+  {
+    "executable": "[..]",
+    "features": [],
+    "filenames": "{...}",
+    "fresh": false,
+    "manifest_path": "[ROOT]/home/.cargo/registry/src/-[HASH]/foo-0.0.1/Cargo.toml",
+    "package_id": "registry+https://github.com/rust-lang/crates.io-index#foo@0.0.1",
+    "profile": "{...}",
+    "reason": "compiler-artifact",
+    "target": {
+      "crate_types": [
+        "bin"
+      ],
+      "doc": true,
+      "doctest": false,
+      "edition": "2015",
+      "kind": [
+        "bin"
+      ],
+      "name": "foo",
+      "src_path": "[ROOT]/home/.cargo/registry/src/-[HASH]/foo-0.0.1/src/main.rs",
+      "test": true
+    }
+  },
+  {
+    "reason": "build-finished",
+    "success": true
+  }
+]
+"#]]
+            .is_json()
+            .against_jsonlines(),
         )
         .run();
     assert_has_installed_exe(paths::cargo_home(), "foo");

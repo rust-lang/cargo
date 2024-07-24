@@ -306,66 +306,47 @@ fn pkgid_json_message_metadata_consistency() {
     let pkgid = pkgid.trim();
     assert_e2e().eq(pkgid, str!["path+[ROOTURL]/foo#0.5.0"]);
 
-    #[allow(deprecated)]
     p.cargo("check --message-format=json")
-        .with_json(
-            &r#"
-{
-  "reason": "compiler-artifact",
-  "package_id": "$PKGID",
-  "manifest_path": "[..]",
-  "target": "{...}",
-  "profile": "{...}",
-  "features": [],
-  "filenames": "{...}",
-  "executable": null,
-  "fresh": false
-}
-
-{
-  "reason": "build-script-executed",
-  "package_id": "$PKGID",
-  "linked_libs": [],
-  "linked_paths": [],
-  "cfgs": [],
-  "env": [],
-  "out_dir": "[..]"
-}
-
-{
-  "manifest_path": "[..]",
-  "message": "{...}",
-  "package_id": "$PKGID",
-  "reason": "compiler-message",
-  "target": "{...}"
-}
-
-{
-  "reason": "compiler-message",
-  "package_id": "$PKGID",
-  "manifest_path": "[..]",
-  "target": "{...}",
-  "message": "{...}"
-}
-
-{
-  "reason": "compiler-artifact",
-  "package_id": "$PKGID",
-  "manifest_path": "[..]",
-  "target": "{...}",
-  "profile": "{...}",
-  "features": [],
-  "filenames": "{...}",
-  "executable": null,
-  "fresh": false
-}
-
-{
-  "reason": "build-finished",
-  "success": true
-}
-            "#
-            .replace("$PKGID", pkgid),
+        .with_stdout_data(
+            str![[r#"
+[
+  {
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "package_id": "path+[ROOTURL]/foo#0.5.0",
+    "reason": "compiler-artifact",
+    "...": "{...}"
+  },
+  {
+    "package_id": "path+[ROOTURL]/foo#0.5.0",
+    "reason": "build-script-executed",
+    "...": "{...}"
+  },
+  {
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "package_id": "path+[ROOTURL]/foo#0.5.0",
+    "reason": "compiler-message",
+    "...": "{...}"
+  },
+  {
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "package_id": "path+[ROOTURL]/foo#0.5.0",
+    "reason": "compiler-message",
+    "...": "{...}"
+  },
+  {
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "package_id": "path+[ROOTURL]/foo#0.5.0",
+    "reason": "compiler-artifact",
+    "...": "{...}"
+  },
+  {
+    "reason": "build-finished",
+    "success": true
+  }
+]
+"#]]
+            .is_json()
+            .against_jsonlines(),
         )
         .run();
 
@@ -426,7 +407,7 @@ fn pkgid_json_message_metadata_consistency() {
   "workspace_root": "[ROOT]/foo"
 }
 "#]]
-            .json(),
+            .is_json(),
         )
         .run()
 }
