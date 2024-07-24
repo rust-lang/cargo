@@ -876,7 +876,9 @@ impl Execs {
     /// - The order of arrays is ignored.
     /// - Strings support patterns described in [`compare`].
     /// - Use `"{...}"` to match any object.
-    #[deprecated(note = "replaced with `Execs::with_stdout_data(expected.json_lines())`")]
+    #[deprecated(
+        note = "replaced with `Execs::with_stdout_data(expected.is_json().against_jsonlines())`"
+    )]
     pub fn with_json(&mut self, expected: &str) -> &mut Self {
         self.expect_json = Some(expected.to_string());
         self
