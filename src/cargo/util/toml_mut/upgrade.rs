@@ -15,12 +15,16 @@ pub(crate) fn upgrade_requirement(
         // Empty matches everything, no-change.
         Ok(None)
     } else {
-        let comparators: CargoResult<Vec<_>> = raw_req
+        let comparators: Vec<_> = raw_req
             .comparators
             .into_iter()
+            // Don't downgrade if pre-release was used, see https://github.com/rust-lang/cargo/issues/14178 and https://github.com/rust-lang/cargo/issues/13290.
+            .filter(|p| p.pre.is_empty() || matches_greater(p, version))
             .map(|p| set_comparator(p, version))
-            .collect();
-        let comparators = comparators?;
+            .collect::<CargoResult<_>>()?;
+        if comparators.is_empty() {
+            return Ok(None);
+        }
         let new_req = semver::VersionReq { comparators };
         let mut new_req_text = new_req.to_string();
         if new_req_text.starts_with('^') && !req.starts_with('^') {
@@ -72,6 +76,33 @@ fn set_comparator(
             Err(unsupported_version_req(user_pred))
         }
     }
+}
+
+// See https://github.com/dtolnay/semver/blob/69efd3cc770ead273a06ad1788477b3092996d29/src/eval.rs#L64-L88
+fn matches_greater(cmp: &semver::Comparator, ver: &semver::Version) -> bool {
+    if ver.major != cmp.major {
+        return ver.major > cmp.major;
+    }
+
+    match cmp.minor {
+        None => return false,
+        Some(minor) => {
+            if ver.minor != minor {
+                return ver.minor > minor;
+            }
+        }
+    }
+
+    match cmp.patch {
+        None => return false,
+        Some(patch) => {
+            if ver.patch != patch {
+                return ver.patch > patch;
+            }
+        }
+    }
+
+    ver.pre > cmp.pre
 }
 
 fn assign_partial_req(
@@ -216,6 +247,18 @@ mod test {
             assert_req_bump("1.1.0", "=1.0.0", "=1.1.0");
             assert_req_bump("1.1.1", "=1.0.0", "=1.1.1");
             assert_req_bump("2.0.0", "=1.0.0", "=2.0.0");
+        }
+
+        #[test]
+        fn greater_prerelease() {
+            assert_req_bump("1.7.0", "2.0.0-beta.21", None);
+            assert_req_bump("1.7.0", "=2.0.0-beta.21", None);
+            assert_req_bump("1.7.0", "~2.0.0-beta.21", None);
+            assert_req_bump("2.0.0-beta.20", "2.0.0-beta.21", None);
+            assert_req_bump("2.0.0-beta.21", "2.0.0-beta.21", None);
+            assert_req_bump("2.0.0-beta.22", "2.0.0-beta.21", "2.0.0-beta.22");
+            assert_req_bump("2.0.0", "2.0.0-beta.21", "2.0.0");
+            assert_req_bump("3.0.0", "2.0.0-beta.21", "3.0.0");
         }
     }
 }
