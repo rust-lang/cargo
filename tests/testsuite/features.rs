@@ -1889,27 +1889,17 @@ fn strong_dep_feature_edition2024() {
 
     p.cargo("metadata")
         .masquerade_as_nightly_cargo(&["edition2024"])
-        .with_stdout_data(
-            str![[r#"
-{
-  "metadata": null,
-  "packages": [
-    {
-      "features": {
-        "optional_dep": [
-          "optional_dep/foo",
-          "dep:optional_dep"
-        ]
-      },
-      "name": "foo",
-      "...": "{...}"
-    }
-  ],
-  "...": "{...}"
-}
-"#]]
-            .json(),
-        )
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] feature `optional_dep` includes `optional_dep/foo`, but `optional_dep` is not a dependency
+ --> Cargo.toml:9:32
+  |
+9 |                 optional_dep = ["optional_dep/foo"]
+  |                                ^^^^^^^^^^^^^^^^^^^^
+  |
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+"#]])
         .run();
 }
 

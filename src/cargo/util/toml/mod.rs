@@ -324,7 +324,7 @@ fn resolve_toml(
             });
         resolved_toml.package = Some(resolved_package);
 
-        resolved_toml.features = resolve_features(original_toml.features.as_ref(), edition)?;
+        resolved_toml.features = resolve_features(original_toml.features.as_ref())?;
 
         resolved_toml.lib = targets::resolve_lib(
             original_toml.lib.as_ref(),
@@ -693,33 +693,10 @@ fn default_readme_from_package_root(package_root: &Path) -> Option<String> {
 #[tracing::instrument(skip_all)]
 fn resolve_features(
     original_features: Option<&BTreeMap<manifest::FeatureName, Vec<String>>>,
-    edition: Edition,
 ) -> CargoResult<Option<BTreeMap<manifest::FeatureName, Vec<String>>>> {
-    let Some(mut resolved_features) = original_features.cloned() else {
+    let Some(resolved_features) = original_features.cloned() else {
         return Ok(None);
     };
-
-    if Edition::Edition2024 <= edition {
-        for activations in resolved_features.values_mut() {
-            let mut deps = Vec::new();
-            for feature_value in activations.iter() {
-                let feature_value = FeatureValue::new(InternedString::new(feature_value));
-                let FeatureValue::DepFeature {
-                    dep_name,
-                    dep_feature: _,
-                    weak: false,
-                } = feature_value
-                else {
-                    continue;
-                };
-                let dep = FeatureValue::Dep { dep_name }.to_string();
-                if !activations.contains(&dep) {
-                    deps.push(dep);
-                }
-            }
-            activations.extend(deps);
-        }
-    }
 
     Ok(Some(resolved_features))
 }
