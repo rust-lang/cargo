@@ -2680,14 +2680,14 @@ impl BuildTargetConfig {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct CargoResolverConfig {
-    pub something_like_precedence: Option<CargoResolverPrecedence>,
+    pub incompatible_rust_versions: Option<IncompatibleRustVersions>,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
-pub enum CargoResolverPrecedence {
-    SomethingLikeMaximum,
-    SomethingLikeRustVersion,
+pub enum IncompatibleRustVersions {
+    Allow,
+    Fallback,
 }
 
 #[derive(Deserialize, Default)]
