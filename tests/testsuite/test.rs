@@ -4383,38 +4383,42 @@ fn json_artifact_includes_test_flag() {
         .file("src/lib.rs", "")
         .build();
 
-    p.cargo("test --lib -v --message-format=json")
-        .with_json(
-            r#"
-                {
-                    "reason":"compiler-artifact",
-                    "profile": {
-                        "debug_assertions": true,
-                        "debuginfo": 2,
-                        "opt_level": "1",
-                        "overflow_checks": true,
-                        "test": true
-                    },
-                    "executable": "[..]/foo-[..]",
-                    "features": [],
-                    "package_id":"path+file:///[..]/foo#0.0.1",
-                    "manifest_path": "[..]",
-                    "target":{
-                        "kind":["lib"],
-                        "crate_types":["lib"],
-                        "doc": true,
-                        "doctest": true,
-                        "edition": "2015",
-                        "name":"foo",
-                        "src_path":"[..]lib.rs",
-                        "test": true
-                    },
-                    "filenames":"{...}",
-                    "fresh": false
-                }
-
-                {"reason": "build-finished", "success": true}
-            "#,
+    p.cargo("test --lib -v --no-run --message-format=json")
+        .with_stdout_data(
+            str![[r#"
+[
+  {
+    "executable": "[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]",
+    "features": [],
+    "filenames": "{...}",
+    "fresh": false,
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "package_id": "path+[ROOTURL]/foo#0.0.1",
+    "profile": "{...}",
+    "reason": "compiler-artifact",
+    "target": {
+      "crate_types": [
+        "lib"
+      ],
+      "doc": true,
+      "doctest": true,
+      "edition": "2015",
+      "kind": [
+        "lib"
+      ],
+      "name": "foo",
+      "src_path": "[ROOT]/foo/src/lib.rs",
+      "test": true
+    }
+  },
+  {
+    "reason": "build-finished",
+    "success": true
+  }
+]
+"#]]
+            .is_json()
+            .against_jsonlines(),
         )
         .run();
 }
