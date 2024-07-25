@@ -16,7 +16,7 @@ Hello, world!
 
 Note that the above command required that we specify the file name
 explicitly. If we were to directly use `rustc` to compile a different program,
-a different command line invocation would be required. If we needed to specify
+a different command line invocation would be required. If we need to specify
 any specific compiler flags or include external dependencies, then the
 needed command would be even more specific (and elaborate).
 
