@@ -405,11 +405,6 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
     paths::create_dir_all(&script_out_dir)?;
 
     let nightly_features_allowed = build_runner.bcx.gctx.nightly_features_allowed;
-    let extra_check_cfg = build_runner
-        .bcx
-        .target_data
-        .info(unit.kind)
-        .support_check_cfg;
     let targets: Vec<Target> = unit.pkg.targets().to_vec();
     let msrv = unit.pkg.rust_version().cloned();
     // Need a separate copy for the fresh closure.
@@ -557,7 +552,6 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
             &pkg_descr,
             &script_out_dir,
             &script_out_dir,
-            extra_check_cfg,
             nightly_features_allowed,
             &targets,
             &msrv,
@@ -586,7 +580,6 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
                 &pkg_descr,
                 &prev_script_out_dir,
                 &script_out_dir,
-                extra_check_cfg,
                 nightly_features_allowed,
                 &targets_fresh,
                 &msrv_fresh,
@@ -643,7 +636,6 @@ impl BuildOutput {
         pkg_descr: &str,
         script_out_dir_when_generated: &Path,
         script_out_dir: &Path,
-        extra_check_cfg: bool,
         nightly_features_allowed: bool,
         targets: &[Target],
         msrv: &Option<RustVersion>,
@@ -655,7 +647,6 @@ impl BuildOutput {
             pkg_descr,
             script_out_dir_when_generated,
             script_out_dir,
-            extra_check_cfg,
             nightly_features_allowed,
             targets,
             msrv,
@@ -666,7 +657,6 @@ impl BuildOutput {
     ///
     /// * `pkg_descr` --- for error messages
     /// * `library_name` --- for determining if `RUSTC_BOOTSTRAP` should be allowed
-    /// * `extra_check_cfg` --- for `--check-cfg` (if supported)
     pub fn parse(
         input: &[u8],
         // Takes String instead of InternedString so passing `unit.pkg.name()` will give a compile error.
@@ -674,7 +664,6 @@ impl BuildOutput {
         pkg_descr: &str,
         script_out_dir_when_generated: &Path,
         script_out_dir: &Path,
-        extra_check_cfg: bool,
         nightly_features_allowed: bool,
         targets: &[Target],
         msrv: &Option<RustVersion>,
@@ -921,14 +910,7 @@ impl BuildOutput {
                     linker_args.push((LinkArgTarget::All, value));
                 }
                 "rustc-cfg" => cfgs.push(value.to_string()),
-                "rustc-check-cfg" => {
-                    if extra_check_cfg {
-                        check_cfgs.push(value.to_string());
-                    } else {
-                        // silently ignoring the instruction because the rustc version
-                        // we are using does not support --check-cfg stably
-                    }
-                }
+                "rustc-check-cfg" => check_cfgs.push(value.to_string()),
                 "rustc-env" => {
                     let (key, val) = BuildOutput::parse_rustc_env(&value, &whence)?;
                     // Build scripts aren't allowed to set RUSTC_BOOTSTRAP.
@@ -1265,11 +1247,6 @@ fn prev_build_output(
             &unit.pkg.to_string(),
             &prev_script_out_dir,
             &script_out_dir,
-            build_runner
-                .bcx
-                .target_data
-                .info(unit.kind)
-                .support_check_cfg,
             build_runner.bcx.gctx.nightly_features_allowed,
             unit.pkg.targets(),
             &unit.pkg.rust_version().cloned(),
