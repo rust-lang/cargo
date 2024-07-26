@@ -1173,9 +1173,9 @@ rustflags = ["…", "…"]
 ```
 
 `cfg` values come from those built-in to the compiler (run `rustc --print=cfg`
-to view), values set by [build scripts], and extra `--cfg` flags passed to
-`rustc` (such as those defined in `RUSTFLAGS`). Do not try to match on
-`debug_assertions` or Cargo features like `feature="foo"`.
+to view) and extra `--cfg` flags passed to `rustc` (such as those defined in
+`RUSTFLAGS`). Do not try to match on `debug_assertions`, `test`, Cargo features
+like `feature="foo"`, or values set by [build scripts].
 
 If using a target spec JSON file, the [`<triple>`] value is the filename stem.
 For example `--target foo/bar.json` would match `[target.bar]`.
