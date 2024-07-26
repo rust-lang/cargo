@@ -774,6 +774,7 @@ unstable_cli_options!(
     mtime_on_use: bool = ("Configure Cargo to update the mtime of used files"),
     next_lockfile_bump: bool,
     no_index_update: bool = ("Do not update the registry index even if the cache is outdated"),
+    package_workspace: bool = ("Handle intra-workspace dependencies when packaging"),
     panic_abort_tests: bool = ("Enable support to run tests with -Cpanic=abort"),
     profile_rustflags: bool = ("Enable the `rustflags` option in profiles in .cargo/config.toml file"),
     public_dependency: bool = ("Respect a dependency's `public` field in Cargo.toml to control public/private dependencies"),
@@ -1276,6 +1277,7 @@ impl CliUnstable {
             // can also be set in .cargo/config or with and ENV
             "mtime-on-use" => self.mtime_on_use = parse_empty(k, v)?,
             "no-index-update" => self.no_index_update = parse_empty(k, v)?,
+            "package-workspace" => self.package_workspace= parse_empty(k, v)?,
             "panic-abort-tests" => self.panic_abort_tests = parse_empty(k, v)?,
             "public-dependency" => self.public_dependency = parse_empty(k, v)?,
             "profile-rustflags" => self.profile_rustflags = parse_empty(k, v)?,

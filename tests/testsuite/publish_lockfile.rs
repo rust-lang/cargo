@@ -553,16 +553,16 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] bar v0.0.1 ([ROOT]/foo/bar)
 [UPDATING] `dummy-registry` index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOWNLOADING] crates ...
 [DOWNLOADED] serde v0.2.0 (registry `dummy-registry`)
 [COMPILING] serde v0.2.0
 [COMPILING] bar v0.0.1 ([ROOT]/foo/target/package/bar-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] serde v0.2.0
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)

@@ -226,7 +226,8 @@ _cargo() {
                         ;;
 
                 package)
-                    _arguments -s -S $common $parallel $features $triple $target $manifest \
+                    _arguments -s -S $common $parallel $features $triple $target $manifest $registry \
+                        '--index=[specify registry index]:index' \
                         '(-l --list)'{-l,--list}'[print files included in a package without making one]' \
                         '--no-metadata[ignore warnings about a lack of human-usable metadata]' \
                         '--allow-dirty[allow dirty working directories to be packaged]' \

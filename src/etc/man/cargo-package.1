@@ -9,9 +9,8 @@ cargo\-package \[em] Assemble the local package into a distributable tarball
 \fBcargo package\fR [\fIoptions\fR]
 .SH "DESCRIPTION"
 This command will create a distributable, compressed \fB\&.crate\fR file with the
-source code of the package in the current directory. The resulting file will
-be stored in the \fBtarget/package\fR directory. This performs the following
-steps:
+source code of the package in the current directory. The resulting file will be
+stored in the \fBtarget/package\fR directory. This performs the following steps:
 .sp
 .RS 4
 \h'-04' 1.\h'+01'Load and check the current workspace, performing some basic checks.
@@ -117,6 +116,20 @@ or the license).
 \fB\-\-allow\-dirty\fR
 .RS 4
 Allow working directories with uncommitted VCS changes to be packaged.
+.RE
+.sp
+\fB\-\-index\fR \fIindex\fR
+.RS 4
+The URL of the registry index to use.
+.RE
+.sp
+\fB\-\-registry\fR \fIregistry\fR
+.RS 4
+Name of the registry to package for; see \fBcargo publish \-\-help\fR for more details
+about configuration of registry names. The packages will not be published
+to this registry, but if we are packaging multiple inter\-dependent crates,
+lock\-files will be generated under the assumption that dependencies will be
+published to this registry.
 .RE
 .SS "Package Selection"
 By default, when no package selection options are given, the packages selected

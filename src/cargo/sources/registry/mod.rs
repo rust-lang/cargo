@@ -445,7 +445,7 @@ pub enum MaybeLock {
 
 mod download;
 mod http_remote;
-mod index;
+pub(crate) mod index;
 pub use index::IndexSummary;
 mod local;
 mod remote;

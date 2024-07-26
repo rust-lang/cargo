@@ -8,7 +8,7 @@ use cargo_test_support::publish::validate_crate_contents;
 use cargo_test_support::registry::{self, Package};
 use cargo_test_support::{
     basic_manifest, cargo_process, git, paths, project, rustc_host, str, symlink_supported, t,
-    ProjectBuilder,
+    Project, ProjectBuilder,
 };
 use flate2::read::GzDecoder;
 use tar::Archive;
@@ -2813,13 +2813,13 @@ fn in_workspace() {
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] bar v0.0.1 ([ROOT]/foo/bar)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[VERIFYING] bar v0.0.1 ([ROOT]/foo/bar)
-[COMPILING] bar v0.0.1 ([ROOT]/foo/target/package/bar-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] bar v0.0.1 ([ROOT]/foo/bar)
+[COMPILING] bar v0.0.1 ([ROOT]/foo/target/package/bar-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -5075,4 +5075,871 @@ path = "examples/z.rs"
 "#,
         )],
     );
+}
+
+// A workspace with three projects that depend on one another (level1 -> level2 -> level3).
+// level1 is a binary package, to test lockfile generation.
+fn workspace_with_local_deps_project() -> Project {
+    project()
+            .file(
+                "Cargo.toml",
+                r#"
+            [workspace]
+            members = ["level1", "level2", "level3"]
+
+            [workspace.dependencies]
+            level2 = { path = "level2", version = "0.0.1" }
+        "#
+            )
+            .file(
+                "level1/Cargo.toml",
+                r#"
+            [package]
+            name = "level1"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "level1"
+            repository = "bar"
+
+            [dependencies]
+            # Let one dependency also specify features, for the added test coverage when generating package files.
+            level2 = { workspace = true, features = ["foo"] }
+        "#,
+            )
+            .file("level1/src/main.rs", "fn main() {}")
+            .file(
+                "level2/Cargo.toml",
+                r#"
+            [package]
+            name = "level2"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "level2"
+            repository = "bar"
+
+            [features]
+            foo = []
+
+            [dependencies]
+            level3 = { path = "../level3", version = "0.0.1" }
+        "#
+            )
+            .file("level2/src/lib.rs", "")
+            .file(
+                "level3/Cargo.toml",
+                r#"
+            [package]
+            name = "level3"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "level3"
+            repository = "bar"
+        "#,
+            )
+            .file("level3/src/lib.rs", "")
+            .build()
+}
+
+#[cargo_test]
+fn workspace_with_local_deps() {
+    let crates_io = registry::init();
+    let p = workspace_with_local_deps_project();
+
+    p.cargo("package")
+        .replace_crates_io(crates_io.index_url())
+        .with_status(101)
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] level3 v0.0.1 ([ROOT]/foo/level3)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] level2 v0.0.1 ([ROOT]/foo/level2)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
+[UPDATING] crates.io index
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `level2` found
+  location searched: registry `crates-io`
+  required by package `level1 v0.0.1 ([ROOT]/foo/level1)`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn workspace_with_local_deps_nightly() {
+    let crates_io = registry::init();
+    let p = workspace_with_local_deps_project();
+
+    p.cargo("package -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(crates_io.index_url())
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] level3 v0.0.1 ([ROOT]/foo/level3)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] level2 v0.0.1 ([ROOT]/foo/level2)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] level3 v0.0.1 ([ROOT]/foo/level3)
+[COMPILING] level3 v0.0.1 ([ROOT]/foo/target/package/level3-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] level2 v0.0.1 ([ROOT]/foo/level2)
+[UNPACKING] level3 v0.0.1 (registry `[ROOT]/foo/target/package/tmp-registry`)
+[COMPILING] level3 v0.0.1
+[COMPILING] level2 v0.0.1 ([ROOT]/foo/target/package/level2-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] level1 v0.0.1 ([ROOT]/foo/level1)
+[UNPACKING] level2 v0.0.1 (registry `[ROOT]/foo/target/package/tmp-registry`)
+[COMPILING] level3 v0.0.1
+[COMPILING] level2 v0.0.1
+[COMPILING] level1 v0.0.1 ([ROOT]/foo/target/package/level1-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    let generated_lock = format!(
+        r#"# This file is automatically @generated by Cargo.
+# It is not intended for manual editing.
+version = 3
+
+[[package]]
+name = "level1"
+version = "0.0.1"
+dependencies = [
+ "level2",
+]
+
+[[package]]
+name = "level2"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = [..]
+dependencies = [
+ "level3",
+]
+
+[[package]]
+name = "level3"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = [..]
+"#
+    );
+
+    let generated_manifest = format!(
+        r#"{}
+[package]
+edition = "2015"
+name = "level1"
+version = "0.0.1"
+authors = []
+build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "level1"
+readme = false
+license = "MIT"
+repository = "bar"
+
+[[bin]]
+name = "level1"
+path = "src/main.rs"
+
+[dependencies.level2]
+version = "0.0.1"
+features = ["foo"]
+"#,
+        cargo::core::manifest::MANIFEST_PREAMBLE,
+    );
+
+    let mut f = File::open(&p.root().join("target/package/level1-0.0.1.crate")).unwrap();
+
+    validate_crate_contents(
+        &mut f,
+        "level1-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[
+            ("Cargo.lock", &generated_lock),
+            ("Cargo.toml", &generated_manifest),
+        ],
+    );
+}
+
+fn workspace_with_local_deps_packaging_one_fails_project() -> Project {
+    project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["level1", "level2"]
+        "#,
+        )
+        .file(
+            "level1/Cargo.toml",
+            r#"
+            [package]
+            name = "level1"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "level1"
+            repository = "bar"
+
+            [dependencies]
+            level2 = { path = "../level2", version = "0.0.1" }
+        "#,
+        )
+        .file("level1/src/lib.rs", "")
+        .file(
+            "level2/Cargo.toml",
+            r#"
+            [package]
+            name = "level2"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "level2"
+            repository = "bar"
+        "#,
+        )
+        .file("level2/src/lib.rs", "")
+        .build()
+}
+
+#[cargo_test]
+fn workspace_with_local_deps_packaging_one_fails() {
+    let crates_io = registry::init();
+    let p = workspace_with_local_deps_packaging_one_fails_project();
+
+    // We can't package just level1, because there's a dependency on level2.
+    p.cargo("package -p level1")
+        .replace_crates_io(crates_io.index_url())
+        .with_status(101)
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] level1 v0.0.1 ([ROOT]/foo/level1)
+[UPDATING] crates.io index
+[ERROR] failed to verify package tarball
+
+Caused by:
+  no matching package named `level2` found
+  location searched: registry `crates-io`
+  required by package `level1 v0.0.1 ([ROOT]/foo/target/package/level1-0.0.1)`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn workspace_with_local_deps_packaging_one_fails_nightly() {
+    let crates_io = registry::init();
+    let p = workspace_with_local_deps_packaging_one_fails_project();
+
+    // We can't package just level1, because there's a dependency on level2.
+    p.cargo("package -p level1 -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(crates_io.index_url())
+        .with_status(101)
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] level1 v0.0.1 ([ROOT]/foo/level1)
+[UPDATING] crates.io index
+[ERROR] failed to verify package tarball
+
+Caused by:
+  no matching package named `level2` found
+  location searched: registry `crates-io`
+  required by package `level1 v0.0.1 ([ROOT]/foo/target/package/level1-0.0.1)`
+
+"#]])
+        .run();
+}
+
+// Same as workspace_with_local_deps_packaging_one_fails except that we're
+// packaging a bin. This fails during lock-file generation instead of during verification.
+#[cargo_test]
+fn workspace_with_local_deps_packaging_one_bin_fails() {
+    let crates_io = registry::init();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["level1", "level2"]
+        "#,
+        )
+        .file(
+            "level1/Cargo.toml",
+            r#"
+            [package]
+            name = "level1"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "level1"
+            repository = "bar"
+
+            [dependencies]
+            level2 = { path = "../level2", version = "0.0.1" }
+        "#,
+        )
+        .file("level1/src/main.rs", "fn main() {}")
+        .file(
+            "level2/Cargo.toml",
+            r#"
+            [package]
+            name = "level2"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "level2"
+            repository = "bar"
+        "#,
+        )
+        .file("level2/src/lib.rs", "")
+        .build();
+
+    // We can't package just level1, because there's a dependency on level2.
+    p.cargo("package -p level1 -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(crates_io.index_url())
+        .with_status(101)
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
+[UPDATING] crates.io index
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `level2` found
+  location searched: registry `crates-io`
+  required by package `level1 v0.0.1 ([ROOT]/foo/level1)`
+
+"#]])
+        .run();
+}
+
+// Here we don't package the whole workspace, but it succeeds because we package a
+// dependency-closed subset.
+#[cargo_test]
+fn workspace_with_local_deps_packaging_one_with_needed_deps() {
+    let crates_io = registry::init();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["level1", "level2", "level3"]
+        "#,
+        )
+        .file(
+            "level1/Cargo.toml",
+            r#"
+            [package]
+            name = "level1"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "level1"
+            repository = "bar"
+
+            [dependencies]
+            level2 = { path = "../level2", version = "0.0.1" }
+        "#,
+        )
+        .file("level1/src/main.rs", "fn main() {}")
+        .file(
+            "level2/Cargo.toml",
+            r#"
+            [package]
+            name = "level2"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "level2"
+            repository = "bar"
+
+            [dependencies]
+            level3 = { path = "../level3", version = "0.0.1" }
+        "#,
+        )
+        .file("level2/src/lib.rs", "")
+        .file(
+            "level3/Cargo.toml",
+            r#"
+            [package]
+            name = "level3"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "level3"
+            repository = "bar"
+        "#,
+        )
+        .file("level3/src/lib.rs", "")
+        .build();
+
+    p.cargo("package -p level2 -p level3 -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(crates_io.index_url())
+        .with_stdout_data("")
+        .with_stderr_data(str![[r#"
+[PACKAGING] level3 v0.0.1 ([ROOT]/foo/level3)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] level2 v0.0.1 ([ROOT]/foo/level2)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] level3 v0.0.1 ([ROOT]/foo/level3)
+[COMPILING] level3 v0.0.1 ([ROOT]/foo/target/package/level3-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] level2 v0.0.1 ([ROOT]/foo/level2)
+[UPDATING] crates.io index
+[UNPACKING] level3 v0.0.1 (registry `[ROOT]/foo/target/package/tmp-registry`)
+[COMPILING] level3 v0.0.1
+[COMPILING] level2 v0.0.1 ([ROOT]/foo/target/package/level2-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+// package --list in a workspace lists all the files in all the packages.
+// The output is not very good, though. See https://github.com/rust-lang/cargo/issues/13953
+#[cargo_test]
+fn workspace_with_local_deps_list() {
+    let crates_io = registry::init();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["level1", "level2"]
+        "#,
+        )
+        .file(
+            "level1/Cargo.toml",
+            r#"
+            [package]
+            name = "level1"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "level1"
+            repository = "bar"
+
+            [dependencies]
+            level2 = { path = "../level2", version = "0.0.1" }
+        "#,
+        )
+        .file("level1/src/main.rs", "fn main() {}")
+        .file(
+            "level2/Cargo.toml",
+            r#"
+            [package]
+            name = "level2"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "level2"
+            repository = "bar"
+        "#,
+        )
+        .file("level2/src/lib.rs", "")
+        .build();
+
+    p.cargo("package --list")
+        .replace_crates_io(crates_io.index_url())
+        .with_stdout_data(str![[r#"
+Cargo.toml
+Cargo.toml.orig
+src/lib.rs
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+src/main.rs
+
+"#]])
+        .with_stderr_data("")
+        .run();
+}
+
+#[cargo_test]
+fn workspace_with_local_deps_index_mismatch() {
+    let alt_reg = registry::RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative()
+        .build();
+    // We're publishing to an alternate index, but the manifests don't specify it.
+    // The intra-workspace deps won't be found.
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["level1", "level2"]
+        "#,
+        )
+        .file(
+            "level1/Cargo.toml",
+            r#"
+            [package]
+            name = "level1"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "level1"
+            repository = "bar"
+
+            [dependencies]
+            level2 = { path = "../level2", version = "0.0.1" }
+        "#,
+        )
+        .file("level1/src/main.rs", "fn main() {}")
+        .file(
+            "level2/Cargo.toml",
+            r#"
+            [package]
+            name = "level2"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "level2"
+            repository = "bar"
+        "#,
+        )
+        .file("level2/src/lib.rs", "")
+        .build();
+    p.cargo(&format!(
+        "package --index {} -Zpackage-workspace",
+        alt_reg.index_url()
+    ))
+    .masquerade_as_nightly_cargo(&["package-workspace"])
+    .with_status(101)
+    .with_stdout_data("")
+    .with_stderr_data(str![[r#"
+[PACKAGING] level2 v0.0.1 ([ROOT]/foo/level2)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
+[UPDATING] crates.io index
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `level2` found
+  location searched: registry `crates-io`
+  required by package `level1 v0.0.1 ([ROOT]/foo/level1)`
+
+"#]])
+    .run();
+}
+
+#[cargo_test]
+fn workspace_with_local_deps_alternative_index() {
+    let alt_reg = registry::RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative()
+        .build();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["level1", "level2"]
+        "#,
+        )
+        .file(
+            "level1/Cargo.toml",
+            r#"
+            [package]
+            name = "level1"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "level1"
+            repository = "bar"
+
+            [dependencies]
+            level2 = { path = "../level2", version = "0.0.1", registry = "alternative" }
+        "#,
+        )
+        .file("level1/src/main.rs", "fn main() {}")
+        .file(
+            "level2/Cargo.toml",
+            r#"
+            [package]
+            name = "level2"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "level2"
+            repository = "bar"
+        "#,
+        )
+        .file("level2/src/lib.rs", "")
+        .build();
+
+    p.cargo(&format!(
+        "package --index {} -Zpackage-workspace",
+        alt_reg.index_url()
+    ))
+    .masquerade_as_nightly_cargo(&["package-workspace"])
+    .with_stdout_data("")
+    .with_stderr_data(str![[r#"
+[PACKAGING] level2 v0.0.1 ([ROOT]/foo/level2)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
+[UPDATING] `alternative` index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] level2 v0.0.1 ([ROOT]/foo/level2)
+[COMPILING] level2 v0.0.1 ([ROOT]/foo/target/package/level2-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] level1 v0.0.1 ([ROOT]/foo/level1)
+[UPDATING] `alternative` index
+[UNPACKING] level2 v0.0.1 (registry `[ROOT]/foo/target/package/tmp-registry`)
+[COMPILING] level2 v0.0.1 (registry `alternative`)
+[COMPILING] level1 v0.0.1 ([ROOT]/foo/target/package/level1-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+    .run();
+
+    let index = alt_reg.index_url();
+    let generated_lock = format!(
+        r#"# This file is automatically @generated by Cargo.
+# It is not intended for manual editing.
+version = 3
+
+[[package]]
+name = "level1"
+version = "0.0.1"
+dependencies = [
+ "level2",
+]
+
+[[package]]
+name = "level2"
+version = "0.0.1"
+source = "{index}"
+checksum = [..]
+"#
+    );
+
+    let mut f = File::open(&p.root().join("target/package/level1-0.0.1.crate")).unwrap();
+
+    validate_crate_contents(
+        &mut f,
+        "level1-0.0.1.crate",
+        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[("Cargo.lock", &generated_lock)],
+    );
+}
+
+fn workspace_with_local_dep_already_published_project() -> Project {
+    Package::new("dep", "0.1.0").publish();
+
+    project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["dep", "main"]
+            "#,
+        )
+        .file(
+            "main/Cargo.toml",
+            r#"
+            [package]
+            name = "main"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "main"
+            repository = "bar"
+
+            [dependencies]
+            dep = { path = "../dep", version = "0.1.0" }
+        "#,
+        )
+        .file("main/src/main.rs", "fn main() {}")
+        .file(
+            "dep/Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "0.1.0"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "dep"
+            repository = "bar"
+        "#,
+        )
+        .file("dep/src/lib.rs", "")
+        .build()
+}
+
+#[cargo_test]
+fn workspace_with_local_dep_already_published() {
+    let reg = registry::init();
+    let p = workspace_with_local_dep_already_published_project();
+
+    p.cargo("package")
+        .replace_crates_io(reg.index_url())
+        .with_stderr_data(
+            str![[r#"
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
+[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] main v0.0.1 ([ROOT]/foo/main)
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep v0.1.0
+[COMPILING] dep v0.1.0
+[COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+#[cargo_test]
+fn workspace_with_local_dep_already_published_nightly() {
+    let reg = registry::init();
+    let p = workspace_with_local_dep_already_published_project();
+
+    p.cargo("package -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(reg.index_url())
+        .with_status(101)
+        .with_stderr_data(
+            str![[r#"
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] crates.io index
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  failed to get `dep` as a dependency of package `main v0.0.1 ([ROOT]/foo/main)`
+
+Caused by:
+  found a package in the remote registry and the local overlay: dep@0.1.0
+
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+#[cargo_test]
+fn workspace_with_local_and_remote_deps() {
+    let reg = registry::init();
+
+    Package::new("dep", "0.0.1").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["dep", "main"]
+            "#,
+        )
+        .file(
+            "main/Cargo.toml",
+            r#"
+            [package]
+            name = "main"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "main"
+            repository = "bar"
+
+            [dependencies]
+            dep = { path = "../dep", version = "0.1.0" }
+            old_dep = { package = "dep", version = "0.0.1" }
+        "#,
+        )
+        .file("main/src/main.rs", "fn main() {}")
+        .file(
+            "dep/Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "0.1.0"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "dep"
+            repository = "bar"
+        "#,
+        )
+        .file("dep/src/lib.rs", "")
+        .build();
+
+    p.cargo("package -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(reg.index_url())
+        .with_stderr_data(
+            str![[r#"
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
+[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] main v0.0.1 ([ROOT]/foo/main)
+[DOWNLOADING] crates ...
+[UNPACKING] dep v0.1.0 (registry `[ROOT]/foo/target/package/tmp-registry`)
+[DOWNLOADED] dep v0.0.1
+[COMPILING] dep v0.0.1
+[COMPILING] dep v0.1.0
+[COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
+        )
+        .run();
 }
