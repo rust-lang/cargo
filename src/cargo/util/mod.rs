@@ -59,6 +59,7 @@ mod progress;
 mod queue;
 pub mod restricted_names;
 pub mod rustc;
+mod semver_eval_ext;
 mod semver_ext;
 pub mod sqlite;
 pub mod style;

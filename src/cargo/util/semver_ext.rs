@@ -1,6 +1,6 @@
-use std::fmt::{self, Display};
-
+use super::semver_eval_ext;
 use semver::{Comparator, Op, Version, VersionReq};
+use std::fmt::{self, Display};
 
 pub trait VersionExt {
     fn is_prerelease(&self) -> bool;
@@ -23,6 +23,16 @@ impl VersionExt for Version {
                 pre: self.pre.clone(),
             }],
         }
+    }
+}
+
+pub trait VersionReqExt {
+    fn matches_prerelease(&self, version: &Version) -> bool;
+}
+
+impl VersionReqExt for VersionReq {
+    fn matches_prerelease(&self, version: &Version) -> bool {
+        semver_eval_ext::matches_prerelease(self, version)
     }
 }
 
@@ -111,16 +121,13 @@ impl OptVersionReq {
         }
     }
 
-    /// Since Semver does not support prerelease versions,
-    /// the simplest implementation is taken here without comparing the prerelease section.
-    /// The logic here is temporary, we'll have to consider more boundary conditions later,
-    /// and we're not sure if this part of the functionality should be implemented in semver or cargo.
+    /// Allow to match any "Semver-compatible" pre-release version.
+    /// The matches_prerelease semantics see [`semver_eval_ext`].
     pub fn matches_prerelease(&self, version: &Version) -> bool {
-        if version.is_prerelease() {
-            let mut version = version.clone();
-            version.pre = semver::Prerelease::EMPTY;
-            return self.matches(&version);
+        if let OptVersionReq::Req(req) = self {
+            return req.matches_prerelease(version);
         }
+
         self.matches(version)
     }
 
@@ -203,12 +210,12 @@ mod matches_prerelease {
         // https://rust-lang.github.io/rfcs/3493-precise-pre-release-cargo-update.html#version-ranges-with-pre-release-upper-bounds
         let cases = [
             //
-            ("1.2.3", "1.2.3-0", true), // bug, must be false
-            ("1.2.3", "1.2.3-1", true), // bug, must be false
+            ("1.2.3", "1.2.3-0", false),
+            ("1.2.3", "1.2.3-1", false),
             ("1.2.3", "1.2.4-0", true),
             //
-            (">=1.2.3", "1.2.3-0", true), // bug, must be false
-            (">=1.2.3", "1.2.3-1", true), // bug, must be false
+            (">=1.2.3", "1.2.3-0", false),
+            (">=1.2.3", "1.2.3-1", false),
             (">=1.2.3", "1.2.4-0", true),
             //
             (">1.2.3", "1.2.3-0", false),
@@ -217,18 +224,18 @@ mod matches_prerelease {
             //
             (">1.2.3, <1.2.4", "1.2.3-0", false),
             (">1.2.3, <1.2.4", "1.2.3-1", false),
-            (">1.2.3, <1.2.4", "1.2.4-0", false), // upper bound semantic
+            (">1.2.3, <1.2.4", "1.2.4-0", true), // upper bound semantic
             //
-            (">=1.2.3, <1.2.4", "1.2.3-0", true), // bug, must be false
-            (">=1.2.3, <1.2.4", "1.2.3-1", true), // bug, must be false
-            (">=1.2.3, <1.2.4", "1.2.4-0", false), // upper bound semantic
+            (">=1.2.3, <1.2.4", "1.2.3-0", false),
+            (">=1.2.3, <1.2.4", "1.2.3-1", false),
+            (">=1.2.3, <1.2.4", "1.2.4-0", true), // upper bound semantic
             //
             (">1.2.3, <=1.2.4", "1.2.3-0", false),
             (">1.2.3, <=1.2.4", "1.2.3-1", false),
             (">1.2.3, <=1.2.4", "1.2.4-0", true),
             //
-            (">=1.2.3-0, <1.2.3", "1.2.3-0", false), // upper bound semantic
-            (">=1.2.3-0, <1.2.3", "1.2.3-1", false), // upper bound semantic
+            (">=1.2.3-0, <1.2.3", "1.2.3-0", true), // upper bound semantic
+            (">=1.2.3-0, <1.2.3", "1.2.3-1", true), // upper bound semantic
             (">=1.2.3-0, <1.2.3", "1.2.4-0", false),
         ];
         for (req, ver, expected) in cases {
