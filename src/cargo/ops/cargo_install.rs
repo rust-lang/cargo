@@ -518,7 +518,12 @@ impl<'gctx> InstallablePackage<'gctx> {
             }
         }
 
-        if duplicates.is_empty() {
+        if dry_run {
+            self.gctx
+                .shell()
+                .status("Aborting", format!("install of package `{}`", self.pkg))?;
+            Ok(true)
+        } else if duplicates.is_empty() {
             self.gctx.shell().status(
                 "Installed",
                 format!(
