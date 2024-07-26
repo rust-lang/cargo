@@ -121,6 +121,10 @@ Filesystem path to local crate to install from.
 List all installed packages and their versions.
 {{/option}}
 
+{{#option "`-n`" "`--dry-run`" }}
+(unstable) Perform all checks without installing.
+{{/option}}
+
 {{#option "`-f`" "`--force`" }}
 Force overwriting existing crates or binaries. This can be used if a package
 has installed a binary with the same name as another package. This is also
