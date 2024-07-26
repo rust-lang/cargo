@@ -459,9 +459,11 @@ impl<'gctx> InstallablePackage<'gctx> {
                     let src = staging_dir.path().join(bin);
                     let dst = dst.join(bin);
                     self.gctx.shell().status("Replacing", dst.display())?;
-                    fs::rename(&src, &dst).with_context(|| {
-                        format!("failed to move `{}` to `{}`", src.display(), dst.display())
-                    })?;
+                    if !dry_run {
+                        fs::rename(&src, &dst).with_context(|| {
+                            format!("failed to move `{}` to `{}`", src.display(), dst.display())
+                        })?;
+                    }
                     successful_bins.insert(bin.to_string());
                 }
                 Ok(())
@@ -479,9 +481,14 @@ impl<'gctx> InstallablePackage<'gctx> {
                 &self.rustc.verbose_version,
             );
 
-            if let Err(e) =
-                remove_orphaned_bins(&self.ws, &mut tracker, &duplicates, &self.pkg, &dst)
-            {
+            if let Err(e) = remove_orphaned_bins(
+                &self.ws,
+                &mut tracker,
+                &duplicates,
+                &self.pkg,
+                &dst,
+                dry_run,
+            ) {
                 // Don't hard error on remove.
                 self.gctx
                     .shell()
@@ -866,6 +873,7 @@ fn remove_orphaned_bins(
     duplicates: &BTreeMap<String, Option<PackageId>>,
     pkg: &Package,
     dst: &Path,
+    dry_run: bool,
 ) -> CargoResult<()> {
     let filter = ops::CompileFilter::new_all_targets();
     let all_self_names = exe_names(pkg, &filter);
@@ -903,8 +911,10 @@ fn remove_orphaned_bins(
                         old_pkg
                     ),
                 )?;
-                paths::remove_file(&full_path)
-                    .with_context(|| format!("failed to remove {:?}", full_path))?;
+                if !dry_run {
+                    paths::remove_file(&full_path)
+                        .with_context(|| format!("failed to remove {:?}", full_path))?;
+                }
             }
         }
     }
