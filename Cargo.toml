@@ -18,10 +18,10 @@ homepage = "https://github.com/rust-lang/cargo"
 repository = "https://github.com/rust-lang/cargo"
 
 [workspace.dependencies]
-annotate-snippets = "0.11.2"
-anstream = "0.6.13"
-anstyle = "1.0.6"
-anyhow = "1.0.82"
+annotate-snippets = "0.11.4"
+anstream = "0.6.15"
+anstyle = "1.0.8"
+anyhow = "1.0.86"
 base64 = "0.22.1"
 bytesize = "1.3"
 cargo = { path = "" }
@@ -35,13 +35,13 @@ cargo-test-support = { version = "0.4.0", path = "crates/cargo-test-support" }
 cargo-util = { version = "0.2.14", path = "crates/cargo-util" }
 cargo-util-schemas = { version = "0.5.0", path = "crates/cargo-util-schemas" }
 cargo_metadata = "0.18.1"
-clap = "4.5.4"
+clap = "4.5.11"
 color-print = "0.3.6"
 core-foundation = { version = "0.9.4", features = ["mac_os_10_7_support"] }
 crates-io = { version = "0.40.4", path = "crates/crates-io" }
 criterion = { version = "0.5.1", features = ["html_reports"] }
 curl = "0.4.46"
-curl-sys = "0.4.72"
+curl-sys = "0.4.73"
 filetime = "0.2.23"
 flate2 = { version = "1.0.30", default-features = false, features = ["zlib"] }
 git2 = "0.19.0"
@@ -58,53 +58,54 @@ ignore = "0.4.22"
 im-rc = "15.1.0"
 indexmap = "2.2.6"
 itertools = "0.13.0"
-jobserver = "0.1.28"
+jobserver = "0.1.32"
 lazycell = "1.3.0"
-libc = "0.2.154"
+libc = "0.2.155"
 libgit2-sys = "0.17.0"
-libloading = "0.8.3"
-memchr = "2.7.2"
+libloading = "0.8.5"
+memchr = "2.7.4"
 miow = "0.6.0"
-opener = "0.7.0"
-openssl = "0.10.57"
+opener = "0.7.1"
+openssl = "0.10.66"
 openssl-sys = "=0.9.92" # See rust-lang/cargo#13546 and openssl/openssl#23376 for pinning
 os_info = { version = "3.8.2", default-features = false }
 pasetors = { version = "0.6.8", features = ["v3", "paserk", "std", "serde"] }
 pathdiff = "0.2.1"
 percent-encoding = "2.3.1"
 pkg-config = "0.3.30"
-proptest = "1.4.0"
+proptest = "1.5.0"
 pulldown-cmark = { version = "0.11.0", default-features = false, features = ["html"] }
 rand = "0.8.5"
-regex = "1.10.4"
+regex = "1.10.5"
 rusqlite = { version = "0.31.0", features = ["bundled"] }
 rustfix = { version = "0.8.2", path = "crates/rustfix" }
 same-file = "1.0.6"
-security-framework = "2.10.0"
-semver = { version = "1.0.22", features = ["serde"] }
-serde = "1.0.199"
-serde-untagged = "0.1.5"
+security-framework = "2.11.1"
+semver = { version = "1.0.23", features = ["serde"] }
+serde = "1.0.204"
+serde-untagged = "0.1.6"
 serde-value = "0.7.0"
 serde_ignored = "0.1.10"
-serde_json = "1.0.116"
+serde_json = "1.0.120"
 sha1 = "0.10.6"
 sha2 = "0.10.8"
 shell-escape = "0.1.5"
+similar = "2.6.0"
 supports-hyperlinks = "3.0.0"
-snapbox = { version = "0.6.14", features = ["diff", "dir", "term-svg", "regex", "json"] }
-tar = { version = "0.4.40", default-features = false }
+snapbox = { version = "0.6.16", features = ["diff", "dir", "term-svg", "regex", "json"] }
+tar = { version = "0.4.41", default-features = false }
 tempfile = "3.10.1"
-thiserror = "1.0.59"
+thiserror = "1.0.63"
 time = { version = "0.3.36", features = ["parsing", "formatting", "serde"] }
-toml = "0.8.14"
-toml_edit = { version = "0.22.14", features = ["serde"] }
+toml = "0.8.16"
+toml_edit = { version = "0.22.17", features = ["serde"] }
 tracing = { version = "0.1.40", default-features = false, features = ["std"] } # be compatible with rustc_log: https://github.com/rust-lang/rust/blob/e51e98dde6a/compiler/rustc_log/Cargo.toml#L9
 tracing-chrome = "0.7.2"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 unicase = "2.7.0"
-unicode-width = "0.1.12"
+unicode-width = "0.1.13"
 unicode-xid = "0.2.4"
-url = "2.5.0"
+url = "2.5.2"
 varisat = "0.2.2"
 walkdir = "2.5.0"
 windows-sys = "0.52"
