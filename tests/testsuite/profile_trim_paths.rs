@@ -1,7 +1,6 @@
 //! Tests for `-Ztrim-paths`.
 
 use cargo_test_support::basic_manifest;
-use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::git;
 use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
@@ -681,6 +680,7 @@ fn custom_build_env_var_trim_paths() {
 #[cfg(unix)]
 #[cargo_test(requires_lldb, nightly, reason = "-Zremap-path-scope is unstable")]
 fn lldb_works_after_trimmed() {
+    use cargo_test_support::compare::assert_e2e;
     use cargo_util::is_ci;
 
     if !is_ci() {

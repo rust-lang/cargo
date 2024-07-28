@@ -1,6 +1,5 @@
 use cargo_test_support::prelude::*;
 use cargo_test_support::project;
-use cargo_test_support::registry::RegistryBuilder;
 use cargo_test_support::str;
 
 #[cargo_test]
@@ -331,6 +330,7 @@ fn main() {}
 #[cargo_test]
 #[cfg(unix)] // until we get proper packaging support
 fn publish_namespaced() {
+    use cargo_test_support::registry::RegistryBuilder;
     let registry = RegistryBuilder::new().http_api().http_index().build();
 
     let p = project()
