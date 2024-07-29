@@ -1879,29 +1879,24 @@ fn doc_message_format() {
 
     p.cargo("doc --message-format=json")
         .with_status(101)
-        .with_stdout_data(
-            str![[r##"
-[
-  {
-    "manifest_path": "[ROOT]/foo/Cargo.toml",
-    "message": {
-      "$message_type": "diagnostic",
-      "children": "{...}",
-      "code": "{...}",
-      "level": "error",
-      "message": "{...}",
-      "rendered": "{...}",
-      "spans": "{...}"
-    },
-    "package_id": "path+[ROOTURL]/foo#0.0.1",
-    "reason": "compiler-message",
-    "target": "{...}"
-  },
-  "{...}"
-]
-"##]]
-            .is_json()
-            .against_jsonlines(),
+        .with_json_contains_unordered(
+            r#"
+            {
+                "message": {
+                    "$message_type": "diagnostic",
+                    "children": "{...}",
+                    "code": "{...}",
+                    "level": "error",
+                    "message": "{...}",
+                    "rendered": "{...}",
+                    "spans": "{...}"
+                },
+                "package_id": "path+file:///[..]/foo#0.0.1",
+                "manifest_path": "[..]",
+                "reason": "compiler-message",
+                "target": "{...}"
+            }
+            "#,
         )
         .run();
 }
@@ -1916,95 +1911,76 @@ fn doc_json_artifacts() {
         .build();
 
     p.cargo("doc --message-format=json")
-        .with_stdout_data(
-            str![[r#"
-[
-  {
-    "executable": null,
-    "features": [],
-    "filenames": [
-      "[ROOT]/foo/target/debug/deps/libfoo-[HASH].rmeta"
-    ],
-    "fresh": false,
-    "manifest_path": "[ROOT]/foo/Cargo.toml",
-    "package_id": "path+[ROOTURL]/foo#0.0.1",
-    "profile": "{...}",
+        .with_json_contains_unordered(
+            r#"
+{
     "reason": "compiler-artifact",
-    "target": {
-      "crate_types": [
-        "lib"
-      ],
-      "doc": true,
-      "doctest": true,
-      "edition": "2015",
-      "kind": [
-        "lib"
-      ],
-      "name": "foo",
-      "src_path": "[ROOT]/foo/src/lib.rs",
-      "test": true
-    }
-  },
-  {
-    "executable": null,
-    "features": [],
-    "filenames": [
-      "[ROOT]/foo/target/doc/foo/index.html"
-    ],
-    "fresh": false,
+    "package_id": "path+file:///[..]/foo#0.0.1",
     "manifest_path": "[ROOT]/foo/Cargo.toml",
-    "package_id": "path+[ROOTURL]/foo#0.0.1",
+    "target":
+    {
+        "kind": ["lib"],
+        "crate_types": ["lib"],
+        "name": "foo",
+        "src_path": "[ROOT]/foo/src/lib.rs",
+        "edition": "2015",
+        "doc": true,
+        "doctest": true,
+        "test": true
+    },
     "profile": "{...}",
-    "reason": "compiler-artifact",
-    "target": {
-      "crate_types": [
-        "lib"
-      ],
-      "doc": true,
-      "doctest": true,
-      "edition": "2015",
-      "kind": [
-        "lib"
-      ],
-      "name": "foo",
-      "src_path": "[ROOT]/foo/src/lib.rs",
-      "test": true
-    }
-  },
-  {
-    "executable": null,
     "features": [],
-    "filenames": [
-      "[ROOT]/foo/target/doc/somebin/index.html"
-    ],
-    "fresh": false,
-    "manifest_path": "[ROOT]/foo/Cargo.toml",
-    "package_id": "path+[ROOTURL]/foo#0.0.1",
-    "profile": "{...}",
+    "filenames": ["[ROOT]/foo/target/debug/deps/libfoo-[..].rmeta"],
+    "executable": null,
+    "fresh": false
+}
+
+{
     "reason": "compiler-artifact",
-    "target": {
-      "crate_types": [
-        "bin"
-      ],
-      "doc": true,
-      "doctest": false,
-      "edition": "2015",
-      "kind": [
-        "bin"
-      ],
-      "name": "somebin",
-      "src_path": "[ROOT]/foo/src/bin/somebin.rs",
-      "test": true
-    }
-  },
-  {
-    "reason": "build-finished",
-    "success": true
-  }
-]
-"#]]
-            .is_json()
-            .against_jsonlines(),
+    "package_id": "path+file:///[..]/foo#0.0.1",
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "target":
+    {
+        "kind": ["lib"],
+        "crate_types": ["lib"],
+        "name": "foo",
+        "src_path": "[ROOT]/foo/src/lib.rs",
+        "edition": "2015",
+        "doc": true,
+        "doctest": true,
+        "test": true
+    },
+    "profile": "{...}",
+    "features": [],
+    "filenames": ["[ROOT]/foo/target/doc/foo/index.html"],
+    "executable": null,
+    "fresh": false
+}
+
+{
+    "reason": "compiler-artifact",
+    "package_id": "path+file:///[..]/foo#0.0.1",
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "target":
+    {
+        "kind": ["bin"],
+        "crate_types": ["bin"],
+        "name": "somebin",
+        "src_path": "[ROOT]/foo/src/bin/somebin.rs",
+        "edition": "2015",
+        "doc": true,
+        "doctest": false,
+        "test": true
+    },
+    "profile": "{...}",
+    "features": [],
+    "filenames": ["[ROOT]/foo/target/doc/somebin/index.html"],
+    "executable": null,
+    "fresh": false
+}
+
+{"reason":"build-finished","success":true}
+"#,
         )
         .run();
 }
