@@ -1,3 +1,9 @@
+//! Extend `semver::VersionReq` with  [`matches_prerelease`] which doesn't preclude pre-releases by default.
+//!
+//! Please refer to the semantic proposal, see [RFC 3493].
+//!
+//! [RFC 3493]: https://rust-lang.github.io/rfcs/3493-precise-pre-release-cargo-update.html
+
 use semver::{Comparator, Op, Prerelease, Version, VersionReq};
 
 pub(crate) fn matches_prerelease(req: &VersionReq, ver: &Version) -> bool {
@@ -33,6 +39,7 @@ fn matches_prerelease_impl(cmp: &Comparator, ver: &Version) -> bool {
     }
 }
 
+// See https://github.com/dtolnay/semver/blob/69efd3cc770ead273a06ad1788477b3092996d29/src/eval.rs#L44-L62
 fn matches_exact(cmp: &Comparator, ver: &Version) -> bool {
     if ver.major != cmp.major {
         return false;
@@ -53,6 +60,7 @@ fn matches_exact(cmp: &Comparator, ver: &Version) -> bool {
     ver.pre == cmp.pre
 }
 
+// See https://github.com/dtolnay/semver/blob/69efd3cc770ead273a06ad1788477b3092996d29/src/eval.rs#L64-L88
 fn matches_greater(cmp: &Comparator, ver: &Version) -> bool {
     if ver.major != cmp.major {
         return ver.major > cmp.major;
@@ -79,6 +87,7 @@ fn matches_greater(cmp: &Comparator, ver: &Version) -> bool {
     ver.pre > cmp.pre
 }
 
+// See https://github.com/dtolnay/semver/blob/69efd3cc770ead273a06ad1788477b3092996d29/src/eval.rs#L90-L114
 fn matches_less(cmp: &Comparator, ver: &Version) -> bool {
     if ver.major != cmp.major {
         return ver.major < cmp.major;
