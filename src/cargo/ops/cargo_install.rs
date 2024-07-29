@@ -446,9 +446,9 @@ impl<'gctx> InstallablePackage<'gctx> {
                 fs::rename(&src, &dst).with_context(|| {
                     format!("failed to move `{}` to `{}`", src.display(), dst.display())
                 })?;
+                installed.bins.push(dst);
+                successful_bins.insert(bin.to_string());
             }
-            installed.bins.push(dst);
-            successful_bins.insert(bin.to_string());
         }
 
         // Repeat for binaries which replace existing ones but don't pop the error
@@ -463,8 +463,8 @@ impl<'gctx> InstallablePackage<'gctx> {
                         fs::rename(&src, &dst).with_context(|| {
                             format!("failed to move `{}` to `{}`", src.display(), dst.display())
                         })?;
+                        successful_bins.insert(bin.to_string());
                     }
-                    successful_bins.insert(bin.to_string());
                 }
                 Ok(())
             };
