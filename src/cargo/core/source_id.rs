@@ -468,34 +468,51 @@ impl SourceId {
 
     /// Creates a new `SourceId` from this source with the given `precise`.
     pub fn with_git_precise(self, fragment: Option<String>) -> SourceId {
-        SourceId::wrap(SourceIdInner {
-            precise: fragment.map(|f| Precise::GitUrlFragment(f)),
-            ..(*self.inner).clone()
-        })
+        let precise = fragment.map(|f| Precise::GitUrlFragment(f));
+        if self.inner.precise == precise {
+            self
+        } else {
+            SourceId::wrap(SourceIdInner {
+                precise,
+                ..(*self.inner).clone()
+            })
+        }
     }
 
     /// Creates a new `SourceId` from this source without a `precise`.
     pub fn without_precise(self) -> SourceId {
-        SourceId::wrap(SourceIdInner {
-            precise: None,
-            ..(*self.inner).clone()
-        })
+        if self.inner.precise.is_none() {
+            self
+        } else {
+            SourceId::wrap(SourceIdInner {
+                precise: None,
+                ..(*self.inner).clone()
+            })
+        }
     }
 
     /// Creates a new `SourceId` from this source without a `precise`.
     pub fn with_locked_precise(self) -> SourceId {
-        SourceId::wrap(SourceIdInner {
-            precise: Some(Precise::Locked),
-            ..(*self.inner).clone()
-        })
+        if self.inner.precise == Some(Precise::Locked) {
+            self
+        } else {
+            SourceId::wrap(SourceIdInner {
+                precise: Some(Precise::Locked),
+                ..(*self.inner).clone()
+            })
+        }
     }
 
     /// Creates a new `SourceId` from this source with the `precise` from some other `SourceId`.
     pub fn with_precise_from(self, v: Self) -> SourceId {
-        SourceId::wrap(SourceIdInner {
-            precise: v.inner.precise.clone(),
-            ..(*self.inner).clone()
-        })
+        if self.inner.precise == v.inner.precise {
+            self
+        } else {
+            SourceId::wrap(SourceIdInner {
+                precise: v.inner.precise.clone(),
+                ..(*self.inner).clone()
+            })
+        }
     }
 
     /// When updating a lock file on a version using `cargo update --precise`
