@@ -1,3 +1,10 @@
+//! This module provides the [`matches_prerelease`] to extends the semantic for how to match a prerelease version.
+//! Please refer to the semantic proposal, see
+//! [3493-precise-pre-release-cargo-update](https://rust-lang.github.io/rfcs/3493-precise-pre-release-cargo-update.html)
+//!
+//! Thanks to [`semver`]'s prior art, we copied the private functions from it, which includes [`matches_exact`],  [`matches_greater`], [`matches_less`].
+//!
+
 use semver::{Comparator, Op, Prerelease, Version, VersionReq};
 
 pub(crate) fn matches_prerelease(req: &VersionReq, ver: &Version) -> bool {
