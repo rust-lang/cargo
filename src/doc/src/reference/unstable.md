@@ -348,7 +348,7 @@ If there is no MSRV set then your toolchain version will be used, allowing it to
 
 #### `resolver.incompatible-rust-versions`
 * Type: string
-* Default: "allow"
+* Default: `"allow"`
 * Environment: `CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS`
 
 When resolving a version for a dependency, select how versions with incompatible `package.rust-version`s are treated.
