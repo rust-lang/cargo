@@ -893,7 +893,7 @@ fn tar(
         .iter()
         .map(|ar_file| ar_file.rel_path.clone())
         .collect::<Vec<_>>();
-    let publish_pkg = prepare_for_publish(pkg, ws, &included)?;
+    let publish_pkg = prepare_for_publish(pkg, ws, Some(&included))?;
 
     let mut uncompressed_size = 0;
     for ar_file in ar_files {
