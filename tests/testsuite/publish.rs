@@ -1603,6 +1603,12 @@ fn publish_dev_dep_stripping() {
     Package::new("normal-only", "1.0.0")
         .feature("cat", &[])
         .publish();
+    Package::new("optional-dep-feature", "1.0.0")
+        .feature("cat", &[])
+        .publish();
+    Package::new("optional-namespaced", "1.0.0")
+        .feature("cat", &[])
+        .publish();
     Package::new("build-only", "1.0.0")
         .feature("cat", &[])
         .publish();
@@ -1644,11 +1650,15 @@ fn publish_dev_dep_stripping() {
                 "target-build-only/cat",
                 "target-dev-only/cat",
                 "target-normal-and-dev/cat",
+                "optional-dep-feature/cat",
+                "dep:optional-namespaced",
             ]
 
             [dependencies]
             normal-only = { version = "1.0", features = ["cat"] }
             normal-and-dev = { version = "1.0", features = ["cat"] }
+            optional-dep-feature = { version = "1.0", features = ["cat"], optional = true }
+            optional-namespaced = { version = "1.0", features = ["cat"], optional = true }
 
             [build-dependencies]
             build-only = { version = "1.0", features = ["cat"] }
@@ -1743,6 +1753,28 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
               "features": [
                 "cat"
               ],
+              "kind": "normal",
+              "name": "optional-dep-feature",
+              "optional": true,
+              "target": null,
+              "version_req": "^1.0"
+            },
+            {
+              "default_features": true,
+              "features": [
+                "cat"
+              ],
+              "kind": "normal",
+              "name": "optional-namespaced",
+              "optional": true,
+              "target": null,
+              "version_req": "^1.0"
+            },
+            {
+              "default_features": true,
+              "features": [
+                "cat"
+              ],
               "kind": "dev",
               "name": "normal-and-dev",
               "optional": false,
@@ -1814,7 +1846,9 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
               "normal-and-dev/cat",
               "target-normal-only/cat",
               "target-build-only/cat",
-              "target-normal-and-dev/cat"
+              "target-normal-and-dev/cat",
+              "optional-dep-feature/cat",
+              "dep:optional-namespaced"
             ]
           },
           "homepage": "foo",
@@ -1865,6 +1899,16 @@ features = ["cat"]
 version = "1.0"
 features = ["cat"]
 
+[dependencies.optional-dep-feature]
+version = "1.0"
+features = ["cat"]
+optional = true
+
+[dependencies.optional-namespaced]
+version = "1.0"
+features = ["cat"]
+optional = true
+
 [dev-dependencies.normal-and-dev]
 version = "1.0"
 features = ["cat"]
@@ -1881,6 +1925,8 @@ foo_feature = [
     "target-normal-only/cat",
     "target-build-only/cat",
     "target-normal-and-dev/cat",
+    "optional-dep-feature/cat",
+    "dep:optional-namespaced",
 ]
 
 [target."cfg(unix)".dependencies.target-normal-and-dev]
