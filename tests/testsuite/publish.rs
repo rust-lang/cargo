@@ -1609,6 +1609,9 @@ fn publish_dev_dep_stripping() {
     Package::new("optional-namespaced", "1.0.0")
         .feature("cat", &[])
         .publish();
+    Package::new("optional-renamed-namespaced", "1.0.0")
+        .feature("cat", &[])
+        .publish();
     Package::new("build-only", "1.0.0")
         .feature("cat", &[])
         .publish();
@@ -1652,6 +1655,7 @@ fn publish_dev_dep_stripping() {
                 "target-normal-and-dev/cat",
                 "optional-dep-feature/cat",
                 "dep:optional-namespaced",
+                "dep:optional-renamed-namespaced10",
             ]
 
             [dependencies]
@@ -1659,6 +1663,7 @@ fn publish_dev_dep_stripping() {
             normal-and-dev = { version = "1.0", features = ["cat"] }
             optional-dep-feature = { version = "1.0", features = ["cat"], optional = true }
             optional-namespaced = { version = "1.0", features = ["cat"], optional = true }
+            optional-renamed-namespaced10 = { version = "1.0", features = ["cat"], optional = true, package = "optional-renamed-namespaced" }
 
             [build-dependencies]
             build-only = { version = "1.0", features = ["cat"] }
@@ -1766,6 +1771,18 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
               ],
               "kind": "normal",
               "name": "optional-namespaced",
+              "optional": true,
+              "target": null,
+              "version_req": "^1.0"
+            },
+            {
+              "default_features": true,
+              "explicit_name_in_toml": "optional-renamed-namespaced10",
+              "features": [
+                "cat"
+              ],
+              "kind": "normal",
+              "name": "optional-renamed-namespaced",
               "optional": true,
               "target": null,
               "version_req": "^1.0"
@@ -1909,6 +1926,12 @@ version = "1.0"
 features = ["cat"]
 optional = true
 
+[dependencies.optional-renamed-namespaced10]
+version = "1.0"
+features = ["cat"]
+optional = true
+package = "optional-renamed-namespaced"
+
 [dev-dependencies.normal-and-dev]
 version = "1.0"
 features = ["cat"]
@@ -1927,6 +1950,7 @@ foo_feature = [
     "target-normal-and-dev/cat",
     "optional-dep-feature/cat",
     "dep:optional-namespaced",
+    "dep:optional-renamed-namespaced10",
 ]
 
 [target."cfg(unix)".dependencies.target-normal-and-dev]
