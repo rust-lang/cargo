@@ -57,6 +57,8 @@ fn validate(_: &str) {
 fn make_exe() -> &'static str {
     if cfg!(windows) {
         "mingw32-make"
+    } else if cfg!(target_os = "aix") {
+        "gmake"
     } else {
         "make"
     }
