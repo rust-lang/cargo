@@ -324,10 +324,10 @@ fn verify_dependencies(
 
 pub(crate) fn prepare_transmit(
     gctx: &GlobalContext,
-    pkg: &Package,
+    local_pkg: &Package,
     registry_id: SourceId,
 ) -> CargoResult<NewCrate> {
-    let deps = pkg
+    let deps = local_pkg
         .dependencies()
         .iter()
         .filter(|dep| {
@@ -378,7 +378,7 @@ pub(crate) fn prepare_transmit(
             })
         })
         .collect::<CargoResult<Vec<NewCrateDependency>>>()?;
-    let manifest = pkg.manifest();
+    let manifest = local_pkg.manifest();
     let ManifestMetadata {
         ref authors,
         ref description,
@@ -398,12 +398,13 @@ pub(crate) fn prepare_transmit(
     let readme_content = readme
         .as_ref()
         .map(|readme| {
-            paths::read(&pkg.root().join(readme))
-                .with_context(|| format!("failed to read `readme` file for package `{}`", pkg))
+            paths::read(&local_pkg.root().join(readme)).with_context(|| {
+                format!("failed to read `readme` file for package `{}`", local_pkg)
+            })
         })
         .transpose()?;
     if let Some(ref file) = *license_file {
-        if !pkg.root().join(file).exists() {
+        if !local_pkg.root().join(file).exists() {
             bail!("the license file `{}` does not exist", file)
         }
     }
@@ -440,8 +441,8 @@ pub(crate) fn prepare_transmit(
     };
 
     Ok(NewCrate {
-        name: pkg.name().to_string(),
-        vers: pkg.version().to_string(),
+        name: local_pkg.name().to_string(),
+        vers: local_pkg.version().to_string(),
         deps,
         features: string_features,
         authors: authors.clone(),
