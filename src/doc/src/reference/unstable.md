@@ -344,7 +344,7 @@ This was stabilized in 1.79 in [#13608](https://github.com/rust-lang/cargo/pull/
 
 The resolver will prefer dependencies with a `package.rust-version` that is the same or older than your project's MSRV.
 Your project's MSRV is determined by taking the lowest `package.rust-version` set among your workspace members.
-If there is none set, your toolchain version will be used with the intent to pick up the version from rustup's `rust-toolchain.toml`, if present.
+If there is no MSRV set then your toolchain version will be used, allowing it to pick up the toolchain version from pinned in rustup (e.g. `rust-toolchain.toml`).
 
 #### `resolver.incompatible-rust-versions`
 * Type: string
