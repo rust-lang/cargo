@@ -752,11 +752,11 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
           "homepage": "https://www.rust-lang.org",
           "keywords": ["cli"],
           "license": "MIT",
-          "license_file": "../LICENSE",
+          "license_file": "LICENSE",
           "links": null,
           "name": "bar",
           "readme": "README.md",
-          "readme_file": "../README.md",
+          "readme_file": "README.md",
           "repository": "https://github.com/example/example",
           "rust_version": "1.60",
           "vers": "1.2.3"
