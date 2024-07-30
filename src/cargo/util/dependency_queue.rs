@@ -187,10 +187,11 @@ impl<N: Hash + Eq + Clone, E: Eq + Hash + Clone, V> DependencyQueue<N, E, V> {
         let key = (node.clone(), edge.clone());
         let mut result = Vec::new();
         for dep in reverse_deps.iter() {
-            let edges = &mut self.dep_map.get_mut(dep).unwrap().0;
-            assert!(edges.remove(&key));
-            if edges.is_empty() {
-                result.push(dep);
+            if let Some((edges, _)) = &mut self.dep_map.get_mut(dep) {
+                edges.remove(&key);
+                if edges.is_empty() {
+                    result.push(dep);
+                }
             }
         }
         result
