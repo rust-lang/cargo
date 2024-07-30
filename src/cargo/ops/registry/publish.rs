@@ -323,13 +323,13 @@ fn verify_dependencies(
 
 fn transmit(
     gctx: &GlobalContext,
-    pkg: &Package,
+    local_pkg: &Package,
     tarball: &File,
     registry: &mut Registry,
     registry_id: SourceId,
     dry_run: bool,
 ) -> CargoResult<()> {
-    let deps = pkg
+    let deps = local_pkg
         .dependencies()
         .iter()
         .filter(|dep| {
@@ -380,7 +380,7 @@ fn transmit(
             })
         })
         .collect::<CargoResult<Vec<NewCrateDependency>>>()?;
-    let manifest = pkg.manifest();
+    let manifest = local_pkg.manifest();
     let ManifestMetadata {
         ref authors,
         ref description,
@@ -400,12 +400,13 @@ fn transmit(
     let readme_content = readme
         .as_ref()
         .map(|readme| {
-            paths::read(&pkg.root().join(readme))
-                .with_context(|| format!("failed to read `readme` file for package `{}`", pkg))
+            paths::read(&local_pkg.root().join(readme)).with_context(|| {
+                format!("failed to read `readme` file for package `{}`", local_pkg)
+            })
         })
         .transpose()?;
     if let Some(ref file) = *license_file {
-        if !pkg.root().join(file).exists() {
+        if !local_pkg.root().join(file).exists() {
             bail!("the license file `{}` does not exist", file)
         }
     }
@@ -450,8 +451,8 @@ fn transmit(
     let warnings = registry
         .publish(
             &NewCrate {
-                name: pkg.name().to_string(),
-                vers: pkg.version().to_string(),
+                name: local_pkg.name().to_string(),
+                vers: local_pkg.version().to_string(),
                 deps,
                 features: string_features,
                 authors: authors.clone(),
