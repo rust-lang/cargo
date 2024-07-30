@@ -7,8 +7,16 @@
 use semver::{Comparator, Op, Prerelease, Version, VersionReq};
 
 pub(crate) fn matches_prerelease(req: &VersionReq, ver: &Version) -> bool {
+    // Whether there are pre release version can be as lower bound
+    let lower_bound_prerelease = &req.comparators.iter().any(|cmp| {
+        if matches!(cmp.op, Op::Greater | Op::GreaterEq) && !cmp.pre.is_empty() {
+            true
+        } else {
+            false
+        }
+    });
     for cmp in &req.comparators {
-        if !matches_prerelease_impl(cmp, ver) {
+        if !matches_prerelease_impl(cmp, ver, lower_bound_prerelease) {
             return false;
         }
     }
@@ -16,7 +24,7 @@ pub(crate) fn matches_prerelease(req: &VersionReq, ver: &Version) -> bool {
     true
 }
 
-fn matches_prerelease_impl(cmp: &Comparator, ver: &Version) -> bool {
+fn matches_prerelease_impl(cmp: &Comparator, ver: &Version, lower_bound_prerelease: &bool) -> bool {
     match cmp.op {
         Op::Exact | Op::Wildcard => matches_exact_prerelease(cmp, ver),
         Op::Greater => matches_greater(cmp, ver),
@@ -26,7 +34,13 @@ fn matches_prerelease_impl(cmp: &Comparator, ver: &Version) -> bool {
             }
             matches_greater(cmp, ver)
         }
-        Op::Less => matches_less(&fill_partial_req(cmp), ver),
+        Op::Less => {
+            if *lower_bound_prerelease {
+                matches_less(&fill_partial_req(cmp), ver)
+            } else {
+                matches_less(&fill_partial_req_include_pre(cmp), ver)
+            }
+        }
         Op::LessEq => {
             if matches_exact_prerelease(cmp, ver) {
                 return true;
@@ -121,6 +135,21 @@ fn fill_partial_req(cmp: &Comparator) -> Comparator {
         cmp.patch = Some(0);
     } else if cmp.patch.is_none() {
         cmp.patch = Some(0);
+    }
+    cmp
+}
+
+fn fill_partial_req_include_pre(cmp: &Comparator) -> Comparator {
+    let mut cmp = cmp.clone();
+    if cmp.minor.is_none() {
+        cmp.minor = Some(0);
+        cmp.patch = Some(0);
+        cmp.pre = Prerelease::new("0").unwrap();
+    } else if cmp.patch.is_none() {
+        cmp.patch = Some(0);
+    }
+    if cmp.pre.is_empty() {
+        cmp.pre = Prerelease::new("0").unwrap();
     }
     cmp
 }
@@ -334,27 +363,64 @@ mod matches_prerelease_semantic {
 
     #[test]
     fn test_less() {
-        // <I.J.K-0
-        let ref r = req("<4.2.1-0");
-        assert_match_all(r, &["0.0.0", "4.0.0"]);
-        assert_match_none(r, &["4.2.1-0", "4.2.2", "5.0.0-0", "5.0.0"]);
-
-        // <I.J.K
-        let ref r = req("<4.2.1");
-        assert_match_all(r, &["0.0.0", "4.0.0", "4.2.1-0"]);
-        assert_match_none(r, &["4.2.2", "5.0.0-0", "5.0.0"]);
-
-        // <I.J equivalent to <I.J.0
-        for r in &[req("<4.2"), req("<4.2.0")] {
-            assert_match_all(r, &["0.0.0", "4.1.0", "4.2.0-0"]);
-            assert_match_none(r, &["4.2.0", "4.3.0-0", "4.3.0"]);
+        // <I.J.K equivalent to <I.J.K-0
+        for r in &[req("<4.2.1"), req("<4.2.1-0")] {
+            assert_match_all(r, &["0.0.0", "4.0.0"]);
+            assert_match_none(r, &["4.2.1-0", "4.2.2", "5.0.0-0", "5.0.0"]);
         }
 
-        // <I equivalent to <I.0.0
-        for r in &[req("<4"), req("<4.0.0")] {
-            assert_match_all(r, &["0.0.0", "4.0.0-0"]);
-            assert_match_none(r, &["4.0.0", "5.0.0-1", "5.0.0"]);
+        // <I.J equivalent to <I.J.0-0
+        for r in &[req("<4.2"), req("<4.2.0-0")] {
+            assert_match_all(r, &["0.0.0", "4.1.0"]);
+            assert_match_none(r, &["4.2.0-0", "4.2.0", "4.3.0-0", "4.3.0"]);
         }
+
+        // <I equivalent to <I.0.0-0
+        for r in &[req("<4"), req("<4.0.0-0")] {
+            assert_match_all(r, &["0.0.0", "3.9.0"]);
+            assert_match_none(r, &["4.0.0-0", "4.0.0", "5.0.0-1", "5.0.0"]);
+        }
+    }
+
+    #[test]
+    fn test_less_upper_bound() {
+        // Lower bound without prerelase tag, so upper bound equivalent to <I.J.K-0
+        for r in &[
+            req(">1.2.3, <2"),
+            req(">1.2.3, <2.0"),
+            req(">1.2.3, <2.0.0"),
+            req(">=1.2.3, <2.0.0"),
+            req(">1.2.3, <2.0.0-0"),
+        ] {
+            assert_match_all(r, &["1.2.4", "1.9.9"]);
+            assert_match_none(r, &["2.0.0-0", "2.0.0", "2.1.2"]);
+        }
+
+        // Lower bound has prerelase tag, so upper bound doesn't change.
+        for r in &[
+            req(">1.2.3-0, <2"),
+            req(">1.2.3-0, <2.0"),
+            req(">1.2.3-0, <2.0.0"),
+            req(">=1.2.3-0, <2.0.0"),
+        ] {
+            assert_match_all(r, &["1.2.4", "1.9.9", "2.0.0-0"]);
+            assert_match_none(r, &["2.0.0", "2.1.2"]);
+        }
+
+        for r in &[
+            req(">=2.0.0-0, <2"),
+            req(">=2.0.0-0, <2.0"),
+            req(">=2.0.0-0, <2.0.0"),
+        ] {
+            assert_match_all(r, &["2.0.0-0", "2.0.0-11"]);
+            assert_match_none(r, &["0.0.9", "2.0.0"]);
+        }
+
+        // There is no intersection between lower bound and upper bound, in this case nothing matches
+        let ref r = req(">5.0.0, <2.0.0");
+        assert_match_none(r, &["1.2.3", "3.0.0", "6.0.0"]);
+        let ref r = req(">5.0.0-0, <2.0.0");
+        assert_match_none(r, &["1.2.3", "3.0.0", "6.0.0"]);
     }
 
     #[test]
