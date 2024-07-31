@@ -338,26 +338,27 @@ This was stabilized in 1.79 in [#13608](https://github.com/rust-lang/cargo/pull/
 ### MSRV-aware resolver
 
 `-Zmsrv-policy` allows access to an MSRV-aware resolver which can be enabled with:
-- `resolver.something-like-precedence` config field
+- `resolver.incompatible-rust-versions` config field
 - `workspace.resolver = "3"` / `package.resolver = "3"`
 - `package.edition = "2024"` (only in workspace root)
 
 The resolver will prefer dependencies with a `package.rust-version` that is the same or older than your project's MSRV.
 Your project's MSRV is determined by taking the lowest `package.rust-version` set among your workspace members.
-If there is none set, your toolchain version will be used with the intent to pick up the version from rustup's `rust-toolchain.toml`, if present.
+If there is no MSRV set then your toolchain version will be used, allowing it to pick up the toolchain version from pinned in rustup (e.g. `rust-toolchain.toml`).
 
-#### `resolver.something-like-precedence`
+#### `resolver.incompatible-rust-versions`
 * Type: string
-* Default: "something-like-maximum"
-* Environment: `CARGO_RESOLVER_SOMETHING_LIKE_PRECEDENCE`
+* Default: `"allow"`
+* Environment: `CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS`
 
-Select which policy should be used when resolving dependencies.  Values include
-- `something-like-maximum`: prefer highest compatible versions of a package
-- `something-like-rust-version`: prefer versions of packages compatible with your project's Rust version
+When resolving a version for a dependency, select how versions with incompatible `package.rust-version`s are treated.
+Values include:
+- `allow`: treat `rust-version`-incompatible versions like any other version
+- `fallback`: only consider `rust-version`-incompatible versions if no other version matched
 
 Can be overridden with
 - `--ignore-rust-version` CLI option
-- Setting the dependency's version requirement too high
+- Setting the dependency's version requirement higher than any version with a compatible `rust-version`
 - Specifying the version to `cargo update` with `--precise`
 
 ## precise-pre-release

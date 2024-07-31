@@ -29,7 +29,7 @@ use crate::util::lints::{
 };
 use crate::util::toml::{read_manifest, InheritableFields};
 use crate::util::{
-    context::CargoResolverConfig, context::CargoResolverPrecedence, context::ConfigRelativePath,
+    context::CargoResolverConfig, context::ConfigRelativePath, context::IncompatibleRustVersions,
     Filesystem, GlobalContext, IntoUrl,
 };
 use cargo_util::paths;
@@ -320,11 +320,11 @@ impl<'gctx> Workspace<'gctx> {
         }
         match self.gctx().get::<CargoResolverConfig>("resolver") {
             Ok(CargoResolverConfig {
-                something_like_precedence: Some(precedence),
+                incompatible_rust_versions: Some(incompatible_rust_versions),
             }) => {
                 if self.gctx().cli_unstable().msrv_policy {
                     self.resolve_honors_rust_version =
-                        precedence == CargoResolverPrecedence::SomethingLikeRustVersion;
+                        incompatible_rust_versions == IncompatibleRustVersions::Fallback;
                 } else {
                     self.gctx()
                         .shell()
@@ -332,7 +332,7 @@ impl<'gctx> Workspace<'gctx> {
                 }
             }
             Ok(CargoResolverConfig {
-                something_like_precedence: None,
+                incompatible_rust_versions: None,
             }) => {}
             Err(err) => {
                 if self.gctx().cli_unstable().msrv_policy {
