@@ -2554,12 +2554,12 @@ fn unused_dep_keys(
 pub fn prepare_for_publish(
     me: &Package,
     ws: &Workspace<'_>,
-    included: Option<&[PathBuf]>,
+    packaged_files: Option<&[PathBuf]>,
 ) -> CargoResult<Package> {
     let contents = me.manifest().contents();
     let document = me.manifest().document();
     let original_toml =
-        prepare_toml_for_publish(me.manifest().resolved_toml(), ws, me.root(), included)?;
+        prepare_toml_for_publish(me.manifest().resolved_toml(), ws, me.root(), packaged_files)?;
     let resolved_toml = original_toml.clone();
     let features = me.manifest().unstable_features().clone();
     let workspace_config = me.manifest().workspace_config().clone();
@@ -2591,7 +2591,7 @@ fn prepare_toml_for_publish(
     me: &manifest::TomlManifest,
     ws: &Workspace<'_>,
     package_root: &Path,
-    included: Option<&[PathBuf]>,
+    packaged_files: Option<&[PathBuf]>,
 ) -> CargoResult<manifest::TomlManifest> {
     let gctx = ws.gctx();
 
@@ -2608,7 +2608,7 @@ fn prepare_toml_for_publish(
     package.workspace = None;
     if let Some(StringOrBool::String(path)) = &package.build {
         let path = paths::normalize_path(Path::new(path));
-        let included = included.map(|i| i.contains(&path)).unwrap_or(true);
+        let included = packaged_files.map(|i| i.contains(&path)).unwrap_or(true);
         let build = if included {
             let path = path
                 .into_os_string()
@@ -2713,14 +2713,16 @@ fn prepare_toml_for_publish(
     }
 
     let lib = if let Some(target) = &me.lib {
-        prepare_target_for_publish(target, included, "library", ws.gctx())?
+        prepare_target_for_publish(target, packaged_files, "library", ws.gctx())?
     } else {
         None
     };
-    let bin = prepare_targets_for_publish(me.bin.as_ref(), included, "binary", ws.gctx())?;
-    let example = prepare_targets_for_publish(me.example.as_ref(), included, "example", ws.gctx())?;
-    let test = prepare_targets_for_publish(me.test.as_ref(), included, "test", ws.gctx())?;
-    let bench = prepare_targets_for_publish(me.bench.as_ref(), included, "benchmark", ws.gctx())?;
+    let bin = prepare_targets_for_publish(me.bin.as_ref(), packaged_files, "binary", ws.gctx())?;
+    let example =
+        prepare_targets_for_publish(me.example.as_ref(), packaged_files, "example", ws.gctx())?;
+    let test = prepare_targets_for_publish(me.test.as_ref(), packaged_files, "test", ws.gctx())?;
+    let bench =
+        prepare_targets_for_publish(me.bench.as_ref(), packaged_files, "benchmark", ws.gctx())?;
 
     let all = |_d: &manifest::TomlDependency| true;
     let mut manifest = manifest::TomlManifest {
@@ -2878,7 +2880,7 @@ fn prepare_toml_for_publish(
 
 fn prepare_targets_for_publish(
     targets: Option<&Vec<manifest::TomlTarget>>,
-    included: Option<&[PathBuf]>,
+    packaged_files: Option<&[PathBuf]>,
     context: &str,
     gctx: &GlobalContext,
 ) -> CargoResult<Option<Vec<manifest::TomlTarget>>> {
@@ -2888,7 +2890,8 @@ fn prepare_targets_for_publish(
 
     let mut prepared = Vec::with_capacity(targets.len());
     for target in targets {
-        let Some(target) = prepare_target_for_publish(target, included, context, gctx)? else {
+        let Some(target) = prepare_target_for_publish(target, packaged_files, context, gctx)?
+        else {
             continue;
         };
         prepared.push(target);
@@ -2903,14 +2906,14 @@ fn prepare_targets_for_publish(
 
 fn prepare_target_for_publish(
     target: &manifest::TomlTarget,
-    included: Option<&[PathBuf]>,
+    packaged_files: Option<&[PathBuf]>,
     context: &str,
     gctx: &GlobalContext,
 ) -> CargoResult<Option<manifest::TomlTarget>> {
     let path = target.path.as_ref().expect("previously resolved");
     let path = normalize_path(&path.0);
-    if let Some(included) = included {
-        if !included.contains(&path) {
+    if let Some(packaged_files) = packaged_files {
+        if !packaged_files.contains(&path) {
             let name = target.name.as_ref().expect("previously resolved");
             gctx.shell().warn(format!(
                 "ignoring {context} `{name}` as `{}` is not included in the published package",
