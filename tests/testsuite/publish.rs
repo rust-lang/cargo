@@ -1609,6 +1609,9 @@ fn publish_dev_dep_stripping() {
     Package::new("optional-namespaced", "1.0.0")
         .feature("cat", &[])
         .publish();
+    Package::new("optional-renamed-dep-feature", "1.0.0")
+        .feature("cat", &[])
+        .publish();
     Package::new("optional-renamed-namespaced", "1.0.0")
         .feature("cat", &[])
         .publish();
@@ -1648,6 +1651,7 @@ fn publish_dev_dep_stripping() {
                 "normal-only/cat",
                 "build-only/cat",
                 "dev-only/cat",
+                "renamed-dev-only01/cat",
                 "normal-and-dev/cat",
                 "target-normal-only/cat",
                 "target-build-only/cat",
@@ -1655,6 +1659,7 @@ fn publish_dev_dep_stripping() {
                 "target-normal-and-dev/cat",
                 "optional-dep-feature/cat",
                 "dep:optional-namespaced",
+                "optional-renamed-dep-feature10/cat",
                 "dep:optional-renamed-namespaced10",
             ]
 
@@ -1663,6 +1668,7 @@ fn publish_dev_dep_stripping() {
             normal-and-dev = { version = "1.0", features = ["cat"] }
             optional-dep-feature = { version = "1.0", features = ["cat"], optional = true }
             optional-namespaced = { version = "1.0", features = ["cat"], optional = true }
+            optional-renamed-dep-feature10 = { version = "1.0", features = ["cat"], optional = true, package = "optional-renamed-dep-feature" }
             optional-renamed-namespaced10 = { version = "1.0", features = ["cat"], optional = true, package = "optional-renamed-namespaced" }
 
             [build-dependencies]
@@ -1670,6 +1676,7 @@ fn publish_dev_dep_stripping() {
 
             [dev-dependencies]
             dev-only = { path = "../dev-only", features = ["cat"] }
+            renamed-dev-only01 = { path = "../renamed-dev-only", features = ["cat"], package = "renamed-dev-only" }
             normal-and-dev = { version = "1.0", features = ["cat"] }
 
             [target.'cfg(unix)'.dependencies]
@@ -1700,6 +1707,26 @@ fn publish_dev_dep_stripping() {
         )
         .file(
             "dev-only/src/lib.rs",
+            r#"
+                #[cfg(feature = "cat")]
+                pub fn cat() {}
+            "#,
+        )
+        .file(
+            "renamed-dev-only/Cargo.toml",
+            r#"
+            [package]
+            name = "renamed-dev-only"
+            version = "0.1.0"
+            edition = "2015"
+            authors = []
+
+            [features]
+            cat = []
+            "#,
+        )
+        .file(
+            "renamed-dev-only/src/lib.rs",
             r#"
                 #[cfg(feature = "cat")]
                 pub fn cat() {}
@@ -1771,6 +1798,18 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
               ],
               "kind": "normal",
               "name": "optional-namespaced",
+              "optional": true,
+              "target": null,
+              "version_req": "^1.0"
+            },
+            {
+              "default_features": true,
+              "explicit_name_in_toml": "optional-renamed-dep-feature10",
+              "features": [
+                "cat"
+              ],
+              "kind": "normal",
+              "name": "optional-renamed-dep-feature",
               "optional": true,
               "target": null,
               "version_req": "^1.0"
@@ -1866,6 +1905,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
               "target-normal-and-dev/cat",
               "optional-dep-feature/cat",
               "dep:optional-namespaced",
+              "optional-renamed-dep-feature10/cat",
               "dep:optional-renamed-namespaced10"
             ]
           },
@@ -1927,6 +1967,12 @@ version = "1.0"
 features = ["cat"]
 optional = true
 
+[dependencies.optional-renamed-dep-feature10]
+version = "1.0"
+features = ["cat"]
+optional = true
+package = "optional-renamed-dep-feature"
+
 [dependencies.optional-renamed-namespaced10]
 version = "1.0"
 features = ["cat"]
@@ -1951,6 +1997,7 @@ foo_feature = [
     "target-normal-and-dev/cat",
     "optional-dep-feature/cat",
     "dep:optional-namespaced",
+    "optional-renamed-dep-feature10/cat",
     "dep:optional-renamed-namespaced10",
 ]
 
