@@ -6,8 +6,7 @@ use snapbox::str;
 
 use cargo_test_support::registry::RegistryBuilder;
 use cargo_test_support::{
-    basic_bin_manifest, cargo_test, project, symlink_supported, Execs,
-    ProjectBuilder,
+    basic_bin_manifest, cargo_test, project, symlink_supported, Execs, ProjectBuilder,
 };
 
 const VALID_LOCKFILE: &str = r#"# Test lockfile
@@ -52,7 +51,7 @@ fn assert_lockfile_created(
         return;
     }
 
-    let lockfile_path_argument = "mylockfile/Cargo.lock";
+    let lockfile_path_argument = "mylockfile/is/burried/Cargo.lock";
     let p = make_project().build();
     let registry = RegistryBuilder::new().http_api().http_index().build();
 
@@ -345,9 +344,9 @@ tests!(vendor, "vendor");
 
 #[cfg(test)]
 mod package_extra {
-    use std::fs;
+    use crate::lockfile_path::make_basic_command;
     use cargo_test_support::{cargo_test, project};
-    use crate::lockfile_path::{make_basic_command};
+    use std::fs;
 
     #[cargo_test(nightly, reason = "--lockfile-path is unstable")]
     fn assert_respect_pinned_version_from_lockfile_path() {
@@ -383,24 +382,27 @@ name = "test_foo"
 [dependencies]
 hello = "1.0.0"
 "#;
-        
+
         let lockfile_path_argument = "mylockfile/Cargo.lock";
         let p = project()
             .file("Cargo.toml", TOML)
             .file("src/main.rs", "fn main() {}")
             .file("mylockfile/Cargo.lock", PINNED_VERSION)
             .build();
-        
+
         make_basic_command(&mut p.cargo("package"), lockfile_path_argument.to_string()).run();
 
         assert!(!p.root().join("Cargo.lock").is_file());
         assert!(p.root().join(lockfile_path_argument).is_file());
-        
-        assert!(p.root().join("target/package/test_foo-0.5.0/Cargo.lock").is_file());
-        
+
+        assert!(p
+            .root()
+            .join("target/package/test_foo-0.5.0/Cargo.lock")
+            .is_file());
+
         let path = p.root().join("target/package/test_foo-0.5.0/Cargo.lock");
         let contents = fs::read_to_string(path).unwrap();
-        
+
         assert_eq!(contents, PINNED_VERSION);
     }
 }

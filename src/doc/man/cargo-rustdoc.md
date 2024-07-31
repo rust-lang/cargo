@@ -93,6 +93,8 @@ if its name is the same as the lib target. Binaries are skipped if they have
 {{> options-ignore-rust-version }}
 
 {{> options-locked }}
+
+{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-options-common }}
