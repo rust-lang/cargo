@@ -2551,6 +2551,7 @@ fn unused_dep_keys(
     }
 }
 
+/// Make the [`Package`] self-contained so its ready for packaging
 pub fn prepare_for_publish(
     me: &Package,
     ws: &Workspace<'_>,
