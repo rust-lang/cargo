@@ -288,7 +288,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Vec<Fi
         } else {
             let tarball = create_package(ws, &pkg, ar_files, local_reg.as_ref())?;
             if let Some(local_reg) = local_reg.as_mut() {
-                local_reg.add_package(&pkg, &tarball)?;
+                local_reg.add_package(ws, &pkg, &tarball)?;
             }
             outputs.push((pkg, opts, tarball));
         }
@@ -893,7 +893,7 @@ fn tar(
         .iter()
         .map(|ar_file| ar_file.rel_path.clone())
         .collect::<Vec<_>>();
-    let publish_pkg = prepare_for_publish(pkg, ws, &included)?;
+    let publish_pkg = prepare_for_publish(pkg, ws, Some(&included))?;
 
     let mut uncompressed_size = 0;
     for ar_file in ar_files {
@@ -1299,7 +1299,12 @@ impl<'a> TmpRegistry<'a> {
         self.root.join("index")
     }
 
-    fn add_package(&mut self, package: &Package, tar: &FileLock) -> CargoResult<()> {
+    fn add_package(
+        &mut self,
+        ws: &Workspace<'_>,
+        package: &Package,
+        tar: &FileLock,
+    ) -> CargoResult<()> {
         debug!(
             "adding package {}@{} to local overlay at {}",
             package.name(),
@@ -1317,7 +1322,7 @@ impl<'a> TmpRegistry<'a> {
             tar_copy.flush()?;
         }
 
-        let new_crate = super::registry::prepare_transmit(self.gctx, package, self.upstream)?;
+        let new_crate = super::registry::prepare_transmit(self.gctx, ws, package, self.upstream)?;
 
         tar.file().seek(SeekFrom::Start(0))?;
         let cksum = cargo_util::Sha256::new()
