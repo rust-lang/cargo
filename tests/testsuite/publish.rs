@@ -1598,110 +1598,18 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
 }
 
 #[cargo_test]
-fn publish_dev_dep_no_version() {
-    let registry = RegistryBuilder::new().http_api().http_index().build();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-            edition = "2015"
-            authors = []
-            license = "MIT"
-            description = "foo"
-            documentation = "foo"
-            homepage = "foo"
-            repository = "foo"
-
-            [dev-dependencies]
-            bar = { path = "bar" }
-            "#,
-        )
-        .file("src/lib.rs", "")
-        .file("bar/Cargo.toml", &basic_manifest("bar", "0.0.1"))
-        .file("bar/src/lib.rs", "")
-        .build();
-
-    p.cargo("publish --no-verify")
-        .replace_crates_io(registry.index_url())
-        .with_stderr_data(str![[r#"
-[UPDATING] crates.io index
-[PACKAGING] foo v0.1.0 ([ROOT]/foo)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[UPLOADING] foo v0.1.0 ([ROOT]/foo)
-[UPLOADED] foo v0.1.0 to registry `crates-io`
-[NOTE] waiting for `foo v0.1.0` to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
-[PUBLISHED] foo v0.1.0 at registry `crates-io`
-
-"#]])
-        .run();
-
-    publish::validate_upload_with_contents(
-        r#"
-        {
-          "authors": [],
-          "badges": {},
-          "categories": [],
-          "deps": [],
-          "description": "foo",
-          "documentation": "foo",
-          "features": {},
-          "homepage": "foo",
-          "keywords": [],
-          "license": "MIT",
-          "license_file": null,
-          "links": null,
-          "name": "foo",
-          "readme": null,
-          "readme_file": null,
-          "repository": "foo",
-          "rust_version": null,
-          "vers": "0.1.0"
-        }
-        "#,
-        "foo-0.1.0.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
-        &[(
-            "Cargo.toml",
-            &format!(
-                r#"{}
-[package]
-edition = "2015"
-name = "foo"
-version = "0.1.0"
-authors = []
-build = false
-autobins = false
-autoexamples = false
-autotests = false
-autobenches = false
-description = "foo"
-homepage = "foo"
-documentation = "foo"
-readme = false
-license = "MIT"
-repository = "foo"
-
-[lib]
-name = "foo"
-path = "src/lib.rs"
-
-[dev-dependencies]
-"#,
-                cargo::core::manifest::MANIFEST_PREAMBLE
-            ),
-        )],
-    );
-}
-
-#[cargo_test]
-fn publish_with_feature_point_diff_kinds_dep() {
+fn publish_dev_dep_stripping() {
     let registry = RegistryBuilder::new().http_api().http_index().build();
     Package::new("normal-only", "1.0.0")
+        .feature("cat", &[])
+        .publish();
+    Package::new("optional-dep-feature", "1.0.0")
+        .feature("cat", &[])
+        .publish();
+    Package::new("optional-namespaced", "1.0.0")
+        .feature("cat", &[])
+        .publish();
+    Package::new("optional-renamed-namespaced", "1.0.0")
         .feature("cat", &[])
         .publish();
     Package::new("build-only", "1.0.0")
@@ -1745,11 +1653,17 @@ fn publish_with_feature_point_diff_kinds_dep() {
                 "target-build-only/cat",
                 "target-dev-only/cat",
                 "target-normal-and-dev/cat",
+                "optional-dep-feature/cat",
+                "dep:optional-namespaced",
+                "dep:optional-renamed-namespaced10",
             ]
 
             [dependencies]
             normal-only = { version = "1.0", features = ["cat"] }
             normal-and-dev = { version = "1.0", features = ["cat"] }
+            optional-dep-feature = { version = "1.0", features = ["cat"], optional = true }
+            optional-namespaced = { version = "1.0", features = ["cat"], optional = true }
+            optional-renamed-namespaced10 = { version = "1.0", features = ["cat"], optional = true, package = "optional-renamed-namespaced" }
 
             [build-dependencies]
             build-only = { version = "1.0", features = ["cat"] }
@@ -1844,6 +1758,40 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
               "features": [
                 "cat"
               ],
+              "kind": "normal",
+              "name": "optional-dep-feature",
+              "optional": true,
+              "target": null,
+              "version_req": "^1.0"
+            },
+            {
+              "default_features": true,
+              "features": [
+                "cat"
+              ],
+              "kind": "normal",
+              "name": "optional-namespaced",
+              "optional": true,
+              "target": null,
+              "version_req": "^1.0"
+            },
+            {
+              "default_features": true,
+              "explicit_name_in_toml": "optional-renamed-namespaced10",
+              "features": [
+                "cat"
+              ],
+              "kind": "normal",
+              "name": "optional-renamed-namespaced",
+              "optional": true,
+              "target": null,
+              "version_req": "^1.0"
+            },
+            {
+              "default_features": true,
+              "features": [
+                "cat"
+              ],
               "kind": "dev",
               "name": "normal-and-dev",
               "optional": false,
@@ -1915,7 +1863,10 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
               "normal-and-dev/cat",
               "target-normal-only/cat",
               "target-build-only/cat",
-              "target-normal-and-dev/cat"
+              "target-normal-and-dev/cat",
+              "optional-dep-feature/cat",
+              "dep:optional-namespaced",
+              "dep:optional-renamed-namespaced10"
             ]
           },
           "homepage": "foo",
@@ -1966,6 +1917,22 @@ features = ["cat"]
 version = "1.0"
 features = ["cat"]
 
+[dependencies.optional-dep-feature]
+version = "1.0"
+features = ["cat"]
+optional = true
+
+[dependencies.optional-namespaced]
+version = "1.0"
+features = ["cat"]
+optional = true
+
+[dependencies.optional-renamed-namespaced10]
+version = "1.0"
+features = ["cat"]
+optional = true
+package = "optional-renamed-namespaced"
+
 [dev-dependencies.normal-and-dev]
 version = "1.0"
 features = ["cat"]
@@ -1982,6 +1949,9 @@ foo_feature = [
     "target-normal-only/cat",
     "target-build-only/cat",
     "target-normal-and-dev/cat",
+    "optional-dep-feature/cat",
+    "dep:optional-namespaced",
+    "dep:optional-renamed-namespaced10",
 ]
 
 [target."cfg(unix)".dependencies.target-normal-and-dev]
@@ -2005,6 +1975,7 @@ features = ["cat"]
         )],
     );
 }
+
 #[cargo_test]
 fn credentials_ambiguous_filename() {
     // `publish` generally requires a remote registry

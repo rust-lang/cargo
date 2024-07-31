@@ -3,7 +3,6 @@
 //! [1]: https://doc.rust-lang.org/nightly/cargo/reference/registry-web-api.html#publish
 
 use std::collections::BTreeMap;
-use std::collections::BTreeSet;
 use std::collections::HashSet;
 use std::fs::File;
 use std::time::Duration;
@@ -21,7 +20,6 @@ use crate::core::dependency::DepKind;
 use crate::core::manifest::ManifestMetadata;
 use crate::core::resolver::CliFeatures;
 use crate::core::Dependency;
-use crate::core::FeatureValue;
 use crate::core::Package;
 use crate::core::PackageIdSpecQuery;
 use crate::core::SourceId;
@@ -35,7 +33,7 @@ use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::auth;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::JobsConfig;
-use crate::util::interning::InternedString;
+use crate::util::toml::prepare_for_publish;
 use crate::util::Progress;
 use crate::util::ProgressStyle;
 use crate::CargoResult;
@@ -184,6 +182,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         .status("Uploading", pkg.package_id().to_string())?;
     transmit(
         opts.gctx,
+        ws,
         pkg,
         tarball.file(),
         &mut registry,
@@ -323,19 +322,19 @@ fn verify_dependencies(
 
 fn transmit(
     gctx: &GlobalContext,
-    pkg: &Package,
+    ws: &Workspace<'_>,
+    local_pkg: &Package,
     tarball: &File,
     registry: &mut Registry,
     registry_id: SourceId,
     dry_run: bool,
 ) -> CargoResult<()> {
-    let deps = pkg
+    let included = None; // don't filter build-targets
+    let publish_pkg = prepare_for_publish(local_pkg, ws, included)?;
+
+    let deps = publish_pkg
         .dependencies()
         .iter()
-        .filter(|dep| {
-            // Skip dev-dependency without version.
-            dep.is_transitive() || dep.specified_req()
-        })
         .map(|dep| {
             // If the dependency is from a different registry, then include the
             // registry in the dependency.
@@ -380,7 +379,7 @@ fn transmit(
             })
         })
         .collect::<CargoResult<Vec<NewCrateDependency>>>()?;
-    let manifest = pkg.manifest();
+    let manifest = publish_pkg.manifest();
     let ManifestMetadata {
         ref authors,
         ref description,
@@ -397,15 +396,19 @@ fn transmit(
         ref rust_version,
     } = *manifest.metadata();
     let rust_version = rust_version.as_ref().map(ToString::to_string);
-    let readme_content = readme
+    let readme_content = local_pkg
+        .manifest()
+        .metadata()
+        .readme
         .as_ref()
         .map(|readme| {
-            paths::read(&pkg.root().join(readme))
-                .with_context(|| format!("failed to read `readme` file for package `{}`", pkg))
+            paths::read(&local_pkg.root().join(readme)).with_context(|| {
+                format!("failed to read `readme` file for package `{}`", local_pkg)
+            })
         })
         .transpose()?;
-    if let Some(ref file) = *license_file {
-        if !pkg.root().join(file).exists() {
+    if let Some(ref file) = local_pkg.manifest().metadata().license_file {
+        if !local_pkg.root().join(file).exists() {
             bail!("the license file `{}` does not exist", file)
         }
     }
@@ -416,31 +419,13 @@ fn transmit(
         return Ok(());
     }
 
-    let deps_set = deps
-        .iter()
-        .map(|dep| dep.name.clone())
-        .collect::<BTreeSet<String>>();
-
     let string_features = match manifest.resolved_toml().features() {
         Some(features) => features
             .iter()
             .map(|(feat, values)| {
                 (
                     feat.to_string(),
-                    values
-                        .iter()
-                        .filter(|fv| {
-                            let feature_value = FeatureValue::new(InternedString::new(fv));
-                            match feature_value {
-                                FeatureValue::Dep { dep_name }
-                                | FeatureValue::DepFeature { dep_name, .. } => {
-                                    deps_set.contains(&dep_name.to_string())
-                                }
-                                _ => true,
-                            }
-                        })
-                        .map(|fv| fv.to_string())
-                        .collect(),
+                    values.iter().map(|fv| fv.to_string()).collect(),
                 )
             })
             .collect::<BTreeMap<String, Vec<String>>>(),
@@ -450,8 +435,8 @@ fn transmit(
     let warnings = registry
         .publish(
             &NewCrate {
-                name: pkg.name().to_string(),
-                vers: pkg.version().to_string(),
+                name: local_pkg.name().to_string(),
+                vers: local_pkg.version().to_string(),
                 deps,
                 features: string_features,
                 authors: authors.clone(),
