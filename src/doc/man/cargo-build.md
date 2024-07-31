@@ -87,6 +87,8 @@ See <https://github.com/rust-lang/cargo/issues/5579> for more information.
 {{> options-ignore-rust-version }}
 
 {{> options-locked }}
+
+{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-options-common }}
