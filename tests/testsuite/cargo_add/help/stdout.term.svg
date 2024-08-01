@@ -175,7 +175,7 @@
 </tspan>
     <tspan x="10px" y="1414px"><tspan>      </tspan><tspan class="fg-cyan bold">--lockfile-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FILE&gt;</tspan>
 </tspan>
-    <tspan x="10px" y="1432px"><tspan>          Path to the Cargo.lock file (unstable)</tspan>
+    <tspan x="10px" y="1432px"><tspan>          Path to Cargo.lock (unstable)</tspan>
 </tspan>
     <tspan x="10px" y="1450px">
 </tspan>

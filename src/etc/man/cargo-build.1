@@ -375,9 +375,9 @@ Equivalent to specifying both \fB\-\-locked\fR and \fB\-\-offline\fR\&.
 .sp
 \fB\-\-lockfile\-path\fR \fIPATH\fR
 .RS 4
-Changes the path of the lockfile from the default (\fB\&./Cargo.lock\fR) to \fIPATH\fR\&. \fIPATH\fR must end with
+Changes the path of the lockfile from the default (\fB<workspace_root>/Cargo.lock\fR) to \fIPATH\fR\&. \fIPATH\fR must end with
 \fBCargo.lock\fR (e.g. \fB\-\-lockfile\-path /tmp/temporary\-lockfile/Cargo.lock\fR). Note that providing
-\fB\-\-lockfile\-path\fR will ignore existing default lockfile (\fB\&./Cargo.lock\fR), if exists, and instead will
+\fB\-\-lockfile\-path\fR will ignore existing default lockfile (\fB<workspace_root>/Cargo.lock\fR), if exists, and instead will
 either use \fIPATH\fR lockfile (or write a new lockfile into the provided path if it doesn\[cq]t exist).
 This flag can be used to run most commands in read\-only directories, writing lockfile into the provided \fIPATH\fR\&.
 .sp

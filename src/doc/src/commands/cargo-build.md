@@ -337,9 +337,9 @@ offline.</p>
 
 
 <dt class="option-term" id="option-cargo-build---lockfile-path"><a class="option-anchor" href="#option-cargo-build---lockfile-path"></a><code>--lockfile-path</code> <em>PATH</em></dt>
-<dd class="option-desc">Changes the path of the lockfile from the default (<code>./Cargo.lock</code>) to <em>PATH</em>. <em>PATH</em> must end with
+<dd class="option-desc">Changes the path of the lockfile from the default (<code>&lt;workspace_root&gt;/Cargo.lock</code>) to <em>PATH</em>. <em>PATH</em> must end with
 <code>Cargo.lock</code> (e.g. <code>--lockfile-path /tmp/temporary-lockfile/Cargo.lock</code>). Note that providing
-<code>--lockfile-path</code> will ignore existing default lockfile (<code>./Cargo.lock</code>), if exists, and instead will
+<code>--lockfile-path</code> will ignore existing default lockfile (<code>&lt;workspace_root&gt;/Cargo.lock</code>), if exists, and instead will
 either use <em>PATH</em> lockfile (or write a new lockfile into the provided path if it doesn’t exist).
 This flag can be used to run most commands in read-only directories, writing lockfile into the provided <em>PATH</em>.</p>
 <p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
