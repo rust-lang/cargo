@@ -56,6 +56,9 @@ available at <https://rust-lang.org>.
 
 ### Manifest Commands
 
+[cargo-add(1)](cargo-add.html)\
+&nbsp;&nbsp;&nbsp;&nbsp;Add dependencies to a `Cargo.toml` manifest file.
+
 [cargo-generate-lockfile(1)](cargo-generate-lockfile.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Generate `Cargo.lock` for a project.
 
@@ -67,6 +70,9 @@ available at <https://rust-lang.org>.
 
 [cargo-pkgid(1)](cargo-pkgid.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Print a fully qualified package specification.
+
+[cargo-remove(1)](cargo-remove.html)\
+&nbsp;&nbsp;&nbsp;&nbsp;Remove dependencies from a `Cargo.toml` manifest file.
 
 [cargo-tree(1)](cargo-tree.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Display a tree visualization of a dependency graph.
@@ -180,21 +186,21 @@ terminal.</li>
 <a href="../reference/config.html">config value</a>.</dd>
 
 
-
 </dl>
 
 ### Manifest Options
 
 <dl>
-<dt class="option-term" id="option-cargo---frozen"><a class="option-anchor" href="#option-cargo---frozen"></a><code>--frozen</code></dt>
 <dt class="option-term" id="option-cargo---locked"><a class="option-anchor" href="#option-cargo---locked"></a><code>--locked</code></dt>
-<dd class="option-desc">Either of these flags requires that the <code>Cargo.lock</code> file is
-up-to-date. If the lock file is missing, or it needs to be updated, Cargo will
-exit with an error. The <code>--frozen</code> flag also prevents Cargo from
-attempting to access the network to determine if it is out-of-date.</p>
-<p>These may be used in environments where you want to assert that the
-<code>Cargo.lock</code> file is up-to-date (such as a CI build) or want to avoid network
-access.</dd>
+<dd class="option-desc">Asserts that the exact same dependencies and versions are used as when the
+existing <code>Cargo.lock</code> file was originally generated. Cargo will exit with an
+error when either of the following scenarios arises:</p>
+<ul>
+<li>The lock file is missing.</li>
+<li>Cargo attempted to change the lock file due to a different dependency resolution.</li>
+</ul>
+<p>It may be used in environments where deterministic builds are desired,
+such as in CI pipelines.</dd>
 
 
 <dt class="option-term" id="option-cargo---offline"><a class="option-anchor" href="#option-cargo---offline"></a><code>--offline</code></dt>
@@ -209,6 +215,9 @@ See the <a href="cargo-fetch.html">cargo-fetch(1)</a> command to download depend
 offline.</p>
 <p>May also be specified with the <code>net.offline</code> <a href="../reference/config.html">config value</a>.</dd>
 
+
+<dt class="option-term" id="option-cargo---frozen"><a class="option-anchor" href="#option-cargo---frozen"></a><code>--frozen</code></dt>
+<dd class="option-desc">Equivalent to specifying both <code>--locked</code> and <code>--offline</code>.</dd>
 
 </dl>
 
@@ -252,18 +261,15 @@ requires the <code>-Z unstable-options</code> flag to enable (see
 
 </dl>
 
-
 ## ENVIRONMENT
 
 See [the reference](../reference/environment-variables.html) for
 details on environment variables that Cargo reads.
 
-
 ## EXIT STATUS
 
 * `0`: Cargo succeeded.
 * `101`: Cargo failed to complete.
-
 
 ## FILES
 
