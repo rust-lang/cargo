@@ -56,6 +56,9 @@ available at <https://rust-lang.org>.
 
 ### Manifest Commands
 
+[cargo-add(1)](cargo-add.html)\
+&nbsp;&nbsp;&nbsp;&nbsp;Add dependencies to a `Cargo.toml` manifest file.
+
 [cargo-generate-lockfile(1)](cargo-generate-lockfile.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Generate `Cargo.lock` for a project.
 
@@ -67,6 +70,9 @@ available at <https://rust-lang.org>.
 
 [cargo-pkgid(1)](cargo-pkgid.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Print a fully qualified package specification.
+
+[cargo-remove(1)](cargo-remove.html)\
+&nbsp;&nbsp;&nbsp;&nbsp;Remove dependencies from a `Cargo.toml` manifest file.
 
 [cargo-tree(1)](cargo-tree.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Display a tree visualization of a dependency graph.

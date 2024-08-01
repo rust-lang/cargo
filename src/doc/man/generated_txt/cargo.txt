@@ -50,6 +50,9 @@ COMMANDS
            Execute unit and integration tests of a package.
 
    Manifest Commands
+       cargo-add(1)
+           Add dependencies to a Cargo.toml manifest file.
+
        cargo-generate-lockfile(1)
            Generate Cargo.lock for a project.
 
@@ -62,6 +65,9 @@ COMMANDS
 
        cargo-pkgid(1)
            Print a fully qualified package specification.
+
+       cargo-remove(1)
+           Remove dependencies from a Cargo.toml manifest file.
 
        cargo-tree(1)
            Display a tree visualization of a dependency graph.
