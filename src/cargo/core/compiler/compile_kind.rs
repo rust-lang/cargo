@@ -195,6 +195,6 @@ impl CompileTarget {
                 self.name.hash(&mut hasher);
             }
         }
-        hasher.finish()
+        Hasher::finish(&hasher)
     }
 }

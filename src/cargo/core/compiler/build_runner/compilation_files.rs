@@ -650,7 +650,7 @@ fn compute_metadata(
     unit.is_std.hash(&mut hasher);
 
     MetaInfo {
-        meta_hash: Metadata(hasher.finish()),
+        meta_hash: Metadata(Hasher::finish(&hasher)),
         use_extra_filename: should_use_metadata(bcx, unit),
     }
 }

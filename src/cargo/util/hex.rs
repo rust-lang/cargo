@@ -10,7 +10,7 @@ pub fn to_hex(num: u64) -> String {
 pub fn hash_u64<H: Hash>(hashable: H) -> u64 {
     let mut hasher = StableHasher::new();
     hashable.hash(&mut hasher);
-    hasher.finish()
+    Hasher::finish(&hasher)
 }
 
 pub fn hash_u64_file(mut file: &File) -> std::io::Result<u64> {
@@ -23,7 +23,7 @@ pub fn hash_u64_file(mut file: &File) -> std::io::Result<u64> {
         }
         hasher.write(&buf[..n]);
     }
-    Ok(hasher.finish())
+    Ok(Hasher::finish(&hasher))
 }
 
 pub fn short_hash<H: Hash>(hashable: &H) -> String {
