@@ -20,7 +20,12 @@ pub fn home_dir_inner() -> Option<PathBuf> {
 fn home_dir_crt() -> Option<PathBuf> {
     unsafe {
         let mut path = ptr::null_mut();
-        match SHGetKnownFolderPath(&FOLDERID_Profile, KF_FLAG_DONT_VERIFY as u32, 0, &mut path) {
+        match SHGetKnownFolderPath(
+            &FOLDERID_Profile,
+            KF_FLAG_DONT_VERIFY as u32,
+            std::ptr::null_mut(),
+            &mut path,
+        ) {
             S_OK => {
                 let path_slice = slice::from_raw_parts(path, wcslen(path));
                 let s = OsString::from_wide(&path_slice);
