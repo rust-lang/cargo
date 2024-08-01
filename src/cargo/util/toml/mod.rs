@@ -81,7 +81,7 @@ pub fn read_manifest(
                 .borrow_mut()
                 .insert(package_root.to_owned(), ws_root_config.clone());
         }
-        let resolved_toml = resolve_toml(
+        let normalized_toml = normalize_toml(
             &original_toml,
             &features,
             &workspace_config,
@@ -91,12 +91,12 @@ pub fn read_manifest(
             &mut errors,
         )?;
 
-        if resolved_toml.package().is_some() {
+        if normalized_toml.package().is_some() {
             to_real_manifest(
                 contents,
                 document,
                 original_toml,
-                resolved_toml,
+                normalized_toml,
                 features,
                 workspace_config,
                 source_id,
@@ -106,12 +106,12 @@ pub fn read_manifest(
                 &mut errors,
             )
             .map(EitherManifest::Real)
-        } else if resolved_toml.workspace.is_some() {
+        } else if normalized_toml.workspace.is_some() {
             to_virtual_manifest(
                 contents,
                 document,
                 original_toml,
-                resolved_toml,
+                normalized_toml,
                 features,
                 workspace_config,
                 source_id,
@@ -240,30 +240,30 @@ fn to_workspace_config(
 }
 
 fn to_workspace_root_config(
-    resolved_toml: &manifest::TomlWorkspace,
+    normalized_toml: &manifest::TomlWorkspace,
     manifest_file: &Path,
 ) -> WorkspaceRootConfig {
     let package_root = manifest_file.parent().unwrap();
     let inheritable = InheritableFields {
-        package: resolved_toml.package.clone(),
-        dependencies: resolved_toml.dependencies.clone(),
-        lints: resolved_toml.lints.clone(),
+        package: normalized_toml.package.clone(),
+        dependencies: normalized_toml.dependencies.clone(),
+        lints: normalized_toml.lints.clone(),
         _ws_root: package_root.to_owned(),
     };
     let ws_root_config = WorkspaceRootConfig::new(
         package_root,
-        &resolved_toml.members,
-        &resolved_toml.default_members,
-        &resolved_toml.exclude,
+        &normalized_toml.members,
+        &normalized_toml.default_members,
+        &normalized_toml.exclude,
         &Some(inheritable),
-        &resolved_toml.metadata,
+        &normalized_toml.metadata,
     );
     ws_root_config
 }
 
-/// See [`Manifest::resolved_toml`] for more details
+/// See [`Manifest::normalized_toml`] for more details
 #[tracing::instrument(skip_all)]
-fn resolve_toml(
+fn normalize_toml(
     original_toml: &manifest::TomlManifest,
     features: &Features,
     workspace_config: &WorkspaceConfig,
@@ -278,7 +278,7 @@ fn resolve_toml(
         }
     }
 
-    let mut resolved_toml = manifest::TomlManifest {
+    let mut normalized_toml = manifest::TomlManifest {
         cargo_features: original_toml.cargo_features.clone(),
         package: None,
         project: None,
@@ -314,26 +314,26 @@ fn resolve_toml(
     if let Some(original_package) = original_toml.package() {
         let package_name = &original_package.name;
 
-        let resolved_package =
-            resolve_package_toml(original_package, features, package_root, &inherit)?;
-        let edition = resolved_package
-            .resolved_edition()
-            .expect("previously resolved")
+        let normalized_package =
+            normalize_package_toml(original_package, features, package_root, &inherit)?;
+        let edition = normalized_package
+            .normalized_edition()
+            .expect("previously normalized")
             .map_or(Edition::default(), |e| {
                 Edition::from_str(&e).unwrap_or_default()
             });
-        resolved_toml.package = Some(resolved_package);
+        normalized_toml.package = Some(normalized_package);
 
-        resolved_toml.features = resolve_features(original_toml.features.as_ref())?;
+        normalized_toml.features = normalize_features(original_toml.features.as_ref())?;
 
-        resolved_toml.lib = targets::resolve_lib(
+        normalized_toml.lib = targets::normalize_lib(
             original_toml.lib.as_ref(),
             package_root,
             &original_package.name,
             edition,
             warnings,
         )?;
-        resolved_toml.bin = Some(targets::resolve_bins(
+        normalized_toml.bin = Some(targets::normalize_bins(
             original_toml.bin.as_ref(),
             package_root,
             &original_package.name,
@@ -341,9 +341,9 @@ fn resolve_toml(
             original_package.autobins,
             warnings,
             errors,
-            resolved_toml.lib.is_some(),
+            normalized_toml.lib.is_some(),
         )?);
-        resolved_toml.example = Some(targets::resolve_examples(
+        normalized_toml.example = Some(targets::normalize_examples(
             original_toml.example.as_ref(),
             package_root,
             edition,
@@ -351,7 +351,7 @@ fn resolve_toml(
             warnings,
             errors,
         )?);
-        resolved_toml.test = Some(targets::resolve_tests(
+        normalized_toml.test = Some(targets::normalize_tests(
             original_toml.test.as_ref(),
             package_root,
             edition,
@@ -359,7 +359,7 @@ fn resolve_toml(
             warnings,
             errors,
         )?);
-        resolved_toml.bench = Some(targets::resolve_benches(
+        normalized_toml.bench = Some(targets::normalize_benches(
             original_toml.bench.as_ref(),
             package_root,
             edition,
@@ -368,7 +368,7 @@ fn resolve_toml(
             errors,
         )?);
 
-        let activated_opt_deps = resolved_toml
+        let activated_opt_deps = normalized_toml
             .features
             .as_ref()
             .map(|map| {
@@ -382,7 +382,7 @@ fn resolve_toml(
             })
             .unwrap_or_default();
 
-        resolved_toml.dependencies = resolve_dependencies(
+        normalized_toml.dependencies = normalize_dependencies(
             gctx,
             edition,
             &features,
@@ -402,7 +402,7 @@ fn resolve_toml(
             edition,
             warnings,
         )?;
-        resolved_toml.dev_dependencies = resolve_dependencies(
+        normalized_toml.dev_dependencies = normalize_dependencies(
             gctx,
             edition,
             &features,
@@ -422,7 +422,7 @@ fn resolve_toml(
             edition,
             warnings,
         )?;
-        resolved_toml.build_dependencies = resolve_dependencies(
+        normalized_toml.build_dependencies = normalize_dependencies(
             gctx,
             edition,
             &features,
@@ -433,9 +433,9 @@ fn resolve_toml(
             package_root,
             warnings,
         )?;
-        let mut resolved_target = BTreeMap::new();
+        let mut normalized_target = BTreeMap::new();
         for (name, platform) in original_toml.target.iter().flatten() {
-            let resolved_dependencies = resolve_dependencies(
+            let normalized_dependencies = normalize_dependencies(
                 gctx,
                 edition,
                 &features,
@@ -455,7 +455,7 @@ fn resolve_toml(
                 edition,
                 warnings,
             )?;
-            let resolved_dev_dependencies = resolve_dependencies(
+            let normalized_dev_dependencies = normalize_dependencies(
                 gctx,
                 edition,
                 &features,
@@ -475,7 +475,7 @@ fn resolve_toml(
                 edition,
                 warnings,
             )?;
-            let resolved_build_dependencies = resolve_dependencies(
+            let normalized_build_dependencies = normalize_dependencies(
                 gctx,
                 edition,
                 &features,
@@ -486,47 +486,47 @@ fn resolve_toml(
                 package_root,
                 warnings,
             )?;
-            resolved_target.insert(
+            normalized_target.insert(
                 name.clone(),
                 manifest::TomlPlatform {
-                    dependencies: resolved_dependencies,
-                    build_dependencies: resolved_build_dependencies,
+                    dependencies: normalized_dependencies,
+                    build_dependencies: normalized_build_dependencies,
                     build_dependencies2: None,
-                    dev_dependencies: resolved_dev_dependencies,
+                    dev_dependencies: normalized_dev_dependencies,
                     dev_dependencies2: None,
                 },
             );
         }
-        resolved_toml.target = (!resolved_target.is_empty()).then_some(resolved_target);
+        normalized_toml.target = (!normalized_target.is_empty()).then_some(normalized_target);
 
-        let resolved_lints = original_toml
+        let normalized_lints = original_toml
             .lints
             .clone()
             .map(|value| lints_inherit_with(value, || inherit()?.lints()))
             .transpose()?;
-        resolved_toml.lints = resolved_lints.map(|lints| manifest::InheritableLints {
+        normalized_toml.lints = normalized_lints.map(|lints| manifest::InheritableLints {
             workspace: false,
             lints,
         });
 
-        resolved_toml.badges = original_toml.badges.clone();
+        normalized_toml.badges = original_toml.badges.clone();
     } else {
         for field in original_toml.requires_package() {
             bail!("this virtual manifest specifies a `{field}` section, which is not allowed");
         }
     }
 
-    Ok(resolved_toml)
+    Ok(normalized_toml)
 }
 
 #[tracing::instrument(skip_all)]
-fn resolve_package_toml<'a>(
+fn normalize_package_toml<'a>(
     original_package: &manifest::TomlPackage,
     features: &Features,
     package_root: &Path,
     inherit: &dyn Fn() -> CargoResult<&'a InheritableFields>,
 ) -> CargoResult<Box<manifest::TomlPackage>> {
-    let resolved_package = manifest::TomlPackage {
+    let normalized_package = manifest::TomlPackage {
         edition: original_package
             .edition
             .clone()
@@ -552,7 +552,7 @@ fn resolve_package_toml<'a>(
             .map(|value| field_inherit_with(value, "authors", || inherit()?.authors()))
             .transpose()?
             .map(manifest::InheritableField::Value),
-        build: targets::resolve_build(original_package.build.as_ref(), package_root),
+        build: targets::normalize_build(original_package.build.as_ref(), package_root),
         metabuild: original_package.metabuild.clone(),
         default_target: original_package.default_target.clone(),
         forced_target: original_package.forced_target.clone(),
@@ -600,7 +600,7 @@ fn resolve_package_toml<'a>(
             .map(|value| field_inherit_with(value, "documentation", || inherit()?.documentation()))
             .transpose()?
             .map(manifest::InheritableField::Value),
-        readme: resolve_package_readme(
+        readme: normalize_package_readme(
             package_root,
             original_package
                 .readme
@@ -654,15 +654,15 @@ fn resolve_package_toml<'a>(
         _invalid_cargo_features: Default::default(),
     };
 
-    if resolved_package.resolver.as_deref() == Some("3") {
+    if normalized_package.resolver.as_deref() == Some("3") {
         features.require(Feature::edition2024())?;
     }
 
-    Ok(Box::new(resolved_package))
+    Ok(Box::new(normalized_package))
 }
 
 /// Returns the name of the README file for a [`manifest::TomlPackage`].
-fn resolve_package_readme(
+fn normalize_package_readme(
     package_root: &Path,
     readme: Option<&manifest::StringOrBool>,
 ) -> Option<String> {
@@ -691,18 +691,18 @@ fn default_readme_from_package_root(package_root: &Path) -> Option<String> {
 }
 
 #[tracing::instrument(skip_all)]
-fn resolve_features(
+fn normalize_features(
     original_features: Option<&BTreeMap<manifest::FeatureName, Vec<String>>>,
 ) -> CargoResult<Option<BTreeMap<manifest::FeatureName, Vec<String>>>> {
-    let Some(resolved_features) = original_features.cloned() else {
+    let Some(normalized_features) = original_features.cloned() else {
         return Ok(None);
     };
 
-    Ok(Some(resolved_features))
+    Ok(Some(normalized_features))
 }
 
 #[tracing::instrument(skip_all)]
-fn resolve_dependencies<'a>(
+fn normalize_dependencies<'a>(
     gctx: &GlobalContext,
     edition: Edition,
     features: &Features,
@@ -788,7 +788,7 @@ fn resolve_dependencies<'a>(
 
 fn load_inheritable_fields(
     gctx: &GlobalContext,
-    resolved_path: &Path,
+    normalized_path: &Path,
     workspace_config: &WorkspaceConfig,
 ) -> CargoResult<InheritableFields> {
     match workspace_config {
@@ -796,7 +796,7 @@ fn load_inheritable_fields(
         WorkspaceConfig::Member {
             root: Some(ref path_to_root),
         } => {
-            let path = resolved_path
+            let path = normalized_path
                 .parent()
                 .unwrap()
                 .join(path_to_root)
@@ -805,7 +805,7 @@ fn load_inheritable_fields(
             inheritable_from_path(gctx, root_path)
         }
         WorkspaceConfig::Member { root: None } => {
-            match find_workspace_root(&resolved_path, gctx)? {
+            match find_workspace_root(&normalized_path, gctx)? {
                 Some(path_to_root) => inheritable_from_path(gctx, path_to_root),
                 None => Err(anyhow!("failed to find a workspace root")),
             }
@@ -931,7 +931,7 @@ impl InheritableFields {
 
     /// Gets the field `workspace.package.readme`.
     fn readme(&self, package_root: &Path) -> CargoResult<manifest::StringOrBool> {
-        let Some(readme) = resolve_package_readme(
+        let Some(readme) = normalize_package_readme(
             self._ws_root.as_path(),
             self.package.as_ref().and_then(|p| p.readme.as_ref()),
         ) else {
@@ -1090,7 +1090,7 @@ fn to_real_manifest(
     contents: String,
     document: toml_edit::ImDocument<String>,
     original_toml: manifest::TomlManifest,
-    resolved_toml: manifest::TomlManifest,
+    normalized_toml: manifest::TomlManifest,
     features: Features,
     workspace_config: WorkspaceConfig,
     source_id: SourceId,
@@ -1117,17 +1117,17 @@ fn to_real_manifest(
         features.require(Feature::open_namespaces())?;
     }
 
-    let resolved_package = resolved_toml
+    let normalized_package = normalized_toml
         .package()
         .expect("previously verified to have a `[package]`");
-    let rust_version = resolved_package
-        .resolved_rust_version()
-        .expect("previously resolved")
+    let rust_version = normalized_package
+        .normalized_rust_version()
+        .expect("previously normalized")
         .cloned();
 
-    let edition = if let Some(edition) = resolved_package
-        .resolved_edition()
-        .expect("previously resolved")
+    let edition = if let Some(edition) = normalized_package
+        .normalized_edition()
+        .expect("previously normalized")
     {
         let edition: Edition = edition
             .parse()
@@ -1210,13 +1210,13 @@ fn to_real_manifest(
         }
     }
 
-    if resolved_package.metabuild.is_some() {
+    if normalized_package.metabuild.is_some() {
         features.require(Feature::metabuild())?;
     }
 
     let resolve_behavior = match (
-        resolved_package.resolver.as_ref(),
-        resolved_toml
+        normalized_package.resolver.as_ref(),
+        normalized_toml
             .workspace
             .as_ref()
             .and_then(|ws| ws.resolver.as_ref()),
@@ -1234,10 +1234,10 @@ fn to_real_manifest(
     let targets = to_targets(
         &features,
         &original_toml,
-        &resolved_toml,
+        &normalized_toml,
         package_root,
         edition,
-        &resolved_package.metabuild,
+        &normalized_package.metabuild,
         warnings,
     )?;
 
@@ -1265,7 +1265,7 @@ fn to_real_manifest(
             })
     }
 
-    if let Some(links) = &resolved_package.links {
+    if let Some(links) = &normalized_package.links {
         if !targets.iter().any(|t| t.is_custom_build()) {
             bail!("package specifies that it links to `{links}` but does not have a custom build script")
         }
@@ -1318,18 +1318,22 @@ fn to_real_manifest(
         platform: None,
         root: package_root,
     };
-    gather_dependencies(&mut manifest_ctx, resolved_toml.dependencies.as_ref(), None)?;
     gather_dependencies(
         &mut manifest_ctx,
-        resolved_toml.dev_dependencies(),
+        normalized_toml.dependencies.as_ref(),
+        None,
+    )?;
+    gather_dependencies(
+        &mut manifest_ctx,
+        normalized_toml.dev_dependencies(),
         Some(DepKind::Development),
     )?;
     gather_dependencies(
         &mut manifest_ctx,
-        resolved_toml.build_dependencies(),
+        normalized_toml.build_dependencies(),
         Some(DepKind::Build),
     )?;
-    for (name, platform) in resolved_toml.target.iter().flatten() {
+    for (name, platform) in normalized_toml.target.iter().flatten() {
         manifest_ctx.platform = Some(name.parse()?);
         gather_dependencies(&mut manifest_ctx, platform.dependencies.as_ref(), None)?;
         gather_dependencies(
@@ -1343,8 +1347,8 @@ fn to_real_manifest(
             Some(DepKind::Development),
         )?;
     }
-    let replace = replace(&resolved_toml, &mut manifest_ctx)?;
-    let patch = patch(&resolved_toml, &mut manifest_ctx)?;
+    let replace = replace(&normalized_toml, &mut manifest_ctx)?;
+    let patch = patch(&normalized_toml, &mut manifest_ctx)?;
 
     {
         let mut names_sources = BTreeMap::new();
@@ -1363,78 +1367,80 @@ fn to_real_manifest(
     }
 
     verify_lints(
-        resolved_toml.resolved_lints().expect("previously resolved"),
+        normalized_toml
+            .normalized_lints()
+            .expect("previously normalized"),
         gctx,
         warnings,
     )?;
     let default = manifest::TomlLints::default();
     let rustflags = lints_to_rustflags(
-        resolved_toml
-            .resolved_lints()
-            .expect("previously resolved")
+        normalized_toml
+            .normalized_lints()
+            .expect("previously normalized")
             .unwrap_or(&default),
     );
 
     let metadata = ManifestMetadata {
-        description: resolved_package
-            .resolved_description()
-            .expect("previously resolved")
+        description: normalized_package
+            .normalized_description()
+            .expect("previously normalized")
             .cloned(),
-        homepage: resolved_package
-            .resolved_homepage()
-            .expect("previously resolved")
+        homepage: normalized_package
+            .normalized_homepage()
+            .expect("previously normalized")
             .cloned(),
-        documentation: resolved_package
-            .resolved_documentation()
-            .expect("previously resolved")
+        documentation: normalized_package
+            .normalized_documentation()
+            .expect("previously normalized")
             .cloned(),
-        readme: resolved_package
-            .resolved_readme()
-            .expect("previously resolved")
+        readme: normalized_package
+            .normalized_readme()
+            .expect("previously normalized")
             .cloned(),
-        authors: resolved_package
-            .resolved_authors()
-            .expect("previously resolved")
+        authors: normalized_package
+            .normalized_authors()
+            .expect("previously normalized")
             .cloned()
             .unwrap_or_default(),
-        license: resolved_package
-            .resolved_license()
-            .expect("previously resolved")
+        license: normalized_package
+            .normalized_license()
+            .expect("previously normalized")
             .cloned(),
-        license_file: resolved_package
-            .resolved_license_file()
-            .expect("previously resolved")
+        license_file: normalized_package
+            .normalized_license_file()
+            .expect("previously normalized")
             .cloned(),
-        repository: resolved_package
-            .resolved_repository()
-            .expect("previously resolved")
+        repository: normalized_package
+            .normalized_repository()
+            .expect("previously normalized")
             .cloned(),
-        keywords: resolved_package
-            .resolved_keywords()
-            .expect("previously resolved")
+        keywords: normalized_package
+            .normalized_keywords()
+            .expect("previously normalized")
             .cloned()
             .unwrap_or_default(),
-        categories: resolved_package
-            .resolved_categories()
-            .expect("previously resolved")
+        categories: normalized_package
+            .normalized_categories()
+            .expect("previously normalized")
             .cloned()
             .unwrap_or_default(),
-        badges: resolved_toml.badges.clone().unwrap_or_default(),
-        links: resolved_package.links.clone(),
+        badges: normalized_toml.badges.clone().unwrap_or_default(),
+        links: normalized_package.links.clone(),
         rust_version: rust_version.clone(),
     };
 
-    if let Some(profiles) = &resolved_toml.profile {
+    if let Some(profiles) = &normalized_toml.profile {
         let cli_unstable = gctx.cli_unstable();
         validate_profiles(profiles, cli_unstable, &features, warnings)?;
     }
 
-    let version = resolved_package
-        .resolved_version()
-        .expect("previously resolved");
-    let publish = match resolved_package
-        .resolved_publish()
-        .expect("previously resolved")
+    let version = normalized_package
+        .normalized_version()
+        .expect("previously normalized");
+    let publish = match normalized_package
+        .normalized_publish()
+        .expect("previously normalized")
     {
         Some(manifest::VecStringOrBool::VecString(ref vecstring)) => Some(vecstring.clone()),
         Some(manifest::VecStringOrBool::Bool(false)) => Some(vec![]),
@@ -1447,7 +1453,7 @@ fn to_real_manifest(
     }
 
     let pkgid = PackageId::new(
-        resolved_package.name.as_str().into(),
+        normalized_package.name.as_str().into(),
         version
             .cloned()
             .unwrap_or_else(|| semver::Version::new(0, 0, 0)),
@@ -1457,7 +1463,7 @@ fn to_real_manifest(
         let summary = Summary::new(
             pkgid,
             deps,
-            &resolved_toml
+            &normalized_toml
                 .features
                 .as_ref()
                 .unwrap_or(&Default::default())
@@ -1469,7 +1475,7 @@ fn to_real_manifest(
                     )
                 })
                 .collect(),
-            resolved_package.links.as_deref(),
+            normalized_package.links.as_deref(),
             rust_version.clone(),
         );
         // editon2024 stops exposing implicit features, which will strip weak optional dependencies from `dependencies`,
@@ -1497,7 +1503,7 @@ fn to_real_manifest(
         )
     }
 
-    if let Some(run) = &resolved_package.default_run {
+    if let Some(run) = &normalized_package.default_run {
         if !targets
             .iter()
             .filter(|t| t.is_bin())
@@ -1509,38 +1515,38 @@ fn to_real_manifest(
         }
     }
 
-    let default_kind = resolved_package
+    let default_kind = normalized_package
         .default_target
         .as_ref()
         .map(|t| CompileTarget::new(&*t))
         .transpose()?
         .map(CompileKind::Target);
-    let forced_kind = resolved_package
+    let forced_kind = normalized_package
         .forced_target
         .as_ref()
         .map(|t| CompileTarget::new(&*t))
         .transpose()?
         .map(CompileKind::Target);
-    let include = resolved_package
-        .resolved_include()
-        .expect("previously resolved")
+    let include = normalized_package
+        .normalized_include()
+        .expect("previously normalized")
         .cloned()
         .unwrap_or_default();
-    let exclude = resolved_package
-        .resolved_exclude()
-        .expect("previously resolved")
+    let exclude = normalized_package
+        .normalized_exclude()
+        .expect("previously normalized")
         .cloned()
         .unwrap_or_default();
-    let links = resolved_package.links.clone();
-    let custom_metadata = resolved_package.metadata.clone();
-    let im_a_teapot = resolved_package.im_a_teapot;
-    let default_run = resolved_package.default_run.clone();
-    let metabuild = resolved_package.metabuild.clone().map(|sov| sov.0);
+    let links = normalized_package.links.clone();
+    let custom_metadata = normalized_package.metadata.clone();
+    let im_a_teapot = normalized_package.im_a_teapot;
+    let default_run = normalized_package.default_run.clone();
+    let metabuild = normalized_package.metabuild.clone().map(|sov| sov.0);
     let manifest = Manifest::new(
         Rc::new(contents),
         Rc::new(document),
         Rc::new(original_toml),
-        Rc::new(resolved_toml),
+        Rc::new(normalized_toml),
         summary,
         default_kind,
         forced_kind,
@@ -1565,13 +1571,13 @@ fn to_real_manifest(
         embedded,
     );
     if manifest
-        .resolved_toml()
+        .normalized_toml()
         .package()
         .unwrap()
         .license_file
         .is_some()
         && manifest
-            .resolved_toml()
+            .normalized_toml()
             .package()
             .unwrap()
             .license
@@ -1677,7 +1683,7 @@ fn to_virtual_manifest(
     contents: String,
     document: toml_edit::ImDocument<String>,
     original_toml: manifest::TomlManifest,
-    resolved_toml: manifest::TomlManifest,
+    normalized_toml: manifest::TomlManifest,
     features: Features,
     workspace_config: WorkspaceConfig,
     source_id: SourceId,
@@ -1719,7 +1725,7 @@ fn to_virtual_manifest(
         Rc::new(contents),
         Rc::new(document),
         Rc::new(original_toml),
-        Rc::new(resolved_toml),
+        Rc::new(normalized_toml),
         replace,
         patch,
         workspace_config,
@@ -1770,15 +1776,15 @@ struct ManifestContext<'a, 'b> {
 #[tracing::instrument(skip_all)]
 fn gather_dependencies(
     manifest_ctx: &mut ManifestContext<'_, '_>,
-    resolved_deps: Option<&BTreeMap<manifest::PackageName, manifest::InheritableDependency>>,
+    normalized_deps: Option<&BTreeMap<manifest::PackageName, manifest::InheritableDependency>>,
     kind: Option<DepKind>,
 ) -> CargoResult<()> {
-    let Some(dependencies) = resolved_deps else {
+    let Some(dependencies) = normalized_deps else {
         return Ok(());
     };
 
     for (n, v) in dependencies.iter() {
-        let resolved = v.resolved().expect("previously resolved");
+        let resolved = v.normalized().expect("previously normalized");
         let dep = dep_to_dependency(&resolved, n, manifest_ctx, kind)?;
         manifest_ctx.deps.push(dep);
     }
@@ -2559,9 +2565,13 @@ pub fn prepare_for_publish(
 ) -> CargoResult<Package> {
     let contents = me.manifest().contents();
     let document = me.manifest().document();
-    let original_toml =
-        prepare_toml_for_publish(me.manifest().resolved_toml(), ws, me.root(), packaged_files)?;
-    let resolved_toml = original_toml.clone();
+    let original_toml = prepare_toml_for_publish(
+        me.manifest().normalized_toml(),
+        ws,
+        me.root(),
+        packaged_files,
+    )?;
+    let normalized_toml = original_toml.clone();
     let features = me.manifest().unstable_features().clone();
     let workspace_config = me.manifest().workspace_config().clone();
     let source_id = me.package_id().source_id();
@@ -2572,7 +2582,7 @@ pub fn prepare_for_publish(
         contents.to_owned(),
         document.clone(),
         original_toml,
-        resolved_toml,
+        normalized_toml,
         features,
         workspace_config,
         source_id,
@@ -2911,11 +2921,11 @@ fn prepare_target_for_publish(
     context: &str,
     gctx: &GlobalContext,
 ) -> CargoResult<Option<manifest::TomlTarget>> {
-    let path = target.path.as_ref().expect("previously resolved");
+    let path = target.path.as_ref().expect("previously normalized");
     let path = normalize_path(&path.0);
     if let Some(packaged_files) = packaged_files {
         if !packaged_files.contains(&path) {
-            let name = target.name.as_ref().expect("previously resolved");
+            let name = target.name.as_ref().expect("previously normalized");
             gctx.shell().warn(format!(
                 "ignoring {context} `{name}` as `{}` is not included in the published package",
                 path.display()

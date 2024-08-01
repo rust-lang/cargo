@@ -443,7 +443,7 @@ fn add_feature_for_unused_deps(
     let manifest = pkg.manifest();
 
     let activated_opt_deps = manifest
-        .resolved_toml()
+        .normalized_toml()
         .features()
         .map(|map| {
             map.values()
@@ -479,7 +479,7 @@ fn add_feature_for_unused_deps(
                 // only way to guarantee an optional dependency is available for use.
                 //
                 // The way we avoid implicitly creating features in Edition2024 is we remove the
-                // dependency from `resolved_toml` if there is no `dep:` syntax as that is the only
+                // dependency from `normalized_toml` if there is no `dep:` syntax as that is the only
                 // syntax that suppresses the creation of the implicit feature.
                 for (feature_name, activations) in features.iter_mut() {
                     let Some(activations) = activations.as_array_mut() else {

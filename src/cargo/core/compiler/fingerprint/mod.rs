@@ -1426,7 +1426,7 @@ fn calculate_normal(
     // HACK(#13975): duplicating the lookup logic here until `--check-cfg` is supported
     // on Cargo's MSRV and we can centralize the logic in `lints_to_rustflags`
     let mut lint_check_cfg = Vec::new();
-    if let Ok(Some(lints)) = unit.pkg.manifest().resolved_toml().resolved_lints() {
+    if let Ok(Some(lints)) = unit.pkg.manifest().normalized_toml().normalized_lints() {
         if let Some(rust_lints) = lints.get("rust") {
             if let Some(unexpected_cfgs) = rust_lints.get("unexpected_cfgs") {
                 if let Some(config) = unexpected_cfgs.config() {
