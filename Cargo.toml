@@ -108,7 +108,7 @@ unicode-xid = "0.2.4"
 url = "2.5.2"
 varisat = "0.2.2"
 walkdir = "2.5.0"
-windows-sys = "0.52"
+windows-sys = "0.59"
 
 [workspace.lints.rust]
 rust_2018_idioms = "warn" # TODO: could this be removed?
