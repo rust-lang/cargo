@@ -169,12 +169,11 @@ fn duplicate_version() {
 
     p.cargo("publish")
         .replace_crates_io(registry_dupl.index_url())
-        .with_stderr(
-            "\
+        .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
-error: crate foo already has version 0.0.1. Aborting publish.
-",
-        )
+[ERROR] crate foo already has version 0.0.1. Aborting publish.
+
+"#]])
         .with_status(101)
         .run();
 }

@@ -36,7 +36,7 @@ pub fn modify_owners(gctx: &GlobalContext, opts: &OwnersOptions) -> CargoResult<
 
     let operation = Operation::Owners { name: &name };
     let source_ids = super::get_source_id(gctx, opts.reg_or_index.as_ref())?;
-    let mut registry = super::registry(
+    let (mut registry, _) = super::registry(
         gctx,
         &source_ids,
         opts.token.as_ref().map(Secret::as_deref),

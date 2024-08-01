@@ -28,6 +28,7 @@ use crate::ops;
 use crate::ops::PackageOpts;
 use crate::ops::Packages;
 use crate::sources::source::QueryKind;
+use crate::sources::source::Source;
 use crate::sources::SourceConfigMap;
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::auth;
@@ -129,7 +130,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         val => val,
     };
     let source_ids = super::get_source_id(opts.gctx, reg_or_index.as_ref())?;
-    let mut registry = super::registry(
+    let (mut registry, mut source) = super::registry(
         opts.gctx,
         &source_ids,
         opts.token.as_ref().map(Secret::as_deref),
@@ -141,9 +142,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
 
     // Bail before packaging and uploading if same version already exists in the registry
 
-    let mut source = SourceConfigMap::empty(opts.gctx)?.load(reg_ids.original, &HashSet::new())?;
-
-    let query = Dependency::parse(pkg.name(), Some(&ver), reg_ids.original)?;
+    let query = Dependency::parse(pkg.name(), Some(&ver), source_ids.replacement)?;
 
     let _lock = opts
         .gctx
