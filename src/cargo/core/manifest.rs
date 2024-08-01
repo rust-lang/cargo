@@ -64,7 +64,7 @@ pub struct Manifest {
     contents: Rc<String>,
     document: Rc<toml_edit::ImDocument<String>>,
     original_toml: Rc<TomlManifest>,
-    resolved_toml: Rc<TomlManifest>,
+    normalized_toml: Rc<TomlManifest>,
     summary: Summary,
 
     // this form of manifest:
@@ -110,7 +110,7 @@ pub struct VirtualManifest {
     contents: Rc<String>,
     document: Rc<toml_edit::ImDocument<String>>,
     original_toml: Rc<TomlManifest>,
-    resolved_toml: Rc<TomlManifest>,
+    normalized_toml: Rc<TomlManifest>,
 
     // this form of manifest:
     replace: Vec<(PackageIdSpec, Dependency)>,
@@ -422,7 +422,7 @@ impl Manifest {
         contents: Rc<String>,
         document: Rc<toml_edit::ImDocument<String>>,
         original_toml: Rc<TomlManifest>,
-        resolved_toml: Rc<TomlManifest>,
+        normalized_toml: Rc<TomlManifest>,
         summary: Summary,
 
         default_kind: Option<CompileKind>,
@@ -451,7 +451,7 @@ impl Manifest {
             contents,
             document,
             original_toml,
-            resolved_toml,
+            normalized_toml,
             summary,
 
             default_kind,
@@ -483,9 +483,9 @@ impl Manifest {
     pub fn contents(&self) -> &str {
         self.contents.as_str()
     }
-    /// See [`Manifest::resolved_toml`] for what "resolved" means
-    pub fn to_resolved_contents(&self) -> CargoResult<String> {
-        let toml = toml::to_string_pretty(self.resolved_toml())?;
+    /// See [`Manifest::normalized_toml`] for what "normalized" means
+    pub fn to_normalized_contents(&self) -> CargoResult<String> {
+        let toml = toml::to_string_pretty(self.normalized_toml())?;
         Ok(format!("{}\n{}", MANIFEST_PREAMBLE, toml))
     }
     /// Collection of spans for the original TOML
@@ -502,8 +502,8 @@ impl Manifest {
     /// useful for the operation of cargo, including
     /// - workspace inheritance
     /// - target discovery
-    pub fn resolved_toml(&self) -> &TomlManifest {
-        &self.resolved_toml
+    pub fn normalized_toml(&self) -> &TomlManifest {
+        &self.normalized_toml
     }
     pub fn summary(&self) -> &Summary {
         &self.summary
@@ -553,7 +553,7 @@ impl Manifest {
         &self.warnings
     }
     pub fn profiles(&self) -> Option<&TomlProfiles> {
-        self.resolved_toml.profile.as_ref()
+        self.normalized_toml.profile.as_ref()
     }
     pub fn publish(&self) -> &Option<Vec<String>> {
         &self.publish
@@ -664,7 +664,7 @@ impl VirtualManifest {
         contents: Rc<String>,
         document: Rc<toml_edit::ImDocument<String>>,
         original_toml: Rc<TomlManifest>,
-        resolved_toml: Rc<TomlManifest>,
+        normalized_toml: Rc<TomlManifest>,
         replace: Vec<(PackageIdSpec, Dependency)>,
         patch: HashMap<Url, Vec<Dependency>>,
         workspace: WorkspaceConfig,
@@ -675,7 +675,7 @@ impl VirtualManifest {
             contents,
             document,
             original_toml,
-            resolved_toml,
+            normalized_toml,
             replace,
             patch,
             workspace,
@@ -698,8 +698,8 @@ impl VirtualManifest {
         &self.original_toml
     }
     /// The [`TomlManifest`] with all fields expanded
-    pub fn resolved_toml(&self) -> &TomlManifest {
-        &self.resolved_toml
+    pub fn normalized_toml(&self) -> &TomlManifest {
+        &self.normalized_toml
     }
 
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] {
@@ -715,7 +715,7 @@ impl VirtualManifest {
     }
 
     pub fn profiles(&self) -> Option<&TomlProfiles> {
-        self.resolved_toml.profile.as_ref()
+        self.normalized_toml.profile.as_ref()
     }
 
     pub fn warnings_mut(&mut self) -> &mut Warnings {
