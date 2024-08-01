@@ -13,14 +13,13 @@ use crate::util::{
     print_available_packages, print_available_tests,
 };
 use crate::CargoResult;
-use anyhow::{bail, Context};
+use anyhow::bail;
 use cargo_util::paths;
 use cargo_util_schemas::manifest::ProfileName;
 use cargo_util_schemas::manifest::RegistryName;
 use cargo_util_schemas::manifest::StringOrVec;
 use clap::builder::UnknownArgumentValueParser;
 use std::ffi::{OsStr, OsString};
-use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -299,9 +298,8 @@ pub trait CommandExt: Sized {
 
     fn arg_lockfile_path(self) -> Self {
         self._arg(
-            opt("lockfile-path", "Path to the Cargo.lock file (unstable)")
+            opt("lockfile-path", "Path to Cargo.lock (unstable)")
                 .value_name("FILE")
-                // TODO: seemed to be the best option, but maybe should be something else?
                 .help_heading(heading::MANIFEST_OPTIONS),
         )
     }
@@ -1007,58 +1005,35 @@ pub fn lockfile_path(
     lockfile_path: Option<&Path>,
     gctx: &GlobalContext,
 ) -> CargoResult<Option<PathBuf>> {
-    let path;
+    let Some(lockfile_path) = lockfile_path else {
+        return Ok(None);
+    };
 
-    if let Some(lockfile_path) = lockfile_path {
-        if !gctx.cli_unstable().unstable_options {
-            bail!("`--lockfile-path` option requires `-Zunstable-options`")
-        }
+    gctx.cli_unstable()
+        .fail_if_stable_opt("--lockfile-path", 5707)?;
 
-        if lockfile_path.is_absolute() {
-            path = lockfile_path.to_path_buf();
-        } else {
-            path = gctx.cwd().join(lockfile_path);
-        }
+    let path = gctx.cwd().join(lockfile_path);
 
-        if !path.ends_with(LOCKFILE_NAME) && !crate::util::toml::is_embedded(&path) {
-            bail!(
-                "the lockfile-path must be a path to a {} file",
-                LOCKFILE_NAME
-            )
-        }
-        if path.is_dir() {
-            bail!(
-                "lockfile path `{}` is a directory but expected a file",
-                lockfile_path.display()
-            )
-        }
-        if !path.exists() {
-            // Root case should already be covered above
-            let parent_path = lockfile_path
-                .parent()
-                .unwrap_or_else(|| unreachable!("Lockfile path can't be root"));
+    if !path.ends_with(LOCKFILE_NAME) && !crate::util::toml::is_embedded(&path) {
+        bail!(
+            "the lockfile-path must be a path to a {} file",
+            LOCKFILE_NAME
+        )
+    }
+    if path.is_dir() {
+        bail!(
+            "lockfile path `{}` is a directory but expected a file",
+            lockfile_path.display()
+        )
+    }
+    if !path.exists() {
+        // Root case should already be covered above
+        let parent_path = lockfile_path.parent().expect("lockfile path can't be root");
 
-            let exists = parent_path.try_exists().with_context(|| {
-                format!(
-                    "Failed to fetch lock file's parent path metadata {}",
-                    parent_path.display()
-                )
-            })?;
-
-            if !exists {
-                fs::create_dir_all(parent_path).with_context(|| {
-                    format!(
-                        "Failed to create lockfile-path parent directory {}",
-                        parent_path.display()
-                    )
-                })?
-            }
-        }
-
-        return Ok(Some(path));
+        paths::create_dir_all(parent_path)?;
     }
 
-    Ok(None)
+    return Ok(Some(path));
 }
 
 #[track_caller]

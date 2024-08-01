@@ -181,15 +181,16 @@ fn assert_broken_symlink(
         "Cannot create a file when that file already exists. (os error 183)"
     };
 
-
     make_execs(&mut p.cargo(command), lockfile_path_argument.to_string())
         .with_status(101)
         .with_stderr_data(&format!(
-            r#"[ERROR] Failed to create lockfile-path parent directory somedir/link
+            r#"[ERROR] failed to create directory `somedir/link`
 
 Caused by:
   {}
-"#, err_msg))
+"#,
+            err_msg
+        ))
         .replace_crates_io(registry.index_url())
         .run();
 }
@@ -215,21 +216,21 @@ fn assert_loop_symlink(
     let registry = RegistryBuilder::new().http_api().http_index().build();
 
     let err_msg = if cfg!(windows) {
-        "The name of the file cannot be resolved by the system. (os error 1921)"
-    } else if cfg!(target_os = "macos") {
-        "Too many levels of symbolic links (os error 62)"
+        "Cannot create a file when that file already exists. (os error 183)"
     } else {
-        "Too many levels of symbolic links (os error 40)"
+        "File exists (os error 17)"
     };
 
     make_execs(&mut p.cargo(command), lockfile_path_argument.to_string())
         .with_status(101)
         .with_stderr_data(&format!(
-            r#"[ERROR] Failed to fetch lock file's parent path metadata somedir/link
+            r#"[ERROR] failed to create directory `somedir/link`
 
 Caused by:
   {}
-"#, err_msg))
+"#,
+            err_msg
+        ))
         .replace_crates_io(registry.index_url())
         .run();
 }
