@@ -456,7 +456,7 @@ pub fn check_im_a_teapot(
     }
 
     if manifest
-        .resolved_toml()
+        .normalized_toml()
         .package()
         .is_some_and(|p| p.im_a_teapot.is_some())
     {
@@ -560,7 +560,7 @@ pub fn check_implicit_features(
     }
 
     let activated_opt_deps = manifest
-        .resolved_toml()
+        .normalized_toml()
         .features()
         .map(|map| {
             map.values()

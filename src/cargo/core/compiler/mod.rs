@@ -1355,7 +1355,7 @@ fn check_cfg_args(unit: &Unit) -> CargoResult<Vec<OsString>> {
     ];
 
     // Also include the custom arguments specified in `[lints.rust.unexpected_cfgs.check_cfg]`
-    if let Ok(Some(lints)) = unit.pkg.manifest().resolved_toml().resolved_lints() {
+    if let Ok(Some(lints)) = unit.pkg.manifest().normalized_toml().normalized_lints() {
         if let Some(rust_lints) = lints.get("rust") {
             if let Some(unexpected_cfgs) = rust_lints.get("unexpected_cfgs") {
                 if let Some(config) = unexpected_cfgs.config() {

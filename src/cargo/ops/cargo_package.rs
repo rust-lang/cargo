@@ -924,7 +924,7 @@ fn tar(
             }
             FileContents::Generated(generated_kind) => {
                 let contents = match generated_kind {
-                    GeneratedFile::Manifest => publish_pkg.manifest().to_resolved_contents()?,
+                    GeneratedFile::Manifest => publish_pkg.manifest().to_normalized_contents()?,
                     GeneratedFile::Lockfile => build_lock(ws, &publish_pkg, local_reg)?,
                     GeneratedFile::VcsInfo(ref s) => serde_json::to_string_pretty(s)?,
                 };

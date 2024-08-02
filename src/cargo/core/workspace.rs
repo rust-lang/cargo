@@ -1066,7 +1066,7 @@ impl<'gctx> Workspace<'gctx> {
                     );
                     self.gctx.shell().warn(&msg)
                 };
-                if manifest.resolved_toml().has_profiles() {
+                if manifest.normalized_toml().has_profiles() {
                     emit_warning("profiles")?;
                 }
                 if !manifest.replace().is_empty() {
@@ -1191,7 +1191,7 @@ impl<'gctx> Workspace<'gctx> {
         let mut error_count = 0;
         let toml_lints = pkg
             .manifest()
-            .resolved_toml()
+            .normalized_toml()
             .lints
             .clone()
             .map(|lints| lints.lints)

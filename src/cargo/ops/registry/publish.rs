@@ -411,7 +411,7 @@ pub(crate) fn prepare_transmit(
         }
     }
 
-    let string_features = match manifest.resolved_toml().features() {
+    let string_features = match manifest.normalized_toml().features() {
         Some(features) => features
             .iter()
             .map(|(feat, values)| {

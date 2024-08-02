@@ -880,14 +880,14 @@ fn read_packages(
 
 fn nested_paths(manifest: &Manifest) -> Vec<PathBuf> {
     let mut nested_paths = Vec::new();
-    let resolved = manifest.resolved_toml();
-    let dependencies = resolved
+    let normalized = manifest.normalized_toml();
+    let dependencies = normalized
         .dependencies
         .iter()
-        .chain(resolved.build_dependencies())
-        .chain(resolved.dev_dependencies())
+        .chain(normalized.build_dependencies())
+        .chain(normalized.dev_dependencies())
         .chain(
-            resolved
+            normalized
                 .target
                 .as_ref()
                 .into_iter()
