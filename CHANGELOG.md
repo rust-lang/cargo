@@ -46,7 +46,7 @@
 
 - ❗️ cargo-package: Disallow `package.license-file` and `package.readme` pointing
   to non-existent files during packaging.
-- ❗️ cargo-package: generated `.cargo_vcs_info.json` is always incluced,
+- ❗️ cargo-package: generated `.cargo_vcs_info.json` is always included,
   even when `--allow-dirty` is passed.
   [#13960](https://github.com/rust-lang/cargo/pull/13960)
 - ❗️ Disallow passing `--release`/`--debug` flag along with the `--profile` flag.
