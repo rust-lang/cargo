@@ -52,12 +52,13 @@ how the feature works:
   ```
 
 Each new feature described below should explain how to use it.
-For the latest nightly, see the [nightly version] of this page.
+
+*For the latest nightly, see the [nightly version] of this page.*
 
 [config file]: config.md
 [nightly channel]: ../../book/appendix-07-nightly-rust.html
 [stabilized]: https://doc.crates.io/contrib/process/unstable.html#stabilization
-[nightly version]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#script
+[nightly version]: https://doc.rust-lang.org/nightly/cargo/reference/unstable.html
 
 ## List of unstable features
 
