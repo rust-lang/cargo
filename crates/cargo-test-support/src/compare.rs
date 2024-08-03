@@ -328,7 +328,6 @@ static E2E_LITERAL_REDACTIONS: &[(&str, &str)] = &[
     ("[BLOCKING]", "    Blocking"),
     ("[GENERATED]", "   Generated"),
     ("[OPENING]", "     Opening"),
-    ("[ABORTING]", "    Aborting"),
 ];
 
 /// Normalizes the output so that it can be compared against the expected value.

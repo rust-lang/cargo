@@ -526,9 +526,7 @@ impl<'gctx> InstallablePackage<'gctx> {
         }
 
         if dry_run {
-            self.gctx
-                .shell()
-                .status("Aborting", format!("install of package `{}`", self.pkg))?;
+            self.gctx.shell().warn("aborting install due to dry run")?;
             Ok(true)
         } else if duplicates.is_empty() {
             self.gctx.shell().status(

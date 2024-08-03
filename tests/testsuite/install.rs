@@ -2747,7 +2747,7 @@ fn dry_run() {
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
 [INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[ABORTING] install of package `foo v0.0.1`
+[WARNING] aborting install due to dry run
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -2796,7 +2796,7 @@ fn dry_run_upgrade() {
 [DOWNLOADED] foo v0.0.2 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.2
 [REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
-[ABORTING] install of package `foo v0.0.2`
+[WARNING] aborting install due to dry run
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
@@ -2853,7 +2853,7 @@ fn dry_run_remove_orphan() {
 [INSTALLING] bar v2.0.0
 [REPLACING] [ROOT]/home/.cargo/bin/client[EXE]
 [REMOVING] executable `[ROOT]/home/.cargo/bin/server[EXE]` from previous version bar v1.0.0
-[ABORTING] install of package `bar v2.0.0`
+[WARNING] aborting install due to dry run
 [WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
 
 "#]])
