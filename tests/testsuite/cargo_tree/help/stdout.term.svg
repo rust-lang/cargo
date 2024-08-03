@@ -97,7 +97,7 @@
 </tspan>
     <tspan x="10px" y="712px"><tspan>      </tspan><tspan class="fg-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.toml</tspan>
 </tspan>
-    <tspan x="10px" y="730px"><tspan>      </tspan><tspan class="fg-cyan bold">--lockfile-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FILE&gt;</tspan><tspan>  Path to Cargo.lock (unstable)</tspan>
+    <tspan x="10px" y="730px"><tspan>      </tspan><tspan class="fg-cyan bold">--lockfile-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.lock (unstable)</tspan>
 </tspan>
     <tspan x="10px" y="748px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan><tspan>                Assert that `Cargo.lock` will remain unchanged</tspan>
 </tspan>

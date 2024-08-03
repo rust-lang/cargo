@@ -1,4 +1,6 @@
 use crate::command_prelude::*;
+use cargo::core::Workspace;
+use std::path::Path;
 
 use cargo::ops;
 
@@ -71,7 +73,14 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     // Unlike other commands default `cargo fix` to all targets to fix as much
     // code as we can.
     let root_manifest = args.root_manifest(gctx)?;
-    let ws = args.workspace(gctx)?;
+
+    // Can't use workspace() to avoid using -Zavoid-dev-deps (if passed)
+    let mut ws = Workspace::new(&root_manifest, gctx)?;
+    ws.set_resolve_honors_rust_version(args.honor_rust_version());
+    let lockfile_path =
+        lockfile_path(args.get_one::<String>("lockfile-path").map(Path::new), gctx)?;
+    ws.set_requested_lockfile_path(lockfile_path);
+
     let mut opts = args.compile_options(gctx, mode, Some(&ws), ProfileChecking::LegacyTestOnly)?;
 
     if !opts.filter.is_specific() {

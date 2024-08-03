@@ -63,7 +63,7 @@
 </tspan>
     <tspan x="10px" y="406px"><tspan>      </tspan><tspan class="fg-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.toml</tspan>
 </tspan>
-    <tspan x="10px" y="424px"><tspan>      </tspan><tspan class="fg-cyan bold">--lockfile-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FILE&gt;</tspan><tspan>  Path to Cargo.lock (unstable)</tspan>
+    <tspan x="10px" y="424px"><tspan>      </tspan><tspan class="fg-cyan bold">--lockfile-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.lock (unstable)</tspan>
 </tspan>
     <tspan x="10px" y="442px"><tspan>      </tspan><tspan class="fg-cyan bold">--ignore-rust-version</tspan><tspan>   Ignore `rust-version` specification in packages (unstable)</tspan>
 </tspan>
