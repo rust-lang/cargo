@@ -105,7 +105,7 @@ pub struct Workspace<'gctx> {
     /// file. This is set for `cargo install` without `--locked`.
     ignore_lock: bool,
 
-    // Requested path of the lockfile (i.e. passed as the cli flag)
+    /// Requested path of the lockfile (i.e. passed as the cli flag)
     requested_lockfile_path: Option<PathBuf>,
 
     /// The resolver behavior specified with the `resolver` field.

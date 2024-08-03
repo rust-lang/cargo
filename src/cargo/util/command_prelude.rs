@@ -299,7 +299,7 @@ pub trait CommandExt: Sized {
     fn arg_lockfile_path(self) -> Self {
         self._arg(
             opt("lockfile-path", "Path to Cargo.lock (unstable)")
-                .value_name("FILE")
+                .value_name("PATH")
                 .help_heading(heading::MANIFEST_OPTIONS),
         )
     }
@@ -1015,10 +1015,7 @@ pub fn lockfile_path(
     let path = gctx.cwd().join(lockfile_path);
 
     if !path.ends_with(LOCKFILE_NAME) && !crate::util::toml::is_embedded(&path) {
-        bail!(
-            "the lockfile-path must be a path to a {} file",
-            LOCKFILE_NAME
-        )
+        bail!("the lockfile-path must be a path to a {LOCKFILE_NAME} file")
     }
     if path.is_dir() {
         bail!(
