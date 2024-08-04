@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::task::Poll;
 
+use super::RegistryOrIndex;
 use crate::core::compiler::{BuildConfig, CompileMode, DefaultExecutor, Executor};
 use crate::core::dependency::DepKind;
 use crate::core::manifest::Target;
@@ -13,6 +14,7 @@ use crate::core::resolver::CliFeatures;
 use crate::core::resolver::HasDevUnits;
 use crate::core::{Feature, PackageIdSpecQuery, Shell, Verbosity, Workspace};
 use crate::core::{Package, PackageId, PackageSet, Resolve, SourceId};
+use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::sources::registry::index::{IndexPackage, RegistryDependency};
 use crate::sources::{PathSource, SourceConfigMap, CRATES_IO_REGISTRY};
 use crate::util::cache_lock::CacheLockMode;
@@ -31,8 +33,6 @@ use serde::Serialize;
 use tar::{Archive, Builder, EntryType, Header, HeaderMode};
 use tracing::debug;
 use unicase::Ascii as UncasedAscii;
-
-use super::RegistryOrIndex;
 
 #[derive(Clone)]
 pub struct PackageOpts<'gctx> {
@@ -248,10 +248,10 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Vec<Fi
     }
     let pkgs = ws.members_with_features(specs, &opts.cli_features)?;
 
-    let default_lockfile = ws.root().join("Cargo.lock");
     if ws
-        .requested_lockfile_path()
-        .unwrap_or_else(|| &default_lockfile)
+        .lock_root()
+        .as_path_unlocked()
+        .join(LOCKFILE_NAME)
         .exists()
     {
         // Make sure the Cargo.lock is up-to-date and valid.

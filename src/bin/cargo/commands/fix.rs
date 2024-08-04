@@ -79,7 +79,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     ws.set_resolve_honors_rust_version(args.honor_rust_version());
     let lockfile_path =
         lockfile_path(args.get_one::<String>("lockfile-path").map(Path::new), gctx)?;
-    ws.set_requested_lockfile_path(lockfile_path);
+    ws.set_requested_lockfile_path(lockfile_path.clone());
 
     let mut opts = args.compile_options(gctx, mode, Some(&ws), ProfileChecking::LegacyTestOnly)?;
 
@@ -92,6 +92,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         gctx,
         &ws,
         &root_manifest,
+        lockfile_path,
         &mut ops::FixOptions {
             edition: args.flag("edition"),
             idioms: args.flag("edition-idioms"),
