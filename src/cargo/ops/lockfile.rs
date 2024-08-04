@@ -10,7 +10,7 @@ pub const LOCKFILE_NAME: &str = "Cargo.lock";
 
 #[tracing::instrument(skip_all)]
 pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
-    let lock_root = lock_root(ws);
+    let lock_root = ws.lock_root();
     if !lock_root.as_path_unlocked().join(LOCKFILE_NAME).exists() {
         return Ok(None);
     }
@@ -106,7 +106,7 @@ fn resolve_to_string_orig(
     resolve: &Resolve,
 ) -> (Option<String>, String, Filesystem) {
     // Load the original lock file if it exists.
-    let lock_root = lock_root(ws);
+    let lock_root = ws.lock_root();
     let orig = lock_root.open_ro_shared(LOCKFILE_NAME, ws.gctx(), "Cargo.lock file");
     let orig = orig.and_then(|mut f| {
         let mut s = String::new();
@@ -245,21 +245,5 @@ fn emit_package(dep: &toml::Table, out: &mut String) {
         out.push('\n');
     } else if dep.contains_key("replace") {
         out.push_str(&format!("replace = {}\n\n", &dep["replace"]));
-    }
-}
-
-fn lock_root(ws: &Workspace<'_>) -> Filesystem {
-    if let Some(requested) = ws.requested_lockfile_path() {
-        return Filesystem::new(
-            requested
-                .parent()
-                .unwrap_or_else(|| unreachable!("Lockfile path can't be root"))
-                .to_owned(),
-        );
-    }
-    if ws.root_maybe().is_embedded() {
-        ws.target_dir()
-    } else {
-        Filesystem::new(ws.root().to_owned())
     }
 }

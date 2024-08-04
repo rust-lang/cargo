@@ -103,6 +103,7 @@ pub fn fix(
     gctx: &GlobalContext,
     original_ws: &Workspace<'_>,
     root_manifest: &Path,
+    requested_lockfile_path: Option<PathBuf>,
     opts: &mut FixOptions,
 ) -> CargoResult<()> {
     check_version_control(gctx, opts)?;
@@ -121,8 +122,8 @@ pub fn fix(
     }
     let mut ws = Workspace::new(&root_manifest, gctx)?;
     ws.set_resolve_honors_rust_version(Some(original_ws.resolve_honors_rust_version()));
-    if let Some(p) = original_ws.requested_lockfile_path() {
-        ws.set_requested_lockfile_path(Some(p.clone()))
+    if let Some(p) = requested_lockfile_path {
+        ws.set_requested_lockfile_path(Some(p))
     }
 
     // Spin up our lock server, which our subprocesses will use to synchronize fixes.

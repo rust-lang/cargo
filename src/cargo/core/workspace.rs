@@ -637,8 +637,24 @@ impl<'gctx> Workspace<'gctx> {
         self
     }
 
-    pub fn requested_lockfile_path(&self) -> Option<&PathBuf> {
-        self.requested_lockfile_path.as_ref()
+    pub fn lock_root(&self) -> Filesystem {
+        if let Some(requested) = self.requested_lockfile_path.as_ref() {
+            return Filesystem::new(
+                requested
+                    .parent()
+                    .unwrap_or_else(|| unreachable!("Lockfile path can't be root"))
+                    .to_owned(),
+            );
+        }
+        return self.default_lock_root();
+    }
+
+    fn default_lock_root(&self) -> Filesystem {
+        if self.root_maybe().is_embedded() {
+            self.target_dir()
+        } else {
+            Filesystem::new(self.root().to_owned())
+        }
     }
 
     pub fn set_requested_lockfile_path(&mut self, path: Option<PathBuf>) {
