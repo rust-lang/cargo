@@ -114,6 +114,7 @@ fn basic() {
         // Importantly, this should not say [UPDATING]
         // There have been multiple bugs where every build triggers and update.
         .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
