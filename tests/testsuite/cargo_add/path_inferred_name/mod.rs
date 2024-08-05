@@ -27,7 +27,7 @@ fn case() {
 
     snapbox::cmd::Command::cargo_ui()
         .arg("add")
-        .arg_line("cargo-list-test-fixture-dependency --path ../dependency")
+        .arg_line("--path ../dependency")
         .current_dir(&cwd)
         .assert()
         .success()
