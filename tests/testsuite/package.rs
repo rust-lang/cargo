@@ -1273,13 +1273,28 @@ fn issue_14354_allowing_dirty_bare_commit() {
         )
         .file("src/lib.rs", "");
 
-    p.cargo("package --allow-dirty")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] revspec 'HEAD' not found; class=Reference (4); code=NotFound (-3)
+    p.cargo("package --allow-dirty").run();
 
-"#]])
-        .run();
+    let f = File::open(&p.root().join("target/package/foo-0.1.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.1.0.crate",
+        &[
+            ".cargo_vcs_info.json",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+        ],
+        &[(
+            ".cargo_vcs_info.json",
+            r#"{
+  "git": {
+    "dirty": true
+  },
+  "path_in_vcs": ""
+}"#,
+        )],
+    );
 }
 
 #[cargo_test]
