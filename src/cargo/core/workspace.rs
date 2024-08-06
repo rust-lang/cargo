@@ -244,25 +244,6 @@ impl<'gctx> Workspace<'gctx> {
         }
     }
 
-    pub fn new_virtual(
-        root_path: PathBuf,
-        current_manifest: PathBuf,
-        manifest: VirtualManifest,
-        gctx: &'gctx GlobalContext,
-    ) -> CargoResult<Workspace<'gctx>> {
-        let mut ws = Workspace::new_default(current_manifest, gctx);
-        ws.root_manifest = Some(root_path.join("Cargo.toml"));
-        ws.target_dir = gctx.target_dir()?;
-        ws.packages
-            .packages
-            .insert(root_path, MaybePackage::Virtual(manifest));
-        ws.find_members()?;
-        ws.set_resolve_behavior()?;
-        // TODO: validation does not work because it walks up the directory
-        // tree looking for the root which is a fake file that doesn't exist.
-        Ok(ws)
-    }
-
     /// Creates a "temporary workspace" from one package which only contains
     /// that package.
     ///

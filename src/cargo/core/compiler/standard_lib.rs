@@ -6,13 +6,12 @@ use crate::core::compiler::{CompileKind, CompileMode, RustcTargetData, Unit};
 use crate::core::profiles::{Profiles, UnitFor};
 use crate::core::resolver::features::{CliFeatures, FeaturesFor, ResolvedFeatures};
 use crate::core::resolver::HasDevUnits;
-use crate::core::{Dependency, PackageId, PackageSet, Resolve, SourceId, Workspace};
+use crate::core::{PackageId, PackageSet, Resolve, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::errors::CargoResult;
 use crate::GlobalContext;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use std::rc::Rc;
 
 use super::BuildConfig;
 
@@ -74,60 +73,11 @@ pub fn resolve_std<'gctx>(
     }
 
     let src_path = detect_sysroot_src_path(target_data)?;
-    let to_patch = [
-        "rustc-std-workspace-core",
-        "rustc-std-workspace-alloc",
-        "rustc-std-workspace-std",
-    ];
-    let patches = to_patch
-        .iter()
-        .map(|&name| {
-            let source_path = SourceId::for_path(&src_path.join("library").join(name))?;
-            let dep = Dependency::parse(name, None, source_path)?;
-            Ok(dep)
-        })
-        .collect::<CargoResult<Vec<_>>>()?;
-    let crates_io_url = crate::sources::CRATES_IO_INDEX.parse().unwrap();
-    let patch = HashMap::from([(crates_io_url, patches)]);
-    let members = vec![
-        String::from("library/std"),
-        String::from("library/core"),
-        String::from("library/alloc"),
-        String::from("library/sysroot"),
-    ];
-    let ws_config = crate::core::WorkspaceConfig::Root(crate::core::WorkspaceRootConfig::new(
-        &src_path,
-        &Some(members),
-        /*default_members*/ &None,
-        /*exclude*/ &None,
-        /*inheritable*/ &None,
-        /*custom_metadata*/ &None,
-    ));
-    let virtual_manifest = crate::core::VirtualManifest::new(
-        Rc::default(),
-        Rc::new(toml_edit::ImDocument::parse("".to_owned()).expect("empty is valid TOML")),
-        Rc::default(),
-        Rc::default(),
-        /*replace*/ Vec::new(),
-        patch,
-        ws_config,
-        crate::core::Features::default(),
-        None,
-    );
-
+    let std_ws_manifest_path = src_path.join("library").join("Cargo.toml");
     let gctx = ws.gctx();
-    // This is a delicate hack. In order for features to resolve correctly,
-    // the resolver needs to run a specific "current" member of the workspace.
-    // Thus, in order to set the features for `std`, we need to set `sysroot`
-    // to be the "current" member. `sysroot` is the root, and all other
-    // standard library crates are dependencies from there. Since none of the
-    // other crates need to alter their features, this should be fine, for
-    // now. Perhaps in the future features will be decoupled from the resolver
-    // and it will be easier to control feature selection.
-    let current_manifest = src_path.join("library/sysroot/Cargo.toml");
     // TODO: Consider doing something to enforce --locked? Or to prevent the
     // lock file from being written, such as setting ephemeral.
-    let mut std_ws = Workspace::new_virtual(src_path, current_manifest, virtual_manifest, gctx)?;
+    let mut std_ws = Workspace::new(&std_ws_manifest_path, gctx)?;
     // Don't require optional dependencies in this workspace, aka std's own
     // `[dev-dependencies]`. No need for us to generate a `Resolve` which has
     // those included because we'll never use them anyway.
