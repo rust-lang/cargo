@@ -776,6 +776,7 @@ pub struct TomlDetailedDependency<P: Clone = String> {
     // `path` is relative to the file it appears in. If that's a `Cargo.toml`, it'll be relative to
     // that TOML file, and if it's a `.cargo/config` file, it'll be relative to that file.
     pub path: Option<P>,
+    pub base: Option<PathBaseName>,
     pub git: Option<String>,
     pub branch: Option<String>,
     pub tag: Option<String>,
@@ -815,6 +816,7 @@ impl<P: Clone> Default for TomlDetailedDependency<P> {
             registry: Default::default(),
             registry_index: Default::default(),
             path: Default::default(),
+            base: Default::default(),
             git: Default::default(),
             branch: Default::default(),
             tag: Default::default(),
@@ -1409,6 +1411,16 @@ impl<T: AsRef<str>> FeatureName<T> {
     /// Validated feature name
     pub fn new(name: T) -> Result<Self, NameValidationError> {
         restricted_names::validate_feature_name(name.as_ref())?;
+        Ok(Self(name))
+    }
+}
+
+str_newtype!(PathBaseName);
+
+impl<T: AsRef<str>> PathBaseName<T> {
+    /// Validated path base name
+    pub fn new(name: T) -> Result<Self, NameValidationError> {
+        restricted_names::validate_path_base_name(name.as_ref())?;
         Ok(Self(name))
     }
 }
