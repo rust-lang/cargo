@@ -47,7 +47,7 @@ pub fn yank(
         }
     };
     let source_ids = super::get_source_id(gctx, reg_or_index.as_ref())?;
-    let mut registry = super::registry(
+    let (mut registry, _) = super::registry(
         gctx,
         &source_ids,
         token.as_ref().map(Secret::as_deref),

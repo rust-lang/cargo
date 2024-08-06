@@ -132,15 +132,19 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
 
 #[cargo_test]
 fn duplicate_version() {
+    let arc: Arc<Mutex<u32>> = Arc::new(Mutex::new(0));
     let registry_dupl = RegistryBuilder::new()
         .http_api()
         .http_index()
-        .add_responder("/api/v1/crates/new", move |_req, _server| Response {
-            code: 200,
-            headers: vec![],
-            body: br#"{"errors": [{"detail": "crate version `0.0.1` is already uploaded"}]}"#
-                .to_vec(),
-        })
+        //.add_responder("/index/3/f/foo", move |req, server| {
+        //  let mut lock = arc.lock().unwrap();
+        //*lock += 1;
+        //if *lock <= 1 {
+        //    server.not_found(req)
+        //} else {
+        //    server.index(req)
+        //}
+        //})
         .build();
 
     let p = project()
@@ -160,23 +164,16 @@ fn duplicate_version() {
 
     p.cargo("publish")
         .replace_crates_io(registry_dupl.index_url())
-        .with_stderr(
-            "\
-[UPDATING] crates.io index
-[WARNING] [..]
-See [..]
-[PACKAGING] foo v0.0.1 ([CWD])
-[VERIFYING] foo v0.0.1 ([CWD])
-[..]
-[..]
-[..]
-[UPLOADING] foo v0.0.1 ([CWD])
-error: failed to publish [..]
+        .without_status()
+        .run();
 
-Caused by:
-[..] is already uploaded
-",
-        )
+    p.cargo("publish")
+        .replace_crates_io(registry_dupl.index_url())
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[ERROR] foo@0.0.1 already exists on [..]
+
+"#]])
         .with_status(101)
         .run();
 }

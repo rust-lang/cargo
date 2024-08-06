@@ -64,6 +64,10 @@ available at <https://rust\-lang.org>\&.
 .br
 \ \ \ \ Execute unit and integration tests of a package.
 .SS "Manifest Commands"
+\fBcargo\-add\fR(1)
+.br
+\ \ \ \ Add dependencies to a \fBCargo.toml\fR manifest file.
+.sp
 \fBcargo\-generate\-lockfile\fR(1)
 .br
 \ \ \ \ Generate \fBCargo.lock\fR for a project.
@@ -79,6 +83,10 @@ available at <https://rust\-lang.org>\&.
 \fBcargo\-pkgid\fR(1)
 .br
 \ \ \ \ Print a fully qualified package specification.
+.sp
+\fBcargo\-remove\fR(1)
+.br
+\ \ \ \ Remove dependencies from a \fBCargo.toml\fR manifest file.
 .sp
 \fBcargo\-tree\fR(1)
 .br
@@ -209,17 +217,22 @@ May also be specified with the \fBterm.color\fR
 .RE
 .SS "Manifest Options"
 .sp
-\fB\-\-frozen\fR, 
 \fB\-\-locked\fR
 .RS 4
-Either of these flags requires that the \fBCargo.lock\fR file is
-up\-to\-date. If the lock file is missing, or it needs to be updated, Cargo will
-exit with an error. The \fB\-\-frozen\fR flag also prevents Cargo from
-attempting to access the network to determine if it is out\-of\-date.
+Asserts that the exact same dependencies and versions are used as when the
+existing \fBCargo.lock\fR file was originally generated. Cargo will exit with an
+error when either of the following scenarios arises:
 .sp
-These may be used in environments where you want to assert that the
-\fBCargo.lock\fR file is up\-to\-date (such as a CI build) or want to avoid network
-access.
+.RS 4
+\h'-04'\(bu\h'+02'The lock file is missing.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Cargo attempted to change the lock file due to a different dependency resolution.
+.RE
+.sp
+It may be used in environments where deterministic builds are desired,
+such as in CI pipelines.
 .RE
 .sp
 \fB\-\-offline\fR
@@ -236,6 +249,11 @@ See the \fBcargo\-fetch\fR(1) command to download dependencies before going
 offline.
 .sp
 May also be specified with the \fBnet.offline\fR \fIconfig value\fR <https://doc.rust\-lang.org/cargo/reference/config.html>\&.
+.RE
+.sp
+\fB\-\-frozen\fR
+.RS 4
+Equivalent to specifying both \fB\-\-locked\fR and \fB\-\-offline\fR\&.
 .RE
 .SS "Common Options"
 .sp

@@ -28,6 +28,7 @@ use crate::ops;
 use crate::ops::PackageOpts;
 use crate::ops::Packages;
 use crate::sources::source::QueryKind;
+use crate::sources::source::Source;
 use crate::sources::SourceConfigMap;
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::auth;
@@ -129,7 +130,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         val => val,
     };
     let source_ids = super::get_source_id(opts.gctx, reg_or_index.as_ref())?;
-    let mut registry = super::registry(
+    let (mut registry, mut source) = super::registry(
         opts.gctx,
         &source_ids,
         opts.token.as_ref().map(Secret::as_deref),
@@ -138,6 +139,34 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         Some(operation).filter(|_| !opts.dry_run),
     )?;
     verify_dependencies(pkg, &registry, source_ids.original)?;
+
+    // Bail before packaging and uploading if same version already exists in the registry
+
+    let query = Dependency::parse(pkg.name(), Some(&ver), source_ids.replacement)?;
+
+    let _lock = opts
+        .gctx
+        .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
+
+    let duplicate_query = loop {
+        match source.query_vec(&query, QueryKind::Exact) {
+            std::task::Poll::Ready(res) => {
+                break res?;
+            }
+            std::task::Poll::Pending => source.block_until_ready()?,
+        }
+    };
+
+    drop(_lock);
+
+    if !duplicate_query.is_empty() {
+        bail!(
+            "{}@{} already exists on {}",
+            pkg.name(),
+            pkg.version(),
+            source.describe()
+        );
+    }
 
     // Prepare a tarball, with a non-suppressible warning if metadata
     // is missing since this is being put online.
@@ -411,7 +440,7 @@ pub(crate) fn prepare_transmit(
         }
     }
 
-    let string_features = match manifest.resolved_toml().features() {
+    let string_features = match manifest.normalized_toml().features() {
         Some(features) => features
             .iter()
             .map(|(feat, values)| {

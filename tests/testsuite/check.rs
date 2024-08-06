@@ -819,7 +819,7 @@ fn short_message_format() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-src/lib.rs:1:27: error[E0308]: mismatched types
+src/lib.rs:1:27: error[E0308]: mismatched types[..]
 [ERROR] could not compile `foo` (lib) due to 1 previous error
 
 "#]])

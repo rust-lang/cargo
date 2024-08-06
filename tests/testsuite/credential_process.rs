@@ -536,6 +536,17 @@ fn token_caching() {
 You may press ctrl-c [..]
 [PUBLISHED] foo v0.1.0 at registry `alternative`
 "#;
+    let output_non_independent = r#"[UPDATING] `alternative` index
+{"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"read"}
+[PACKAGING] foo v0.1.1 ([ROOT]/foo)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+{"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"publish","name":"foo","vers":"0.1.1","cksum":"[..]"}
+[UPLOADING] foo v0.1.1 ([ROOT]/foo)
+[UPLOADED] foo v0.1.1 to registry `alternative`
+[NOTE] waiting [..]
+You may press ctrl-c [..]
+[PUBLISHED] foo v0.1.1 at registry `alternative`
+"#;
 
     // The output should contain two JSON messages from the provider in both cases:
     // The first because the credential is expired, the second because the provider
@@ -556,8 +567,21 @@ You may press ctrl-c [..]
         ),
     );
 
+    p.change_file(
+        "Cargo.toml",
+        r#"
+        [package]
+        name = "foo"
+        version = "0.1.1"
+        edition = "2015"
+        description = "foo"
+        license = "MIT"
+        homepage = "https://example.com/"
+    "#,
+    );
+
     p.cargo("publish --registry alternative --no-verify")
-        .with_stderr_data(output)
+        .with_stderr_data(output_non_independent)
         .run();
 }
 
