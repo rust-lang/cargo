@@ -101,6 +101,7 @@ Each new feature described below should explain how to use it.
     * [Edition 2024](#edition-2024) — Adds support for the 2024 Edition.
     * [Profile `trim-paths` option](#profile-trim-paths-option) --- Control the sanitization of file paths in build outputs.
     * [`[lints.cargo]`](#lintscargo) --- Allows configuring lints for Cargo.
+    * [path bases](#path-bases) --- Named base directories for path dependencies.
 * Information and metadata
     * [Build-plan](#build-plan) --- Emits JSON information on which commands will be run.
     * [unit-graph](#unit-graph) --- Emits JSON for Cargo's internal graph structure.
@@ -1569,6 +1570,60 @@ implicit-features = "warn"
 [lints]
 workspace = true
 ```
+
+## Path Bases
+
+* Tracking Issue: [#14355](https://github.com/rust-lang/cargo/issues/14355)
+
+A `path` dependency may optionally specify a base by setting the `base` key to
+the name of a path base from the `[path-bases]` table in either the
+[configuration](config.md) or one of the [built-in path bases](#built-in-path-bases).
+The value of that path base is prepended to the `path` value (along with a path
+separator if necessary) to produce the actual location where Cargo will look for
+the dependency.
+
+For example, if the `Cargo.toml` contains:
+
+```toml
+cargo-features = ["path-bases"]
+
+[dependencies]
+foo = { base = "dev", path = "foo" }
+```
+
+Given a `[path-bases]` table in the configuration that contains:
+
+```toml
+[path-bases]
+dev = "/home/user/dev/rust/libraries/"
+```
+
+This will produce a `path` dependency `foo` located at
+`/home/user/dev/rust/libraries/foo`.
+
+Path bases can be either absolute or relative. Relative path bases are relative
+to the parent directory of the configuration file that declared that path base.
+
+The name of a path base must use only [alphanumeric](https://doc.rust-lang.org/std/primitive.char.html#method.is_alphanumeric)
+characters or `-` or `_`, must start with an [alphabetic](https://doc.rust-lang.org/std/primitive.char.html#method.is_alphabetic)
+character, and must not be empty.
+
+If the name of path base used in a dependency is neither in the configuration
+nor one of the built-in path base, then Cargo will raise an error.
+
+#### Built-in path bases
+
+Cargo provides implicit path bases that can be used without the need to specify
+them in a `[path-bases]` table.
+
+* `workspace` - If a project is [a workspace or workspace member](workspaces.md)
+then this path base is defined as the parent directory of the root `Cargo.toml`
+of the workspace.
+
+If a built-in path base name is also declared in the configuration, then Cargo
+will prefer the value in the configuration. The allows Cargo to add new built-in
+path bases without compatibility issues (as existing uses will shadow the
+built-in name).
 
 # Stabilized and removed features
 

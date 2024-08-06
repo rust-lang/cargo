@@ -513,6 +513,9 @@ features! {
 
     /// Allow multiple packages to participate in the same API namespace
     (unstable, open_namespaces, "", "reference/unstable.html#open-namespaces"),
+
+    /// Allow paths that resolve relatively to a base specified in the config.
+    (unstable, path_bases, "", "reference/unstable.html#path-bases"),
 }
 
 /// Status and metadata for a single unstable feature.
