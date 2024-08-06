@@ -87,7 +87,8 @@ struct VcsInfo {
 
 #[derive(Serialize)]
 struct GitVcsInfo {
-    sha1: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sha1: Option<String>,
     /// Indicate whether or not the Git worktree is dirty.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     dirty: bool,
@@ -831,9 +832,12 @@ fn check_repo_state(
             .collect();
         let dirty = !dirty_src_files.is_empty();
         if !dirty || opts.allow_dirty {
+            if repo.is_empty()? {
+                return Ok(GitVcsInfo { sha1: None, dirty });
+            }
             let rev_obj = repo.revparse_single("HEAD")?;
             Ok(GitVcsInfo {
-                sha1: rev_obj.id().to_string(),
+                sha1: Some(rev_obj.id().to_string()),
                 dirty,
             })
         } else {
