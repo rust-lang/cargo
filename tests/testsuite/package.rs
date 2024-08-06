@@ -1255,6 +1255,34 @@ fn issue_13695_allowing_dirty_vcs_info_but_clean() {
 }
 
 #[cargo_test]
+fn issue_14354_allowing_dirty_bare_commit() {
+    let p = project().build();
+    // Init a bare commit git repo
+    let _ = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+            description = "foo"
+            license = "foo"
+            documentation = "foo"
+        "#,
+        )
+        .file("src/lib.rs", "");
+
+    p.cargo("package --allow-dirty")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] revspec 'HEAD' not found; class=Reference (4); code=NotFound (-3)
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn generated_manifest() {
     let registry = registry::alt_init();
     Package::new("abc", "1.0.0").publish();
