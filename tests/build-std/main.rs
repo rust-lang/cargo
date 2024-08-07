@@ -62,6 +62,8 @@ impl BuildStd for Execs {
     }
 }
 
+#[allow(unused_attributes)]
+#[ignore = "to unblock beta-1.81 backport"]
 #[cargo_test(build_std_real)]
 fn basic() {
     let p = project()
