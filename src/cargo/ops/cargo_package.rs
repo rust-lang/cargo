@@ -87,8 +87,7 @@ struct VcsInfo {
 
 #[derive(Serialize)]
 struct GitVcsInfo {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    sha1: Option<String>,
+    sha1: String,
     /// Indicate whether or not the Git worktree is dirty.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     dirty: bool,
@@ -776,10 +775,12 @@ fn check_repo_state(
                         .and_then(|p| p.to_str())
                         .unwrap_or("")
                         .replace("\\", "/");
-                    return Ok(Some(VcsInfo {
-                        git: git(p, src_files, &repo, &opts)?,
-                        path_in_vcs,
-                    }));
+                    let Some(git) = git(p, src_files, &repo, &opts)? else {
+                        // If the git repo lacks essensial field like `sha1`, and since this field exists from the beginning,
+                        // then don't generate the corresponding file in order to maintain consistency with past behavior.
+                        return Ok(None);
+                    };
+                    return Ok(Some(VcsInfo { git, path_in_vcs }));
                 }
             }
             gctx.shell().verbose(|shell| {
@@ -805,7 +806,7 @@ fn check_repo_state(
         src_files: &[PathBuf],
         repo: &git2::Repository,
         opts: &PackageOpts<'_>,
-    ) -> CargoResult<GitVcsInfo> {
+    ) -> CargoResult<Option<GitVcsInfo>> {
         // This is a collection of any dirty or untracked files. This covers:
         // - new/modified/deleted/renamed/type change (index or worktree)
         // - untracked files (which are "new" worktree files)
@@ -832,14 +833,16 @@ fn check_repo_state(
             .collect();
         let dirty = !dirty_src_files.is_empty();
         if !dirty || opts.allow_dirty {
+            // Must check whetherthe repo has no commit firstly, otherwise `revparse_single` would fail on bare commit repo.
+            // Due to lacking the `sha1` field, it's better not record the `GitVcsInfo` for consistency.
             if repo.is_empty()? {
-                return Ok(GitVcsInfo { sha1: None, dirty });
+                return Ok(None);
             }
             let rev_obj = repo.revparse_single("HEAD")?;
-            Ok(GitVcsInfo {
-                sha1: Some(rev_obj.id().to_string()),
+            Ok(Some(GitVcsInfo {
+                sha1: rev_obj.id().to_string(),
                 dirty,
-            })
+            }))
         } else {
             anyhow::bail!(
                 "{} files in the working directory contain changes that were \
