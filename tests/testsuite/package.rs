@@ -2868,21 +2868,30 @@ fn in_workspace_with_publish_false() {
         .build();
 
     p.cargo("package --workspace")
-        // FIXME: This reproduces https://github.com/rust-lang/cargo/issues/14356
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] `no-publish` cannot be packaged.
-The registry `crates-io` is not listed in the `package.publish` value in Cargo.toml.
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] no-publish v0.0.1 ([ROOT]/foo/no-publish)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] no-publish v0.0.1 ([ROOT]/foo/no-publish)
+[COMPILING] no-publish v0.0.1 ([ROOT]/foo/target/package/no-publish-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
 
-    // FIXME: Enable these
-    // assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
-    // assert!(p
-    //     .root()
-    //     .join("target/package/no-publish-0.0.1.crate")
-    //     .is_file());
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    assert!(p
+        .root()
+        .join("target/package/no-publish-0.0.1.crate")
+        .is_file());
 }
 
 #[cargo_test]

@@ -207,7 +207,7 @@ fn infer_registry(
         let reg_name = publish_registry.as_deref().unwrap_or(CRATES_IO_REGISTRY);
         for pkg in pkgs {
             if let Some(allowed) = pkg.publish().as_ref() {
-                if !allowed.iter().any(|a| a == reg_name) {
+                if !allowed.is_empty() && !allowed.iter().any(|a| a == reg_name) {
                     bail!(
                         "`{}` cannot be packaged.\n\
                          The registry `{}` is not listed in the `package.publish` value in Cargo.toml.",
