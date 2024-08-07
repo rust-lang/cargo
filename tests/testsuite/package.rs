@@ -2832,6 +2832,60 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 }
 
 #[cargo_test]
+fn in_workspace_with_publish_false() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "foo"
+
+                [workspace]
+                members = ["no-publish"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "no-publish/Cargo.toml",
+            r#"
+                [package]
+                name = "no-publish"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "no-publish"
+                workspace = ".."
+                publish = false
+            "#,
+        )
+        .file("no-publish/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package --workspace")
+        // FIXME: This reproduces https://github.com/rust-lang/cargo/issues/14356
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] `no-publish` cannot be packaged.
+The registry `crates-io` is not listed in the `package.publish` value in Cargo.toml.
+
+"#]])
+        .run();
+
+    // FIXME: Enable these
+    // assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    // assert!(p
+    //     .root()
+    //     .join("target/package/no-publish-0.0.1.crate")
+    //     .is_file());
+}
+
+#[cargo_test]
 fn workspace_noconflict_readme() {
     let p = project()
         .file(
