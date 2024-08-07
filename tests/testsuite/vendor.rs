@@ -36,7 +36,7 @@ fn vendor_simple() {
     let lock = p.read_file("vendor/log/Cargo.toml");
     assert!(lock.contains("version = \"0.3.5\""));
 
-    add_vendor_config(&p);
+    add_crates_io_vendor_config(&p);
     p.cargo("check").run();
 }
 
@@ -151,7 +151,7 @@ directory = "deps/.vendor"
     assert!(lock.contains("version = \"0.3.5\""));
 }
 
-fn add_vendor_config(p: &Project) {
+fn add_crates_io_vendor_config(p: &Project) {
     p.change_file(
         ".cargo/config.toml",
         r#"
@@ -248,7 +248,7 @@ fn two_versions() {
     let lock = p.read_file("vendor/bitflags-0.7.0/Cargo.toml");
     assert!(lock.contains("version = \"0.7.0\""));
 
-    add_vendor_config(&p);
+    add_crates_io_vendor_config(&p);
     p.cargo("check").run();
 }
 
@@ -293,7 +293,7 @@ fn two_explicit_versions() {
     let lock = p.read_file("vendor/bitflags-0.7.0/Cargo.toml");
     assert!(lock.contains("version = \"0.7.0\""));
 
-    add_vendor_config(&p);
+    add_crates_io_vendor_config(&p);
     p.cargo("check").run();
 }
 
@@ -386,7 +386,7 @@ fn two_lockfiles() {
     let lock = p.read_file("vendor/bitflags-0.7.0/Cargo.toml");
     assert!(lock.contains("version = \"0.7.0\""));
 
-    add_vendor_config(&p);
+    add_crates_io_vendor_config(&p);
     p.cargo("check").cwd("foo").run();
     p.cargo("check").cwd("bar").run();
 }
@@ -645,7 +645,7 @@ fn vendoring_git_crates() {
     p.cargo("vendor --respect-source-config").run();
     p.read_file("vendor/serde_derive/src/wut.rs");
 
-    add_vendor_config(&p);
+    add_crates_io_vendor_config(&p);
     p.cargo("check").run();
 }
 
