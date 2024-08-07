@@ -1279,21 +1279,8 @@ fn issue_14354_allowing_dirty_bare_commit() {
     validate_crate_contents(
         f,
         "foo-0.1.0.crate",
-        &[
-            ".cargo_vcs_info.json",
-            "Cargo.toml",
-            "Cargo.toml.orig",
-            "src/lib.rs",
-        ],
-        &[(
-            ".cargo_vcs_info.json",
-            r#"{
-  "git": {
-    "dirty": true
-  },
-  "path_in_vcs": ""
-}"#,
-        )],
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[],
     );
 }
 
