@@ -1068,7 +1068,7 @@ fn deprecated_ws_default_features(
 }
 
 #[tracing::instrument(skip_all)]
-fn to_real_manifest(
+pub fn to_real_manifest(
     contents: String,
     document: toml_edit::ImDocument<String>,
     original_toml: manifest::TomlManifest,
@@ -2760,7 +2760,7 @@ fn prepare_toml_for_publish(
     }
 }
 
-fn prepare_targets_for_publish(
+pub fn prepare_targets_for_publish(
     targets: Option<&Vec<manifest::TomlTarget>>,
     included: &[PathBuf],
     context: &str,
@@ -2785,7 +2785,7 @@ fn prepare_targets_for_publish(
     }
 }
 
-fn prepare_target_for_publish(
+pub fn prepare_target_for_publish(
     target: &manifest::TomlTarget,
     included: &[PathBuf],
     context: &str,
@@ -2818,7 +2818,7 @@ fn normalize_path_sep(path: PathBuf, context: &str) -> CargoResult<PathBuf> {
     Ok(path.into())
 }
 
-fn normalize_path_string_sep(path: String) -> String {
+pub fn normalize_path_string_sep(path: String) -> String {
     if std::path::MAIN_SEPARATOR != '/' {
         path.replace(std::path::MAIN_SEPARATOR, "/")
     } else {

@@ -283,11 +283,6 @@ fn discovery_inferred_build_rs_included() {
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
-bin = []
-example = []
-test = []
-bench = []
-
 [package]
 edition = "2015"
 name = "dep"
@@ -376,17 +371,12 @@ fn discovery_inferred_build_rs_excluded() {
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
-bin = []
-example = []
-test = []
-bench = []
-
 [package]
 edition = "2015"
 name = "dep"
 version = "0.0.1"
 authors = []
-build = "build.rs"
+build = false
 include = ["src/lib.rs"]
 autobins = false
 autoexamples = false
@@ -404,16 +394,7 @@ path = "src/lib.rs"
 "##]],
     );
 
-    p.cargo("check")
-        .with_status(101)
-        .with_stderr(
-            r#"[COMPILING] dep v0.0.1 ([..]/dep#[..])
-[ERROR] couldn't read [ROOT]/foo/vendor/dep/build.rs: [..]
-
-[ERROR] could not compile `dep` (build script) due to 1 previous error
-"#,
-        )
-        .run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -474,10 +455,6 @@ fn discovery_inferred_lib_included() {
 # If you are reading this file be aware that the original Cargo.toml
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
-
-example = []
-test = []
-bench = []
 
 [package]
 edition = "2015"
@@ -571,10 +548,6 @@ fn discovery_inferred_lib_excluded() {
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
-example = []
-test = []
-bench = []
-
 [package]
 edition = "2015"
 name = "dep"
@@ -591,10 +564,6 @@ documentation = "docs.rs/foo"
 readme = false
 license = "MIT"
 
-[lib]
-name = "dep"
-path = "src/lib.rs"
-
 [[bin]]
 name = "dep"
 path = "src/main.rs"
@@ -602,16 +571,7 @@ path = "src/main.rs"
 "##]],
     );
 
-    p.cargo("check")
-        .with_status(101)
-        .with_stderr(
-            r#"[CHECKING] dep v0.0.1 ([..]/dep#[..])
-[ERROR] couldn't read [ROOT]/foo/vendor/dep/src/lib.rs: [..]
-
-[ERROR] could not compile `dep` (lib) due to 1 previous error
-"#,
-        )
-        .run();
+    p.cargo("check").run();
 }
 
 #[cargo_test]
@@ -805,22 +765,6 @@ license = "MIT"
 [lib]
 name = "dep"
 path = "src/lib.rs"
-
-[[bin]]
-name = "foo"
-path = "src/bin/foo/main.rs"
-
-[[example]]
-name = "example_foo"
-path = "examples/example_foo.rs"
-
-[[test]]
-name = "test_foo"
-path = "tests/test_foo.rs"
-
-[[bench]]
-name = "bench_foo"
-path = "benches/bench_foo.rs"
 
 "##]],
     );
@@ -1559,10 +1503,6 @@ fn git_deterministic() {
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
-bin = []
-test = []
-bench = []
-
 [package]
 edition = "2021"
 name = "git_dep"
@@ -1580,7 +1520,7 @@ license = "MIT"
 
 [lib]
 name = "git_dep"
-path = [..]
+path = "src/lib.rs"
 
 [[example]]
 name = "a"
