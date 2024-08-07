@@ -565,9 +565,10 @@ fn token_not_logged() {
     // 2. config.json again for verification
     // 3. /index/3/b/bar
     // 4. /dl/bar/1.0.0/download
-    // 5. /api/v1/crates/new
-    // 6. config.json for the "wait for publish"
-    // 7. /index/3/f/foo for the "wait for publish"
-    assert_eq!(authorizations.len(), 7);
+    // 5. /index/3/f/foo for checking duplicate version
+    // 6. /api/v1/crates/new
+    // 7. config.json for the "wait for publish"
+    // 8. /index/3/f/foo for the "wait for publish"
+    assert_eq!(authorizations.len(), 8);
     assert!(!log.contains("a-unique_token"));
 }

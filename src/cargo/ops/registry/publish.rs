@@ -161,9 +161,10 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
 
     if !duplicate_query.is_empty() {
         bail!(
-            "crate {} already has version {}. Aborting publish.",
+            "crate {}@{} already exists on {}",
             pkg.name(),
-            pkg.version()
+            pkg.version(),
+            source.describe()
         );
     }
 
