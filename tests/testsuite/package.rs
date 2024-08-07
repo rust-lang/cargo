@@ -2832,6 +2832,69 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 }
 
 #[cargo_test]
+fn in_workspace_with_publish_false() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "foo"
+
+                [workspace]
+                members = ["no-publish"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "no-publish/Cargo.toml",
+            r#"
+                [package]
+                name = "no-publish"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "no-publish"
+                workspace = ".."
+                publish = false
+            "#,
+        )
+        .file("no-publish/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package --workspace")
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] foo v0.0.1 ([ROOT]/foo)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] no-publish v0.0.1 ([ROOT]/foo/no-publish)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
+[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] no-publish v0.0.1 ([ROOT]/foo/no-publish)
+[COMPILING] no-publish v0.0.1 ([ROOT]/foo/target/package/no-publish-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
+    assert!(p
+        .root()
+        .join("target/package/no-publish-0.0.1.crate")
+        .is_file());
+}
+
+#[cargo_test]
 fn workspace_noconflict_readme() {
     let p = project()
         .file(
