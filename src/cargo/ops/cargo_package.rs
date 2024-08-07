@@ -185,44 +185,76 @@ fn infer_registry(
     pkgs: &[&Package],
     reg_or_index: Option<RegistryOrIndex>,
 ) -> CargoResult<SourceId> {
-    let publish_registry = if let Some(RegistryOrIndex::Registry(registry)) = reg_or_index.as_ref()
-    {
-        Some(registry.clone())
-    } else if let Some([first_pkg_reg]) = pkgs[0].publish().as_deref() {
-        // If no registry is specified in the command, but all of the packages
-        // to publish have the same, unique allowed registry, push to that one.
-        if pkgs[1..].iter().all(|p| p.publish() == pkgs[0].publish()) {
-            Some(first_pkg_reg.clone())
-        } else {
-            None
+    let reg_or_index = match reg_or_index {
+        Some(r) => r,
+        None => {
+            if pkgs[1..].iter().all(|p| p.publish() == pkgs[0].publish()) {
+                // If all packages have the same publish settings, we take that as the default.
+                match pkgs[0].publish().as_deref() {
+                    Some([unique_pkg_reg]) => RegistryOrIndex::Registry(unique_pkg_reg.to_owned()),
+                    None | Some([]) => RegistryOrIndex::Registry(CRATES_IO_REGISTRY.to_owned()),
+                    Some([reg, ..]) if pkgs.len() == 1 => {
+                        // For backwards compatibility, avoid erroring if there's only one package.
+                        // The registry doesn't affect packaging in this case.
+                        RegistryOrIndex::Registry(reg.to_owned())
+                    }
+                    Some(regs) => {
+                        let mut regs: Vec<_> = regs.iter().map(|s| format!("\"{}\"", s)).collect();
+                        regs.sort();
+                        regs.dedup();
+                        // unwrap: the match block ensures that there's more than one reg.
+                        let (last_reg, regs) = regs.split_last().unwrap();
+                        bail!(
+                            "--registry is required to disambiguate between {} or {} registries",
+                            regs.join(", "),
+                            last_reg
+                        )
+                    }
+                }
+            } else {
+                let common_regs = pkgs
+                    .iter()
+                    // `None` means "all registries", so drop them instead of including them
+                    // in the intersection.
+                    .filter_map(|p| p.publish().as_deref())
+                    .map(|p| p.iter().collect::<HashSet<_>>())
+                    .reduce(|xs, ys| xs.intersection(&ys).cloned().collect())
+                    .unwrap_or_default();
+                if common_regs.is_empty() {
+                    bail!("conflicts between `package.publish` fields in the selected packages");
+                } else {
+                    bail!(
+                        "--registry is required because not all `package.publish` settings agree",
+                    );
+                }
+            }
         }
-    } else {
-        None
     };
 
     // Validate the registry against the packages' allow-lists. For backwards compatibility, we
     // skip this if only a single package is being published (because in that case the registry
     // doesn't affect the packaging step).
     if pkgs.len() > 1 {
-        let reg_name = publish_registry.as_deref().unwrap_or(CRATES_IO_REGISTRY);
-        for pkg in pkgs {
-            if let Some(allowed) = pkg.publish().as_ref() {
-                if !allowed.iter().any(|a| a == reg_name) {
-                    bail!(
+        if let RegistryOrIndex::Registry(reg_name) = &reg_or_index {
+            for pkg in pkgs {
+                if let Some(allowed) = pkg.publish().as_ref() {
+                    if !allowed.iter().any(|a| a == reg_name) {
+                        bail!(
                         "`{}` cannot be packaged.\n\
                          The registry `{}` is not listed in the `package.publish` value in Cargo.toml.",
                         pkg.name(),
                         reg_name
                     );
+                    }
                 }
             }
         }
     }
 
     let sid = match reg_or_index {
-        None => SourceId::crates_io(gctx)?,
-        Some(RegistryOrIndex::Registry(r)) => SourceId::alt_registry(gctx, &r)?,
-        Some(RegistryOrIndex::Index(url)) => SourceId::for_registry(&url)?,
+        RegistryOrIndex::Index(url) => SourceId::for_registry(&url)?,
+        RegistryOrIndex::Registry(reg) if reg == CRATES_IO_REGISTRY => SourceId::crates_io(gctx)?,
+        RegistryOrIndex::Registry(reg) => SourceId::alt_registry(gctx, &reg)?,
     };
 
     // Load source replacements that are built-in to Cargo.
