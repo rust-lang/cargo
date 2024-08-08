@@ -132,7 +132,7 @@ fn setup() -> Setup {
 fn enable_build_std(e: &mut Execs, setup: &Setup) {
     // First up, force Cargo to use our "mock sysroot" which mimics what
     // libstd looks like upstream.
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/testsuite/mock-std");
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/testsuite/mock-std/library");
     e.env("__CARGO_TESTS_ONLY_SRC_ROOT", &root);
 
     e.masquerade_as_nightly_cargo(&["build-std"]);
