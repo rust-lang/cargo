@@ -73,7 +73,7 @@ pub fn resolve_std<'gctx>(
     }
 
     let src_path = detect_sysroot_src_path(target_data)?;
-    let std_ws_manifest_path = src_path.join("library").join("Cargo.toml");
+    let std_ws_manifest_path = src_path.join("Cargo.toml");
     let gctx = ws.gctx();
     // TODO: Consider doing something to enforce --locked? Or to prevent the
     // lock file from being written, such as setting ephemeral.
@@ -192,7 +192,8 @@ fn detect_sysroot_src_path(target_data: &RustcTargetData<'_>) -> CargoResult<Pat
         .join("lib")
         .join("rustlib")
         .join("src")
-        .join("rust");
+        .join("rust")
+        .join("library");
     let lock = src_path.join("Cargo.lock");
     if !lock.exists() {
         let msg = format!(
