@@ -1255,6 +1255,36 @@ fn issue_13695_allowing_dirty_vcs_info_but_clean() {
 }
 
 #[cargo_test]
+fn issue_14354_allowing_dirty_bare_commit() {
+    let p = project().build();
+    // Init a bare commit git repo
+    let _ = git::repo(&paths::root().join("foo"))
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2015"
+            description = "foo"
+            license = "foo"
+            documentation = "foo"
+        "#,
+        )
+        .file("src/lib.rs", "");
+
+    p.cargo("package --allow-dirty").run();
+
+    let f = File::open(&p.root().join("target/package/foo-0.1.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "foo-0.1.0.crate",
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &[],
+    );
+}
+
+#[cargo_test]
 fn generated_manifest() {
     let registry = registry::alt_init();
     Package::new("abc", "1.0.0").publish();
