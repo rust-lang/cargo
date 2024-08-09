@@ -268,7 +268,7 @@ impl<'gctx> HttpRegistry<'gctx> {
 
         self.multi
             .pipelining(false, self.multiplexing)
-            .with_context(|| "failed to enable multiplexing/pipelining in curl")?;
+            .context("failed to enable multiplexing/pipelining in curl")?;
 
         // let's not flood the server with connections
         self.multi.set_max_host_connections(2)?;
@@ -802,7 +802,7 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
             let remaining_in_multi = tls::set(&self.downloads, || {
                 self.multi
                     .perform()
-                    .with_context(|| "failed to perform http requests")
+                    .context("failed to perform http requests")
             })?;
             trace!(target: "network", "{} transfers remaining", remaining_in_multi);
 
@@ -823,7 +823,7 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
                     .unwrap_or_else(|| Duration::new(1, 0));
                 self.multi
                     .wait(&mut [], timeout)
-                    .with_context(|| "failed to wait on curl `Multi`")?;
+                    .context("failed to wait on curl `Multi`")?;
             }
         }
     }

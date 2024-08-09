@@ -513,7 +513,7 @@ impl<'gctx> JobQueue<'gctx> {
             .into_helper_thread(move |token| {
                 messages.push(Message::Token(token));
             })
-            .with_context(|| "failed to create helper thread for jobserver management")?;
+            .context("failed to create helper thread for jobserver management")?;
 
         // Create a helper thread to manage the diagnostics for rustfix if
         // necessary.
@@ -700,7 +700,7 @@ impl<'gctx> DrainState<'gctx> {
                     .push(FutureIncompatReportPackage { package_id, items });
             }
             Message::Token(acquired_token) => {
-                let token = acquired_token.with_context(|| "failed to acquire jobserver token")?;
+                let token = acquired_token.context("failed to acquire jobserver token")?;
                 self.tokens.push(token);
             }
         }

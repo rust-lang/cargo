@@ -1131,7 +1131,7 @@ pub fn to_real_manifest(
     {
         let edition: Edition = edition
             .parse()
-            .with_context(|| "failed to parse the `edition` key")?;
+            .context("failed to parse the `edition` key")?;
         if let Some(pkg_msrv) = &rust_version {
             if let Some(edition_msrv) = edition.first_version() {
                 let edition_msrv = RustVersion::try_from(edition_msrv).unwrap();

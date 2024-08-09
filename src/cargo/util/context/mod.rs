@@ -335,8 +335,8 @@ impl GlobalContext {
     /// any config files from disk. Those will be loaded lazily as-needed.
     pub fn default() -> CargoResult<GlobalContext> {
         let shell = Shell::new();
-        let cwd = env::current_dir()
-            .with_context(|| "couldn't get the current directory of the process")?;
+        let cwd =
+            env::current_dir().context("couldn't get the current directory of the process")?;
         let homedir = homedir(&cwd).ok_or_else(|| {
             anyhow!(
                 "Cargo couldn't find your home directory. \
@@ -496,7 +496,7 @@ impl GlobalContext {
                 let exe = from_env()
                     .or_else(|_| from_current_exe())
                     .or_else(|_| from_argv())
-                    .with_context(|| "couldn't get the path to cargo executable")?;
+                    .context("couldn't get the path to cargo executable")?;
                 Ok(exe)
             })
             .map(AsRef::as_ref)
@@ -569,8 +569,8 @@ impl GlobalContext {
     ///
     /// There is not a need to also call [`Self::reload_rooted_at`].
     pub fn reload_cwd(&mut self) -> CargoResult<()> {
-        let cwd = env::current_dir()
-            .with_context(|| "couldn't get the current directory of the process")?;
+        let cwd =
+            env::current_dir().context("couldn't get the current directory of the process")?;
         let homedir = homedir(&cwd).ok_or_else(|| {
             anyhow!(
                 "Cargo couldn't find your home directory. \
@@ -1166,7 +1166,7 @@ impl GlobalContext {
             result.push(cv);
             Ok(())
         })
-        .with_context(|| "could not load Cargo configuration")?;
+        .context("could not load Cargo configuration")?;
         Ok(result)
     }
 
@@ -1206,7 +1206,7 @@ impl GlobalContext {
             })?;
             Ok(())
         })
-        .with_context(|| "could not load Cargo configuration")?;
+        .context("could not load Cargo configuration")?;
 
         match cfg {
             CV::Table(map, _) => Ok(map),
@@ -1495,7 +1495,7 @@ impl GlobalContext {
             };
             let tmp_table = self
                 .load_includes(tmp_table, &mut HashSet::new(), WhyLoad::Cli)
-                .with_context(|| "failed to load --config include".to_string())?;
+                .context("failed to load --config include".to_string())?;
             loaded_args
                 .merge(tmp_table, true)
                 .with_context(|| format!("failed to merge --config argument `{arg}`"))?;
