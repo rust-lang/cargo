@@ -21,7 +21,7 @@ pub fn search(
     limit: u32,
 ) -> CargoResult<()> {
     let source_ids = super::get_source_id(gctx, reg_or_index.as_ref())?;
-    let mut registry =
+    let (mut registry, _) =
         super::registry(gctx, &source_ids, None, reg_or_index.as_ref(), false, None)?;
     let (crates, total_crates) = registry.search(query, limit).with_context(|| {
         format!(

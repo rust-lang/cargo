@@ -34,7 +34,7 @@ pub fn registry_login(
         false,
         None,
     ) {
-        Ok(registry) => Some(format!("{}/me", registry.host())),
+        Ok((registry, _)) => Some(format!("{}/me", registry.host())),
         Err(e) if e.is::<AuthorizationError>() => e
             .downcast::<AuthorizationError>()
             .unwrap()

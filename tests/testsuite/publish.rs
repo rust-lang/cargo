@@ -130,6 +130,41 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
     validate_upload_foo();
 }
 
+#[cargo_test]
+fn duplicate_version() {
+    let registry_dupl = RegistryBuilder::new().http_api().http_index().build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish")
+        .replace_crates_io(registry_dupl.index_url())
+        .without_status()
+        .run();
+
+    p.cargo("publish")
+        .replace_crates_io(registry_dupl.index_url())
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[ERROR] crate foo@0.0.1 already exists on [..]
+
+"#]])
+        .with_status(101)
+        .run();
+}
+
 // Check that the `token` key works at the root instead of under a
 // `[registry]` table.
 #[cargo_test]
