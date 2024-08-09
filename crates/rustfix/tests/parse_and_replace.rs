@@ -164,8 +164,8 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
 
     debug!("next up: {:?}", file);
     let code = fs::read_to_string(file)?;
-    let errors =
-        compile_and_get_json_errors(file).context(format!("could compile {}", file.display()))?;
+    let errors = compile_and_get_json_errors(file)
+        .with_context(|| format!("could not compile {}", file.display()))?;
     let suggestions =
         rustfix::get_suggestions_from_json(&errors, &HashSet::new(), filter_suggestions)
             .context("could not load suggestions")?;
@@ -175,10 +175,8 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
     }
 
     if std::env::var(settings::CHECK_JSON).is_ok() {
-        let expected_json = fs::read_to_string(&json_file).context(format!(
-            "could not load json fixtures for {}",
-            file.display()
-        ))?;
+        let expected_json = fs::read_to_string(&json_file)
+            .with_context(|| format!("could not load json fixtures for {}", file.display()))?;
         let expected_suggestions =
             rustfix::get_suggestions_from_json(&expected_json, &HashSet::new(), filter_suggestions)
                 .context("could not load expected suggestions")?;
@@ -194,7 +192,7 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
     }
 
     let fixed = apply_suggestions(&code, &suggestions)
-        .context(format!("could not apply suggestions to {}", file.display()))?
+        .with_context(|| format!("could not apply suggestions to {}", file.display()))?
         .replace('\r', "");
 
     if std::env::var(settings::RECORD_FIXED_RUST).is_ok() {
@@ -209,7 +207,7 @@ fn test_rustfix_with_file<P: AsRef<Path>>(file: P, mode: &str) -> Result<(), Err
     }
 
     let expected_fixed = fs::read_to_string(&fixed_file)
-        .context(format!("could read fixed file for {}", file.display()))?
+        .with_context(|| format!("could read fixed file for {}", file.display()))?
         .replace('\r', "");
     ensure!(
         fixed.trim() == expected_fixed.trim(),
@@ -236,7 +234,7 @@ fn get_fixture_files(p: &str) -> Result<Vec<PathBuf>, Error> {
 
 fn assert_fixtures(dir: &str, mode: &str) {
     let files = get_fixture_files(dir)
-        .context(format!("couldn't load dir `{}`", dir))
+        .with_context(|| format!("couldn't load dir `{dir}`"))
         .unwrap();
     let mut failures = 0;
 

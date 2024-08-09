@@ -1085,10 +1085,9 @@ fn find_workspace_dep(toml_key: &str, root_manifest: &Path) -> CargoResult<Depen
         .context("could not find `dependencies` table in `workspace`")?
         .as_table_like()
         .context("could not make `dependencies` into a table")?;
-    let dep_item = dependencies.get(toml_key).context(format!(
-        "could not find {} in `workspace.dependencies`",
-        toml_key
-    ))?;
+    let dep_item = dependencies
+        .get(toml_key)
+        .with_context(|| format!("could not find {toml_key} in `workspace.dependencies`"))?;
     Dependency::from_toml(root_manifest.parent().unwrap(), toml_key, dep_item)
 }
 

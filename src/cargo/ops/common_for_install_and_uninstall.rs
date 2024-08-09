@@ -111,7 +111,7 @@ impl InstallTracker {
             if contents.is_empty() {
                 Ok(CrateListingV1::default())
             } else {
-                Ok(toml::from_str(&contents).with_context(|| "invalid TOML found for metadata")?)
+                Ok(toml::from_str(&contents).context("invalid TOML found for metadata")?)
             }
         })()
         .with_context(|| {
@@ -127,8 +127,7 @@ impl InstallTracker {
             let mut v2 = if contents.is_empty() {
                 CrateListingV2::default()
             } else {
-                serde_json::from_str(&contents)
-                    .with_context(|| "invalid JSON found for metadata")?
+                serde_json::from_str(&contents).context("invalid JSON found for metadata")?
             };
             v2.sync_v1(&v1);
             Ok(v2)

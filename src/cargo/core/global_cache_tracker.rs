@@ -543,7 +543,7 @@ impl GlobalCacheTracker {
     /// Deletes files from the global cache based on the given options.
     pub fn clean(&mut self, clean_ctx: &mut CleanContext<'_>, gc_opts: &GcOpts) -> CargoResult<()> {
         self.clean_inner(clean_ctx, gc_opts)
-            .with_context(|| "failed to clean entries from the global cache")
+            .context("failed to clean entries from the global cache")
     }
 
     #[tracing::instrument(skip_all)]
@@ -575,7 +575,7 @@ impl GlobalCacheTracker {
                 gc_opts.is_download_cache_size_set(),
                 &mut delete_paths,
             )
-            .with_context(|| "failed to sync tracking database")?
+            .context("failed to sync tracking database")?
         }
         if let Some(max_age) = gc_opts.max_index_age {
             let max_age = now - max_age.as_secs();

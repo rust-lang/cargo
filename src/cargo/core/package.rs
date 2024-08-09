@@ -393,7 +393,7 @@ impl<'gctx> PackageSet<'gctx> {
         let multiplexing = gctx.http_config()?.multiplexing.unwrap_or(true);
         multi
             .pipelining(false, multiplexing)
-            .with_context(|| "failed to enable multiplexing/pipelining in curl")?;
+            .context("failed to enable multiplexing/pipelining in curl")?;
 
         // let's not flood crates.io with connections
         multi.set_max_host_connections(2)?;
@@ -681,7 +681,7 @@ impl<'a, 'gctx> Downloads<'a, 'gctx> {
             .ok_or_else(|| internal(format!("couldn't find source for `{}`", id)))?;
         let pkg = source
             .download(id)
-            .with_context(|| "unable to get packages from source")?;
+            .context("unable to get packages from source")?;
         let (url, descriptor, authorization) = match pkg {
             MaybePackage::Ready(pkg) => {
                 debug!("{} doesn't need a download", id);
@@ -951,7 +951,7 @@ impl<'a, 'gctx> Downloads<'a, 'gctx> {
                 self.set
                     .multi
                     .perform()
-                    .with_context(|| "failed to perform http requests")
+                    .context("failed to perform http requests")
             })?;
             debug!(target: "network", "handles remaining: {}", n);
             let results = &mut self.results;
@@ -981,7 +981,7 @@ impl<'a, 'gctx> Downloads<'a, 'gctx> {
                 self.set
                     .multi
                     .wait(&mut [], timeout)
-                    .with_context(|| "failed to wait on curl `Multi`")?;
+                    .context("failed to wait on curl `Multi`")?;
             }
         }
     }

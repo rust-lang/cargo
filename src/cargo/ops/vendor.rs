@@ -32,7 +32,7 @@ pub fn vendor(ws: &Workspace<'_>, opts: &VendorOptions<'_>) -> CargoResult<()> {
     }
     let workspaces = extra_workspaces.iter().chain(Some(ws)).collect::<Vec<_>>();
     let _lock = gctx.acquire_package_cache_lock(CacheLockMode::MutateExclusive)?;
-    let vendor_config = sync(gctx, &workspaces, opts).with_context(|| "failed to sync")?;
+    let vendor_config = sync(gctx, &workspaces, opts).context("failed to sync")?;
 
     if gctx.shell().verbosity() != Verbosity::Quiet {
         if vendor_config.source.is_empty() {
@@ -113,11 +113,11 @@ fn sync(
     // crate to work with.
     for ws in workspaces {
         let (packages, resolve) =
-            ops::resolve_ws(ws, dry_run).with_context(|| "failed to load pkg lockfile")?;
+            ops::resolve_ws(ws, dry_run).context("failed to load pkg lockfile")?;
 
         packages
             .get_many(resolve.iter())
-            .with_context(|| "failed to download packages")?;
+            .context("failed to download packages")?;
 
         for pkg in resolve.iter() {
             // Don't delete actual source code!
@@ -145,11 +145,11 @@ fn sync(
     // tables about them.
     for ws in workspaces {
         let (packages, resolve) =
-            ops::resolve_ws(ws, dry_run).with_context(|| "failed to load pkg lockfile")?;
+            ops::resolve_ws(ws, dry_run).context("failed to load pkg lockfile")?;
 
         packages
             .get_many(resolve.iter())
-            .with_context(|| "failed to download packages")?;
+            .context("failed to download packages")?;
 
         for pkg in resolve.iter() {
             // No need to vendor path crates since they're already in the
@@ -161,7 +161,7 @@ fn sync(
                 pkg,
                 packages
                     .get_one(pkg)
-                    .with_context(|| "failed to fetch package")?
+                    .context("failed to fetch package")?
                     .clone(),
             );
 

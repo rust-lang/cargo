@@ -187,7 +187,6 @@ fn amend_authentication_hints(
         _ => None,
     };
     if let Some(e) = e {
-        use anyhow::Context;
         let auth_message = match e {
             gix::protocol::handshake::Error::Credentials(_) => {
                 "\n* attempted to find username/password via \
@@ -206,7 +205,7 @@ fn amend_authentication_hints(
                     "if a proxy or similar is necessary `net.git-fetch-with-cli` may help here\n",
                     "https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
                 );
-                return Err(anyhow::Error::from(err)).context(msg);
+                return Err(anyhow::Error::from(err).context(msg));
             }
             _ => None,
         };
@@ -225,7 +224,7 @@ fn amend_authentication_hints(
             msg.push_str(
                 "https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli",
             );
-            return Err(anyhow::Error::from(err)).context(msg);
+            return Err(anyhow::Error::from(err).context(msg));
         }
     }
     Err(err.into())

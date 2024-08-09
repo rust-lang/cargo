@@ -853,7 +853,7 @@ fn configure(toml: &TomlTarget, target: &mut Target) -> CargoResult<()> {
         target.set_edition(
             edition
                 .parse()
-                .with_context(|| "failed to parse the `edition` key")?,
+                .context("failed to parse the `edition` key")?,
         );
     }
     Ok(())

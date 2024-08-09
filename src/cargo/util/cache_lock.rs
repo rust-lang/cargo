@@ -308,7 +308,7 @@ impl RecursiveLock {
                         self.is_exclusive = true;
                         return Ok(());
                     } else {
-                        return Err(e).with_context(|| "failed to acquire package cache lock");
+                        return Err(e).context("failed to acquire package cache lock");
                     }
                 }
             }
@@ -331,7 +331,7 @@ impl RecursiveLock {
                         self.is_exclusive = true;
                         return Ok(result);
                     } else {
-                        return Err(e).with_context(|| "failed to acquire package cache lock");
+                        return Err(e).context("failed to acquire package cache lock");
                     }
                 }
             }

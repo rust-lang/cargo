@@ -268,7 +268,7 @@ pub struct StartedServer {
 impl RustfixDiagnosticServer {
     pub fn new() -> Result<Self, Error> {
         let listener = TcpListener::bind(&LOCALHOST[..])
-            .with_context(|| "failed to bind TCP listener to manage locking")?;
+            .context("failed to bind TCP listener to manage locking")?;
         let addr = listener.local_addr()?;
 
         Ok(RustfixDiagnosticServer { listener, addr })
