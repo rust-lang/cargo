@@ -444,8 +444,8 @@ impl<'gctx> PackageRegistry<'gctx> {
                         patches must point to different sources",
                         dep.package_name(),
                         url
-                    ))
-                    .context(format!("failed to resolve patches for `{}`", url));
+                    )
+                    .context(format!("failed to resolve patches for `{}`", url)));
                 }
                 unlocked_summaries.push(summary);
             }
