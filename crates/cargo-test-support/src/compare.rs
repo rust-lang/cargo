@@ -658,7 +658,7 @@ pub(crate) fn match_with_without(
 /// expected JSON objects.
 ///
 /// See [`crate::Execs::with_json`] for more details.
-pub(crate) fn match_json(expected: &str, actual: &str, cwd: Option<&Path>) -> Result<()> {
+pub fn match_json(expected: &str, actual: &str, cwd: Option<&Path>) -> Result<()> {
     let (exp_objs, act_objs) = collect_json_objects(expected, actual)?;
     if exp_objs.len() != act_objs.len() {
         bail!(
