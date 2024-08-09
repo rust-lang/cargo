@@ -187,7 +187,6 @@ fn amend_authentication_hints(
         _ => None,
     };
     if let Some(e) = e {
-        use anyhow::Context;
         let auth_message = match e {
             gix::protocol::handshake::Error::Credentials(_) => {
                 "\n* attempted to find username/password via \
