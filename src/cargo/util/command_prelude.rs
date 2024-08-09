@@ -1014,7 +1014,7 @@ pub fn lockfile_path(
 
     let path = gctx.cwd().join(lockfile_path);
 
-    if !path.ends_with(LOCKFILE_NAME) && !crate::util::toml::is_embedded(&path) {
+    if !path.ends_with(LOCKFILE_NAME) {
         bail!("the lockfile-path must be a path to a {LOCKFILE_NAME} file")
     }
     if path.is_dir() {
