@@ -89,6 +89,7 @@ use lazycell::LazyCell;
 use serde::de::IntoDeserializer as _;
 use serde::Deserialize;
 use serde_untagged::UntaggedEnumVisitor;
+use shlex::Shlex;
 use time::OffsetDateTime;
 use toml_edit::Item;
 use url::Url;
@@ -973,8 +974,8 @@ impl GlobalContext {
             }
         } else {
             output.extend(
-                env_val
-                    .split_whitespace()
+                Shlex::new(env_val)
+                    .into_iter()
                     .map(|s| (s.to_string(), def.clone())),
             );
         }
@@ -3022,10 +3023,8 @@ mod tests {
 
         let values: &[(&str, &[&str])] = &[
             ("VAL1", &["--path"]),
-            // FIXME: this one is parsed as `["--path=\"y", "z\""]`.
-            // ("VAL2", &["--path=\"y z\""]),
-            // FIXME: this one is parsed as `["--path", "\"y", "z\""]`.
-            // ("VAL3", &["--path", "\"y z\""]),
+            ("VAL2", &["--path=\"y z\""]),
+            ("VAL3", &["--path", "\"y z\""]),
         ];
 
         let mut env = HashMap::new();
