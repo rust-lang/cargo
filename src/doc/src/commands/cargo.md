@@ -62,6 +62,9 @@ available at <https://rust-lang.org>.
 [cargo-generate-lockfile(1)](cargo-generate-lockfile.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Generate `Cargo.lock` for a project.
 
+[cargo-info(1)](cargo-info.html)\
+&nbsp;&nbsp;&nbsp;&nbsp;Display information about a package in the registry. Default registry is crates.io.
+
 [cargo-locate-project(1)](cargo-locate-project.html)\
 &nbsp;&nbsp;&nbsp;&nbsp;Print a JSON representation of a `Cargo.toml` file's location.
 
@@ -338,4 +341,5 @@ stable yet and may be subject to change.
 See <https://github.com/rust-lang/cargo/issues> for issues.
 
 ## SEE ALSO
+
 [rustc(1)](https://doc.rust-lang.org/rustc/index.html), [rustdoc(1)](https://doc.rust-lang.org/rustdoc/index.html)
