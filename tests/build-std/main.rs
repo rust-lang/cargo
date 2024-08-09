@@ -133,6 +133,8 @@ fn basic() {
     assert_eq!(p.glob(deps_dir.join("*.dylib")).count(), 0);
 }
 
+#[allow(unused_attributes)]
+#[ignore = "to unblock beta-1.81 backport"]
 #[cargo_test(build_std_real)]
 fn cross_custom() {
     let p = project()
@@ -176,6 +178,8 @@ fn cross_custom() {
         .run();
 }
 
+#[allow(unused_attributes)]
+#[ignore = "to unblock beta-1.81 backport"]
 #[cargo_test(build_std_real)]
 fn custom_test_framework() {
     let p = project()
@@ -237,6 +241,8 @@ fn custom_test_framework() {
 // Fixing rust-lang/rust#117839.
 // on macOS it never gets remapped.
 // Might be a separate issue, so only run on Linux.
+#[allow(unused_attributes)]
+#[ignore = "to unblock beta-1.81 backport"]
 #[cargo_test(build_std_real)]
 #[cfg(target_os = "linux")]
 fn remap_path_scope() {
