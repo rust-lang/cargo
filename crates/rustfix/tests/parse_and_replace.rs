@@ -234,7 +234,7 @@ fn get_fixture_files(p: &str) -> Result<Vec<PathBuf>, Error> {
 
 fn assert_fixtures(dir: &str, mode: &str) {
     let files = get_fixture_files(dir)
-        .with_context(|| format!("couldn't load dir `{}`", dir))
+        .with_context(|| format!("couldn't load dir `{dir}`"))
         .unwrap();
     let mut failures = 0;
 
