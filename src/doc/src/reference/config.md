@@ -757,6 +757,20 @@ string that includes Cargo's version.
 
 The `[install]` table defines defaults for the [`cargo install`] command.
 
+#### `install.no-path-check`
+* Type: boolean
+* Default: false
+* Environment: `CARGO_INSTALL_NO_PATH_CHECK`
+
+If this is `true`, then Cargo will not perform any checks if an installed
+command is not available on the configured `PATH`.
+
+Setting this to `true` can be helpful when the install root is configured
+to an interim location (e.g. cross-compiling) and an installer wishes to
+suppress any path checks warnings not relevant for their use case.
+
+Can be overridden with the `--no-path-check` command-line option.
+
 #### `install.root`
 * Type: string (path)
 * Default: Cargo's home directory

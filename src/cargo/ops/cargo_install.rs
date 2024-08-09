@@ -620,6 +620,7 @@ pub fn install(
     opts: &ops::CompileOptions,
     force: bool,
     no_track: bool,
+    no_path_check: bool,
 ) -> CargoResult<()> {
     let root = resolve_root(root, gctx)?;
     let dst = root.join("bin").into_path_unlocked();
@@ -739,7 +740,12 @@ pub fn install(
         (!succeeded.is_empty(), !failed.is_empty())
     };
 
-    if installed_anything {
+    let skip_path_check = match gctx.get_env_os("CARGO_INSTALL_NO_PATH_CHECK") {
+        Some(v) => Some(v == "1"),
+        None => Some(no_path_check),
+    };
+
+    if installed_anything && !skip_path_check.is_some_and(|f| f) {
         // Print a warning that if this directory isn't in PATH that they won't be
         // able to run these commands.
         let path = gctx.get_env_os("PATH").unwrap_or_default();

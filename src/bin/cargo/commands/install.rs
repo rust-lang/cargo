@@ -8,6 +8,7 @@ use cargo::ops;
 use cargo::util::IntoUrl;
 use cargo::util::VersionExt;
 use cargo::CargoResult;
+use clap::parser::ValueSource;
 use itertools::Itertools;
 use semver::VersionReq;
 
@@ -69,6 +70,7 @@ pub fn cli() -> Command {
         )
         .arg(opt("root", "Directory to install packages into").value_name("DIR"))
         .arg(flag("force", "Force overwriting existing crates or binaries").short('f'))
+        .arg(flag("no-path-check", "Do not perform a PATH check"))
         .arg(flag("no-track", "Do not save tracking information"))
         .arg(flag(
             "list",
@@ -176,6 +178,12 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
 
     let root = args.get_one::<String>("root").map(String::as_str);
 
+    let no_path_check = if args.value_source("no-path-check") != Some(ValueSource::DefaultValue) {
+        args.flag("no-path-check")
+    } else {
+        gctx.install_config()?.no_path_check.is_some_and(|f| f)
+    };
+
     // We only provide workspace information for local crate installation from
     // one of the following sources:
     // - From current working directory (only work for edition 2015).
@@ -213,6 +221,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
             &compile_opts,
             args.flag("force"),
             args.flag("no-track"),
+            no_path_check,
         )?;
     }
     Ok(())

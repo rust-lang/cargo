@@ -128,6 +128,12 @@ useful if something has changed on the system that you want to rebuild with,
 such as a newer version of `rustc`.
 {{/option}}
 
+{{#option "`--no-path-check`" }}
+By default, Cargo will check if installed programs are available in the
+configured `PATH` and generate a warning if this is not the case. This flag
+tells Cargo not to perform any path checks.
+{{/option}}
+
 {{#option "`--no-track`" }}
 By default, Cargo keeps track of the installed packages with a metadata file
 stored in the installation root directory. This flag tells Cargo not to use or

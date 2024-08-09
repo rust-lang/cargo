@@ -224,6 +224,7 @@ pub struct GlobalContext {
     future_incompat_config: LazyCell<CargoFutureIncompatConfig>,
     net_config: LazyCell<CargoNetConfig>,
     build_config: LazyCell<CargoBuildConfig>,
+    install_config: LazyCell<CargoInstallConfig>,
     target_cfgs: LazyCell<Vec<(String, TargetCfgConfig)>>,
     doc_extern_map: LazyCell<RustdocExternMap>,
     progress_config: ProgressConfig,
@@ -318,6 +319,7 @@ impl GlobalContext {
             future_incompat_config: LazyCell::new(),
             net_config: LazyCell::new(),
             build_config: LazyCell::new(),
+            install_config: LazyCell::new(),
             target_cfgs: LazyCell::new(),
             doc_extern_map: LazyCell::new(),
             progress_config: ProgressConfig::default(),
@@ -1824,6 +1826,11 @@ impl GlobalContext {
             .try_borrow_with(|| self.get::<CargoBuildConfig>("build"))
     }
 
+    pub fn install_config(&self) -> CargoResult<&CargoInstallConfig> {
+        self.install_config
+            .try_borrow_with(|| self.get::<CargoInstallConfig>("install"))
+    }
+
     pub fn progress_config(&self) -> &ProgressConfig {
         &self.progress_config
     }
@@ -2615,6 +2622,12 @@ pub struct CargoBuildConfig {
     // deprecated alias for artifact-dir
     pub out_dir: Option<ConfigRelativePath>,
     pub artifact_dir: Option<ConfigRelativePath>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct CargoInstallConfig {
+    pub no_path_check: Option<bool>,
 }
 
 /// Configuration for `build.target`.

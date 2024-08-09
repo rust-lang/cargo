@@ -110,6 +110,7 @@ In summary, the supported environment variables are:
 * `CARGO_HTTP_LOW_SPEED_LIMIT` --- The HTTP low-speed limit, see [`http.low-speed-limit`].
 * `CARGO_HTTP_MULTIPLEXING` --- Whether HTTP/2 multiplexing is used, see [`http.multiplexing`].
 * `CARGO_HTTP_USER_AGENT` --- The HTTP user-agent header, see [`http.user-agent`].
+* `CARGO_INSTALL_NO_PATH_CHECK` --- Disables any path checks when using [`cargo install`], see [`install.no-path-check`].
 * `CARGO_INSTALL_ROOT` --- The default directory for [`cargo install`], see [`install.root`].
 * `CARGO_NET_RETRY` --- Number of times to retry network errors, see [`net.retry`].
 * `CARGO_NET_GIT_FETCH_WITH_CLI` --- Enables the use of the `git` executable to fetch, see [`net.git-fetch-with-cli`].
@@ -176,6 +177,7 @@ In summary, the supported environment variables are:
 [`http.low-speed-limit`]: config.md#httplow-speed-limit
 [`http.multiplexing`]: config.md#httpmultiplexing
 [`http.user-agent`]: config.md#httpuser-agent
+[`install.no-path-check`]: config.md#installno-path-check
 [`install.root`]: config.md#installroot
 [`net.retry`]: config.md#netretry
 [`net.git-fetch-with-cli`]: config.md#netgit-fetch-with-cli
