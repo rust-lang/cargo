@@ -147,13 +147,13 @@ fn create_package(
         .status("Packaging", pkg.package_id().to_string())?;
     dst.file().set_len(0)?;
     let uncompressed_size = tar(ws, pkg, local_reg, ar_files, dst.file(), &filename)
-        .with_context(|| "failed to prepare local package for uploading")?;
+        .context("failed to prepare local package for uploading")?;
 
     dst.seek(SeekFrom::Start(0))?;
     let src_path = dst.path();
     let dst_path = dst.parent().join(&filename);
     fs::rename(&src_path, &dst_path)
-        .with_context(|| "failed to move temporary tarball into final location")?;
+        .context("failed to move temporary tarball into final location")?;
 
     let dst_metadata = dst
         .file()
@@ -331,7 +331,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Vec<Fi
     if opts.verify {
         for (pkg, opts, tarball) in &outputs {
             run_verify(ws, pkg, tarball, local_reg.as_ref(), opts)
-                .with_context(|| "failed to verify package tarball")?
+                .context("failed to verify package tarball")?
         }
     }
 

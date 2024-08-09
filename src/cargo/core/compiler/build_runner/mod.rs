@@ -100,8 +100,8 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         let jobserver = match bcx.gctx.jobserver_from_env() {
             Some(c) => c.clone(),
             None => {
-                let client = Client::new(bcx.jobs() as usize)
-                    .with_context(|| "failed to create jobserver")?;
+                let client =
+                    Client::new(bcx.jobs() as usize).context("failed to create jobserver")?;
                 client.acquire_raw()?;
                 client
             }
@@ -354,11 +354,11 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             .unwrap()
             .host
             .prepare()
-            .with_context(|| "couldn't prepare build directories")?;
+            .context("couldn't prepare build directories")?;
         for target in self.files.as_mut().unwrap().target.values_mut() {
             target
                 .prepare()
-                .with_context(|| "couldn't prepare build directories")?;
+                .context("couldn't prepare build directories")?;
         }
 
         let files = self.files.as_ref().unwrap();

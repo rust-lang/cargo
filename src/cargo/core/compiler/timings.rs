@@ -299,7 +299,7 @@ impl<'gctx> Timings<'gctx> {
             .sort_unstable_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
         if self.report_html {
             self.report_html(build_runner, error)
-                .with_context(|| "failed to save timing report")?;
+                .context("failed to save timing report")?;
         }
         Ok(())
     }

@@ -431,7 +431,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         // If we have an old build directory, then just move it into place,
         // otherwise create it!
         paths::create_dir_all(&script_out_dir)
-            .with_context(|| "failed to create script output directory for build command")?;
+            .context("failed to create script output directory for build command")?;
 
         // For all our native lib dependencies, pick up their metadata to pass
         // along to this custom build command. We're also careful to augment our

@@ -211,9 +211,9 @@ impl OnDiskReports {
         report_file
             .file()
             .read_to_string(&mut file_contents)
-            .with_context(|| "failed to read report")?;
+            .context("failed to read report")?;
         let on_disk_reports: OnDiskReports =
-            serde_json::from_str(&file_contents).with_context(|| "failed to load report")?;
+            serde_json::from_str(&file_contents).context("failed to load report")?;
         if on_disk_reports.version != ON_DISK_VERSION {
             bail!("unable to read reports; reports were saved from a future version of Cargo");
         }
