@@ -59,6 +59,8 @@ Don't actually write to the manifest.
 {{> options-manifest-path }}
 
 {{> options-locked }}
+
+{{> options-lockfile-path }}
 {{/options}}
 
 ### Package Selection

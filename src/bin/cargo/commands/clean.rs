@@ -19,6 +19,7 @@ pub fn cli() -> Command {
         .arg_target_triple("Target triple to clean output for")
         .arg_target_dir()
         .arg_manifest_path()
+        .arg_lockfile_path()
         .arg_dry_run("Display what would be deleted without deleting anything")
         .args_conflicts_with_subcommands(true)
         .subcommand(

@@ -146,6 +146,8 @@ passing `--nocapture` to the benchmark binaries:
 {{> options-ignore-rust-version }}
 
 {{> options-locked }}
+
+{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-options-common }}

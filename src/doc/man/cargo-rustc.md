@@ -112,6 +112,8 @@ This flag only works when building a `lib` or `example` library target.
 
 {{> options-locked }}
 
+{{> options-lockfile-path }}
+
 {{/options}}
 
 {{> section-options-common }}

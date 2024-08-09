@@ -10,6 +10,7 @@ pub fn cli() -> Command {
         .arg_silent_suggestion()
         .arg_package("Argument to get the package ID specifier for")
         .arg_manifest_path()
+        .arg_lockfile_path()
         .after_help(color_print::cstr!(
             "Run `<cyan,bold>cargo help pkgid</>` for more detailed information.\n"
         ))

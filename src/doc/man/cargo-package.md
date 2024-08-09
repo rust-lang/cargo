@@ -128,6 +128,8 @@ published to this registry.
 
 {{> options-locked }}
 
+{{> options-lockfile-path }}
+
 {{/options}}
 
 ### Miscellaneous Options

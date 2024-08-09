@@ -104,6 +104,8 @@ and supports common Unix glob patterns.
 {{> options-ignore-rust-version }}
 
 {{> options-locked }}
+
+{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-options-common }}

@@ -33,6 +33,8 @@ lockfile and has more options for controlling update behavior.
 {{> options-ignore-rust-version }}
 
 {{> options-locked }}
+
+{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-options-common }}

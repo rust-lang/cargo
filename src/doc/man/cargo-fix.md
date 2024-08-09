@@ -150,6 +150,8 @@ When no target selection options are given, `cargo fix` will fix all targets
 {{> options-ignore-rust-version }}
 
 {{> options-locked }}
+
+{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-options-common }}

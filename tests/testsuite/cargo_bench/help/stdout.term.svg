@@ -1,4 +1,4 @@
-<svg width="810px" height="1100px" xmlns="http://www.w3.org/2000/svg">
+<svg width="810px" height="1118px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
@@ -125,19 +125,21 @@
 </tspan>
     <tspan x="10px" y="964px"><tspan>      </tspan><tspan class="fg-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.toml</tspan>
 </tspan>
-    <tspan x="10px" y="982px"><tspan>      </tspan><tspan class="fg-cyan bold">--ignore-rust-version</tspan><tspan>   Ignore `rust-version` specification in packages</tspan>
+    <tspan x="10px" y="982px"><tspan>      </tspan><tspan class="fg-cyan bold">--lockfile-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.lock (unstable)</tspan>
 </tspan>
-    <tspan x="10px" y="1000px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan><tspan>                Assert that `Cargo.lock` will remain unchanged</tspan>
+    <tspan x="10px" y="1000px"><tspan>      </tspan><tspan class="fg-cyan bold">--ignore-rust-version</tspan><tspan>   Ignore `rust-version` specification in packages</tspan>
 </tspan>
-    <tspan x="10px" y="1018px"><tspan>      </tspan><tspan class="fg-cyan bold">--offline</tspan><tspan>               Run without accessing the network</tspan>
+    <tspan x="10px" y="1018px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan><tspan>                Assert that `Cargo.lock` will remain unchanged</tspan>
 </tspan>
-    <tspan x="10px" y="1036px"><tspan>      </tspan><tspan class="fg-cyan bold">--frozen</tspan><tspan>                Equivalent to specifying both --locked and --offline</tspan>
+    <tspan x="10px" y="1036px"><tspan>      </tspan><tspan class="fg-cyan bold">--offline</tspan><tspan>               Run without accessing the network</tspan>
 </tspan>
-    <tspan x="10px" y="1054px">
+    <tspan x="10px" y="1054px"><tspan>      </tspan><tspan class="fg-cyan bold">--frozen</tspan><tspan>                Equivalent to specifying both --locked and --offline</tspan>
 </tspan>
-    <tspan x="10px" y="1072px"><tspan>Run `</tspan><tspan class="fg-cyan bold">cargo help bench</tspan><tspan class="bold">` for more detailed information.</tspan>
+    <tspan x="10px" y="1072px">
 </tspan>
-    <tspan x="10px" y="1090px">
+    <tspan x="10px" y="1090px"><tspan>Run `</tspan><tspan class="fg-cyan bold">cargo help bench</tspan><tspan class="bold">` for more detailed information.</tspan>
+</tspan>
+    <tspan x="10px" y="1108px">
 </tspan>
   </text>
 
