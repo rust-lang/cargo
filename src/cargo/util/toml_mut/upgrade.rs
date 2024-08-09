@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use anyhow::bail;
+
 use crate::CargoResult;
 
 /// Upgrade an existing requirement to a new version.
@@ -31,15 +33,8 @@ pub(crate) fn upgrade_requirement(
             new_req_text.remove(0);
         }
         // Validate contract
-        #[cfg(debug_assertions)]
-        {
-            assert!(
-                new_req.matches(version),
-                "New req {} is invalid, because {} does not match {}",
-                new_req_text,
-                new_req,
-                version
-            )
+        if !new_req.matches(version) {
+            bail!("new requirement {new_req_text} is invalid, because it doesn't match {version}")
         }
         if new_req_text == req_text {
             Ok(None)

@@ -66,11 +66,12 @@ fn update_pre_release() {
     p.cargo("update my-dependency --precise 0.1.2-pre.0 -Zunstable-options")
         .masquerade_as_nightly_cargo(&["precise-pre-release"])
         .with_stderr_data(str![[r#"
+[UPGRADING] my-dependency ^0.1.1 -> ^0.1.2-pre.0
 [UPDATING] `dummy-registry` index
-[UPDATING] my-dependency v0.1.1 -> v0.1.2-pre.0
 
 "#]])
         .run();
+
     let lockfile = p.read_lockfile();
     assert!(lockfile.contains("\nname = \"my-dependency\"\nversion = \"0.1.2-pre.0\""));
 }
@@ -99,8 +100,8 @@ fn update_pre_release_differ() {
     p.cargo("update -p my-dependency --precise 0.1.2-pre.0 -Zunstable-options")
         .masquerade_as_nightly_cargo(&["precise-pre-release"])
         .with_stderr_data(str![[r#"
+[DOWNGRADING] my-dependency ^0.1.2 -> ^0.1.2-pre.0
 [UPDATING] `dummy-registry` index
-[DOWNGRADING] my-dependency v0.1.2 -> v0.1.2-pre.0
 
 "#]])
         .run();

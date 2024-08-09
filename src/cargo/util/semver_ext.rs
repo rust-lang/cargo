@@ -117,9 +117,15 @@ impl OptVersionReq {
     /// and we're not sure if this part of the functionality should be implemented in semver or cargo.
     pub fn matches_prerelease(&self, version: &Version) -> bool {
         if version.is_prerelease() {
-            let mut version = version.clone();
-            version.pre = semver::Prerelease::EMPTY;
-            return self.matches(&version);
+            // Only in the case of "ordinary" version requirements with pre-release
+            // versions do we need to help the version matching. In the case of Any,
+            // Locked, or Precise, the `matches()` function is already doing the
+            // correct handling.
+            if let OptVersionReq::Req(_) = self {
+                let mut version = version.clone();
+                version.pre = semver::Prerelease::EMPTY;
+                return self.matches(&version);
+            }
         }
         self.matches(version)
     }
@@ -178,6 +184,8 @@ impl From<VersionReq> for OptVersionReq {
 
 #[cfg(test)]
 mod matches_prerelease {
+    use semver::{Version, VersionReq};
+
     use super::OptVersionReq;
 
     #[test]
@@ -237,5 +245,14 @@ mod matches_prerelease {
             let matched = OptVersionReq::Req(version_req).matches_prerelease(&version);
             assert_eq!(expected, matched, "req: {req}; ver: {ver}");
         }
+    }
+
+    #[test]
+    fn precise_prerelease() {
+        let version_req = VersionReq::parse("1.2.3-pre").unwrap();
+        let version = Version::parse("1.2.3-pre").unwrap();
+        let matched =
+            OptVersionReq::Precise(version.clone(), version_req).matches_prerelease(&version);
+        assert!(matched, "a version must match its own precise requirement");
     }
 }
