@@ -97,6 +97,7 @@ use crate::util::{add_path_args, internal};
 use cargo_util::{paths, ProcessBuilder, ProcessError};
 use cargo_util_schemas::manifest::TomlDebugInfo;
 use cargo_util_schemas::manifest::TomlTrimPaths;
+use cargo_util_schemas::manifest::TomlTrimPathsValue;
 use rustfix::diagnostics::Applicability;
 
 const RUSTDOC_CRATE_VERSION_FLAG: &str = "--crate-version";
@@ -737,6 +738,10 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
     add_error_format_and_color(build_runner, &mut rustdoc);
     add_allow_features(build_runner, &mut rustdoc);
 
+    if let Some(trim_paths) = unit.profile.trim_paths.as_ref() {
+        trim_paths_args_rustdoc(&mut rustdoc, build_runner, unit, trim_paths)?;
+    }
+
     rustdoc.args(unit.pkg.manifest().lint_rustflags());
     if let Some(args) = build_runner.bcx.extra_args_for(unit) {
         rustdoc.args(args);
@@ -1221,6 +1226,32 @@ fn features_args(unit: &Unit) -> Vec<OsString> {
     }
 
     args
+}
+
+/// Like [`trim_paths_args`] but for rustdoc invocations.
+fn trim_paths_args_rustdoc(
+    cmd: &mut ProcessBuilder,
+    build_runner: &BuildRunner<'_, '_>,
+    unit: &Unit,
+    trim_paths: &TomlTrimPaths,
+) -> CargoResult<()> {
+    match trim_paths {
+        // rustdoc supports diagnostics trimming only.
+        TomlTrimPaths::Values(values) if !values.contains(&TomlTrimPathsValue::Diagnostics) => {
+            return Ok(())
+        }
+        _ => {}
+    }
+
+    // feature gate was checked during manifest/config parsing.
+    cmd.arg("-Zunstable-options");
+
+    // Order of `--remap-path-prefix` flags is important for `-Zbuild-std`.
+    // We want to show `/rustc/<hash>/library/std` instead of `std-0.0.0`.
+    cmd.arg(package_remap(build_runner, unit));
+    cmd.arg(sysroot_remap(build_runner, unit));
+
+    Ok(())
 }
 
 /// Generates the `--remap-path-scope` and `--remap-path-prefix` for [RFC 3127].
