@@ -276,3 +276,32 @@ MAIN ENV_TEST:from-env
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn env_reset() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+        use std::env;
+        fn main() {
+            println!( "{}", env!("ENV_TEST") );
+        }
+        "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [env]
+                ENV_TEST = "from-config"
+            "#,
+        )
+        .build();
+
+    p.cargo("run").with_stdout_contains("from-config").run();
+    p.cargo("run")
+        .env("ENV_TEST", "from-env")
+        .with_stdout_contains("from-env")
+        .run();
+}
