@@ -610,11 +610,11 @@ fn list_files_gix(
 
     let pathspec = {
         // Include the package root.
-        let mut include = BString::from(":/");
+        let mut include = BString::from(":(top)");
         include.push_str(package_prefix.as_ref());
 
         // Exclude the target directory.
-        let mut exclude = BString::from(":!/");
+        let mut exclude = BString::from(":!(exclude,top)");
         exclude.push_str(target_prefix.as_ref());
 
         vec![include, exclude]
