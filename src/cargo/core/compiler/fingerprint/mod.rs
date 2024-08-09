@@ -1910,6 +1910,9 @@ where
         None
     };
 
+    let mut truncated_precision_count: u64 = 0;
+    let mut total_checked: u64 = 0;
+    let mut first: Option<StaleItem> = None;
     for path in paths {
         let path = path.as_ref();
 
@@ -1950,7 +1953,30 @@ where
         // if equal, files were changed just after a previous build finished.
         // Unfortunately this became problematic when (in #6484) cargo switch to more accurately
         // measuring the start time of builds.
-        if path_mtime <= reference_mtime {
+        //
+        // Additionally, the build can span different volumes, some which support high-precision
+        // file timestamps and some that don't (e.g. mounted Docker volumes). This can make
+        // one of the timestamps lose the nanosecond part and appear up to a second in the past.
+        total_checked += 1;
+        let truncated_precision =
+            path_mtime.nanoseconds() == 0 || reference_mtime.nanoseconds() == 0;
+
+        let fresh = if truncated_precision {
+            truncated_precision_count += 1;
+            if first.is_none() {
+                first = Some(StaleItem::ChangedFile {
+                    reference: reference.to_path_buf(),
+                    reference_mtime,
+                    stale: path.to_path_buf(),
+                    stale_mtime: path_mtime,
+                });
+            }
+            path_mtime.unix_seconds() <= reference_mtime.unix_seconds()
+        } else {
+            path_mtime <= reference_mtime
+        };
+
+        if fresh {
             continue;
         }
 
@@ -1960,6 +1986,13 @@ where
             stale: path.to_path_buf(),
             stale_mtime: path_mtime,
         });
+    }
+
+    // If one file in many has a .0ns mtime then still regard it as a changed file.
+    if total_checked > 1 && truncated_precision_count == 1 {
+        return first;
+    } else if truncated_precision_count > 0 {
+        debug!("ignoring files that look changed due to mtime precision differences");
     }
 
     debug!(
