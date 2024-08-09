@@ -637,16 +637,17 @@ impl<'gctx> Workspace<'gctx> {
         self
     }
 
+    /// Returns the directory where the lockfile is in.
     pub fn lock_root(&self) -> Filesystem {
         if let Some(requested) = self.requested_lockfile_path.as_ref() {
             return Filesystem::new(
                 requested
                     .parent()
-                    .unwrap_or_else(|| unreachable!("Lockfile path can't be root"))
+                    .expect("Lockfile path can't be root")
                     .to_owned(),
             );
         }
-        return self.default_lock_root();
+        self.default_lock_root()
     }
 
     fn default_lock_root(&self) -> Filesystem {

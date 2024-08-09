@@ -1,6 +1,5 @@
 use crate::command_prelude::*;
 use cargo::core::Workspace;
-use std::path::Path;
 
 use cargo::ops;
 
@@ -77,8 +76,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     // Can't use workspace() to avoid using -Zavoid-dev-deps (if passed)
     let mut ws = Workspace::new(&root_manifest, gctx)?;
     ws.set_resolve_honors_rust_version(args.honor_rust_version());
-    let lockfile_path =
-        lockfile_path(args.get_one::<String>("lockfile-path").map(Path::new), gctx)?;
+    let lockfile_path = args.lockfile_path(gctx)?;
     ws.set_requested_lockfile_path(lockfile_path.clone());
 
     let mut opts = args.compile_options(gctx, mode, Some(&ws), ProfileChecking::LegacyTestOnly)?;
@@ -92,7 +90,6 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         gctx,
         &ws,
         &root_manifest,
-        lockfile_path,
         &mut ops::FixOptions {
             edition: args.flag("edition"),
             idioms: args.flag("edition-idioms"),
@@ -101,6 +98,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
             allow_no_vcs: args.flag("allow-no-vcs"),
             allow_staged: args.flag("allow-staged"),
             broken_code: args.flag("broken-code"),
+            requested_lockfile_path: lockfile_path,
         },
     )?;
     Ok(())
