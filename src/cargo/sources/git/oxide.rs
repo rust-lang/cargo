@@ -206,7 +206,7 @@ fn amend_authentication_hints(
                     "if a proxy or similar is necessary `net.git-fetch-with-cli` may help here\n",
                     "https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli"
                 );
-                return Err(anyhow::Error::from(err)).context(msg);
+                return Err(anyhow::Error::from(err).context(msg));
             }
             _ => None,
         };
@@ -225,7 +225,7 @@ fn amend_authentication_hints(
             msg.push_str(
                 "https://doc.rust-lang.org/cargo/reference/config.html#netgit-fetch-with-cli",
             );
-            return Err(anyhow::Error::from(err)).context(msg);
+            return Err(anyhow::Error::from(err).context(msg));
         }
     }
     Err(err.into())
