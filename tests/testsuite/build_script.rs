@@ -5833,17 +5833,6 @@ fn directory_with_leading_underscore() {
             .file("_foo/foo/build.rs", "fn main() { }")
     });
     p.cargo("build --manifest-path=_foo/foo/Cargo.toml -v")
-        .with_status(101)
-        .with_stderr_data(r#"[ERROR] failed to determine package fingerprint for build script for foo v0.1.0 ([ROOT]/foo/_foo/foo)
-
-Caused by:
-  failed to determine the most recently modified file in [ROOT]/foo/_foo/foo
-
-Caused by:
-  failed to determine list of files in [ROOT]/foo/_foo/foo
-
-Caused by:
-  Unimplemented short keyword: '_'
-"#)
+        .with_status(0)
         .run();
 }
