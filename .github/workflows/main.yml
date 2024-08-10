@@ -140,17 +140,17 @@ jobs:
           os: ubuntu-latest
           rust: nightly
           other: i686-unknown-linux-gnu
-        - name: macOS x86_64 stable
-          os: macos-13
+        - name: macOS aarch64 stable
+          os: macos-14
           rust: stable
-          other: x86_64-apple-ios
+          other: x86_64-apple-darwin
         - name: macOS x86_64 nightly
           os: macos-13
           rust: nightly
           other: x86_64-apple-ios
-        - name: macOS aarch64 stable
+        - name: macOS aarch64 nightly
           os: macos-14
-          rust: stable
+          rust: nightly
           other: x86_64-apple-darwin
         - name: Windows x86_64 MSVC stable
           os: windows-latest
