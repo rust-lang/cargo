@@ -163,6 +163,11 @@ _cargo() {
                 help)
                     _cargo_cmds
                         ;;
+                info)
+                    _arguments -s -A "^--" $common $registry \
+                        '--index=[specify registry index]:index' \
+                        '*: :_guard "^-*" "crate"'
+                        ;;
 
                 init)
                     _arguments -s -S $common $registry \
