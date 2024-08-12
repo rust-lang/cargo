@@ -14,7 +14,7 @@ use cargo_test_support::tools;
 use cargo_test_support::{
     basic_manifest, cargo_exe, cross_compile, is_coarse_mtime, project, project_in,
 };
-use cargo_test_support::{rustc_host, sleep_ms, slow_cpu_multiplier, symlink_supported};
+use cargo_test_support::{git, rustc_host, sleep_ms, slow_cpu_multiplier, symlink_supported};
 use cargo_util::paths::{self, remove_dir_all};
 
 #[cargo_test]
@@ -5812,5 +5812,27 @@ fn links_overrides_with_target_applies_to_host() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
+        .run();
+}
+
+#[cargo_test]
+fn directory_with_leading_underscore() {
+    let p: cargo_test_support::Project = git::new("foo", |p| {
+        p.no_manifest()
+            .file(
+                "_foo/foo/Cargo.toml",
+                r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2021"
+                build = "build.rs"
+            "#,
+            )
+            .file("_foo/foo/src/main.rs", "fn main() {}")
+            .file("_foo/foo/build.rs", "fn main() { }")
+    });
+    p.cargo("build --manifest-path=_foo/foo/Cargo.toml -v")
+        .with_status(0)
         .run();
 }
