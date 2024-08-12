@@ -752,3 +752,90 @@ Hello, Ferris!
 "#]],
     );
 }
+
+#[cargo_test(nightly, reason = "rustdoc --remap-path-prefix is unstable")]
+fn rustdoc_without_diagnostics_scope() {
+    Package::new("bar", "0.0.1")
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file(
+            "src/lib.rs",
+            r#"
+            /// </script>
+            pub struct Bar;
+            "#,
+        )
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                bar = "0.0.1"
+
+                [profile.dev]
+                trim-paths = "object"
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("doc -vv -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .with_stderr_data(str![[r#"
+...
+[WARNING] unopened HTML tag `script`
+ --> [ROOT]/home/.cargo/registry/src/-[HASH]/bar-0.0.1/src/lib.rs:2:17
+...
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "rustdoc --remap-path-prefix is unstable")]
+fn rustdoc_diagnostics_works() {
+    // This is expected to work after rust-lang/rust#128736
+    Package::new("bar", "0.0.1")
+        .file("Cargo.toml", &basic_manifest("bar", "0.0.1"))
+        .file(
+            "src/lib.rs",
+            r#"
+            /// </script>
+            pub struct Bar;
+            "#,
+        )
+        .publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+
+                [dependencies]
+                bar = "0.0.1"
+
+                [profile.dev]
+                trim-paths = "diagnostics"
+           "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("doc -vv -Ztrim-paths")
+        .masquerade_as_nightly_cargo(&["-Ztrim-paths"])
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `[..]rustc [..]-Zremap-path-scope=diagnostics --remap-path-prefix=[ROOT]/home/.cargo/registry/src= --remap-path-prefix=[..]/lib/rustlib/src/rust=/rustc/[..]`
+...
+[WARNING] unopened HTML tag `script`
+ --> -[..]/bar-0.0.1/src/lib.rs:2:17
+...
+"#]])
+        .run();
+}
