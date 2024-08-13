@@ -272,7 +272,8 @@ pub trait CommandExt: Sized {
         };
         self._arg(
             optional_multi_opt("target", "TRIPLE", target)
-                .help_heading(heading::COMPILATION_OPTIONS),
+                .help_heading(heading::COMPILATION_OPTIONS)
+                .add(clap_complete::ArgValueCandidates::new(get_target_triples)),
         )
         ._arg(unsupported_short_arg)
     }
@@ -1065,6 +1066,62 @@ fn get_targets_from_metadata() -> CargoResult<Vec<Target>> {
         .collect::<Vec<_>>();
 
     Ok(targets)
+}
+
+fn get_target_triples() -> Vec<clap_complete::CompletionCandidate> {
+    let mut candidates = Vec::new();
+
+    if is_rustup() {
+        if let Ok(targets) = get_target_triples_from_rustup() {
+            candidates.extend(targets);
+        }
+    } else {
+        if let Ok(targets) = get_target_triples_from_rustc() {
+            candidates.extend(targets);
+        }
+    }
+
+    candidates
+}
+
+fn get_target_triples_from_rustup() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
+    let output = std::process::Command::new("rustup")
+        .arg("target")
+        .arg("list")
+        .output()?;
+
+    if !output.status.success() {
+        return Ok(vec![]);
+    }
+
+    let stdout = String::from_utf8(output.stdout)?;
+
+    Ok(stdout
+        .lines()
+        .map(|line| {
+            let target = line.split_once(' ');
+            match target {
+                None => clap_complete::CompletionCandidate::new(line.to_owned()).hide(true),
+                Some((target, _installed)) => clap_complete::CompletionCandidate::new(target),
+            }
+        })
+        .collect())
+}
+
+fn get_target_triples_from_rustc() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
+    let cwd = std::env::current_dir()?;
+    let gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
+    let ws = Workspace::new(&find_root_manifest_for_wd(&PathBuf::from(&cwd))?, &gctx);
+
+    let rustc = gctx.load_global_rustc(ws.as_ref().ok())?;
+
+    let (stdout, _stderr) =
+        rustc.cached_output(rustc.process().arg("--print").arg("target-list"), 0)?;
+
+    Ok(stdout
+        .lines()
+        .map(|line| clap_complete::CompletionCandidate::new(line.to_owned()))
+        .collect())
 }
 
 #[track_caller]
