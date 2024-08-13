@@ -163,7 +163,9 @@ pub trait CommandExt: Sized {
             )
             ._arg(flag("benches", benches).help_heading(heading::TARGET_SELECTION))
             ._arg(
-                optional_multi_opt("bench", "NAME", bench).help_heading(heading::TARGET_SELECTION),
+                optional_multi_opt("bench", "NAME", bench)
+                    .help_heading(heading::TARGET_SELECTION)
+                    .add(clap_complete::ArgValueCandidates::new(get_bench_candidates)),
             )
             ._arg(flag("all-targets", all).help_heading(heading::TARGET_SELECTION))
     }
@@ -1044,6 +1046,17 @@ pub fn lockfile_path(
     }
 
     return Ok(Some(path));
+}
+
+fn get_bench_candidates() -> Vec<clap_complete::CompletionCandidate> {
+    get_targets_from_metadata()
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|target| match target.kind() {
+            TargetKind::Bench => Some(clap_complete::CompletionCandidate::new(target.name())),
+            _ => None,
+        })
+        .collect::<Vec<_>>()
 }
 
 fn get_test_candidates() -> Vec<clap_complete::CompletionCandidate> {
