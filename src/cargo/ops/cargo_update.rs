@@ -514,12 +514,14 @@ fn print_lockfile_generation(
         };
 
         for package in diff.added.iter() {
+            let required_rust_version = report_required_rust_version(ws, resolve, *package);
             let latest = report_latest(&possibilities, *package);
+            let note = required_rust_version.or(latest);
 
-            if let Some(latest) = latest {
+            if let Some(note) = note {
                 ws.gctx().shell().status_with_color(
                     "Adding",
-                    format!("{package}{latest}"),
+                    format!("{package}{note}"),
                     &style::NOTE,
                 )?;
             }
@@ -594,11 +596,13 @@ fn print_lockfile_sync(
             }
         } else {
             for package in diff.added.iter() {
-                let latest = report_latest(&possibilities, *package).unwrap_or_default();
+                let required_rust_version = report_required_rust_version(ws, resolve, *package);
+                let latest = report_latest(&possibilities, *package);
+                let note = required_rust_version.or(latest).unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
                     "Adding",
-                    format!("{package}{latest}"),
+                    format!("{package}{note}"),
                     &style::NOTE,
                 )?;
             }
@@ -637,15 +641,17 @@ fn print_lockfile_updates(
         };
 
         if let Some((removed, added)) = diff.change() {
-            let latest = report_latest(&possibilities, *added).unwrap_or_default();
+            let required_rust_version = report_required_rust_version(ws, resolve, *added);
+            let latest = report_latest(&possibilities, *added);
+            let note = required_rust_version.or(latest).unwrap_or_default();
 
             let msg = if removed.source_id().is_git() {
                 format!(
-                    "{removed} -> #{}",
+                    "{removed} -> #{}{note}",
                     &added.source_id().precise_git_fragment().unwrap()[..8],
                 )
             } else {
-                format!("{removed} -> v{}{latest}", added.version())
+                format!("{removed} -> v{}{note}", added.version())
             };
 
             // If versions differ only in build metadata, we call it an "update"
@@ -670,24 +676,30 @@ fn print_lockfile_updates(
                 )?;
             }
             for package in diff.added.iter() {
-                let latest = report_latest(&possibilities, *package).unwrap_or_default();
+                let required_rust_version = report_required_rust_version(ws, resolve, *package);
+                let latest = report_latest(&possibilities, *package);
+                let note = required_rust_version.or(latest).unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
                     "Adding",
-                    format!("{package}{latest}"),
+                    format!("{package}{note}"),
                     &style::NOTE,
                 )?;
             }
         }
         for package in &diff.unchanged {
+            let required_rust_version = report_required_rust_version(ws, resolve, *package);
             let latest = report_latest(&possibilities, *package);
+            let note = required_rust_version.as_deref().or(latest.as_deref());
 
-            if let Some(latest) = latest {
-                unchanged_behind += 1;
+            if let Some(note) = note {
+                if latest.is_some() {
+                    unchanged_behind += 1;
+                }
                 if ws.gctx().shell().verbosity() == Verbosity::Verbose {
                     ws.gctx().shell().status_with_color(
                         "Unchanged",
-                        format!("{package}{latest}"),
+                        format!("{package}{note}"),
                         &anstyle::Style::new().bold(),
                     )?;
                 }
@@ -749,6 +761,27 @@ fn required_rust_version(ws: &Workspace<'_>) -> Option<PartialVersion> {
         let rustc_version = rustc.version.clone().into();
         Some(rustc_version)
     }
+}
+
+fn report_required_rust_version(
+    ws: &Workspace<'_>,
+    resolve: &Resolve,
+    package: PackageId,
+) -> Option<String> {
+    if package.source_id().is_path() {
+        return None;
+    }
+    let summary = resolve.summary(package);
+    let package_rust_version = summary.rust_version()?;
+    let workspace_rust_version = required_rust_version(ws)?;
+    if package_rust_version.is_compatible_with(&workspace_rust_version) {
+        return None;
+    }
+
+    let warn = style::WARN;
+    Some(format!(
+        " {warn}(requires Rust {package_rust_version}){warn:#}"
+    ))
 }
 
 fn report_latest(possibilities: &[IndexSummary], package: PackageId) -> Option<String> {

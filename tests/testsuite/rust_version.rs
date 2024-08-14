@@ -241,6 +241,7 @@ foo v0.0.1 ([ROOT]/foo)
 [UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest Rust 1.60.0 compatible versions
 [ADDING] newer-and-older v1.5.0 (latest: v1.6.0)
+[ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
 
 "#]])
         .run();
@@ -315,6 +316,7 @@ foo v0.0.1 ([ROOT]/foo)
 [UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest Rust 1.60.0 compatible versions
 [ADDING] newer-and-older v1.5.0 (latest: v1.6.0)
+[ADDING] only-newer v1.6.0 (requires Rust 1.2345)
 
 "#]])
         .run();
@@ -387,6 +389,7 @@ foo v0.0.1 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest Rust 1.60.0 compatible versions
+[ADDING] has-rust-version v1.6.0 (requires Rust 1.65.0)
 
 "#]])
         .run();
@@ -484,6 +487,7 @@ higher v0.0.1 ([ROOT]/foo)
 [UPDATING] `dummy-registry` index
 [LOCKING] 4 packages to latest Rust 1.50.0 compatible versions
 [ADDING] newer-and-older v1.5.0 (latest: v1.6.0)
+[ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
 
 "#]])
         .run();
@@ -612,6 +616,7 @@ fn resolve_edition2024() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest Rust 1.60.0 compatible versions
 [ADDING] newer-and-older v1.5.0 (latest: v1.6.0)
+[ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
 
 "#]])
         .run();
@@ -715,6 +720,7 @@ fn resolve_v3() {
 [UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest Rust 1.60.0 compatible versions
 [ADDING] newer-and-older v1.5.0 (latest: v1.6.0)
+[ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
 
 "#]])
         .run();
@@ -932,7 +938,7 @@ fn update_precise_overrides_msrv_resolver() {
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[UPDATING] bar v1.5.0 -> v1.6.0
+[UPDATING] bar v1.5.0 -> v1.6.0 (requires Rust 1.65.0)
 
 "#]])
         .run();
@@ -1010,6 +1016,7 @@ foo v0.0.1 ([ROOT]/foo)
 [UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest Rust 1.60.0 compatible versions
 [ADDING] newer-and-older v1.5.0 (latest: v1.6.0)
+[ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
 [DOWNLOADING] crates ...
 [DOWNLOADED] newer-and-older v1.5.0 (registry `dummy-registry`)
 [CHECKING] newer-and-older v1.5.0
