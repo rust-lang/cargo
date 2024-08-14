@@ -498,10 +498,6 @@ fn print_lockfile_generation(
     status_locking(ws, num_pkgs)?;
 
     for diff in diff {
-        fn format_latest(version: semver::Version) -> String {
-            let warn = style::WARN;
-            format!(" {warn}(latest: v{version}){warn:#}")
-        }
         let possibilities = if let Some(query) = diff.alternatives_query() {
             loop {
                 match registry.query_vec(&query, QueryKind::Exact) {
@@ -555,10 +551,6 @@ fn print_lockfile_sync(
     status_locking(ws, num_pkgs)?;
 
     for diff in diff {
-        fn format_latest(version: semver::Version) -> String {
-            let warn = style::WARN;
-            format!(" {warn}(latest: v{version}){warn:#}")
-        }
         let possibilities = if let Some(query) = diff.alternatives_query() {
             loop {
                 match registry.query_vec(&query, QueryKind::Exact) {
@@ -650,10 +642,6 @@ fn print_lockfile_updates(
 
     let mut unchanged_behind = 0;
     for diff in diff {
-        fn format_latest(version: semver::Version) -> String {
-            let warn = style::WARN;
-            format!(" {warn}(latest: v{version}){warn:#}")
-        }
         let possibilities = if let Some(query) = diff.alternatives_query() {
             loop {
                 match registry.query_vec(&query, QueryKind::Exact) {
@@ -805,6 +793,11 @@ fn status_locking(ws: &Workspace<'_>, num_pkgs: usize) -> CargoResult<()> {
         .shell()
         .status("Locking", format!("{num_pkgs} package{plural}{cfg}"))?;
     Ok(())
+}
+
+fn format_latest(version: semver::Version) -> String {
+    let warn = style::WARN;
+    format!(" {warn}(latest: v{version}){warn:#}")
 }
 
 fn is_latest(candidate: &semver::Version, current: &semver::Version) -> bool {
