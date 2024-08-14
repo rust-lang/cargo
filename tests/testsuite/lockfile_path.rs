@@ -1,8 +1,9 @@
 //! Tests for `lockfile-path` flag
 
+use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::registry::RegistryBuilder;
 use cargo_test_support::{
-    basic_bin_manifest, cargo_test, project, symlink_supported, Execs, ProjectBuilder,
+    basic_bin_manifest, cargo_test, project, symlink_supported, Execs, Project, ProjectBuilder,
 };
 use snapbox::str;
 use std::fs;
@@ -22,13 +23,13 @@ const LIB_TOML: &str = r#"
         edition = "2021"
     "#;
 
-fn make_basic_project() -> ProjectBuilder {
+fn make_project() -> ProjectBuilder {
     return project()
         .file("Cargo.toml", &basic_bin_manifest("test_foo"))
         .file("src/main.rs", "fn main() {}");
 }
 
-fn make_basic_command(execs: &mut Execs, lockfile_path_argument: String) -> &mut Execs {
+fn make_execs(execs: &mut Execs, lockfile_path_argument: String) -> &mut Execs {
     return execs
         .masquerade_as_nightly_cargo(&["lockfile-path"])
         .arg("-Zunstable-options")
@@ -36,77 +37,48 @@ fn make_basic_command(execs: &mut Execs, lockfile_path_argument: String) -> &mut
         .arg(lockfile_path_argument);
 }
 
-fn lockfile_must_exist(command: &str) -> bool {
-    return command == "pkgid" || command == "publish" || command == "package";
-}
-
-fn lockfile_created(
-    command: &str,
-    make_execs: &dyn Fn(&mut Execs, String) -> &mut Execs,
-    make_project: impl FnOnce() -> ProjectBuilder,
-) {
-    if lockfile_must_exist(command) {
-        return;
-    }
-
+#[cargo_test]
+fn basic_lockfile_created() {
     let lockfile_path_argument = "mylockfile/is/burried/Cargo.lock";
     let p = make_project().build();
-    let registry = RegistryBuilder::new().http_api().http_index().build();
 
-    make_execs(&mut p.cargo(command), lockfile_path_argument.to_string())
-        .replace_crates_io(registry.index_url())
-        .run();
+    make_execs(&mut p.cargo("metadata"), lockfile_path_argument.to_string()).run();
     assert!(!p.root().join("Cargo.lock").exists());
     assert!(p.root().join(lockfile_path_argument).is_file());
 }
 
-fn lockfile_read(
-    command: &str,
-    make_execs: &dyn Fn(&mut Execs, String) -> &mut Execs,
-    make_project: impl FnOnce() -> ProjectBuilder,
-) {
+#[cargo_test]
+fn basic_lockfile_read() {
     let lockfile_path_argument = "mylockfile/Cargo.lock";
     let p = make_project()
         .file("mylockfile/Cargo.lock", VALID_LOCKFILE)
         .build();
-    let registry = RegistryBuilder::new().http_api().http_index().build();
 
-    make_execs(&mut p.cargo(command), lockfile_path_argument.to_string())
-        .replace_crates_io(registry.index_url())
-        .run();
+    make_execs(&mut p.cargo("metadata"), lockfile_path_argument.to_string()).run();
 
     assert!(!p.root().join("Cargo.lock").exists());
     assert!(p.root().join(lockfile_path_argument).is_file());
 }
 
-fn lockfile_override(
-    command: &str,
-    make_execs: &dyn Fn(&mut Execs, String) -> &mut Execs,
-    make_project: impl FnOnce() -> ProjectBuilder,
-) {
-    if lockfile_must_exist(command) {
-        return;
-    }
-
+#[cargo_test]
+fn basic_lockfile_override() {
     let lockfile_path_argument = "mylockfile/Cargo.lock";
     let p = make_project()
         .file("Cargo.lock", "This is an invalid lock file!")
         .build();
-    let registry = RegistryBuilder::new().http_api().http_index().build();
 
-    make_execs(&mut p.cargo(command), lockfile_path_argument.to_string())
-        .replace_crates_io(registry.index_url())
-        .run();
+    make_execs(&mut p.cargo("metadata"), lockfile_path_argument.to_string()).run();
 
     assert!(p.root().join(lockfile_path_argument).is_file());
 }
 
-fn symlink_in_path(
-    command: &str,
-    make_execs: &dyn Fn(&mut Execs, String) -> &mut Execs,
-    make_project: impl FnOnce() -> ProjectBuilder,
-) {
-    if !symlink_supported() || lockfile_must_exist(command) {
+//////////////////////
+///// Symlink tests
+//////////////////////
+
+#[cargo_test]
+fn symlink_in_path() {
+    if !symlink_supported() {
         return;
     }
 
@@ -115,26 +87,20 @@ fn symlink_in_path(
     let lockfile_path_argument = format!("{src}/Cargo.lock");
 
     let p = make_project().symlink_dir(dst, src).build();
-    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     fs::create_dir(p.root().join("dst"))
         .unwrap_or_else(|e| panic!("could not create directory {}", e));
     assert!(p.root().join(src).is_dir());
 
-    make_execs(&mut p.cargo(command), lockfile_path_argument.to_string())
-        .replace_crates_io(registry.index_url())
-        .run();
+    make_execs(&mut p.cargo("metadata"), lockfile_path_argument.to_string()).run();
 
     assert!(p.root().join(format!("{src}/Cargo.lock")).is_file());
     assert!(p.root().join(lockfile_path_argument).is_file());
     assert!(p.root().join(dst).join("Cargo.lock").is_file());
 }
 
-fn symlink_lockfile(
-    command: &str,
-    make_execs: &dyn Fn(&mut Execs, String) -> &mut Execs,
-    make_project: impl FnOnce() -> ProjectBuilder,
-) {
+#[cargo_test]
+fn symlink_lockfile() {
     if !symlink_supported() {
         return;
     }
@@ -147,22 +113,16 @@ fn symlink_lockfile(
         .file(lockfile_path_argument, lock_body)
         .symlink(lockfile_path_argument, src)
         .build();
-    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     assert!(p.root().join(src).is_file());
 
-    make_execs(&mut p.cargo(command), lockfile_path_argument.to_string())
-        .replace_crates_io(registry.index_url())
-        .run();
+    make_execs(&mut p.cargo("metadata"), lockfile_path_argument.to_string()).run();
 
     assert!(!p.root().join("Cargo.lock").exists());
 }
 
-fn broken_symlink(
-    command: &str,
-    make_execs: &dyn Fn(&mut Execs, String) -> &mut Execs,
-    make_project: impl FnOnce() -> ProjectBuilder,
-) {
+#[cargo_test]
+fn broken_symlink() {
     if !symlink_supported() {
         return;
     }
@@ -173,34 +133,31 @@ fn broken_symlink(
 
     let p = make_project().symlink_dir(invalid_dst, src).build();
     assert!(!p.root().join(src).is_dir());
-    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     let err_msg = if !cfg!(windows) {
         str![[r#"[ERROR] failed to create directory `somedir/link`
 
 Caused by:
   File exists (os error 17)
+
 "#]]
     } else {
         str![[r#"[ERROR] failed to create directory `somedir/link`
 
 Caused by:
   Cannot create a file when that file already exists. (os error 183)
+
 "#]]
     };
 
-    make_execs(&mut p.cargo(command), lockfile_path_argument.to_string())
+    make_execs(&mut p.cargo("metadata"), lockfile_path_argument.to_string())
         .with_status(101)
         .with_stderr_data(err_msg)
-        .replace_crates_io(registry.index_url())
         .run();
 }
 
-fn loop_symlink(
-    command: &str,
-    make_execs: &dyn Fn(&mut Execs, String) -> &mut Execs,
-    make_project: impl FnOnce() -> ProjectBuilder,
-) {
+#[cargo_test]
+fn loop_symlink() {
     if !symlink_supported() {
         return;
     }
@@ -214,104 +171,178 @@ fn loop_symlink(
         .symlink_dir(src, loop_link)
         .build();
     assert!(!p.root().join(src).is_dir());
-    let registry = RegistryBuilder::new().http_api().http_index().build();
 
     let err_msg = if !cfg!(windows) {
         str![[r#"[ERROR] failed to create directory `somedir/link`
 
 Caused by:
-  "Cannot create a file when that file already exists. (os error 183)"
+  File exists (os error 17)
+
 "#]]
     } else {
         str![[r#"[ERROR] failed to create directory `somedir/link`
 
 Caused by:
-  "File exists (os error 17)"
+  Cannot create a file when that file already exists. (os error 183)
+
 "#]]
     };
 
-    make_execs(&mut p.cargo(command), lockfile_path_argument.to_string())
+    make_execs(&mut p.cargo("metadata"), lockfile_path_argument.to_string())
         .with_status(101)
         .with_stderr_data(err_msg)
-        .replace_crates_io(registry.index_url())
         .run();
 }
 
-/////////////////////
-//// Generic tests
-/////////////////////
-
-macro_rules! tests {
-    ($name: ident, $cmd_name:expr, $make_command:expr, $setup_test:expr) => {
-        #[cfg(test)]
-        mod $name {
-            use super::*;
-
-            #[cargo_test]
-            fn test_lockfile_created() {
-                lockfile_created($cmd_name, $make_command, $setup_test);
-            }
-
-            #[cargo_test]
-            fn test_lockfile_read() {
-                lockfile_read($cmd_name, $make_command, $setup_test);
-            }
-
-            #[cargo_test]
-            fn test_lockfile_override() {
-                lockfile_override($cmd_name, $make_command, $setup_test);
-            }
-
-            #[cargo_test]
-            fn test_symlink_in_path() {
-                symlink_in_path($cmd_name, $make_command, $setup_test);
-            }
-
-            #[cargo_test]
-            fn test_symlink_lockfile() {
-                symlink_lockfile($cmd_name, $make_command, $setup_test);
-            }
-
-            #[cargo_test]
-            fn test_broken_symlink() {
-                broken_symlink($cmd_name, $make_command, $setup_test);
-            }
-
-            #[cargo_test]
-            fn test_loop_symlink() {
-                loop_symlink($cmd_name, $make_command, $setup_test);
-            }
-        }
-    };
-
-    ($name: ident, $cmd_name:expr) => {
-        tests!($name, $cmd_name, &make_basic_command, make_basic_project);
-    };
-}
-
-fn make_add_command(execs: &mut Execs, lockfile_path_argument: String) -> &mut Execs {
-    return make_basic_command(execs, lockfile_path_argument)
+fn run_add_command(p: &Project, lockfile_path_argument: String) {
+    make_execs(&mut p.cargo("add"), lockfile_path_argument)
         .arg("--path")
-        .arg("../bar");
+        .arg("../bar")
+        .run();
 }
 
 fn make_add_project() -> ProjectBuilder {
-    return make_basic_project()
+    return make_project()
         .file("../bar/Cargo.toml", LIB_TOML)
         .file("../bar/src/main.rs", "fn main() {}");
 }
 
-fn make_clean_command(execs: &mut Execs, lockfile_path_argument: String) -> &mut Execs {
-    return make_basic_command(execs, lockfile_path_argument)
-        .arg("--package")
-        .arg("test_foo");
+/////////////////////////
+//// Commands tests
+/////////////////////////
+
+#[cargo_test]
+fn add_lockfile_created() {
+    let lockfile_path_argument = "mylockfile/is/burried/Cargo.lock";
+    let p = make_add_project().build();
+    run_add_command(&p, lockfile_path_argument.to_string());
+
+    assert!(!p.root().join("Cargo.lock").exists());
+    assert!(p.root().join(lockfile_path_argument).is_file());
 }
 
-fn make_fix_command(execs: &mut Execs, lockfile_path_argument: String) -> &mut Execs {
-    return make_basic_command(execs, lockfile_path_argument)
+#[cargo_test]
+fn add_lockfile_read() {
+    let lockfile_path_argument = "mylockfile/Cargo.lock";
+    let p = make_add_project()
+        .file("mylockfile/Cargo.lock", VALID_LOCKFILE)
+        .build();
+    run_add_command(&p, lockfile_path_argument.to_string());
+
+    assert!(!p.root().join("Cargo.lock").exists());
+    assert!(p.root().join(lockfile_path_argument).is_file());
+}
+
+#[cargo_test]
+fn add_lockfile_override() {
+    let lockfile_path_argument = "mylockfile/Cargo.lock";
+    let p = make_add_project()
+        .file("Cargo.lock", "This is an invalid lock file!")
+        .build();
+    run_add_command(&p, lockfile_path_argument.to_string());
+
+    assert!(p.root().join(lockfile_path_argument).is_file());
+}
+
+fn run_clean_command(p: &Project, lockfile_path_argument: String) {
+    make_execs(&mut p.cargo("clean"), lockfile_path_argument)
         .arg("--package")
         .arg("test_foo")
-        .arg("--allow-no-vcs");
+        .run();
+}
+
+#[cargo_test]
+fn clean_lockfile_created() {
+    let lockfile_path_argument = "mylockfile/is/burried/Cargo.lock";
+    let p = make_project().build();
+    run_clean_command(&p, lockfile_path_argument.to_string());
+
+    assert!(!p.root().join("Cargo.lock").exists());
+    assert!(p.root().join(lockfile_path_argument).is_file());
+}
+
+#[cargo_test]
+fn clean_lockfile_read() {
+    let lockfile_path_argument = "mylockfile/Cargo.lock";
+    let p = make_project()
+        .file("mylockfile/Cargo.lock", VALID_LOCKFILE)
+        .build();
+    run_clean_command(&p, lockfile_path_argument.to_string());
+
+    assert!(!p.root().join("Cargo.lock").exists());
+    assert!(p.root().join(lockfile_path_argument).is_file());
+}
+
+#[cargo_test]
+fn clean_lockfile_override() {
+    let lockfile_path_argument = "mylockfile/Cargo.lock";
+    let p = make_project()
+        .file("Cargo.lock", "This is an invalid lock file!")
+        .build();
+    run_clean_command(&p, lockfile_path_argument.to_string());
+
+    assert!(p.root().join(lockfile_path_argument).is_file());
+}
+
+fn run_fix_command(p: &Project, lockfile_path_argument: String) {
+    make_execs(&mut p.cargo("fix"), lockfile_path_argument)
+        .arg("--package")
+        .arg("test_foo")
+        .arg("--allow-no-vcs")
+        .run();
+}
+
+#[cargo_test]
+fn fix_lockfile_created() {
+    let lockfile_path_argument = "mylockfile/is/burried/Cargo.lock";
+    let p = make_project().build();
+    run_fix_command(&p, lockfile_path_argument.to_string());
+
+    assert!(!p.root().join("Cargo.lock").exists());
+    assert!(p.root().join(lockfile_path_argument).is_file());
+}
+
+#[cargo_test]
+fn fix_lockfile_read() {
+    let lockfile_path_argument = "mylockfile/Cargo.lock";
+    let p = make_project()
+        .file("mylockfile/Cargo.lock", VALID_LOCKFILE)
+        .build();
+    run_fix_command(&p, lockfile_path_argument.to_string());
+
+    assert!(!p.root().join("Cargo.lock").exists());
+    assert!(p.root().join(lockfile_path_argument).is_file());
+}
+
+#[cargo_test]
+fn fix_lockfile_override() {
+    let lockfile_path_argument = "mylockfile/Cargo.lock";
+    let p = make_project()
+        .file("Cargo.lock", "This is an invalid lock file!")
+        .build();
+    run_fix_command(&p, lockfile_path_argument.to_string());
+
+    assert!(p.root().join(lockfile_path_argument).is_file());
+}
+
+fn run_publish_command(p: &Project, lockfile_path_argument: String) {
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+
+    make_execs(&mut p.cargo("publish"), lockfile_path_argument)
+        .replace_crates_io(registry.index_url())
+        .run();
+}
+
+#[cargo_test]
+fn publish_lockfile_read() {
+    let lockfile_path_argument = "mylockfile/Cargo.lock";
+    let p = make_project()
+        .file("mylockfile/Cargo.lock", VALID_LOCKFILE)
+        .build();
+    run_publish_command(&p, lockfile_path_argument.to_string());
+
+    assert!(!p.root().join("Cargo.lock").exists());
+    assert!(p.root().join(lockfile_path_argument).is_file());
 }
 
 fn make_remove_project() -> ProjectBuilder {
@@ -338,42 +369,47 @@ fn make_remove_project() -> ProjectBuilder {
         .file("../bar/src/main.rs", "fn main() {}");
 }
 
-fn make_remove_command(execs: &mut Execs, lockfile_path_argument: String) -> &mut Execs {
-    return make_basic_command(execs, lockfile_path_argument).arg("test_bar");
+fn run_remove_command(p: &Project, lockfile_path_argument: String) {
+    make_execs(&mut p.cargo("remove"), lockfile_path_argument)
+        .arg("test_bar")
+        .run();
+}
+#[cargo_test]
+fn remove_lockfile_created() {
+    let lockfile_path_argument = "mylockfile/is/burried/Cargo.lock";
+    let p = make_remove_project().build();
+    run_remove_command(&p, lockfile_path_argument.to_string());
+
+    assert!(!p.root().join("Cargo.lock").exists());
+    assert!(p.root().join(lockfile_path_argument).is_file());
 }
 
-tests!(add, "add", &make_add_command, make_add_project);
-tests!(bench, "bench");
-tests!(build, "build");
-tests!(check, "check");
-tests!(clean, "clean", &make_clean_command, make_basic_project);
-tests!(doc, "doc");
-tests!(fetch, "fetch");
-tests!(fix, "fix", &make_fix_command, make_basic_project);
-tests!(generate_lockfile, "generate-lockfile");
-tests!(metadata, "metadata");
-tests!(package, "package");
-tests!(pkgid, "pkgid");
-tests!(publish, "publish");
-tests!(remove, "remove", &make_remove_command, make_remove_project);
-tests!(run, "run");
-tests!(rustc, "rustc");
-tests!(rustdoc, "rustdoc");
-tests!(test, "test");
-tests!(tree, "tree");
-tests!(update, "update");
-tests!(vendor, "vendor");
+#[cargo_test]
+fn remove_lockfile_read() {
+    let lockfile_path_argument = "mylockfile/Cargo.lock";
+    let p = make_remove_project()
+        .file("mylockfile/Cargo.lock", VALID_LOCKFILE)
+        .build();
+    run_remove_command(&p, lockfile_path_argument.to_string());
 
-#[cfg(test)]
-mod package_extra {
-    use crate::lockfile_path::make_basic_command;
-    use cargo_test_support::compare::assert_e2e;
-    use cargo_test_support::{cargo_test, project};
-    use std::fs;
+    assert!(!p.root().join("Cargo.lock").exists());
+    assert!(p.root().join(lockfile_path_argument).is_file());
+}
 
-    #[cargo_test]
-    fn assert_respect_pinned_version_from_lockfile_path() {
-        const PINNED_VERSION: &str = r#"# This file is automatically @generated by Cargo.
+#[cargo_test]
+fn remove_lockfile_override() {
+    let lockfile_path_argument = "mylockfile/Cargo.lock";
+    let p = make_remove_project()
+        .file("Cargo.lock", "This is an invalid lock file!")
+        .build();
+    run_remove_command(&p, lockfile_path_argument.to_string());
+
+    assert!(p.root().join(lockfile_path_argument).is_file());
+}
+
+#[cargo_test]
+fn assert_respect_pinned_version_from_lockfile_path() {
+    const PINNED_VERSION: &str = r#"# This file is automatically @generated by Cargo.
 # It is not intended for manual editing.
 version = 3
 
@@ -390,7 +426,7 @@ dependencies = [
  "hello",
 ]
 "#;
-        const TOML: &str = r#"#
+    const TOML: &str = r#"#
 [package]
 
 name = "test_foo"
@@ -406,32 +442,32 @@ name = "test_foo"
 hello = "1.0.0"
 "#;
 
-        let lockfile_path_argument = "mylockfile/Cargo.lock";
-        let p = project()
-            .file("Cargo.toml", TOML)
-            .file("src/main.rs", "fn main() {}")
-            .file("mylockfile/Cargo.lock", PINNED_VERSION)
-            .build();
+    let lockfile_path_argument = "mylockfile/Cargo.lock";
+    let p = project()
+        .file("Cargo.toml", TOML)
+        .file("src/main.rs", "fn main() {}")
+        .file("mylockfile/Cargo.lock", PINNED_VERSION)
+        .build();
 
-        make_basic_command(&mut p.cargo("package"), lockfile_path_argument.to_string()).run();
+    make_execs(&mut p.cargo("package"), lockfile_path_argument.to_string()).run();
 
-        assert!(!p.root().join("Cargo.lock").exists());
-        assert!(p.root().join(lockfile_path_argument).is_file());
+    assert!(!p.root().join("Cargo.lock").exists());
+    assert!(p.root().join(lockfile_path_argument).is_file());
 
-        assert!(p
-            .root()
-            .join("target/package/test_foo-0.5.0/Cargo.lock")
-            .is_file());
+    assert!(p
+        .root()
+        .join("target/package/test_foo-0.5.0/Cargo.lock")
+        .is_file());
 
-        let path = p.root().join("target/package/test_foo-0.5.0/Cargo.lock");
-        let contents = fs::read_to_string(path).unwrap();
+    let path = p.root().join("target/package/test_foo-0.5.0/Cargo.lock");
+    let contents = fs::read_to_string(path).unwrap();
 
-        assert_e2e().eq(contents, PINNED_VERSION);
-    }
+    assert_e2e().eq(contents, PINNED_VERSION);
+}
 
-    #[cargo_test]
-    fn run_embed() {
-        const ECHO_SCRIPT: &str = r#"#!/usr/bin/env cargo
+#[cargo_test]
+fn run_embed() {
+    const ECHO_SCRIPT: &str = r#"#!/usr/bin/env cargo
 
 fn main() {
     let mut args = std::env::args_os();
@@ -444,20 +480,19 @@ fn main() {
 #[test]
 fn test () {}
 "#;
-        let lockfile_path_argument = "mylockfile/Cargo.lock";
-        let p = project().file("src/main.rs", ECHO_SCRIPT).build();
+    let lockfile_path_argument = "mylockfile/Cargo.lock";
+    let p = project().file("src/main.rs", ECHO_SCRIPT).build();
 
-        p.cargo("run")
-            .masquerade_as_nightly_cargo(&["lockfile-path"])
-            .arg("-Zunstable-options")
-            .arg("-Zscript")
-            .arg("--lockfile-path")
-            .arg(lockfile_path_argument)
-            .arg("--manifest-path")
-            .arg("src/main.rs")
-            .run();
+    p.cargo("run")
+        .masquerade_as_nightly_cargo(&["lockfile-path"])
+        .arg("-Zunstable-options")
+        .arg("-Zscript")
+        .arg("--lockfile-path")
+        .arg(lockfile_path_argument)
+        .arg("--manifest-path")
+        .arg("src/main.rs")
+        .run();
 
-        assert!(p.root().join(lockfile_path_argument).is_file());
-        assert!(!p.root().join("Cargo.lock").exists());
-    }
+    assert!(p.root().join(lockfile_path_argument).is_file());
+    assert!(!p.root().join("Cargo.lock").exists());
 }
