@@ -16,6 +16,7 @@ use crate::util::toml_mut::upgrade::upgrade_requirement;
 use crate::util::{style, OptVersionReq};
 use crate::util::{CargoResult, VersionExt};
 use anyhow::Context as _;
+use cargo_util_schemas::core::PartialVersion;
 use itertools::Itertools;
 use semver::{Op, Version, VersionReq};
 use std::cmp::Ordering;
@@ -724,14 +725,7 @@ fn status_locking(ws: &Workspace<'_>, num_pkgs: usize) -> CargoResult<()> {
             write!(&mut cfg, " latest")?;
         }
 
-        if ws.resolve_honors_rust_version() {
-            let rust_version = if let Some(ver) = ws.rust_version() {
-                ver.clone().into_partial()
-            } else {
-                let rustc = ws.gctx().load_global_rustc(Some(ws))?;
-                let rustc_version = rustc.version.clone().into();
-                rustc_version
-            };
+        if let Some(rust_version) = required_rust_version(ws) {
             write!(&mut cfg, " Rust {rust_version}")?;
         }
         write!(&mut cfg, " compatible version{plural}")?;
@@ -741,6 +735,20 @@ fn status_locking(ws: &Workspace<'_>, num_pkgs: usize) -> CargoResult<()> {
         .shell()
         .status("Locking", format!("{num_pkgs} package{plural}{cfg}"))?;
     Ok(())
+}
+
+fn required_rust_version(ws: &Workspace<'_>) -> Option<PartialVersion> {
+    if !ws.resolve_honors_rust_version() {
+        return None;
+    }
+
+    if let Some(ver) = ws.rust_version() {
+        Some(ver.clone().into_partial())
+    } else {
+        let rustc = ws.gctx().load_global_rustc(Some(ws)).ok()?;
+        let rustc_version = rustc.version.clone().into();
+        Some(rustc_version)
+    }
 }
 
 fn report_latest(possibilities: &[IndexSummary], package: PackageId) -> Option<String> {
