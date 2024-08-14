@@ -741,43 +741,48 @@ fn metabuild_json_artifact() {
     let p = basic_project();
     p.cargo("check --message-format=json")
         .masquerade_as_nightly_cargo(&["metabuild"])
-        .with_json_contains_unordered(
-            r#"
-            {
-              "executable": null,
-              "features": [],
-              "filenames": "{...}",
-              "fresh": false,
-              "package_id": "path+file:///[..]/foo#0.0.1",
-              "manifest_path": "[..]",
-              "profile": "{...}",
-              "reason": "compiler-artifact",
-              "target": {
-                "crate_types": [
-                  "bin"
-                ],
-                "doc": false,
-                "doctest": false,
-                "edition": "2018",
-                "kind": [
-                  "custom-build"
-                ],
-                "name": "metabuild-foo",
-                "src_path": "[..]/foo/target/.metabuild/metabuild-foo-[..].rs",
-                "test": false
-              }
-            }
-
-            {
-              "cfgs": [],
-              "env": [],
-              "linked_libs": [],
-              "linked_paths": [],
-              "package_id": "path+file:///[..]/foo#0.0.1",
-              "out_dir": "[..]",
-              "reason": "build-script-executed"
-            }
-            "#,
+        .with_stdout_data(
+            str![[r#"
+[
+  "{...}",
+  {
+    "executable": null,
+    "features": [],
+    "filenames": "{...}",
+    "fresh": false,
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "package_id": "path+[ROOTURL]/foo#0.0.1",
+    "profile": "{...}",
+    "reason": "compiler-artifact",
+    "target": {
+      "crate_types": [
+        "bin"
+      ],
+      "doc": false,
+      "doctest": false,
+      "edition": "2018",
+      "kind": [
+        "custom-build"
+      ],
+      "name": "metabuild-foo",
+      "src_path": "[ROOT]/foo/target/.metabuild/metabuild-foo-[HASH].rs",
+      "test": false
+    }
+  },
+  {
+    "cfgs": [],
+    "env": [],
+    "linked_libs": [],
+    "linked_paths": [],
+    "out_dir": "[ROOT]/foo/target/debug/build/foo-[HASH]/out",
+    "package_id": "path+[ROOTURL]/foo#0.0.1",
+    "reason": "build-script-executed"
+  },
+  "{...}"
+]
+"#]]
+            .is_json()
+            .against_jsonlines(),
         )
         .run();
 }
@@ -791,37 +796,39 @@ fn metabuild_failed_build_json() {
     p.cargo("check --message-format=json")
         .masquerade_as_nightly_cargo(&["metabuild"])
         .with_status(101)
-        .with_json_contains_unordered(
-            r#"
-            {
-              "message": {
-                "$message_type": "diagnostic",
-                "children": "{...}",
-                "code": "{...}",
-                "level": "error",
-                "message": "cannot find function `metabuild`[..]",
-                "rendered": "{...}",
-                "spans": "{...}"
-              },
-              "package_id": "path+file:///[..]/foo#0.0.1",
-              "manifest_path": "[..]",
-              "reason": "compiler-message",
-              "target": {
-                "crate_types": [
-                  "bin"
-                ],
-                "doc": false,
-                "doctest": false,
-                "edition": "2018",
-                "kind": [
-                  "custom-build"
-                ],
-                "name": "metabuild-foo",
-                "src_path": null,
-                "test": false
-              }
-            }
-            "#,
+        .with_stdout_data(
+            str![[r#"
+[
+  "{...}",
+  {
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "message": {
+      "level": "error",
+      "message": "cannot find function `metabuild` in crate `mb`",
+      "...": "{...}"
+    },
+    "package_id": "path+[ROOTURL]/foo#0.0.1",
+    "reason": "compiler-message",
+    "target": {
+      "crate_types": [
+        "bin"
+      ],
+      "doc": false,
+      "doctest": false,
+      "edition": "2018",
+      "kind": [
+        "custom-build"
+      ],
+      "name": "metabuild-foo",
+      "src_path": null,
+      "test": false
+    }
+  },
+  "{...}"
+]
+"#]]
+            .is_json()
+            .against_jsonlines(),
         )
         .run();
 }
