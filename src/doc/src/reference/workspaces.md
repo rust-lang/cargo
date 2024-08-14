@@ -191,7 +191,7 @@ description.workspace = true
 documentation.workspace = true
 ```
 
-> **MSRV:** Requires 1.74+
+> **MSRV:** Requires 1.64+
 
 ## The `dependencies` table
 
@@ -232,7 +232,7 @@ cc.workspace = true
 rand.workspace = true
 ```
 
-> **MSRV:** Requires 1.74+
+> **MSRV:** Requires 1.64+
 
 ## The `lints` table
 
