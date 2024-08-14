@@ -7,6 +7,7 @@ use crate::core::{PackageId, PackageIdSpec, PackageIdSpecQuery};
 use crate::core::{Resolve, SourceId, Workspace};
 use crate::ops;
 use crate::sources::source::QueryKind;
+use crate::sources::IndexSummary;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::GlobalContext;
 use crate::util::toml_mut::dependency::{MaybeWorkspace, Source};
@@ -512,17 +513,7 @@ fn print_lockfile_generation(
         };
 
         for package in diff.added.iter() {
-            let latest = if !possibilities.is_empty() {
-                possibilities
-                    .iter()
-                    .map(|s| s.as_summary())
-                    .filter(|s| is_latest(s.version(), package.version()))
-                    .map(|s| s.version().clone())
-                    .max()
-                    .map(format_latest)
-            } else {
-                None
-            };
+            let latest = report_latest(&possibilities, *package);
 
             if let Some(latest) = latest {
                 ws.gctx().shell().status_with_color(
@@ -602,18 +593,7 @@ fn print_lockfile_sync(
             }
         } else {
             for package in diff.added.iter() {
-                let latest = if !possibilities.is_empty() {
-                    possibilities
-                        .iter()
-                        .map(|s| s.as_summary())
-                        .filter(|s| is_latest(s.version(), package.version()))
-                        .map(|s| s.version().clone())
-                        .max()
-                        .map(format_latest)
-                } else {
-                    None
-                }
-                .unwrap_or_default();
+                let latest = report_latest(&possibilities, *package).unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
                     "Adding",
@@ -656,18 +636,7 @@ fn print_lockfile_updates(
         };
 
         if let Some((removed, added)) = diff.change() {
-            let latest = if !possibilities.is_empty() {
-                possibilities
-                    .iter()
-                    .map(|s| s.as_summary())
-                    .filter(|s| is_latest(s.version(), added.version()))
-                    .map(|s| s.version().clone())
-                    .max()
-                    .map(format_latest)
-            } else {
-                None
-            }
-            .unwrap_or_default();
+            let latest = report_latest(&possibilities, *added).unwrap_or_default();
 
             let msg = if removed.source_id().is_git() {
                 format!(
@@ -700,18 +669,7 @@ fn print_lockfile_updates(
                 )?;
             }
             for package in diff.added.iter() {
-                let latest = if !possibilities.is_empty() {
-                    possibilities
-                        .iter()
-                        .map(|s| s.as_summary())
-                        .filter(|s| is_latest(s.version(), package.version()))
-                        .map(|s| s.version().clone())
-                        .max()
-                        .map(format_latest)
-                } else {
-                    None
-                }
-                .unwrap_or_default();
+                let latest = report_latest(&possibilities, *package).unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
                     "Adding",
@@ -721,17 +679,7 @@ fn print_lockfile_updates(
             }
         }
         for package in &diff.unchanged {
-            let latest = if !possibilities.is_empty() {
-                possibilities
-                    .iter()
-                    .map(|s| s.as_summary())
-                    .filter(|s| is_latest(s.version(), package.version()))
-                    .map(|s| s.version().clone())
-                    .max()
-                    .map(format_latest)
-            } else {
-                None
-            };
+            let latest = report_latest(&possibilities, *package);
 
             if let Some(latest) = latest {
                 unchanged_behind += 1;
@@ -793,6 +741,16 @@ fn status_locking(ws: &Workspace<'_>, num_pkgs: usize) -> CargoResult<()> {
         .shell()
         .status("Locking", format!("{num_pkgs} package{plural}{cfg}"))?;
     Ok(())
+}
+
+fn report_latest(possibilities: &[IndexSummary], package: PackageId) -> Option<String> {
+    possibilities
+        .iter()
+        .map(|s| s.as_summary())
+        .filter(|s| is_latest(s.version(), package.version()))
+        .map(|s| s.version().clone())
+        .max()
+        .map(format_latest)
 }
 
 fn format_latest(version: semver::Version) -> String {
