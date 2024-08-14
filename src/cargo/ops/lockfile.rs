@@ -84,6 +84,10 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
         anyhow::bail!("lock file version `{current_version:?}` requires `-Znext-lockfile-bump`")
     }
 
+    if !lock_root.as_path_unlocked().exists() {
+        lock_root.create_dir()?;
+    }
+
     // Ok, if that didn't work just write it out
     lock_root
         .open_rw_exclusive_create(LOCKFILE_NAME, ws.gctx(), "Cargo.lock file")

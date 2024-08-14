@@ -1015,19 +1015,13 @@ pub fn lockfile_path(
     let path = gctx.cwd().join(lockfile_path);
 
     if !path.ends_with(LOCKFILE_NAME) {
-        bail!("the lockfile-path must be a path to a {LOCKFILE_NAME} file")
+        bail!("the lockfile-path must be a path to a {LOCKFILE_NAME} file (please rename your lock file to {LOCKFILE_NAME})")
     }
     if path.is_dir() {
         bail!(
             "lockfile path `{}` is a directory but expected a file",
             lockfile_path.display()
         )
-    }
-    if !path.exists() {
-        // Root case should already be covered above
-        let parent_path = lockfile_path.parent().expect("lockfile path can't be root");
-
-        paths::create_dir_all(parent_path)?;
     }
 
     return Ok(Some(path));

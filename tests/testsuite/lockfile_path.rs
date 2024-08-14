@@ -135,19 +135,25 @@ fn broken_symlink() {
     assert!(!p.root().join(src).is_dir());
 
     let err_msg = if !cfg!(windows) {
-        str![[r#"[ERROR] failed to create directory `somedir/link`
+        str![[
+            r#"[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[ERROR] failed to create directory `[ROOT]/foo/somedir/link`
 
 Caused by:
   File exists (os error 17)
 
-"#]]
+"#
+        ]]
     } else {
-        str![[r#"[ERROR] failed to create directory `somedir/link`
+        str![[
+            r#"[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[ERROR] failed to create directory `[ROOT]/foo/somedir/link`
 
 Caused by:
   Cannot create a file when that file already exists. (os error 183)
 
-"#]]
+"#
+        ]]
     };
 
     make_execs(&mut p.cargo("metadata"), lockfile_path_argument.to_string())
@@ -173,19 +179,25 @@ fn loop_symlink() {
     assert!(!p.root().join(src).is_dir());
 
     let err_msg = if !cfg!(windows) {
-        str![[r#"[ERROR] failed to create directory `somedir/link`
+        str![[
+            r#"[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[ERROR] failed to create directory `[ROOT]/foo/somedir/link`
 
 Caused by:
   File exists (os error 17)
 
-"#]]
+"#
+        ]]
     } else {
-        str![[r#"[ERROR] failed to create directory `somedir/link`
+        str![[
+            r#"[WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
+[ERROR] failed to create directory `[ROOT]/foo/somedir/link`
 
 Caused by:
   Cannot create a file when that file already exists. (os error 183)
 
-"#]]
+"#
+        ]]
     };
 
     make_execs(&mut p.cargo("metadata"), lockfile_path_argument.to_string())
