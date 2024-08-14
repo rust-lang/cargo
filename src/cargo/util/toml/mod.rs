@@ -10,7 +10,9 @@ use crate::AlreadyPrintedError;
 use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
 use cargo_util::paths::{self, normalize_path};
-use cargo_util_schemas::manifest::{self, TomlManifest};
+use cargo_util_schemas::manifest::{
+    self, PackageName, PathBaseName, TomlDependency, TomlDetailedDependency, TomlManifest,
+};
 use cargo_util_schemas::manifest::{RustVersion, StringOrBool};
 use itertools::Itertools;
 use lazycell::LazyCell;
@@ -296,7 +298,7 @@ fn normalize_toml(
         features: None,
         target: None,
         replace: original_toml.replace.clone(),
-        patch: original_toml.patch.clone(),
+        patch: None,
         workspace: original_toml.workspace.clone(),
         badges: None,
         lints: None,
@@ -310,6 +312,7 @@ fn normalize_toml(
         inherit_cell
             .try_borrow_with(|| load_inheritable_fields(gctx, manifest_file, &workspace_config))
     };
+    let workspace_root = || inherit().map(|fields| fields.ws_root());
 
     if let Some(original_package) = original_toml.package() {
         let package_name = &original_package.name;
@@ -390,6 +393,7 @@ fn normalize_toml(
             &activated_opt_deps,
             None,
             &inherit,
+            &workspace_root,
             package_root,
             warnings,
         )?;
@@ -410,6 +414,7 @@ fn normalize_toml(
             &activated_opt_deps,
             Some(DepKind::Development),
             &inherit,
+            &workspace_root,
             package_root,
             warnings,
         )?;
@@ -430,6 +435,7 @@ fn normalize_toml(
             &activated_opt_deps,
             Some(DepKind::Build),
             &inherit,
+            &workspace_root,
             package_root,
             warnings,
         )?;
@@ -443,6 +449,7 @@ fn normalize_toml(
                 &activated_opt_deps,
                 None,
                 &inherit,
+                &workspace_root,
                 package_root,
                 warnings,
             )?;
@@ -463,6 +470,7 @@ fn normalize_toml(
                 &activated_opt_deps,
                 Some(DepKind::Development),
                 &inherit,
+                &workspace_root,
                 package_root,
                 warnings,
             )?;
@@ -483,6 +491,7 @@ fn normalize_toml(
                 &activated_opt_deps,
                 Some(DepKind::Build),
                 &inherit,
+                &workspace_root,
                 package_root,
                 warnings,
             )?;
@@ -498,6 +507,13 @@ fn normalize_toml(
             );
         }
         normalized_toml.target = (!normalized_target.is_empty()).then_some(normalized_target);
+
+        normalized_toml.patch = normalize_patch(
+            gctx,
+            original_toml.patch.as_ref(),
+            &workspace_root,
+            features,
+        )?;
 
         let normalized_lints = original_toml
             .lints
@@ -517,6 +533,37 @@ fn normalize_toml(
     }
 
     Ok(normalized_toml)
+}
+
+fn normalize_patch<'a>(
+    gctx: &GlobalContext,
+    original_patch: Option<&BTreeMap<String, BTreeMap<PackageName, TomlDependency>>>,
+    workspace_root: &dyn Fn() -> CargoResult<&'a PathBuf>,
+    features: &Features,
+) -> CargoResult<Option<BTreeMap<String, BTreeMap<PackageName, TomlDependency>>>> {
+    if let Some(patch) = original_patch {
+        let mut normalized_patch = BTreeMap::new();
+        for (name, packages) in patch {
+            let mut normalized_packages = BTreeMap::new();
+            for (pkg, dep) in packages {
+                let dep = if let TomlDependency::Detailed(dep) = dep {
+                    let mut dep = dep.clone();
+                    normalize_path_dependency(gctx, &mut dep, workspace_root, features)
+                        .with_context(|| {
+                            format!("resolving path for patch of ({pkg}) for source ({name})")
+                        })?;
+                    TomlDependency::Detailed(dep)
+                } else {
+                    dep.clone()
+                };
+                normalized_packages.insert(pkg.clone(), dep);
+            }
+            normalized_patch.insert(name.clone(), normalized_packages);
+        }
+        Ok(Some(normalized_patch))
+    } else {
+        Ok(None)
+    }
 }
 
 #[tracing::instrument(skip_all)]
@@ -710,6 +757,7 @@ fn normalize_dependencies<'a>(
     activated_opt_deps: &HashSet<&str>,
     kind: Option<DepKind>,
     inherit: &dyn Fn() -> CargoResult<&'a InheritableFields>,
+    workspace_root: &dyn Fn() -> CargoResult<&'a PathBuf>,
     package_root: &Path,
     warnings: &mut Vec<String>,
 ) -> CargoResult<Option<BTreeMap<manifest::PackageName, manifest::InheritableDependency>>> {
@@ -768,6 +816,8 @@ fn normalize_dependencies<'a>(
                     }
                 }
             }
+            normalize_path_dependency(gctx, d, workspace_root, features)
+                .with_context(|| format!("resolving path dependency {name_in_toml}"))?;
         }
 
         // if the dependency is not optional, it is always used
@@ -784,6 +834,23 @@ fn normalize_dependencies<'a>(
         }
     }
     Ok(Some(deps))
+}
+
+fn normalize_path_dependency<'a>(
+    gctx: &GlobalContext,
+    detailed_dep: &mut TomlDetailedDependency,
+    workspace_root: &dyn Fn() -> CargoResult<&'a PathBuf>,
+    features: &Features,
+) -> CargoResult<()> {
+    if let Some(base) = detailed_dep.base.take() {
+        if let Some(path) = detailed_dep.path.as_mut() {
+            let new_path = lookup_path_base(&base, gctx, workspace_root, features)?.join(&path);
+            *path = new_path.to_str().unwrap().to_string();
+        } else {
+            bail!("`base` can only be used with path dependencies");
+        }
+    }
+    Ok(())
 }
 
 fn load_inheritable_fields(
@@ -901,13 +968,17 @@ impl InheritableFields {
         };
         let mut dep = dep.clone();
         if let manifest::TomlDependency::Detailed(detailed) = &mut dep {
-            if let Some(rel_path) = &detailed.path {
-                detailed.path = Some(resolve_relative_path(
-                    name,
-                    self.ws_root(),
-                    package_root,
-                    rel_path,
-                )?);
+            if detailed.base.is_none() {
+                // If this is a path dependency without a base, then update the path to be relative
+                // to the workspace root instead.
+                if let Some(rel_path) = &detailed.path {
+                    detailed.path = Some(resolve_relative_path(
+                        name,
+                        self.ws_root(),
+                        package_root,
+                        rel_path,
+                    )?);
+                }
             }
         }
         Ok(dep)
@@ -2151,6 +2222,33 @@ fn to_dependency_source_id<P: ResolveToPath + Clone>(
     }
 }
 
+pub(crate) fn lookup_path_base<'a>(
+    base: &PathBaseName,
+    gctx: &GlobalContext,
+    workspace_root: &dyn Fn() -> CargoResult<&'a PathBuf>,
+    features: &Features,
+) -> CargoResult<PathBuf> {
+    features.require(Feature::path_bases())?;
+
+    // HACK: The `base` string is user controlled, but building the path is safe from injection
+    // attacks since the `PathBaseName` type restricts the characters that can be used to exclude `.`
+    let base_key = format!("path-bases.{base}");
+
+    // Look up the relevant base in the Config and use that as the root.
+    if let Some(path_bases) = gctx.get::<Option<ConfigRelativePath>>(&base_key)? {
+        Ok(path_bases.resolve_path(gctx))
+    } else {
+        // Otherwise, check the built-in bases.
+        match base.as_str() {
+            "workspace" => Ok(workspace_root()?.clone()),
+            _ => bail!(
+                "path base `{base}` is undefined. \
+            You must add an entry for `{base}` in the Cargo configuration [path-bases] table."
+            ),
+        }
+    }
+}
+
 pub trait ResolveToPath {
     fn resolve(&self, gctx: &GlobalContext) -> PathBuf;
 }
@@ -2865,6 +2963,7 @@ fn prepare_toml_for_publish(
                 let mut d = d.clone();
                 // Path dependencies become crates.io deps.
                 d.path.take();
+                d.base.take();
                 // Same with git dependencies.
                 d.git.take();
                 d.branch.take();
