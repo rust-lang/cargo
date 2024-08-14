@@ -752,6 +752,10 @@ fn required_rust_version(ws: &Workspace<'_>) -> Option<PartialVersion> {
 }
 
 fn report_latest(possibilities: &[IndexSummary], package: PackageId) -> Option<String> {
+    if !package.source_id().is_registry() {
+        return None;
+    }
+
     possibilities
         .iter()
         .map(|s| s.as_summary())
