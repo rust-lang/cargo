@@ -226,6 +226,7 @@ corresponding environment variable is set to the empty string, `""`.
 
 * `CARGO` --- Path to the `cargo` binary performing the build.
 * `CARGO_MANIFEST_DIR` --- The directory containing the manifest of your package.
+* `CARGO_MANIFEST_PATH` --- The path to the manifest of your package.
 * `CARGO_PKG_VERSION` --- The full version of your package.
 * `CARGO_PKG_VERSION_MAJOR` --- The major version of your package.
 * `CARGO_PKG_VERSION_MINOR` --- The minor version of your package.
@@ -320,6 +321,7 @@ let out_dir = env::var("OUT_DIR").unwrap();
 * `CARGO_MANIFEST_DIR` --- The directory containing the manifest for the package
   being built (the package containing the build script). Also note that this is
   the value of the current working directory of the build script when it starts.
+* `CARGO_MANIFEST_PATH` --- The path to the manifest of your package.
 * `CARGO_MANIFEST_LINKS` --- the manifest `links` value.
 * `CARGO_MAKEFLAGS` --- Contains parameters needed for Cargo's [jobserver]
   implementation to parallelize subprocesses. Rustc or cargo invocations from

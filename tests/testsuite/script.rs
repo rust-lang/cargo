@@ -1317,3 +1317,33 @@ fn cmd_publish_with_embedded() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn manifest_path_env() {
+    let p = cargo_test_support::project()
+        .file(
+            "script.rs",
+            r#"#!/usr/bin/env cargo
+
+fn main() {
+    let path = env!("CARGO_MANIFEST_PATH");
+    println!("CARGO_MANIFEST_PATH: {}", path);
+}
+"#,
+        )
+        .build();
+    p.cargo("-Zscript -v script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![[r#"
+CARGO_MANIFEST_PATH: [ROOT]/foo/script.rs
+
+"#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[COMPILING] script v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
+
+"#]])
+        .run();
+}
