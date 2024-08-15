@@ -10,14 +10,12 @@
 //! cargo test --test testsuite -- old_cargos --nocapture --ignored
 //! ```
 
-#![allow(deprecated)]
-
 use std::fs;
 
 use cargo::CargoResult;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{self, Dependency, Package};
-use cargo_test_support::{cargo_exe, execs, paths, process, project, rustc_host};
+use cargo_test_support::{cargo_exe, execs, paths, process, project, rustc_host, str};
 use cargo_util::{ProcessBuilder, ProcessError};
 use semver::Version;
 
@@ -640,32 +638,32 @@ fn index_cache_rebuild() {
         .with_process_builder(tc_process("cargo", "1.48.0"))
         .arg("check")
         .cwd(p.root())
-        .with_stderr(
-            "\
-[UPDATING] [..]
+        .with_stderr_data(str![[r#"
+[UPDATING] `[ROOT]/registry` index
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v1.0.0 [..]
+[DOWNLOADED] bar v1.0.0 (registry `[ROOT]/registry`)
 [CHECKING] bar v1.0.0
-[CHECKING] foo v0.1.0 [..]
-[FINISHED] [..]
-",
-        )
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] dev [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     fs::remove_file(p.root().join("Cargo.lock")).unwrap();
 
     // This should rebuild the cache and use 1.0.1.
     p.cargo("check")
-        .with_stderr(
-            "\
-[UPDATING] [..]
+        .with_stderr_data(str![[r#"
+[WARNING] no edition set: defaulting to the 2015 edition while the latest is [..]
+[UPDATING] `dummy-registry` index
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] bar v1.0.1 [..]
+[DOWNLOADED] bar v1.0.1 (registry `dummy-registry`)
 [CHECKING] bar v1.0.1
-[CHECKING] foo v0.1.0 [..]
-[FINISHED] [..]
-",
-        )
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     fs::remove_file(p.root().join("Cargo.lock")).unwrap();
@@ -675,12 +673,11 @@ fn index_cache_rebuild() {
         .with_process_builder(tc_process("cargo", "1.48.0"))
         .arg("tree")
         .cwd(p.root())
-        .with_stdout(
-            "\
-foo v0.1.0 [..]
+        .with_stdout_data(str![[r#"
+foo v0.1.0 ([ROOT]/foo)
 └── bar v1.0.0
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -714,22 +711,21 @@ fn avoids_split_debuginfo_collision() {
         .arg("build")
         .env("CARGO_INCREMENTAL", "1")
         .cwd(p.root())
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     p.cargo("build")
         .env("CARGO_INCREMENTAL", "1")
-        .with_stderr(
-            "\
-[COMPILING] foo v0.1.0 [..]
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[WARNING] no edition set: defaulting to the 2015 edition while the latest is [..]
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 
     execs()
@@ -737,10 +733,9 @@ fn avoids_split_debuginfo_collision() {
         .arg("build")
         .env("CARGO_INCREMENTAL", "1")
         .cwd(p.root())
-        .with_stderr(
-            "\
-[FINISHED] [..]
-",
-        )
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
         .run();
 }
