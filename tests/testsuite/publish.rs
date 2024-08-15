@@ -4,10 +4,10 @@ use std::fs;
 use std::sync::{Arc, Mutex};
 
 use cargo_test_support::git::{self, repo};
-use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{self, Package, RegistryBuilder, Response};
 use cargo_test_support::{basic_manifest, project, publish, str};
+use cargo_test_support::{paths, Project};
 
 const CLEAN_FOO_JSON: &str = r#"
     {
@@ -3233,6 +3233,87 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
 }
 
 #[cargo_test]
+fn timeout_waiting_for_dependency_publish() {
+    // Publish doesn't happen within the timeout window.
+    let registry = registry::RegistryBuilder::new()
+        .http_api()
+        .delayed_index_update(20)
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["main", "other", "dep"]
+        "#,
+        )
+        .file(
+            "main/Cargo.toml",
+            r#"
+                [package]
+                name = "main"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "foo"
+
+                [dependencies]
+                dep = { version = "0.0.1", path = "../dep" }
+            "#,
+        )
+        .file("main/src/main.rs", "fn main() {}")
+        .file(
+            "other/Cargo.toml",
+            r#"
+                [package]
+                name = "other"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "foo"
+
+                [dependencies]
+                dep = { version = "0.0.1", path = "../dep" }
+            "#,
+        )
+        .file("other/src/main.rs", "fn main() {}")
+        .file(
+            "dep/Cargo.toml",
+            r#"
+                [package]
+                name = "dep"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("dep/src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [publish]
+                timeout = 2
+            "#,
+        )
+        .build();
+
+    p.cargo("publish --no-verify -Zpublish-timeout -Zpackage-workspace")
+        .replace_crates_io(registry.index_url())
+        .masquerade_as_nightly_cargo(&["publish-timeout", "package-workspace"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the `-p` argument must be specified to select a single package to publish
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn wait_for_git_publish() {
     // Slow publish to an index with a git index.
     let registry = registry::RegistryBuilder::new()
@@ -3416,4 +3497,330 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
         .run();
 
     validate_upload_foo();
+}
+
+// A workspace with three projects that depend on one another (level1 -> level2 -> level3).
+// level1 is a binary package, to test lockfile generation.
+fn workspace_with_local_deps_project() -> Project {
+    project()
+            .file(
+                "Cargo.toml",
+                r#"
+            [workspace]
+            members = ["level1", "level2", "level3"]
+
+            [workspace.dependencies]
+            level2 = { path = "level2", version = "0.0.1" }
+        "#
+            )
+            .file(
+                "level1/Cargo.toml",
+                r#"
+            [package]
+            name = "level1"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "level1"
+            repository = "bar"
+
+            [dependencies]
+            # Let one dependency also specify features, for the added test coverage when generating package files.
+            level2 = { workspace = true, features = ["foo"] }
+        "#,
+            )
+            .file("level1/src/main.rs", "fn main() {}")
+            .file(
+                "level2/Cargo.toml",
+                r#"
+            [package]
+            name = "level2"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "level2"
+            repository = "bar"
+
+            [features]
+            foo = []
+
+            [dependencies]
+            level3 = { path = "../level3", version = "0.0.1" }
+        "#
+            )
+            .file("level2/src/lib.rs", "")
+            .file(
+                "level3/Cargo.toml",
+                r#"
+            [package]
+            name = "level3"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "level3"
+            repository = "bar"
+        "#,
+            )
+            .file("level3/src/lib.rs", "")
+            .build()
+}
+
+#[cargo_test]
+fn workspace_with_local_deps() {
+    let crates_io = registry::init();
+    let p = workspace_with_local_deps_project();
+
+    p.cargo("publish")
+        .replace_crates_io(crates_io.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the `-p` argument must be specified to select a single package to publish
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn workspace_with_local_deps_nightly() {
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+    let p = workspace_with_local_deps_project();
+
+    p.cargo("publish -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_status(101)
+        .replace_crates_io(registry.index_url())
+        .with_stderr_data(str![[r#"
+[ERROR] the `-p` argument must be specified to select a single package to publish
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn workspace_parallel() {
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b", "c"]
+        "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "a"
+            repository = "bar"
+        "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+            [package]
+            name = "b"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "b"
+            repository = "bar"
+        "#,
+        )
+        .file("b/src/lib.rs", "")
+        .file(
+            "c/Cargo.toml",
+            r#"
+            [package]
+            name = "c"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "c"
+            repository = "bar"
+
+            [dependencies]
+            a = { path = "../a", version = "0.0.1" }
+            b = { path = "../b", version = "0.0.1" }
+        "#,
+        )
+        .file("c/src/lib.rs", "")
+        .build();
+
+    p.cargo("publish -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(
+            str![[r#"
+[ERROR] the `-p` argument must be specified to select a single package to publish
+
+"#]]
+            .unordered(),
+        )
+        .run();
+}
+
+#[cargo_test]
+fn workspace_missing_dependency() {
+    let registry = RegistryBuilder::new().http_api().http_index().build();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b"]
+        "#,
+        )
+        .file(
+            "a/Cargo.toml",
+            r#"
+            [package]
+            name = "a"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "a"
+            repository = "bar"
+        "#,
+        )
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+            [package]
+            name = "b"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "b"
+            repository = "bar"
+
+            [dependencies]
+            a = { path = "../a", version = "0.0.1" }
+        "#,
+        )
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("publish -Zpackage-workspace -p b")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[PACKAGING] b v0.0.1 ([ROOT]/foo/b)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] b v0.0.1 ([ROOT]/foo/b)
+[UPDATING] crates.io index
+[ERROR] no matching package named `a` found
+location searched: registry `crates-io`
+required by package `b v0.0.1 ([ROOT]/foo/target/package/b-0.0.1)`
+
+"#]])
+        .run();
+
+    p.cargo("publish -Zpackage-workspace -p a")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(registry.index_url())
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[PACKAGING] a v0.0.1 ([ROOT]/foo/a)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] a v0.0.1 ([ROOT]/foo/a)
+[COMPILING] a v0.0.1 ([ROOT]/foo/target/package/a-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] a v0.0.1 ([ROOT]/foo/a)
+[UPLOADED] a v0.0.1 to registry `crates-io`
+[NOTE] waiting for `a v0.0.1` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] a v0.0.1 at registry `crates-io`
+
+"#]])
+        .run();
+
+    // Publishing the whole workspace now will fail, as `a` is already published.
+    p.cargo("publish -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the `-p` argument must be specified to select a single package to publish
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn one_unpublishable_package() {
+    let _alt_reg = registry::RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative()
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["dep", "main"]
+            "#,
+        )
+        .file(
+            "main/Cargo.toml",
+            r#"
+            [package]
+            name = "main"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "main"
+            repository = "bar"
+            publish = false
+
+            [dependencies]
+            dep = { path = "../dep", version = "0.1.0", registry = "alternative" }
+        "#,
+        )
+        .file("main/src/main.rs", "fn main() {}")
+        .file(
+            "dep/Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "0.1.0"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "dep"
+            repository = "bar"
+            publish = ["alternative"]
+        "#,
+        )
+        .file("dep/src/lib.rs", "")
+        .build();
+
+    p.cargo("publish -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the `-p` argument must be specified to select a single package to publish
+
+"#]])
+        .run();
 }
