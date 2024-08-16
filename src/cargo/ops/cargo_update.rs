@@ -7,6 +7,7 @@ use crate::core::{PackageId, PackageIdSpec, PackageIdSpecQuery};
 use crate::core::{Resolve, SourceId, Workspace};
 use crate::ops;
 use crate::sources::source::QueryKind;
+use crate::sources::IndexSummary;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::GlobalContext;
 use crate::util::toml_mut::dependency::{MaybeWorkspace, Source};
@@ -15,6 +16,7 @@ use crate::util::toml_mut::upgrade::upgrade_requirement;
 use crate::util::{style, OptVersionReq};
 use crate::util::{CargoResult, VersionExt};
 use anyhow::Context as _;
+use cargo_util_schemas::core::PartialVersion;
 use itertools::Itertools;
 use semver::{Op, Version, VersionReq};
 use std::cmp::Ordering;
@@ -498,10 +500,6 @@ fn print_lockfile_generation(
     status_locking(ws, num_pkgs)?;
 
     for diff in diff {
-        fn format_latest(version: semver::Version) -> String {
-            let warn = style::WARN;
-            format!(" {warn}(latest: v{version}){warn:#}")
-        }
         let possibilities = if let Some(query) = diff.alternatives_query() {
             loop {
                 match registry.query_vec(&query, QueryKind::Exact) {
@@ -516,22 +514,14 @@ fn print_lockfile_generation(
         };
 
         for package in diff.added.iter() {
-            let latest = if !possibilities.is_empty() {
-                possibilities
-                    .iter()
-                    .map(|s| s.as_summary())
-                    .filter(|s| is_latest(s.version(), package.version()))
-                    .map(|s| s.version().clone())
-                    .max()
-                    .map(format_latest)
-            } else {
-                None
-            };
+            let required_rust_version = report_required_rust_version(ws, resolve, *package);
+            let latest = report_latest(&possibilities, *package);
+            let note = required_rust_version.or(latest);
 
-            if let Some(latest) = latest {
+            if let Some(note) = note {
                 ws.gctx().shell().status_with_color(
                     "Adding",
-                    format!("{package}{latest}"),
+                    format!("{package}{note}"),
                     &style::NOTE,
                 )?;
             }
@@ -555,10 +545,6 @@ fn print_lockfile_sync(
     status_locking(ws, num_pkgs)?;
 
     for diff in diff {
-        fn format_latest(version: semver::Version) -> String {
-            let warn = style::WARN;
-            format!(" {warn}(latest: v{version}){warn:#}")
-        }
         let possibilities = if let Some(query) = diff.alternatives_query() {
             loop {
                 match registry.query_vec(&query, QueryKind::Exact) {
@@ -610,22 +596,13 @@ fn print_lockfile_sync(
             }
         } else {
             for package in diff.added.iter() {
-                let latest = if !possibilities.is_empty() {
-                    possibilities
-                        .iter()
-                        .map(|s| s.as_summary())
-                        .filter(|s| is_latest(s.version(), package.version()))
-                        .map(|s| s.version().clone())
-                        .max()
-                        .map(format_latest)
-                } else {
-                    None
-                }
-                .unwrap_or_default();
+                let required_rust_version = report_required_rust_version(ws, resolve, *package);
+                let latest = report_latest(&possibilities, *package);
+                let note = required_rust_version.or(latest).unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
                     "Adding",
-                    format!("{package}{latest}"),
+                    format!("{package}{note}"),
                     &style::NOTE,
                 )?;
             }
@@ -650,10 +627,6 @@ fn print_lockfile_updates(
 
     let mut unchanged_behind = 0;
     for diff in diff {
-        fn format_latest(version: semver::Version) -> String {
-            let warn = style::WARN;
-            format!(" {warn}(latest: v{version}){warn:#}")
-        }
         let possibilities = if let Some(query) = diff.alternatives_query() {
             loop {
                 match registry.query_vec(&query, QueryKind::Exact) {
@@ -668,26 +641,17 @@ fn print_lockfile_updates(
         };
 
         if let Some((removed, added)) = diff.change() {
-            let latest = if !possibilities.is_empty() {
-                possibilities
-                    .iter()
-                    .map(|s| s.as_summary())
-                    .filter(|s| is_latest(s.version(), added.version()))
-                    .map(|s| s.version().clone())
-                    .max()
-                    .map(format_latest)
-            } else {
-                None
-            }
-            .unwrap_or_default();
+            let required_rust_version = report_required_rust_version(ws, resolve, *added);
+            let latest = report_latest(&possibilities, *added);
+            let note = required_rust_version.or(latest).unwrap_or_default();
 
             let msg = if removed.source_id().is_git() {
                 format!(
-                    "{removed} -> #{}",
+                    "{removed} -> #{}{note}",
                     &added.source_id().precise_git_fragment().unwrap()[..8],
                 )
             } else {
-                format!("{removed} -> v{}{latest}", added.version())
+                format!("{removed} -> v{}{note}", added.version())
             };
 
             // If versions differ only in build metadata, we call it an "update"
@@ -712,45 +676,30 @@ fn print_lockfile_updates(
                 )?;
             }
             for package in diff.added.iter() {
-                let latest = if !possibilities.is_empty() {
-                    possibilities
-                        .iter()
-                        .map(|s| s.as_summary())
-                        .filter(|s| is_latest(s.version(), package.version()))
-                        .map(|s| s.version().clone())
-                        .max()
-                        .map(format_latest)
-                } else {
-                    None
-                }
-                .unwrap_or_default();
+                let required_rust_version = report_required_rust_version(ws, resolve, *package);
+                let latest = report_latest(&possibilities, *package);
+                let note = required_rust_version.or(latest).unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
                     "Adding",
-                    format!("{package}{latest}"),
+                    format!("{package}{note}"),
                     &style::NOTE,
                 )?;
             }
         }
         for package in &diff.unchanged {
-            let latest = if !possibilities.is_empty() {
-                possibilities
-                    .iter()
-                    .map(|s| s.as_summary())
-                    .filter(|s| is_latest(s.version(), package.version()))
-                    .map(|s| s.version().clone())
-                    .max()
-                    .map(format_latest)
-            } else {
-                None
-            };
+            let required_rust_version = report_required_rust_version(ws, resolve, *package);
+            let latest = report_latest(&possibilities, *package);
+            let note = required_rust_version.as_deref().or(latest.as_deref());
 
-            if let Some(latest) = latest {
-                unchanged_behind += 1;
+            if let Some(note) = note {
+                if latest.is_some() {
+                    unchanged_behind += 1;
+                }
                 if ws.gctx().shell().verbosity() == Verbosity::Verbose {
                     ws.gctx().shell().status_with_color(
                         "Unchanged",
-                        format!("{package}{latest}"),
+                        format!("{package}{note}"),
                         &anstyle::Style::new().bold(),
                     )?;
                 }
@@ -788,14 +737,7 @@ fn status_locking(ws: &Workspace<'_>, num_pkgs: usize) -> CargoResult<()> {
             write!(&mut cfg, " latest")?;
         }
 
-        if ws.resolve_honors_rust_version() {
-            let rust_version = if let Some(ver) = ws.rust_version() {
-                ver.clone().into_partial()
-            } else {
-                let rustc = ws.gctx().load_global_rustc(Some(ws))?;
-                let rustc_version = rustc.version.clone().into();
-                rustc_version
-            };
+        if let Some(rust_version) = required_rust_version(ws) {
             write!(&mut cfg, " Rust {rust_version}")?;
         }
         write!(&mut cfg, " compatible version{plural}")?;
@@ -805,6 +747,60 @@ fn status_locking(ws: &Workspace<'_>, num_pkgs: usize) -> CargoResult<()> {
         .shell()
         .status("Locking", format!("{num_pkgs} package{plural}{cfg}"))?;
     Ok(())
+}
+
+fn required_rust_version(ws: &Workspace<'_>) -> Option<PartialVersion> {
+    if !ws.resolve_honors_rust_version() {
+        return None;
+    }
+
+    if let Some(ver) = ws.rust_version() {
+        Some(ver.clone().into_partial())
+    } else {
+        let rustc = ws.gctx().load_global_rustc(Some(ws)).ok()?;
+        let rustc_version = rustc.version.clone().into();
+        Some(rustc_version)
+    }
+}
+
+fn report_required_rust_version(
+    ws: &Workspace<'_>,
+    resolve: &Resolve,
+    package: PackageId,
+) -> Option<String> {
+    if package.source_id().is_path() {
+        return None;
+    }
+    let summary = resolve.summary(package);
+    let package_rust_version = summary.rust_version()?;
+    let workspace_rust_version = required_rust_version(ws)?;
+    if package_rust_version.is_compatible_with(&workspace_rust_version) {
+        return None;
+    }
+
+    let warn = style::WARN;
+    Some(format!(
+        " {warn}(requires Rust {package_rust_version}){warn:#}"
+    ))
+}
+
+fn report_latest(possibilities: &[IndexSummary], package: PackageId) -> Option<String> {
+    if !package.source_id().is_registry() {
+        return None;
+    }
+
+    possibilities
+        .iter()
+        .map(|s| s.as_summary())
+        .filter(|s| is_latest(s.version(), package.version()))
+        .map(|s| s.version().clone())
+        .max()
+        .map(format_latest)
+}
+
+fn format_latest(version: semver::Version) -> String {
+    let warn = style::WARN;
+    format!(" {warn}(latest: v{version}){warn:#}")
 }
 
 fn is_latest(candidate: &semver::Version, current: &semver::Version) -> bool {
