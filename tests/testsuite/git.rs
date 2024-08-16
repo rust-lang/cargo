@@ -17,6 +17,8 @@ use cargo_test_support::registry::Package;
 use cargo_test_support::{basic_lib_manifest, basic_manifest, git, main_file, project};
 use cargo_test_support::{sleep_ms, str, t, Project};
 
+use crate::config::write_config_at;
+
 #[cargo_test]
 fn cargo_compile_simple_git_dep() {
     let project = project();
@@ -369,6 +371,109 @@ fn cargo_compile_with_nested_paths() {
         .build();
 
     p.cargo("build").run();
+
+    assert!(p.bin("foo").is_file());
+
+    p.process(&p.bin("foo"))
+        .with_stdout_data(str![[r#"
+hello world
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn dependency_in_submodule_via_path_base() {
+    // Using a submodule prevents the dependency from being discovered during the directory walk,
+    // so Cargo will need to follow the path dependency to discover it.
+
+    let git_project = git::new("dep1", |project| {
+        project
+            .file(
+                "Cargo.toml",
+                r#"
+                    cargo-features = ["path-bases"]
+
+                    [package]
+                    name = "dep1"
+                    version = "0.5.0"
+                    edition = "2015"
+                    authors = ["carlhuda@example.com"]
+
+                    [dependencies]
+                    dep2 = { version = "0.5.0", base = "submodules", path = "dep2" }
+
+                    [lib]
+                    name = "dep1"
+                "#,
+            )
+            .file(
+                "src/dep1.rs",
+                r#"
+                    extern crate dep2;
+
+                    pub fn hello() -> &'static str {
+                        dep2::hello()
+                    }
+                "#,
+            )
+    });
+
+    let git_project2 = git::new("dep2", |project| {
+        project
+            .file("Cargo.toml", &basic_lib_manifest("dep2"))
+            .file(
+                "src/dep2.rs",
+                r#"
+                    pub fn hello() -> &'static str {
+                        "hello world"
+                    }
+                "#,
+            )
+    });
+
+    let repo = git2::Repository::open(&git_project.root()).unwrap();
+    let url = git_project2.root().to_url().to_string();
+    git::add_submodule(&repo, &url, Path::new("submods/dep2"));
+    git::commit(&repo);
+
+    write_config_at(
+        paths::home().join(".cargo/config.toml"),
+        r#"
+            [path-bases]
+            submodules = '../dep1/submods'
+        "#,
+    );
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.5.0"
+                    edition = "2015"
+                    authors = ["wycats@example.com"]
+
+                    [dependencies]
+                    dep1 = {{ version = "0.5.0", git = '{}' }}
+
+                    [[bin]]
+                    name = "foo"
+                "#,
+                git_project.url()
+            ),
+        )
+        .file(
+            "src/foo.rs",
+            &main_file(r#""{}", dep1::hello()"#, &["dep1"]),
+        )
+        .build();
+
+    p.cargo("build")
+        .masquerade_as_nightly_cargo(&["path-bases"])
+        .run();
 
     assert!(p.bin("foo").is_file());
 

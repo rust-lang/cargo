@@ -1612,7 +1612,7 @@ character, and must not be empty.
 If the name of path base used in a dependency is neither in the configuration
 nor one of the built-in path base, then Cargo will raise an error.
 
-#### Built-in path bases
+### Built-in path bases
 
 Cargo provides implicit path bases that can be used without the need to specify
 them in a `[path-bases]` table.
@@ -1625,6 +1625,12 @@ If a built-in path base name is also declared in the configuration, then Cargo
 will prefer the value in the configuration. The allows Cargo to add new built-in
 path bases without compatibility issues (as existing uses will shadow the
 built-in name).
+
+### Path bases in git dependencies and patches
+
+Configuration files in git dependencies and patches are not loaded by Cargo and
+so any path bases used in those packages will need to be defined in some
+configuration that is loaded by Cargo.
 
 ## lockfile-path
 * Original Issue: [#5707](https://github.com/rust-lang/cargo/issues/5707)

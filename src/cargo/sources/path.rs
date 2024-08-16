@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Debug, Formatter};
 use std::fs;
@@ -5,7 +6,9 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::task::Poll;
 
-use crate::core::{Dependency, EitherManifest, Manifest, Package, PackageId, SourceId};
+use crate::core::{
+    find_workspace_root, Dependency, EitherManifest, Manifest, Package, PackageId, SourceId,
+};
 use crate::ops;
 use crate::sources::source::MaybePackage;
 use crate::sources::source::QueryKind;
@@ -14,15 +17,17 @@ use crate::sources::IndexSummary;
 use crate::util::errors::CargoResult;
 use crate::util::important_paths::find_project_manifest_exact;
 use crate::util::internal;
-use crate::util::toml::read_manifest;
+use crate::util::toml::{lookup_path_base, read_manifest};
 use crate::util::GlobalContext;
-use anyhow::Context as _;
+use anyhow::{anyhow, Context as _};
 use cargo_util::paths;
+use cargo_util_schemas::manifest::PathBaseName;
 use filetime::FileTime;
 use gix::bstr::{BString, ByteVec};
 use gix::dir::entry::Status;
 use gix::index::entry::Stage;
 use ignore::gitignore::GitignoreBuilder;
+use lazycell::LazyCell;
 use tracing::{debug, info, trace, warn};
 use walkdir::WalkDir;
 
@@ -878,7 +883,7 @@ fn read_packages(
     }
 }
 
-fn nested_paths(manifest: &Manifest) -> Vec<PathBuf> {
+fn nested_paths(manifest: &Manifest) -> Vec<(PathBuf, Option<PathBaseName>)> {
     let mut nested_paths = Vec::new();
     let normalized = manifest.normalized_toml();
     let dependencies = normalized
@@ -910,7 +915,7 @@ fn nested_paths(manifest: &Manifest) -> Vec<PathBuf> {
             let Some(path) = dep.path.as_ref() else {
                 continue;
             };
-            nested_paths.push(PathBuf::from(path.as_str()));
+            nested_paths.push((PathBuf::from(path.as_str()), dep.base.clone()));
         }
     }
     nested_paths
@@ -1000,8 +1005,31 @@ fn read_nested_packages(
     //
     // TODO: filesystem/symlink implications?
     if !source_id.is_registry() {
-        for p in nested.iter() {
-            let path = paths::normalize_path(&path.join(p));
+        let workspace_root_cell: LazyCell<PathBuf> = LazyCell::new();
+
+        for (p, base) in nested.iter() {
+            let p = if let Some(base) = base {
+                let workspace_root = || {
+                    workspace_root_cell
+                        .try_borrow_with(|| {
+                            find_workspace_root(&manifest_path, gctx)?
+                                .ok_or_else(|| anyhow!("failed to find a workspace root"))
+                        })
+                        .map(|p| p.as_path())
+                };
+                // Pass in `None` for the `cargo-features` not to skip verification: when the
+                // package is loaded as a dependency, then it will be checked.
+                match lookup_path_base(base, gctx, &workspace_root, None) {
+                    Ok(base) => Cow::Owned(base.join(p)),
+                    Err(err) => {
+                        errors.push(err);
+                        continue;
+                    }
+                }
+            } else {
+                Cow::Borrowed(p)
+            };
+            let path = paths::normalize_path(&path.join(p.as_path()));
             let result =
                 read_nested_packages(&path, all_packages, source_id, gctx, visited, errors);
             // Ignore broken manifests found on git repositories.
