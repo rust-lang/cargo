@@ -105,6 +105,9 @@ pub struct Workspace<'gctx> {
     /// file. This is set for `cargo install` without `--locked`.
     ignore_lock: bool,
 
+    /// Requested path of the lockfile (i.e. passed as the cli flag)
+    requested_lockfile_path: Option<PathBuf>,
+
     /// The resolver behavior specified with the `resolver` field.
     resolve_behavior: ResolveBehavior,
     /// If `true`, then workspace `rust_version` would be used in `cargo resolve`
@@ -242,6 +245,7 @@ impl<'gctx> Workspace<'gctx> {
             require_optional_deps: true,
             loaded_packages: RefCell::new(HashMap::new()),
             ignore_lock: false,
+            requested_lockfile_path: None,
             resolve_behavior: ResolveBehavior::V1,
             resolve_honors_rust_version: false,
             custom_metadata: None,
@@ -631,6 +635,31 @@ impl<'gctx> Workspace<'gctx> {
     pub fn set_ignore_lock(&mut self, ignore_lock: bool) -> &mut Workspace<'gctx> {
         self.ignore_lock = ignore_lock;
         self
+    }
+
+    /// Returns the directory where the lockfile is in.
+    pub fn lock_root(&self) -> Filesystem {
+        if let Some(requested) = self.requested_lockfile_path.as_ref() {
+            return Filesystem::new(
+                requested
+                    .parent()
+                    .expect("Lockfile path can't be root")
+                    .to_owned(),
+            );
+        }
+        self.default_lock_root()
+    }
+
+    fn default_lock_root(&self) -> Filesystem {
+        if self.root_maybe().is_embedded() {
+            self.target_dir()
+        } else {
+            Filesystem::new(self.root().to_owned())
+        }
+    }
+
+    pub fn set_requested_lockfile_path(&mut self, path: Option<PathBuf>) {
+        self.requested_lockfile_path = path;
     }
 
     /// Get the lowest-common denominator `package.rust-version` within the workspace, if specified

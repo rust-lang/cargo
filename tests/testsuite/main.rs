@@ -112,6 +112,7 @@ mod list_availables;
 mod local_registry;
 mod locate_project;
 mod lockfile_compat;
+mod lockfile_path;
 mod login;
 mod logout;
 mod lto;

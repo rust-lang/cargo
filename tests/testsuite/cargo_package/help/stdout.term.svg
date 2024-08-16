@@ -1,4 +1,4 @@
-<svg width="860px" height="776px" xmlns="http://www.w3.org/2000/svg">
+<svg width="860px" height="794px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
@@ -91,17 +91,19 @@
 </tspan>
     <tspan x="10px" y="658px"><tspan>      </tspan><tspan class="fg-cyan bold">--manifest-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.toml</tspan>
 </tspan>
-    <tspan x="10px" y="676px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan><tspan>                Assert that `Cargo.lock` will remain unchanged</tspan>
+    <tspan x="10px" y="676px"><tspan>      </tspan><tspan class="fg-cyan bold">--lockfile-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.lock (unstable)</tspan>
 </tspan>
-    <tspan x="10px" y="694px"><tspan>      </tspan><tspan class="fg-cyan bold">--offline</tspan><tspan>               Run without accessing the network</tspan>
+    <tspan x="10px" y="694px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan><tspan>                Assert that `Cargo.lock` will remain unchanged</tspan>
 </tspan>
-    <tspan x="10px" y="712px"><tspan>      </tspan><tspan class="fg-cyan bold">--frozen</tspan><tspan>                Equivalent to specifying both --locked and --offline</tspan>
+    <tspan x="10px" y="712px"><tspan>      </tspan><tspan class="fg-cyan bold">--offline</tspan><tspan>               Run without accessing the network</tspan>
 </tspan>
-    <tspan x="10px" y="730px">
+    <tspan x="10px" y="730px"><tspan>      </tspan><tspan class="fg-cyan bold">--frozen</tspan><tspan>                Equivalent to specifying both --locked and --offline</tspan>
 </tspan>
-    <tspan x="10px" y="748px"><tspan>Run `</tspan><tspan class="fg-cyan bold">cargo help package</tspan><tspan class="bold">` for more detailed information.</tspan>
+    <tspan x="10px" y="748px">
 </tspan>
-    <tspan x="10px" y="766px">
+    <tspan x="10px" y="766px"><tspan>Run `</tspan><tspan class="fg-cyan bold">cargo help package</tspan><tspan class="bold">` for more detailed information.</tspan>
+</tspan>
+    <tspan x="10px" y="784px">
 </tspan>
   </text>
 

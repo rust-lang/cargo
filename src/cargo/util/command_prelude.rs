@@ -1,6 +1,7 @@
 use crate::core::compiler::{BuildConfig, MessageFormat, TimingOutput};
 use crate::core::resolver::CliFeatures;
 use crate::core::{Edition, Workspace};
+use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::ops::registry::RegistryOrIndex;
 use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::util::important_paths::find_root_manifest_for_wd;
@@ -295,6 +296,14 @@ pub trait CommandExt: Sized {
         )
     }
 
+    fn arg_lockfile_path(self) -> Self {
+        self._arg(
+            opt("lockfile-path", "Path to Cargo.lock (unstable)")
+                .value_name("PATH")
+                .help_heading(heading::MANIFEST_OPTIONS),
+        )
+    }
+
     fn arg_message_format(self) -> Self {
         self._arg(multi_opt("message-format", "FMT", "Error format"))
     }
@@ -517,14 +526,20 @@ pub trait ArgMatchesExt {
         root_manifest(self._value_of("manifest-path").map(Path::new), gctx)
     }
 
+    fn lockfile_path(&self, gctx: &GlobalContext) -> CargoResult<Option<PathBuf>> {
+        lockfile_path(self._value_of("lockfile-path").map(Path::new), gctx)
+    }
+
     #[tracing::instrument(skip_all)]
     fn workspace<'a>(&self, gctx: &'a GlobalContext) -> CargoResult<Workspace<'a>> {
         let root = self.root_manifest(gctx)?;
+        let lockfile_path = self.lockfile_path(gctx)?;
         let mut ws = Workspace::new(&root, gctx)?;
         ws.set_resolve_honors_rust_version(self.honor_rust_version());
         if gctx.cli_unstable().avoid_dev_deps {
             ws.set_require_optional_deps(false);
         }
+        ws.set_requested_lockfile_path(lockfile_path);
         Ok(ws)
     }
 
@@ -984,6 +999,32 @@ pub fn root_manifest(manifest_path: Option<&Path>, gctx: &GlobalContext) -> Carg
     } else {
         find_root_manifest_for_wd(gctx.cwd())
     }
+}
+
+pub fn lockfile_path(
+    lockfile_path: Option<&Path>,
+    gctx: &GlobalContext,
+) -> CargoResult<Option<PathBuf>> {
+    let Some(lockfile_path) = lockfile_path else {
+        return Ok(None);
+    };
+
+    gctx.cli_unstable()
+        .fail_if_stable_opt("--lockfile-path", 5707)?;
+
+    let path = gctx.cwd().join(lockfile_path);
+
+    if !path.ends_with(LOCKFILE_NAME) {
+        bail!("the lockfile-path must be a path to a {LOCKFILE_NAME} file (please rename your lock file to {LOCKFILE_NAME})")
+    }
+    if path.is_dir() {
+        bail!(
+            "lockfile path `{}` is a directory but expected a file",
+            lockfile_path.display()
+        )
+    }
+
+    return Ok(Some(path));
 }
 
 #[track_caller]

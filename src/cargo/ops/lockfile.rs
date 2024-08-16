@@ -6,14 +6,16 @@ use crate::util::Filesystem;
 
 use anyhow::Context as _;
 
+pub const LOCKFILE_NAME: &str = "Cargo.lock";
+
 #[tracing::instrument(skip_all)]
 pub fn load_pkg_lockfile(ws: &Workspace<'_>) -> CargoResult<Option<Resolve>> {
-    let lock_root = lock_root(ws);
-    if !lock_root.as_path_unlocked().join("Cargo.lock").exists() {
+    let lock_root = ws.lock_root();
+    if !lock_root.as_path_unlocked().join(LOCKFILE_NAME).exists() {
         return Ok(None);
     }
 
-    let mut f = lock_root.open_ro_shared("Cargo.lock", ws.gctx(), "Cargo.lock file")?;
+    let mut f = lock_root.open_ro_shared(LOCKFILE_NAME, ws.gctx(), "Cargo.lock file")?;
 
     let mut s = String::new();
     f.read_to_string(&mut s)
@@ -58,7 +60,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
             "the lock file {} needs to be updated but {} was passed to prevent this\n\
              If you want to try to generate the lock file without accessing the network, \
              remove the {} flag and use --offline instead.",
-            lock_root.as_path_unlocked().join("Cargo.lock").display(),
+            lock_root.as_path_unlocked().join(LOCKFILE_NAME).display(),
             flag,
             flag
         );
@@ -82,9 +84,13 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
         anyhow::bail!("lock file version `{current_version:?}` requires `-Znext-lockfile-bump`")
     }
 
+    if !lock_root.as_path_unlocked().exists() {
+        lock_root.create_dir()?;
+    }
+
     // Ok, if that didn't work just write it out
     lock_root
-        .open_rw_exclusive_create("Cargo.lock", ws.gctx(), "Cargo.lock file")
+        .open_rw_exclusive_create(LOCKFILE_NAME, ws.gctx(), "Cargo.lock file")
         .and_then(|mut f| {
             f.file().set_len(0)?;
             f.write_all(out.as_bytes())?;
@@ -93,7 +99,7 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
         .with_context(|| {
             format!(
                 "failed to write {}",
-                lock_root.as_path_unlocked().join("Cargo.lock").display()
+                lock_root.as_path_unlocked().join(LOCKFILE_NAME).display()
             )
         })?;
     Ok(true)
@@ -104,8 +110,8 @@ fn resolve_to_string_orig(
     resolve: &Resolve,
 ) -> (Option<String>, String, Filesystem) {
     // Load the original lock file if it exists.
-    let lock_root = lock_root(ws);
-    let orig = lock_root.open_ro_shared("Cargo.lock", ws.gctx(), "Cargo.lock file");
+    let lock_root = ws.lock_root();
+    let orig = lock_root.open_ro_shared(LOCKFILE_NAME, ws.gctx(), "Cargo.lock file");
     let orig = orig.and_then(|mut f| {
         let mut s = String::new();
         f.read_to_string(&mut s)?;
@@ -243,13 +249,5 @@ fn emit_package(dep: &toml::Table, out: &mut String) {
         out.push('\n');
     } else if dep.contains_key("replace") {
         out.push_str(&format!("replace = {}\n\n", &dep["replace"]));
-    }
-}
-
-fn lock_root(ws: &Workspace<'_>) -> Filesystem {
-    if ws.root_maybe().is_embedded() {
-        ws.target_dir()
-    } else {
-        Filesystem::new(ws.root().to_owned())
     }
 }

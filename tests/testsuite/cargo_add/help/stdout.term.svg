@@ -1,4 +1,4 @@
-<svg width="860px" height="2468px" xmlns="http://www.w3.org/2000/svg">
+<svg width="860px" height="2522px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
@@ -173,123 +173,129 @@
 </tspan>
     <tspan x="10px" y="1396px">
 </tspan>
-    <tspan x="10px" y="1414px"><tspan>      </tspan><tspan class="fg-cyan bold">--ignore-rust-version</tspan>
+    <tspan x="10px" y="1414px"><tspan>      </tspan><tspan class="fg-cyan bold">--lockfile-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan>
 </tspan>
-    <tspan x="10px" y="1432px"><tspan>          Ignore `rust-version` specification in packages</tspan>
+    <tspan x="10px" y="1432px"><tspan>          Path to Cargo.lock (unstable)</tspan>
 </tspan>
     <tspan x="10px" y="1450px">
 </tspan>
-    <tspan x="10px" y="1468px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan>
+    <tspan x="10px" y="1468px"><tspan>      </tspan><tspan class="fg-cyan bold">--ignore-rust-version</tspan>
 </tspan>
-    <tspan x="10px" y="1486px"><tspan>          Assert that `Cargo.lock` will remain unchanged</tspan>
+    <tspan x="10px" y="1486px"><tspan>          Ignore `rust-version` specification in packages</tspan>
 </tspan>
     <tspan x="10px" y="1504px">
 </tspan>
-    <tspan x="10px" y="1522px"><tspan>      </tspan><tspan class="fg-cyan bold">--offline</tspan>
+    <tspan x="10px" y="1522px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan>
 </tspan>
-    <tspan x="10px" y="1540px"><tspan>          Run without accessing the network</tspan>
+    <tspan x="10px" y="1540px"><tspan>          Assert that `Cargo.lock` will remain unchanged</tspan>
 </tspan>
     <tspan x="10px" y="1558px">
 </tspan>
-    <tspan x="10px" y="1576px"><tspan>      </tspan><tspan class="fg-cyan bold">--frozen</tspan>
+    <tspan x="10px" y="1576px"><tspan>      </tspan><tspan class="fg-cyan bold">--offline</tspan>
 </tspan>
-    <tspan x="10px" y="1594px"><tspan>          Equivalent to specifying both --locked and --offline</tspan>
+    <tspan x="10px" y="1594px"><tspan>          Run without accessing the network</tspan>
 </tspan>
     <tspan x="10px" y="1612px">
 </tspan>
-    <tspan x="10px" y="1630px"><tspan class="fg-green bold">Package Selection:</tspan>
+    <tspan x="10px" y="1630px"><tspan>      </tspan><tspan class="fg-cyan bold">--frozen</tspan>
 </tspan>
-    <tspan x="10px" y="1648px"><tspan>  </tspan><tspan class="fg-cyan bold">-p</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--package</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;SPEC&gt;</tspan><tspan class="fg-cyan">]</tspan>
+    <tspan x="10px" y="1648px"><tspan>          Equivalent to specifying both --locked and --offline</tspan>
 </tspan>
-    <tspan x="10px" y="1666px"><tspan>          Package to modify</tspan>
+    <tspan x="10px" y="1666px">
 </tspan>
-    <tspan x="10px" y="1684px">
+    <tspan x="10px" y="1684px"><tspan class="fg-green bold">Package Selection:</tspan>
 </tspan>
-    <tspan x="10px" y="1702px"><tspan class="fg-green bold">Source:</tspan>
+    <tspan x="10px" y="1702px"><tspan>  </tspan><tspan class="fg-cyan bold">-p</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--package</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;SPEC&gt;</tspan><tspan class="fg-cyan">]</tspan>
 </tspan>
-    <tspan x="10px" y="1720px"><tspan>      </tspan><tspan class="fg-cyan bold">--path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan>
+    <tspan x="10px" y="1720px"><tspan>          Package to modify</tspan>
 </tspan>
-    <tspan x="10px" y="1738px"><tspan>          Filesystem path to local crate to add</tspan>
+    <tspan x="10px" y="1738px">
 </tspan>
-    <tspan x="10px" y="1756px">
+    <tspan x="10px" y="1756px"><tspan class="fg-green bold">Source:</tspan>
 </tspan>
-    <tspan x="10px" y="1774px"><tspan>      </tspan><tspan class="fg-cyan bold">--git</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;URI&gt;</tspan>
+    <tspan x="10px" y="1774px"><tspan>      </tspan><tspan class="fg-cyan bold">--path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan>
 </tspan>
-    <tspan x="10px" y="1792px"><tspan>          Git repository location</tspan>
+    <tspan x="10px" y="1792px"><tspan>          Filesystem path to local crate to add</tspan>
 </tspan>
-    <tspan x="10px" y="1810px"><tspan>          </tspan>
+    <tspan x="10px" y="1810px">
 </tspan>
-    <tspan x="10px" y="1828px"><tspan>          Without any other information, cargo will use latest commit on the main branch.</tspan>
+    <tspan x="10px" y="1828px"><tspan>      </tspan><tspan class="fg-cyan bold">--git</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;URI&gt;</tspan>
 </tspan>
-    <tspan x="10px" y="1846px">
+    <tspan x="10px" y="1846px"><tspan>          Git repository location</tspan>
 </tspan>
-    <tspan x="10px" y="1864px"><tspan>      </tspan><tspan class="fg-cyan bold">--branch</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;BRANCH&gt;</tspan>
+    <tspan x="10px" y="1864px"><tspan>          </tspan>
 </tspan>
-    <tspan x="10px" y="1882px"><tspan>          Git branch to download the crate from</tspan>
+    <tspan x="10px" y="1882px"><tspan>          Without any other information, cargo will use latest commit on the main branch.</tspan>
 </tspan>
     <tspan x="10px" y="1900px">
 </tspan>
-    <tspan x="10px" y="1918px"><tspan>      </tspan><tspan class="fg-cyan bold">--tag</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;TAG&gt;</tspan>
+    <tspan x="10px" y="1918px"><tspan>      </tspan><tspan class="fg-cyan bold">--branch</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;BRANCH&gt;</tspan>
 </tspan>
-    <tspan x="10px" y="1936px"><tspan>          Git tag to download the crate from</tspan>
+    <tspan x="10px" y="1936px"><tspan>          Git branch to download the crate from</tspan>
 </tspan>
     <tspan x="10px" y="1954px">
 </tspan>
-    <tspan x="10px" y="1972px"><tspan>      </tspan><tspan class="fg-cyan bold">--rev</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;REV&gt;</tspan>
+    <tspan x="10px" y="1972px"><tspan>      </tspan><tspan class="fg-cyan bold">--tag</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;TAG&gt;</tspan>
 </tspan>
-    <tspan x="10px" y="1990px"><tspan>          Git reference to download the crate from</tspan>
+    <tspan x="10px" y="1990px"><tspan>          Git tag to download the crate from</tspan>
 </tspan>
-    <tspan x="10px" y="2008px"><tspan>          </tspan>
+    <tspan x="10px" y="2008px">
 </tspan>
-    <tspan x="10px" y="2026px"><tspan>          This is the catch all, handling hashes to named references in remote repositories.</tspan>
+    <tspan x="10px" y="2026px"><tspan>      </tspan><tspan class="fg-cyan bold">--rev</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;REV&gt;</tspan>
 </tspan>
-    <tspan x="10px" y="2044px">
+    <tspan x="10px" y="2044px"><tspan>          Git reference to download the crate from</tspan>
 </tspan>
-    <tspan x="10px" y="2062px"><tspan>      </tspan><tspan class="fg-cyan bold">--registry</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;NAME&gt;</tspan>
+    <tspan x="10px" y="2062px"><tspan>          </tspan>
 </tspan>
-    <tspan x="10px" y="2080px"><tspan>          Package registry for this dependency</tspan>
+    <tspan x="10px" y="2080px"><tspan>          This is the catch all, handling hashes to named references in remote repositories.</tspan>
 </tspan>
     <tspan x="10px" y="2098px">
 </tspan>
-    <tspan x="10px" y="2116px"><tspan class="fg-green bold">Section:</tspan>
+    <tspan x="10px" y="2116px"><tspan>      </tspan><tspan class="fg-cyan bold">--registry</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;NAME&gt;</tspan>
 </tspan>
-    <tspan x="10px" y="2134px"><tspan>      </tspan><tspan class="fg-cyan bold">--dev</tspan>
+    <tspan x="10px" y="2134px"><tspan>          Package registry for this dependency</tspan>
 </tspan>
-    <tspan x="10px" y="2152px"><tspan>          Add as development dependency</tspan>
+    <tspan x="10px" y="2152px">
 </tspan>
-    <tspan x="10px" y="2170px"><tspan>          </tspan>
+    <tspan x="10px" y="2170px"><tspan class="fg-green bold">Section:</tspan>
 </tspan>
-    <tspan x="10px" y="2188px"><tspan>          Dev-dependencies are not used when compiling a package for building, but are used for</tspan>
+    <tspan x="10px" y="2188px"><tspan>      </tspan><tspan class="fg-cyan bold">--dev</tspan>
 </tspan>
-    <tspan x="10px" y="2206px"><tspan>          compiling tests, examples, and benchmarks.</tspan>
+    <tspan x="10px" y="2206px"><tspan>          Add as development dependency</tspan>
 </tspan>
     <tspan x="10px" y="2224px"><tspan>          </tspan>
 </tspan>
-    <tspan x="10px" y="2242px"><tspan>          These dependencies are not propagated to other packages which depend on this package.</tspan>
+    <tspan x="10px" y="2242px"><tspan>          Dev-dependencies are not used when compiling a package for building, but are used for</tspan>
 </tspan>
-    <tspan x="10px" y="2260px">
+    <tspan x="10px" y="2260px"><tspan>          compiling tests, examples, and benchmarks.</tspan>
 </tspan>
-    <tspan x="10px" y="2278px"><tspan>      </tspan><tspan class="fg-cyan bold">--build</tspan>
+    <tspan x="10px" y="2278px"><tspan>          </tspan>
 </tspan>
-    <tspan x="10px" y="2296px"><tspan>          Add as build dependency</tspan>
+    <tspan x="10px" y="2296px"><tspan>          These dependencies are not propagated to other packages which depend on this package.</tspan>
 </tspan>
-    <tspan x="10px" y="2314px"><tspan>          </tspan>
+    <tspan x="10px" y="2314px">
 </tspan>
-    <tspan x="10px" y="2332px"><tspan>          Build-dependencies are the only dependencies available for use by build scripts</tspan>
+    <tspan x="10px" y="2332px"><tspan>      </tspan><tspan class="fg-cyan bold">--build</tspan>
 </tspan>
-    <tspan x="10px" y="2350px"><tspan>          (`build.rs` files).</tspan>
+    <tspan x="10px" y="2350px"><tspan>          Add as build dependency</tspan>
 </tspan>
-    <tspan x="10px" y="2368px">
+    <tspan x="10px" y="2368px"><tspan>          </tspan>
 </tspan>
-    <tspan x="10px" y="2386px"><tspan>      </tspan><tspan class="fg-cyan bold">--target</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;TARGET&gt;</tspan>
+    <tspan x="10px" y="2386px"><tspan>          Build-dependencies are the only dependencies available for use by build scripts</tspan>
 </tspan>
-    <tspan x="10px" y="2404px"><tspan>          Add as dependency to the given target platform</tspan>
+    <tspan x="10px" y="2404px"><tspan>          (`build.rs` files).</tspan>
 </tspan>
     <tspan x="10px" y="2422px">
 </tspan>
-    <tspan x="10px" y="2440px"><tspan>Run `</tspan><tspan class="fg-cyan bold">cargo help add</tspan><tspan class="bold">` for more detailed information.</tspan>
+    <tspan x="10px" y="2440px"><tspan>      </tspan><tspan class="fg-cyan bold">--target</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;TARGET&gt;</tspan>
 </tspan>
-    <tspan x="10px" y="2458px">
+    <tspan x="10px" y="2458px"><tspan>          Add as dependency to the given target platform</tspan>
+</tspan>
+    <tspan x="10px" y="2476px">
+</tspan>
+    <tspan x="10px" y="2494px"><tspan>Run `</tspan><tspan class="fg-cyan bold">cargo help add</tspan><tspan class="bold">` for more detailed information.</tspan>
+</tspan>
+    <tspan x="10px" y="2512px">
 </tspan>
   </text>
 

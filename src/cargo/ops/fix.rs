@@ -97,6 +97,7 @@ pub struct FixOptions {
     pub allow_no_vcs: bool,
     pub allow_staged: bool,
     pub broken_code: bool,
+    pub requested_lockfile_path: Option<PathBuf>,
 }
 
 pub fn fix(
@@ -121,6 +122,7 @@ pub fn fix(
     }
     let mut ws = Workspace::new(&root_manifest, gctx)?;
     ws.set_resolve_honors_rust_version(Some(original_ws.resolve_honors_rust_version()));
+    ws.set_requested_lockfile_path(opts.requested_lockfile_path.clone());
 
     // Spin up our lock server, which our subprocesses will use to synchronize fixes.
     let lock_server = LockServer::new()?;

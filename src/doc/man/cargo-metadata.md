@@ -378,6 +378,8 @@ reproduction of the information within `Cargo.toml`.
 {{> options-manifest-path }}
 
 {{> options-locked }}
+
+{{> options-lockfile-path }}
 {{/options}}
 
 {{> section-options-common }}
