@@ -2686,7 +2686,7 @@ fn bad_debuginfo() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid value: string "a", expected a boolean, 0, 1, 2, "line-tables-only", or "line-directives-only"
+[ERROR] invalid value: string "a", expected a boolean, 0, 1, 2, "none", "limited", "full", "line-tables-only", or "line-directives-only"
  --> Cargo.toml:9:25
   |
 9 |                 debug = 'a'
@@ -2719,7 +2719,7 @@ fn bad_debuginfo2() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] invalid type: floating point `3.6`, expected a boolean, 0, 1, 2, "line-tables-only", or "line-directives-only"
+[ERROR] invalid type: floating point `3.6`, expected a boolean, 0, 1, 2, "none", "limited", "full", "line-tables-only", or "line-directives-only"
  --> Cargo.toml:9:25
   |
 9 |                 debug = 3.6

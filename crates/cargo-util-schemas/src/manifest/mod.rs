@@ -1088,7 +1088,7 @@ impl<'de> de::Deserialize<'de> for TomlDebugInfo {
         D: de::Deserializer<'de>,
     {
         use serde::de::Error as _;
-        let expecting = "a boolean, 0, 1, 2, \"line-tables-only\", or \"line-directives-only\"";
+        let expecting = "a boolean, 0, 1, 2, \"none\", \"limited\", \"full\", \"line-tables-only\", or \"line-directives-only\"";
         UntaggedEnumVisitor::new()
             .expecting(expecting)
             .bool(|value| {
