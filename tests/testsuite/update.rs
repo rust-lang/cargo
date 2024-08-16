@@ -2565,6 +2565,68 @@ perhaps a crate was updated and forgotten to be re-vendored?
 }
 
 #[cargo_test]
+fn update_precise_breaking_direct_plus_transitive() {
+    Package::new("incompatible", "1.0.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                # Check if formatting is preserved
+
+                [package]
+                name  =  "foo"
+                version  =  "0.0.1"
+                edition  =  "2015"
+                authors  =  []
+
+                [dependencies]
+                incompatible  =  "1.0"  # Comment
+                bar = { path = "bar" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            r#"
+                [package]
+                name = "bar"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                incompatible = "1.0"
+            "#,
+        )
+        .file("bar/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+    let lock1 = p.read_lockfile();
+
+    Package::new("incompatible", "2.0.0").publish();
+    Package::new("incompatible", "2.0.1").publish();
+
+    p.cargo("update -Zunstable-options incompatible --precise 2.0.0")
+        .masquerade_as_nightly_cargo(&["update-precise-breaking"])
+        .with_stderr_data(str![[r#"
+[UPGRADING] incompatible ^1.0 -> ^2.0
+[UPDATING] `dummy-registry` index
+[ADDING] incompatible v2.0.0 (latest: v2.0.1)
+[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
+
+"#]])
+        .run();
+
+    let lock2 = p.read_lockfile();
+
+    assert_ne!(lock1, lock2);
+    assert!(lock2.contains("incompatible 1.0.0"));
+    assert!(lock2.contains("incompatible 2.0.0"));
+}
+
+#[cargo_test]
 fn update_precise_breaking_incompatible_downgrade() {
     Package::new("incompatible", "1.0.0").publish();
     Package::new("incompatible", "2.0.0").publish();

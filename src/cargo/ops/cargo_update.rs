@@ -109,12 +109,13 @@ pub fn update_lockfile(
     };
     let mut registry = ws.package_registry()?;
     let mut to_avoid = HashSet::new();
+    let breaking_update = !upgrades.is_empty();
 
-    if opts.breaking {
+    if breaking_update {
         // We don't necessarily want to update all specified packages. If we are
-        // doing a breaking update (or precise upgrades, coming in #14140), we
-        // don't want to touch any packages that have no breaking updates. So we
-        // want to only avoid all packages that got upgraded.
+        // doing a breaking update or precise upgrade, we don't want to touch
+        // any packages that have no breaking updates. So we want to only avoid
+        // all packages that got upgraded.
 
         for name in opts.to_update.iter() {
             // We still want to query any specified package, for the sake of
