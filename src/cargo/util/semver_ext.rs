@@ -178,7 +178,10 @@ impl From<VersionReq> for OptVersionReq {
 
 #[cfg(test)]
 mod matches_prerelease {
+    use semver::VersionReq;
+
     use super::OptVersionReq;
+    use super::Version;
 
     #[test]
     fn prerelease() {
@@ -237,5 +240,20 @@ mod matches_prerelease {
             let matched = OptVersionReq::Req(version_req).matches_prerelease(&version);
             assert_eq!(expected, matched, "req: {req}; ver: {ver}");
         }
+    }
+
+    #[test]
+    fn opt_version_req_matches_prerelease() {
+        let req_ver: VersionReq = "^1.2.3-rc.0".parse().unwrap();
+        let to_ver: Version = "1.2.3-rc.0".parse().unwrap();
+
+        let req = OptVersionReq::Req(req_ver.clone());
+        assert!(req.matches_prerelease(&to_ver));
+
+        let req = OptVersionReq::Locked(to_ver.clone(), req_ver.clone());
+        assert!(!req.matches_prerelease(&to_ver));
+
+        let req = OptVersionReq::Precise(to_ver.clone(), req_ver.clone());
+        assert!(!req.matches_prerelease(&to_ver));
     }
 }
