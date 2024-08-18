@@ -25,7 +25,7 @@ fn must_have_unstable_options() {
         .arg(lockfile_path)
         .with_stderr_data(str![[
             r#"[ERROR] the `--lockfile-path` flag is unstable, pass `-Z unstable-options` to enable it
-See https://github.com/rust-lang/cargo/issues/5707 for more information about the `--lockfile-path` flag.
+See https://github.com/rust-lang/cargo/issues/14421 for more information about the `--lockfile-path` flag.
 
 "#]])
         .with_status(101)
