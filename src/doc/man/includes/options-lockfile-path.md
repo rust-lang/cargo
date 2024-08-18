@@ -8,5 +8,5 @@ This flag can be used to run most commands in read-only directories, writing loc
 This option is only available on the [nightly
 channel](https://doc.rust-lang.org/book/appendix-07-nightly-rust.html) and
 requires the `-Z unstable-options` flag to enable (see
-[#5707](https://github.com/rust-lang/cargo/issues/5707)).
+[#14421](https://github.com/rust-lang/cargo/issues/14421)).
 {{/option}}
