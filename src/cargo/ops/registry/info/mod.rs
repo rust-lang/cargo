@@ -1,9 +1,7 @@
 //! Implementation of `cargo info`.
 
 use anyhow::bail;
-use cargo_credential::Operation;
 use cargo_util_schemas::core::{PackageIdSpec, PartialVersion};
-use crates_io::User;
 
 use crate::core::registry::PackageRegistry;
 use crate::core::{Dependency, Package, PackageId, PackageIdSpecQuery, Registry, Workspace};
@@ -12,7 +10,6 @@ use crate::ops::registry::{get_source_id_with_package_id, RegistryOrIndex, Regis
 use crate::ops::resolve_ws;
 use crate::sources::source::QueryKind;
 use crate::sources::{IndexSummary, SourceConfigMap};
-use crate::util::auth::AuthorizationErrorReason;
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::command_prelude::root_manifest;
 use crate::{CargoResult, GlobalContext};
@@ -79,19 +76,7 @@ pub fn info(
 
     let package = registry.get(&[package_id])?;
     let package = package.get_one(package_id)?;
-    let owners = try_list_owners(
-        gctx,
-        &source_ids,
-        reg_or_index.as_ref(),
-        package_id.name().as_str(),
-    )?;
-    pretty_view(
-        package,
-        &summaries,
-        &owners,
-        suggest_cargo_tree_command,
-        gctx,
-    )?;
+    pretty_view(package, &summaries, suggest_cargo_tree_command, gctx)?;
 
     Ok(())
 }
@@ -205,56 +190,6 @@ fn query_summaries(
             std::task::Poll::Pending => registry.block_until_ready()?,
         }
     }
-}
-
-// Try to list the login and name of all owners of a crate.
-fn try_list_owners(
-    gctx: &GlobalContext,
-    source_ids: &RegistrySourceIds,
-    reg_or_index: Option<&RegistryOrIndex>,
-    package_name: &str,
-) -> CargoResult<Option<Vec<String>>> {
-    // Only remote registries support listing owners.
-    if !source_ids.original.is_remote_registry() {
-        return Ok(None);
-    }
-    match super::registry(
-        gctx,
-        source_ids,
-        None,
-        reg_or_index,
-        false,
-        Some(Operation::Read),
-    ) {
-        Ok(mut registry) => {
-            let owners = registry.list_owners(package_name)?;
-            let names = owners.iter().map(get_username).collect();
-            return Ok(Some(names));
-        }
-        Err(err) => {
-            // If the token is missing, it means the user is not logged in.
-            // We don't want to show an error in this case.
-            if err.to_string().contains(
-                (AuthorizationErrorReason::TokenMissing)
-                    .to_string()
-                    .as_str(),
-            ) {
-                return Ok(None);
-            }
-            return Err(err);
-        }
-    }
-}
-
-fn get_username(u: &User) -> String {
-    format!(
-        "{}{}",
-        u.login,
-        u.name
-            .as_ref()
-            .map(|name| format!(" ({})", name))
-            .unwrap_or_default(),
-    )
 }
 
 fn validate_locked_and_frozen_options(

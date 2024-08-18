@@ -15,7 +15,6 @@ use crate::{
 pub(super) fn pretty_view(
     package: &Package,
     summaries: &[IndexSummary],
-    owners: &Option<Vec<String>>,
     suggest_cargo_tree_command: bool,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
@@ -152,10 +151,6 @@ pub(super) fn pretty_view(
         stdout,
         gctx,
     )?;
-
-    if let Some(owners) = owners {
-        pretty_owners(owners, stdout)?;
-    }
 
     if suggest_cargo_tree_command {
         suggest_cargo_tree(package_id, stdout)?;
@@ -394,19 +389,6 @@ fn pretty_features(
             stdout,
             "  {summary}{total_deactivated} deactivated features{summary:#}",
         )?;
-    }
-
-    Ok(())
-}
-
-fn pretty_owners(owners: &Vec<String>, stdout: &mut dyn Write) -> CargoResult<()> {
-    let header = HEADER;
-
-    if !owners.is_empty() {
-        writeln!(stdout, "{header}owners:{header:#}",)?;
-        for owner in owners {
-            writeln!(stdout, "  {}", owner)?;
-        }
     }
 
     Ok(())
