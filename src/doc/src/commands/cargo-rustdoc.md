@@ -322,7 +322,7 @@ This flag can be used to run most commands in read-only directories, writing loc
 <p>This option is only available on the <a href="https://doc.rust-lang.org/book/appendix-07-nightly-rust.html">nightly
 channel</a> and
 requires the <code>-Z unstable-options</code> flag to enable (see
-<a href="https://github.com/rust-lang/cargo/issues/5707">#5707</a>).</dd>
+<a href="https://github.com/rust-lang/cargo/issues/14421">#14421</a>).</dd>
 
 </dl>
 

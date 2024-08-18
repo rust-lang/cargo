@@ -1010,7 +1010,7 @@ pub fn lockfile_path(
     };
 
     gctx.cli_unstable()
-        .fail_if_stable_opt("--lockfile-path", 5707)?;
+        .fail_if_stable_opt("--lockfile-path", 14421)?;
 
     let path = gctx.cwd().join(lockfile_path);
 
