@@ -2871,7 +2871,7 @@ fn env_test() {
 [RUNNING] `[ROOT]/foo/target/debug/deps/foo-[HASH][EXE]`
 [RUNNING] `[ROOT]/foo/target/debug/deps/test-[HASH][EXE]`
 [DOCTEST] foo
-[RUNNING] `rustdoc --edition=2015 --crate-type lib --crate-name foo[..]`
+[RUNNING] `rustdoc --edition=2015 --crate-type lib --color auto --crate-name foo[..]`
 
 "#]])
         .with_stdout_data(str![[r#"
