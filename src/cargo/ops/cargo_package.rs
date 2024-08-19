@@ -243,7 +243,9 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Vec<Fi
         } else {
             let tarball = create_package(ws, &pkg, ar_files, local_reg.as_ref())?;
             if let Some(local_reg) = local_reg.as_mut() {
-                local_reg.add_package(ws, &pkg, &tarball)?;
+                if pkg.publish() != &Some(Vec::new()) {
+                    local_reg.add_package(ws, &pkg, &tarball)?;
+                }
             }
             outputs.push((pkg, opts, tarball));
         }
@@ -284,7 +286,10 @@ fn get_registry(
     if let RegistryOrIndex::Registry(reg_name) = reg {
         for pkg in pkgs {
             if let Some(allowed) = pkg.publish().as_ref() {
-                if !allowed.iter().any(|a| a == &reg_name) {
+                // If allowed is empty (i.e. package.publish is false), we let it slide.
+                // This allows packaging unpublishable packages (although packaging might
+                // fail later if the unpublishable package is a dependency of something else).
+                if !allowed.is_empty() && !allowed.iter().any(|a| a == &reg_name) {
                     bail!(
                         "`{}` cannot be packaged.\n\
                          The registry `{}` is not listed in the `package.publish` value in Cargo.toml.",

@@ -6227,19 +6227,41 @@ fn registry_inference_ignores_unpublishable() {
 
     p.cargo("package -Zpackage-workspace")
         .masquerade_as_nightly_cargo(&["package-workspace"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] conflicts between `package.publish` fields in the selected packages
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] `alternative` index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
+[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] `alternative` index
+[UNPACKING] dep v0.1.0 (registry `[ROOT]/foo/target/package/tmp-registry`)
+[COMPILING] dep v0.1.0 (registry `alternative`)
+[COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
 
     p.cargo("package -Zpackage-workspace --registry=alternative")
         .masquerade_as_nightly_cargo(&["package-workspace"])
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] `main` cannot be packaged.
-The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] `alternative` index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
+[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] `alternative` index
+[COMPILING] dep v0.1.0 (registry `alternative`)
+[COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -6464,7 +6486,16 @@ fn unpublishable_dependency() {
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] conflicts between `package.publish` fields in the selected packages
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] `alternative` index
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `dep` found
+  location searched: registry `alternative`
+  required by package `main v0.0.1 ([ROOT]/foo/main)`
 
 "#]])
         .run();
