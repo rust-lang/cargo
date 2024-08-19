@@ -139,6 +139,9 @@ impl HelperDef for OptionHelper<'_> {
         // Render the block.
         let block = t.renders(r, gctx, rc)?;
 
+        // Windows newlines can break some rendering, so normalize.
+        let block = block.replace("\r\n", "\n");
+
         // Get the name of this page.
         let man_name = gctx
             .data()
