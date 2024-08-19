@@ -115,6 +115,7 @@ Each new feature described below should explain how to use it.
 * Other
     * [gitoxide](#gitoxide) --- Use `gitoxide` instead of `git2` for a set of operations.
     * [script](#script) --- Enable support for single-file `.rs` packages.
+    * [lockfile-path](#lockfile-path) --- Allows to specify a path to lockfile other than the default path `<workspace_root>/Cargo.lock`.
 
 ## allow-features
 
@@ -1624,6 +1625,23 @@ If a built-in path base name is also declared in the configuration, then Cargo
 will prefer the value in the configuration. The allows Cargo to add new built-in
 path bases without compatibility issues (as existing uses will shadow the
 built-in name).
+
+## lockfile-path
+* Original Issue: [#5707](https://github.com/rust-lang/cargo/issues/5707)
+* Tracking Issue: [#14421](https://github.com/rust-lang/cargo/issues/14421)
+
+This feature allows you to specify the path of lockfile Cargo.lock. 
+By default, lockfile is written into `<workspace_root>/Cargo.lock`. 
+However, when sources are stored in read-only directory, most of the cargo commands 
+would fail, trying to write a lockfile. The `--lockfile-path`
+flag makes it easier to work with readonly sources. 
+Note, that currently path must end with `Cargo.lock`. Meaning, if you want to use 
+this feature in multiple projects, lockfiles should be stored in different directories.
+Example:
+
+```sh
+cargo +nightly metadata --lockfile-path=$LOCKFILES_ROOT/my-project/Cargo.lock -Z unstable-options
+```
 
 # Stabilized and removed features
 
