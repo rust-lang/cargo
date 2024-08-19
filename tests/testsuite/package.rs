@@ -5999,7 +5999,8 @@ fn registry_not_in_publish_list() {
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] registry index was not found in any configuration: `alternative`
+[ERROR] `foo` cannot be packaged.
+The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
 
 "#]])
         .run();
