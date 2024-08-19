@@ -325,9 +325,19 @@ pub(crate) struct RegistrySourceIds {
 
 /// If this set of packages has an unambiguous publish registry, find it.
 pub(crate) fn infer_registry(pkgs: &[&Package]) -> CargoResult<Option<RegistryOrIndex>> {
-    if pkgs[1..].iter().all(|p| p.publish() == pkgs[0].publish()) {
-        // If all packages have the same publish settings, we take that as the default.
-        match pkgs[0].publish().as_deref() {
+    // Ignore "publish = false" packages while inferring the registry.
+    let publishable_pkgs: Vec<_> = pkgs
+        .iter()
+        .filter(|p| p.publish() != &Some(Vec::new()))
+        .collect();
+
+    let Some((first, rest)) = publishable_pkgs.split_first() else {
+        return Ok(None);
+    };
+
+    // If all packages have the same publish settings, we take that as the default.
+    if rest.iter().all(|p| p.publish() == first.publish()) {
+        match publishable_pkgs[0].publish().as_deref() {
             Some([unique_pkg_reg]) => {
                 Ok(Some(RegistryOrIndex::Registry(unique_pkg_reg.to_owned())))
             }
@@ -346,7 +356,7 @@ pub(crate) fn infer_registry(pkgs: &[&Package]) -> CargoResult<Option<RegistryOr
             }
         }
     } else {
-        let common_regs = pkgs
+        let common_regs = publishable_pkgs
             .iter()
             // `None` means "all registries", so drop them instead of including them
             // in the intersection.
