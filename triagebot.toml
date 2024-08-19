@@ -270,6 +270,9 @@ trigger_files = ["src/bin/cargo/commands/generate_lockfile.rs"]
 [autolabel."Command-git-checkout"]
 trigger_files = ["src/bin/cargo/commands/git_checkout.rs"]
 
+[autolabel."Command-info"]
+trigger_files = ["src/bin/cargo/commands/info.rs", "src/cargo/ops/registry/info/"]
+
 [autolabel."Command-init"]
 trigger_files = ["src/bin/cargo/commands/init.rs"]
 
