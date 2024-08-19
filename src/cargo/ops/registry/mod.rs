@@ -191,7 +191,7 @@ fn registry(
 ///
 /// The return value is a pair of `SourceId`s: The first may be a built-in replacement of
 /// crates.io (such as index.crates.io), while the second is always the original source.
-fn get_source_id(
+pub(crate) fn get_source_id(
     gctx: &GlobalContext,
     reg_or_index: Option<&RegistryOrIndex>,
 ) -> CargoResult<RegistrySourceIds> {

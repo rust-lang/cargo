@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 use std::fs::{self, File};
 use std::io::prelude::*;
 use std::io::SeekFrom;
@@ -16,7 +16,7 @@ use crate::core::{Package, PackageId, PackageSet, Resolve, SourceId};
 use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::ops::registry::{infer_registry, RegistryOrIndex};
 use crate::sources::registry::index::{IndexPackage, RegistryDependency};
-use crate::sources::{PathSource, SourceConfigMap, CRATES_IO_REGISTRY};
+use crate::sources::{PathSource, CRATES_IO_REGISTRY};
 use crate::util::cache_lock::CacheLockMode;
 use crate::util::context::JobsConfig;
 use crate::util::errors::CargoResult;
@@ -202,18 +202,27 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Vec<Fi
         // below, and will be validated during the verification step.
     }
 
+    let deps = local_deps(pkgs.iter().map(|(p, f)| ((*p).clone(), f.clone())));
     let just_pkgs: Vec<_> = pkgs.iter().map(|p| p.0).collect();
-    let publish_reg = get_registry(ws.gctx(), &just_pkgs, opts.reg_or_index.clone())?;
-    debug!("packaging for registry {publish_reg}");
+
+    // The publish registry doesn't matter unless there are local dependencies,
+    // so only try to get one if we need it. If they explicitly passed a
+    // registry on the CLI, we check it no matter what.
+    let sid = if deps.has_no_dependencies() && opts.reg_or_index.is_none() {
+        None
+    } else {
+        let sid = get_registry(ws.gctx(), &just_pkgs, opts.reg_or_index.clone())?;
+        debug!("packaging for registry {}", sid);
+        Some(sid)
+    };
 
     let mut local_reg = if ws.gctx().cli_unstable().package_workspace {
         let reg_dir = ws.target_dir().join("package").join("tmp-registry");
-        Some(TmpRegistry::new(ws.gctx(), reg_dir, publish_reg)?)
+        sid.map(|sid| TmpRegistry::new(ws.gctx(), reg_dir, sid))
+            .transpose()?
     } else {
         None
     };
-
-    let deps = local_deps(pkgs.iter().map(|(p, f)| ((*p).clone(), f.clone())));
 
     // Packages need to be created in dependency order, because dependencies must
     // be added to our local overlay before we can create lockfiles that depend on them.
@@ -258,52 +267,35 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Vec<Fi
 /// packages that we're packaging: if we're packaging foo-bin and foo-lib, and foo-bin
 /// depends on foo-lib, then the foo-lib entry in foo-bin's lockfile will depend on the
 /// registry that we're building packages for.
-pub(crate) fn get_registry(
+fn get_registry(
     gctx: &GlobalContext,
     pkgs: &[&Package],
     reg_or_index: Option<RegistryOrIndex>,
 ) -> CargoResult<SourceId> {
-    let reg_or_index = match reg_or_index {
+    let reg_or_index = match reg_or_index.clone() {
         Some(r) => Some(r),
         None => infer_registry(pkgs)?,
     };
 
+    // Validate the registry against the packages' allow-lists.
     let reg = reg_or_index
         .clone()
         .unwrap_or_else(|| RegistryOrIndex::Registry(CRATES_IO_REGISTRY.to_owned()));
-
-    // Validate the registry against the packages' allow-lists. For backwards compatibility, we
-    // skip this if only a single package is being published (because in that case the registry
-    // doesn't affect the packaging step).
-    if pkgs.len() > 1 {
-        if let RegistryOrIndex::Registry(reg_name) = &reg {
-            for pkg in pkgs {
-                if let Some(allowed) = pkg.publish().as_ref() {
-                    if !allowed.iter().any(|a| a == reg_name) {
-                        bail!(
+    if let RegistryOrIndex::Registry(reg_name) = reg {
+        for pkg in pkgs {
+            if let Some(allowed) = pkg.publish().as_ref() {
+                if !allowed.iter().any(|a| a == &reg_name) {
+                    bail!(
                         "`{}` cannot be packaged.\n\
                          The registry `{}` is not listed in the `package.publish` value in Cargo.toml.",
                         pkg.name(),
                         reg_name
                     );
-                    }
                 }
             }
         }
     }
-
-    let sid = match reg {
-        RegistryOrIndex::Index(url) => SourceId::for_registry(&url)?,
-        RegistryOrIndex::Registry(reg) if reg == CRATES_IO_REGISTRY => SourceId::crates_io(gctx)?,
-        RegistryOrIndex::Registry(reg) => SourceId::alt_registry(gctx, &reg)?,
-    };
-
-    // Load source replacements that are built-in to Cargo.
-    let sid = SourceConfigMap::empty(gctx)?
-        .load(sid, &HashSet::new())?
-        .replaced_source_id();
-
-    Ok(sid)
+    Ok(ops::registry::get_source_id(gctx, reg_or_index.as_ref())?.replacement)
 }
 
 /// Just the part of the dependency graph that's between the packages we're packaging.
@@ -321,6 +313,12 @@ impl LocalDependencies {
             .into_iter()
             .map(|name| self.packages[&name].clone())
             .collect()
+    }
+
+    pub fn has_no_dependencies(&self) -> bool {
+        self.graph
+            .iter()
+            .all(|node| self.graph.edges(node).next().is_none())
     }
 }
 
