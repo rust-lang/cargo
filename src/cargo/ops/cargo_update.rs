@@ -491,7 +491,7 @@ fn print_lockfile_generation(
     resolve: &Resolve,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<()> {
-    let diff = PackageDiff::new(&resolve);
+    let diff: Vec<_> = PackageDiff::new(&resolve).collect();
     let num_pkgs: usize = diff.iter().map(|d| d.added.len()).sum();
     if num_pkgs <= 1 {
         // just ourself, nothing worth reporting
@@ -537,7 +537,7 @@ fn print_lockfile_sync(
     resolve: &Resolve,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<()> {
-    let diff = PackageDiff::diff(&previous_resolve, &resolve);
+    let diff: Vec<_> = PackageDiff::diff(&previous_resolve, &resolve).collect();
     let num_pkgs: usize = diff.iter().map(|d| d.added.len()).sum();
     if num_pkgs == 0 {
         return Ok(());
@@ -619,7 +619,7 @@ fn print_lockfile_updates(
     precise: bool,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<()> {
-    let diff = PackageDiff::diff(&previous_resolve, &resolve);
+    let diff: Vec<_> = PackageDiff::diff(&previous_resolve, &resolve).collect();
     let num_pkgs: usize = diff.iter().map(|d| d.added.len()).sum();
     if !precise {
         status_locking(ws, num_pkgs)?;
@@ -836,7 +836,7 @@ pub struct PackageDiff {
 }
 
 impl PackageDiff {
-    pub fn new(resolve: &Resolve) -> Vec<Self> {
+    pub fn new(resolve: &Resolve) -> impl Iterator<Item = Self> {
         let mut changes = BTreeMap::new();
         let empty = Self::default();
         for dep in resolve.iter() {
@@ -847,10 +847,10 @@ impl PackageDiff {
                 .push(dep);
         }
 
-        changes.into_iter().map(|(_, v)| v).collect()
+        changes.into_iter().map(|(_, v)| v)
     }
 
-    pub fn diff(previous_resolve: &Resolve, resolve: &Resolve) -> Vec<Self> {
+    pub fn diff(previous_resolve: &Resolve, resolve: &Resolve) -> impl Iterator<Item = Self> {
         fn vec_subset(a: &[PackageId], b: &[PackageId]) -> Vec<PackageId> {
             a.iter().filter(|a| !contains_id(b, a)).cloned().collect()
         }
@@ -921,7 +921,7 @@ impl PackageDiff {
         }
         debug!("{:#?}", changes);
 
-        changes.into_iter().map(|(_, v)| v).collect()
+        changes.into_iter().map(|(_, v)| v)
     }
 
     fn key(dep: PackageId) -> (&'static str, SourceId) {
