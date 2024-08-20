@@ -641,8 +641,8 @@ fn print_lockfile_updates(
         };
 
         if let Some((removed, added)) = diff.change() {
-            let required_rust_version = report_required_rust_version(ws, resolve, *added);
-            let latest = report_latest(&possibilities, *added);
+            let required_rust_version = report_required_rust_version(ws, resolve, added);
+            let latest = report_latest(&possibilities, added);
             let note = required_rust_version.or(latest).unwrap_or_default();
 
             let msg = if removed.source_id().is_git() {
@@ -933,9 +933,9 @@ impl PackageDiff {
     /// All `PackageDiff` knows is that entries were added/removed within [`Resolve`].
     /// A package could be added or removed because of dependencies from other packages
     /// which makes it hard to definitively say "X was upgrade to N".
-    pub fn change(&self) -> Option<(&PackageId, &PackageId)> {
+    pub fn change(&self) -> Option<(PackageId, PackageId)> {
         if self.removed.len() == 1 && self.added.len() == 1 {
-            Some((&self.removed[0], &self.added[0]))
+            Some((self.removed[0], self.added[0]))
         } else {
             None
         }
