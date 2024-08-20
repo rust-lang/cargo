@@ -1,5 +1,6 @@
 use crate::core::compiler::{Compilation, CompileKind, Doctest, Metadata, Unit, UnitOutput};
 use crate::core::profiles::PanicStrategy;
+use crate::core::shell::ColorChoice;
 use crate::core::shell::Verbosity;
 use crate::core::{TargetKind, Workspace};
 use crate::ops;
@@ -176,6 +177,7 @@ fn run_doc_tests(
     let gctx = ws.gctx();
     let mut errors = Vec::new();
     let doctest_xcompile = gctx.cli_unstable().doctest_xcompile;
+    let color = gctx.shell().color_choice();
 
     for doctest_info in &compilation.to_doc_test {
         let Doctest {
@@ -215,6 +217,14 @@ fn run_doc_tests(
         for (var, value) in env {
             p.env(var, value);
         }
+
+        let color_arg = match color {
+            ColorChoice::Always => "always",
+            ColorChoice::Never => "never",
+            ColorChoice::CargoAuto => "auto",
+        };
+        p.arg("--color").arg(color_arg);
+
         p.arg("--crate-name").arg(&unit.target.crate_name());
         p.arg("--test");
 

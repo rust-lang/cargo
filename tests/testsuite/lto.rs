@@ -619,7 +619,7 @@ fn cdylib_and_rlib() {
 [RUNNING] `[ROOT]/foo/target/release/deps/bar-[HASH][EXE]`
 [RUNNING] `[ROOT]/foo/target/release/deps/b-[HASH][EXE]`
 [DOCTEST] bar
-[RUNNING] `rustdoc --edition=2015 --crate-type cdylib --crate-type rlib --crate-name bar --test [..]-C lto [..]
+[RUNNING] `rustdoc --edition=2015 --crate-type cdylib --crate-type rlib --color auto --crate-name bar --test [..]-C lto [..]
 
 "#]].unordered())
         .run();
