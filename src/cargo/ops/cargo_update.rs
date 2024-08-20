@@ -563,7 +563,7 @@ fn print_lockfile_sync(
             let latest = report_latest(&possibilities, package_id);
             let note = required_rust_version.or(latest).unwrap_or_default();
 
-            let msg = if previous_id.source_id().is_git() {
+            let msg = if package_id.source_id().is_git() {
                 format!(
                     "{previous_id} -> #{}",
                     &package_id.source_id().precise_git_fragment().unwrap()[..8],
@@ -636,7 +636,7 @@ fn print_lockfile_updates(
             let latest = report_latest(&possibilities, package_id);
             let note = required_rust_version.or(latest).unwrap_or_default();
 
-            let msg = if previous_id.source_id().is_git() {
+            let msg = if package_id.source_id().is_git() {
                 format!(
                     "{previous_id} -> #{}{note}",
                     &package_id.source_id().precise_git_fragment().unwrap()[..8],
