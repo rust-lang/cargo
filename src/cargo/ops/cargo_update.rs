@@ -513,15 +513,15 @@ fn print_lockfile_generation(
             vec![]
         };
 
-        for package in diff.added.iter() {
-            let required_rust_version = report_required_rust_version(ws, resolve, *package);
-            let latest = report_latest(&possibilities, *package);
+        for package_id in diff.added.iter() {
+            let required_rust_version = report_required_rust_version(ws, resolve, *package_id);
+            let latest = report_latest(&possibilities, *package_id);
             let note = required_rust_version.or(latest);
 
             if let Some(note) = note {
                 ws.gctx().shell().status_with_color(
                     "Adding",
-                    format!("{package}{note}"),
+                    format!("{package_id}{note}"),
                     &style::NOTE,
                 )?;
             }
@@ -558,25 +558,25 @@ fn print_lockfile_sync(
             vec![]
         };
 
-        if let Some((removed, added)) = diff.change() {
-            let required_rust_version = report_required_rust_version(ws, resolve, added);
-            let latest = report_latest(&possibilities, added);
+        if let Some((previous_id, package_id)) = diff.change() {
+            let required_rust_version = report_required_rust_version(ws, resolve, package_id);
+            let latest = report_latest(&possibilities, package_id);
             let note = required_rust_version.or(latest).unwrap_or_default();
 
-            let msg = if removed.source_id().is_git() {
+            let msg = if previous_id.source_id().is_git() {
                 format!(
-                    "{removed} -> #{}",
-                    &added.source_id().precise_git_fragment().unwrap()[..8],
+                    "{previous_id} -> #{}",
+                    &package_id.source_id().precise_git_fragment().unwrap()[..8],
                 )
             } else {
-                format!("{removed} -> v{}{note}", added.version())
+                format!("{previous_id} -> v{}{note}", package_id.version())
             };
 
             // If versions differ only in build metadata, we call it an "update"
             // regardless of whether the build metadata has gone up or down.
             // This metadata is often stuff like git commit hashes, which are
             // not meaningfully ordered.
-            if removed.version().cmp_precedence(added.version()) == Ordering::Greater {
+            if previous_id.version().cmp_precedence(package_id.version()) == Ordering::Greater {
                 ws.gctx()
                     .shell()
                     .status_with_color("Downgrading", msg, &style::WARN)?;
@@ -586,14 +586,14 @@ fn print_lockfile_sync(
                     .status_with_color("Updating", msg, &style::GOOD)?;
             }
         } else {
-            for package in diff.added.iter() {
-                let required_rust_version = report_required_rust_version(ws, resolve, *package);
-                let latest = report_latest(&possibilities, *package);
+            for package_id in diff.added.iter() {
+                let required_rust_version = report_required_rust_version(ws, resolve, *package_id);
+                let latest = report_latest(&possibilities, *package_id);
                 let note = required_rust_version.or(latest).unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
                     "Adding",
-                    format!("{package}{note}"),
+                    format!("{package_id}{note}"),
                     &style::NOTE,
                 )?;
             }
@@ -631,25 +631,25 @@ fn print_lockfile_updates(
             vec![]
         };
 
-        if let Some((removed, added)) = diff.change() {
-            let required_rust_version = report_required_rust_version(ws, resolve, added);
-            let latest = report_latest(&possibilities, added);
+        if let Some((previous_id, package_id)) = diff.change() {
+            let required_rust_version = report_required_rust_version(ws, resolve, package_id);
+            let latest = report_latest(&possibilities, package_id);
             let note = required_rust_version.or(latest).unwrap_or_default();
 
-            let msg = if removed.source_id().is_git() {
+            let msg = if previous_id.source_id().is_git() {
                 format!(
-                    "{removed} -> #{}{note}",
-                    &added.source_id().precise_git_fragment().unwrap()[..8],
+                    "{previous_id} -> #{}{note}",
+                    &package_id.source_id().precise_git_fragment().unwrap()[..8],
                 )
             } else {
-                format!("{removed} -> v{}{note}", added.version())
+                format!("{previous_id} -> v{}{note}", package_id.version())
             };
 
             // If versions differ only in build metadata, we call it an "update"
             // regardless of whether the build metadata has gone up or down.
             // This metadata is often stuff like git commit hashes, which are
             // not meaningfully ordered.
-            if removed.version().cmp_precedence(added.version()) == Ordering::Greater {
+            if previous_id.version().cmp_precedence(package_id.version()) == Ordering::Greater {
                 ws.gctx()
                     .shell()
                     .status_with_color("Downgrading", msg, &style::WARN)?;
@@ -659,28 +659,28 @@ fn print_lockfile_updates(
                     .status_with_color("Updating", msg, &style::GOOD)?;
             }
         } else {
-            for package in diff.removed.iter() {
+            for package_id in diff.removed.iter() {
                 ws.gctx().shell().status_with_color(
                     "Removing",
-                    format!("{package}"),
+                    format!("{package_id}"),
                     &style::ERROR,
                 )?;
             }
-            for package in diff.added.iter() {
-                let required_rust_version = report_required_rust_version(ws, resolve, *package);
-                let latest = report_latest(&possibilities, *package);
+            for package_id in diff.added.iter() {
+                let required_rust_version = report_required_rust_version(ws, resolve, *package_id);
+                let latest = report_latest(&possibilities, *package_id);
                 let note = required_rust_version.or(latest).unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
                     "Adding",
-                    format!("{package}{note}"),
+                    format!("{package_id}{note}"),
                     &style::NOTE,
                 )?;
             }
         }
-        for package in &diff.unchanged {
-            let required_rust_version = report_required_rust_version(ws, resolve, *package);
-            let latest = report_latest(&possibilities, *package);
+        for package_id in &diff.unchanged {
+            let required_rust_version = report_required_rust_version(ws, resolve, *package_id);
+            let latest = report_latest(&possibilities, *package_id);
             let note = required_rust_version.as_deref().or(latest.as_deref());
 
             if let Some(note) = note {
@@ -690,7 +690,7 @@ fn print_lockfile_updates(
                 if ws.gctx().shell().verbosity() == Verbosity::Verbose {
                     ws.gctx().shell().status_with_color(
                         "Unchanged",
-                        format!("{package}{note}"),
+                        format!("{package_id}{note}"),
                         &anstyle::Style::new().bold(),
                     )?;
                 }
