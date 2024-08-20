@@ -559,18 +559,9 @@ fn print_lockfile_sync(
         };
 
         if let Some((removed, added)) = diff.change() {
-            let latest = if !possibilities.is_empty() {
-                possibilities
-                    .iter()
-                    .map(|s| s.as_summary())
-                    .filter(|s| is_latest(s.version(), added.version()))
-                    .map(|s| s.version().clone())
-                    .max()
-                    .map(format_latest)
-            } else {
-                None
-            }
-            .unwrap_or_default();
+            let required_rust_version = report_required_rust_version(ws, resolve, added);
+            let latest = report_latest(&possibilities, added);
+            let note = required_rust_version.or(latest).unwrap_or_default();
 
             let msg = if removed.source_id().is_git() {
                 format!(
@@ -578,7 +569,7 @@ fn print_lockfile_sync(
                     &added.source_id().precise_git_fragment().unwrap()[..8],
                 )
             } else {
-                format!("{removed} -> v{}{latest}", added.version())
+                format!("{removed} -> v{}{note}", added.version())
             };
 
             // If versions differ only in build metadata, we call it an "update"
