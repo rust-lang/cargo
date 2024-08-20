@@ -28,6 +28,7 @@ mod within_ws;
 mod within_ws_and_pick_ws_package;
 mod within_ws_with_alternative_registry;
 mod within_ws_without_lockfile;
+mod without_requiring_registry_auth;
 
 // Initialize the registry without a token.
 // Otherwise, it will try to list owners of the crate and fail.
