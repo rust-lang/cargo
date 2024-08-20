@@ -513,9 +513,9 @@ fn print_lockfile_generation(
             vec![]
         };
 
-        for package_id in diff.added.iter() {
-            let required_rust_version = report_required_rust_version(ws, resolve, *package_id);
-            let latest = report_latest(&possibilities, *package_id);
+        for package_id in diff.added {
+            let required_rust_version = report_required_rust_version(ws, resolve, package_id);
+            let latest = report_latest(&possibilities, package_id);
             let note = required_rust_version.or(latest);
 
             if let Some(note) = note {
@@ -586,9 +586,9 @@ fn print_lockfile_sync(
                     .status_with_color("Updating", msg, &style::GOOD)?;
             }
         } else {
-            for package_id in diff.added.iter() {
-                let required_rust_version = report_required_rust_version(ws, resolve, *package_id);
-                let latest = report_latest(&possibilities, *package_id);
+            for package_id in diff.added {
+                let required_rust_version = report_required_rust_version(ws, resolve, package_id);
+                let latest = report_latest(&possibilities, package_id);
                 let note = required_rust_version.or(latest).unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
@@ -659,16 +659,16 @@ fn print_lockfile_updates(
                     .status_with_color("Updating", msg, &style::GOOD)?;
             }
         } else {
-            for package_id in diff.removed.iter() {
+            for package_id in diff.removed {
                 ws.gctx().shell().status_with_color(
                     "Removing",
                     format!("{package_id}"),
                     &style::ERROR,
                 )?;
             }
-            for package_id in diff.added.iter() {
-                let required_rust_version = report_required_rust_version(ws, resolve, *package_id);
-                let latest = report_latest(&possibilities, *package_id);
+            for package_id in diff.added {
+                let required_rust_version = report_required_rust_version(ws, resolve, package_id);
+                let latest = report_latest(&possibilities, package_id);
                 let note = required_rust_version.or(latest).unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
@@ -678,9 +678,9 @@ fn print_lockfile_updates(
                 )?;
             }
         }
-        for package_id in &diff.unchanged {
-            let required_rust_version = report_required_rust_version(ws, resolve, *package_id);
-            let latest = report_latest(&possibilities, *package_id);
+        for package_id in diff.unchanged {
+            let required_rust_version = report_required_rust_version(ws, resolve, package_id);
+            let latest = report_latest(&possibilities, package_id);
             let note = required_rust_version.as_deref().or(latest.as_deref());
 
             if let Some(note) = note {
