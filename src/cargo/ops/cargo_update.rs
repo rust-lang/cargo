@@ -524,7 +524,7 @@ fn print_lockfile_generation(
                 assert_eq!(change.kind, PackageChangeKind::Added);
                 ws.gctx().shell().status_with_color(
                     change.kind.status(),
-                    format!("{package_id}{note}"),
+                    format!("{change}{note}"),
                     &change.kind.style(),
                 )?;
             }
@@ -562,19 +562,12 @@ fn print_lockfile_sync(
         };
 
         let package_id = change.package_id;
-        if let Some(previous_id) = change.previous_id {
+        if change.previous_id.is_some() {
             let required_rust_version = report_required_rust_version(ws, resolve, package_id);
             let latest = report_latest(&possibilities, package_id);
             let note = required_rust_version.or(latest).unwrap_or_default();
 
-            let msg = if package_id.source_id().is_git() {
-                format!(
-                    "{previous_id} -> #{}{note}",
-                    &package_id.source_id().precise_git_fragment().unwrap()[..8],
-                )
-            } else {
-                format!("{previous_id} -> v{}{note}", package_id.version())
-            };
+            let msg = format!("{change}{note}");
 
             if change.kind == PackageChangeKind::Downgraded {
                 ws.gctx().shell().status_with_color(
@@ -597,7 +590,7 @@ fn print_lockfile_sync(
 
                 ws.gctx().shell().status_with_color(
                     change.kind.status(),
-                    format!("{package_id}{note}"),
+                    format!("{change}{note}"),
                     &change.kind.style(),
                 )?;
             }
@@ -636,19 +629,12 @@ fn print_lockfile_updates(
         };
 
         let package_id = change.package_id;
-        if let Some(previous_id) = change.previous_id {
+        if change.previous_id.is_some() {
             let required_rust_version = report_required_rust_version(ws, resolve, package_id);
             let latest = report_latest(&possibilities, package_id);
             let note = required_rust_version.or(latest).unwrap_or_default();
 
-            let msg = if package_id.source_id().is_git() {
-                format!(
-                    "{previous_id} -> #{}{note}",
-                    &package_id.source_id().precise_git_fragment().unwrap()[..8],
-                )
-            } else {
-                format!("{previous_id} -> v{}{note}", package_id.version())
-            };
+            let msg = format!("{change}{note}");
 
             if change.kind == PackageChangeKind::Downgraded {
                 ws.gctx().shell().status_with_color(
@@ -667,7 +653,7 @@ fn print_lockfile_updates(
             if change.kind == PackageChangeKind::Removed {
                 ws.gctx().shell().status_with_color(
                     change.kind.status(),
-                    format!("{package_id}"),
+                    format!("{change}"),
                     &change.kind.style(),
                 )?;
             } else if change.kind == PackageChangeKind::Added {
@@ -677,7 +663,7 @@ fn print_lockfile_updates(
 
                 ws.gctx().shell().status_with_color(
                     change.kind.status(),
-                    format!("{package_id}{note}"),
+                    format!("{change}{note}"),
                     &change.kind.style(),
                 )?;
             }
@@ -694,7 +680,7 @@ fn print_lockfile_updates(
                 if ws.gctx().shell().verbosity() == Verbosity::Verbose {
                     ws.gctx().shell().status_with_color(
                         change.kind.status(),
-                        format!("{package_id}{note}"),
+                        format!("{change}{note}"),
                         &change.kind.style(),
                     )?;
                 }
@@ -908,6 +894,25 @@ impl PackageChange {
         )
         .expect("already a valid dependency");
         Some(query)
+    }
+}
+
+impl std::fmt::Display for PackageChange {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let package_id = self.package_id;
+        if let Some(previous_id) = self.previous_id {
+            if package_id.source_id().is_git() {
+                write!(
+                    f,
+                    "{previous_id} -> #{}",
+                    &package_id.source_id().precise_git_fragment().unwrap()[..8],
+                )
+            } else {
+                write!(f, "{previous_id} -> v{}", package_id.version())
+            }
+        } else {
+            write!(f, "{package_id}")
+        }
     }
 }
 
