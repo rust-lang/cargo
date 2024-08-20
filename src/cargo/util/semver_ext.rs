@@ -111,13 +111,17 @@ impl OptVersionReq {
         }
     }
 
-    /// Since Semver does not support prerelease versions,
-    /// the simplest implementation is taken here without comparing the prerelease section.
-    /// The logic here is temporary, we'll have to consider more boundary conditions later,
-    /// and we're not sure if this part of the functionality should be implemented in semver or cargo.
+    /// An interim approach allows to update to SemVer-Compatible prerelease version.
     pub fn matches_prerelease(&self, version: &Version) -> bool {
+        // Others Non `OptVersionReq::Req` have their own implementation.
+        if !matches!(self, OptVersionReq::Req(_)) {
+            return self.matches(version);
+        }
+
+        // TODO: In the future we have a prerelease semantic to be implemented.
         if version.is_prerelease() {
-            let mut version = version.clone();
+            let mut version: Version = version.clone();
+            // Ignores the Prerelease tag to unlock the limit of non prerelease unpdate to prerelease.
             version.pre = semver::Prerelease::EMPTY;
             return self.matches(&version);
         }
@@ -178,7 +182,10 @@ impl From<VersionReq> for OptVersionReq {
 
 #[cfg(test)]
 mod matches_prerelease {
+    use semver::VersionReq;
+
     use super::OptVersionReq;
+    use super::Version;
 
     #[test]
     fn prerelease() {
@@ -237,5 +244,20 @@ mod matches_prerelease {
             let matched = OptVersionReq::Req(version_req).matches_prerelease(&version);
             assert_eq!(expected, matched, "req: {req}; ver: {ver}");
         }
+    }
+
+    #[test]
+    fn opt_version_req_matches_prerelease() {
+        let req_ver: VersionReq = "^1.2.3-rc.0".parse().unwrap();
+        let to_ver: Version = "1.2.3-rc.0".parse().unwrap();
+
+        let req = OptVersionReq::Req(req_ver.clone());
+        assert!(req.matches_prerelease(&to_ver));
+
+        let req = OptVersionReq::Locked(to_ver.clone(), req_ver.clone());
+        assert!(req.matches_prerelease(&to_ver));
+
+        let req = OptVersionReq::Precise(to_ver.clone(), req_ver.clone());
+        assert!(req.matches_prerelease(&to_ver));
     }
 }
