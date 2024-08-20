@@ -565,7 +565,7 @@ fn print_lockfile_sync(
 
             let msg = if package_id.source_id().is_git() {
                 format!(
-                    "{previous_id} -> #{}",
+                    "{previous_id} -> #{}{note}",
                     &package_id.source_id().precise_git_fragment().unwrap()[..8],
                 )
             } else {
