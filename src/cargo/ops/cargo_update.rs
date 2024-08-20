@@ -525,7 +525,7 @@ fn print_lockfile_generation(
                 ws.gctx().shell().status_with_color(
                     change.kind.status(),
                     format!("{package_id}{note}"),
-                    &style::NOTE,
+                    &change.kind.style(),
                 )?;
             }
         }
@@ -577,13 +577,17 @@ fn print_lockfile_sync(
             };
 
             if change.kind == PackageChangeKind::Downgraded {
-                ws.gctx()
-                    .shell()
-                    .status_with_color(change.kind.status(), msg, &style::WARN)?;
+                ws.gctx().shell().status_with_color(
+                    change.kind.status(),
+                    msg,
+                    &change.kind.style(),
+                )?;
             } else {
-                ws.gctx()
-                    .shell()
-                    .status_with_color(change.kind.status(), msg, &style::GOOD)?;
+                ws.gctx().shell().status_with_color(
+                    change.kind.status(),
+                    msg,
+                    &change.kind.style(),
+                )?;
             }
         } else {
             if change.kind == PackageChangeKind::Added {
@@ -594,7 +598,7 @@ fn print_lockfile_sync(
                 ws.gctx().shell().status_with_color(
                     change.kind.status(),
                     format!("{package_id}{note}"),
-                    &style::NOTE,
+                    &change.kind.style(),
                 )?;
             }
         }
@@ -647,20 +651,24 @@ fn print_lockfile_updates(
             };
 
             if change.kind == PackageChangeKind::Downgraded {
-                ws.gctx()
-                    .shell()
-                    .status_with_color(change.kind.status(), msg, &style::WARN)?;
+                ws.gctx().shell().status_with_color(
+                    change.kind.status(),
+                    msg,
+                    &change.kind.style(),
+                )?;
             } else {
-                ws.gctx()
-                    .shell()
-                    .status_with_color(change.kind.status(), msg, &style::GOOD)?;
+                ws.gctx().shell().status_with_color(
+                    change.kind.status(),
+                    msg,
+                    &change.kind.style(),
+                )?;
             }
         } else {
             if change.kind == PackageChangeKind::Removed {
                 ws.gctx().shell().status_with_color(
                     change.kind.status(),
                     format!("{package_id}"),
-                    &style::ERROR,
+                    &change.kind.style(),
                 )?;
             } else if change.kind == PackageChangeKind::Added {
                 let required_rust_version = report_required_rust_version(ws, resolve, package_id);
@@ -670,7 +678,7 @@ fn print_lockfile_updates(
                 ws.gctx().shell().status_with_color(
                     change.kind.status(),
                     format!("{package_id}{note}"),
-                    &style::NOTE,
+                    &change.kind.style(),
                 )?;
             }
         }
@@ -687,7 +695,7 @@ fn print_lockfile_updates(
                     ws.gctx().shell().status_with_color(
                         change.kind.status(),
                         format!("{package_id}{note}"),
-                        &anstyle::Style::new().bold(),
+                        &change.kind.style(),
                     )?;
                 }
             }
@@ -927,6 +935,16 @@ impl PackageChangeKind {
             Self::Upgraded => "Updating",
             Self::Downgraded => "Downgrading",
             Self::Unchanged => "Unchanged",
+        }
+    }
+
+    pub fn style(&self) -> anstyle::Style {
+        match self {
+            Self::Added => style::NOTE,
+            Self::Removed => style::ERROR,
+            Self::Upgraded => style::GOOD,
+            Self::Downgraded => style::WARN,
+            Self::Unchanged => anstyle::Style::new().bold(),
         }
     }
 }
