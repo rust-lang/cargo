@@ -523,7 +523,7 @@ fn print_lockfile_generation(
             if let Some(note) = note {
                 assert_eq!(change.kind, PackageChangeKind::Added);
                 ws.gctx().shell().status_with_color(
-                    "Adding",
+                    change.kind.status(),
                     format!("{package_id}{note}"),
                     &style::NOTE,
                 )?;
@@ -579,11 +579,11 @@ fn print_lockfile_sync(
             if change.kind == PackageChangeKind::Downgraded {
                 ws.gctx()
                     .shell()
-                    .status_with_color("Downgrading", msg, &style::WARN)?;
+                    .status_with_color(change.kind.status(), msg, &style::WARN)?;
             } else {
                 ws.gctx()
                     .shell()
-                    .status_with_color("Updating", msg, &style::GOOD)?;
+                    .status_with_color(change.kind.status(), msg, &style::GOOD)?;
             }
         } else {
             if change.kind == PackageChangeKind::Added {
@@ -592,7 +592,7 @@ fn print_lockfile_sync(
                 let note = required_rust_version.or(latest).unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
-                    "Adding",
+                    change.kind.status(),
                     format!("{package_id}{note}"),
                     &style::NOTE,
                 )?;
@@ -649,16 +649,16 @@ fn print_lockfile_updates(
             if change.kind == PackageChangeKind::Downgraded {
                 ws.gctx()
                     .shell()
-                    .status_with_color("Downgrading", msg, &style::WARN)?;
+                    .status_with_color(change.kind.status(), msg, &style::WARN)?;
             } else {
                 ws.gctx()
                     .shell()
-                    .status_with_color("Updating", msg, &style::GOOD)?;
+                    .status_with_color(change.kind.status(), msg, &style::GOOD)?;
             }
         } else {
             if change.kind == PackageChangeKind::Removed {
                 ws.gctx().shell().status_with_color(
-                    "Removing",
+                    change.kind.status(),
                     format!("{package_id}"),
                     &style::ERROR,
                 )?;
@@ -668,7 +668,7 @@ fn print_lockfile_updates(
                 let note = required_rust_version.or(latest).unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
-                    "Adding",
+                    change.kind.status(),
                     format!("{package_id}{note}"),
                     &style::NOTE,
                 )?;
@@ -685,7 +685,7 @@ fn print_lockfile_updates(
                 }
                 if ws.gctx().shell().verbosity() == Verbosity::Verbose {
                     ws.gctx().shell().status_with_color(
-                        "Unchanged",
+                        change.kind.status(),
                         format!("{package_id}{note}"),
                         &anstyle::Style::new().bold(),
                     )?;
@@ -917,6 +917,16 @@ impl PackageChangeKind {
         match self {
             Self::Added | Self::Upgraded | Self::Downgraded => true,
             Self::Removed | Self::Unchanged => false,
+        }
+    }
+
+    pub fn status(&self) -> &'static str {
+        match self {
+            Self::Added => "Adding",
+            Self::Removed => "Removing",
+            Self::Upgraded => "Updating",
+            Self::Downgraded => "Downgrading",
+            Self::Unchanged => "Unchanged",
         }
     }
 }
