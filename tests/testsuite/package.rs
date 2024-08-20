@@ -5999,7 +5999,8 @@ fn registry_not_in_publish_list() {
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] registry index was not found in any configuration: `alternative`
+[ERROR] `foo` cannot be packaged.
+The registry `alternative` is not listed in the `package.publish` value in Cargo.toml.
 
 "#]])
         .run();
@@ -6174,6 +6175,99 @@ The registry `alternative` is not listed in the `package.publish` value in Cargo
 }
 
 #[cargo_test]
+fn registry_inference_ignores_unpublishable() {
+    let _alt_reg = registry::RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative()
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["dep", "main"]
+            "#,
+        )
+        .file(
+            "main/Cargo.toml",
+            r#"
+            [package]
+            name = "main"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "main"
+            repository = "bar"
+            publish = false
+
+            [dependencies]
+            dep = { path = "../dep", version = "0.1.0", registry = "alternative" }
+        "#,
+        )
+        .file("main/src/main.rs", "fn main() {}")
+        .file(
+            "dep/Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "0.1.0"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "dep"
+            repository = "bar"
+            publish = ["alternative"]
+        "#,
+        )
+        .file("dep/src/lib.rs", "")
+        .build();
+
+    p.cargo("package -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_stderr_data(str![[r#"
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] `alternative` index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
+[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] `alternative` index
+[UNPACKING] dep v0.1.0 (registry `[ROOT]/foo/target/package/tmp-registry`)
+[COMPILING] dep v0.1.0 (registry `alternative`)
+[COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("package -Zpackage-workspace --registry=alternative")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_stderr_data(str![[r#"
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] `alternative` index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
+[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] `alternative` index
+[COMPILING] dep v0.1.0 (registry `alternative`)
+[COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn registry_not_inferred_because_of_multiple_options() {
     let _alt_reg = registry::RegistryBuilder::new()
         .http_api()
@@ -6333,6 +6427,75 @@ fn registry_not_inferred_because_of_mismatch() {
 [COMPILING] dep v0.1.0 (registry `alternative`)
 [COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn unpublishable_dependency() {
+    let _alt_reg = registry::RegistryBuilder::new()
+        .http_api()
+        .http_index()
+        .alternative()
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["dep", "main"]
+            "#,
+        )
+        .file(
+            "main/Cargo.toml",
+            r#"
+            [package]
+            name = "main"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "main"
+            repository = "bar"
+
+            [dependencies]
+            dep = { path = "../dep", version = "0.1.0", registry = "alternative" }
+        "#,
+        )
+        .file("main/src/main.rs", "fn main() {}")
+        .file(
+            "dep/Cargo.toml",
+            r#"
+            [package]
+            name = "dep"
+            version = "0.1.0"
+            edition = "2015"
+            authors = []
+            license = "MIT"
+            description = "dep"
+            repository = "bar"
+            publish = false
+        "#,
+        )
+        .file("dep/src/lib.rs", "")
+        .build();
+
+    p.cargo("package -Zpackage-workspace")
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[UPDATING] `alternative` index
+[ERROR] failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `dep` found
+  location searched: registry `alternative`
+  required by package `main v0.0.1 ([ROOT]/foo/main)`
 
 "#]])
         .run();
