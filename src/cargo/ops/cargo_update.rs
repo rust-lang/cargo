@@ -17,6 +17,7 @@ use crate::util::{style, OptVersionReq};
 use crate::util::{CargoResult, VersionExt};
 use anyhow::Context as _;
 use cargo_util_schemas::core::PartialVersion;
+use indexmap::IndexMap;
 use itertools::Itertools;
 use semver::{Op, Version, VersionReq};
 use std::cmp::Ordering;
@@ -491,16 +492,16 @@ fn print_lockfile_generation(
     resolve: &Resolve,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<()> {
-    let diff: Vec<_> = PackageDiff::new(&resolve).collect();
-    let num_pkgs: usize = diff.iter().map(|d| d.added.len()).sum();
+    let changes = PackageChange::new(resolve);
+    let num_pkgs: usize = changes.iter().filter(|change| change.kind.is_new()).count();
     if num_pkgs <= 1 {
         // just ourself, nothing worth reporting
         return Ok(());
     }
     status_locking(ws, num_pkgs)?;
 
-    for diff in diff {
-        let possibilities = if let Some(query) = diff.alternatives_query() {
+    for change in changes {
+        let possibilities = if let Some(query) = change.alternatives_query() {
             loop {
                 match registry.query_vec(&query, QueryKind::Exact) {
                     std::task::Poll::Ready(res) => {
@@ -513,12 +514,14 @@ fn print_lockfile_generation(
             vec![]
         };
 
-        for package_id in diff.added {
+        {
+            let package_id = change.package_id;
             let required_rust_version = report_required_rust_version(ws, resolve, package_id);
             let latest = report_latest(&possibilities, package_id);
             let note = required_rust_version.or(latest);
 
             if let Some(note) = note {
+                assert_eq!(change.kind, PackageChangeKind::Added);
                 ws.gctx().shell().status_with_color(
                     "Adding",
                     format!("{package_id}{note}"),
@@ -537,15 +540,15 @@ fn print_lockfile_sync(
     resolve: &Resolve,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<()> {
-    let diff: Vec<_> = PackageDiff::diff(&previous_resolve, &resolve).collect();
-    let num_pkgs: usize = diff.iter().map(|d| d.added.len()).sum();
+    let changes = PackageChange::diff(previous_resolve, resolve);
+    let num_pkgs: usize = changes.iter().filter(|change| change.kind.is_new()).count();
     if num_pkgs == 0 {
         return Ok(());
     }
     status_locking(ws, num_pkgs)?;
 
-    for diff in diff {
-        let possibilities = if let Some(query) = diff.alternatives_query() {
+    for change in changes {
+        let possibilities = if let Some(query) = change.alternatives_query() {
             loop {
                 match registry.query_vec(&query, QueryKind::Exact) {
                     std::task::Poll::Ready(res) => {
@@ -558,7 +561,8 @@ fn print_lockfile_sync(
             vec![]
         };
 
-        if let Some((previous_id, package_id)) = diff.change() {
+        let package_id = change.package_id;
+        if let Some(previous_id) = change.previous_id {
             let required_rust_version = report_required_rust_version(ws, resolve, package_id);
             let latest = report_latest(&possibilities, package_id);
             let note = required_rust_version.or(latest).unwrap_or_default();
@@ -572,11 +576,7 @@ fn print_lockfile_sync(
                 format!("{previous_id} -> v{}{note}", package_id.version())
             };
 
-            // If versions differ only in build metadata, we call it an "update"
-            // regardless of whether the build metadata has gone up or down.
-            // This metadata is often stuff like git commit hashes, which are
-            // not meaningfully ordered.
-            if previous_id.version().cmp_precedence(package_id.version()) == Ordering::Greater {
+            if change.kind == PackageChangeKind::Downgraded {
                 ws.gctx()
                     .shell()
                     .status_with_color("Downgrading", msg, &style::WARN)?;
@@ -586,7 +586,7 @@ fn print_lockfile_sync(
                     .status_with_color("Updating", msg, &style::GOOD)?;
             }
         } else {
-            for package_id in diff.added {
+            if change.kind == PackageChangeKind::Added {
                 let required_rust_version = report_required_rust_version(ws, resolve, package_id);
                 let latest = report_latest(&possibilities, package_id);
                 let note = required_rust_version.or(latest).unwrap_or_default();
@@ -610,15 +610,15 @@ fn print_lockfile_updates(
     precise: bool,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<()> {
-    let diff: Vec<_> = PackageDiff::diff(&previous_resolve, &resolve).collect();
-    let num_pkgs: usize = diff.iter().map(|d| d.added.len()).sum();
+    let changes = PackageChange::diff(previous_resolve, resolve);
+    let num_pkgs: usize = changes.iter().filter(|change| change.kind.is_new()).count();
     if !precise {
         status_locking(ws, num_pkgs)?;
     }
 
     let mut unchanged_behind = 0;
-    for diff in diff {
-        let possibilities = if let Some(query) = diff.alternatives_query() {
+    for change in changes {
+        let possibilities = if let Some(query) = change.alternatives_query() {
             loop {
                 match registry.query_vec(&query, QueryKind::Exact) {
                     std::task::Poll::Ready(res) => {
@@ -631,7 +631,8 @@ fn print_lockfile_updates(
             vec![]
         };
 
-        if let Some((previous_id, package_id)) = diff.change() {
+        let package_id = change.package_id;
+        if let Some(previous_id) = change.previous_id {
             let required_rust_version = report_required_rust_version(ws, resolve, package_id);
             let latest = report_latest(&possibilities, package_id);
             let note = required_rust_version.or(latest).unwrap_or_default();
@@ -645,11 +646,7 @@ fn print_lockfile_updates(
                 format!("{previous_id} -> v{}{note}", package_id.version())
             };
 
-            // If versions differ only in build metadata, we call it an "update"
-            // regardless of whether the build metadata has gone up or down.
-            // This metadata is often stuff like git commit hashes, which are
-            // not meaningfully ordered.
-            if previous_id.version().cmp_precedence(package_id.version()) == Ordering::Greater {
+            if change.kind == PackageChangeKind::Downgraded {
                 ws.gctx()
                     .shell()
                     .status_with_color("Downgrading", msg, &style::WARN)?;
@@ -659,14 +656,13 @@ fn print_lockfile_updates(
                     .status_with_color("Updating", msg, &style::GOOD)?;
             }
         } else {
-            for package_id in diff.removed {
+            if change.kind == PackageChangeKind::Removed {
                 ws.gctx().shell().status_with_color(
                     "Removing",
                     format!("{package_id}"),
                     &style::ERROR,
                 )?;
-            }
-            for package_id in diff.added {
+            } else if change.kind == PackageChangeKind::Added {
                 let required_rust_version = report_required_rust_version(ws, resolve, package_id);
                 let latest = report_latest(&possibilities, package_id);
                 let note = required_rust_version.or(latest).unwrap_or_default();
@@ -678,7 +674,7 @@ fn print_lockfile_updates(
                 )?;
             }
         }
-        for package_id in diff.unchanged {
+        if change.kind == PackageChangeKind::Unchanged {
             let required_rust_version = report_required_rust_version(ws, resolve, package_id);
             let latest = report_latest(&possibilities, package_id);
             let note = required_rust_version.as_deref().or(latest.as_deref());
@@ -818,6 +814,113 @@ fn fill_with_deps<'a>(
     }
 }
 
+#[derive(Clone, Debug)]
+struct PackageChange {
+    package_id: PackageId,
+    previous_id: Option<PackageId>,
+    kind: PackageChangeKind,
+}
+
+impl PackageChange {
+    pub fn new(resolve: &Resolve) -> Vec<Self> {
+        let diff = PackageDiff::new(resolve);
+        Self::with_diff(diff)
+    }
+
+    pub fn diff(previous_resolve: &Resolve, resolve: &Resolve) -> Vec<Self> {
+        let diff = PackageDiff::diff(previous_resolve, resolve);
+        Self::with_diff(diff)
+    }
+
+    fn with_diff(diff: impl Iterator<Item = PackageDiff>) -> Vec<Self> {
+        let mut changes = IndexMap::new();
+        for diff in diff {
+            if let Some((previous_id, package_id)) = diff.change() {
+                // If versions differ only in build metadata, we call it an "update"
+                // regardless of whether the build metadata has gone up or down.
+                // This metadata is often stuff like git commit hashes, which are
+                // not meaningfully ordered.
+                let kind = if previous_id.version().cmp_precedence(package_id.version())
+                    == Ordering::Greater
+                {
+                    PackageChangeKind::Downgraded
+                } else {
+                    PackageChangeKind::Upgraded
+                };
+                let change = Self {
+                    package_id,
+                    previous_id: Some(previous_id),
+                    kind,
+                };
+                changes.insert(change.package_id, change);
+            } else {
+                for package_id in diff.removed {
+                    let kind = PackageChangeKind::Removed;
+                    let change = Self {
+                        package_id,
+                        previous_id: None,
+                        kind,
+                    };
+                    changes.insert(change.package_id, change);
+                }
+                for package_id in diff.added {
+                    let kind = PackageChangeKind::Added;
+                    let change = Self {
+                        package_id,
+                        previous_id: None,
+                        kind,
+                    };
+                    changes.insert(change.package_id, change);
+                }
+            }
+            for package_id in diff.unchanged {
+                let kind = PackageChangeKind::Unchanged;
+                let change = Self {
+                    package_id,
+                    previous_id: None,
+                    kind,
+                };
+                changes.insert(change.package_id, change);
+            }
+        }
+
+        changes.into_values().collect()
+    }
+
+    /// For querying [`PackageRegistry`] for alternative versions to report to the user
+    fn alternatives_query(&self) -> Option<crate::core::dependency::Dependency> {
+        if !self.package_id.source_id().is_registry() {
+            return None;
+        }
+
+        let query = crate::core::dependency::Dependency::parse(
+            self.package_id.name(),
+            None,
+            self.package_id.source_id(),
+        )
+        .expect("already a valid dependency");
+        Some(query)
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum PackageChangeKind {
+    Added,
+    Removed,
+    Upgraded,
+    Downgraded,
+    Unchanged,
+}
+
+impl PackageChangeKind {
+    pub fn is_new(&self) -> bool {
+        match self {
+            Self::Added | Self::Upgraded | Self::Downgraded => true,
+            Self::Removed | Self::Unchanged => false,
+        }
+    }
+}
+
 /// All resolved versions of a package name within a [`SourceId`]
 #[derive(Default, Clone, Debug)]
 pub struct PackageDiff {
@@ -930,26 +1033,5 @@ impl PackageDiff {
         } else {
             None
         }
-    }
-
-    /// For querying [`PackageRegistry`] for alternative versions to report to the user
-    pub fn alternatives_query(&self) -> Option<crate::core::dependency::Dependency> {
-        let package_id = [
-            self.added.iter(),
-            self.unchanged.iter(),
-            self.removed.iter(),
-        ]
-        .into_iter()
-        .flatten()
-        .next()
-        // Limit to registry as that is the only source with meaningful alternative versions
-        .filter(|s| s.source_id().is_registry())?;
-        let query = crate::core::dependency::Dependency::parse(
-            package_id.name(),
-            None,
-            package_id.source_id(),
-        )
-        .expect("already a valid dependency");
-        Some(query)
     }
 }
