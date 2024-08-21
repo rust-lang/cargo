@@ -187,7 +187,11 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Vec<Fi
             spec.query(member_ids)?;
         }
     }
-    let pkgs = ws.members_with_features(specs, &opts.cli_features)?;
+    let mut pkgs = ws.members_with_features(specs, &opts.cli_features)?;
+
+    // In `members_with_features_old`, it will add "current" package (determined by the cwd)
+    // So we need filter
+    pkgs.retain(|(pkg, _feats)| specs.iter().any(|spec| spec.matches(pkg.package_id())));
 
     if ws
         .lock_root()
