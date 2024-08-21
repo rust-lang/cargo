@@ -237,6 +237,14 @@ mod matches_prerelease {
             (">=1.2.3-0, <1.2.3", "1.2.3-0", false), // upper bound semantic
             (">=1.2.3-0, <1.2.3", "1.2.3-1", false), // upper bound semantic
             (">=1.2.3-0, <1.2.3", "1.2.4-0", false),
+            //
+            ("1.2.3", "2.0.0-0", false), // upper bound semantics
+            ("=1.2.3-0", "1.2.3", false),
+            ("=1.2.3-0", "1.2.3-0", false), // bug, must be true
+            ("=1.2.3-0", "1.2.4", false),
+            (">=1.2.3-2, <1.2.3-4", "1.2.3-0", false),
+            (">=1.2.3-2, <1.2.3-4", "1.2.3-3", false), // bug, must be true
+            (">=1.2.3-2, <1.2.3-4", "1.2.3-5", false), // upper bound semantics
         ];
         for (req, ver, expected) in cases {
             let version_req = req.parse().unwrap();
