@@ -131,7 +131,7 @@ fn self_signed_with_cacert() {
     p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `https://127.0.0.1:[..]/repos/bar.git`
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 
 "#]])
         .run();
@@ -158,7 +158,7 @@ fn github_works() {
     p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `https://github.com/rust-lang/bitflags.git`
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 
 "#]])
         .run();

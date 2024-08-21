@@ -824,7 +824,7 @@ fn dev_dependencies2() {
     p.cargo("check").with_stderr_data(str![[r#"
 [WARNING] `dev_dependencies` is deprecated in favor of `dev-dependencies` and will not work in the 2024 edition
 (in the `foo` package)
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -905,7 +905,7 @@ fn dev_dependencies2_conflict() {
         .build();
     p.cargo("check").with_stderr_data(str![[r#"
 [WARNING] `dev_dependencies` is redundant with `dev-dependencies`, preferring `dev-dependencies` in the `foo` package
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -942,7 +942,7 @@ fn build_dependencies2() {
     p.cargo("check").with_stderr_data(str![[r#"
 [WARNING] `build_dependencies` is deprecated in favor of `build-dependencies` and will not work in the 2024 edition
 (in the `foo` package)
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1023,7 +1023,7 @@ fn build_dependencies2_conflict() {
         .build();
     p.cargo("check").with_stderr_data(str![[r#"
 [WARNING] `build_dependencies` is redundant with `build-dependencies`, preferring `build-dependencies` in the `foo` package
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1401,7 +1401,7 @@ fn cargo_platform_build_dependencies2() {
         .with_stderr_data(str![[r#"
 [WARNING] `build_dependencies` is deprecated in favor of `build-dependencies` and will not work in the 2024 edition
 (in the `[HOST_TARGET]` platform target)
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] build v0.5.0 ([ROOT]/foo/build)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1492,7 +1492,7 @@ fn cargo_platform_build_dependencies2_conflict() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] `build_dependencies` is redundant with `build-dependencies`, preferring `build-dependencies` in the `[HOST_TARGET]` platform target
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] build v0.5.0 ([ROOT]/foo/build)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1535,7 +1535,7 @@ fn cargo_platform_dev_dependencies2() {
         .with_stderr_data(str![[r#"
 [WARNING] `dev_dependencies` is deprecated in favor of `dev-dependencies` and will not work in the 2024 edition
 (in the `[HOST_TARGET]` platform target)
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1622,7 +1622,7 @@ fn cargo_platform_dev_dependencies2_conflict() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [WARNING] `dev_dependencies` is redundant with `dev-dependencies`, preferring `dev-dependencies` in the `[HOST_TARGET]` platform target
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1667,7 +1667,7 @@ fn default_features2() {
     p.cargo("check").with_stderr_data(str![[r#"
 [WARNING] `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
 (in the `a` dependency)
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1761,7 +1761,7 @@ fn default_features2_conflict() {
 
     p.cargo("check").with_stderr_data(str![[r#"
 [WARNING] `default_features` is redundant with `default-features`, preferring `default-features` in the `a` dependency
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1840,7 +1840,6 @@ fn workspace_default_features2() {
             str![[r#"
 [WARNING] [ROOT]/foo/workspace_only/Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
 (in the `dep_workspace_only` dependency)
-[LOCKING] 4 packages to latest compatible versions
 [CHECKING] dep_package_only v0.1.0 ([ROOT]/foo/dep_package_only)
 [CHECKING] dep_workspace_only v0.1.0 ([ROOT]/foo/dep_workspace_only)
 [CHECKING] package_only v0.1.0 ([ROOT]/foo/package_only)
@@ -2782,7 +2781,7 @@ fn warn_semver_metadata() {
     p.cargo("check").with_stderr_data(str![[r#"
 [WARNING] version requirement `1.0.0+1234` for dependency `bar` includes semver metadata which will be ignored, removing the metadata is recommended to avoid confusion
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [CHECKING] bar v1.0.0

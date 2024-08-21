@@ -1,4 +1,4 @@
-<svg width="740px" height="74px" xmlns="http://www.w3.org/2000/svg">
+<svg width="740px" height="56px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
@@ -20,9 +20,7 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-green bold">      Adding</tspan><tspan> foo (local) to dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-green bold">     Locking</tspan><tspan> 2 packages to latest compatible versions</tspan>
-</tspan>
-    <tspan x="10px" y="64px">
+    <tspan x="10px" y="46px">
 </tspan>
   </text>
 

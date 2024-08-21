@@ -75,7 +75,7 @@ fn cargo_compile_with_nested_deps_shorthand() {
 
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] baz v0.5.0 ([ROOT]/foo/bar/baz)
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
@@ -160,7 +160,7 @@ fn cargo_compile_with_root_dev_deps() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 error[E0463]: can't find crate for `bar`
 ...
@@ -207,7 +207,7 @@ fn cargo_compile_with_root_dev_deps_with_testing() {
 
     p.cargo("test")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/bar)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -276,7 +276,7 @@ fn cargo_compile_with_transitive_dev_deps() {
 
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -318,7 +318,7 @@ fn no_rebuild_dependency() {
     // First time around we should compile both foo and bar
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.5.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -387,7 +387,7 @@ fn deep_dependencies_trigger_rebuild() {
         .build();
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] baz v0.5.0 ([ROOT]/foo/baz)
 [CHECKING] bar v0.5.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
@@ -481,7 +481,7 @@ fn no_rebuild_two_deps() {
         .build();
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] baz v0.5.0 ([ROOT]/foo/baz)
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
@@ -525,7 +525,7 @@ fn nested_deps_recompile() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.5.0 ([ROOT]/foo/src/bar)
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1385,7 +1385,7 @@ fn path_dep_build_cmd() {
 
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1455,7 +1455,7 @@ fn dev_deps_no_rebuild_lib() {
     p.cargo("build")
         .env("FOO", "bar")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1517,7 +1517,6 @@ fn custom_target_no_rebuild() {
         .build();
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[LOCKING] 3 packages to latest compatible versions
 [CHECKING] a v0.5.0 ([ROOT]/foo/a)
 [CHECKING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1577,7 +1576,7 @@ fn override_and_depend() {
     p.cargo("check")
         .cwd("b")
         .with_stderr_data(str![[r#"
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] a2 v0.5.0 ([ROOT]/foo/a)
 [CHECKING] a1 v0.5.0 ([ROOT]/foo/a)
 [CHECKING] b v0.5.0 ([ROOT]/foo/b)
@@ -1889,7 +1888,7 @@ fn same_name_version_changed() {
 
     p.cargo("tree")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 
 "#]])
         .with_stdout_data(str![[r#"

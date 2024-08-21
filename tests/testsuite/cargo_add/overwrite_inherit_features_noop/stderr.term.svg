@@ -1,4 +1,4 @@
-<svg width="740px" height="110px" xmlns="http://www.w3.org/2000/svg">
+<svg width="740px" height="92px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
@@ -24,9 +24,7 @@
 </tspan>
     <tspan x="10px" y="64px"><tspan>             </tspan><tspan class="fg-green bold">+</tspan><tspan> test</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan class="fg-green bold">     Locking</tspan><tspan> 2 packages to latest compatible versions</tspan>
-</tspan>
-    <tspan x="10px" y="100px">
+    <tspan x="10px" y="82px">
 </tspan>
   </text>
 

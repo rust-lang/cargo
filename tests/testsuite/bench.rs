@@ -543,7 +543,7 @@ fn bench_with_deep_lib_dep() {
 
     p.cargo("bench")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] bar v0.0.1 ([ROOT]/bar)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
@@ -1094,7 +1094,7 @@ fn bench_dylib() {
 
     p.cargo("bench -v")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [RUNNING] [..] -C opt-level=3 [..]
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -1605,7 +1605,7 @@ fn test_bench_multiple_packages() {
 "#]])
         .with_stderr_data(
             str![[r#"
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.1.0 ([ROOT]/bar)
 [COMPILING] baz v0.1.0 ([ROOT]/baz)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
@@ -1668,7 +1668,6 @@ fn bench_all_workspace() {
 
     p.cargo("bench --workspace")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
@@ -1860,7 +1859,6 @@ fn bench_all_virtual_manifest() {
     p.cargo("bench --workspace")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
@@ -1943,7 +1941,6 @@ fn bench_virtual_manifest_glob() {
     // This should not have `bar` built or benched
     p.cargo("bench -p '*z'")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/release/deps/baz-[HASH][EXE])
@@ -2052,7 +2049,6 @@ fn bench_virtual_manifest_all_implied() {
     p.cargo("bench")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
 [FINISHED] `bench` profile [optimized] target(s) in [ELAPSED]s

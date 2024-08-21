@@ -100,7 +100,7 @@ fn cargo_test_release() {
 
     p.cargo("test -v --release")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [RUNNING] `rustc [..]-C opt-level=3 [..]`
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
@@ -635,7 +635,7 @@ fn test_with_deep_lib_dep() {
 
     p.cargo("test")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1480,7 +1480,7 @@ fn test_dylib() {
 
     p.cargo("test")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -2098,7 +2098,7 @@ fn selective_testing() {
     println!("d1");
     p.cargo("test -p d1")
         .with_stderr_data(str![[r#"
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] d1 v0.0.1 ([ROOT]/foo/d1)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/debug/deps/d1-[HASH][EXE])
@@ -2328,7 +2328,7 @@ fn selective_testing_with_docs() {
 
     p.cargo("test -p d1")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] d1 v0.0.1 ([ROOT]/foo/d1)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests d1.rs (target/debug/deps/d1-[HASH][EXE])
@@ -2437,7 +2437,7 @@ fn example_with_dev_dep() {
     p.cargo("test -v")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] a v0.0.1 ([ROOT]/foo/a)
 [RUNNING] `rustc --crate-name foo [..]`
@@ -2744,7 +2744,7 @@ fn cyclic_dev_dep_doc_test() {
         .build();
     p.cargo("test")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -3023,7 +3023,7 @@ fn selective_test_optional_dep() {
 
     p.cargo("test -v --no-run --features a -p a")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] a v0.0.1 ([ROOT]/foo/a)
 [RUNNING] `rustc [..] a/src/lib.rs [..]`
 [RUNNING] `rustc [..] a/src/lib.rs [..]`
@@ -4254,7 +4254,6 @@ fn test_hint_workspace_virtual() {
     p.cargo("test")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 3 packages to latest compatible versions
 [COMPILING] c v0.1.0 ([ROOT]/foo/c)
 [COMPILING] a v0.1.0 ([ROOT]/foo/a)
 [COMPILING] b v0.1.0 ([ROOT]/foo/b)
@@ -4753,7 +4752,7 @@ fn test_dep_with_dev() {
     p.cargo("test -p bar")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [ERROR] package `bar` cannot be tested because it requires dev-dependencies and is not a member of the workspace
 
 "#]])

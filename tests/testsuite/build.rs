@@ -870,7 +870,6 @@ fn cargo_compile_with_invalid_code_in_deps() {
         .with_status(101)
         .with_stderr_data(
             str![[r#"
-[LOCKING] 3 packages to latest compatible versions
 [COMPILING] bar v0.1.0 ([ROOT]/bar)
 [COMPILING] baz v0.1.0 ([ROOT]/baz)
 [ERROR] could not compile `bar` (lib) due to 1 previous error
@@ -939,7 +938,7 @@ fn cargo_compile_with_warnings_in_a_dep_package() {
 
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [WARNING] [..]dead[..]
 ...
@@ -3423,7 +3422,7 @@ fn bad_platform_specific_dependency() {
     p.cargo("build")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 error[E0463]: can't find crate for `bar`
 ...
@@ -3653,7 +3652,7 @@ fn transitive_dependencies_not_available() {
     p.cargo("build -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bbbbb v0.0.1 ([ROOT]/foo/b)
 [RUNNING] `rustc [..]
 [COMPILING] aaaaa v0.0.1 ([ROOT]/foo/a)
@@ -4064,7 +4063,7 @@ fn invalid_spec() {
     p.cargo("build -p notAValidDep")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [ERROR] package ID specification `notAValidDep` did not match any packages
 
 "#]])
@@ -4511,7 +4510,6 @@ fn build_all_workspace() {
 
     p.cargo("build --workspace")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -4545,7 +4543,6 @@ fn build_all_exclude() {
     p.cargo("build --workspace --exclude baz")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 3 packages to latest compatible versions
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -4617,7 +4614,6 @@ fn build_all_exclude_not_found() {
         .with_stderr_data(
             str![[r#"
 [WARNING] excluded package(s) `baz` not found in workspace `[ROOT]/foo`
-[LOCKING] 2 packages to latest compatible versions
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -4653,7 +4649,6 @@ fn build_all_exclude_glob() {
     p.cargo("build --workspace --exclude '*z'")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 3 packages to latest compatible versions
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -4688,7 +4683,6 @@ fn build_all_exclude_glob_not_found() {
         .with_stderr_data(
             str![[r#"
 [WARNING] excluded package pattern(s) `*z` not found in workspace `[ROOT]/foo`
-[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -4747,7 +4741,6 @@ fn build_all_workspace_implicit_examples() {
 
     p.cargo("build --workspace --examples")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -4784,7 +4777,6 @@ fn build_all_virtual_manifest() {
     p.cargo("build --workspace")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -4815,7 +4807,6 @@ fn build_virtual_manifest_all_implied() {
     p.cargo("build")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -4844,7 +4835,6 @@ fn build_virtual_manifest_one_project() {
 
     p.cargo("build -p bar")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -4870,7 +4860,6 @@ fn build_virtual_manifest_glob() {
 
     p.cargo("build -p '*z'")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -4955,7 +4944,6 @@ fn build_all_virtual_manifest_implicit_examples() {
     p.cargo("build --workspace --examples")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -5004,7 +4992,7 @@ fn build_all_member_dependency_same_name() {
     p.cargo("build --workspace")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] a v0.1.0 (registry `dummy-registry`)
 [COMPILING] a v0.1.0
@@ -5240,7 +5228,7 @@ fn rustc_wrapper_relative() {
         .env("RUSTC_WRAPPER", &relative_path)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
 [COMPILING] bar v1.0.0
@@ -5773,7 +5761,7 @@ fn building_a_dependent_crate_without_bin_should_fail() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] testless v0.1.0 (registry `dummy-registry`)
 [ERROR] failed to download replaced source registry `crates-io`
@@ -6017,7 +6005,7 @@ fn no_linkable_target() {
         .build();
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [WARNING] The package `the_lib` provides no linkable target. The compiler might raise an error while compiling `foo`. Consider adding 'dylib' or 'rlib' to key `crate-type` in `the_lib`'s Cargo.toml. This warning might turn into a hard error in the future.
 [COMPILING] the_lib v0.1.0 ([ROOT]/foo/the_lib)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
@@ -6173,7 +6161,6 @@ fn target_filters_workspace() {
     ws.cargo("build -v --example ex")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [ERROR] no example target named `ex`
 
 	Did you mean `ex1`?
@@ -6235,7 +6222,6 @@ fn target_filters_workspace_not_found() {
     ws.cargo("build -v --lib")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [ERROR] no library targets found in packages: a, b
 
 "#]])
@@ -6295,7 +6281,7 @@ fn signal_display() {
 
     foo.cargo("build")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] pm v0.1.0 ([ROOT]/foo/pm)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [ERROR] could not compile `foo` (lib)
@@ -6353,7 +6339,7 @@ fn pipelining_works() {
     foo.cargo("build")
         .with_stdout_data(str![])
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -6418,7 +6404,6 @@ fn pipelining_big_graph() {
         .with_status(101)
         .with_stderr_data(
             str![[r#"
-[LOCKING] 61 packages to latest compatible versions
 [COMPILING] a30 v0.5.0 ([ROOT]/foo/a30)
 [ERROR] don't actually build me
 ...
@@ -6485,7 +6470,7 @@ b
 
 "#]])
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 c

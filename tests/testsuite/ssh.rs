@@ -203,7 +203,7 @@ fn known_host_works() {
         .env("SSH_AUTH_SOCK", &agent.sock)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 
 "#]])
         .run();
@@ -275,7 +275,7 @@ fn known_host_without_port() {
         .env("SSH_AUTH_SOCK", &agent.sock)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 
 "#]])
         .run();
@@ -312,7 +312,7 @@ fn hostname_case_insensitive() {
         .with_stderr_data(&format!(
             "\
 [UPDATING] git repository `ssh://testuser@{hostname}:{port}/repos/bar.git`
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 "
         ))
         .run();
@@ -383,7 +383,7 @@ Caused by:
         .env("SSH_AUTH_SOCK", &agent.sock)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 
 "#]])
         .run();
@@ -628,7 +628,7 @@ fn ssh_key_in_config() {
         .env("SSH_AUTH_SOCK", &agent.sock)
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `ssh://testuser@127.0.0.1:[..]/repos/bar.git`
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 
 "#]])
         .run();

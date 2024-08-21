@@ -761,7 +761,7 @@ fn build_script_needed_for_host_and_target() {
     p.cargo("build -v --target")
         .arg(&target)
         .with_stderr_data(str![[r#"
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] d1 v0.0.0 ([ROOT]/foo/d1)
 [RUNNING] `rustc [..] d1/build.rs [..] --out-dir [ROOT]/foo/target/debug/build/d1-[HASH] [..]
 [RUNNING] `[ROOT]/foo/target/debug/build/d1-[HASH]/build-script-build`
@@ -937,7 +937,7 @@ fn build_script_with_platform_specific_dependencies() {
     p.cargo("build -v --target")
         .arg(&target)
         .with_stderr_data(str![[r#"
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] d2 v0.0.0 ([ROOT]/foo/d2)
 [RUNNING] `rustc [..] d2/src/lib.rs [..]`
 [COMPILING] d1 v0.0.0 ([ROOT]/foo/d1)
@@ -1188,7 +1188,7 @@ fn cross_test_dylib() {
     p.cargo("test --target")
         .arg(&target)
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

@@ -610,7 +610,7 @@ fn basic_provider() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 CARGO=Some([..])
 CARGO_REGISTRY_NAME_OPT=Some("alternative")
 CARGO_REGISTRY_INDEX_URL=Some("[ROOTURL]/alternative-registry")

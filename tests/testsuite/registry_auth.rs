@@ -52,7 +52,7 @@ fn requires_credential_provider() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [ERROR] failed to download `bar v0.0.1 (registry `alternative`)`
 
 Caused by:
@@ -78,7 +78,7 @@ fn simple() {
     cargo(&p, "build")
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
 [COMPILING] bar v0.0.1 (registry `alternative`)
@@ -102,7 +102,7 @@ fn simple_with_asymmetric() {
     cargo(&p, "build")
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
 [COMPILING] bar v0.0.1 (registry `alternative`)
@@ -131,7 +131,7 @@ fn environment_config() {
         .env("CARGO_REGISTRIES_ALTERNATIVE_TOKEN", registry.token())
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
 [COMPILING] bar v0.0.1 (registry `alternative`)
@@ -156,7 +156,7 @@ fn environment_token() {
         .env("CARGO_REGISTRIES_ALTERNATIVE_TOKEN", registry.token())
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
 [COMPILING] bar v0.0.1 (registry `alternative`)
@@ -186,7 +186,7 @@ fn environment_token_with_asymmetric() {
         .env("CARGO_REGISTRIES_ALTERNATIVE_SECRET_KEY", registry.key())
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
 [COMPILING] bar v0.0.1 (registry `alternative`)
@@ -346,7 +346,7 @@ fn missing_token_git() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [ERROR] failed to download `bar v0.0.1 (registry `alternative`)`
 
 Caused by:
@@ -405,7 +405,7 @@ fn incorrect_token_git() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [ERROR] failed to download from `http://127.0.0.1:[..]/dl/bar/0.0.1/download`
 
@@ -497,7 +497,7 @@ fn duplicate_index() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [ERROR] failed to download `bar v0.0.1 (registry `alternative`)`
 
 Caused by:

@@ -1039,9 +1039,8 @@ dependencies = [
         .with_stderr_data(format!(
             "\
 [UPDATING] git repository `[ROOTURL]/dep1`
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [ADDING] dep1 v0.5.0 ([ROOTURL]/dep1?{ref_kind}={git_ref}#[..])
-[ADDING] foo v0.0.1 ([ROOT]/foo)
 [CHECKING] dep1 v0.5.0 ([ROOTURL]/dep1?{ref_kind}={git_ref}#[..])
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1135,9 +1134,8 @@ dependencies = [
         .with_stderr_data(format!(
             "\
 [UPDATING] git repository `[ROOTURL]/dep1`
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [ADDING] dep1 v0.5.0 ([ROOTURL]/dep1?{ref_kind}={git_ref}#[..])
-[ADDING] foo v0.0.1 ([ROOT]/foo)
 [CHECKING] dep1 v0.5.0 ([ROOTURL]/dep1?{ref_kind}={git_ref}#[..])
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

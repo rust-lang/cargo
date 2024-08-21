@@ -1251,7 +1251,7 @@ fn package_cache_lock_during_build() {
         .env("CARGO_LOG", "gc=debug")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
    [..]s DEBUG gc: unable to acquire mutate lock, auto gc disabled
 [CHECKING] bar v1.0.0
 [CHECKING] foo2 v0.1.0 ([ROOT]/foo2)

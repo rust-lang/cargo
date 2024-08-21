@@ -1986,7 +1986,7 @@ fn cargo_metadata_with_invalid_artifact_deps() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [ERROR] dependency `artifact` in package `foo` requires a `bin:notfound` artifact to be present.
 
 "#]])
@@ -2017,7 +2017,7 @@ fn cargo_metadata_with_invalid_duplicate_renamed_deps() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [ERROR] the crate `foo v0.5.0 ([ROOT]/foo)` depends on crate `bar v0.5.0 ([ROOT]/foo/bar)` multiple times with different names
 
 "#]])
@@ -3650,7 +3650,7 @@ fn filter_platform() {
             str![[r#"
 [WARNING] please specify `--format-version` flag explicitly to avoid compatibility problems
 [UPDATING] `dummy-registry` index
-[LOCKING] 5 packages to latest compatible versions
+[LOCKING] 4 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] normal-dep v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] host-dep v0.0.1 (registry `dummy-registry`)

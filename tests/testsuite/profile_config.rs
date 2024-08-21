@@ -228,7 +228,7 @@ fn profile_config_override_spec_multiple() {
     p.cargo("build -v")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [ERROR] multiple package overrides in profile `dev` match package `bar v0.5.0 ([ROOT]/foo/bar)`
 found package specs: bar, bar@0.5.0
 
@@ -305,7 +305,7 @@ fn profile_config_override_precedence() {
 
     p.cargo("build -v")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [RUNNING] `rustc --crate-name bar [..] -C opt-level=2[..]-C codegen-units=2 [..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -512,7 +512,7 @@ fn test_with_dev_profile() {
         .env("CARGO_PROFILE_DEV_DEBUG", "0")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] somedep v1.0.0 (registry `dummy-registry`)
 [COMPILING] somedep v1.0.0

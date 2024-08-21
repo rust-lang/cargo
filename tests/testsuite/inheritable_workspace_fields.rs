@@ -290,7 +290,7 @@ fn inherit_own_dependencies() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 4 packages to latest compatible versions
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v0.1.2 (registry `dummy-registry`)
 [DOWNLOADED] dep-build v0.8.2 (registry `dummy-registry`)
@@ -452,7 +452,7 @@ fn inherit_own_detailed_dependencies() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v0.1.2 (registry `dummy-registry`)
 [CHECKING] dep v0.1.2
@@ -630,7 +630,7 @@ fn inherited_dependencies_union_features() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 4 packages to latest compatible versions
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] fancy_dep v0.2.4 (registry `dummy-registry`)
 [DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
@@ -861,7 +861,7 @@ fn inherit_dependencies() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 4 packages to latest compatible versions
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v0.1.2 (registry `dummy-registry`)
 [DOWNLOADED] dep-build v0.8.2 (registry `dummy-registry`)
@@ -1026,7 +1026,7 @@ fn inherit_target_dependencies() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v0.1.2 (registry `dummy-registry`)
 [CHECKING] dep v0.1.2
@@ -1073,7 +1073,7 @@ fn inherit_dependency_override_optional() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.2.0 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1116,7 +1116,7 @@ fn inherit_dependency_features() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] fancy_dep v0.2.4 (registry `dummy-registry`)
 [DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
@@ -1186,7 +1186,7 @@ fn inherit_detailed_dependencies() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/detailed`
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] detailed v0.5.0 ([ROOTURL]/detailed?branch=branchy#[..])
 [CHECKING] bar v0.2.0 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1227,7 +1227,6 @@ fn inherit_path_dependencies() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [CHECKING] dep v0.9.0 ([ROOT]/foo/dep)
 [CHECKING] bar v0.2.0 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1488,7 +1487,7 @@ fn warn_inherit_def_feat_true_member_def_feat_false() {
     p.cargo("check").with_stderr_data(str![[r#"
 [WARNING] [ROOT]/foo/Cargo.toml: `default-features` is ignored for dep, since `default-features` was true for `workspace.dependencies.dep`, this could become a hard error in the future
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] fancy_dep v0.2.4 (registry `dummy-registry`)
 [DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
@@ -1583,7 +1582,7 @@ fn warn_inherit_simple_member_def_feat_false() {
     p.cargo("check").with_stderr_data(str![[r#"
 [WARNING] [ROOT]/foo/Cargo.toml: `default-features` is ignored for dep, since `default-features` was not specified for `workspace.dependencies.dep`, this could become a hard error in the future
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] fancy_dep v0.2.4 (registry `dummy-registry`)
 [DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
@@ -1678,7 +1677,7 @@ fn inherit_def_feat_false_member_def_feat_true() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] fancy_dep v0.2.4 (registry `dummy-registry`)
 [DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
@@ -1764,7 +1763,7 @@ fn warn_inherit_unused_manifest_key_dep() {
 [WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: workspace.dependencies.dep.wxz
 [WARNING] [ROOT]/foo/Cargo.toml: unused manifest key: dependencies.dep.wxz
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] dep v0.1.0
