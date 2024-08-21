@@ -501,32 +501,39 @@ fn print_lockfile_generation(
     status_locking(ws, num_pkgs)?;
 
     for change in changes {
-        let possibilities = if let Some(query) = change.alternatives_query() {
-            loop {
-                match registry.query_vec(&query, QueryKind::Exact) {
-                    std::task::Poll::Ready(res) => {
-                        break res?;
+        match change.kind {
+            PackageChangeKind::Added => {
+                let possibilities = if let Some(query) = change.alternatives_query() {
+                    loop {
+                        match registry.query_vec(&query, QueryKind::Exact) {
+                            std::task::Poll::Ready(res) => {
+                                break res?;
+                            }
+                            std::task::Poll::Pending => registry.block_until_ready()?,
+                        }
                     }
-                    std::task::Poll::Pending => registry.block_until_ready()?,
+                } else {
+                    vec![]
+                };
+
+                let package_id = change.package_id;
+                let required_rust_version = report_required_rust_version(ws, resolve, package_id);
+                let latest = report_latest(&possibilities, package_id);
+                let note = required_rust_version.or(latest);
+
+                if let Some(note) = note {
+                    ws.gctx().shell().status_with_color(
+                        change.kind.status(),
+                        format!("{change}{note}"),
+                        &change.kind.style(),
+                    )?;
                 }
             }
-        } else {
-            vec![]
-        };
-
-        {
-            let package_id = change.package_id;
-            let required_rust_version = report_required_rust_version(ws, resolve, package_id);
-            let latest = report_latest(&possibilities, package_id);
-            let note = required_rust_version.or(latest);
-
-            if let Some(note) = note {
-                assert_eq!(change.kind, PackageChangeKind::Added);
-                ws.gctx().shell().status_with_color(
-                    change.kind.status(),
-                    format!("{change}{note}"),
-                    &change.kind.style(),
-                )?;
+            PackageChangeKind::Upgraded
+            | PackageChangeKind::Downgraded
+            | PackageChangeKind::Removed
+            | PackageChangeKind::Unchanged => {
+                unreachable!("without a previous resolve, everything should be added")
             }
         }
     }
@@ -548,42 +555,24 @@ fn print_lockfile_sync(
     status_locking(ws, num_pkgs)?;
 
     for change in changes {
-        let possibilities = if let Some(query) = change.alternatives_query() {
-            loop {
-                match registry.query_vec(&query, QueryKind::Exact) {
-                    std::task::Poll::Ready(res) => {
-                        break res?;
+        match change.kind {
+            PackageChangeKind::Added
+            | PackageChangeKind::Upgraded
+            | PackageChangeKind::Downgraded => {
+                let possibilities = if let Some(query) = change.alternatives_query() {
+                    loop {
+                        match registry.query_vec(&query, QueryKind::Exact) {
+                            std::task::Poll::Ready(res) => {
+                                break res?;
+                            }
+                            std::task::Poll::Pending => registry.block_until_ready()?,
+                        }
                     }
-                    std::task::Poll::Pending => registry.block_until_ready()?,
-                }
-            }
-        } else {
-            vec![]
-        };
+                } else {
+                    vec![]
+                };
 
-        let package_id = change.package_id;
-        if change.previous_id.is_some() {
-            let required_rust_version = report_required_rust_version(ws, resolve, package_id);
-            let latest = report_latest(&possibilities, package_id);
-            let note = required_rust_version.or(latest).unwrap_or_default();
-
-            let msg = format!("{change}{note}");
-
-            if change.kind == PackageChangeKind::Downgraded {
-                ws.gctx().shell().status_with_color(
-                    change.kind.status(),
-                    msg,
-                    &change.kind.style(),
-                )?;
-            } else {
-                ws.gctx().shell().status_with_color(
-                    change.kind.status(),
-                    msg,
-                    &change.kind.style(),
-                )?;
-            }
-        } else {
-            if change.kind == PackageChangeKind::Added {
+                let package_id = change.package_id;
                 let required_rust_version = report_required_rust_version(ws, resolve, package_id);
                 let latest = report_latest(&possibilities, package_id);
                 let note = required_rust_version.or(latest).unwrap_or_default();
@@ -594,6 +583,7 @@ fn print_lockfile_sync(
                     &change.kind.style(),
                 )?;
             }
+            PackageChangeKind::Removed | PackageChangeKind::Unchanged => {}
         }
     }
 
@@ -628,35 +618,11 @@ fn print_lockfile_updates(
             vec![]
         };
 
-        let package_id = change.package_id;
-        if change.previous_id.is_some() {
-            let required_rust_version = report_required_rust_version(ws, resolve, package_id);
-            let latest = report_latest(&possibilities, package_id);
-            let note = required_rust_version.or(latest).unwrap_or_default();
-
-            let msg = format!("{change}{note}");
-
-            if change.kind == PackageChangeKind::Downgraded {
-                ws.gctx().shell().status_with_color(
-                    change.kind.status(),
-                    msg,
-                    &change.kind.style(),
-                )?;
-            } else {
-                ws.gctx().shell().status_with_color(
-                    change.kind.status(),
-                    msg,
-                    &change.kind.style(),
-                )?;
-            }
-        } else {
-            if change.kind == PackageChangeKind::Removed {
-                ws.gctx().shell().status_with_color(
-                    change.kind.status(),
-                    format!("{change}"),
-                    &change.kind.style(),
-                )?;
-            } else if change.kind == PackageChangeKind::Added {
+        match change.kind {
+            PackageChangeKind::Added
+            | PackageChangeKind::Upgraded
+            | PackageChangeKind::Downgraded => {
+                let package_id = change.package_id;
                 let required_rust_version = report_required_rust_version(ws, resolve, package_id);
                 let latest = report_latest(&possibilities, package_id);
                 let note = required_rust_version.or(latest).unwrap_or_default();
@@ -667,22 +633,30 @@ fn print_lockfile_updates(
                     &change.kind.style(),
                 )?;
             }
-        }
-        if change.kind == PackageChangeKind::Unchanged {
-            let required_rust_version = report_required_rust_version(ws, resolve, package_id);
-            let latest = report_latest(&possibilities, package_id);
-            let note = required_rust_version.as_deref().or(latest.as_deref());
+            PackageChangeKind::Removed => {
+                ws.gctx().shell().status_with_color(
+                    change.kind.status(),
+                    format!("{change}"),
+                    &change.kind.style(),
+                )?;
+            }
+            PackageChangeKind::Unchanged => {
+                let package_id = change.package_id;
+                let required_rust_version = report_required_rust_version(ws, resolve, package_id);
+                let latest = report_latest(&possibilities, package_id);
+                let note = required_rust_version.as_deref().or(latest.as_deref());
 
-            if let Some(note) = note {
-                if latest.is_some() {
-                    unchanged_behind += 1;
-                }
-                if ws.gctx().shell().verbosity() == Verbosity::Verbose {
-                    ws.gctx().shell().status_with_color(
-                        change.kind.status(),
-                        format!("{change}{note}"),
-                        &change.kind.style(),
-                    )?;
+                if let Some(note) = note {
+                    if latest.is_some() {
+                        unchanged_behind += 1;
+                    }
+                    if ws.gctx().shell().verbosity() == Verbosity::Verbose {
+                        ws.gctx().shell().status_with_color(
+                            change.kind.status(),
+                            format!("{change}{note}"),
+                            &change.kind.style(),
+                        )?;
+                    }
                 }
             }
         }
