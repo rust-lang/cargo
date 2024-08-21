@@ -128,6 +128,7 @@ one detailed below.
 * [`cargo::rustc-env=VAR=VALUE`](#rustc-env) --- Sets an environment variable.
 * [`cargo::rustc-cdylib-link-arg=FLAG`](#rustc-cdylib-link-arg) --- Passes custom
   flags to a linker for cdylib crates.
+- [`cargo::error=MESSAGE`](#cargo-error) --- Displays an error on the terminal.
 * [`cargo::warning=MESSAGE`](#cargo-warning) --- Displays a warning on the
   terminal.
 * [`cargo::metadata=KEY=VALUE`](#the-links-manifest-key) --- Metadata, used by `links`
@@ -312,6 +313,11 @@ The `rustc-cdylib-link-arg` instruction tells Cargo to pass the [`-C
 link-arg=FLAG` option][link-arg] to the compiler, but only when building a
 `cdylib` library target. Its usage is highly platform specific. It is useful
 to set the shared library version or the runtime-path.
+
+### `cargo::error=MESSAGE` {#cargo-error}
+
+The `error` instruction tells Cargo to display an error after the build script
+has finished running, and then fail the build.
 
 ### `cargo::warning=MESSAGE` {#cargo-warning}
 

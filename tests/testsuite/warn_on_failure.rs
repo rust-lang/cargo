@@ -118,11 +118,8 @@ fn warning_on_lib_failure() {
 [COMPILING] bar v0.0.1
 error[E0425]: cannot find function `err` in this scope
 ...
-The following warnings were emitted during compilation:
-
 [WARNING] bar@0.0.1: Hello! I'm a warning. :)
 [WARNING] bar@0.0.1: And one more!
-
 [ERROR] could not compile `bar` (lib) due to 1 previous error
 
 "#]])

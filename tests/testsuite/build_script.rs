@@ -3903,21 +3903,22 @@ fn errors_and_warnings_emitted_and_build_failed() {
                 fn main() {
                     println!("cargo::warning=foo");
                     println!("cargo::warning=bar");
-                    println!("cargo::warning=foo err");
-                    println!("cargo::warning=bar err");
+                    println!("cargo::error=foo err");
+                    println!("cargo::error=bar err");
                 }
             "#,
         )
         .build();
 
     p.cargo("build")
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [WARNING] foo@0.5.0: foo
 [WARNING] foo@0.5.0: bar
-[WARNING] foo@0.5.0: foo err
-[WARNING] foo@0.5.0: bar err
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] foo@0.5.0: foo err
+[ERROR] foo@0.5.0: bar err
+[ERROR] build script logged errors
 
 "#]])
         .run();
@@ -4008,11 +4009,8 @@ fn warnings_emitted_when_build_script_panics() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-The following warnings were emitted during compilation:
-
 [WARNING] foo@0.5.0: foo
 [WARNING] foo@0.5.0: bar
-
 [ERROR] failed to run custom build command for `foo v0.5.0 ([ROOT]/foo)`
 
 Caused by:
@@ -4082,11 +4080,8 @@ fn warnings_emitted_when_dependency_panics() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] published v0.1.0 (registry `dummy-registry`)
 [COMPILING] published v0.1.0
-The following warnings were emitted during compilation:
-
 [WARNING] published@0.1.0: foo
 [WARNING] published@0.1.0: bar
-
 [ERROR] failed to run custom build command for `published v0.1.0`
 
 Caused by:
@@ -4105,7 +4100,7 @@ Caused by:
 }
 
 #[cargo_test]
-fn errors_and_warnings_emitted_when_dependency_logs_errors() {
+fn log_messages_emitted_when_dependency_logs_errors() {
     Package::new("published", "0.1.0")
         .file(
             "build.rs",
@@ -4113,8 +4108,8 @@ fn errors_and_warnings_emitted_when_dependency_logs_errors() {
                 fn main() {
                     println!("cargo::warning=foo");
                     println!("cargo::warning=bar");
-                    println!("cargo::warning=foo err");
-                    println!("cargo::warning=bar err");
+                    println!("cargo::error=foo err");
+                    println!("cargo::error=bar err");
                 }
             "#,
         )
@@ -4150,14 +4145,18 @@ fn errors_and_warnings_emitted_when_dependency_logs_errors() {
         .build();
 
     p.cargo("build")
+        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] published v0.1.0 (registry `dummy-registry`)
 [COMPILING] published v0.1.0
-[COMPILING] foo v0.5.0 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[WARNING] published@0.1.0: foo
+[WARNING] published@0.1.0: bar
+[ERROR] published@0.1.0: foo err
+[ERROR] published@0.1.0: bar err
+[ERROR] build script logged errors
 
 "#]])
         .run();

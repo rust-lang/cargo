@@ -132,6 +132,7 @@ pub use self::job::Freshness::{self, Dirty, Fresh};
 pub use self::job::{Job, Work};
 pub use self::job_state::JobState;
 use super::build_runner::OutputFile;
+use super::custom_build::Severity;
 use super::timings::Timings;
 use super::{BuildContext, BuildPlan, BuildRunner, CompileMode, Unit};
 use crate::core::compiler::descriptive_pkg_name;
@@ -684,8 +685,8 @@ impl<'gctx> DrainState<'gctx> {
                         self.queue.finish(&unit, &artifact);
                     }
                     Err(error) => {
-                        let msg = "The following warnings were emitted during compilation:";
-                        self.emit_warnings(Some(msg), &unit, build_runner)?;
+                        let show_warnings = true;
+                        self.emit_log_messages(&unit, build_runner, show_warnings)?;
                         self.back_compat_notice(build_runner, &unit)?;
                         return Err(ErrorToHandle {
                             error,
@@ -962,11 +963,11 @@ impl<'gctx> DrainState<'gctx> {
         }
     }
 
-    fn emit_warnings(
+    fn emit_log_messages(
         &mut self,
-        msg: Option<&str>,
         unit: &Unit,
         build_runner: &mut BuildRunner<'_, '_>,
+        show_warnings: bool,
     ) -> CargoResult<()> {
         let outputs = build_runner.build_script_outputs.lock().unwrap();
         let Some(metadata) = build_runner.find_build_script_metadata(unit) else {
@@ -974,21 +975,25 @@ impl<'gctx> DrainState<'gctx> {
         };
         let bcx = &mut build_runner.bcx;
         if let Some(output) = outputs.get(metadata) {
-            if !output.warnings.is_empty() {
-                if let Some(msg) = msg {
-                    writeln!(bcx.gctx.shell().err(), "{}\n", msg)?;
-                }
+            if !output.log_messages.is_empty()
+                && (show_warnings
+                    || output
+                        .log_messages
+                        .iter()
+                        .any(|(severity, _)| *severity == Severity::Error))
+            {
+                let msg_with_package =
+                    |msg: &str| format!("{}@{}: {}", unit.pkg.name(), unit.pkg.version(), msg);
 
-                for warning in output.warnings.iter() {
-                    let warning_with_package =
-                        format!("{}@{}: {}", unit.pkg.name(), unit.pkg.version(), warning);
-
-                    bcx.gctx.shell().warn(warning_with_package)?;
-                }
-
-                if msg.is_some() {
-                    // Output an empty line.
-                    writeln!(bcx.gctx.shell().err())?;
+                for (severity, message) in output.log_messages.iter() {
+                    match severity {
+                        Severity::Error => {
+                            bcx.gctx.shell().error(msg_with_package(message))?;
+                        }
+                        Severity::Warning => {
+                            bcx.gctx.shell().warn(msg_with_package(message))?;
+                        }
+                    }
                 }
             }
         }
@@ -1098,8 +1103,12 @@ impl<'gctx> DrainState<'gctx> {
         artifact: Artifact,
         build_runner: &mut BuildRunner<'_, '_>,
     ) -> CargoResult<()> {
-        if unit.mode.is_run_custom_build() && unit.show_warnings(build_runner.bcx.gctx) {
-            self.emit_warnings(None, unit, build_runner)?;
+        if unit.mode.is_run_custom_build() {
+            self.emit_log_messages(
+                unit,
+                build_runner,
+                unit.show_warnings(build_runner.bcx.gctx),
+            )?;
         }
         let unlocked = self.queue.finish(unit, &artifact);
         match artifact {
