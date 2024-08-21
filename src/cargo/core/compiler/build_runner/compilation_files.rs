@@ -649,6 +649,26 @@ fn compute_metadata(
     // with user dependencies.
     unit.is_std.hash(&mut hasher);
 
+    // While we don't hash RUSTFLAGS because it may contain absolute paths that
+    // hurts reproducibility, we track whether a unit's RUSTFLAGS is from host
+    // config, so that we can generate a different metadata hash for runtime
+    // and compile-time units.
+    //
+    // HACK: This is a temporary hack for fixing rust-lang/cargo#14253
+    // Need to find a long-term solution to replace this fragile workaround.
+    // See https://github.com/rust-lang/cargo/pull/14432#discussion_r1725065350
+    if unit.kind.is_host() && !bcx.gctx.target_applies_to_host().unwrap_or_default() {
+        let host_info = bcx.target_data.info(CompileKind::Host);
+        let target_configs_are_different = unit.rustflags != host_info.rustflags
+            || unit.rustdocflags != host_info.rustdocflags
+            || bcx
+                .target_data
+                .target_config(CompileKind::Host)
+                .links_overrides
+                != unit.links_overrides;
+        target_configs_are_different.hash(&mut hasher);
+    }
+
     MetaInfo {
         meta_hash: Metadata(hasher.finish()),
         use_extra_filename: should_use_metadata(bcx, unit),
