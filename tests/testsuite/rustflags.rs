@@ -1685,31 +1685,23 @@ fn host_config_shared_build_dep() {
         .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .arg("-Ztarget-applies-to-host")
         .arg("-Zhost-config")
-        // Sometimes it compiles. Not deterministic...
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] cc v1.0.0 (registry `dummy-registry`)
-[WARNING] output filename collision.
-The lib target `cc` in package `cc v1.0.0` has the same output filename as the lib target `cc` in package `cc v1.0.0`.
-Colliding filename is: [ROOT]/foo/target/debug/deps/libcc-[HASH].rlib
-The targets should have unique names.
-Consider changing their names to be unique or compiling them separately.
-This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
-[WARNING] output filename collision.
-The lib target `cc` in package `cc v1.0.0` has the same output filename as the lib target `cc` in package `cc v1.0.0`.
-Colliding filename is: [ROOT]/foo/target/debug/deps/libcc-[HASH].rmeta
-The targets should have unique names.
-Consider changing their names to be unique or compiling them separately.
-This may become a hard error in the future; see <https://github.com/rust-lang/cargo/issues/6313>.
 [COMPILING] cc v1.0.0
 [RUNNING] `rustc --crate-name cc [..]--cfg from_host[..]`
 [RUNNING] `rustc --crate-name cc [..]--cfg from_target[..]`
-[ERROR] failed to build archive: No such file or directory
+[COMPILING] bootstrap v0.0.0 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name build_script_build [..]--cfg from_host[..]`
+[RUNNING] `[ROOT]/foo/target/debug/build/bootstrap-[HASH]/build-script-build`
+[RUNNING] `rustc --crate-name bootstrap[..]--cfg from_target[..]`
+[FINISHED] `dev` profile [unoptimized] target(s) in [ELAPSED]s
 
-[ERROR] could not compile `cc` (lib) due to 1 previous error
-
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 }
