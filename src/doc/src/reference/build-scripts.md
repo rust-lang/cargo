@@ -318,8 +318,9 @@ to set the shared library version or the runtime-path.
 The `warning` instruction tells Cargo to display a warning after the build
 script has finished running. Warnings are only shown for `path` dependencies
 (that is, those you're working on locally), so for example warnings printed
-out in [crates.io] crates are not emitted by default. The `-vv` "very verbose"
-flag may be used to have Cargo display warnings for all crates.
+out in [crates.io] crates are not emitted by default, unless the build fails.
+The `-vv` "very verbose" flag may be used to have Cargo display warnings for
+all crates.
 
 ## Build Dependencies
 
