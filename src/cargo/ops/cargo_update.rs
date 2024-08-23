@@ -494,7 +494,7 @@ fn print_lockfile_generation(
 ) -> CargoResult<()> {
     let changes = PackageChange::new(ws, resolve);
     let num_pkgs: usize = changes
-        .iter()
+        .values()
         .filter(|change| change.kind.is_new() && !change.is_member.unwrap_or(false))
         .count();
     if num_pkgs == 0 {
@@ -503,7 +503,7 @@ fn print_lockfile_generation(
     }
     status_locking(ws, num_pkgs)?;
 
-    for change in changes {
+    for change in changes.values() {
         if change.is_member.unwrap_or(false) {
             continue;
         };
@@ -555,7 +555,7 @@ fn print_lockfile_sync(
 ) -> CargoResult<()> {
     let changes = PackageChange::diff(ws, previous_resolve, resolve);
     let num_pkgs: usize = changes
-        .iter()
+        .values()
         .filter(|change| change.kind.is_new() && !change.is_member.unwrap_or(false))
         .count();
     if num_pkgs == 0 {
@@ -564,7 +564,7 @@ fn print_lockfile_sync(
     }
     status_locking(ws, num_pkgs)?;
 
-    for change in changes {
+    for change in changes.values() {
         if change.is_member.unwrap_or(false) {
             continue;
         };
@@ -611,13 +611,16 @@ fn print_lockfile_updates(
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<()> {
     let changes = PackageChange::diff(ws, previous_resolve, resolve);
-    let num_pkgs: usize = changes.iter().filter(|change| change.kind.is_new()).count();
+    let num_pkgs: usize = changes
+        .values()
+        .filter(|change| change.kind.is_new())
+        .count();
     if !precise {
         status_locking(ws, num_pkgs)?;
     }
 
     let mut unchanged_behind = 0;
-    for change in changes {
+    for change in changes.values() {
         let possibilities = if let Some(query) = change.alternatives_query() {
             loop {
                 match registry.query_vec(&query, QueryKind::Exact) {
@@ -804,17 +807,24 @@ struct PackageChange {
 }
 
 impl PackageChange {
-    pub fn new(ws: &Workspace<'_>, resolve: &Resolve) -> Vec<Self> {
+    pub fn new(ws: &Workspace<'_>, resolve: &Resolve) -> IndexMap<PackageId, Self> {
         let diff = PackageDiff::new(resolve);
         Self::with_diff(diff, ws)
     }
 
-    pub fn diff(ws: &Workspace<'_>, previous_resolve: &Resolve, resolve: &Resolve) -> Vec<Self> {
+    pub fn diff(
+        ws: &Workspace<'_>,
+        previous_resolve: &Resolve,
+        resolve: &Resolve,
+    ) -> IndexMap<PackageId, Self> {
         let diff = PackageDiff::diff(previous_resolve, resolve);
         Self::with_diff(diff, ws)
     }
 
-    fn with_diff(diff: impl Iterator<Item = PackageDiff>, ws: &Workspace<'_>) -> Vec<Self> {
+    fn with_diff(
+        diff: impl Iterator<Item = PackageDiff>,
+        ws: &Workspace<'_>,
+    ) -> IndexMap<PackageId, Self> {
         let member_ids: HashSet<_> = ws.members().map(|p| p.package_id()).collect();
 
         let mut changes = IndexMap::new();
@@ -876,7 +886,7 @@ impl PackageChange {
             }
         }
 
-        changes.into_values().collect()
+        changes
     }
 
     /// For querying [`PackageRegistry`] for alternative versions to report to the user
