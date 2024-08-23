@@ -319,6 +319,8 @@ to set the shared library version or the runtime-path.
 The `error` instruction tells Cargo to display an error after the build script
 has finished running, and then fail the build.
 
+> **MSRV:** Respected as of 1.82
+
 ### `cargo::warning=MESSAGE` {#cargo-warning}
 
 The `warning` instruction tells Cargo to display a warning after the build
