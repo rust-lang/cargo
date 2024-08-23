@@ -1,6 +1,6 @@
-use std::fmt::{self, Display};
-
+use super::semver_eval_ext;
 use semver::{Comparator, Op, Version, VersionReq};
+use std::fmt::{self, Display};
 
 pub trait VersionExt {
     fn is_prerelease(&self) -> bool;
@@ -23,6 +23,16 @@ impl VersionExt for Version {
                 pre: self.pre.clone(),
             }],
         }
+    }
+}
+
+pub trait VersionReqExt {
+    fn matches_prerelease(&self, version: &Version) -> bool;
+}
+
+impl VersionReqExt for VersionReq {
+    fn matches_prerelease(&self, version: &Version) -> bool {
+        semver_eval_ext::matches_prerelease(self, version)
     }
 }
 
@@ -111,21 +121,14 @@ impl OptVersionReq {
         }
     }
 
-    /// An interim approach allows to update to SemVer-Compatible prerelease version.
+    /// Allows to match pre-release in SemVer-Compatible way.
+    /// See [`semver_eval_ext`] for matches_prerelease semantics.
     pub fn matches_prerelease(&self, version: &Version) -> bool {
-        // Others Non `OptVersionReq::Req` have their own implementation.
-        if !matches!(self, OptVersionReq::Req(_)) {
+        if let OptVersionReq::Req(req) = self {
+            return req.matches_prerelease(version);
+        } else {
             return self.matches(version);
         }
-
-        // TODO: In the future we have a prerelease semantic to be implemented.
-        if version.is_prerelease() {
-            let mut version: Version = version.clone();
-            // Ignores the Prerelease tag to unlock the limit of non prerelease unpdate to prerelease.
-            version.pre = semver::Prerelease::EMPTY;
-            return self.matches(&version);
-        }
-        self.matches(version)
     }
 
     pub fn matches(&self, version: &Version) -> bool {
@@ -210,12 +213,12 @@ mod matches_prerelease {
         // https://rust-lang.github.io/rfcs/3493-precise-pre-release-cargo-update.html#version-ranges-with-pre-release-upper-bounds
         let cases = [
             //
-            ("1.2.3", "1.2.3-0", true), // bug, must be false
-            ("1.2.3", "1.2.3-1", true), // bug, must be false
+            ("1.2.3", "1.2.3-0", false),
+            ("1.2.3", "1.2.3-1", false),
             ("1.2.3", "1.2.4-0", true),
             //
-            (">=1.2.3", "1.2.3-0", true), // bug, must be false
-            (">=1.2.3", "1.2.3-1", true), // bug, must be false
+            (">=1.2.3", "1.2.3-0", false),
+            (">=1.2.3", "1.2.3-1", false),
             (">=1.2.3", "1.2.4-0", true),
             //
             (">1.2.3", "1.2.3-0", false),
@@ -226,17 +229,25 @@ mod matches_prerelease {
             (">1.2.3, <1.2.4", "1.2.3-1", false),
             (">1.2.3, <1.2.4", "1.2.4-0", false), // upper bound semantic
             //
-            (">=1.2.3, <1.2.4", "1.2.3-0", true), // bug, must be false
-            (">=1.2.3, <1.2.4", "1.2.3-1", true), // bug, must be false
+            (">=1.2.3, <1.2.4", "1.2.3-0", false),
+            (">=1.2.3, <1.2.4", "1.2.3-1", false),
             (">=1.2.3, <1.2.4", "1.2.4-0", false), // upper bound semantic
             //
             (">1.2.3, <=1.2.4", "1.2.3-0", false),
             (">1.2.3, <=1.2.4", "1.2.3-1", false),
             (">1.2.3, <=1.2.4", "1.2.4-0", true),
             //
-            (">=1.2.3-0, <1.2.3", "1.2.3-0", false), // upper bound semantic
-            (">=1.2.3-0, <1.2.3", "1.2.3-1", false), // upper bound semantic
+            (">=1.2.3-0, <1.2.3", "1.2.3-0", true), // upper bound semantic
+            (">=1.2.3-0, <1.2.3", "1.2.3-1", true), // upper bound semantic
             (">=1.2.3-0, <1.2.3", "1.2.4-0", false),
+            //
+            ("1.2.3", "2.0.0-0", false), // upper bound semantics
+            ("=1.2.3-0", "1.2.3", false),
+            ("=1.2.3-0", "1.2.3-0", true),
+            ("=1.2.3-0", "1.2.4", false),
+            (">=1.2.3-2, <1.2.3-4", "1.2.3-0", false),
+            (">=1.2.3-2, <1.2.3-4", "1.2.3-3", true),
+            (">=1.2.3-2, <1.2.3-4", "1.2.3-5", false), // upper bound semantics
         ];
         for (req, ver, expected) in cases {
             let version_req = req.parse().unwrap();
