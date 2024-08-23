@@ -1121,5 +1121,9 @@ fn annotate_required_rust_version(
                     .map(|(dep, _)| (Some(required_rust_version.clone()), dep)),
             );
         }
+    } else {
+        for change in changes.values_mut() {
+            change.required_rust_version = rustc_version.clone();
+        }
     }
 }

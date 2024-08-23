@@ -157,6 +157,8 @@ fn lint_dep_incompatible_with_rust_version() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest compatible versions
+[ADDING] too_new_child v0.0.1 (requires Rust 1.2345.0)
+[ADDING] too_new_parent v0.0.1 (requires Rust 1.2345.0)
 
 "#]])
         .run();
@@ -296,6 +298,8 @@ fn resolve_with_rustc() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
+[ADDING] newer-and-older v1.6.0 (requires Rust 1.2345)
+[ADDING] only-newer v1.6.0 (requires Rust 1.2345)
 
 "#]])
         .run();
