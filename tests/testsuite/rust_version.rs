@@ -1180,10 +1180,8 @@ fn report_rust_versions() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 9 packages to latest Rust 1.60.0 compatible versions
-[ADDING] dep-only-high-compatible v1.65.0 (requires Rust 1.65.0)
 [ADDING] dep-only-high-incompatible v1.75.0 (requires Rust 1.75.0)
 [ADDING] dep-only-low-incompatible v1.75.0 (requires Rust 1.75.0)
-[ADDING] dep-only-unset-compatible v1.75.0 (requires Rust 1.75.0)
 [ADDING] dep-only-unset-incompatible v1.2345.0 (requires Rust 1.2345.0)
 [ADDING] dep-shared-incompatible v1.75.0 (requires Rust 1.75.0)
 
