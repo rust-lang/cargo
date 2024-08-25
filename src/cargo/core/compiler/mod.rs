@@ -409,7 +409,17 @@ fn rustc(
                         )
                     },
                 )
-                .map_err(verbose_if_simple_exit_code)
+                .map_err(|e| {
+                    if output_options.errors_seen == 0 {
+                        // If we didn't expect an error, do not require --verbose to fail.
+                        // This is intended to debug
+                        // https://github.com/rust-lang/crater/issues/733, where we are seeing
+                        // Cargo exit unsuccessfully while seeming to not show any errors.
+                        e
+                    } else {
+                        verbose_if_simple_exit_code(e)
+                    }
+                })
                 .with_context(|| {
                     // adapted from rustc_errors/src/lib.rs
                     let warnings = match output_options.warnings_seen {
