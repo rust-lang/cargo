@@ -195,6 +195,7 @@ use std::task::{ready, Poll};
 use anyhow::Context as _;
 use cargo_util::paths::{self, exclude_from_backups_and_indexing};
 use flate2::read::GzDecoder;
+use semver::VersionReq;
 use serde::Deserialize;
 use serde::Serialize;
 use tar::Archive;
@@ -694,6 +695,10 @@ impl<'gctx> RegistrySource<'gctx> {
             .open(&path)
             .with_context(|| format!("failed to open `{}`", path.display()))?;
 
+        if let Err(e) = patch_extracted_package_if_needed(pkg, unpack_dir) {
+            tracing::warn!("error patching {pkg}: {e}");
+        }
+
         let lock_meta = LockMetadata { v: 1 };
         write!(ok, "{}", serde_json::to_string(&lock_meta).unwrap())?;
 
@@ -738,6 +743,28 @@ impl<'gctx> RegistrySource<'gctx> {
 
         Ok(pkg)
     }
+}
+
+/// Workaround for <https://github.com/rust-lang/rust/issues/127343> in the `time` crate
+fn patch_extracted_package_if_needed(pkg: PackageId, unpack_dir: &Path) -> CargoResult<()> {
+    if !pkg.source_id().is_crates_io()
+        || pkg.name() != "time"
+        || !VersionReq::parse("0.3.18,<0.3.35")
+            .unwrap()
+            .matches(pkg.version())
+    {
+        return Ok(());
+    }
+
+    let patch_path = unpack_dir.join("src/format_description/parse/mod.rs");
+    let source_code = std::fs::read_to_string(&patch_path)?;
+
+    let patched = source_code.replace(
+        "<Result<Box<_>, _>>",
+        "<Result<Box<[_ /*patched by Cargo*/ ]>, _>>",
+    );
+    std::fs::write(&patch_path, patched)?;
+    Ok(())
 }
 
 impl<'gctx> Source for RegistrySource<'gctx> {
