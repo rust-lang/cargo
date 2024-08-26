@@ -32,7 +32,7 @@ fn simple() {
         .masquerade_as_nightly_cargo(&["direct-minimal-versions"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages
+[LOCKING] 1 package
 [ADDING] dep v1.0.0 (latest: v1.1.0)
 
 "#]])
@@ -121,7 +121,7 @@ fn yanked() {
         .masquerade_as_nightly_cargo(&["direct-minimal-versions"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages
+[LOCKING] 1 package
 [ADDING] dep v1.1.0 (latest: v1.2.0)
 
 "#]])
@@ -175,7 +175,7 @@ fn indirect() {
         .masquerade_as_nightly_cargo(&["direct-minimal-versions"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages
+[LOCKING] 2 packages
 [ADDING] direct v1.0.0 (latest: v1.1.0)
 
 "#]])

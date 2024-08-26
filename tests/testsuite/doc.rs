@@ -110,7 +110,7 @@ fn doc_deps() {
     p.cargo("doc")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOCUMENTING] bar v0.0.1 ([ROOT]/foo/bar)
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
@@ -167,7 +167,7 @@ fn doc_no_deps() {
 
     p.cargo("doc --no-deps")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -248,7 +248,6 @@ fn doc_multiple_targets_same_name_lib() {
     p.cargo("doc --workspace")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [ERROR] document output filename collision
 The lib `foo_lib` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as the lib `foo_lib` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
 Only one may be documented at once since they output to the same path.
@@ -297,7 +296,6 @@ fn doc_multiple_targets_same_name() {
 
     p.cargo("doc --workspace")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [WARNING] output filename collision.
 The bin target `foo_lib` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same output filename as the lib target `foo_lib` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
 Colliding filename is: [ROOT]/foo/target/doc/foo_lib/index.html
@@ -348,7 +346,6 @@ fn doc_multiple_targets_same_name_bin() {
     p.cargo("doc --workspace")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [ERROR] document output filename collision
 The bin `foo-cli` in package `foo v0.1.0 ([ROOT]/foo/foo)` has the same name as the bin `foo-cli` in package `bar v0.1.0 ([ROOT]/foo/bar)`.
 Only one may be documented at once since they output to the same path.
@@ -729,7 +726,7 @@ fn doc_dash_p() {
     p.cargo("doc -p a")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [DOCUMENTING] b v0.0.1 ([ROOT]/foo/b)
 [CHECKING] b v0.0.1 ([ROOT]/foo/b)
 [DOCUMENTING] a v0.0.1 ([ROOT]/foo/a)
@@ -760,7 +757,6 @@ fn doc_all_exclude() {
 
     p.cargo("doc --workspace --exclude baz")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/bar/index.html
@@ -787,7 +783,6 @@ fn doc_all_exclude_glob() {
 
     p.cargo("doc --workspace --exclude '*z'")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/bar/index.html
@@ -1072,7 +1067,7 @@ fn features() {
         .build();
     p.cargo("doc --features foo")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
@@ -1204,7 +1199,6 @@ fn doc_all_workspace() {
     p.cargo("doc --workspace")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
@@ -1243,7 +1237,6 @@ fn doc_all_workspace_verbose() {
     p.cargo("doc --workspace -v")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
 [RUNNING] `rustdoc [..]
@@ -1280,7 +1273,6 @@ fn doc_all_virtual_manifest() {
     p.cargo("doc --workspace")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [DOCUMENTING] baz v0.1.0 ([ROOT]/foo/baz)
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1312,7 +1304,6 @@ fn doc_virtual_manifest_all_implied() {
     p.cargo("doc")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [GENERATED] [ROOT]/foo/target/doc/bar/index.html and 1 other file
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
@@ -1342,7 +1333,6 @@ fn doc_virtual_manifest_one_project() {
 
     p.cargo("doc -p bar")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/bar/index.html
@@ -1369,7 +1359,6 @@ fn doc_virtual_manifest_glob() {
 
     p.cargo("doc -p '*z'")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [DOCUMENTING] baz v0.1.0 ([ROOT]/foo/baz)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/baz/index.html
@@ -1408,7 +1397,7 @@ fn doc_all_member_dependency_same_name() {
     p.cargo("doc --workspace")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [WARNING] output filename collision.
@@ -1448,7 +1437,6 @@ fn doc_workspace_open_help_message() {
         .env("BROWSER", tools::echo())
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo/foo)
 [DOCUMENTING] bar v0.1.0 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1789,7 +1777,6 @@ fn doc_private_ws() {
     p.cargo("doc --workspace --bins --lib --document-private-items -v")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [DOCUMENTING] b v0.0.1 ([ROOT]/foo/b)
 [CHECKING] b v0.0.1 ([ROOT]/foo/b)
 [DOCUMENTING] a v0.0.1 ([ROOT]/foo/a)
@@ -1848,7 +1835,7 @@ fn doc_cap_lints() {
     p.cargo("doc")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [UPDATING] git repository `[..]`
 [DOCUMENTING] a v0.5.0 ([..])
 [CHECKING] a v0.5.0 ([..])
@@ -2212,7 +2199,7 @@ fn bin_private_items_deps() {
     p.cargo("doc")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOCUMENTING] bar v0.0.1 ([ROOT]/foo/bar)
 [CHECKING] bar v0.0.1 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
@@ -2790,7 +2777,7 @@ fn doc_lib_false() {
 
     p.cargo("doc")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
@@ -2840,7 +2827,7 @@ fn doc_lib_false_dep() {
 
     p.cargo("doc")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [DOCUMENTING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

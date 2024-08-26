@@ -1688,7 +1688,7 @@ fn host_config_shared_build_dep() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] cc v1.0.0 (registry `dummy-registry`)
 [COMPILING] cc v1.0.0

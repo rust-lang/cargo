@@ -45,7 +45,7 @@ fn override_simple() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[ROOTURL]/override`
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([ROOTURL]/override#[..])
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -92,7 +92,7 @@ fn override_with_features() {
     p.cargo("check").with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[ROOTURL]/override`
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [WARNING] replacement for `bar` uses the features mechanism. default-features and features will not take effect because the replacement dependency does not support this mechanism
 [CHECKING] bar v0.1.0 ([ROOTURL]/override#[..])
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -139,7 +139,7 @@ fn override_with_setting_default_features() {
     p.cargo("check").with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[ROOTURL]/override`
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [WARNING] replacement for `bar` uses the features mechanism. default-features and features will not take effect because the replacement dependency does not support this mechanism
 [CHECKING] bar v0.1.0 ([ROOTURL]/override#[..])
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
@@ -287,7 +287,7 @@ fn transitive() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[ROOTURL]/override`
-[LOCKING] 4 packages to latest compatible versions
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.2.0 (registry `dummy-registry`)
 [CHECKING] bar v0.1.0 ([ROOTURL]/override#[..])
@@ -345,7 +345,7 @@ fn persists_across_rebuilds() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[ROOTURL]/override`
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([ROOTURL]/override#[..])
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -397,7 +397,7 @@ fn replace_registry_with_path() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([ROOT]/bar)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -464,7 +464,7 @@ fn use_a_spec_to_select() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[ROOTURL]/override`
-[LOCKING] 5 packages to latest compatible versions
+[LOCKING] 4 packages to latest compatible versions
 [ADDING] baz v0.1.1 (latest: v0.2.0)
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.1.1 (registry `dummy-registry`)
@@ -528,7 +528,7 @@ fn override_adds_some_deps() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[ROOTURL]/override`
-[LOCKING] 4 packages to latest compatible versions
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.1.1 (registry `dummy-registry`)
 [CHECKING] baz v0.1.1
@@ -856,7 +856,7 @@ fn test_override_dep() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[ROOTURL]/override`
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [ERROR] There are multiple `bar` packages in your project, and the specification `bar` is ambiguous.
 Please re-run this command with one of the following specifications:
   registry+https://github.com/rust-lang/crates.io-index#bar@0.1.0
@@ -1172,7 +1172,7 @@ fn no_warnings_when_replace_is_used_in_another_workspace_member() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 4 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([ROOT]/foo/local_bar)
 [CHECKING] first_crate v0.1.0 ([ROOT]/foo/first_crate)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1438,7 +1438,7 @@ fn override_respects_spec_metadata() {
 
     p.cargo("check").with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [WARNING] package replacement is not used: https://github.com/rust-lang/crates.io-index#bar@0.1.0+notTheBuild
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0+a (registry `dummy-registry`)
@@ -1490,7 +1490,7 @@ fn override_spec_metadata_is_optional() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[ROOTURL]/override`
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0+a ([ROOTURL]/override#[..])
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

@@ -1,4 +1,4 @@
-<svg width="953px" height="128px" xmlns="http://www.w3.org/2000/svg">
+<svg width="1020px" height="128px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
@@ -26,7 +26,7 @@
 </tspan>
     <tspan x="10px" y="64px"><tspan class="fg-green bold">      Adding</tspan><tspan> rust-version-user v0.1.1 to dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan class="fg-green bold">     Locking</tspan><tspan> 2 packages to latest Rust [..] compatible versions</tspan>
+    <tspan x="10px" y="82px"><tspan class="fg-green bold">     Locking</tspan><tspan> 1 package to latest Rust [..] compatible version</tspan>
 </tspan>
     <tspan x="10px" y="100px"><tspan class="fg-cyan bold">      Adding</tspan><tspan> rust-version-user v0.1.1 </tspan><tspan class="fg-yellow bold">(latest: v0.2.1)</tspan>
 </tspan>

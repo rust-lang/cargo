@@ -79,7 +79,7 @@ fn exported_pub_dep() {
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] pub_dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] pub_dep v0.1.0
@@ -143,7 +143,7 @@ fn requires_feature() {
         .with_stderr_data(str![[r#"
 [WARNING] ignoring `public` on dependency pub_dep, pass `-Zpublic-dependency` to enable support for it
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] pub_dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] pub_dep v0.1.0
@@ -230,7 +230,7 @@ fn pub_dev_dependency_without_feature() {
         .with_stderr_data(str![[r#"
 [WARNING] 'public' specifier can only be used on regular dependencies, not dev-dependencies
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -329,7 +329,7 @@ fn allow_priv_in_tests() {
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] priv_dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] priv_dep v0.1.0
@@ -374,7 +374,7 @@ fn allow_priv_in_benchs() {
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] priv_dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] priv_dep v0.1.0
@@ -420,7 +420,7 @@ fn allow_priv_in_bins() {
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] priv_dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] priv_dep v0.1.0
@@ -466,7 +466,7 @@ fn allow_priv_in_examples() {
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] priv_dep v0.1.0 (registry `dummy-registry`)
 [CHECKING] priv_dep v0.1.0
@@ -513,7 +513,7 @@ fn allow_priv_in_custom_build() {
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] priv_dep v0.1.0 (registry `dummy-registry`)
 [COMPILING] priv_dep v0.1.0
@@ -567,7 +567,7 @@ fn publish_package_with_public_dependency() {
         .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] pub_bar v0.1.0 (registry `dummy-registry`)
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)

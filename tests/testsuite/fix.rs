@@ -104,7 +104,6 @@ fn fix_path_deps() {
         .with_stdout_data("")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [FIXED] bar/src/lib.rs (1 fix)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
@@ -271,7 +270,6 @@ fn upgrade_extern_crate() {
     p.cargo("fix --allow-no-vcs")
         .env("__CARGO_FIX_YOLO", "1")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FIXED] src/lib.rs (1 fix)
@@ -1144,7 +1142,6 @@ fn doesnt_rebuild_dependencies() {
         .env("__CARGO_FIX_YOLO", "1")
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1252,7 +1249,7 @@ fn only_warn_for_relevant_crates() {
     p.cargo("fix --allow-no-vcs --edition")
         .with_stderr_data(str![[r#"
 [MIGRATING] Cargo.toml from 2015 edition to 2018
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] a v0.1.0 ([ROOT]/foo/a)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from 2015 edition to 2018
@@ -1471,7 +1468,7 @@ fn edition_v2_resolver_report() {
         .with_stderr_data(str![[r#"
 [MIGRATING] Cargo.toml from 2018 edition to 2021
 [UPDATING] `dummy-registry` index
-[LOCKING] 4 packages to latest compatible versions
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] common v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
@@ -1593,7 +1590,6 @@ fn fix_shared_cross_workspace() {
         .env("__CARGO_FIX_YOLO", "1")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [CHECKING] foo v0.1.0 ([ROOT]/foo/foo)
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [FIXED] [..]foo/src/shared.rs (2 fixes)
@@ -2536,7 +2532,6 @@ a = {path = "a", default_features = false}
         .with_stderr_data(str![[r#"
 [MIGRATING] Cargo.toml from 2021 edition to 2024
 [FIXED] Cargo.toml (11 fixes)
-[LOCKING] 2 packages to latest compatible versions
 [CHECKING] a v0.0.1 ([ROOT]/foo/a)
 [CHECKING] foo v0.0.0 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from 2021 edition to 2024
@@ -2634,7 +2629,7 @@ target-dep = { version = "0.1.0", optional = true }
 [MIGRATING] Cargo.toml from 2021 edition to 2024
 [FIXED] Cargo.toml (3 fixes)
 [UPDATING] `dummy-registry` index
-[LOCKING] 4 packages to latest compatible versions
+[LOCKING] 3 packages to latest compatible versions
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from 2021 edition to 2024
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -2696,7 +2691,7 @@ existing = []
 [MIGRATING] Cargo.toml from 2021 edition to 2024
 [FIXED] Cargo.toml (1 fix)
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from 2021 edition to 2024
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -2773,7 +2768,7 @@ unrelated-dep-feature = ["unrelated-feature/a", "unrelated-feature/b"]
 [MIGRATING] Cargo.toml from 2021 edition to 2024
 [FIXED] Cargo.toml (4 fixes)
 [UPDATING] `dummy-registry` index
-[LOCKING] 5 packages to latest compatible versions
+[LOCKING] 4 packages to latest compatible versions
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [MIGRATING] src/lib.rs from 2021 edition to 2024
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -2907,7 +2902,7 @@ dep_df_false = { version = "0.1.0", default-features = false }
 [MIGRATING] pkg_df_false/Cargo.toml from 2021 edition to 2024
 [FIXED] pkg_df_false/Cargo.toml (6 fixes)
 [UPDATING] `dummy-registry` index
-[LOCKING] 6 packages to latest compatible versions
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep_simple v0.1.0 (registry `dummy-registry`)
 [DOWNLOADED] dep_df_true v0.1.0 (registry `dummy-registry`)

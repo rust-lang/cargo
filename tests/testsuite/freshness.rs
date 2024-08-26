@@ -146,7 +146,7 @@ fn rebuild_sub_package_then_while_package() {
 
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] b v0.0.1 ([ROOT]/foo/b)
 [COMPILING] a v0.0.1 ([ROOT]/foo/a)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -400,7 +400,7 @@ ftest off
 
 "#]])
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] dep_crate v0.0.1 ([ROOT]/foo/dep_crate)
 [COMPILING] a v0.0.1 ([ROOT]/foo/a)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -431,7 +431,7 @@ ftest on
 
 "#]])
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] dep_crate v0.0.1 ([ROOT]/foo/dep_crate)
 [COMPILING] b v0.0.1 ([ROOT]/foo/b)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -817,7 +817,7 @@ fn same_build_dir_cached_packages() {
     p.cargo("build")
         .cwd("a1")
         .with_stderr_data(str![[r#"
-[LOCKING] 4 packages to latest compatible versions
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] d v0.0.1 ([ROOT]/foo/d)
 [COMPILING] c v0.0.1 ([ROOT]/foo/c)
 [COMPILING] b v0.0.1 ([ROOT]/foo/b)
@@ -829,7 +829,7 @@ fn same_build_dir_cached_packages() {
     p.cargo("build")
         .cwd("a2")
         .with_stderr_data(str![[r#"
-[LOCKING] 4 packages to latest compatible versions
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] a2 v0.0.1 ([ROOT]/foo/a2)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -1400,7 +1400,7 @@ fn update_dependency_mtime_does_not_rebuild() {
         .masquerade_as_nightly_cargo(&["mtime-on-use"])
         .env("RUSTFLAGS", "-C linker=cc")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1558,7 +1558,7 @@ fn reuse_panic_build_dep_test() {
     // Check that `bar` is not built twice. It is only needed once (without `panic`).
     p.cargo("test --lib --no-run -v")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [RUNNING] `rustc --crate-name bar [..]
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
@@ -1621,7 +1621,7 @@ fn reuse_panic_pm() {
     p.cargo("build -v")
             .with_stderr_unordered(
                 "\
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar [..]
 [RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]
 [RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C debuginfo=2 [..]
@@ -1787,7 +1787,6 @@ fn rebuild_on_mid_build_file_modification() {
 
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [COMPILING] proc_macro_dep v0.1.0 ([ROOT]/foo/proc_macro_dep)
 [COMPILING] root v0.1.0 ([ROOT]/foo/root)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

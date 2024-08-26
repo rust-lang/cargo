@@ -20,7 +20,7 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-green bold">      Adding</tspan><tspan> cargo-list-test-fixture-dependency (local) to dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-green bold">     Locking</tspan><tspan> 2 packages to latest compatible versions</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-green bold">     Locking</tspan><tspan> 1 package to latest compatible version</tspan>
 </tspan>
     <tspan x="10px" y="64px">
 </tspan>

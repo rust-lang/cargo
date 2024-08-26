@@ -187,7 +187,7 @@ fn top_level_overrides_deps() {
     p.cargo("build -v --release")
         .with_stderr_data(&format!(
             "\
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] foo v0.0.0 ([ROOT]/foo/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 foo/src/lib.rs [..]\
         --crate-type dylib --crate-type rlib \
@@ -260,7 +260,6 @@ fn profile_in_non_root_manifest_triggers_a_warning() {
 [WARNING] profiles for the non root package will be ignored, specify profiles at the workspace root:
 package:   [ROOT]/foo/bar/Cargo.toml
 workspace: [ROOT]/foo/Cargo.toml
-[LOCKING] 2 packages to latest compatible versions
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [RUNNING] `rustc [..]`
 [FINISHED] `dev` profile [unoptimized] target(s) in [ELAPSED]s

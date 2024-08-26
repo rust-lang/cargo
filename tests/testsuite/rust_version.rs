@@ -156,7 +156,7 @@ fn lint_dep_incompatible_with_rust_version() {
     p.cargo("generate-lockfile")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 4 packages to latest compatible versions
+[LOCKING] 3 packages to latest compatible versions
 
 "#]])
         .run();
@@ -220,7 +220,7 @@ fn resolve_with_rust_version() {
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 
 "#]])
         .run();
@@ -239,7 +239,7 @@ foo v0.0.1 ([ROOT]/foo)
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest Rust 1.60.0 compatible versions
+[LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
 [ADDING] newer-and-older v1.5.0 (latest: v1.6.0)
 [ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
 
@@ -295,7 +295,7 @@ fn resolve_with_rustc() {
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 
 "#]])
         .run();
@@ -314,7 +314,7 @@ foo v0.0.1 ([ROOT]/foo)
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest Rust 1.60.0 compatible versions
+[LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
 [ADDING] newer-and-older v1.5.0 (latest: v1.6.0)
 [ADDING] only-newer v1.6.0 (requires Rust 1.2345)
 
@@ -368,7 +368,7 @@ fn resolve_with_backtracking() {
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 
 "#]])
         .run();
@@ -388,7 +388,7 @@ foo v0.0.1 ([ROOT]/foo)
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest Rust 1.60.0 compatible versions
+[LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
 [ADDING] has-rust-version v1.6.0 (requires Rust 1.65.0)
 
 "#]])
@@ -466,7 +466,7 @@ fn resolve_with_multiple_rust_versions() {
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 4 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 
 "#]])
         .run();
@@ -485,7 +485,7 @@ higher v0.0.1 ([ROOT]/foo)
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 4 packages to latest Rust 1.50.0 compatible versions
+[LOCKING] 2 packages to latest Rust 1.50.0 compatible versions
 [ADDING] newer-and-older v1.5.0 (latest: v1.6.0)
 [ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
 
@@ -540,7 +540,7 @@ fn resolve_unstable_config_on_stable() {
         .with_stderr_data(str![[r#"
 [WARNING] ignoring `resolver` config table without `-Zmsrv-policy`
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 
 "#]])
         .run();
@@ -558,7 +558,7 @@ foo v0.0.1 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [WARNING] ignoring `resolver` config table without `-Zmsrv-policy`
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 
 "#]])
         .run();
@@ -614,7 +614,7 @@ fn resolve_edition2024() {
         .masquerade_as_nightly_cargo(&["edition2024", "msrv-policy"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest Rust 1.60.0 compatible versions
+[LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
 [ADDING] newer-and-older v1.5.0 (latest: v1.6.0)
 [ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
 
@@ -635,7 +635,7 @@ foo v0.0.1 ([ROOT]/foo)
     p.cargo("generate-lockfile --ignore-rust-version")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 
 "#]])
         .arg("-Zmsrv-policy")
@@ -657,7 +657,7 @@ foo v0.0.1 ([ROOT]/foo)
         .env("CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS", "allow")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 
 "#]])
         .arg("-Zmsrv-policy")
@@ -718,7 +718,7 @@ fn resolve_v3() {
         .masquerade_as_nightly_cargo(&["edition2024", "msrv-policy"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest Rust 1.60.0 compatible versions
+[LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
 [ADDING] newer-and-older v1.5.0 (latest: v1.6.0)
 [ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
 
@@ -739,7 +739,7 @@ foo v0.0.1 ([ROOT]/foo)
     p.cargo("generate-lockfile --ignore-rust-version")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 
 "#]])
         .arg("-Zmsrv-policy")
@@ -761,7 +761,7 @@ foo v0.0.1 ([ROOT]/foo)
         .env("CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS", "allow")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 
 "#]])
         .arg("-Zmsrv-policy")
@@ -866,7 +866,7 @@ fn update_msrv_resolve() {
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
+[LOCKING] 1 package to latest Rust 1.60.0 compatible version
 [ADDING] bar v1.5.0 (latest: v1.6.0)
 
 "#]])
@@ -927,7 +927,7 @@ fn update_precise_overrides_msrv_resolver() {
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
+[LOCKING] 1 package to latest Rust 1.60.0 compatible version
 [ADDING] bar v1.5.0 (latest: v1.6.0)
 
 "#]])
@@ -985,7 +985,7 @@ fn check_msrv_resolve() {
         .with_stderr_data(
             str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] only-newer v1.6.0 (registry `dummy-registry`)
 [DOWNLOADED] newer-and-older v1.6.0 (registry `dummy-registry`)
@@ -1014,7 +1014,7 @@ foo v0.0.1 ([ROOT]/foo)
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest Rust 1.60.0 compatible versions
+[LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
 [ADDING] newer-and-older v1.5.0 (latest: v1.6.0)
 [ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
 [DOWNLOADING] crates ...
@@ -1063,7 +1063,7 @@ fn cargo_install_ignores_msrv_config() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.1
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v1.1.0 (registry `dummy-registry`)
 [COMPILING] dep v1.1.0

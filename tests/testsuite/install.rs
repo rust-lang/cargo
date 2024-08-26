@@ -2513,7 +2513,7 @@ fn self_referential() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.2 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.2
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [ADDING] foo v0.0.1 (latest: v0.0.2)
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
@@ -2558,7 +2558,7 @@ fn ambiguous_registry_vs_local_package() {
         .with_stderr_data(str![[r#"
 [INSTALLING] foo v0.1.0 ([ROOT]/foo)
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [COMPILING] foo v0.0.1

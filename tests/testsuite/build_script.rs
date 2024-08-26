@@ -882,7 +882,7 @@ fn custom_build_script_rustc_flags() {
         .build();
 
     p.cargo("build --verbose").with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] foo v0.5.0 ([ROOT]/foo/foo)
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 foo/build.rs [..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
@@ -936,7 +936,7 @@ fn custom_build_script_rustc_flags_no_space() {
         .build();
 
     p.cargo("build --verbose").with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] foo v0.5.0 ([ROOT]/foo/foo)
 [RUNNING] `rustc --crate-name build_script_build --edition=2015 foo/build.rs [..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build`
@@ -1071,7 +1071,7 @@ fn links_duplicates_old_registry() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [ERROR] multiple packages link to native library `a`, but a native library can be linked only once
@@ -1221,7 +1221,7 @@ fn overrides_and_links() {
     p.cargo("build -v")
         .with_stderr_data(
             str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] a v0.5.0 ([ROOT]/foo/a)
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name build_script_build [..]`
@@ -1698,7 +1698,7 @@ fn build_deps_simple() {
         .build();
 
     p.cargo("build -v").with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] a v0.5.0 ([ROOT]/foo/a)
 [RUNNING] `rustc --crate-name a [..]`
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
@@ -1811,7 +1811,7 @@ fn build_cmd_with_a_build_cmd() {
         .build();
 
     p.cargo("build -v").with_stderr_data(str![[r#"
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] b v0.5.0 ([ROOT]/foo/b)
 [RUNNING] `rustc --crate-name b [..]`
 [COMPILING] a v0.5.0 ([ROOT]/foo/a)
@@ -2980,7 +2980,7 @@ fn flags_go_into_tests() {
 
     p.cargo("test -v --test=foo")
         .with_stderr_data(str![[r#"
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 [COMPILING] a v0.5.0 ([ROOT]/foo/a)
 [RUNNING] `rustc [..] a/build.rs [..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/a-[HASH]/build-script-build`
@@ -3094,7 +3094,7 @@ fn diamond_passes_args_only_once() {
 
     p.cargo("build -v")
         .with_stderr_data(str![[r#"
-[LOCKING] 4 packages to latest compatible versions
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] c v0.5.0 ([ROOT]/foo/c)
 [RUNNING] `rustc --crate-name build_script_build [..]`
 [RUNNING] `[ROOT]/foo/target/debug/build/c-[HASH]/build-script-build`
@@ -3970,7 +3970,7 @@ fn warnings_hidden_for_upstream() {
     p.cargo("build -v")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [COMPILING] bar v0.1.0
@@ -4031,7 +4031,7 @@ fn warnings_printed_on_vv() {
     p.cargo("build -vv")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [COMPILING] bar v0.1.0
@@ -4811,7 +4811,7 @@ fn optional_build_dep_and_required_normal_dep() {
 
 "#]])
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.5.0 ([ROOT]/foo/bar)
 [COMPILING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

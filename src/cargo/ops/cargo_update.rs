@@ -492,15 +492,21 @@ fn print_lockfile_generation(
     resolve: &Resolve,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<()> {
-    let changes = PackageChange::new(resolve);
-    let num_pkgs: usize = changes.iter().filter(|change| change.kind.is_new()).count();
-    if num_pkgs <= 1 {
-        // just ourself, nothing worth reporting
+    let changes = PackageChange::new(ws, resolve);
+    let num_pkgs: usize = changes
+        .iter()
+        .filter(|change| change.kind.is_new() && !change.is_member.unwrap_or(false))
+        .count();
+    if num_pkgs == 0 {
+        // nothing worth reporting
         return Ok(());
     }
     status_locking(ws, num_pkgs)?;
 
     for change in changes {
+        if change.is_member.unwrap_or(false) {
+            continue;
+        };
         match change.kind {
             PackageChangeKind::Added => {
                 let possibilities = if let Some(query) = change.alternatives_query() {
@@ -547,14 +553,21 @@ fn print_lockfile_sync(
     resolve: &Resolve,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<()> {
-    let changes = PackageChange::diff(previous_resolve, resolve);
-    let num_pkgs: usize = changes.iter().filter(|change| change.kind.is_new()).count();
+    let changes = PackageChange::diff(ws, previous_resolve, resolve);
+    let num_pkgs: usize = changes
+        .iter()
+        .filter(|change| change.kind.is_new() && !change.is_member.unwrap_or(false))
+        .count();
     if num_pkgs == 0 {
+        // nothing worth reporting
         return Ok(());
     }
     status_locking(ws, num_pkgs)?;
 
     for change in changes {
+        if change.is_member.unwrap_or(false) {
+            continue;
+        };
         match change.kind {
             PackageChangeKind::Added
             | PackageChangeKind::Upgraded
@@ -597,7 +610,7 @@ fn print_lockfile_updates(
     precise: bool,
     registry: &mut PackageRegistry<'_>,
 ) -> CargoResult<()> {
-    let changes = PackageChange::diff(previous_resolve, resolve);
+    let changes = PackageChange::diff(ws, previous_resolve, resolve);
     let num_pkgs: usize = changes.iter().filter(|change| change.kind.is_new()).count();
     if !precise {
         status_locking(ws, num_pkgs)?;
@@ -787,20 +800,23 @@ struct PackageChange {
     package_id: PackageId,
     previous_id: Option<PackageId>,
     kind: PackageChangeKind,
+    is_member: Option<bool>,
 }
 
 impl PackageChange {
-    pub fn new(resolve: &Resolve) -> Vec<Self> {
+    pub fn new(ws: &Workspace<'_>, resolve: &Resolve) -> Vec<Self> {
         let diff = PackageDiff::new(resolve);
-        Self::with_diff(diff)
+        Self::with_diff(diff, ws)
     }
 
-    pub fn diff(previous_resolve: &Resolve, resolve: &Resolve) -> Vec<Self> {
+    pub fn diff(ws: &Workspace<'_>, previous_resolve: &Resolve, resolve: &Resolve) -> Vec<Self> {
         let diff = PackageDiff::diff(previous_resolve, resolve);
-        Self::with_diff(diff)
+        Self::with_diff(diff, ws)
     }
 
-    fn with_diff(diff: impl Iterator<Item = PackageDiff>) -> Vec<Self> {
+    fn with_diff(diff: impl Iterator<Item = PackageDiff>, ws: &Workspace<'_>) -> Vec<Self> {
+        let member_ids: HashSet<_> = ws.members().map(|p| p.package_id()).collect();
+
         let mut changes = IndexMap::new();
         for diff in diff {
             if let Some((previous_id, package_id)) = diff.change() {
@@ -815,38 +831,46 @@ impl PackageChange {
                 } else {
                     PackageChangeKind::Upgraded
                 };
+                let is_member = Some(member_ids.contains(&package_id));
                 let change = Self {
                     package_id,
                     previous_id: Some(previous_id),
                     kind,
+                    is_member,
                 };
                 changes.insert(change.package_id, change);
             } else {
                 for package_id in diff.removed {
                     let kind = PackageChangeKind::Removed;
+                    let is_member = None;
                     let change = Self {
                         package_id,
                         previous_id: None,
                         kind,
+                        is_member,
                     };
                     changes.insert(change.package_id, change);
                 }
                 for package_id in diff.added {
                     let kind = PackageChangeKind::Added;
+                    let is_member = Some(member_ids.contains(&package_id));
                     let change = Self {
                         package_id,
                         previous_id: None,
                         kind,
+                        is_member,
                     };
                     changes.insert(change.package_id, change);
                 }
             }
             for package_id in diff.unchanged {
                 let kind = PackageChangeKind::Unchanged;
+                let is_member = Some(member_ids.contains(&package_id));
                 let change = Self {
                     package_id,
                     previous_id: None,
                     kind,
+                    is_member,
                 };
                 changes.insert(change.package_id, change);
             }

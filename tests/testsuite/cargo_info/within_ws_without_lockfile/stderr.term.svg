@@ -22,7 +22,7 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-green bold">    Updating</tspan><tspan> `dummy-registry` index</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-green bold">     Locking</tspan><tspan> 2 packages to latest compatible versions</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-green bold">     Locking</tspan><tspan> 1 package to latest compatible version</tspan>
 </tspan>
     <tspan x="10px" y="64px"><tspan class="fg-cyan bold">      Adding</tspan><tspan> my-package v0.2.3+my-package </tspan><tspan class="fg-yellow bold">(latest: v0.4.1+my-package)</tspan>
 </tspan>

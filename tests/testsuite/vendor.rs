@@ -1342,7 +1342,7 @@ fn git_duplicate() {
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/a`
 [UPDATING] `dummy-registry` index
-[LOCKING] 4 packages to latest compatible versions
+[LOCKING] 3 packages to latest compatible versions
 [DOWNLOADING] crates ...
 [DOWNLOADED] b v0.5.0 (registry `dummy-registry`)
 [ERROR] failed to sync
@@ -1805,7 +1805,7 @@ fn no_remote_dependency_no_vendor() {
 
     p.cargo("vendor")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 There is no dependency to vendor in this project.
 
 "#]])

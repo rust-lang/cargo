@@ -114,7 +114,6 @@ fn non_virtual_default_members_build_other_member() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[LOCKING] 3 packages to latest compatible versions
 [CHECKING] baz v0.1.0 ([ROOT]/foo/baz)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -154,7 +153,6 @@ fn non_virtual_default_members_build_root_project() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -698,7 +696,7 @@ fn share_dependencies() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [ADDING] dep1 v0.1.3 (latest: v0.1.8)
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep1 v0.1.3 (registry `dummy-registry`)
@@ -748,7 +746,7 @@ fn fetch_fetches_all() {
     p.cargo("fetch")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 3 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep1 v0.1.3 (registry `dummy-registry`)
 
@@ -798,7 +796,7 @@ fn lock_works_for_everyone() {
     p.cargo("generate-lockfile")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 4 packages to latest compatible versions
+[LOCKING] 2 packages to latest compatible versions
 
 "#]])
         .run();
@@ -975,7 +973,6 @@ fn virtual_default_members_build_other_member() {
 
     p.cargo("check --manifest-path bar/Cargo.toml")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -2051,7 +2048,6 @@ fn dep_used_with_separate_features() {
     // Build the entire workspace.
     p.cargo("build --workspace")
         .with_stderr_data(str![[r#"
-[LOCKING] 3 packages to latest compatible versions
 [COMPILING] feat_lib v0.1.0 ([ROOT]/foo/feat_lib)
 [COMPILING] caller1 v0.1.0 ([ROOT]/foo/caller1)
 [COMPILING] caller2 v0.1.0 ([ROOT]/foo/caller2)

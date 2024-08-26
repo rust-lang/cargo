@@ -34,7 +34,7 @@ fn minimal_version_cli() {
         .masquerade_as_nightly_cargo(&["minimal-versions"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to earliest compatible versions
+[LOCKING] 1 package to earliest compatible version
 [ADDING] dep v1.0.0 (latest: v1.1.0)
 
 "#]])

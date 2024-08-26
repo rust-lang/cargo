@@ -24,7 +24,7 @@
 </tspan>
     <tspan x="10px" y="64px"><tspan class="fg-green bold">      Adding</tspan><tspan> my-package2 v99999.0.0 to dependencies for target `cfg(target_os="linux")`</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan class="fg-green bold">     Locking</tspan><tspan> 3 packages to latest compatible versions</tspan>
+    <tspan x="10px" y="82px"><tspan class="fg-green bold">     Locking</tspan><tspan> 2 packages to latest compatible versions</tspan>
 </tspan>
     <tspan x="10px" y="100px">
 </tspan>

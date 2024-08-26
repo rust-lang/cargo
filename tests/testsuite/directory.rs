@@ -107,7 +107,7 @@ fn simple() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.1.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -147,7 +147,7 @@ fn simple_install() {
     cargo_process("install bar")
         .with_stderr_data(str![[r#"
 [INSTALLING] bar v0.1.0
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] foo v0.0.1
 [COMPILING] bar v0.1.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
@@ -241,7 +241,7 @@ fn install_without_feature_dep() {
     cargo_process("install bar")
         .with_stderr_data(str![[r#"
 [INSTALLING] bar v0.1.0
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] foo v0.0.1
 [COMPILING] bar v0.1.0
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
@@ -328,7 +328,7 @@ fn multiple() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [ADDING] bar v0.1.0 (latest: v0.2.0)
 [CHECKING] bar v0.1.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
@@ -367,7 +367,7 @@ fn crates_io_then_directory() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.1.0 (registry `dummy-registry`)
 [CHECKING] bar v0.1.0
@@ -476,7 +476,7 @@ fn bad_file_checksum() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [ERROR] the listed checksum of `[ROOT]/index/bar/src/lib.rs` has changed:
 expected: [..]
 actual:   [..]
@@ -734,7 +734,7 @@ fn workspace_different_locations() {
     p.cargo("check")
         .cwd("bar")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
