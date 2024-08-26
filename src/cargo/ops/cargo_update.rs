@@ -748,9 +748,9 @@ fn report_required_rust_version(resolve: &Resolve, change: &PackageChange) -> Op
         return None;
     }
 
-    let warn = style::WARN;
+    let error = style::ERROR;
     Some(format!(
-        " {warn}(requires Rust {package_rust_version}){warn:#}"
+        " {error}(requires Rust {package_rust_version}){error:#}"
     ))
 }
 
