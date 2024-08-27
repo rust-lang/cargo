@@ -523,9 +523,8 @@ fn print_lockfile_generation(
                     vec![]
                 };
 
-                let package_id = change.package_id;
                 let required_rust_version = report_required_rust_version(resolve, change);
-                let latest = report_latest(&possibilities, package_id);
+                let latest = report_latest(&possibilities, change);
                 let note = required_rust_version.or(latest);
 
                 if let Some(note) = note {
@@ -587,9 +586,8 @@ fn print_lockfile_sync(
                     vec![]
                 };
 
-                let package_id = change.package_id;
                 let required_rust_version = report_required_rust_version(resolve, change);
-                let latest = report_latest(&possibilities, package_id);
+                let latest = report_latest(&possibilities, change);
                 let note = required_rust_version.or(latest).unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
@@ -641,9 +639,8 @@ fn print_lockfile_updates(
             PackageChangeKind::Added
             | PackageChangeKind::Upgraded
             | PackageChangeKind::Downgraded => {
-                let package_id = change.package_id;
                 let required_rust_version = report_required_rust_version(resolve, change);
-                let latest = report_latest(&possibilities, package_id);
+                let latest = report_latest(&possibilities, change);
                 let note = required_rust_version.or(latest).unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
@@ -660,9 +657,8 @@ fn print_lockfile_updates(
                 )?;
             }
             PackageChangeKind::Unchanged => {
-                let package_id = change.package_id;
                 let required_rust_version = report_required_rust_version(resolve, change);
-                let latest = report_latest(&possibilities, package_id);
+                let latest = report_latest(&possibilities, change);
                 let note = required_rust_version.as_deref().or(latest.as_deref());
 
                 if let Some(note) = note {
@@ -754,15 +750,16 @@ fn report_required_rust_version(resolve: &Resolve, change: &PackageChange) -> Op
     ))
 }
 
-fn report_latest(possibilities: &[IndexSummary], package: PackageId) -> Option<String> {
-    if !package.source_id().is_registry() {
+fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Option<String> {
+    let package_id = change.package_id;
+    if !package_id.source_id().is_registry() {
         return None;
     }
 
     if let Some(version) = possibilities
         .iter()
         .map(|s| s.as_summary())
-        .filter(|s| is_latest(s.version(), package.version()))
+        .filter(|s| is_latest(s.version(), package_id.version()))
         .map(|s| s.version().clone())
         .max()
     {
