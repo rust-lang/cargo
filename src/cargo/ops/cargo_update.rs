@@ -756,6 +756,19 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
         return None;
     }
 
+    let version_req = package_id.version().to_caret_req();
+    if let Some(version) = possibilities
+        .iter()
+        .map(|s| s.as_summary())
+        .filter(|s| package_id.version() != s.version() && version_req.matches(s.version()))
+        .map(|s| s.version().clone())
+        .max()
+    {
+        let warn = style::WARN;
+        let report = format!(" {warn}(latest compatible: v{version}){warn:#}");
+        return Some(report);
+    }
+
     if let Some(version) = possibilities
         .iter()
         .map(|s| s.as_summary())
@@ -763,7 +776,11 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
         .map(|s| s.version().clone())
         .max()
     {
-        let warn = style::WARN;
+        let warn = if change.is_transitive.unwrap_or(true) {
+            Default::default()
+        } else {
+            style::WARN
+        };
         let report = format!(" {warn}(latest: v{version}){warn:#}");
         return Some(report);
     }
@@ -801,13 +818,14 @@ struct PackageChange {
     previous_id: Option<PackageId>,
     kind: PackageChangeKind,
     is_member: Option<bool>,
+    is_transitive: Option<bool>,
     required_rust_version: Option<PartialVersion>,
 }
 
 impl PackageChange {
     pub fn new(ws: &Workspace<'_>, resolve: &Resolve) -> IndexMap<PackageId, Self> {
         let diff = PackageDiff::new(resolve);
-        Self::with_diff(diff, ws)
+        Self::with_diff(diff, ws, resolve)
     }
 
     pub fn diff(
@@ -816,12 +834,13 @@ impl PackageChange {
         resolve: &Resolve,
     ) -> IndexMap<PackageId, Self> {
         let diff = PackageDiff::diff(previous_resolve, resolve);
-        Self::with_diff(diff, ws)
+        Self::with_diff(diff, ws, resolve)
     }
 
     fn with_diff(
         diff: impl Iterator<Item = PackageDiff>,
         ws: &Workspace<'_>,
+        resolve: &Resolve,
     ) -> IndexMap<PackageId, Self> {
         let member_ids: HashSet<_> = ws.members().map(|p| p.package_id()).collect();
 
@@ -840,11 +859,13 @@ impl PackageChange {
                     PackageChangeKind::Upgraded
                 };
                 let is_member = Some(member_ids.contains(&package_id));
+                let is_transitive = Some(true);
                 let change = Self {
                     package_id,
                     previous_id: Some(previous_id),
                     kind,
                     is_member,
+                    is_transitive,
                     required_rust_version: None,
                 };
                 changes.insert(change.package_id, change);
@@ -852,11 +873,13 @@ impl PackageChange {
                 for package_id in diff.removed {
                     let kind = PackageChangeKind::Removed;
                     let is_member = None;
+                    let is_transitive = None;
                     let change = Self {
                         package_id,
                         previous_id: None,
                         kind,
                         is_member,
+                        is_transitive,
                         required_rust_version: None,
                     };
                     changes.insert(change.package_id, change);
@@ -864,11 +887,13 @@ impl PackageChange {
                 for package_id in diff.added {
                     let kind = PackageChangeKind::Added;
                     let is_member = Some(member_ids.contains(&package_id));
+                    let is_transitive = Some(true);
                     let change = Self {
                         package_id,
                         previous_id: None,
                         kind,
                         is_member,
+                        is_transitive,
                         required_rust_version: None,
                     };
                     changes.insert(change.package_id, change);
@@ -877,14 +902,29 @@ impl PackageChange {
             for package_id in diff.unchanged {
                 let kind = PackageChangeKind::Unchanged;
                 let is_member = Some(member_ids.contains(&package_id));
+                let is_transitive = Some(true);
                 let change = Self {
                     package_id,
                     previous_id: None,
                     kind,
                     is_member,
+                    is_transitive,
                     required_rust_version: None,
                 };
                 changes.insert(change.package_id, change);
+            }
+        }
+
+        for member_id in &member_ids {
+            let Some(change) = changes.get_mut(member_id) else {
+                continue;
+            };
+            change.is_transitive = Some(false);
+            for (direct_dep_id, _) in resolve.deps(*member_id) {
+                let Some(change) = changes.get_mut(&direct_dep_id) else {
+                    continue;
+                };
+                change.is_transitive = Some(false);
             }
         }
 
