@@ -759,16 +759,19 @@ fn report_latest(possibilities: &[IndexSummary], package: PackageId) -> Option<S
         return None;
     }
 
-    let version = possibilities
+    if let Some(version) = possibilities
         .iter()
         .map(|s| s.as_summary())
         .filter(|s| is_latest(s.version(), package.version()))
         .map(|s| s.version().clone())
-        .max()?;
+        .max()
+    {
+        let warn = style::WARN;
+        let report = format!(" {warn}(latest: v{version}){warn:#}");
+        return Some(report);
+    }
 
-    let warn = style::WARN;
-    let report = format!(" {warn}(latest: v{version}){warn:#}");
-    Some(report)
+    None
 }
 
 fn is_latest(candidate: &semver::Version, current: &semver::Version) -> bool {
