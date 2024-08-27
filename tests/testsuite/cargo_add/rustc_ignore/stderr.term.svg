@@ -1,8 +1,10 @@
-<svg width="740px" height="92px" xmlns="http://www.w3.org/2000/svg">
+<svg width="740px" height="110px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
+    .fg-cyan { fill: #00AAAA }
     .fg-green { fill: #00AA00 }
+    .fg-red { fill: #AA0000 }
     .container {
       padding: 0 10px;
       line-height: 18px;
@@ -24,7 +26,9 @@
 </tspan>
     <tspan x="10px" y="64px"><tspan class="fg-green bold">     Locking</tspan><tspan> 1 package to latest compatible version</tspan>
 </tspan>
-    <tspan x="10px" y="82px">
+    <tspan x="10px" y="82px"><tspan class="fg-cyan bold">      Adding</tspan><tspan> rust-version-user v0.2.1 </tspan><tspan class="fg-red bold">(requires Rust 1.2345)</tspan>
+</tspan>
+    <tspan x="10px" y="100px">
 </tspan>
   </text>
 
