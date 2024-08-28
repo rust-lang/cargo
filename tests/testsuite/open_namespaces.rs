@@ -379,15 +379,9 @@ fn update_spec_accepts_namespaced_name() {
         .run();
     p.cargo("update foo::bar")
         .masquerade_as_nightly_cargo(&["open-namespaces"])
-        .with_status(101)
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
-[ERROR] invalid package ID specification: `foo::bar`
-
-	Did you mean `foo::bar`?
-
-Caused by:
-  expected a version like "1.32"
+[LOCKING] 0 packages to latest compatible versions
 
 "#]])
         .run()
@@ -415,13 +409,9 @@ fn update_spec_accepts_namespaced_pkgid() {
         .run();
     p.cargo(&format!("update path+{}#foo::bar@0.0.1", p.url()))
         .masquerade_as_nightly_cargo(&["open-namespaces"])
-        .with_status(101)
         .with_stdout_data(str![""])
         .with_stderr_data(str![[r#"
-[ERROR] invalid package ID specification: `path+[ROOTURL]/foo#foo::bar@0.0.1`
-
-Caused by:
-  expected a version like "1.32"
+[LOCKING] 0 packages to latest compatible versions
 
 "#]])
         .run()

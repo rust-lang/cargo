@@ -210,7 +210,10 @@ impl PackageIdSpec {
 }
 
 fn parse_spec(spec: &str) -> Result<Option<(String, Option<PartialVersion>)>> {
-    let Some((name, ver)) = spec.split_once([':', '@']) else {
+    let Some((name, ver)) = spec
+        .rsplit_once('@')
+        .or_else(|| spec.rsplit_once(':').filter(|(n, _)| !n.ends_with(':')))
+    else {
         return Ok(None);
     };
     let name = name.to_owned();
@@ -438,7 +441,16 @@ mod tests {
             },
             "foo",
         );
-        err!("foo::bar", ErrorKind::PartialVersion(_));
+        ok(
+            "foo::bar",
+            PackageIdSpec {
+                name: String::from("foo::bar"),
+                version: None,
+                url: None,
+                kind: None,
+            },
+            "foo::bar",
+        );
         ok(
             "foo:1.2.3",
             PackageIdSpec {
@@ -449,7 +461,16 @@ mod tests {
             },
             "foo@1.2.3",
         );
-        err!("foo::bar:1.2.3", ErrorKind::PartialVersion(_));
+        ok(
+            "foo::bar:1.2.3",
+            PackageIdSpec {
+                name: String::from("foo::bar"),
+                version: Some("1.2.3".parse().unwrap()),
+                url: None,
+                kind: None,
+            },
+            "foo::bar@1.2.3",
+        );
         ok(
             "foo@1.2.3",
             PackageIdSpec {
@@ -460,7 +481,16 @@ mod tests {
             },
             "foo@1.2.3",
         );
-        err!("foo::bar@1.2.3", ErrorKind::PartialVersion(_));
+        ok(
+            "foo::bar@1.2.3",
+            PackageIdSpec {
+                name: String::from("foo::bar"),
+                version: Some("1.2.3".parse().unwrap()),
+                url: None,
+                kind: None,
+            },
+            "foo::bar@1.2.3",
+        );
         ok(
             "foo@1.2",
             PackageIdSpec {
@@ -635,9 +665,15 @@ mod tests {
             },
             "path+file:///path/to/my/project/foo#bar",
         );
-        err!(
+        ok(
             "path+file:///path/to/my/project/foo#foo::bar",
-            ErrorKind::PartialVersion(_)
+            PackageIdSpec {
+                name: String::from("foo::bar"),
+                version: None,
+                url: Some(Url::parse("file:///path/to/my/project/foo").unwrap()),
+                kind: Some(SourceKind::Path),
+            },
+            "path+file:///path/to/my/project/foo#foo::bar",
         );
         ok(
             "path+file:///path/to/my/project/foo#bar:1.1.8",
@@ -649,9 +685,15 @@ mod tests {
             },
             "path+file:///path/to/my/project/foo#bar@1.1.8",
         );
-        err!(
+        ok(
             "path+file:///path/to/my/project/foo#foo::bar:1.1.8",
-            ErrorKind::PartialVersion(_)
+            PackageIdSpec {
+                name: String::from("foo::bar"),
+                version: Some("1.1.8".parse().unwrap()),
+                url: Some(Url::parse("file:///path/to/my/project/foo").unwrap()),
+                kind: Some(SourceKind::Path),
+            },
+            "path+file:///path/to/my/project/foo#foo::bar@1.1.8",
         );
         ok(
             "path+file:///path/to/my/project/foo#bar@1.1.8",
@@ -663,9 +705,15 @@ mod tests {
             },
             "path+file:///path/to/my/project/foo#bar@1.1.8",
         );
-        err!(
+        ok(
             "path+file:///path/to/my/project/foo#foo::bar@1.1.8",
-            ErrorKind::PartialVersion(_)
+            PackageIdSpec {
+                name: String::from("foo::bar"),
+                version: Some("1.1.8".parse().unwrap()),
+                url: Some(Url::parse("file:///path/to/my/project/foo").unwrap()),
+                kind: Some(SourceKind::Path),
+            },
+            "path+file:///path/to/my/project/foo#foo::bar@1.1.8",
         );
     }
 
@@ -676,8 +724,8 @@ mod tests {
         err!("baz@", ErrorKind::PartialVersion(_));
         err!("baz@*", ErrorKind::PartialVersion(_));
         err!("baz@^1.0", ErrorKind::PartialVersion(_));
-        err!("https://baz:1.0", ErrorKind::PartialVersion(_));
-        err!("https://#baz:1.0", ErrorKind::PartialVersion(_));
+        err!("https://baz:1.0", ErrorKind::NameValidation(_));
+        err!("https://#baz:1.0", ErrorKind::NameValidation(_));
         err!(
             "foobar+https://github.com/rust-lang/crates.io-index",
             ErrorKind::UnsupportedProtocol(_)
