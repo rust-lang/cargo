@@ -323,18 +323,30 @@ mod tests {
     use crate::core::{GitReference, SourceKind};
     use url::Url;
 
+    #[track_caller]
+    fn ok(spec: &str, expected: PackageIdSpec, expected_rendered: &str) {
+        let parsed = PackageIdSpec::parse(spec).unwrap();
+        assert_eq!(parsed, expected);
+        let rendered = parsed.to_string();
+        assert_eq!(rendered, expected_rendered);
+        let reparsed = PackageIdSpec::parse(&rendered).unwrap();
+        assert_eq!(reparsed, expected);
+    }
+
+    macro_rules! err {
+        ($spec:expr, $expected:pat) => {
+            let err = PackageIdSpec::parse($spec).unwrap_err();
+            let kind = err.0;
+            assert!(
+                matches!(kind, $expected),
+                "`{}` parse error mismatch, got {kind:?}",
+                $spec
+            );
+        };
+    }
+
     #[test]
     fn good_parsing() {
-        #[track_caller]
-        fn ok(spec: &str, expected: PackageIdSpec, expected_rendered: &str) {
-            let parsed = PackageIdSpec::parse(spec).unwrap();
-            assert_eq!(parsed, expected);
-            let rendered = parsed.to_string();
-            assert_eq!(rendered, expected_rendered);
-            let reparsed = PackageIdSpec::parse(&rendered).unwrap();
-            assert_eq!(reparsed, expected);
-        }
-
         ok(
             "https://crates.io/foo",
             PackageIdSpec {
@@ -603,18 +615,6 @@ mod tests {
 
     #[test]
     fn bad_parsing() {
-        macro_rules! err {
-            ($spec:expr, $expected:pat) => {
-                let err = PackageIdSpec::parse($spec).unwrap_err();
-                let kind = err.0;
-                assert!(
-                    matches!(kind, $expected),
-                    "`{}` parse error mismatch, got {kind:?}",
-                    $spec
-                );
-            };
-        }
-
         err!("baz:", ErrorKind::PartialVersion(_));
         err!("baz:*", ErrorKind::PartialVersion(_));
         err!("baz@", ErrorKind::PartialVersion(_));
