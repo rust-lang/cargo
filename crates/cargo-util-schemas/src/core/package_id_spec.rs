@@ -437,6 +437,7 @@ mod tests {
             },
             "foo",
         );
+        err!("foo::bar", ErrorKind::PartialVersion(_));
         ok(
             "foo:1.2.3",
             PackageIdSpec {
@@ -447,6 +448,7 @@ mod tests {
             },
             "foo@1.2.3",
         );
+        err!("foo::bar:1.2.3", ErrorKind::PartialVersion(_));
         ok(
             "foo@1.2.3",
             PackageIdSpec {
@@ -457,6 +459,7 @@ mod tests {
             },
             "foo@1.2.3",
         );
+        err!("foo::bar@1.2.3", ErrorKind::PartialVersion(_));
         ok(
             "foo@1.2",
             PackageIdSpec {
@@ -592,6 +595,16 @@ mod tests {
             "file:///path/to/my/project/foo",
         );
         ok(
+            "file:///path/to/my/project/foo::bar",
+            PackageIdSpec {
+                name: String::from("foo::bar"),
+                version: None,
+                url: Some(Url::parse("file:///path/to/my/project/foo::bar").unwrap()),
+                kind: None,
+            },
+            "file:///path/to/my/project/foo::bar",
+        );
+        ok(
             "file:///path/to/my/project/foo#1.1.8",
             PackageIdSpec {
                 name: String::from("foo"),
@@ -610,6 +623,48 @@ mod tests {
                 kind: Some(SourceKind::Path),
             },
             "path+file:///path/to/my/project/foo#1.1.8",
+        );
+        ok(
+            "path+file:///path/to/my/project/foo#bar",
+            PackageIdSpec {
+                name: String::from("bar"),
+                version: None,
+                url: Some(Url::parse("file:///path/to/my/project/foo").unwrap()),
+                kind: Some(SourceKind::Path),
+            },
+            "path+file:///path/to/my/project/foo#bar",
+        );
+        err!(
+            "path+file:///path/to/my/project/foo#foo::bar",
+            ErrorKind::PartialVersion(_)
+        );
+        ok(
+            "path+file:///path/to/my/project/foo#bar:1.1.8",
+            PackageIdSpec {
+                name: String::from("bar"),
+                version: Some("1.1.8".parse().unwrap()),
+                url: Some(Url::parse("file:///path/to/my/project/foo").unwrap()),
+                kind: Some(SourceKind::Path),
+            },
+            "path+file:///path/to/my/project/foo#bar@1.1.8",
+        );
+        err!(
+            "path+file:///path/to/my/project/foo#foo::bar:1.1.8",
+            ErrorKind::PartialVersion(_)
+        );
+        ok(
+            "path+file:///path/to/my/project/foo#bar@1.1.8",
+            PackageIdSpec {
+                name: String::from("bar"),
+                version: Some("1.1.8".parse().unwrap()),
+                url: Some(Url::parse("file:///path/to/my/project/foo").unwrap()),
+                kind: Some(SourceKind::Path),
+            },
+            "path+file:///path/to/my/project/foo#bar@1.1.8",
+        );
+        err!(
+            "path+file:///path/to/my/project/foo#foo::bar@1.1.8",
+            ErrorKind::PartialVersion(_)
         );
     }
 
