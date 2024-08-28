@@ -2178,7 +2178,7 @@ fn issue_14194_deduplicate_library_path_env_var() {
                             let prev_lib_path = std::fs::read_to_string(txt).unwrap();
                             // Ensure no duplicate insertion to dylib search paths
                             // when calling `cargo run` recursively.
-                            assert_ne!(lib_path, prev_lib_path);
+                            assert_eq!(lib_path, prev_lib_path);
                         }}
 
                         if level == 0 {{

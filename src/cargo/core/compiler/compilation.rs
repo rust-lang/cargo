@@ -323,7 +323,11 @@ impl<'gctx> Compilation<'gctx> {
 
         let dylib_path = paths::dylib_path();
         let dylib_path_is_empty = dylib_path.is_empty();
-        search_path.extend(dylib_path.into_iter());
+        if dylib_path.starts_with(&search_path) {
+            search_path = dylib_path;
+        } else {
+            search_path.extend(dylib_path.into_iter());
+        }
         if cfg!(target_os = "macos") && dylib_path_is_empty {
             // These are the defaults when DYLD_FALLBACK_LIBRARY_PATH isn't
             // set or set to an empty string. Since Cargo is explicitly setting
