@@ -94,13 +94,8 @@ impl PackageIdSpec {
                 .into());
             }
         }
-        let mut parts = spec.splitn(2, [':', '@']);
-        let name = parts.next().unwrap();
-        let version = match parts.next() {
-            Some(version) => Some(version.parse::<PartialVersion>()?),
-            None => None,
-        };
-        PackageName::new(name)?;
+        let (name, version) = parse_spec(spec)?.unwrap_or_else(|| (spec.to_owned(), None));
+        PackageName::new(&name)?;
         Ok(PackageIdSpec {
             name: String::from(name),
             version,
@@ -161,11 +156,8 @@ impl PackageIdSpec {
                 return Err(ErrorKind::MissingUrlPath(url).into());
             };
             match frag {
-                Some(fragment) => match fragment.split_once([':', '@']) {
-                    Some((name, part)) => {
-                        let version = part.parse::<PartialVersion>()?;
-                        (String::from(name), Some(version))
-                    }
+                Some(fragment) => match parse_spec(&fragment)? {
+                    Some((name, ver)) => (name, ver),
                     None => {
                         if fragment.chars().next().unwrap().is_alphabetic() {
                             (String::from(fragment.as_str()), None)
@@ -215,6 +207,15 @@ impl PackageIdSpec {
     pub fn set_kind(&mut self, kind: SourceKind) {
         self.kind = Some(kind);
     }
+}
+
+fn parse_spec(spec: &str) -> Result<Option<(String, Option<PartialVersion>)>> {
+    let Some((name, ver)) = spec.split_once([':', '@']) else {
+        return Ok(None);
+    };
+    let name = name.to_owned();
+    let ver = ver.parse::<PartialVersion>()?;
+    Ok(Some((name, Some(ver))))
 }
 
 fn strip_url_protocol(url: &Url) -> Url {
