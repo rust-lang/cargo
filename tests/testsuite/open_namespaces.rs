@@ -328,6 +328,96 @@ fn main() {}
 }
 
 #[cargo_test]
+fn generate_pkgid_with_namespace() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["open-namespaces"]
+
+                [package]
+                name = "foo::bar"
+                version = "0.0.1"
+                edition = "2015"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .masquerade_as_nightly_cargo(&["open-namespaces"])
+        .run();
+    p.cargo("pkgid")
+        .masquerade_as_nightly_cargo(&["open-namespaces"])
+        .with_stdout_data(str![[r#"
+path+[ROOTURL]/foo#foo::bar@0.0.1
+
+"#]])
+        .with_stderr_data("")
+        .run()
+}
+
+#[cargo_test]
+fn update_spec_accepts_namespaced_name() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["open-namespaces"]
+
+                [package]
+                name = "foo::bar"
+                version = "0.0.1"
+                edition = "2015"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .masquerade_as_nightly_cargo(&["open-namespaces"])
+        .run();
+    p.cargo("update foo::bar")
+        .masquerade_as_nightly_cargo(&["open-namespaces"])
+        .with_stdout_data(str![""])
+        .with_stderr_data(str![[r#"
+[LOCKING] 0 packages to latest compatible versions
+
+"#]])
+        .run()
+}
+
+#[cargo_test]
+fn update_spec_accepts_namespaced_pkgid() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["open-namespaces"]
+
+                [package]
+                name = "foo::bar"
+                version = "0.0.1"
+                edition = "2015"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .masquerade_as_nightly_cargo(&["open-namespaces"])
+        .run();
+    p.cargo(&format!("update path+{}#foo::bar@0.0.1", p.url()))
+        .masquerade_as_nightly_cargo(&["open-namespaces"])
+        .with_stdout_data(str![""])
+        .with_stderr_data(str![[r#"
+[LOCKING] 0 packages to latest compatible versions
+
+"#]])
+        .run()
+}
+
+#[cargo_test]
 #[cfg(unix)] // until we get proper packaging support
 fn publish_namespaced() {
     use cargo_test_support::registry::RegistryBuilder;
