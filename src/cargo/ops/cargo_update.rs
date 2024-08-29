@@ -757,30 +757,30 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
     }
 
     let version_req = package_id.version().to_caret_req();
-    if let Some(version) = possibilities
+    if let Some(summary) = possibilities
         .iter()
         .map(|s| s.as_summary())
         .filter(|s| package_id.version() != s.version() && version_req.matches(s.version()))
-        .map(|s| s.version().clone())
-        .max()
+        .max_by_key(|s| s.version())
     {
         let warn = style::WARN;
+        let version = summary.version();
         let report = format!(" {warn}(latest compatible: v{version}){warn:#}");
         return Some(report);
     }
 
-    if let Some(version) = possibilities
+    if let Some(summary) = possibilities
         .iter()
         .map(|s| s.as_summary())
         .filter(|s| is_latest(s.version(), package_id.version()))
-        .map(|s| s.version().clone())
-        .max()
+        .max_by_key(|s| s.version())
     {
         let warn = if change.is_transitive.unwrap_or(true) {
             Default::default()
         } else {
             style::WARN
         };
+        let version = summary.version();
         let report = format!(" {warn}(latest: v{version}){warn:#}");
         return Some(report);
     }
