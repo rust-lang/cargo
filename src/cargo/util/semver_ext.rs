@@ -5,7 +5,15 @@ use std::fmt::{self, Display};
 pub trait VersionExt {
     fn is_prerelease(&self) -> bool;
 
-    fn to_exact_req(&self) -> VersionReq;
+    fn to_req(&self, op: Op) -> VersionReq;
+
+    fn to_exact_req(&self) -> VersionReq {
+        self.to_req(Op::Exact)
+    }
+
+    fn to_caret_req(&self) -> VersionReq {
+        self.to_req(Op::Caret)
+    }
 }
 
 impl VersionExt for Version {
@@ -13,10 +21,10 @@ impl VersionExt for Version {
         !self.pre.is_empty()
     }
 
-    fn to_exact_req(&self) -> VersionReq {
+    fn to_req(&self, op: Op) -> VersionReq {
         VersionReq {
             comparators: vec![Comparator {
-                op: Op::Exact,
+                op,
                 major: self.major,
                 minor: Some(self.minor),
                 patch: Some(self.patch),

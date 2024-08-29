@@ -33,7 +33,7 @@ fn simple() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package
-[ADDING] dep v1.0.0 (latest: v1.1.0)
+[ADDING] dep v1.0.0 (latest compatible: v1.1.0)
 
 "#]])
         .run();
@@ -122,7 +122,7 @@ fn yanked() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package
-[ADDING] dep v1.1.0 (latest: v1.2.0)
+[ADDING] dep v1.1.0 (latest compatible: v1.2.0)
 
 "#]])
         .run();
@@ -176,7 +176,7 @@ fn indirect() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages
-[ADDING] direct v1.0.0 (latest: v1.1.0)
+[ADDING] direct v1.0.0 (latest compatible: v1.1.0)
 
 "#]])
         .run();

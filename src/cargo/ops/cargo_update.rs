@@ -523,9 +523,8 @@ fn print_lockfile_generation(
                     vec![]
                 };
 
-                let package_id = change.package_id;
                 let required_rust_version = report_required_rust_version(resolve, change);
-                let latest = report_latest(&possibilities, package_id);
+                let latest = report_latest(&possibilities, change);
                 let note = required_rust_version.or(latest);
 
                 if let Some(note) = note {
@@ -587,9 +586,8 @@ fn print_lockfile_sync(
                     vec![]
                 };
 
-                let package_id = change.package_id;
                 let required_rust_version = report_required_rust_version(resolve, change);
-                let latest = report_latest(&possibilities, package_id);
+                let latest = report_latest(&possibilities, change);
                 let note = required_rust_version.or(latest).unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
@@ -641,9 +639,8 @@ fn print_lockfile_updates(
             PackageChangeKind::Added
             | PackageChangeKind::Upgraded
             | PackageChangeKind::Downgraded => {
-                let package_id = change.package_id;
                 let required_rust_version = report_required_rust_version(resolve, change);
-                let latest = report_latest(&possibilities, package_id);
+                let latest = report_latest(&possibilities, change);
                 let note = required_rust_version.or(latest).unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
@@ -660,9 +657,8 @@ fn print_lockfile_updates(
                 )?;
             }
             PackageChangeKind::Unchanged => {
-                let package_id = change.package_id;
                 let required_rust_version = report_required_rust_version(resolve, change);
-                let latest = report_latest(&possibilities, package_id);
+                let latest = report_latest(&possibilities, change);
                 let note = required_rust_version.as_deref().or(latest.as_deref());
 
                 if let Some(note) = note {
@@ -754,23 +750,42 @@ fn report_required_rust_version(resolve: &Resolve, change: &PackageChange) -> Op
     ))
 }
 
-fn report_latest(possibilities: &[IndexSummary], package: PackageId) -> Option<String> {
-    if !package.source_id().is_registry() {
+fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Option<String> {
+    let package_id = change.package_id;
+    if !package_id.source_id().is_registry() {
         return None;
     }
 
-    possibilities
+    let version_req = package_id.version().to_caret_req();
+    if let Some(version) = possibilities
         .iter()
         .map(|s| s.as_summary())
-        .filter(|s| is_latest(s.version(), package.version()))
+        .filter(|s| package_id.version() != s.version() && version_req.matches(s.version()))
         .map(|s| s.version().clone())
         .max()
-        .map(format_latest)
-}
+    {
+        let warn = style::WARN;
+        let report = format!(" {warn}(latest compatible: v{version}){warn:#}");
+        return Some(report);
+    }
 
-fn format_latest(version: semver::Version) -> String {
-    let warn = style::WARN;
-    format!(" {warn}(latest: v{version}){warn:#}")
+    if let Some(version) = possibilities
+        .iter()
+        .map(|s| s.as_summary())
+        .filter(|s| is_latest(s.version(), package_id.version()))
+        .map(|s| s.version().clone())
+        .max()
+    {
+        let warn = if change.is_transitive.unwrap_or(true) {
+            Default::default()
+        } else {
+            style::WARN
+        };
+        let report = format!(" {warn}(latest: v{version}){warn:#}");
+        return Some(report);
+    }
+
+    None
 }
 
 fn is_latest(candidate: &semver::Version, current: &semver::Version) -> bool {
@@ -803,13 +818,14 @@ struct PackageChange {
     previous_id: Option<PackageId>,
     kind: PackageChangeKind,
     is_member: Option<bool>,
+    is_transitive: Option<bool>,
     required_rust_version: Option<PartialVersion>,
 }
 
 impl PackageChange {
     pub fn new(ws: &Workspace<'_>, resolve: &Resolve) -> IndexMap<PackageId, Self> {
         let diff = PackageDiff::new(resolve);
-        Self::with_diff(diff, ws)
+        Self::with_diff(diff, ws, resolve)
     }
 
     pub fn diff(
@@ -818,12 +834,13 @@ impl PackageChange {
         resolve: &Resolve,
     ) -> IndexMap<PackageId, Self> {
         let diff = PackageDiff::diff(previous_resolve, resolve);
-        Self::with_diff(diff, ws)
+        Self::with_diff(diff, ws, resolve)
     }
 
     fn with_diff(
         diff: impl Iterator<Item = PackageDiff>,
         ws: &Workspace<'_>,
+        resolve: &Resolve,
     ) -> IndexMap<PackageId, Self> {
         let member_ids: HashSet<_> = ws.members().map(|p| p.package_id()).collect();
 
@@ -842,11 +859,13 @@ impl PackageChange {
                     PackageChangeKind::Upgraded
                 };
                 let is_member = Some(member_ids.contains(&package_id));
+                let is_transitive = Some(true);
                 let change = Self {
                     package_id,
                     previous_id: Some(previous_id),
                     kind,
                     is_member,
+                    is_transitive,
                     required_rust_version: None,
                 };
                 changes.insert(change.package_id, change);
@@ -854,11 +873,13 @@ impl PackageChange {
                 for package_id in diff.removed {
                     let kind = PackageChangeKind::Removed;
                     let is_member = None;
+                    let is_transitive = None;
                     let change = Self {
                         package_id,
                         previous_id: None,
                         kind,
                         is_member,
+                        is_transitive,
                         required_rust_version: None,
                     };
                     changes.insert(change.package_id, change);
@@ -866,11 +887,13 @@ impl PackageChange {
                 for package_id in diff.added {
                     let kind = PackageChangeKind::Added;
                     let is_member = Some(member_ids.contains(&package_id));
+                    let is_transitive = Some(true);
                     let change = Self {
                         package_id,
                         previous_id: None,
                         kind,
                         is_member,
+                        is_transitive,
                         required_rust_version: None,
                     };
                     changes.insert(change.package_id, change);
@@ -879,14 +902,29 @@ impl PackageChange {
             for package_id in diff.unchanged {
                 let kind = PackageChangeKind::Unchanged;
                 let is_member = Some(member_ids.contains(&package_id));
+                let is_transitive = Some(true);
                 let change = Self {
                     package_id,
                     previous_id: None,
                     kind,
                     is_member,
+                    is_transitive,
                     required_rust_version: None,
                 };
                 changes.insert(change.package_id, change);
+            }
+        }
+
+        for member_id in &member_ids {
+            let Some(change) = changes.get_mut(member_id) else {
+                continue;
+            };
+            change.is_transitive = Some(false);
+            for (direct_dep_id, _) in resolve.deps(*member_id) {
+                let Some(change) = changes.get_mut(&direct_dep_id) else {
+                    continue;
+                };
+                change.is_transitive = Some(false);
             }
         }
 
