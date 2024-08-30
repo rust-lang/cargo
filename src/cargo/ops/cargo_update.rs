@@ -757,9 +757,20 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
     }
 
     let version_req = package_id.version().to_caret_req();
+    let required_rust_version = change.required_rust_version.as_ref();
+
     if let Some(summary) = possibilities
         .iter()
         .map(|s| s.as_summary())
+        .filter(|s| {
+            if let (Some(summary_rust_version), Some(required_rust_version)) =
+                (s.rust_version(), required_rust_version)
+            {
+                summary_rust_version.is_compatible_with(required_rust_version)
+            } else {
+                true
+            }
+        })
         .filter(|s| package_id.version() != s.version() && version_req.matches(s.version()))
         .max_by_key(|s| s.version())
     {
@@ -772,6 +783,15 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
     if let Some(summary) = possibilities
         .iter()
         .map(|s| s.as_summary())
+        .filter(|s| {
+            if let (Some(summary_rust_version), Some(required_rust_version)) =
+                (s.rust_version(), required_rust_version)
+            {
+                summary_rust_version.is_compatible_with(required_rust_version)
+            } else {
+                true
+            }
+        })
         .filter(|s| is_latest(s.version(), package_id.version()))
         .max_by_key(|s| s.version())
     {
@@ -782,6 +802,38 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
         };
         let version = summary.version();
         let report = format!(" {warn}(available: v{version}){warn:#}");
+        return Some(report);
+    }
+
+    if let Some(summary) = possibilities
+        .iter()
+        .map(|s| s.as_summary())
+        .filter(|s| package_id.version() != s.version() && version_req.matches(s.version()))
+        .max_by_key(|s| s.version())
+    {
+        let msrv_note = summary
+            .rust_version()
+            .map(|rv| format!(", requires Rust {rv}"))
+            .unwrap_or_default();
+        let warn = style::NOP;
+        let version = summary.version();
+        let report = format!(" {warn}(available: v{version}{msrv_note}){warn:#}");
+        return Some(report);
+    }
+
+    if let Some(summary) = possibilities
+        .iter()
+        .map(|s| s.as_summary())
+        .filter(|s| is_latest(s.version(), package_id.version()))
+        .max_by_key(|s| s.version())
+    {
+        let msrv_note = summary
+            .rust_version()
+            .map(|rv| format!(", requires Rust {rv}"))
+            .unwrap_or_default();
+        let warn = style::NOP;
+        let version = summary.version();
+        let report = format!(" {warn}(available: v{version}{msrv_note}){warn:#}");
         return Some(report);
     }
 
