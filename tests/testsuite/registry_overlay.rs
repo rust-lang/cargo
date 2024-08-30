@@ -252,7 +252,7 @@ fn registry_dep_depends_on_new_local_package() {
             "\
 [UPDATING] [..]
 [LOCKING] 3 packages to latest compatible versions
-[ADDING] workspace-package v0.0.1 (latest: v0.1.1)
+[ADDING] workspace-package v0.0.1 (available: v0.1.1)
 [DOWNLOADING] crates ...
 [UNPACKING] [..]
 [DOWNLOADED] [..]

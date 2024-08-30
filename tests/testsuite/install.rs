@@ -2514,7 +2514,7 @@ fn self_referential() {
 [DOWNLOADED] foo v0.0.2 (registry `dummy-registry`)
 [INSTALLING] foo v0.0.2
 [LOCKING] 1 package to latest compatible version
-[ADDING] foo v0.0.1 (latest: v0.0.2)
+[ADDING] foo v0.0.1 (available: v0.0.2)
 [DOWNLOADING] crates ...
 [DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
 [COMPILING] foo v0.0.1

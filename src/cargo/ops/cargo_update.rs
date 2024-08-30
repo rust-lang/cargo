@@ -765,7 +765,7 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
     {
         let warn = style::WARN;
         let version = summary.version();
-        let report = format!(" {warn}(latest compatible: v{version}){warn:#}");
+        let report = format!(" {warn}(available: v{version}){warn:#}");
         return Some(report);
     }
 
@@ -781,7 +781,7 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
             style::WARN
         };
         let version = summary.version();
-        let report = format!(" {warn}(latest: v{version}){warn:#}");
+        let report = format!(" {warn}(available: v{version}){warn:#}");
         return Some(report);
     }
 

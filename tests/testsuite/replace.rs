@@ -465,7 +465,7 @@ fn use_a_spec_to_select() {
 [UPDATING] `dummy-registry` index
 [UPDATING] git repository `[ROOTURL]/override`
 [LOCKING] 4 packages to latest compatible versions
-[ADDING] baz v0.1.1 (latest: v0.2.0)
+[ADDING] baz v0.1.1 (available: v0.2.0)
 [DOWNLOADING] crates ...
 [DOWNLOADED] baz v0.1.1 (registry `dummy-registry`)
 [DOWNLOADED] bar v0.1.1 (registry `dummy-registry`)

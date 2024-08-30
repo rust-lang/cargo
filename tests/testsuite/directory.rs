@@ -329,7 +329,7 @@ fn multiple() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
-[ADDING] bar v0.1.0 (latest: v0.2.0)
+[ADDING] bar v0.1.0 (available: v0.2.0)
 [CHECKING] bar v0.1.0
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

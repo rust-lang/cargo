@@ -697,7 +697,7 @@ fn share_dependencies() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-[ADDING] dep1 v0.1.3 (latest compatible: v0.1.8)
+[ADDING] dep1 v0.1.3 (available: v0.1.8)
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep1 v0.1.3 (registry `dummy-registry`)
 [CHECKING] dep1 v0.1.3

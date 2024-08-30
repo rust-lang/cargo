@@ -1,4 +1,4 @@
-<svg width="844px" height="128px" xmlns="http://www.w3.org/2000/svg">
+<svg width="869px" height="128px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
@@ -28,7 +28,7 @@
 </tspan>
     <tspan x="10px" y="82px"><tspan class="fg-green bold">     Locking</tspan><tspan> 1 package to latest compatible version</tspan>
 </tspan>
-    <tspan x="10px" y="100px"><tspan class="fg-cyan bold">      Adding</tspan><tspan> cargo-list-test-fixture-dependency v20.0.0+my-package </tspan><tspan class="fg-yellow bold">(latest: v99999.0.0+my-package)</tspan>
+    <tspan x="10px" y="100px"><tspan class="fg-cyan bold">      Adding</tspan><tspan> cargo-list-test-fixture-dependency v20.0.0+my-package </tspan><tspan class="fg-yellow bold">(available: v99999.0.0+my-package)</tspan>
 </tspan>
     <tspan x="10px" y="118px">
 </tspan>
