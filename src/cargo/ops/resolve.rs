@@ -813,7 +813,7 @@ fn register_patch_entries(
 ) -> CargoResult<HashSet<PackageId>> {
     let mut avoid_patch_ids = HashSet::new();
     for (url, patches) in ws.root_patch()?.iter() {
-        for patch in patches {
+        for (patch, _) in patches {
             version_prefs.prefer_dependency(patch.clone());
         }
         let Some(previous) = previous else {
@@ -832,7 +832,8 @@ fn register_patch_entries(
         // previous resolve graph, which is primarily what's done here to
         // build the `registrations` list.
         let mut registrations = Vec::new();
-        for dep in patches {
+        for dep_with_location in patches {
+            let (dep, _) = dep_with_location;
             let candidates = || {
                 previous
                     .iter()
@@ -897,7 +898,7 @@ fn register_patch_entries(
                 }
             };
 
-            registrations.push((dep, lock));
+            registrations.push((dep_with_location, lock));
         }
 
         let canonical = CanonicalUrl::new(url)?;

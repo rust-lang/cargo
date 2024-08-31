@@ -465,7 +465,7 @@ fn build_path_deps(
         build_pkg(member, ws, &mut ret, &mut visited);
     }
     for deps in ws.root_patch()?.values() {
-        for dep in deps {
+        for (dep, _) in deps {
             build_dep(dep, ws, &mut ret, &mut visited);
         }
     }

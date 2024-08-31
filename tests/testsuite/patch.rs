@@ -1438,7 +1438,7 @@ fn replace_with_crates_io() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
+[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index` specified in `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   patch for `bar` in `https://github.com/rust-lang/crates.io-index` points to the same source, but patches must point to different sources
@@ -2140,7 +2140,7 @@ fn too_many_matches() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
-[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
+[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index` specified in `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
@@ -2182,7 +2182,7 @@ fn no_matches() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
+[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index` specified in `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
@@ -2221,7 +2221,7 @@ fn mismatched_version() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
+[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index` specified in `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve
@@ -2331,7 +2331,7 @@ fn patch_walks_backwards_restricted() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index`
+[ERROR] failed to resolve patches for `https://github.com/rust-lang/crates.io-index` specified in `[ROOT]/foo/Cargo.toml`
 
 Caused by:
   patch for `bar` in `https://github.com/rust-lang/crates.io-index` failed to resolve

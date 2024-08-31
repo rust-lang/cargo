@@ -29,8 +29,8 @@ use crate::util::lints::{
 };
 use crate::util::toml::{read_manifest, InheritableFields};
 use crate::util::{
-    context::CargoResolverConfig, context::ConfigRelativePath, context::IncompatibleRustVersions,
-    Filesystem, GlobalContext, IntoUrl,
+    context::CargoResolverConfig, context::ConfigKey, context::ConfigRelativePath,
+    context::Definition, context::IncompatibleRustVersions, Filesystem, GlobalContext, IntoUrl,
 };
 use cargo_util::paths;
 use cargo_util::paths::normalize_path;
@@ -134,6 +134,28 @@ struct Packages<'gctx> {
 pub enum MaybePackage {
     Package(Package),
     Virtual(VirtualManifest),
+}
+
+#[derive(Clone, Debug)]
+pub enum PathOrDefinition {
+    Path(PathBuf),
+    Definition(Definition),
+}
+
+impl PathOrDefinition {
+    pub fn get_location_string(&self) -> String {
+        match self {
+            PathOrDefinition::Path(path) => path.to_string_lossy().into_owned(),
+            PathOrDefinition::Definition(def) => match def {
+                Definition::Path(path) => path.to_string_lossy().into_owned(),
+                Definition::Environment(env) => env.clone(),
+                Definition::Cli(cli) => match cli {
+                    Some(path) => path.to_string_lossy().into_owned(),
+                    None => String::from("cli"),
+                },
+            },
+        }
+    }
 }
 
 /// Configuration of a workspace in a manifest.
@@ -506,16 +528,47 @@ impl<'gctx> Workspace<'gctx> {
     /// Returns the root `[patch]` section of this workspace.
     ///
     /// This may be from a virtual crate or an actual crate.
-    pub fn root_patch(&self) -> CargoResult<HashMap<Url, Vec<Dependency>>> {
-        let from_manifest = match self.root_maybe() {
+    pub fn root_patch(&self) -> CargoResult<HashMap<Url, Vec<(Dependency, PathOrDefinition)>>> {
+        let manifest_path = PathOrDefinition::Path(self.root_manifest().into());
+        let patch_from_manifest = match self.root_maybe() {
             MaybePackage::Package(p) => p.manifest().patch(),
             MaybePackage::Virtual(vm) => vm.patch(),
         };
 
-        let from_config = self.config_patch()?;
+        let mut from_manifest: HashMap<_, Vec<_>> = HashMap::new();
+        for (url, dep) in patch_from_manifest {
+            from_manifest.insert(
+                url.clone(),
+                dep.iter()
+                    .map(|dep| (dep.clone(), manifest_path.clone()))
+                    .collect(),
+            );
+        }
+
+        let patch_cv = self.gctx.get_cv_with_env(&ConfigKey::from_str("patch"))?;
+
+        // Insert location information for each dep in the patch
+        let mut from_config: HashMap<_, Vec<_>> = HashMap::new();
+        for (url, dep) in self.config_patch()? {
+            from_config.insert(
+                url,
+                dep.iter()
+                    .map(|dep| {
+                        (
+                            dep.clone(),
+                            PathOrDefinition::Definition(
+                                patch_cv.as_ref().unwrap().definition().clone(),
+                            ),
+                        )
+                    })
+                    .collect(),
+            );
+        }
+
         if from_config.is_empty() {
             return Ok(from_manifest.clone());
         }
+
         if from_manifest.is_empty() {
             return Ok(from_config);
         }
@@ -524,15 +577,19 @@ impl<'gctx> Workspace<'gctx> {
         // but that's not quite right as it won't deal with overlaps.
         let mut combined = from_config;
         for (url, deps_from_manifest) in from_manifest {
-            if let Some(deps_from_config) = combined.get_mut(url) {
+            if let Some(deps_from_config) = combined.get_mut(&url) {
                 // We want from_config to take precedence for each patched name.
                 // NOTE: This is inefficient if the number of patches is large!
                 let mut from_manifest_pruned = deps_from_manifest.clone();
-                for dep_from_config in &mut *deps_from_config {
-                    if let Some(i) = from_manifest_pruned.iter().position(|dep_from_manifest| {
-                        // XXX: should this also take into account version numbers?
-                        dep_from_config.name_in_toml() == dep_from_manifest.name_in_toml()
-                    }) {
+                for (dep_from_config, _) in &mut *deps_from_config {
+                    if let Some(i) =
+                        from_manifest_pruned
+                            .iter()
+                            .position(|(dep_from_manifest, _)| {
+                                // XXX: should this also take into account version numbers?
+                                dep_from_config.name_in_toml() == dep_from_manifest.name_in_toml()
+                            })
+                    {
                         from_manifest_pruned.swap_remove(i);
                     }
                 }

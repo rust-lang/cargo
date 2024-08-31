@@ -12,6 +12,7 @@
 use std::collections::{HashMap, HashSet};
 use std::task::{ready, Poll};
 
+use crate::core::workspace::PathOrDefinition;
 use crate::core::PackageSet;
 use crate::core::{Dependency, PackageId, SourceId, Summary};
 use crate::sources::config::SourceConfigMap;
@@ -176,7 +177,10 @@ enum Kind {
 ///   It is the patch locked to a specific version found in Cargo.lock.
 ///   This will be `None` if `Cargo.lock` doesn't exist,
 ///   or the patch did not match any existing entries in `Cargo.lock`.
-pub type PatchDependency<'a> = (&'a Dependency, Option<LockedPatchDependency>);
+pub type PatchDependency<'a> = (
+    &'a (Dependency, PathOrDefinition),
+    Option<LockedPatchDependency>,
+);
 
 /// Argument to [`PackageRegistry::patch`] which is information about a `[patch]`
 /// directive that we found in a lockfile, if present.
@@ -366,12 +370,12 @@ impl<'gctx> PackageRegistry<'gctx> {
         while !patch_deps_remaining.is_empty() {
             let mut patch_deps_pending = Vec::new();
             for patch_dep_remaining in patch_deps_remaining {
-                let (orig_patch, locked) = patch_dep_remaining;
+                let ((orig_patch, patch_location), locked) = patch_dep_remaining;
 
                 // Use the locked patch if it exists, otherwise use the original.
                 let dep = match locked {
                     Some(lock) => &lock.dependency,
-                    None => *orig_patch,
+                    None => orig_patch,
                 };
                 debug!(
                     "registering a patch for `{}` with `{}`",
@@ -393,8 +397,9 @@ impl<'gctx> PackageRegistry<'gctx> {
                 self.ensure_loaded(dep.source_id(), Kind::Normal)
                     .with_context(|| {
                         format!(
-                            "failed to load source for dependency `{}`",
-                            dep.package_name()
+                            "failed to load source for dependency `{}` specified in `{}`",
+                            dep.package_name(),
+                            patch_location.get_location_string(),
                         )
                     })?;
 
@@ -428,14 +433,20 @@ impl<'gctx> PackageRegistry<'gctx> {
                             url,
                         )
                     })
-                    .with_context(|| format!("failed to resolve patches for `{}`", url))?;
+                    .with_context(|| {
+                        format!(
+                            "failed to resolve patches for `{}` specified in `{}`",
+                            url,
+                            patch_location.get_location_string()
+                        )
+                    })?;
 
                 debug!(
                     "patch summary is {:?} should_unlock={:?}",
                     summary, should_unlock
                 );
                 if let Some(unlock_id) = should_unlock {
-                    unlock_patches.push(((*orig_patch).clone(), unlock_id));
+                    unlock_patches.push((orig_patch.clone(), unlock_id));
                 }
 
                 if *summary.package_id().source_id().canonical_url() == canonical {
@@ -445,7 +456,11 @@ impl<'gctx> PackageRegistry<'gctx> {
                         dep.package_name(),
                         url
                     )
-                    .context(format!("failed to resolve patches for `{}`", url)));
+                    .context(format!(
+                        "failed to resolve patches for `{}` specified in `{}`",
+                        url,
+                        patch_location.get_location_string()
+                    )));
                 }
                 unlocked_summaries.push(summary);
             }
