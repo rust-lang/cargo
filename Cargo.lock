@@ -2550,9 +2550,9 @@ dependencies = [
 
 [[package]]
 name = "pasetors"
-version = "0.6.8"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b36d47c66f2230dd1b7143d9afb2b4891879020210eddf2ccb624e529b96dba"
+checksum = "b719f62f9b77cfadf01500984ab26c7bda71b3f1e497e9dbb055ff466dbe2a86"
 dependencies = [
  "ct-codecs",
  "ed25519-compact",
