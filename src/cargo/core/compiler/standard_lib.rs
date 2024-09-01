@@ -124,7 +124,6 @@ pub fn generate_std_roots(
     crates: &[String],
     std_resolve: &Resolve,
     std_features: &ResolvedFeatures,
-    kinds: &[CompileKind],
     package_set: &PackageSet<'_>,
     interner: &UnitInterner,
     profiles: &Profiles,
@@ -150,7 +149,7 @@ pub fn generate_std_roots(
         // significant.
         let mode = CompileMode::Build;
         let features = std_features.activated_features(pkg.package_id(), FeaturesFor::NormalOrDev);
-        for kind in kinds {
+        for kind in target_data.requested_kinds() {
             let list = ret.entry(*kind).or_insert_with(Vec::new);
             let unit_for = UnitFor::new_normal(*kind);
             let profile = profiles.get_profile(

@@ -915,7 +915,7 @@ impl<'gctx> RustcTargetData<'gctx> {
         let mut res = RustcTargetData {
             rustc,
             gctx,
-            requested_kinds: requested_kinds.into(),
+            requested_kinds: Vec::new(),
             host_config,
             host_info,
             target_config,
@@ -948,6 +948,7 @@ impl<'gctx> RustcTargetData<'gctx> {
             }));
         for kind in all_kinds {
             res.merge_compile_kind(kind)?;
+            res.requested_kinds.push(kind);
         }
 
         Ok(res)
@@ -1022,6 +1023,10 @@ impl<'gctx> RustcTargetData<'gctx> {
             CompileKind::Host => &self.host_config,
             CompileKind::Target(s) => &self.target_config[&s],
         }
+    }
+
+    pub fn requested_kinds(&self) -> &[CompileKind] {
+        &self.requested_kinds
     }
 }
 

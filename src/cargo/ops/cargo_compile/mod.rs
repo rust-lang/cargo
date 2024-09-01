@@ -343,14 +343,6 @@ pub fn create_bcx<'a, 'gctx>(
     // assuming `--target $HOST` was specified. See
     // `rebuild_unit_graph_shared` for more on why this is done.
     let explicit_host_kind = CompileKind::Target(CompileTarget::new(&target_data.rustc.host)?);
-    let explicit_host_kinds: Vec<_> = build_config
-        .requested_kinds
-        .iter()
-        .map(|kind| match kind {
-            CompileKind::Host => explicit_host_kind,
-            CompileKind::Target(t) => CompileKind::Target(*t),
-        })
-        .collect();
 
     // Passing `build_config.requested_kinds` instead of
     // `explicit_host_kinds` here so that `generate_root_units` can do
@@ -396,7 +388,6 @@ pub fn create_bcx<'a, 'gctx>(
             &crates,
             std_resolve,
             std_features,
-            &explicit_host_kinds,
             &pkg_set,
             interner,
             &profiles,
