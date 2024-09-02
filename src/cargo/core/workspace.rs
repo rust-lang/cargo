@@ -577,7 +577,7 @@ impl<'gctx> Workspace<'gctx> {
     }
 
     /// Returns an iterator over default packages in this workspace
-    pub fn default_members<'a>(&'a self) -> impl Iterator<Item = &Package> {
+    pub fn default_members<'a>(&'a self) -> impl Iterator<Item = &'a Package> {
         let packages = &self.packages;
         self.default_members
             .iter()
