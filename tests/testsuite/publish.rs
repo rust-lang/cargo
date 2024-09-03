@@ -961,7 +961,6 @@ fn publish_failed_with_index_and_only_allowed_registry() {
         .arg(registry.index_url().as_str())
         .with_status(101)
         .with_stderr_data(str![[r#"
-[NOTE] found `alternative` as only allowed registry. Publishing to it automatically.
 [ERROR] command-line argument --index requires --token to be specified
 
 "#]])
@@ -995,8 +994,7 @@ fn publish_fail_with_no_registry_specified() {
     p.cargo("publish")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] `foo` cannot be published.
-The registry `crates-io` is not listed in the `package.publish` value in Cargo.toml.
+[ERROR] --registry is required to disambiguate between "alternative" or "test" registries
 
 "#]])
         .run();
