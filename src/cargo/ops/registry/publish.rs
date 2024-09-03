@@ -103,7 +103,6 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     // This causes the credential provider to be called an extra time, but keeps the same order of errors.
     let (pkg, cli_features) = pkgs.pop().unwrap();
     let ver = pkg.version().to_string();
-    let operation = Operation::Read;
 
     let source_ids = super::get_source_id(opts.gctx, reg_or_index.as_ref())?;
     let mut registry = super::registry(
@@ -112,7 +111,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         opts.token.as_ref().map(Secret::as_deref),
         reg_or_index.as_ref(),
         true,
-        Some(operation).filter(|_| !opts.dry_run),
+        Some(Operation::Read).filter(|_| !opts.dry_run),
     )?;
     verify_dependencies(pkg, &registry, source_ids.original)?;
 
