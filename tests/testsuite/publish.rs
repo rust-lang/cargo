@@ -3173,6 +3173,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
+[UPLOADED] foo v0.0.1 to registry `crates-io`
 
 "#]])
         .run();
@@ -3305,7 +3306,26 @@ fn timeout_waiting_for_dependency_publish() {
         .masquerade_as_nightly_cargo(&["publish-timeout", "package-workspace"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] the `-p` argument must be specified to select a single package to publish
+[UPDATING] crates.io index
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] dep v0.0.1 ([ROOT]/foo/dep)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] main v0.0.1 ([ROOT]/foo/main)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] other v0.0.1 ([ROOT]/foo/other)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] dep v0.0.1 ([ROOT]/foo/dep)
+[UPLOADED] dep v0.0.1 to registry `crates-io`
+[NOTE] waiting for `dep v0.0.1` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[WARNING] timed out waiting for `dep v0.0.1` to be available in registry `crates-io`
+[NOTE] the registry may have a backlog that is delaying making the crate available. The crate should be available soon.
+[ERROR] unable to publish `main v0.0.1` and `other v0.0.1` due to time out while waiting for published dependencies to be available.
 
 "#]])
         .run();
@@ -3588,10 +3608,47 @@ fn workspace_with_local_deps_nightly() {
 
     p.cargo("publish -Zpackage-workspace")
         .masquerade_as_nightly_cargo(&["package-workspace"])
-        .with_status(101)
         .replace_crates_io(registry.index_url())
         .with_stderr_data(str![[r#"
-[ERROR] the `-p` argument must be specified to select a single package to publish
+[UPDATING] crates.io index
+[PACKAGING] level3 v0.0.1 ([ROOT]/foo/level3)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] level2 v0.0.1 ([ROOT]/foo/level2)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] level3 v0.0.1 ([ROOT]/foo/level3)
+[COMPILING] level3 v0.0.1 ([ROOT]/foo/target/package/level3-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] level2 v0.0.1 ([ROOT]/foo/level2)
+[UPDATING] crates.io index
+[UNPACKING] level3 v0.0.1 (registry `[ROOT]/foo/target/package/tmp-registry`)
+[COMPILING] level3 v0.0.1
+[COMPILING] level2 v0.0.1 ([ROOT]/foo/target/package/level2-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] level1 v0.0.1 ([ROOT]/foo/level1)
+[UPDATING] crates.io index
+[UNPACKING] level2 v0.0.1 (registry `[ROOT]/foo/target/package/tmp-registry`)
+[COMPILING] level3 v0.0.1
+[COMPILING] level2 v0.0.1
+[COMPILING] level1 v0.0.1 ([ROOT]/foo/target/package/level1-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADING] level3 v0.0.1 ([ROOT]/foo/level3)
+[UPLOADED] level3 v0.0.1 to registry `crates-io`
+[NOTE] waiting for `level3 v0.0.1` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] level3 v0.0.1 at registry `crates-io`
+[UPLOADING] level2 v0.0.1 ([ROOT]/foo/level2)
+[UPLOADED] level2 v0.0.1 to registry `crates-io`
+[NOTE] waiting for `level2 v0.0.1` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] level2 v0.0.1 at registry `crates-io`
+[UPLOADING] level1 v0.0.1 ([ROOT]/foo/level1)
+[UPLOADED] level1 v0.0.1 to registry `crates-io`
+[NOTE] waiting for `level1 v0.0.1` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] level1 v0.0.1 at registry `crates-io`
 
 "#]])
         .run();
@@ -3659,10 +3716,41 @@ fn workspace_parallel() {
     p.cargo("publish -Zpackage-workspace")
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .replace_crates_io(registry.index_url())
-        .with_status(101)
         .with_stderr_data(
             str![[r#"
-[ERROR] the `-p` argument must be specified to select a single package to publish
+[UPDATING] crates.io index
+[PACKAGING] a v0.0.1 ([ROOT]/foo/a)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] b v0.0.1 ([ROOT]/foo/b)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] c v0.0.1 ([ROOT]/foo/c)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] a v0.0.1 ([ROOT]/foo/a)
+[COMPILING] a v0.0.1 ([ROOT]/foo/target/package/a-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] b v0.0.1 ([ROOT]/foo/b)
+[COMPILING] b v0.0.1 ([ROOT]/foo/target/package/b-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] c v0.0.1 ([ROOT]/foo/c)
+[UPDATING] crates.io index
+[UNPACKING] a v0.0.1 (registry `[ROOT]/foo/target/package/tmp-registry`)
+[UNPACKING] b v0.0.1 (registry `[ROOT]/foo/target/package/tmp-registry`)
+[COMPILING] a v0.0.1
+[COMPILING] b v0.0.1
+[COMPILING] c v0.0.1 ([ROOT]/foo/target/package/c-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[UPLOADED] b v0.0.1 to registry `crates-io`
+[UPLOADED] a v0.0.1 to registry `crates-io`
+[NOTE] waiting for `a v0.0.1` or `b v0.0.1` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] a v0.0.1, b v0.0.1 at registry `crates-io`
+[UPLOADING] c v0.0.1 ([ROOT]/foo/c)
+[UPLOADED] c v0.0.1 to registry `crates-io`
+[NOTE] waiting for `c v0.0.1` to be available at registry `crates-io`.
+You may press ctrl-c to skip waiting; the crate should be available shortly.
+[PUBLISHED] c v0.0.1 at registry `crates-io`
+[UPLOADING] a v0.0.1 ([ROOT]/foo/a)
+[UPLOADING] b v0.0.1 ([ROOT]/foo/b)
 
 "#]]
             .unordered(),
@@ -3724,9 +3812,12 @@ fn workspace_missing_dependency() {
 [PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] b v0.0.1 ([ROOT]/foo/b)
 [UPDATING] crates.io index
-[ERROR] no matching package named `a` found
-location searched: registry `crates-io`
-required by package `b v0.0.1 ([ROOT]/foo/target/package/b-0.0.1)`
+[ERROR] failed to verify package tarball
+
+Caused by:
+  no matching package named `a` found
+  location searched: registry `crates-io`
+  required by package `b v0.0.1 ([ROOT]/foo/target/package/b-0.0.1)`
 
 "#]])
         .run();
@@ -3756,7 +3847,23 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
         .replace_crates_io(registry.index_url())
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] the `-p` argument must be specified to select a single package to publish
+[UPDATING] crates.io index
+[PACKAGING] a v0.0.1 ([ROOT]/foo/a)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] b v0.0.1 ([ROOT]/foo/b)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] a v0.0.1 ([ROOT]/foo/a)
+[COMPILING] a v0.0.1 ([ROOT]/foo/target/package/a-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] b v0.0.1 ([ROOT]/foo/b)
+[UPDATING] crates.io index
+[ERROR] failed to verify package tarball
+
+Caused by:
+  failed to get `a` as a dependency of package `b v0.0.1 ([ROOT]/foo/target/package/b-0.0.1)`
+
+Caused by:
+  found a package in the remote registry and the local overlay: a@0.0.1
 
 "#]])
         .run();
@@ -3817,7 +3924,8 @@ fn one_unpublishable_package() {
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] the `-p` argument must be specified to select a single package to publish
+[ERROR] `main` cannot be published.
+`package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.
 
 "#]])
         .run();

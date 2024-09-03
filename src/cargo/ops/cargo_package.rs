@@ -93,30 +93,6 @@ struct GitVcsInfo {
     dirty: bool,
 }
 
-/// Packages a single package in a workspace, returning the resulting tar file.
-///
-/// # Panics
-/// Panics if `opts.list` is true. In that case you probably don't want to
-/// actually build the package tarball; you should just make and print the list
-/// of files. (We don't currently provide a public API for that, but see how
-/// [`package`] does it.)
-pub fn package_one(
-    ws: &Workspace<'_>,
-    pkg: &Package,
-    opts: &PackageOpts<'_>,
-) -> CargoResult<FileLock> {
-    assert!(!opts.list);
-
-    let ar_files = prepare_archive(ws, pkg, opts)?;
-    let tarball = create_package(ws, pkg, ar_files, None)?;
-
-    if opts.verify {
-        run_verify(ws, pkg, &tarball, None, opts)?;
-    }
-
-    Ok(tarball)
-}
-
 // Builds a tarball and places it in the output directory.
 fn create_package(
     ws: &Workspace<'_>,
@@ -193,6 +169,34 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Vec<Fi
     // So we need filter
     pkgs.retain(|(pkg, _feats)| specs.iter().any(|spec| spec.matches(pkg.package_id())));
 
+    Ok(do_package(ws, opts, pkgs)?
+        .into_iter()
+        .map(|x| x.2)
+        .collect())
+}
+
+/// Packages an entire workspace.
+///
+/// Returns the generated package files and the dependencies between them. If
+/// `opts.list` is true, skips generating package files and returns an empty
+/// list.
+pub(crate) fn package_with_dep_graph(
+    ws: &Workspace<'_>,
+    opts: &PackageOpts<'_>,
+    pkgs: Vec<(&Package, CliFeatures)>,
+) -> CargoResult<LocalDependencies<(CliFeatures, FileLock)>> {
+    let output = do_package(ws, opts, pkgs)?;
+
+    Ok(local_deps(output.into_iter().map(
+        |(pkg, opts, tarball)| (pkg, (opts.cli_features, tarball)),
+    )))
+}
+
+fn do_package<'a>(
+    ws: &Workspace<'_>,
+    opts: &PackageOpts<'a>,
+    pkgs: Vec<(&Package, CliFeatures)>,
+) -> CargoResult<Vec<(Package, PackageOpts<'a>, FileLock)>> {
     if ws
         .lock_root()
         .as_path_unlocked()
@@ -264,7 +268,7 @@ pub fn package(ws: &Workspace<'_>, opts: &PackageOpts<'_>) -> CargoResult<Vec<Fi
         }
     }
 
-    Ok(outputs.into_iter().map(|x| x.2).collect())
+    Ok(outputs)
 }
 
 /// Determine which registry the packages are for.
@@ -308,15 +312,14 @@ fn get_registry(
 }
 
 /// Just the part of the dependency graph that's between the packages we're packaging.
-/// (Is the package name a good key? Does it uniquely identify packages?)
 #[derive(Clone, Debug, Default)]
-struct LocalDependencies {
-    packages: HashMap<PackageId, (Package, CliFeatures)>,
-    graph: Graph<PackageId, ()>,
+pub(crate) struct LocalDependencies<T> {
+    pub packages: HashMap<PackageId, (Package, T)>,
+    pub graph: Graph<PackageId, ()>,
 }
 
-impl LocalDependencies {
-    fn sort(&self) -> Vec<(Package, CliFeatures)> {
+impl<T: Clone> LocalDependencies<T> {
+    pub fn sort(&self) -> Vec<(Package, T)> {
         self.graph
             .sort()
             .into_iter()
@@ -335,9 +338,10 @@ impl LocalDependencies {
 /// ignoring dev dependencies.
 ///
 /// We assume that the packages all belong to this workspace.
-fn local_deps(packages: impl Iterator<Item = (Package, CliFeatures)>) -> LocalDependencies {
-    let packages: HashMap<PackageId, (Package, CliFeatures)> =
-        packages.map(|pkg| (pkg.0.package_id(), pkg)).collect();
+fn local_deps<T>(packages: impl Iterator<Item = (Package, T)>) -> LocalDependencies<T> {
+    let packages: HashMap<PackageId, (Package, T)> = packages
+        .map(|(pkg, payload)| (pkg.package_id(), (pkg, payload)))
+        .collect();
 
     // Dependencies have source ids but not package ids. We draw an edge
     // whenever a dependency's source id matches one of our packages. This is
@@ -349,7 +353,7 @@ fn local_deps(packages: impl Iterator<Item = (Package, CliFeatures)>) -> LocalDe
         .collect();
 
     let mut graph = Graph::new();
-    for (pkg, _features) in packages.values() {
+    for (pkg, _payload) in packages.values() {
         graph.add(pkg.package_id());
         for dep in pkg.dependencies() {
             // Ignore local dev-dependencies because they aren't needed for intra-workspace

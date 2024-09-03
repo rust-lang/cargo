@@ -76,8 +76,8 @@ fn publish() {
 {"v":1,"registry":{"index-url":"[..]","name":"alternative","headers":[..]},"kind":"get","operation":"read"}
 [PACKAGING] foo v0.1.0 ([ROOT]/foo)
 [PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-{"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"publish","name":"foo","vers":"0.1.0","cksum":"[..]"}
 [UPLOADING] foo v0.1.0 ([ROOT]/foo)
+{"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"publish","name":"foo","vers":"0.1.0","cksum":"[..]"}
 [UPLOADED] foo v0.1.0 to registry `alternative`
 [NOTE] waiting for `foo v0.1.0` to be available at registry `alternative`.
 You may press ctrl-c [..]
@@ -529,8 +529,8 @@ fn token_caching() {
 {"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"read"}
 [PACKAGING] foo v0.1.0 ([ROOT]/foo)
 [PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-{"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"publish","name":"foo","vers":"0.1.0","cksum":"[..]"}
 [UPLOADING] foo v0.1.0 ([ROOT]/foo)
+{"v":1,"registry":{"index-url":"[..]","name":"alternative"},"kind":"get","operation":"publish","name":"foo","vers":"0.1.0","cksum":"[..]"}
 [UPLOADED] foo v0.1.0 to registry `alternative`
 [NOTE] waiting [..]
 You may press ctrl-c [..]
