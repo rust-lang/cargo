@@ -37,7 +37,7 @@ cargo-util-schemas = { version = "0.6.0", path = "crates/cargo-util-schemas" }
 cargo_metadata = "0.18.1"
 clap = "4.5.11"
 color-print = "0.3.6"
-core-foundation = { version = "0.9.4", features = ["mac_os_10_7_support"] }
+core-foundation = { version = "0.10.0", features = ["mac_os_10_7_support"] }
 crates-io = { version = "0.40.4", path = "crates/crates-io" }
 criterion = { version = "0.5.1", features = ["html_reports"] }
 curl = "0.4.46"
