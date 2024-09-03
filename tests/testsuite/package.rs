@@ -6500,3 +6500,44 @@ Caused by:
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn in_package_workspace_with_members_with_features_old() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+                [workspace]
+                members = ["li"]
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "li/Cargo.toml",
+            r#"
+                [package]
+                name = "li"
+                version = "0.0.1"
+                edition = "2015"
+                rust-version = "1.69"
+                description = "li"
+                license = "MIT"
+            "#,
+        )
+        .file("li/src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("package -p li --no-verify")
+        .with_stderr_data(str![[r#"
+[WARNING] manifest has no documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] li v0.0.1 ([ROOT]/foo/li)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
+        .run();
+}
