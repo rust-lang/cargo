@@ -242,7 +242,7 @@ foo v0.0.1 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
-[ADDING] newer-and-older v1.5.0 (latest compatible: v1.6.0)
+[ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.65.0)
 [ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
 
 "#]])
@@ -319,7 +319,7 @@ foo v0.0.1 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
-[ADDING] newer-and-older v1.5.0 (latest compatible: v1.6.0)
+[ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.2345)
 [ADDING] only-newer v1.6.0 (requires Rust 1.2345)
 
 "#]])
@@ -490,7 +490,7 @@ higher v0.0.1 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest Rust 1.50.0 compatible versions
-[ADDING] newer-and-older v1.5.0 (latest compatible: v1.6.0)
+[ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.65.0)
 [ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
 
 "#]])
@@ -619,7 +619,7 @@ fn resolve_edition2024() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
-[ADDING] newer-and-older v1.5.0 (latest compatible: v1.6.0)
+[ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.65.0)
 [ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
 
 "#]])
@@ -723,7 +723,7 @@ fn resolve_v3() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
-[ADDING] newer-and-older v1.5.0 (latest compatible: v1.6.0)
+[ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.65.0)
 [ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
 
 "#]])
@@ -871,7 +871,7 @@ fn update_msrv_resolve() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest Rust 1.60.0 compatible version
-[ADDING] bar v1.5.0 (latest compatible: v1.6.0)
+[ADDING] bar v1.5.0 (available: v1.6.0, requires Rust 1.65.0)
 
 "#]])
         .run();
@@ -932,7 +932,7 @@ fn update_precise_overrides_msrv_resolver() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest Rust 1.60.0 compatible version
-[ADDING] bar v1.5.0 (latest compatible: v1.6.0)
+[ADDING] bar v1.5.0 (available: v1.6.0, requires Rust 1.65.0)
 
 "#]])
         .run();
@@ -1019,7 +1019,7 @@ foo v0.0.1 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
-[ADDING] newer-and-older v1.5.0 (latest compatible: v1.6.0)
+[ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.65.0)
 [ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
 [DOWNLOADING] crates ...
 [DOWNLOADED] newer-and-older v1.5.0 (registry `dummy-registry`)

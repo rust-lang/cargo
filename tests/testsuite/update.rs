@@ -1522,7 +1522,7 @@ fn report_behind() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-[UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.0)
+[UPDATING] breaking v0.1.0 -> v0.1.1 (available: v0.2.0)
 [NOTE] pass `--verbose` to see 2 unchanged dependencies behind latest
 [WARNING] not updating lockfile due to dry run
 
@@ -1533,9 +1533,9 @@ fn report_behind() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to latest compatible version
-[UPDATING] breaking v0.1.0 -> v0.1.1 (latest: v0.2.0)
-[UNCHANGED] pre v1.0.0-alpha.0 (latest compatible: v1.0.0-alpha.1)
-[UNCHANGED] two-ver v0.1.0 (latest: v0.2.0)
+[UPDATING] breaking v0.1.0 -> v0.1.1 (available: v0.2.0)
+[UNCHANGED] pre v1.0.0-alpha.0 (available: v1.0.0-alpha.1)
+[UNCHANGED] two-ver v0.1.0 (available: v0.2.0)
 [NOTE] to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`
 [WARNING] not updating lockfile due to dry run
 
@@ -1558,9 +1558,9 @@ fn report_behind() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 0 packages to latest compatible versions
-[UNCHANGED] breaking v0.1.1 (latest: v0.2.0)
-[UNCHANGED] pre v1.0.0-alpha.0 (latest compatible: v1.0.0-alpha.1)
-[UNCHANGED] two-ver v0.1.0 (latest: v0.2.0)
+[UNCHANGED] breaking v0.1.1 (available: v0.2.0)
+[UNCHANGED] pre v1.0.0-alpha.0 (available: v1.0.0-alpha.1)
+[UNCHANGED] two-ver v0.1.0 (available: v0.2.0)
 [NOTE] to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`
 [WARNING] not updating lockfile due to dry run
 
@@ -2008,8 +2008,8 @@ fn update_breaking() {
 [LOCKING] 4 packages to latest compatible versions
 [UPDATING] compatible v1.0.0 -> v1.0.1
 [UPDATING] less-than v1.0.0 -> v2.0.0
-[UPDATING] pinned v1.0.0 -> v1.0.1 (latest: v2.0.0)
-[UPDATING] renamed-from v1.0.0 -> v1.0.1 (latest: v2.0.0)
+[UPDATING] pinned v1.0.0 -> v1.0.1 (available: v2.0.0)
+[UPDATING] renamed-from v1.0.0 -> v1.0.1 (available: v2.0.0)
 
 "#]])
         .run();
@@ -2180,10 +2180,10 @@ fn update_breaking_specific_packages_that_wont_update() {
 [UPDATING] `[..]` index
 [LOCKING] 5 packages to latest compatible versions
 [UPDATING] compatible v1.0.0 -> v1.0.1
-[UPDATING] non-semver v1.0.0 -> v1.0.1 (latest: v2.0.0)
-[UPDATING] renamed-from v1.0.0 -> v1.0.1 (latest: v2.0.0)
+[UPDATING] non-semver v1.0.0 -> v1.0.1 (available: v2.0.0)
+[UPDATING] renamed-from v1.0.0 -> v1.0.1 (available: v2.0.0)
 [UPDATING] transitive-compatible v1.0.0 -> v1.0.1
-[UPDATING] transitive-incompatible v1.0.0 -> v1.0.1 (latest: v2.0.0)
+[UPDATING] transitive-incompatible v1.0.0 -> v1.0.1 (available: v2.0.0)
 
 "#]])
     .run();
@@ -2397,7 +2397,7 @@ fn update_breaking_spec_version_transitive() {
         .with_stderr_data(str![[r#"
 [UPDATING] `[..]` index
 [LOCKING] 1 package to latest compatible version
-[UPDATING] dep v1.1.0 -> v1.1.1 (latest: v2.0.0)
+[UPDATING] dep v1.1.0 -> v1.1.1 (available: v2.0.0)
 
 "#]])
         .run();

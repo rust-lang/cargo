@@ -35,7 +35,7 @@ fn minimal_version_cli() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 1 package to earliest compatible version
-[ADDING] dep v1.0.0 (latest compatible: v1.1.0)
+[ADDING] dep v1.0.0 (available: v1.1.0)
 
 "#]])
         .run();

@@ -207,7 +207,7 @@ fn collision_doc_multiple_versions() {
             str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest compatible versions
-[ADDING] bar v1.0.0 (latest: v2.0.0)
+[ADDING] bar v1.0.0 (available: v2.0.0)
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v2.0.0 (registry `dummy-registry`)
 [DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
@@ -503,7 +503,7 @@ fn collision_doc_target() {
             str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 3 packages to latest compatible versions
-[ADDING] bar v1.0.0 (latest: v2.0.0)
+[ADDING] bar v1.0.0 (available: v2.0.0)
 [DOWNLOADING] crates ...
 [DOWNLOADED] orphaned v1.0.0 (registry `dummy-registry`)
 [DOWNLOADED] bar v2.0.0 (registry `dummy-registry`)
