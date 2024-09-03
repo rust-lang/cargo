@@ -21,6 +21,7 @@ use crate::core::manifest::ManifestMetadata;
 use crate::core::resolver::CliFeatures;
 use crate::core::Dependency;
 use crate::core::Package;
+use crate::core::PackageId;
 use crate::core::PackageIdSpecQuery;
 use crate::core::SourceId;
 use crate::core::Workspace;
@@ -28,6 +29,7 @@ use crate::ops;
 use crate::ops::PackageOpts;
 use crate::ops::Packages;
 use crate::sources::source::QueryKind;
+use crate::sources::source::Source;
 use crate::sources::SourceConfigMap;
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::auth;
@@ -189,14 +191,12 @@ fn wait_for_publish(
     pkg: &Package,
     timeout: Duration,
 ) -> CargoResult<()> {
-    let version_req = format!("={}", pkg.version());
     let mut source = SourceConfigMap::empty(gctx)?.load(registry_src, &HashSet::new())?;
     // Disable the source's built-in progress bars. Repeatedly showing a bunch
     // of independent progress bars can be a little confusing. There is an
     // overall progress bar managed here.
     source.set_quiet(true);
     let source_description = source.source_id().to_string();
-    let query = Dependency::parse(pkg.name(), Some(&version_req), registry_src)?;
 
     let now = std::time::Instant::now();
     let sleep_time = Duration::from_secs(1);
@@ -223,16 +223,7 @@ fn wait_for_publish(
             // multiple times
             gctx.updated_sources().remove(&source.replaced_source_id());
             source.invalidate_cache();
-            let summaries = loop {
-                // Exact to avoid returning all for path/git
-                match source.query_vec(&query, QueryKind::Exact) {
-                    std::task::Poll::Ready(res) => {
-                        break res?;
-                    }
-                    std::task::Poll::Pending => source.block_until_ready()?,
-                }
-            };
-            if !summaries.is_empty() {
+            if poll_one_package(registry_src, &pkg.package_id(), &mut source)? {
                 break true;
             }
         }
@@ -260,6 +251,25 @@ fn wait_for_publish(
     }
 
     Ok(())
+}
+
+fn poll_one_package(
+    registry_src: SourceId,
+    pkg_id: &PackageId,
+    source: &mut dyn Source,
+) -> CargoResult<bool> {
+    let version_req = format!("={}", pkg_id.version());
+    let query = Dependency::parse(pkg_id.name(), Some(&version_req), registry_src)?;
+    let summaries = loop {
+        // Exact to avoid returning all for path/git
+        match source.query_vec(&query, QueryKind::Exact) {
+            std::task::Poll::Ready(res) => {
+                break res?;
+            }
+            std::task::Poll::Pending => source.block_until_ready()?,
+        }
+    };
+    Ok(!summaries.is_empty())
 }
 
 fn verify_dependencies(
