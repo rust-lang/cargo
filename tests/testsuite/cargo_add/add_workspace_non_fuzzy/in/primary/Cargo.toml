@@ -1,0 +1,7 @@
+[package]
+name = "bar"
+version = "0.0.0"
+edition = "2015"
+
+[dependencies]
+fuzzy_name = { path = "../fuzzy_name" }

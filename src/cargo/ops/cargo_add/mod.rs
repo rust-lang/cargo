@@ -361,7 +361,9 @@ fn resolve_dependency(
     };
     selected_dep = populate_dependency(selected_dep, arg);
 
-    let old_dep = get_existing_dependency(manifest, selected_dep.toml_key(), section)?;
+    let lookup = |dep_key: &_| get_existing_dependency(manifest, dep_key, section);
+    let old_dep = fuzzy_lookup(&mut selected_dep, lookup, gctx)?;
+
     let mut dependency = if let Some(mut old_dep) = old_dep.clone() {
         if old_dep.name != selected_dep.name {
             // Assuming most existing keys are not relevant when the package changes
@@ -383,7 +385,8 @@ fn resolve_dependency(
     if dependency.source().is_none() {
         // Checking for a workspace dependency happens first since a member could be specified
         // in the workspace dependencies table as a dependency
-        if let Some(_dep) = find_workspace_dep(dependency.toml_key(), ws.root_manifest()).ok() {
+        let lookup = |toml_key: &_| Ok(find_workspace_dep(toml_key, ws.root_manifest()).ok());
+        if let Some(_dep) = fuzzy_lookup(&mut dependency, lookup, gctx)? {
             dependency = dependency.set_source(WorkspaceSource::new());
         } else if let Some(package) = ws.members().find(|p| p.name().as_str() == dependency.name) {
             // Only special-case workspaces when the user doesn't provide any extra
@@ -447,6 +450,42 @@ fn resolve_dependency(
     let dependency = populate_available_features(dependency, &query, registry)?;
 
     Ok(dependency)
+}
+
+fn fuzzy_lookup(
+    dependency: &mut Dependency,
+    lookup: impl Fn(&str) -> CargoResult<Option<Dependency>>,
+    gctx: &GlobalContext,
+) -> CargoResult<Option<Dependency>> {
+    if let Some(rename) = dependency.rename() {
+        // Manually implement `toml_key` to restrict fuzzy lookups to only package names to mirror `PackageRegistry::query()`
+        return lookup(rename);
+    }
+
+    for name_permutation in [
+        dependency.name.clone(),
+        dependency.name.replace('-', "_"),
+        dependency.name.replace('_', "-"),
+    ] {
+        let Some(dep) = lookup(&name_permutation)? else {
+            continue;
+        };
+
+        if dependency.name != name_permutation {
+            // Mirror the fuzzy matching policy of `PackageRegistry::query()`
+            if !matches!(dep.source, Some(Source::Registry(_))) {
+                continue;
+            }
+            gctx.shell().warn(format!(
+                "translating `{}` to `{}`",
+                dependency.name, &name_permutation,
+            ))?;
+            dependency.name = name_permutation;
+        }
+        return Ok(Some(dep));
+    }
+
+    Ok(None)
 }
 
 /// When { workspace = true } you cannot define other keys that configure
