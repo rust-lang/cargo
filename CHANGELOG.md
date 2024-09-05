@@ -71,6 +71,12 @@
   [#14252](https://github.com/rust-lang/cargo/pull/14252)
 - Don't warn about unreferenced duplicate packages 
   [#14239](https://github.com/rust-lang/cargo/pull/14239)
+- cargo-publish: Don't strip non-dev features for renamed dependencies from the
+  HTTP JSON body sent to the registry.
+  The bug only affected third-party registries.
+  [#14328](https://github.com/rust-lang/cargo/pull/14328)
+- cargo-vendor: don't copy source files of excluded Cargo targets when vendoring.
+  [#14368](https://github.com/rust-lang/cargo/pull/14368)
 
 ### Nightly only
 
@@ -88,8 +94,6 @@
   [#14028](https://github.com/rust-lang/cargo/pull/14028)
 - `edition2024`: Address problems with implicit -> explicit feature migration 
   [#14018](https://github.com/rust-lang/cargo/pull/14018)
-- `edition2024`: Ensure `dep/feature` feature syntax activates the dependency
-  [#14221](https://github.com/rust-lang/cargo/pull/14221)
 - `-Zcargo-lints`: Add `unknown_lints` to lints list.
   [#14024](https://github.com/rust-lang/cargo/pull/14024)
 - `-Zcargo-lints`: Add tooling to document lints.
@@ -169,6 +173,8 @@
 - test: migrate Cargo testsuite to `snapbox`.
   For the complete list of migration pull requests,
   see [#14039](https://github.com/rust-lang/cargo/issues/14039#issuecomment-2158974033)
+- Updated to `gix` 0.64.0 
+  [#14431](https://github.com/rust-lang/cargo/pull/14431)
 - Update dependencies.
   [#13995](https://github.com/rust-lang/cargo/pull/13995)
   [#13998](https://github.com/rust-lang/cargo/pull/13998)
