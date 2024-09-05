@@ -1,5 +1,50 @@
 # Changelog
 
+## Cargo 1.83 (2024-11-28)
+[8f40fc59...HEAD](https://github.com/rust-lang/cargo/compare/8f40fc59...HEAD)
+
+### Added
+
+### Changed
+
+- Enhanced the missing feature error message.
+  [#14436](https://github.com/rust-lang/cargo/pull/14436)
+- Enhanced the dependency update status message, including
+  - Reports incompatible packages with precise Rust version
+    [#14457](https://github.com/rust-lang/cargo/pull/14457)
+  - Reports incompatible-with-rustc when MSRV-resolver is disabled
+    [#14459](https://github.com/rust-lang/cargo/pull/14459)
+  - Reports compatible, incompatible, and direct-dep updates with different
+    colors and messages.
+    [#14461](https://github.com/rust-lang/cargo/pull/14461)
+  - The `Locking` status message stops showing workspace members.
+    [#14445](https://github.com/rust-lang/cargo/pull/14445)
+- Log details of `rustc` invocation failure if no errors are seen
+  [#14453](https://github.com/rust-lang/cargo/pull/14453)
+- cargo-package: Don't automatically include the current crate when packaging
+  [#14488](https://github.com/rust-lang/cargo/pull/14488)
+
+### Fixed
+
+- cargo-add: Perform fuzzy search when translating package names
+  [#13765](https://github.com/rust-lang/cargo/pull/13765)
+
+### Nightly only
+
+- cargo-update: Add `matches_prerelease` semantic
+  [#14305](https://github.com/rust-lang/cargo/pull/14305)
+- `open-namespaces`: Allow open namespaces in `PackageIdSpec`s
+  [#14467](https://github.com/rust-lang/cargo/pull/14467)
+
+### Documentation
+
+### Internal
+
+- Updated to `pasetors` 0.7.0
+  [#14478](https://github.com/rust-lang/cargo/pull/14478)
+- cargo-update: Prepare for smarter update messages
+  [#14440](https://github.com/rust-lang/cargo/pull/14440)
+
 ## Cargo 1.82 (2024-10-17)
 [a2b58c3d...rust-1.82.0](https://github.com/rust-lang/cargo/compare/a2b58c3d...rust-1.82.0)
 
