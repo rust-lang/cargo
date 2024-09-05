@@ -116,6 +116,7 @@ Each new feature described below should explain how to use it.
     * [gitoxide](#gitoxide) --- Use `gitoxide` instead of `git2` for a set of operations.
     * [script](#script) --- Enable support for single-file `.rs` packages.
     * [lockfile-path](#lockfile-path) --- Allows to specify a path to lockfile other than the default path `<workspace_root>/Cargo.lock`.
+    * [package-workspace](#package-workspace) --- Allows for packaging and publishing multiple crates in a workspace.
 
 ## allow-features
 
@@ -1641,6 +1642,48 @@ Example:
 
 ```sh
 cargo +nightly metadata --lockfile-path=$LOCKFILES_ROOT/my-project/Cargo.lock -Z unstable-options
+```
+
+## package-workspace
+* Tracking Issue: [#10948](https://github.com/rust-lang/cargo/issues/10948)
+
+This allows cargo to package (or publish) multiple crates in a workspace, even
+if they have inter-dependencies. For example, consider a workspace containing
+packages `foo` and `dep`, where `foo` depends on `dep`. Then
+
+```sh
+cargo +nightly -Zpackage-workspace package -p foo -p dep
+```
+
+will package both `foo` and `dep`, while
+
+```sh
+cargo +nightly -Zpackage-workspace publish -p foo -p dep
+```
+
+will publish both `foo` and `dep`.
+If `foo` and `dep` are the only crates in the workspace, you can use the `--workspace`
+flag instead of specifying the crates individually:
+
+```sh
+cargo +nightly -Zpackage-workspace package --workspace
+cargo +nightly -Zpackage-workspace publish --workspace
+```
+
+#### Lock-file behavior
+
+When packaging a binary at the same time as one of its dependencies, the binary
+will be packaged with a lock-file pointing at the dependency's registry entry
+*as though the dependency were already published*, even though it has not yet
+been. In this case, `cargo` needs to know the registry that the dependency
+will eventually be published on. `cargo` will attempt to infer this registry
+by examining the [the `publish` field](manifest.md#the-publish-field), falling back
+to `crates.io` if no `publish` field is set. To explicitly set the registry,
+pass a `--registry` or `--index` flag.
+
+```sh
+cargo +nightly -Zpackage-workspace --registry=my-registry package -p foo -p dep
+cargo +nightly -Zpackage-workspace --index=https://example.com package -p foo -p dep
 ```
 
 # Stabilized and removed features
