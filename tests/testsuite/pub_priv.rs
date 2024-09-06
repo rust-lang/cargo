@@ -226,7 +226,6 @@ fn pub_dev_dependency_without_feature() {
         .build();
 
     p.cargo("check --message-format=short")
-        .masquerade_as_nightly_cargo(&["public-dependency"])
         .with_stderr_data(str![[r#"
 [WARNING] 'public' specifier can only be used on regular dependencies, not dev-dependencies
 [UPDATING] `dummy-registry` index
