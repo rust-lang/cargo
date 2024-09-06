@@ -115,7 +115,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     // This is only used to confirm that we can create a token before we build the package.
     // This causes the credential provider to be called an extra time, but keeps the same order of errors.
     let source_ids = super::get_source_id(opts.gctx, reg_or_index.as_ref())?;
-    let mut registry = super::registry(
+    let (mut registry, _) = super::registry(
         opts.gctx,
         &source_ids,
         opts.token.as_ref().map(Secret::as_deref),

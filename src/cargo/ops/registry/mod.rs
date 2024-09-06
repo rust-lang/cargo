@@ -120,14 +120,14 @@ impl RegistryCredentialConfig {
 ///   `registry`, or `index` are set, then uses `crates-io`.
 /// * `force_update`: If `true`, forces the index to be updated.
 /// * `token_required`: If `true`, the token will be set.
-fn registry(
-    gctx: &GlobalContext,
+fn registry<'gctx>(
+    gctx: &'gctx GlobalContext,
     source_ids: &RegistrySourceIds,
     token_from_cmdline: Option<Secret<&str>>,
     reg_or_index: Option<&RegistryOrIndex>,
     force_update: bool,
     token_required: Option<Operation<'_>>,
-) -> CargoResult<Registry> {
+) -> CargoResult<(Registry, RegistrySource<'gctx>)> {
     let is_index = reg_or_index.map(|v| v.is_index()).unwrap_or_default();
     if is_index && token_required.is_some() && token_from_cmdline.is_none() {
         bail!("command-line argument --index requires --token to be specified");
@@ -136,9 +136,9 @@ fn registry(
         auth::cache_token_from_commandline(gctx, &source_ids.original, token);
     }
 
+    let mut src = RegistrySource::remote(source_ids.replacement, &HashSet::new(), gctx)?;
     let cfg = {
         let _lock = gctx.acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
-        let mut src = RegistrySource::remote(source_ids.replacement, &HashSet::new(), gctx)?;
         // Only update the index if `force_update` is set.
         if force_update {
             src.invalidate_cache()
@@ -170,11 +170,9 @@ fn registry(
         None
     };
     let handle = http_handle(gctx)?;
-    Ok(Registry::new_handle(
-        api_host,
-        token,
-        handle,
-        cfg.auth_required,
+    Ok((
+        Registry::new_handle(api_host, token, handle, cfg.auth_required),
+        src,
     ))
 }
 
