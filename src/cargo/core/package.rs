@@ -23,7 +23,8 @@ use crate::core::dependency::DepKind;
 use crate::core::resolver::features::ForceAllTargets;
 use crate::core::resolver::{HasDevUnits, Resolve};
 use crate::core::{
-    Dependency, Manifest, PackageId, PackageIdSpec, SerializedDependency, SourceId, Target,
+    CliUnstable, Dependency, Features, Manifest, PackageId, PackageIdSpec, SerializedDependency,
+    SourceId, Target,
 };
 use crate::core::{Summary, Workspace};
 use crate::sources::source::{MaybePackage, SourceMap};
@@ -190,7 +191,11 @@ impl Package {
         self.targets().iter().any(|t| t.is_example() || t.is_bin())
     }
 
-    pub fn serialized(&self) -> SerializedPackage {
+    pub fn serialized(
+        &self,
+        unstable_flags: &CliUnstable,
+        cargo_features: &Features,
+    ) -> SerializedPackage {
         let summary = self.manifest().summary();
         let package_id = summary.package_id();
         let manmeta = self.manifest().metadata();
@@ -205,7 +210,7 @@ impl Package {
             .cloned()
             .collect();
         // Convert Vec<FeatureValue> to Vec<InternedString>
-        let features = summary
+        let crate_features = summary
             .features()
             .iter()
             .map(|(k, v)| {
@@ -229,10 +234,10 @@ impl Package {
             dependencies: summary
                 .dependencies()
                 .iter()
-                .map(Dependency::serialized)
+                .map(|dep| dep.serialized(unstable_flags, cargo_features))
                 .collect(),
             targets,
-            features,
+            features: crate_features,
             manifest_path: self.manifest_path().to_path_buf(),
             metadata: self.manifest().custom_metadata().cloned(),
             authors: manmeta.authors.clone(),

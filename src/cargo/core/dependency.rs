@@ -9,7 +9,7 @@ use std::sync::Arc;
 use tracing::trace;
 
 use crate::core::compiler::{CompileKind, CompileTarget};
-use crate::core::{PackageId, SourceId, Summary};
+use crate::core::{CliUnstable, Feature, Features, PackageId, SourceId, Summary};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::OptVersionReq;
@@ -72,6 +72,12 @@ pub struct SerializedDependency {
     /// The file system path for a local path dependency.
     #[serde(skip_serializing_if = "Option::is_none")]
     path: Option<PathBuf>,
+
+    /// `public` flag is unset if `-Zpublic-dependency` is not enabled
+    ///
+    /// Once that feature is stabilized, `public` will not need to be `Option`
+    #[serde(skip_serializing_if = "Option::is_none")]
+    public: Option<bool>,
 }
 
 #[derive(PartialEq, Eq, Hash, Ord, PartialOrd, Clone, Debug, Copy)]
@@ -158,7 +164,11 @@ impl Dependency {
         }
     }
 
-    pub fn serialized(&self) -> SerializedDependency {
+    pub fn serialized(
+        &self,
+        unstable_flags: &CliUnstable,
+        features: &Features,
+    ) -> SerializedDependency {
         SerializedDependency {
             name: self.package_name(),
             source: self.source_id(),
@@ -172,6 +182,13 @@ impl Dependency {
             registry: self.registry_id().as_ref().map(|sid| sid.url().to_string()),
             path: self.source_id().local_path(),
             artifact: self.inner.artifact.clone(),
+            public: if unstable_flags.public_dependency
+                || features.is_enabled(Feature::public_dependency())
+            {
+                Some(self.inner.public)
+            } else {
+                None
+            },
         }
     }
 
