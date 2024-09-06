@@ -125,7 +125,12 @@ The JSON output has the following format:
                        If not specified or null, the dependency is from the default
                        registry (crates.io).
                     */
-                    "registry": null
+                    "registry": null,
+                    /* (unstable) Boolean flag of whether or not this is a pulbic
+                       dependency. This field is only present when
+                       `\-Zpublic\-dependency` is enabled.
+                    */
+                    "public": false
                 }
             ],
             /* Array of Cargo targets. */
