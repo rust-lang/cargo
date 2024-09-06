@@ -130,6 +130,37 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
     validate_upload_foo();
 }
 
+#[cargo_test]
+fn duplicate_version() {
+    let registry_dupl = RegistryBuilder::new().http_api().http_index().build();
+    Package::new("foo", "0.0.1").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                authors = []
+                license = "MIT"
+                description = "foo"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    p.cargo("publish")
+        .replace_crates_io(registry_dupl.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[ERROR] crate foo@0.0.1 already exists on crates.io index
+
+"#]])
+        .run();
+}
+
 // Check that the `token` key works at the root instead of under a
 // `[registry]` table.
 #[cargo_test]
@@ -3848,22 +3879,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
-[PACKAGING] a v0.0.1 ([ROOT]/foo/a)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[PACKAGING] b v0.0.1 ([ROOT]/foo/b)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[VERIFYING] a v0.0.1 ([ROOT]/foo/a)
-[COMPILING] a v0.0.1 ([ROOT]/foo/target/package/a-0.0.1)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[VERIFYING] b v0.0.1 ([ROOT]/foo/b)
-[UPDATING] crates.io index
-[ERROR] failed to verify package tarball
-
-Caused by:
-  failed to get `a` as a dependency of package `b v0.0.1 ([ROOT]/foo/target/package/b-0.0.1)`
-
-Caused by:
-  found a package in the remote registry and the local overlay: a@0.0.1
+[ERROR] crate a@0.0.1 already exists on crates.io index
 
 "#]])
         .run();

@@ -31,11 +31,13 @@ use crate::core::PackageIdSpecQuery;
 use crate::core::SourceId;
 use crate::core::Workspace;
 use crate::ops;
+use crate::ops::registry::RegistrySourceIds;
 use crate::ops::PackageOpts;
 use crate::ops::Packages;
 use crate::ops::RegistryOrIndex;
 use crate::sources::source::QueryKind;
 use crate::sources::source::Source;
+use crate::sources::RegistrySource;
 use crate::sources::SourceConfigMap;
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::auth;
@@ -45,6 +47,7 @@ use crate::util::toml::prepare_for_publish;
 use crate::util::Graph;
 use crate::util::Progress;
 use crate::util::ProgressStyle;
+use crate::util::VersionExt as _;
 use crate::CargoResult;
 use crate::GlobalContext;
 
@@ -115,7 +118,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
     // This is only used to confirm that we can create a token before we build the package.
     // This causes the credential provider to be called an extra time, but keeps the same order of errors.
     let source_ids = super::get_source_id(opts.gctx, reg_or_index.as_ref())?;
-    let mut registry = super::registry(
+    let (mut registry, mut source) = super::registry(
         opts.gctx,
         &source_ids,
         opts.token.as_ref().map(Secret::as_deref),
@@ -124,9 +127,15 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
         Some(Operation::Read).filter(|_| !opts.dry_run),
     )?;
 
-    // Validate all the packages before publishing any of them.
-    for (pkg, _) in &pkgs {
-        verify_dependencies(pkg, &registry, source_ids.original)?;
+    {
+        let _lock = opts
+            .gctx
+            .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
+
+        for (pkg, _) in &pkgs {
+            verify_unpublished(pkg, &mut source, &source_ids)?;
+            verify_dependencies(pkg, &registry, source_ids.original)?;
+        }
     }
 
     let pkg_dep_graph = ops::cargo_package::package_with_dep_graph(
@@ -353,6 +362,36 @@ fn poll_one_package(
         }
     };
     Ok(!summaries.is_empty())
+}
+
+fn verify_unpublished(
+    pkg: &Package,
+    source: &mut RegistrySource<'_>,
+    source_ids: &RegistrySourceIds,
+) -> CargoResult<()> {
+    let query = Dependency::parse(
+        pkg.name(),
+        Some(&pkg.version().to_exact_req().to_string()),
+        source_ids.replacement,
+    )?;
+    let duplicate_query = loop {
+        match source.query_vec(&query, QueryKind::Exact) {
+            std::task::Poll::Ready(res) => {
+                break res?;
+            }
+            std::task::Poll::Pending => source.block_until_ready()?,
+        }
+    };
+    if !duplicate_query.is_empty() {
+        bail!(
+            "crate {}@{} already exists on {}",
+            pkg.name(),
+            pkg.version(),
+            source.describe()
+        );
+    }
+
+    Ok(())
 }
 
 fn verify_dependencies(
