@@ -906,7 +906,7 @@ mod tests {
         }
     }
 
-    if let Err(e) = Workspace::new(&path.join("Cargo.toml"), gctx) {
+    if let Err(e) = Workspace::new(&manifest_path, gctx) {
         crate::display_warning_with_error(
             "compiling this new package may not work due to invalid \
              workspace configuration",
