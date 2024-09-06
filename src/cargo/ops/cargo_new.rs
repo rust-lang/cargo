@@ -802,7 +802,7 @@ fn mk(gctx: &GlobalContext, opts: &MkOptions<'_>) -> CargoResult<()> {
         }
     }
 
-    let manifest_path = path.join("Cargo.toml");
+    let manifest_path = paths::normalize_path(&path.join("Cargo.toml"));
     if let Ok(root_manifest_path) = find_root_manifest_for_wd(&manifest_path) {
         let root_manifest = paths::read(&root_manifest_path)?;
         // Sometimes the root manifest is not a valid manifest, so we only try to parse it if it is.

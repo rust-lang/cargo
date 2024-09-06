@@ -1,10 +1,9 @@
-<svg width="1902px" height="146px" xmlns="http://www.w3.org/2000/svg">
+<svg width="970px" height="74px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
     .fg-cyan { fill: #00AAAA }
     .fg-green { fill: #00AA00 }
-    .fg-yellow { fill: #AA5500 }
     .container {
       padding: 0 10px;
       line-height: 18px;
@@ -22,17 +21,9 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-green bold">    Creating</tspan><tspan> library `out-of-workspace` package</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-green bold">      Adding</tspan><tspan> `out-of-workspace` as member of workspace at `[ROOT]/case/workspace`</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-cyan bold">note</tspan><tspan class="bold">:</tspan><tspan> see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan class="fg-yellow bold">warning</tspan><tspan class="bold">:</tspan><tspan> compiling this new package may not work due to invalid workspace configuration</tspan>
-</tspan>
-    <tspan x="10px" y="82px">
-</tspan>
-    <tspan x="10px" y="100px"><tspan>workspace member `[ROOT]/case/out-of-workspace/Cargo.toml` is not hierarchically below the workspace root `[ROOT]/case/workspace/Cargo.toml`</tspan>
-</tspan>
-    <tspan x="10px" y="118px"><tspan class="fg-cyan bold">note</tspan><tspan class="bold">:</tspan><tspan> see more `Cargo.toml` keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html</tspan>
-</tspan>
-    <tspan x="10px" y="136px">
+    <tspan x="10px" y="64px">
 </tspan>
   </text>
 

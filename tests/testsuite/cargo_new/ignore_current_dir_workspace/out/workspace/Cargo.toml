@@ -1,5 +1,4 @@
 [workspace]
-members = ["../out-of-workspace"]
 
 [package]
 name = "foo"
