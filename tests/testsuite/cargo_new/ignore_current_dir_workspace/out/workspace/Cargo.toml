@@ -1,0 +1,9 @@
+[workspace]
+members = ["../out-of-workspace"]
+
+[package]
+name = "foo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
