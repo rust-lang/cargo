@@ -22,7 +22,9 @@ use crate::core::compiler::{CompileKind, RustcTargetData};
 use crate::core::dependency::DepKind;
 use crate::core::resolver::features::ForceAllTargets;
 use crate::core::resolver::{HasDevUnits, Resolve};
-use crate::core::{Dependency, Manifest, PackageId, PackageIdSpec, SourceId, Target};
+use crate::core::{
+    Dependency, Manifest, PackageId, PackageIdSpec, SerializedDependency, SourceId, Target,
+};
 use crate::core::{Summary, Workspace};
 use crate::sources::source::{MaybePackage, SourceMap};
 use crate::util::cache_lock::{CacheLock, CacheLockMode};
@@ -73,7 +75,7 @@ pub struct SerializedPackage {
     license_file: Option<String>,
     description: Option<String>,
     source: SourceId,
-    dependencies: Vec<Dependency>,
+    dependencies: Vec<SerializedDependency>,
     targets: Vec<Target>,
     features: BTreeMap<InternedString, Vec<InternedString>>,
     manifest_path: PathBuf,
@@ -224,7 +226,11 @@ impl Package {
             license_file: manmeta.license_file.clone(),
             description: manmeta.description.clone(),
             source: summary.source_id(),
-            dependencies: summary.dependencies().to_vec(),
+            dependencies: summary
+                .dependencies()
+                .iter()
+                .map(Dependency::serialized)
+                .collect(),
             targets,
             features,
             manifest_path: self.manifest_path().to_path_buf(),
