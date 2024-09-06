@@ -398,11 +398,16 @@ pub fn write_manifest_upgrades(
 
     let mut any_file_has_changed = false;
 
-    let manifest_paths = std::iter::once(ws.root_manifest())
-        .chain(ws.members().map(|member| member.manifest_path()))
+    let items = std::iter::once((ws.root_manifest(), ws.unstable_features()))
+        .chain(ws.members().map(|member| {
+            (
+                member.manifest_path(),
+                member.manifest().unstable_features(),
+            )
+        }))
         .collect::<Vec<_>>();
 
-    for manifest_path in manifest_paths {
+    for (manifest_path, unstable_features) in items {
         trace!("updating TOML manifest at `{manifest_path:?}` with upgraded dependencies");
 
         let crate_root = manifest_path
@@ -417,7 +422,10 @@ pub fn write_manifest_upgrades(
             for (mut dep_key, dep_item) in dep_table.iter_mut() {
                 let dep_key_str = dep_key.get();
                 let dependency = crate::util::toml_mut::dependency::Dependency::from_toml(
+                    ws.gctx(),
+                    ws.root(),
                     &manifest_path,
+                    unstable_features,
                     dep_key_str,
                     dep_item,
                 )?;
@@ -472,7 +480,14 @@ pub fn write_manifest_upgrades(
                 dep.source = Some(Source::Registry(source));
 
                 trace!("upgrading dependency {name}");
-                dep.update_toml(&crate_root, &mut dep_key, dep_item);
+                dep.update_toml(
+                    ws.gctx(),
+                    ws.root(),
+                    &crate_root,
+                    unstable_features,
+                    &mut dep_key,
+                    dep_item,
+                )?;
                 manifest_has_changed = true;
                 any_file_has_changed = true;
             }

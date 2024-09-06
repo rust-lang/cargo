@@ -56,6 +56,14 @@ OPTIONS
            <https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#specifying-path-dependencies>
            to local crate to add.
 
+       --base base
+           The path base
+           <https://doc.rust-lang.org/cargo/reference/unstable.html#path-bases>
+           to use when adding a local crate.
+
+           Unstable (nightly-only)
+           <https://doc.rust-lang.org/cargo/reference/unstable.html#path-bases>
+
        --registry registry
            Name of the registry to use. Registry names are defined in Cargo
            config files

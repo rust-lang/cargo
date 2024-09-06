@@ -1,0 +1,11 @@
+cargo-features = ["path-bases"]
+
+[workspace]
+
+[package]
+name = "cargo-list-test-fixture"
+version = "0.0.0"
+edition = "2015"
+
+[dependencies]
+cargo-list-test-fixture-dependency = { optional = true, path = "dependency", base = "my_base" }

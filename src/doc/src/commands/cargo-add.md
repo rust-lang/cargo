@@ -59,6 +59,11 @@ dependency will be listed in the command's output.
 <dd class="option-desc"><a href="../reference/specifying-dependencies.html#specifying-path-dependencies">Filesystem path</a> to local crate to add.</dd>
 
 
+<dt class="option-term" id="option-cargo-add---base"><a class="option-anchor" href="#option-cargo-add---base"></a><code>--base</code> <em>base</em></dt>
+<dd class="option-desc">The <a href="../reference/unstable.html#path-bases">path base</a> to use when adding a local crate.</p>
+<p><a href="../reference/unstable.html#path-bases">Unstable (nightly-only)</a></dd>
+
+
 <dt class="option-term" id="option-cargo-add---registry"><a class="option-anchor" href="#option-cargo-add---registry"></a><code>--registry</code> <em>registry</em></dt>
 <dd class="option-desc">Name of the registry to use. Registry names are defined in <a href="../reference/config.html">Cargo config
 files</a>. If not specified, the default registry is used,

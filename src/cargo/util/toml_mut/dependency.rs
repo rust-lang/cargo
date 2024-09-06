@@ -1,16 +1,19 @@
 //! Information about dependencies in a manifest.
 
+use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 
+use cargo_util_schemas::manifest::PathBaseName;
 use indexmap::IndexSet;
 use itertools::Itertools;
 use toml_edit::KeyMut;
 
 use super::manifest::str_or_1_len_table;
-use crate::core::GitReference;
 use crate::core::SourceId;
 use crate::core::Summary;
+use crate::core::{Features, GitReference};
+use crate::util::toml::lookup_path_base;
 use crate::util::toml_mut::is_sorted;
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -219,7 +222,14 @@ pub enum MaybeWorkspace<T> {
 
 impl Dependency {
     /// Create a dependency from a TOML table entry.
-    pub fn from_toml(crate_root: &Path, key: &str, item: &toml_edit::Item) -> CargoResult<Self> {
+    pub fn from_toml(
+        gctx: &GlobalContext,
+        workspace_root: &Path,
+        crate_root: &Path,
+        unstable_features: &Features,
+        key: &str,
+        item: &toml_edit::Item,
+    ) -> CargoResult<Self> {
         if let Some(version) = item.as_str() {
             let dep = Self::new(key).set_source(RegistrySource::new(version));
             Ok(dep)
@@ -266,12 +276,31 @@ impl Dependency {
                 }
                 src.into()
             } else if let Some(path) = table.get("path") {
+                let base = table
+                    .get("base")
+                    .map(|base| {
+                        base.as_str()
+                            .ok_or_else(|| invalid_type(key, "base", base.type_name(), "string"))
+                            .map(|s| s.to_owned())
+                    })
+                    .transpose()?;
+                let relative_to = if let Some(base) = &base {
+                    Cow::Owned(lookup_path_base(
+                        &PathBaseName::new(base.clone())?,
+                        gctx,
+                        &|| Ok(workspace_root),
+                        unstable_features,
+                    )?)
+                } else {
+                    Cow::Borrowed(crate_root)
+                };
                 let path =
-                    crate_root
+                    relative_to
                         .join(path.as_str().ok_or_else(|| {
                             invalid_type(key, "path", path.type_name(), "string")
                         })?);
                 let mut src = PathSource::new(path);
+                src.base = base;
                 if let Some(value) = table.get("version") {
                     src = src.set_version(value.as_str().ok_or_else(|| {
                         invalid_type(key, "version", value.type_name(), "string")
@@ -372,7 +401,13 @@ impl Dependency {
     /// # Panic
     ///
     /// Panics if the path is relative
-    pub fn to_toml(&self, crate_root: &Path) -> toml_edit::Item {
+    pub fn to_toml<'a>(
+        &self,
+        gctx: &GlobalContext,
+        workspace_root: &Path,
+        crate_root: &Path,
+        unstable_features: &Features,
+    ) -> CargoResult<toml_edit::Item> {
         assert!(
             crate_root.is_absolute(),
             "Absolute path needed, got: {}",
@@ -412,9 +447,13 @@ impl Dependency {
                         table.insert("version", src.version.as_str().into());
                     }
                     Some(Source::Path(src)) => {
-                        let relpath = path_field(crate_root, &src.path);
+                        let relpath =
+                            path_field(&src, gctx, workspace_root, crate_root, unstable_features)?;
                         if let Some(r) = src.version.as_deref() {
                             table.insert("version", r.into());
+                        }
+                        if let Some(base) = &src.base {
+                            table.insert("base", base.into());
                         }
                         table.insert("path", relpath.into());
                     }
@@ -465,19 +504,22 @@ impl Dependency {
             }
         };
 
-        table
+        Ok(table)
     }
 
     /// Modify existing entry to match this dependency.
-    pub fn update_toml<'k>(
+    pub fn update_toml<'k, 'a>(
         &self,
+        gctx: &GlobalContext,
+        workspace_root: &Path,
         crate_root: &Path,
+        unstable_features: &Features,
         key: &mut KeyMut<'k>,
         item: &mut toml_edit::Item,
-    ) {
+    ) -> CargoResult<()> {
         if str_or_1_len_table(item) {
             // Little to preserve
-            let mut new_item = self.to_toml(crate_root);
+            let mut new_item = self.to_toml(gctx, workspace_root, crate_root, unstable_features)?;
             match (&item, &mut new_item) {
                 (toml_edit::Item::Value(old), toml_edit::Item::Value(new)) => {
                     *new.decor_mut() = old.decor().clone();
@@ -493,12 +535,18 @@ impl Dependency {
                 Some(Source::Registry(src)) => {
                     overwrite_value(table, "version", src.version.as_str());
 
-                    for key in ["path", "git", "branch", "tag", "rev", "workspace"] {
+                    for key in ["path", "git", "branch", "tag", "rev", "workspace", "base"] {
                         table.remove(key);
                     }
                 }
                 Some(Source::Path(src)) => {
-                    let relpath = path_field(crate_root, &src.path);
+                    if let Some(base) = &src.base {
+                        overwrite_value(table, "base", base);
+                    } else {
+                        table.remove("base");
+                    }
+                    let relpath =
+                        path_field(&src, gctx, workspace_root, crate_root, unstable_features)?;
                     overwrite_value(table, "path", relpath);
                     if let Some(r) = src.version.as_deref() {
                         overwrite_value(table, "version", r);
@@ -533,7 +581,7 @@ impl Dependency {
                         table.remove("version");
                     }
 
-                    for key in ["path", "workspace"] {
+                    for key in ["path", "workspace", "base"] {
                         table.remove(key);
                     }
                 }
@@ -552,6 +600,7 @@ impl Dependency {
                         "rev",
                         "package",
                         "default-features",
+                        "base",
                     ] {
                         table.remove(key);
                     }
@@ -623,6 +672,7 @@ impl Dependency {
         } else {
             unreachable!("Invalid dependency type: {}", item.type_name());
         }
+        Ok(())
     }
 }
 
@@ -682,10 +732,26 @@ impl From<Summary> for Dependency {
     }
 }
 
-fn path_field(crate_root: &Path, abs_path: &Path) -> String {
-    let relpath = pathdiff::diff_paths(abs_path, crate_root).expect("both paths are absolute");
+fn path_field<'a>(
+    source: &PathSource,
+    gctx: &GlobalContext,
+    workspace_root: &Path,
+    crate_root: &Path,
+    unstable_features: &Features,
+) -> CargoResult<String> {
+    let relative_to = if let Some(base) = &source.base {
+        Cow::Owned(lookup_path_base(
+            &PathBaseName::new(base.clone())?,
+            gctx,
+            &|| Ok(workspace_root),
+            unstable_features,
+        )?)
+    } else {
+        Cow::Borrowed(crate_root)
+    };
+    let relpath = pathdiff::diff_paths(&source.path, relative_to).expect("both paths are absolute");
     let relpath = relpath.to_str().unwrap().replace('\\', "/");
-    relpath
+    Ok(relpath)
 }
 
 /// Primary location of a dependency.
@@ -812,6 +878,8 @@ impl std::fmt::Display for RegistrySource {
 pub struct PathSource {
     /// Local, absolute path.
     pub path: PathBuf,
+    /// The path base, if using one.
+    pub base: Option<String>,
     /// Version requirement for when published.
     pub version: Option<String>,
 }
@@ -821,6 +889,7 @@ impl PathSource {
     pub fn new(path: impl Into<PathBuf>) -> Self {
         Self {
             path: path.into(),
+            base: None,
             version: None,
         }
     }
@@ -975,11 +1044,14 @@ mod tests {
             paths::normalize_path(&std::env::current_dir().unwrap().join(Path::new("/")));
         let dep = Dependency::new("dep").set_source(RegistrySource::new("1.0"));
         let key = dep.toml_key();
-        let item = dep.to_toml(&crate_root);
+        let gctx = GlobalContext::default().unwrap();
+        let item = dep
+            .to_toml(&gctx, &crate_root, &crate_root, &Features::default())
+            .unwrap();
 
         assert_eq!(key, "dep".to_owned());
 
-        verify_roundtrip(&crate_root, key, &item);
+        verify_roundtrip(&crate_root, &gctx, key, &item);
     }
 
     #[test]
@@ -988,12 +1060,15 @@ mod tests {
             paths::normalize_path(&std::env::current_dir().unwrap().join(Path::new("/")));
         let dep = Dependency::new("dep").set_source(RegistrySource::new("1.0"));
         let key = dep.toml_key();
-        let item = dep.to_toml(&crate_root);
+        let gctx = GlobalContext::default().unwrap();
+        let item = dep
+            .to_toml(&gctx, &crate_root, &crate_root, &Features::default())
+            .unwrap();
 
         assert_eq!(key, "dep".to_owned());
         assert_eq!(item.as_str(), Some("1.0"));
 
-        verify_roundtrip(&crate_root, key, &item);
+        verify_roundtrip(&crate_root, &gctx, key, &item);
     }
 
     #[test]
@@ -1004,7 +1079,10 @@ mod tests {
             .set_source(RegistrySource::new("1.0"))
             .set_optional(true);
         let key = dep.toml_key();
-        let item = dep.to_toml(&crate_root);
+        let gctx = GlobalContext::default().unwrap();
+        let item = dep
+            .to_toml(&gctx, &crate_root, &crate_root, &Features::default())
+            .unwrap();
 
         assert_eq!(key, "dep".to_owned());
         assert!(item.is_inline_table());
@@ -1012,7 +1090,7 @@ mod tests {
         let dep = item.as_inline_table().unwrap();
         assert_eq!(dep.get("optional").unwrap().as_bool(), Some(true));
 
-        verify_roundtrip(&crate_root, key, &item);
+        verify_roundtrip(&crate_root, &gctx, key, &item);
     }
 
     #[test]
@@ -1023,7 +1101,10 @@ mod tests {
             .set_source(RegistrySource::new("1.0"))
             .set_default_features(false);
         let key = dep.toml_key();
-        let item = dep.to_toml(&crate_root);
+        let gctx = GlobalContext::default().unwrap();
+        let item = dep
+            .to_toml(&gctx, &crate_root, &crate_root, &Features::default())
+            .unwrap();
 
         assert_eq!(key, "dep".to_owned());
         assert!(item.is_inline_table());
@@ -1031,7 +1112,7 @@ mod tests {
         let dep = item.as_inline_table().unwrap();
         assert_eq!(dep.get("default-features").unwrap().as_bool(), Some(false));
 
-        verify_roundtrip(&crate_root, key, &item);
+        verify_roundtrip(&crate_root, &gctx, key, &item);
     }
 
     #[test]
@@ -1040,7 +1121,10 @@ mod tests {
         let crate_root = root.join("foo");
         let dep = Dependency::new("dep").set_source(PathSource::new(root.join("bar")));
         let key = dep.toml_key();
-        let item = dep.to_toml(&crate_root);
+        let gctx = GlobalContext::default().unwrap();
+        let item = dep
+            .to_toml(&gctx, &crate_root, &crate_root, &Features::default())
+            .unwrap();
 
         assert_eq!(key, "dep".to_owned());
         assert!(item.is_inline_table());
@@ -1048,7 +1132,7 @@ mod tests {
         let dep = item.as_inline_table().unwrap();
         assert_eq!(dep.get("path").unwrap().as_str(), Some("../bar"));
 
-        verify_roundtrip(&crate_root, key, &item);
+        verify_roundtrip(&crate_root, &gctx, key, &item);
     }
 
     #[test]
@@ -1057,7 +1141,10 @@ mod tests {
             paths::normalize_path(&std::env::current_dir().unwrap().join(Path::new("/")));
         let dep = Dependency::new("dep").set_source(GitSource::new("https://foor/bar.git"));
         let key = dep.toml_key();
-        let item = dep.to_toml(&crate_root);
+        let gctx = GlobalContext::default().unwrap();
+        let item = dep
+            .to_toml(&gctx, &crate_root, &crate_root, &Features::default())
+            .unwrap();
 
         assert_eq!(key, "dep".to_owned());
         assert!(item.is_inline_table());
@@ -1068,7 +1155,7 @@ mod tests {
             Some("https://foor/bar.git")
         );
 
-        verify_roundtrip(&crate_root, key, &item);
+        verify_roundtrip(&crate_root, &gctx, key, &item);
     }
 
     #[test]
@@ -1079,7 +1166,10 @@ mod tests {
             .set_source(RegistrySource::new("1.0"))
             .set_rename("d");
         let key = dep.toml_key();
-        let item = dep.to_toml(&crate_root);
+        let gctx = GlobalContext::default().unwrap();
+        let item = dep
+            .to_toml(&gctx, &crate_root, &crate_root, &Features::default())
+            .unwrap();
 
         assert_eq!(key, "d".to_owned());
         assert!(item.is_inline_table());
@@ -1087,7 +1177,7 @@ mod tests {
         let dep = item.as_inline_table().unwrap();
         assert_eq!(dep.get("package").unwrap().as_str(), Some("dep"));
 
-        verify_roundtrip(&crate_root, key, &item);
+        verify_roundtrip(&crate_root, &gctx, key, &item);
     }
 
     #[test]
@@ -1098,7 +1188,10 @@ mod tests {
             .set_source(RegistrySource::new("1.0"))
             .set_registry("alternative");
         let key = dep.toml_key();
-        let item = dep.to_toml(&crate_root);
+        let gctx = GlobalContext::default().unwrap();
+        let item = dep
+            .to_toml(&gctx, &crate_root, &crate_root, &Features::default())
+            .unwrap();
 
         assert_eq!(key, "dep".to_owned());
         assert!(item.is_inline_table());
@@ -1106,7 +1199,7 @@ mod tests {
         let dep = item.as_inline_table().unwrap();
         assert_eq!(dep.get("registry").unwrap().as_str(), Some("alternative"));
 
-        verify_roundtrip(&crate_root, key, &item);
+        verify_roundtrip(&crate_root, &gctx, key, &item);
     }
 
     #[test]
@@ -1118,7 +1211,10 @@ mod tests {
             .set_default_features(false)
             .set_rename("d");
         let key = dep.toml_key();
-        let item = dep.to_toml(&crate_root);
+        let gctx = GlobalContext::default().unwrap();
+        let item = dep
+            .to_toml(&gctx, &crate_root, &crate_root, &Features::default())
+            .unwrap();
 
         assert_eq!(key, "d".to_owned());
         assert!(item.is_inline_table());
@@ -1128,7 +1224,7 @@ mod tests {
         assert_eq!(dep.get("version").unwrap().as_str(), Some("1.0"));
         assert_eq!(dep.get("default-features").unwrap().as_bool(), Some(false));
 
-        verify_roundtrip(&crate_root, key, &item);
+        verify_roundtrip(&crate_root, &gctx, key, &item);
     }
 
     #[test]
@@ -1139,13 +1235,16 @@ mod tests {
         let relpath = "sibling/crate";
         let dep = Dependency::new("dep").set_source(PathSource::new(path));
         let key = dep.toml_key();
-        let item = dep.to_toml(&crate_root);
+        let gctx = GlobalContext::default().unwrap();
+        let item = dep
+            .to_toml(&gctx, &crate_root, &crate_root, &Features::default())
+            .unwrap();
 
         let table = item.as_inline_table().unwrap();
         let got = table.get("path").unwrap().as_str().unwrap();
         assert_eq!(got, relpath);
 
-        verify_roundtrip(&crate_root, key, &item);
+        verify_roundtrip(&crate_root, &gctx, key, &item);
     }
 
     #[test]
@@ -1159,10 +1258,21 @@ mod tests {
             manifest,
         };
         assert_eq!(local.manifest.to_string(), toml);
+        let gctx = GlobalContext::default().unwrap();
         for (key, item) in local.data.clone().iter() {
-            let dep = Dependency::from_toml(&crate_root, key, item).unwrap();
+            let dep = Dependency::from_toml(
+                &gctx,
+                &crate_root,
+                &crate_root,
+                &Features::default(),
+                key,
+                item,
+            )
+            .unwrap();
             let dep = dep.set_source(WorkspaceSource::new());
-            local.insert_into_table(&vec![], &dep).unwrap();
+            local
+                .insert_into_table(&vec![], &dep, &gctx, &crate_root, &Features::default())
+                .unwrap();
             assert_eq!(local.data.to_string(), "dep.workspace = true\n");
         }
     }
@@ -1176,20 +1286,38 @@ mod tests {
         let should_be = "sibling/crate";
         let dep = Dependency::new("dep").set_source(PathSource::new(original));
         let key = dep.toml_key();
-        let item = dep.to_toml(&crate_root);
+        let gctx = GlobalContext::default().unwrap();
+        let item = dep
+            .to_toml(&gctx, &crate_root, &crate_root, &Features::default())
+            .unwrap();
 
         let table = item.as_inline_table().unwrap();
         let got = table.get("path").unwrap().as_str().unwrap();
         assert_eq!(got, should_be);
 
-        verify_roundtrip(&crate_root, key, &item);
+        verify_roundtrip(&crate_root, &gctx, key, &item);
     }
 
     #[track_caller]
-    fn verify_roundtrip(crate_root: &Path, key: &str, item: &toml_edit::Item) {
-        let roundtrip = Dependency::from_toml(crate_root, key, item).unwrap();
+    fn verify_roundtrip(
+        crate_root: &Path,
+        gctx: &GlobalContext,
+        key: &str,
+        item: &toml_edit::Item,
+    ) {
+        let roundtrip = Dependency::from_toml(
+            gctx,
+            crate_root,
+            crate_root,
+            &Features::default(),
+            key,
+            item,
+        )
+        .unwrap();
         let round_key = roundtrip.toml_key();
-        let round_item = roundtrip.to_toml(crate_root);
+        let round_item = roundtrip
+            .to_toml(gctx, crate_root, crate_root, &Features::default())
+            .unwrap();
         assert_eq!(key, round_key);
         assert_eq!(item.to_string(), round_item.to_string());
     }
