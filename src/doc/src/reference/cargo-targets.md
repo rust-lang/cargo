@@ -28,10 +28,10 @@ bench = false
 ## Binaries
 
 Binary targets are executable programs that can be run after being compiled.
-The default binary filename is `src/main.rs`, which defaults to the name of
-the package. Additional binaries are stored in the [`src/bin/`
-directory][package layout]. The settings for each binary can be [customized]
-in the `[[bin]]` tables in `Cargo.toml`.
+A binary's source can be `src/main.rs` and/or stored in the [`src/bin/`
+directory][package layout]. For `src/main.rs`, the default binary name is the
+package name. The settings for each binary can be [customized] in the`[[bin]]`
+tables in `Cargo.toml`.
 
 Binaries can use the public API of the package's library. They are also linked
 with the [`[dependencies]`][dependencies] defined in `Cargo.toml`.
