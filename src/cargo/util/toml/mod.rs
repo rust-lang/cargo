@@ -786,12 +786,8 @@ fn normalize_dependencies<'a>(
                 warnings,
             )?;
             if d.public.is_some() {
-                let public_feature = features.require(Feature::public_dependency());
-                let with_public_feature = public_feature.is_ok();
+                let with_public_feature = features.require(Feature::public_dependency()).is_ok();
                 let with_z_public = gctx.cli_unstable().public_dependency;
-                if !with_public_feature && (!with_z_public && !gctx.nightly_features_allowed) {
-                    public_feature?;
-                }
                 if matches!(kind, None) {
                     if !with_public_feature && !with_z_public {
                         d.public = None;
