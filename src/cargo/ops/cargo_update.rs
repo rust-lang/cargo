@@ -694,7 +694,7 @@ fn print_lockfile_updates(
 
     if ws.gctx().shell().verbosity() == Verbosity::Verbose {
         ws.gctx().shell().note(
-            "to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`",
+            "to see how you depend on a package, run `cargo tree --invert --target all --package <dep>@<ver>`",
         )?;
     } else {
         if 0 < unchanged_behind {
