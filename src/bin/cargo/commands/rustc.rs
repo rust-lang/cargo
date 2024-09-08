@@ -80,11 +80,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         compile_opts.build_config.requested_profile = InternedString::new("dev");
     }
     let target_args = values(args, "args");
-    compile_opts.target_rustc_args = if target_args.is_empty() {
-        None
-    } else {
-        Some(target_args)
-    };
+    compile_opts.target_rustc_args = (!target_args.is_empty()).then(|| target_args);
     if let Some(opt_value) = args.get_one::<String>(PRINT_ARG_NAME) {
         gctx.cli_unstable()
             .fail_if_stable_opt(PRINT_ARG_NAME, 9357)?;
@@ -92,11 +88,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         return Ok(());
     }
     let crate_types = values(args, CRATE_TYPE_ARG_NAME);
-    compile_opts.target_rustc_crate_types = if crate_types.is_empty() {
-        None
-    } else {
-        Some(crate_types)
-    };
+    compile_opts.target_rustc_crate_types = (!crate_types.is_empty()).then(|| crate_types);
     ops::compile(&ws, &compile_opts)?;
 
     Ok(())
