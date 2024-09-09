@@ -91,7 +91,16 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
         ops::print(&ws, &compile_opts, opt_value)?;
         return Ok(());
     }
-    let crate_types = values(args, CRATE_TYPE_ARG_NAME);
+
+    let crate_types = args
+        .get_many::<String>(CRATE_TYPE_ARG_NAME)
+        .into_iter()
+        .flatten()
+        .flat_map(|s| s.split(','))
+        .filter(|s| !s.is_empty())
+        .map(String::from)
+        .collect::<Vec<String>>();
+
     compile_opts.target_rustc_crate_types = if crate_types.is_empty() {
         None
     } else {

@@ -238,7 +238,7 @@ fn build_with_crate_types_for_foo() {
     p.cargo("rustc -v --crate-type lib,cdylib")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib,cdylib [..]`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --crate-type cdylib [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -302,7 +302,7 @@ fn build_with_crate_types_to_example() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib [..]`
-[RUNNING] `rustc --crate-name ex --edition=2015 examples/ex.rs [..]--crate-type lib,cdylib [..]`
+[RUNNING] `rustc --crate-name ex --edition=2015 examples/ex.rs [..]--crate-type lib --crate-type cdylib [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -338,7 +338,7 @@ fn build_with_crate_types_to_one_of_multi_examples() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib [..]`
-[RUNNING] `rustc --crate-name ex1 --edition=2015 examples/ex1.rs [..]--crate-type lib,cdylib [..]`
+[RUNNING] `rustc --crate-name ex1 --edition=2015 examples/ex1.rs [..]--crate-type lib --crate-type cdylib [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
