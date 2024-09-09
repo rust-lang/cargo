@@ -9,7 +9,7 @@ use std::sync::Arc;
 use tracing::trace;
 
 use crate::core::compiler::{CompileKind, CompileTarget};
-use crate::core::{PackageId, SourceId, Summary};
+use crate::core::{CliUnstable, Feature, Features, PackageId, SourceId, Summary};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::OptVersionReq;
@@ -52,50 +52,32 @@ struct Inner {
 }
 
 #[derive(Serialize)]
-struct SerializedDependency<'a> {
-    name: &'a str,
+pub struct SerializedDependency {
+    name: InternedString,
     source: SourceId,
     req: String,
     kind: DepKind,
-    rename: Option<&'a str>,
+    rename: Option<InternedString>,
 
     optional: bool,
     uses_default_features: bool,
-    features: &'a [InternedString],
+    features: Vec<InternedString>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    artifact: Option<&'a Artifact>,
-    target: Option<&'a Platform>,
+    artifact: Option<Artifact>,
+    target: Option<Platform>,
     /// The registry URL this dependency is from.
     /// If None, then it comes from the default registry (crates.io).
-    registry: Option<&'a str>,
+    registry: Option<String>,
 
     /// The file system path for a local path dependency.
     #[serde(skip_serializing_if = "Option::is_none")]
     path: Option<PathBuf>,
-}
 
-impl ser::Serialize for Dependency {
-    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        let registry_id = self.registry_id();
-        SerializedDependency {
-            name: &*self.package_name(),
-            source: self.source_id(),
-            req: self.version_req().to_string(),
-            kind: self.kind(),
-            optional: self.is_optional(),
-            uses_default_features: self.uses_default_features(),
-            features: self.features(),
-            target: self.platform(),
-            rename: self.explicit_name_in_toml().map(|s| s.as_str()),
-            registry: registry_id.as_ref().map(|sid| sid.url().as_str()),
-            path: self.source_id().local_path(),
-            artifact: self.artifact(),
-        }
-        .serialize(s)
-    }
+    /// `public` flag is unset if `-Zpublic-dependency` is not enabled
+    ///
+    /// Once that feature is stabilized, `public` will not need to be `Option`
+    #[serde(skip_serializing_if = "Option::is_none")]
+    public: Option<bool>,
 }
 
 #[derive(PartialEq, Eq, Hash, Ord, PartialOrd, Clone, Debug, Copy)]
@@ -179,6 +161,34 @@ impl Dependency {
                 explicit_name_in_toml: None,
                 artifact: None,
             }),
+        }
+    }
+
+    pub fn serialized(
+        &self,
+        unstable_flags: &CliUnstable,
+        features: &Features,
+    ) -> SerializedDependency {
+        SerializedDependency {
+            name: self.package_name(),
+            source: self.source_id(),
+            req: self.version_req().to_string(),
+            kind: self.kind(),
+            optional: self.is_optional(),
+            uses_default_features: self.uses_default_features(),
+            features: self.features().to_vec(),
+            target: self.inner.platform.clone(),
+            rename: self.explicit_name_in_toml(),
+            registry: self.registry_id().as_ref().map(|sid| sid.url().to_string()),
+            path: self.source_id().local_path(),
+            artifact: self.inner.artifact.clone(),
+            public: if unstable_flags.public_dependency
+                || features.is_enabled(Feature::public_dependency())
+            {
+                Some(self.inner.public)
+            } else {
+                None
+            },
         }
     }
 

@@ -15,6 +15,9 @@ Deprecated, use `<cyan,bold>cargo metadata --no-deps</>` instead.\
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
     let ws = args.workspace(gctx)?;
-    gctx.shell().print_json(&ws.current()?.serialized())?;
+    gctx.shell().print_json(
+        &ws.current()?
+            .serialized(gctx.cli_unstable(), ws.unstable_features()),
+    )?;
     Ok(())
 }

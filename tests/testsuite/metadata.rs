@@ -627,6 +627,206 @@ fn cargo_metadata_with_deps_and_version() {
         .run();
 }
 
+/// The `public` field should not show up in `cargo metadata` output if `-Zpublic-dependency`
+/// is not enabled
+#[cargo_test]
+fn cargo_metadata_public_private_dependencies_disabled() {
+    let p = project()
+        .file("src/foo.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                authors = []
+                license = "MIT"
+                description = "foo"
+
+                [[bin]]
+                name = "foo"
+
+                [dependencies]
+                bar = { version = "*", public = false }
+                foobar = { version = "*", public = true }
+                baz = "*"
+            "#,
+        )
+        .build();
+    Package::new("bar", "0.0.1").publish();
+    Package::new("foobar", "0.0.2").publish();
+    Package::new("baz", "0.0.3").publish();
+
+    p.cargo("metadata -q --format-version 1")
+        .with_stdout_data(
+            str![[r#"
+{
+  "metadata": null,
+  "packages": [
+    {
+      "name": "bar",
+      "...": "{...}"
+    },
+    {
+      "name": "baz",
+      "...": "{...}"
+    },
+    {
+      "name": "foo",
+      "dependencies": [
+        {
+          "features": [],
+          "kind": null,
+          "name": "bar",
+          "optional": false,
+          "registry": null,
+          "rename": null,
+          "req": "*",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "target": null,
+          "uses_default_features": true
+        },
+        {
+          "features": [],
+          "kind": null,
+          "name": "baz",
+          "optional": false,
+          "registry": null,
+          "rename": null,
+          "req": "*",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "target": null,
+          "uses_default_features": true
+        },
+        {
+          "features": [],
+          "kind": null,
+          "name": "foobar",
+          "optional": false,
+          "registry": null,
+          "rename": null,
+          "req": "*",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "target": null,
+          "uses_default_features": true
+        }
+      ],
+      "...": "{...}"
+    },
+    {
+      "name": "foobar",
+      "...": "{...}"
+    }
+  ],
+  "...": "{...}"
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+}
+
+#[cargo_test]
+fn cargo_metadata_public_private_dependencies_enabled() {
+    let p = project()
+        .file("src/foo.rs", "")
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                authors = []
+                license = "MIT"
+                description = "foo"
+
+                [[bin]]
+                name = "foo"
+
+                [dependencies]
+                bar = { version = "*", public = false }
+                foobar = { version = "*", public = true }
+                baz = "*"
+            "#,
+        )
+        .build();
+    Package::new("bar", "0.0.1").publish();
+    Package::new("foobar", "0.0.2").publish();
+    Package::new("baz", "0.0.3").publish();
+
+    p.cargo("metadata -q --format-version 1 -Zpublic-dependency")
+        .masquerade_as_nightly_cargo(&["public-dependency"])
+        .with_stdout_data(
+            str![[r#"
+{
+  "metadata": null,
+  "packages": [
+    {
+      "name": "bar",
+      "...": "{...}"
+    },
+    {
+      "name": "baz",
+      "...": "{...}"
+    },
+    {
+      "name": "foo",
+      "dependencies": [
+        {
+          "features": [],
+          "kind": null,
+          "name": "bar",
+          "optional": false,
+          "public": false,
+          "registry": null,
+          "rename": null,
+          "req": "*",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "target": null,
+          "uses_default_features": true
+        },
+        {
+          "features": [],
+          "kind": null,
+          "name": "baz",
+          "optional": false,
+          "public": false,
+          "registry": null,
+          "rename": null,
+          "req": "*",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "target": null,
+          "uses_default_features": true
+        },
+        {
+          "features": [],
+          "kind": null,
+          "name": "foobar",
+          "optional": false,
+          "public": true,
+          "registry": null,
+          "rename": null,
+          "req": "*",
+          "source": "registry+https://github.com/rust-lang/crates.io-index",
+          "target": null,
+          "uses_default_features": true
+        }
+      ],
+      "...": "{...}"
+    },
+    {
+      "name": "foobar",
+      "...": "{...}"
+    }
+  ],
+  "...": "{...}"
+}
+"#]]
+            .is_json(),
+        )
+        .run();
+}
+
 #[cargo_test]
 fn example() {
     let p = project()

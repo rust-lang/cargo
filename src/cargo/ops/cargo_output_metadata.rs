@@ -33,7 +33,10 @@ pub fn output_metadata(ws: &Workspace<'_>, opt: &OutputMetadataOptions) -> Cargo
         );
     }
     let (packages, resolve) = if opt.no_deps {
-        let packages = ws.members().map(|pkg| pkg.serialized()).collect();
+        let packages = ws
+            .members()
+            .map(|pkg| pkg.serialized(ws.gctx().cli_unstable(), ws.unstable_features()))
+            .collect();
         (packages, None)
     } else {
         let (packages, resolve) = build_resolve_graph(ws, opt)?;
@@ -178,7 +181,7 @@ fn build_resolve_graph(
     let actual_packages = package_map
         .into_iter()
         .filter_map(|(pkg_id, pkg)| node_map.get(&pkg_id).map(|_| pkg))
-        .map(|pkg| pkg.serialized())
+        .map(|pkg| pkg.serialized(ws.gctx().cli_unstable(), ws.unstable_features()))
         .collect();
 
     let mr = MetadataResolve {
