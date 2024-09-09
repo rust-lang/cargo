@@ -51,7 +51,7 @@ const INDEX_V_MAX: u32 = 2;
 ///
 /// Different kinds of registries store the index differently:
 ///
-/// * [`LocalRegistry`]` is a simple on-disk tree of files of the raw index.
+/// * [`LocalRegistry`] is a simple on-disk tree of files of the raw index.
 /// * [`RemoteRegistry`] is stored as a raw git repository.
 /// * [`HttpRegistry`] fills the on-disk index cache directly without keeping
 ///   any raw index.
