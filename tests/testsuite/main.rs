@@ -166,6 +166,7 @@ mod rustflags;
 mod rustup;
 mod script;
 mod search;
+mod shell_completions;
 mod shell_quoting;
 mod source_replacement;
 mod ssh;

@@ -36,7 +36,9 @@ cargo-util = { version = "0.2.14", path = "crates/cargo-util" }
 cargo-util-schemas = { version = "0.6.0", path = "crates/cargo-util-schemas" }
 cargo_metadata = "0.18.1"
 clap = "4.5.11"
+clap_complete = { version = "4.5.24", features = ["unstable-dynamic"] }
 color-print = "0.3.6"
+completest-pty = "0.5.3"
 core-foundation = { version = "0.10.0", features = ["mac_os_10_7_support"] }
 crates-io = { version = "0.40.4", path = "crates/crates-io" }
 criterion = { version = "0.5.1", features = ["html_reports"] }
@@ -153,6 +155,7 @@ cargo-platform.workspace = true
 cargo-util-schemas.workspace = true
 cargo-util.workspace = true
 clap = { workspace = true, features = ["wrap_help"] }
+clap_complete.workspace = true
 color-print.workspace = true
 crates-io.workspace = true
 curl = { workspace = true, features = ["http2"] }
@@ -239,6 +242,7 @@ features = [
 [dev-dependencies]
 annotate-snippets = { workspace = true, features = ["testing-colors"] }
 cargo-test-support.workspace = true
+completest-pty.workspace = true
 gix = { workspace = true, features = ["revision"] }
 same-file.workspace = true
 snapbox.workspace = true
