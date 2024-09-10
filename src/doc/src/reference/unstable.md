@@ -117,6 +117,7 @@ Each new feature described below should explain how to use it.
     * [script](#script) --- Enable support for single-file `.rs` packages.
     * [lockfile-path](#lockfile-path) --- Allows to specify a path to lockfile other than the default path `<workspace_root>/Cargo.lock`.
     * [package-workspace](#package-workspace) --- Allows for packaging and publishing multiple crates in a workspace.
+    * [native-completions](#native-completions) --- Move cargo shell completions to native completions.
 
 ## allow-features
 
@@ -1685,6 +1686,30 @@ pass a `--registry` or `--index` flag.
 cargo +nightly -Zpackage-workspace --registry=my-registry package -p foo -p dep
 cargo +nightly -Zpackage-workspace --index=https://example.com package -p foo -p dep
 ```
+
+## native-completions
+* Original Issue: [#6645](https://github.com/rust-lang/cargo/issues/6645)
+* Tracking Issue: [#14520](https://github.com/rust-lang/cargo/issues/14520)
+
+This feature moves the handwritten completion scripts to Rust native, making it
+easier for us to add, extend and test new completions. This feature is enabled with the
+nightly channel, without requiring additional `-Z` options.
+
+### How to use native-completions feature:
+- bash:
+  Add `source <(CARGO_COMPLETE=bash cargo)` to your .bashrc.
+
+- zsh:
+  Add `source <(CARGO_COMPLETE=zsh cargo)` to your .zshrc.
+  
+- fish:
+  Add `source (CARGO_COMPLETE=fish cargo | psub)` to `$XDG_CONFIG_HOME/fish/completions/cargo.fish`
+
+- elvish:
+  Add `eval (E:CARGO_COMPLETE=elvish cargo | slurp)` to `$XDG_CONFIG_HOME/elvish/rc.elv`
+
+- powershell:
+  Add `CARGO_COMPLETE=powershell cargo | Invoke-Expression` to `$PROFILE`.
 
 # Stabilized and removed features
 

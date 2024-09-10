@@ -173,6 +173,13 @@ jobs:
     - run: rustup target add ${{ matrix.other }}
     - run: rustup component add rustc-dev llvm-tools-preview rust-docs
       if: startsWith(matrix.rust, 'nightly')
+    # Install fish, zsh, and elvish only on Ubuntu systems
+    - name: Install fish, zsh, and elvish on Ubuntu
+      run: sudo apt update -y && sudo apt install fish zsh elvish -y
+      if: matrix.os == 'ubuntu-latest'
+    - name: Install fish, elvish on macOS
+      run: brew install fish elvish
+      if: matrix.os == 'macos-14' || matrix.os == 'macos-13'
     - run: sudo apt update -y && sudo apt install lldb gcc-multilib libsecret-1-0 libsecret-1-dev -y
       if: matrix.os == 'ubuntu-latest'
     - run: rustup component add rustfmt || echo "rustfmt not available"
@@ -227,6 +234,7 @@ jobs:
       - run: rustup update --no-self-update stable && rustup default stable
       - run: rustup target add i686-unknown-linux-gnu
       - run: sudo apt update -y && sudo apt install gcc-multilib libsecret-1-0 libsecret-1-dev -y
+      - run: sudo apt update -y && sudo apt install fish zsh elvish -y
       - run: rustup component add rustfmt || echo "rustfmt not available"
       - run: cargo test -p cargo
         env:
