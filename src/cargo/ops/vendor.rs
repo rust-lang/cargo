@@ -207,8 +207,10 @@ fn sync(
         let dst = canonical_destination.join(&dst_name);
         to_remove.remove(&dst);
         let cksum = dst.join(".cargo-checksum.json");
-        if dir_has_version_suffix && cksum.exists() {
-            // Always re-copy directory without version suffix in case the version changed
+        // Registries are the only immutable sources,
+        // path and git dependencies' versions cannot be trusted to mean "no change"
+        if dir_has_version_suffix && id.source_id().is_registry() && cksum.exists() {
+            // Don't re-copy directory with version suffix in case it comes from a registry
             continue;
         }
 

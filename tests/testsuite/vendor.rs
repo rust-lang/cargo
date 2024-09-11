@@ -1626,7 +1626,7 @@ fn git_update_rev() {
         .run();
 
     let lib = p.read_file("vendor/a-0.1.0/src/lib.rs");
-    assert_e2e().eq(lib, "");
+    assert_e2e().eq(lib, "pub fn f() {}");
 }
 
 #[cargo_test]
