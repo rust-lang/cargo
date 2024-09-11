@@ -26,7 +26,7 @@ Every night at 00:00 UTC, the artifacts from the most recently merged PR are
 promoted to the nightly release channel. A similar process happens for beta
 and stable releases.
 
-[`dist` bootstrap module]: https://github.com/rust-lang/rust/blob/master/src/bootstrap/dist.rs
+[`dist` bootstrap module]: https://github.com/rust-lang/rust/blob/master/src/bootstrap/src/core/build_steps/dist.rs
 
 ## Submodule updates
 
@@ -123,17 +123,21 @@ stable) and the release-specific URL such as
 The code that builds the documentation is located in the [`doc` bootstrap
 module].
 
-[`doc` bootstrap module]: https://github.com/rust-lang/rust/blob/master/src/bootstrap/doc.rs
+[`doc` bootstrap module]: https://github.com/rust-lang/rust/blob/master/src/bootstrap/src/core/build_steps/doc.rs
 
 ## crates.io publishing
 
 Cargo's library and its related dependencies (like `cargo-util`) are published
 to [crates.io] as part of the 6-week stable release process by the [Release
-team]. There is a [`publish.py` script] that is used by the Release team's
-automation scripts (see <https://github.com/rust-lang/simpleinfra/>) to handle
-determining which packages to publish. The build tool crates aren't published.
-This runs on the specific git commit associated with the cargo submodule in the
-`stable` branch in `rust-lang/rust` at the time of release.
+team]. The release process involves a series of steps:
+
+1. The Release team's automation scripts (see <https://github.com/rust-lang/simpleinfra/>) will run [`promote-release`] which will create a tag in the `rust-lang/cargo` repository associated with the version of the cargo submodule for that release.
+2. The creation of a tag will trigger the [release workflow] in `rust-lang/cargo`.
+3. The release workflow will run the [`publish.py` script] on the commit associated with the tag.
+4. The `publish.py` script will run `cargo publish` on any crates that are not already published.
+
+[`promote-release`]: https://github.com/rust-lang/promote-release
+[release workflow]: https://github.com/rust-lang/cargo/blob/master/.github/workflows/release.yml
 
 On very rare cases, the Cargo team may decide to manually publish a new
 release to [crates.io]. For example, this may be necessary if there is a
@@ -141,20 +145,17 @@ problem with the current version that only affects API users, and does not
 affect the `cargo` binary shipped in the stable release. In this situation,
 PRs should be merged to the associated stable release branch in the cargo repo
 (like `rust-1.70.0`) that fix the issue and bump the patch version of the
-affected package. Then someone with permissions (currently a subset of the
-Cargo team, or the Release team) should publish it manually using `cargo
-publish`.
+affected package. Then you need to work with the Release Team to get a release
+published to crates.io.[^release-problem]
 
 Some packages are not published automatically because they are not part of the
 Rust release train. This currently only includes the [`home`] package. These
 are published manually on an as-needed or as-requested basis by whoever has
-permissions (currently [@ehuss] or the Release/Infra team).
+permissions (currently [@ehuss] or the Release/Infra team)[^fix-manual-release].
 
-In the future, these manual publishing options should be integrated with
-GitHub Actions so that any team member can trigger them. Likely that should
-involve getting Infra to create scoped tokens that can be added as GitHub
-Secrets, and setting up GitHub Actions workflows with the appropriate
-permissions which can be manually triggered to launch a release.
+[^release-problem]: Unfortunately there are some complications with this process. See <https://github.com/rust-lang/cargo/issues/14538> for more detail, and thoughts on how to improve this.
+
+[^fix-manual-release]: This should be fixed, see [crate ownership policy](https://forge.rust-lang.org/policies/crate-ownership.html) about removing ownership. Also see <https://github.com/rust-lang/cargo/issues/14538> for problems with tagging. In general, these should be published from GitHub Actions, but we don't have the infrastructure set up for that, yet.
 
 [`home`]: https://github.com/rust-lang/cargo/tree/master/crates/home
 [`publish.py` script]: https://github.com/rust-lang/cargo/blob/master/publish.py
