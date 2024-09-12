@@ -369,7 +369,7 @@ situations:
   currently being built are ignored.
 * [Build-dependencies] and proc-macros do not share features with normal
   dependencies.
-* [Dev-dependencies] do not activate features unless building a [cargo target][target] that
+* [Dev-dependencies] do not activate features unless building a [Cargo target][target] that
   needs them (like tests or examples).
 
 Avoiding the unification is necessary for some situations. For example, if a
