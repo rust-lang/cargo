@@ -182,6 +182,7 @@ mod vendor;
 mod verify_project;
 mod version;
 mod warn_on_failure;
+mod warning_override;
 mod weak_dep_features;
 mod workspaces;
 mod yank;
