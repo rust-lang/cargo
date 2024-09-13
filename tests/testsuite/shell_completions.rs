@@ -4,13 +4,9 @@ use cargo_test_support::cargo_test;
 use completest_pty::Runtime;
 use snapbox::assert_data_eq;
 
-#[cargo_test]
+#[cargo_test(requires_bash)]
+#[cfg_attr(target_os = "macos", ignore = "bash is not working on macOS")]
 fn bash() {
-    // HACK: At least on CI, bash is not working on macOS
-    if cfg!(target_os = "macos") {
-        return;
-    }
-
     let input = "cargo \t\t";
     let expected = snapbox::str![
         "% 
@@ -29,13 +25,9 @@ fn bash() {
     assert_data_eq!(actual, expected);
 }
 
-#[cargo_test]
+#[cargo_test(requires_elvish)]
+#[cfg_attr(target_os = "macos", ignore = "elvish is not working on macOS")]
 fn elvish() {
-    // HACK: At least on CI, elvish is not working on macOS
-    if cfg!(target_os = "macos") {
-        return;
-    }
-
     let input = "cargo \t\t";
     let expected = snapbox::str![
         "% cargo --config
@@ -55,13 +47,9 @@ fn elvish() {
     assert_data_eq!(actual, expected);
 }
 
-#[cargo_test]
+#[cargo_test(requires_fish)]
+#[cfg_attr(target_os = "macos", ignore = "fish is not working on macOS")]
 fn fish() {
-    // HACK: At least on CI, fish is not working on macOS
-    if cfg!(target_os = "macos") {
-        return;
-    }
-
     let input = "cargo \t\t";
     let expected = snapbox::str![
         "% cargo 
@@ -125,7 +113,7 @@ yank                                                                            
     assert_data_eq!(actual, expected);
 }
 
-#[cargo_test]
+#[cargo_test(requires_zsh)]
 fn zsh() {
     let input = "cargo \t\t";
     let expected = snapbox::str![
