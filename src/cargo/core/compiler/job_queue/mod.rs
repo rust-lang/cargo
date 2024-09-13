@@ -964,7 +964,7 @@ impl<'gctx> DrainState<'gctx> {
     }
 
     fn emit_log_messages(
-        &mut self,
+        &self,
         unit: &Unit,
         build_runner: &mut BuildRunner<'_, '_>,
         show_warnings: bool,
