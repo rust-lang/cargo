@@ -963,32 +963,32 @@ impl<'gctx> DrainState<'gctx> {
     }
 
     fn emit_warnings(
-        &mut self,
+        &self,
         msg: Option<&str>,
         unit: &Unit,
-        build_runner: &mut BuildRunner<'_, '_>,
+        build_runner: &BuildRunner<'_, '_>,
     ) -> CargoResult<()> {
         let outputs = build_runner.build_script_outputs.lock().unwrap();
         let Some(metadata) = build_runner.find_build_script_metadata(unit) else {
             return Ok(());
         };
-        let bcx = &mut build_runner.bcx;
+        let gctx = build_runner.bcx.gctx;
         if let Some(output) = outputs.get(metadata) {
             if !output.warnings.is_empty() {
                 if let Some(msg) = msg {
-                    writeln!(bcx.gctx.shell().err(), "{}\n", msg)?;
+                    writeln!(gctx.shell().err(), "{}\n", msg)?;
                 }
 
                 for warning in output.warnings.iter() {
                     let warning_with_package =
                         format!("{}@{}: {}", unit.pkg.name(), unit.pkg.version(), warning);
 
-                    bcx.gctx.shell().warn(warning_with_package)?;
+                    gctx.shell().warn(warning_with_package)?;
                 }
 
                 if msg.is_some() {
                     // Output an empty line.
-                    writeln!(bcx.gctx.shell().err())?;
+                    writeln!(gctx.shell().err())?;
                 }
             }
         }
