@@ -1,4 +1,4 @@
-<svg width="1230px" height="758px" xmlns="http://www.w3.org/2000/svg">
+<svg width="1230px" height="776px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
@@ -88,15 +88,17 @@
 </tspan>
     <tspan x="10px" y="658px"><tspan>    -Z unstable-options         Allow the usage of unstable options</tspan>
 </tspan>
-    <tspan x="10px" y="676px">
+    <tspan x="10px" y="676px"><tspan>    -Z warnings                 Allow use of the build.warnings config key</tspan>
 </tspan>
-    <tspan x="10px" y="694px"><tspan>Run with `cargo -Z [FLAG] [COMMAND]`</tspan>
+    <tspan x="10px" y="694px">
 </tspan>
-    <tspan x="10px" y="712px">
+    <tspan x="10px" y="712px"><tspan>Run with `cargo -Z [FLAG] [COMMAND]`</tspan>
 </tspan>
-    <tspan x="10px" y="730px"><tspan>See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html for more information about these flags.</tspan>
+    <tspan x="10px" y="730px">
 </tspan>
-    <tspan x="10px" y="748px">
+    <tspan x="10px" y="748px"><tspan>See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html for more information about these flags.</tspan>
+</tspan>
+    <tspan x="10px" y="766px">
 </tspan>
   </text>
 
