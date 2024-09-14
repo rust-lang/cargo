@@ -5,6 +5,7 @@ use completest_pty::Runtime;
 use snapbox::assert_data_eq;
 
 #[cargo_test]
+#[ignore = "disabled, see https://github.com/rust-lang/cargo/issues/14545"]
 fn bash() {
     // HACK: At least on CI, bash is not working on macOS
     if cfg!(target_os = "macos") {
@@ -30,6 +31,7 @@ fn bash() {
 }
 
 #[cargo_test]
+#[ignore = "disabled, see https://github.com/rust-lang/cargo/issues/14545"]
 fn elvish() {
     // HACK: At least on CI, elvish is not working on macOS
     if cfg!(target_os = "macos") {
@@ -56,6 +58,7 @@ fn elvish() {
 }
 
 #[cargo_test]
+#[ignore = "disabled, see https://github.com/rust-lang/cargo/issues/14545"]
 fn fish() {
     // HACK: At least on CI, fish is not working on macOS
     if cfg!(target_os = "macos") {
@@ -126,6 +129,7 @@ yank                                                                            
 }
 
 #[cargo_test]
+#[ignore = "disabled, see https://github.com/rust-lang/cargo/issues/14545"]
 fn zsh() {
     let input = "cargo \t\t";
     let expected = snapbox::str![
