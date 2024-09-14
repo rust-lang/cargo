@@ -1569,6 +1569,67 @@ path = [..]
 }
 
 #[cargo_test]
+fn git_update_rev() {
+    let (git_project, git_repo) = git::new_repo("git", |p| {
+        p.file("Cargo.toml", &basic_manifest("a", "0.1.0"))
+            .file("src/lib.rs", "")
+    });
+    let url = git_project.url();
+    let ref_1 = "initial";
+    let ref_2 = "update";
+
+    git::tag(&git_repo, ref_1);
+
+    git_project.change_file("src/lib.rs", "pub fn f() {}");
+    git::add(&git_repo);
+    git::commit(&git_repo);
+    git::tag(&git_repo, ref_2);
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    a = {{ git = '{url}', rev = '{ref_1}' }}
+                "#
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("vendor --respect-source-config --versioned-dirs")
+        .run();
+
+    let lib = p.read_file("vendor/a-0.1.0/src/lib.rs");
+    assert_e2e().eq(lib, "");
+
+    p.change_file(
+        "Cargo.toml",
+        &format!(
+            r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    a = {{ git = '{url}', rev = '{ref_2}' }}
+                "#
+        ),
+    );
+
+    p.cargo("vendor --respect-source-config --versioned-dirs")
+        .run();
+
+    let lib = p.read_file("vendor/a-0.1.0/src/lib.rs");
+    assert_e2e().eq(lib, "pub fn f() {}");
+}
+
+#[cargo_test]
 fn depend_on_vendor_dir_not_deleted() {
     let p = project()
         .file(
