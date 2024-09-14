@@ -1113,33 +1113,57 @@ fn report_rust_versions() {
         .rust_version("1.55.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
+
+    Package::new("dep-only-low-incompatible", "1.55.0")
+        .rust_version("1.55.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
     Package::new("dep-only-low-incompatible", "1.75.0")
         .rust_version("1.75.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+
+    Package::new("dep-only-high-compatible", "1.55.0")
+        .rust_version("1.55.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
     Package::new("dep-only-high-compatible", "1.65.0")
         .rust_version("1.65.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
+
+    Package::new("dep-only-high-incompatible", "1.55.0")
+        .rust_version("1.55.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
     Package::new("dep-only-high-incompatible", "1.75.0")
         .rust_version("1.75.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
+
     Package::new("dep-only-unset-unset", "1.0.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+
+    Package::new("dep-only-unset-compatible", "1.55.0")
+        .rust_version("1.55.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
     Package::new("dep-only-unset-compatible", "1.75.0")
         .rust_version("1.75.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
+
     Package::new("dep-only-unset-incompatible", "1.2345.0")
         .rust_version("1.2345.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
+
     Package::new("dep-shared-compatible", "1.55.0")
         .rust_version("1.55.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
+
     Package::new("dep-shared-incompatible", "1.75.0")
         .rust_version("1.75.0")
         .file("src/lib.rs", "fn other_stuff() {}")
@@ -1210,8 +1234,10 @@ fn report_rust_versions() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 9 packages to latest Rust 1.60.0 compatible versions
-[ADDING] dep-only-high-incompatible v1.75.0 (requires Rust 1.75.0)
-[ADDING] dep-only-low-incompatible v1.75.0 (requires Rust 1.75.0)
+[ADDING] dep-only-high-compatible v1.55.0 (available: v1.65.0)
+[ADDING] dep-only-high-incompatible v1.55.0 (available: v1.75.0, requires Rust 1.75.0)
+[ADDING] dep-only-low-incompatible v1.55.0 (available: v1.75.0, requires Rust 1.75.0)
+[ADDING] dep-only-unset-compatible v1.55.0 (available: v1.75.0)
 [ADDING] dep-only-unset-incompatible v1.2345.0 (requires Rust 1.2345.0)
 [ADDING] dep-shared-incompatible v1.75.0 (requires Rust 1.75.0)
 
