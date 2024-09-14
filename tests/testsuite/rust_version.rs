@@ -1240,6 +1240,7 @@ fn report_rust_versions() {
 [ADDING] dep-only-unset-compatible v1.55.0 (available: v1.75.0)
 [ADDING] dep-only-unset-incompatible v1.2345.0 (requires Rust 1.2345.0)
 [ADDING] dep-shared-incompatible v1.75.0 (requires Rust 1.75.0)
+[NOTE] 2 packages may have a higher, compatible version. To update them, run `cargo update <name> --precise <version>
 
 "#]])
         .run();
