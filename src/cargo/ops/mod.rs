@@ -22,6 +22,7 @@ pub use self::cargo_update::update_lockfile;
 pub use self::cargo_update::upgrade_manifests;
 pub use self::cargo_update::write_manifest_upgrades;
 pub use self::cargo_update::UpdateOptions;
+pub use self::common_for_install_and_uninstall::{resolve_root, InstallTracker};
 pub use self::fix::{fix, fix_exec_rustc, fix_get_proxy_lock_addr, FixOptions};
 pub use self::lockfile::{load_pkg_lockfile, resolve_to_string, write_pkg_lockfile};
 pub use self::registry::info;
