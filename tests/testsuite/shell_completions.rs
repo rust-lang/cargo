@@ -4,14 +4,8 @@ use cargo_test_support::cargo_test;
 use completest_pty::Runtime;
 use snapbox::assert_data_eq;
 
-#[cargo_test]
-#[ignore = "disabled, see https://github.com/rust-lang/cargo/issues/14545"]
+#[cargo_test(requires_bash)]
 fn bash() {
-    // HACK: At least on CI, bash is not working on macOS
-    if cfg!(target_os = "macos") {
-        return;
-    }
-
     let input = "cargo \t\t";
     let expected = snapbox::str![
         "% 
@@ -30,14 +24,8 @@ fn bash() {
     assert_data_eq!(actual, expected);
 }
 
-#[cargo_test]
-#[ignore = "disabled, see https://github.com/rust-lang/cargo/issues/14545"]
+#[cargo_test(requires_elvish)]
 fn elvish() {
-    // HACK: At least on CI, elvish is not working on macOS
-    if cfg!(target_os = "macos") {
-        return;
-    }
-
     let input = "cargo \t\t";
     let expected = snapbox::str![
         "% cargo --config
@@ -57,14 +45,8 @@ fn elvish() {
     assert_data_eq!(actual, expected);
 }
 
-#[cargo_test]
-#[ignore = "disabled, see https://github.com/rust-lang/cargo/issues/14545"]
+#[cargo_test(requires_fish)]
 fn fish() {
-    // HACK: At least on CI, fish is not working on macOS
-    if cfg!(target_os = "macos") {
-        return;
-    }
-
     let input = "cargo \t\t";
     let expected = snapbox::str![
         "% cargo 
@@ -128,8 +110,7 @@ yank                                                                            
     assert_data_eq!(actual, expected);
 }
 
-#[cargo_test]
-#[ignore = "disabled, see https://github.com/rust-lang/cargo/issues/14545"]
+#[cargo_test(requires_zsh)]
 fn zsh() {
     let input = "cargo \t\t";
     let expected = snapbox::str![
