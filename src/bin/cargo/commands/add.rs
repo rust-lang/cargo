@@ -144,7 +144,11 @@ This is the catch all, handling hashes to named references in remote repositorie
                 .long("registry")
                 .action(ArgAction::Set)
                 .value_name("NAME")
-                .help("Package registry for this dependency"),
+                .help("Package registry for this dependency")
+                .add(clap_complete::ArgValueCandidates::new(|| {
+                    let candidates = get_registry_candidates();
+                    candidates.unwrap_or_default()
+                })),
         ])
         .next_help_heading("Section")
         .args([

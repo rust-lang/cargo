@@ -386,7 +386,12 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_registry(self, help: &'static str) -> Self {
-        self._arg(opt("registry", help).value_name("REGISTRY"))
+        self._arg(opt("registry", help).value_name("REGISTRY").add(
+            clap_complete::ArgValueCandidates::new(|| {
+                let candidates = get_registry_candidates();
+                candidates.unwrap_or_default()
+            }),
+        ))
     }
 
     fn arg_index(self, help: &'static str) -> Self {
@@ -1061,6 +1066,21 @@ pub fn lockfile_path(
     }
 
     return Ok(Some(path));
+}
+
+pub fn get_registry_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
+    let gctx = new_gctx_for_completions()?;
+
+    if let Ok(Some(registries)) =
+        gctx.get::<Option<HashMap<String, HashMap<String, String>>>>("registries")
+    {
+        Ok(registries
+            .keys()
+            .map(|name| clap_complete::CompletionCandidate::new(name.to_owned()))
+            .collect())
+    } else {
+        Ok(vec![])
+    }
 }
 
 fn get_example_candidates() -> Vec<clap_complete::CompletionCandidate> {
