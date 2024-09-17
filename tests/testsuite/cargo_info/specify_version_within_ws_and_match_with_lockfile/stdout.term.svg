@@ -1,8 +1,7 @@
-<svg width="911px" height="164px" xmlns="http://www.w3.org/2000/svg">
+<svg width="740px" height="146px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
-    .fg-cyan { fill: #00AAAA }
     .fg-green { fill: #00AA00 }
     .fg-red { fill: #AA0000 }
     .fg-yellow { fill: #AA5500 }
@@ -33,9 +32,7 @@
 </tspan>
     <tspan x="10px" y="118px"><tspan class="fg-green bold">crates.io:</tspan><tspan> https://crates.io/crates/my-package/0.1.1+my-package</tspan>
 </tspan>
-    <tspan x="10px" y="136px"><tspan class="fg-cyan bold">note</tspan><tspan class="bold">:</tspan><tspan> to see how you depend on my-package, run `</tspan><tspan class="fg-cyan bold">cargo tree --invert --package my-package@0.1.1+my-package</tspan><tspan>`</tspan>
-</tspan>
-    <tspan x="10px" y="154px">
+    <tspan x="10px" y="136px">
 </tspan>
   </text>
 

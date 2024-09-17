@@ -48,7 +48,7 @@ fn case() {
         .current_dir(transitive1_directory)
         .assert()
         .stdout_eq(file!["transitive1-stdout.term.svg"])
-        .stderr_eq("");
+        .stderr_eq(file!["transitive1-stderr.term.svg"]);
     snapbox::cmd::Command::cargo_ui()
         .arg("info")
         .arg("my-package")
@@ -56,7 +56,7 @@ fn case() {
         .current_dir(transitive2_directory)
         .assert()
         .stdout_eq(file!["transitive2-stdout.term.svg"])
-        .stderr_eq("");
+        .stderr_eq(file!["transitive2-stderr.term.svg"]);
     snapbox::cmd::Command::cargo_ui()
         .arg("info")
         .arg("my-package")
@@ -72,7 +72,7 @@ fn case() {
         .current_dir(direct2_directory)
         .assert()
         .stdout_eq(file!["direct2-stdout.term.svg"])
-        .stderr_eq("");
+        .stderr_eq(file!["direct2-stderr.term.svg"]);
 
     assert_ui().subset_matches(current_dir!().join("out"), &project_root);
 }

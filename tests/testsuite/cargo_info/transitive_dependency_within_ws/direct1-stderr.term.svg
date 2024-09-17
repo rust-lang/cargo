@@ -1,7 +1,8 @@
-<svg width="740px" height="74px" xmlns="http://www.w3.org/2000/svg">
+<svg width="818px" height="92px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
+    .fg-cyan { fill: #00AAAA }
     .fg-green { fill: #00AA00 }
     .container {
       padding: 0 10px;
@@ -22,7 +23,9 @@
 </tspan>
     <tspan x="10px" y="46px"><tspan class="fg-green bold">  Downloaded</tspan><tspan> my-package v1.0.0 (registry `dummy-registry`)</tspan>
 </tspan>
-    <tspan x="10px" y="64px">
+    <tspan x="10px" y="64px"><tspan class="fg-cyan bold">note</tspan><tspan class="bold">:</tspan><tspan> to see how you depend on my-package, run `</tspan><tspan class="fg-cyan bold">cargo tree --invert --package my-package@1.0.0</tspan><tspan>`</tspan>
+</tspan>
+    <tspan x="10px" y="82px">
 </tspan>
   </text>
 

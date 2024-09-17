@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::io::Write;
 
+use crate::core::Shell;
 use crate::util::style::{ERROR, HEADER, LITERAL, NOP, NOTE, WARN};
 use crate::{
     core::{
@@ -153,7 +154,7 @@ pub(super) fn pretty_view(
     )?;
 
     if suggest_cargo_tree_command {
-        suggest_cargo_tree(package_id, stdout)?;
+        suggest_cargo_tree(package_id, &mut shell)?;
     }
 
     Ok(())
@@ -395,23 +396,14 @@ fn pretty_features(
 }
 
 // Suggest the cargo tree command to view the dependency tree.
-fn suggest_cargo_tree(package_id: PackageId, stdout: &mut dyn Write) -> CargoResult<()> {
+fn suggest_cargo_tree(package_id: PackageId, shell: &mut Shell) -> CargoResult<()> {
     let literal = LITERAL;
 
-    note(format_args!(
+    shell.note(format_args!(
         "to see how you depend on {name}, run `{literal}cargo tree --invert --package {name}@{version}{literal:#}`",
         name = package_id.name(),
         version = package_id.version(),
-    ), stdout)
-}
-
-pub(super) fn note(msg: impl std::fmt::Display, stdout: &mut dyn Write) -> CargoResult<()> {
-    let note = NOTE;
-    let bold = anstyle::Style::new() | anstyle::Effects::BOLD;
-
-    writeln!(stdout, "{note}note{note:#}{bold}:{bold:#} {msg}",)?;
-
-    Ok(())
+    ))
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
