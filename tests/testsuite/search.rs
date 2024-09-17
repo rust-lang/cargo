@@ -115,7 +115,11 @@ fn not_update() {
     cargo_process("search postgres")
         .replace_crates_io(registry.index_url())
         .with_stdout_data(SEARCH_RESULTS)
-        .with_stderr_data("") // without "Updating ... index"
+        // without "Updating ... index"
+        .with_stderr_data(str![[r#"
+[NOTE] to learn more about a package, run `cargo info <name>`
+
+"#]])
         .run();
 }
 
@@ -128,6 +132,7 @@ fn replace_default() {
         .with_stdout_data(SEARCH_RESULTS)
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
+[NOTE] to learn more about a package, run `cargo info <name>`
 
 "#]])
         .run();
@@ -140,6 +145,11 @@ fn simple() {
     cargo_process("search postgres --index")
         .arg(registry.index_url().as_str())
         .with_stdout_data(SEARCH_RESULTS)
+        .with_stderr_data(str![[r#"
+[UPDATING] `[ROOT]/registry` index
+[NOTE] to learn more about a package, run `cargo info <name>`
+
+"#]])
         .run();
 }
 
@@ -150,6 +160,11 @@ fn multiple_query_params() {
     cargo_process("search postgres sql --index")
         .arg(registry.index_url().as_str())
         .with_stdout_data(SEARCH_RESULTS)
+        .with_stderr_data(str![[r#"
+[UPDATING] `[ROOT]/registry` index
+[NOTE] to learn more about a package, run `cargo info <name>`
+
+"#]])
         .run();
 }
 

@@ -8,6 +8,7 @@ use anyhow::Context as _;
 use url::Url;
 
 use crate::util::style;
+use crate::util::style::LITERAL;
 use crate::util::truncate_with_ellipsis;
 use crate::CargoResult;
 use crate::GlobalContext;
@@ -85,6 +86,13 @@ pub fn search(
             total_crates - limit,
             extra
         );
+    }
+
+    if total_crates > 0 {
+        let literal = LITERAL;
+        shell.note(format_args!(
+            "to learn more about a package, run `{literal}cargo info <name>{literal:#}`",
+        ))?;
     }
 
     Ok(())
