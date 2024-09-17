@@ -13,7 +13,10 @@ pub fn cli() -> Command {
             .value_name("SPEC")
             .help_heading(heading::PACKAGE_SELECTION)
             .group("package-group")
-            .help("Package to update")])
+            .help("Package to update")
+            .add(clap_complete::ArgValueCandidates::new(
+                get_pkg_id_spec_candidates,
+            ))])
         .arg(
             optional_multi_opt("package", "SPEC", "Package to update")
                 .short('p')

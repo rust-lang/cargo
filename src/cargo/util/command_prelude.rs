@@ -1,9 +1,11 @@
-use crate::core::compiler::{BuildConfig, MessageFormat, TimingOutput};
-use crate::core::resolver::CliFeatures;
-use crate::core::{shell, Edition, Target, TargetKind, Workspace};
+use crate::core::compiler::{
+    BuildConfig, CompileKind, MessageFormat, RustcTargetData, TimingOutput,
+};
+use crate::core::resolver::{CliFeatures, ForceAllTargets, HasDevUnits};
+use crate::core::{shell, Edition, Package, Target, TargetKind, Workspace};
 use crate::ops::lockfile::LOCKFILE_NAME;
 use crate::ops::registry::RegistryOrIndex;
-use crate::ops::{CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
+use crate::ops::{self, CompileFilter, CompileOptions, NewOptions, Packages, VersionControl};
 use crate::util::important_paths::find_root_manifest_for_wd;
 use crate::util::interning::InternedString;
 use crate::util::is_rustup;
@@ -20,6 +22,8 @@ use cargo_util_schemas::manifest::RegistryName;
 use cargo_util_schemas::manifest::StringOrVec;
 use clap::builder::UnknownArgumentValueParser;
 use home::cargo_home_with_cwd;
+use semver::Version;
+use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
 use std::path::Path;
 use std::path::PathBuf;
@@ -1172,6 +1176,155 @@ fn get_target_triples_from_rustc() -> CargoResult<Vec<clap_complete::CompletionC
         .lines()
         .map(|line| clap_complete::CompletionCandidate::new(line.to_owned()))
         .collect())
+}
+
+pub fn get_pkg_id_spec_candidates() -> Vec<clap_complete::CompletionCandidate> {
+    let mut candidates = vec![];
+
+    let package_map = HashMap::<&str, Vec<Package>>::new();
+    let package_map =
+        get_packages()
+            .unwrap_or_default()
+            .into_iter()
+            .fold(package_map, |mut map, package| {
+                map.entry(package.name().as_str())
+                    .or_insert_with(Vec::new)
+                    .push(package);
+                map
+            });
+
+    let unique_name_candidates = package_map
+        .iter()
+        .filter(|(_name, packages)| packages.len() == 1)
+        .map(|(name, packages)| {
+            clap_complete::CompletionCandidate::new(name.to_string()).help(
+                packages[0]
+                    .manifest()
+                    .metadata()
+                    .description
+                    .to_owned()
+                    .map(From::from),
+            )
+        })
+        .collect::<Vec<_>>();
+
+    let duplicate_name_pairs = package_map
+        .iter()
+        .filter(|(_name, packages)| packages.len() > 1)
+        .collect::<Vec<_>>();
+
+    let mut duplicate_name_candidates = vec![];
+    for (name, packages) in duplicate_name_pairs {
+        let mut version_count: HashMap<&Version, usize> = HashMap::new();
+
+        for package in packages {
+            *version_count.entry(package.version()).or_insert(0) += 1;
+        }
+
+        for package in packages {
+            if let Some(&count) = version_count.get(package.version()) {
+                if count == 1 {
+                    duplicate_name_candidates.push(
+                        clap_complete::CompletionCandidate::new(format!(
+                            "{}@{}",
+                            name,
+                            package.version()
+                        ))
+                        .help(
+                            package
+                                .manifest()
+                                .metadata()
+                                .description
+                                .to_owned()
+                                .map(From::from),
+                        ),
+                    );
+                } else {
+                    duplicate_name_candidates.push(
+                        clap_complete::CompletionCandidate::new(format!(
+                            "{}",
+                            package.package_id().to_spec()
+                        ))
+                        .help(
+                            package
+                                .manifest()
+                                .metadata()
+                                .description
+                                .to_owned()
+                                .map(From::from),
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    candidates.extend(unique_name_candidates);
+    candidates.extend(duplicate_name_candidates);
+
+    candidates
+}
+
+fn get_packages() -> CargoResult<Vec<Package>> {
+    let gctx = new_gctx_for_completions()?;
+
+    let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx)?;
+
+    let requested_kinds = CompileKind::from_requested_targets(ws.gctx(), &[])?;
+    let mut target_data = RustcTargetData::new(&ws, &requested_kinds)?;
+    // `cli_features.all_features` must be true in case that `specs` is empty.
+    let cli_features = CliFeatures::new_all(true);
+    let has_dev_units = HasDevUnits::Yes;
+    let force_all_targets = ForceAllTargets::No;
+    let dry_run = true;
+
+    let ws_resolve = ops::resolve_ws_with_opts(
+        &ws,
+        &mut target_data,
+        &requested_kinds,
+        &cli_features,
+        &[],
+        has_dev_units,
+        force_all_targets,
+        dry_run,
+    )?;
+
+    let packages = ws_resolve
+        .pkg_set
+        .packages()
+        .map(Clone::clone)
+        .collect::<Vec<_>>();
+
+    Ok(packages)
+}
+
+fn new_gctx_for_completions() -> CargoResult<GlobalContext> {
+    let cwd = std::env::current_dir()?;
+    let mut gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
+
+    let verbose = 0;
+    let quiet = true;
+    let color = None;
+    let frozen = false;
+    let locked = true;
+    let offline = false;
+    let target_dir = None;
+    let unstable_flags = &[];
+    let cli_config = &[];
+
+    gctx.configure(
+        verbose,
+        quiet,
+        color,
+        frozen,
+        locked,
+        offline,
+        &target_dir,
+        unstable_flags,
+        cli_config,
+    )?;
+
+    Ok(gctx)
 }
 
 #[track_caller]
