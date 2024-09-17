@@ -89,10 +89,18 @@ pub trait CommandExt: Sized {
     }
 
     fn arg_package_spec_simple(self, package: &'static str) -> Self {
+        let name = self._name();
         self._arg(
             optional_multi_opt("package", "SPEC", package)
                 .short('p')
-                .help_heading(heading::PACKAGE_SELECTION),
+                .help_heading(heading::PACKAGE_SELECTION)
+                .add(clap_complete::ArgValueCandidates::new(move || {
+                    if ["build", "tree"].contains(&name.as_str()) {
+                        get_ws_member_candidates()
+                    } else {
+                        vec![]
+                    }
+                })),
         )
     }
 
@@ -101,7 +109,10 @@ pub trait CommandExt: Sized {
             optional_opt("package", package)
                 .short('p')
                 .value_name("SPEC")
-                .help_heading(heading::PACKAGE_SELECTION),
+                .help_heading(heading::PACKAGE_SELECTION)
+                .add(clap_complete::ArgValueCandidates::new(
+                    get_ws_member_candidates,
+                )),
         )
     }
 
@@ -1300,6 +1311,31 @@ fn get_packages() -> CargoResult<Vec<Package>> {
         .packages()
         .map(Clone::clone)
         .collect::<Vec<_>>();
+
+    Ok(packages)
+}
+
+fn get_ws_member_candidates() -> Vec<clap_complete::CompletionCandidate> {
+    get_ws_member_packages()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|pkg| {
+            clap_complete::CompletionCandidate::new(pkg.name().as_str()).help(
+                pkg.manifest()
+                    .metadata()
+                    .description
+                    .to_owned()
+                    .map(From::from),
+            )
+        })
+        .collect::<Vec<_>>()
+}
+
+fn get_ws_member_packages() -> CargoResult<Vec<Package>> {
+    let gctx = new_gctx_for_completions()?;
+    let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx)?;
+
+    let packages = ws.members().map(|pkg| pkg.to_owned()).collect::<Vec<_>>();
 
     Ok(packages)
 }
