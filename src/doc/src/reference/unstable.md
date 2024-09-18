@@ -1695,6 +1695,23 @@ This feature moves the handwritten completion scripts to Rust native, making it
 easier for us to add, extend and test new completions. This feature is enabled with the
 nightly channel, without requiring additional `-Z` options.
 
+Areas of particular interest for feedback
+- Arguments that need escaping or quoting that aren't handled correctly
+- Inaccuracies in the information
+- Bugs in parsing of the command-line
+- Arguments that don't report their completions
+- If a known issue is being problematic
+
+Feedback can be broken down into
+- What completion candidates are reported
+  - Known issues: [#14520](https://github.com/rust-lang/cargo/issues/14520), [`A-completions`](https://github.com/rust-lang/cargo/labels/A-completions)
+  - [Report an issue](https://github.com/rust-lang/cargo/issues/new) or [discuss the behavior](https://github.com/rust-lang/cargo/issues/14520)
+- Shell integration, command-line parsing, and completion filtering
+  - Known issues: [clap#3166](https://github.com/clap-rs/clap/issues/3166), [clap's `A-completions`](https://github.com/clap-rs/clap/labels/A-completion)
+  - [Report an issue](https://github.com/clap-rs/clap/issues/new/choose) or [discuss the behavior](https://github.com/clap-rs/clap/discussions/new/choose)
+
+When in doubt, you can discuss this in [#14520](https://github.com/rust-lang/cargo/issues/14520) or on [zulip](https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo)
+
 ### How to use native-completions feature:
 - bash:
   Add `source <(CARGO_COMPLETE=bash cargo +nightly)` to your .bashrc.
