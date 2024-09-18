@@ -1697,19 +1697,19 @@ nightly channel, without requiring additional `-Z` options.
 
 ### How to use native-completions feature:
 - bash:
-  Add `source <(CARGO_COMPLETE=bash cargo)` to your .bashrc.
+  Add `source <(CARGO_COMPLETE=bash cargo +nightly)` to your .bashrc.
 
 - zsh:
-  Add `source <(CARGO_COMPLETE=zsh cargo)` to your .zshrc.
+  Add `source <(CARGO_COMPLETE=zsh cargo +nightly)` to your .zshrc.
   
 - fish:
-  Add `source (CARGO_COMPLETE=fish cargo | psub)` to `$XDG_CONFIG_HOME/fish/completions/cargo.fish`
+  Add `source (CARGO_COMPLETE=fish cargo +nightly | psub)` to `$XDG_CONFIG_HOME/fish/completions/cargo.fish`
 
 - elvish:
-  Add `eval (E:CARGO_COMPLETE=elvish cargo | slurp)` to `$XDG_CONFIG_HOME/elvish/rc.elv`
+  Add `eval (E:CARGO_COMPLETE=elvish cargo +nightly | slurp)` to `$XDG_CONFIG_HOME/elvish/rc.elv`
 
 - powershell:
-  Add `CARGO_COMPLETE=powershell cargo | Invoke-Expression` to `$PROFILE`.
+  Add `CARGO_COMPLETE=powershell cargo +nightly | Invoke-Expression` to `$PROFILE`.
 
 # Stabilized and removed features
 
