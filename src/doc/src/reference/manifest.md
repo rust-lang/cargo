@@ -209,17 +209,13 @@ description = "A short description of my package"
 ### The `documentation` field
 
 The `documentation` field specifies a URL to a website hosting the crate's
-documentation. If no URL is specified in the manifest file, [crates.io] will
-automatically link your crate to the corresponding [docs.rs] page when the
-documentation has been built and is available (see [docs.rs queue]).
+documentation.
 
 ```toml
 [package]
 # ...
 documentation = "https://docs.rs/bitflags"
 ```
-
-[docs.rs queue]: https://docs.rs/releases/queue
 
 ### The `readme` field
 
