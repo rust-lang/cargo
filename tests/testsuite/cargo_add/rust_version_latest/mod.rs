@@ -20,12 +20,10 @@ fn case() {
     let cwd = &project_root;
 
     snapbox::cmd::Command::cargo_ui()
-        .arg("-Zmsrv-policy")
         .arg("add")
         .arg_line("rust-version-user")
         .current_dir(cwd)
         .env("CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS", "fallback")
-        .masquerade_as_nightly_cargo(&["msrv-policy"])
         .assert()
         .success()
         .stdout_eq(str![""])
