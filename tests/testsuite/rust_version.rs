@@ -409,22 +409,16 @@ foo v0.0.1 ([ROOT]/foo)
 
 #[cargo_test]
 fn resolve_with_multiple_rust_versions() {
-    Package::new("shared-only-newer", "1.65.0")
+    Package::new(&format!("shared-only-newer"), "1.65.0")
         .rust_version("1.65.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
-    Package::new("shared-newer-and-older", "1.45.0")
-        .rust_version("1.45.0")
-        .file("src/lib.rs", "fn other_stuff() {}")
-        .publish();
-    Package::new("shared-newer-and-older", "1.55.0")
-        .rust_version("1.55.0")
-        .file("src/lib.rs", "fn other_stuff() {}")
-        .publish();
-    Package::new("shared-newer-and-older", "1.65.0")
-        .rust_version("1.65.0")
-        .file("src/lib.rs", "fn other_stuff() {}")
-        .publish();
+    for ver in ["1.45.0", "1.55.0", "1.65.0"] {
+        Package::new(&format!("shared-newer-and-older"), ver)
+            .rust_version(ver)
+            .file("src/lib.rs", "fn other_stuff() {}")
+            .publish();
+    }
 
     let p = project()
         .file(
