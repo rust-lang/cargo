@@ -236,7 +236,7 @@ mod test {
     }
 
     #[test]
-    fn test_max_rust_version() {
+    fn test_single_rust_version() {
         let mut vp = VersionPreferences::default();
         vp.max_rust_version(Some("1.50".parse().unwrap()));
 
@@ -263,6 +263,38 @@ mod test {
         assert_eq!(
             describe(&summaries),
             "foo/1.0.9, foo/1.1.0, foo/1.2.0, foo/1.2.1, foo/1.2.2, foo/1.2.4, foo/1.2.3"
+                .to_string()
+        );
+    }
+
+    #[test]
+    fn test_multiple_rust_versions() {
+        let mut vp = VersionPreferences::default();
+        vp.max_rust_version(Some("1.45".parse().unwrap()));
+
+        let mut summaries = vec![
+            summ("foo", "1.2.4", None),
+            summ("foo", "1.2.3", Some("1.60")),
+            summ("foo", "1.2.2", None),
+            summ("foo", "1.2.1", Some("1.50")),
+            summ("foo", "1.2.0", None),
+            summ("foo", "1.1.0", Some("1.40")),
+            summ("foo", "1.0.9", None),
+        ];
+
+        vp.version_ordering(VersionOrdering::MaximumVersionsFirst);
+        vp.sort_summaries(&mut summaries, None);
+        assert_eq!(
+            describe(&summaries),
+            "foo/1.2.4, foo/1.2.2, foo/1.2.0, foo/1.1.0, foo/1.0.9, foo/1.2.3, foo/1.2.1"
+                .to_string()
+        );
+
+        vp.version_ordering(VersionOrdering::MinimumVersionsFirst);
+        vp.sort_summaries(&mut summaries, None);
+        assert_eq!(
+            describe(&summaries),
+            "foo/1.0.9, foo/1.1.0, foo/1.2.0, foo/1.2.2, foo/1.2.4, foo/1.2.1, foo/1.2.3"
                 .to_string()
         );
     }
