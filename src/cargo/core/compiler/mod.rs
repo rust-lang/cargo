@@ -743,7 +743,7 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
     let doc_dir = build_runner.files().out_dir(unit);
     rustdoc.arg("-o").arg(&doc_dir);
     rustdoc.args(&features_args(unit));
-    rustdoc.args(&check_cfg_args(unit)?);
+    rustdoc.args(&check_cfg_args(unit));
 
     add_error_format_and_color(build_runner, &mut rustdoc);
     add_allow_features(build_runner, &mut rustdoc);
@@ -1140,7 +1140,7 @@ fn build_base_args(
     }
 
     cmd.args(&features_args(unit));
-    cmd.args(&check_cfg_args(unit)?);
+    cmd.args(&check_cfg_args(unit));
 
     let meta = build_runner.files().metadata(unit);
     cmd.arg("-C").arg(&format!("metadata={}", meta));
@@ -1354,7 +1354,7 @@ fn package_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> OsString {
 }
 
 /// Generates the `--check-cfg` arguments for the `unit`.
-fn check_cfg_args(unit: &Unit) -> CargoResult<Vec<OsString>> {
+fn check_cfg_args(unit: &Unit) -> Vec<OsString> {
     // The routine below generates the --check-cfg arguments. Our goals here are to
     // enable the checking of conditionals and pass the list of declared features.
     //
@@ -1391,12 +1391,12 @@ fn check_cfg_args(unit: &Unit) -> CargoResult<Vec<OsString>> {
     // Cargo and docs.rs than rustc and docs.rs. In particular, all users of docs.rs use
     // Cargo, but not all users of rustc (like Rust-for-Linux) use docs.rs.
 
-    Ok(vec![
+    vec![
         OsString::from("--check-cfg"),
         OsString::from("cfg(docsrs)"),
         OsString::from("--check-cfg"),
         arg_feature,
-    ])
+    ]
 }
 
 /// Adds LTO related codegen flags.
