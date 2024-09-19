@@ -510,7 +510,7 @@ higher v0.0.1 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 6 packages to latest Rust 1.50.0 compatible versions
-[ADDING] higher-newer-and-older v1.65.0 (requires Rust 1.65.0)
+[ADDING] higher-newer-and-older v1.55.0 (available: v1.65.0, requires Rust 1.65.0)
 [ADDING] higher-only-newer v1.65.0 (requires Rust 1.65.0)
 [ADDING] lower-newer-and-older v1.45.0 (available: v1.55.0, requires Rust 1.55.0)
 [ADDING] lower-only-newer v1.65.0 (requires Rust 1.65.0)
@@ -522,7 +522,7 @@ higher v0.0.1 ([ROOT]/foo)
     p.cargo("tree")
         .with_stdout_data(str![[r#"
 higher v0.0.1 ([ROOT]/foo)
-├── higher-newer-and-older v1.65.0
+├── higher-newer-and-older v1.55.0
 ├── higher-only-newer v1.65.0
 ├── shared-newer-and-older v1.45.0
 └── shared-only-newer v1.65.0

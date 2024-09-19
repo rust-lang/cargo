@@ -348,7 +348,9 @@ This was stabilized in 1.79 in [#13608](https://github.com/rust-lang/cargo/pull/
 - `package.edition = "2024"` (only in workspace root)
 
 The resolver will prefer dependencies with a `package.rust-version` that is the same or older than your project's MSRV.
-Your project's MSRV is determined by taking the lowest `package.rust-version` set among your workspace members.
+As the resolver is unable to determine which workspace members will eventually
+depend on a package when it is being selected, we prioritize versions based on
+how many workspace member MSRVs they are compatible with.
 If there is no MSRV set then your toolchain version will be used, allowing it to pick up the toolchain version from pinned in rustup (e.g. `rust-toolchain.toml`).
 
 #### `resolver.incompatible-rust-versions`
