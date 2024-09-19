@@ -707,8 +707,11 @@ fn config_invalid_not_list() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] `lints.rust.unexpected_cfgs.check-cfg` must be a list of string
-...
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  `lints.rust.unexpected_cfgs.check-cfg` must be a list of string
+
 "#]])
         .run();
 }
@@ -734,8 +737,11 @@ fn config_invalid_not_list_string() {
     p.cargo("check")
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] `lints.rust.unexpected_cfgs.check-cfg` must be a list of string
-...
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  `lints.rust.unexpected_cfgs.check-cfg` must be a list of string
+
 "#]])
         .run();
 }
