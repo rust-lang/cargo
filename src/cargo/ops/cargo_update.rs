@@ -739,7 +739,7 @@ fn required_rust_version(ws: &Workspace<'_>) -> Option<PartialVersion> {
         return None;
     }
 
-    if let Some(ver) = ws.rust_version() {
+    if let Some(ver) = ws.lowest_rust_version() {
         Some(ver.clone().into_partial())
     } else {
         let rustc = ws.gctx().load_global_rustc(Some(ws)).ok()?;

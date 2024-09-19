@@ -357,7 +357,7 @@ pub fn resolve_with_previous<'gctx>(
         version_prefs.version_ordering(VersionOrdering::MinimumVersionsFirst)
     }
     if ws.resolve_honors_rust_version() {
-        let rust_version = if let Some(ver) = ws.rust_version() {
+        let rust_version = if let Some(ver) = ws.lowest_rust_version() {
             ver.clone().into_partial()
         } else {
             let rustc = ws.gctx().load_global_rustc(Some(ws))?;
@@ -422,7 +422,7 @@ pub fn resolve_with_previous<'gctx>(
         &replace,
         registry,
         &version_prefs,
-        ResolveVersion::with_rust_version(ws.rust_version()),
+        ResolveVersion::with_rust_version(ws.lowest_rust_version()),
         Some(ws.gctx()),
     )?;
 
