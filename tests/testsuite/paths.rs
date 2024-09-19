@@ -60,7 +60,6 @@ fn broken_path_override_warns() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
-[ADDING] bar v0.1.0 (available: v0.2.0)
 [WARNING] path override for crate `a` has altered the original list of
 dependencies; the dependency on `bar` was either added or
 modified to not match the previously resolved version

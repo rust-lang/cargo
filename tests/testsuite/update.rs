@@ -406,7 +406,6 @@ fn update_precise() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [DOWNGRADING] serde v0.2.1 -> v0.2.0
-[NOTE] pass `--verbose` to see 1 unchanged dependencies behind latest
 
 "#]])
         .run();
@@ -2183,7 +2182,7 @@ fn update_breaking_specific_packages_that_wont_update() {
 [UPDATING] non-semver v1.0.0 -> v1.0.1 (available: v2.0.0)
 [UPDATING] renamed-from v1.0.0 -> v1.0.1 (available: v2.0.0)
 [UPDATING] transitive-compatible v1.0.0 -> v1.0.1
-[UPDATING] transitive-incompatible v1.0.0 -> v1.0.1 (available: v2.0.0)
+[UPDATING] transitive-incompatible v1.0.0 -> v1.0.1
 
 "#]])
     .run();
@@ -2397,7 +2396,7 @@ fn update_breaking_spec_version_transitive() {
         .with_stderr_data(str![[r#"
 [UPDATING] `[..]` index
 [LOCKING] 1 package to latest compatible version
-[UPDATING] dep v1.1.0 -> v1.1.1 (available: v2.0.0)
+[UPDATING] dep v1.1.0 -> v1.1.1
 
 "#]])
         .run();
