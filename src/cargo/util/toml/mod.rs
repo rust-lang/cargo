@@ -1446,7 +1446,7 @@ pub fn to_real_manifest(
             .normalized_lints()
             .expect("previously normalized")
             .unwrap_or(&default),
-    );
+    )?;
 
     let metadata = ManifestMetadata {
         description: normalized_package
@@ -2545,7 +2545,7 @@ switch to nightly channel you can pass
     warnings.push(message);
 }
 
-fn lints_to_rustflags(lints: &manifest::TomlLints) -> Vec<String> {
+fn lints_to_rustflags(lints: &manifest::TomlLints) -> CargoResult<Vec<String>> {
     let mut rustflags = lints
         .iter()
         // We don't want to pass any of the `cargo` lints to `rustc`
@@ -2575,7 +2575,30 @@ fn lints_to_rustflags(lints: &manifest::TomlLints) -> Vec<String> {
         })
         .collect::<Vec<_>>();
     rustflags.sort();
-    rustflags.into_iter().map(|(_, _, option)| option).collect()
+
+    let mut rustflags: Vec<_> = rustflags.into_iter().map(|(_, _, option)| option).collect();
+
+    // Also include the custom arguments specified in `[lints.rust.unexpected_cfgs.check_cfg]`
+    if let Some(rust_lints) = lints.get("rust") {
+        if let Some(unexpected_cfgs) = rust_lints.get("unexpected_cfgs") {
+            if let Some(config) = unexpected_cfgs.config() {
+                if let Some(check_cfg) = config.get("check-cfg") {
+                    if let Ok(check_cfgs) = toml::Value::try_into::<Vec<String>>(check_cfg.clone())
+                    {
+                        for check_cfg in check_cfgs {
+                            rustflags.push("--check-cfg".to_string());
+                            rustflags.push(check_cfg);
+                        }
+                    // error about `check-cfg` not being a list-of-string
+                    } else {
+                        bail!("`lints.rust.unexpected_cfgs.check-cfg` must be a list of string");
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(rustflags)
 }
 
 fn emit_diagnostic(
