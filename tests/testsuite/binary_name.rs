@@ -423,7 +423,7 @@ fn targets_with_relative_path_in_workspace_members() {
 
 [WARNING] `relative-bar` (build script) generated 1 warning
 [WARNING] function `a` is never used
- --> relative-bar/./src/lib.rs:1:4
+ --> relative-bar/src/lib.rs:1:4
   |
 1 | fn a() {}
   |    ^
@@ -432,7 +432,7 @@ fn targets_with_relative_path_in_workspace_members() {
 
 [WARNING] `relative-bar` (lib) generated 1 warning
 [WARNING] unused variable: `a`
- --> relative-bar/./src/main.rs:1:17
+ --> relative-bar/src/main.rs:1:17
   |
 1 | fn main() { let a = 1; }
   |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_a`
@@ -457,7 +457,7 @@ fn targets_with_relative_path_in_workspace_members() {
 
 [WARNING] `relative-bar` (build script) generated 1 warning
 [WARNING] function `a` is never used
- --> relative-bar/./src/lib.rs:1:4
+ --> relative-bar/src/lib.rs:1:4
   |
 1 | fn a() {}
   |    ^
@@ -467,7 +467,7 @@ fn targets_with_relative_path_in_workspace_members() {
 [WARNING] `relative-bar` (lib) generated 1 warning
 [CHECKING] relative-bar v0.1.0 ([ROOT]/foo/relative-bar)
 [WARNING] unused variable: `a`
- --> relative-bar/./example.rs:1:17
+ --> relative-bar/example.rs:1:17
   |
 1 | fn main() { let a = 1; }
   |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_a`
@@ -491,7 +491,7 @@ fn targets_with_relative_path_in_workspace_members() {
 
 [WARNING] `relative-bar` (build script) generated 1 warning
 [WARNING] function `a` is never used
- --> relative-bar/./src/lib.rs:1:4
+ --> relative-bar/src/lib.rs:1:4
   |
 1 | fn a() {}
   |    ^
@@ -501,7 +501,7 @@ fn targets_with_relative_path_in_workspace_members() {
 [WARNING] `relative-bar` (lib) generated 1 warning
 [CHECKING] relative-bar v0.1.0 ([ROOT]/foo/relative-bar)
 [WARNING] unused variable: `a`
- --> relative-bar/./test.rs:5:35
+ --> relative-bar/test.rs:5:35
   |
 5 |                 fn test_a() { let a = 1; } 
   |                                   ^ [HELP] if this is intentional, prefix it with an underscore: `_a`
@@ -525,7 +525,7 @@ fn targets_with_relative_path_in_workspace_members() {
 
 [WARNING] `relative-bar` (build script) generated 1 warning
 [WARNING] function `a` is never used
- --> relative-bar/./src/lib.rs:1:4
+ --> relative-bar/src/lib.rs:1:4
   |
 1 | fn a() {}
   |    ^
@@ -535,7 +535,7 @@ fn targets_with_relative_path_in_workspace_members() {
 [WARNING] `relative-bar` (lib) generated 1 warning
 [CHECKING] relative-bar v0.1.0 ([ROOT]/foo/relative-bar)
 [WARNING] unused variable: `a`
- --> relative-bar/./bench.rs:7:58
+ --> relative-bar/bench.rs:7:58
   |
 7 |                 fn bench_a(_b: &mut test::Bencher) { let a = 1; }
   |                                                          ^ [HELP] if this is intentional, prefix it with an underscore: `_a`
