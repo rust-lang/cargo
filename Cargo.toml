@@ -35,8 +35,8 @@ cargo-test-support = { version = "0.4.0", path = "crates/cargo-test-support" }
 cargo-util = { version = "0.2.14", path = "crates/cargo-util" }
 cargo-util-schemas = { version = "0.6.0", path = "crates/cargo-util-schemas" }
 cargo_metadata = "0.18.1"
-clap = "4.5.17"
-clap_complete = { version = "4.5.28", features = ["unstable-dynamic"] }
+clap = "4.5.18"
+clap_complete = { version = "4.5.29", features = ["unstable-dynamic"] }
 color-print = "0.3.6"
 completest-pty = "0.5.3"
 core-foundation = { version = "0.10.0", features = ["mac_os_10_7_support"] }
