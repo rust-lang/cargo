@@ -7,7 +7,8 @@ use snapbox::str;
 use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::{
-    basic_bin_manifest, cargo_test, project, symlink_supported, ProjectBuilder,
+    basic_bin_manifest, cargo_process, cargo_test, paths, project, symlink_supported,
+    ProjectBuilder,
 };
 
 ///////////////////////////////
@@ -398,6 +399,51 @@ bar = "0.1.0"
     let contents = fs::read_to_string(path).unwrap();
 
     assert_e2e().eq(contents, lockfile_original);
+}
+
+#[cargo_test]
+fn install_without_lockfile_path() {
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.1.1")
+        .file("src/lib.rs", "not rust")
+        .publish();
+    Package::new("foo", "0.1.0")
+        .dep("bar", "0.1")
+        .file("src/lib.rs", "")
+        .file(
+            "src/main.rs",
+            "extern crate foo; extern crate bar; fn main() {}",
+        )
+        .file(
+            "Cargo.lock",
+            r#"
+[[package]]
+name = "bar"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "foo"
+version = "0.1.0"
+dependencies = [
+ "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+"#,
+        )
+        .publish();
+
+    cargo_process("install foo")
+        .with_stderr_data(str![[r#"
+...
+[..]not rust[..]
+...
+"#]])
+        .with_status(101)
+        .run();
+    cargo_process("install foo --locked").run();
+    assert!(paths::root()
+        .join("home/.cargo/registry/src/-ec6bec4300fe98b6/foo-0.1.0/Cargo.lock")
+        .is_file());
 }
 
 #[cargo_test]
