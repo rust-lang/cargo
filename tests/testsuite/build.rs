@@ -4131,7 +4131,6 @@ fn panic_abort_compiles_with_panic_abort() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn compiler_json_error_format() {
     let p = project()
@@ -4160,148 +4159,98 @@ fn compiler_json_error_format() {
 
     let output = |fresh| {
         r#"
-            {
-                "reason":"compiler-artifact",
-                "package_id":"path+file:///[..]/foo#0.5.0",
-                "manifest_path": "[..]",
-                "target":{
-                    "kind":["custom-build"],
-                    "crate_types":["bin"],
-                    "doc": false,
-                    "doctest": false,
-                    "edition": "2015",
-                    "name":"build-script-build",
-                    "src_path":"[..]build.rs",
-                    "test": false
-                },
-                "profile": {
-                    "debug_assertions": true,
-                    "debuginfo": 0,
-                    "opt_level": "0",
-                    "overflow_checks": true,
-                    "test": false
-                },
-                "executable": null,
-                "features": [],
-                "filenames": "{...}",
-                "fresh": $FRESH
-            }
-
-            {
-                "reason":"compiler-message",
-                "package_id":"path+file:///[..]/bar#0.5.0",
-                "manifest_path": "[..]",
-                "target":{
-                    "kind":["lib"],
-                    "crate_types":["lib"],
-                    "doc": true,
-                    "doctest": true,
-                    "edition": "2015",
-                    "name":"bar",
-                    "src_path":"[..]lib.rs",
-                    "test": true
-                },
-                "message":"{...}"
-            }
-
-            {
-                "reason":"compiler-artifact",
-                "profile": {
-                    "debug_assertions": true,
-                    "debuginfo": 2,
-                    "opt_level": "0",
-                    "overflow_checks": true,
-                    "test": false
-                },
-                "executable": null,
-                "features": [],
-                "package_id":"path+file:///[..]/bar#0.5.0",
-                "manifest_path": "[..]",
-                "target":{
-                    "kind":["lib"],
-                    "crate_types":["lib"],
-                    "doc": true,
-                    "doctest": true,
-                    "edition": "2015",
-                    "name":"bar",
-                    "src_path":"[..]lib.rs",
-                    "test": true
-                },
-                "filenames":[
-                    "[..].rlib",
-                    "[..].rmeta"
-                ],
-                "fresh": $FRESH
-            }
-
-            {
-                "reason":"build-script-executed",
-                "package_id":"path+file:///[..]/foo#0.5.0",
-                "linked_libs":[],
-                "linked_paths":[],
-                "env":[],
-                "cfgs":["xyz"],
-                "out_dir": "[..]target/debug/build/foo-[..]/out"
-            }
-
-            {
-                "reason":"compiler-message",
-                "package_id":"path+file:///[..]/foo#0.5.0",
-                "manifest_path": "[..]",
-                "target":{
-                    "kind":["bin"],
-                    "crate_types":["bin"],
-                    "doc": true,
-                    "doctest": false,
-                    "edition": "2015",
-                    "name":"foo",
-                    "src_path":"[..]main.rs",
-                    "test": true
-                },
-                "message":"{...}"
-            }
-
-            {
-                "reason":"compiler-artifact",
-                "package_id":"path+file:///[..]/foo#0.5.0",
-                "manifest_path": "[..]",
-                "target":{
-                    "kind":["bin"],
-                    "crate_types":["bin"],
-                    "doc": true,
-                    "doctest": false,
-                    "edition": "2015",
-                    "name":"foo",
-                    "src_path":"[..]main.rs",
-                    "test": true
-                },
-                "profile": {
-                    "debug_assertions": true,
-                    "debuginfo": 2,
-                    "opt_level": "0",
-                    "overflow_checks": true,
-                    "test": false
-                },
-                "executable": "[..]/foo/target/debug/foo[EXE]",
-                "features": [],
-                "filenames": "{...}",
-                "fresh": $FRESH
-            }
-
-            {"reason": "build-finished", "success": true}
-        "#
+[
+  {
+    "executable": null,
+    "features": [],
+    "fresh": $FRESH,
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "package_id": "path+[ROOTURL]/foo#0.5.0",
+    "reason": "compiler-artifact",
+    "target": {
+      "kind": ["custom-build"],
+      "...": "{...}"
+    },
+    "...": "{...}"
+  },
+  {
+    "manifest_path": "[ROOT]/foo/bar/Cargo.toml",
+    "package_id": "path+[ROOTURL]/foo/bar#0.5.0",
+    "reason": "compiler-message",
+    "target": {
+      "kind": ["lib"],
+      "...": "{...}"
+    },
+    "...": "{...}"
+  },
+  {
+    "executable": null,
+    "features": [],
+    "fresh": $FRESH,
+    "manifest_path": "[ROOT]/foo/bar/Cargo.toml",
+    "package_id": "path+[ROOTURL]/foo/bar#0.5.0",
+    "reason": "compiler-artifact",
+    "target": {
+      "kind": ["lib"],
+      "...": "{...}"
+    },
+    "...": "{...}"
+  },
+  {
+    "cfgs": [
+      "xyz"
+    ],
+    "env": [],
+    "linked_libs": [],
+    "linked_paths": [],
+    "out_dir": "[ROOT]/foo/target/debug/build/foo-[HASH]/out",
+    "package_id": "path+[ROOTURL]/foo#0.5.0",
+    "reason": "build-script-executed"
+  },
+  {
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "package_id": "path+[ROOTURL]/foo#0.5.0",
+    "reason": "compiler-message",
+    "target": {
+      "kind": ["bin"],
+      "...": "{...}"
+    },
+    "...": "{...}"
+  },
+  {
+    "features": [],
+    "fresh": $FRESH,
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "package_id": "path+[ROOTURL]/foo#0.5.0",
+    "reason": "compiler-artifact",
+    "target": {
+      "kind": ["bin"],
+      "...": "{...}"
+    },
+    "...": "{...}"
+  },
+  {
+    "reason": "build-finished",
+    "success": true
+  },
+  "{...}"
+]
+"#
         .replace("$FRESH", fresh)
+        .is_json()
+        .against_jsonlines()
+        .unordered()
     };
 
     // Use `jobs=1` to ensure that the order of messages is consistent.
     p.cargo("build -v --message-format=json --jobs=1")
-        .with_json_contains_unordered(&output("false"))
+        .with_stdout_data(output("false"))
         .run();
 
     // With fresh build, we should repeat the artifacts,
     // and replay the cached compiler warnings.
     p.cargo("build -v --message-format=json --jobs=1")
-        .with_json_contains_unordered(&output("true"))
+        .with_stdout_data(output("true"))
         .run();
 }
 
@@ -4321,7 +4270,6 @@ fn wrong_message_format_option() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn message_format_json_forward_stderr() {
     let p = project()
@@ -4330,54 +4278,42 @@ fn message_format_json_forward_stderr() {
         .build();
 
     p.cargo("rustc --release --bin foo --message-format JSON")
-        .with_json_contains_unordered(
-            r#"
-                {
-                    "reason":"compiler-message",
-                    "package_id":"path+file:///[..]/foo#0.5.0",
-                    "manifest_path": "[..]",
-                    "target":{
-                        "kind":["bin"],
-                        "crate_types":["bin"],
-                        "doc": true,
-                        "doctest": false,
-                        "edition": "2015",
-                        "name":"foo",
-                        "src_path":"[..]",
-                        "test": true
-                    },
-                    "message":"{...}"
-                }
-
-                {
-                    "reason":"compiler-artifact",
-                    "package_id":"path+file:///[..]/foo#0.5.0",
-                    "manifest_path": "[..]",
-                    "target":{
-                        "kind":["bin"],
-                        "crate_types":["bin"],
-                        "doc": true,
-                        "doctest": false,
-                        "edition": "2015",
-                        "name":"foo",
-                        "src_path":"[..]",
-                        "test": true
-                    },
-                    "profile":{
-                        "debug_assertions":false,
-                        "debuginfo":0,
-                        "opt_level":"3",
-                        "overflow_checks": false,
-                        "test":false
-                    },
-                    "executable": "{...}",
-                    "features":[],
-                    "filenames": "{...}",
-                    "fresh": false
-                }
-
-                {"reason": "build-finished", "success": true}
-            "#,
+        .with_stdout_data(
+            str![[r#"
+[
+  {
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "message": "{...}",
+    "package_id": "path+[ROOTURL]/foo#0.5.0",
+    "reason": "compiler-message",
+    "target": {
+      "kind": ["bin"],
+      "...": "{...}"
+    },
+    "...": "{...}"
+  },
+  {
+    "features": [],
+    "fresh": false,
+    "manifest_path": "[ROOT]/foo/Cargo.toml",
+    "package_id": "path+[ROOTURL]/foo#0.5.0",
+    "reason": "compiler-artifact",
+    "target": {
+      "kind": ["bin"],
+      "...": "{...}"
+    },
+    "...": "{...}"
+  },
+  {
+    "reason": "build-finished",
+    "success": true
+  },
+  "{...}"
+]
+"#]]
+            .is_json()
+            .against_jsonlines()
+            .unordered(),
         )
         .run();
 }
