@@ -69,6 +69,7 @@ pub fn cli() -> Command {
         )
         .arg(opt("root", "Directory to install packages into").value_name("DIR"))
         .arg(flag("force", "Force overwriting existing crates or binaries").short('f'))
+        .arg_dry_run("Perform all checks without installing (unstable)")
         .arg(flag("no-track", "Do not save tracking information"))
         .arg(flag(
             "list",
@@ -200,7 +201,9 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
 
     compile_opts.build_config.requested_profile =
         args.get_profile_name("release", ProfileChecking::Custom)?;
-
+    if args.dry_run() {
+        gctx.cli_unstable().fail_if_stable_opt("--dry-run", 11123)?;
+    }
     if args.flag("list") {
         ops::install_list(root, gctx)?;
     } else {
@@ -213,6 +216,7 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
             &compile_opts,
             args.flag("force"),
             args.flag("no-track"),
+            args.dry_run(),
         )?;
     }
     Ok(())

@@ -2734,3 +2734,162 @@ fn uninstall_running_binary() {
 
 "#]]).run();
 }
+
+#[cargo_test]
+fn dry_run() {
+    pkg("foo", "0.0.1");
+
+    cargo_process("-Z unstable-options install --dry-run foo")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
+[INSTALLING] foo v0.0.1
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[WARNING] aborting install due to dry run
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+    assert_has_not_installed_exe(paths::cargo_home(), "foo");
+}
+
+#[cargo_test]
+fn dry_run_incompatible_package() {
+    Package::new("some-package-from-the-distant-future", "0.0.1")
+        .rust_version("1.2345.0")
+        .file("src/main.rs", "fn main() {}")
+        .publish();
+
+    cargo_process("-Z unstable-options install --dry-run some-package-from-the-distant-future")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] cannot install package `some-package-from-the-distant-future 0.0.1`, it requires rustc 1.2345.0 or newer, while the currently active rustc version is [..]
+
+"#]])
+        .run();
+    assert_has_not_installed_exe(paths::cargo_home(), "some-package-from-the-distant-future");
+}
+
+#[cargo_test]
+fn dry_run_incompatible_package_dependecy() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                authors = []
+
+                [dependencies]
+                some-package-from-the-distant-future = { path = "a" }
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "some-package-from-the-distant-future"
+                version = "0.1.0"
+                authors = []
+                rust-version = "1.2345.0"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+
+    cargo_process("-Z unstable-options install --dry-run --path")
+        .arg(p.root())
+        .arg("foo")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[INSTALLING] foo v0.1.0 ([ROOT]/foo)
+[LOCKING] 1 package to latest compatible version
+[ERROR] failed to compile `foo v0.1.0 ([ROOT]/foo)`, intermediate artifacts can be found at `[ROOT]/foo/target`.
+To reuse those artifacts with a future compilation, set the environment variable `CARGO_TARGET_DIR` to that path.
+
+Caused by:
+  rustc [..] is not supported by the following package:
+    some-package-from-the-distant-future@0.1.0 requires rustc 1.2345.0
+
+"#]])
+        .run();
+    assert_has_not_installed_exe(paths::cargo_home(), "foo");
+}
+
+#[cargo_test]
+fn dry_run_upgrade() {
+    pkg("foo", "0.0.1");
+    cargo_process("install foo").run();
+    assert_has_installed_exe(paths::cargo_home(), "foo");
+
+    pkg("foo", "0.0.2");
+    cargo_process("-Z unstable-options install --dry-run foo")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.2 (registry `dummy-registry`)
+[INSTALLING] foo v0.0.2
+[REPLACING] [ROOT]/home/.cargo/bin/foo[EXE]
+[WARNING] aborting install due to dry run
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+    assert_has_installed_exe(paths::cargo_home(), "foo");
+}
+
+#[cargo_test]
+fn dry_run_remove_orphan() {
+    Package::new("bar", "1.0.0")
+        .file("src/bin/client.rs", "fn main() {}")
+        .file("src/bin/server.rs", "fn main() {}")
+        .publish();
+
+    cargo_process("install bar")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v1.0.0 (registry `dummy-registry`)
+[INSTALLING] bar v1.0.0
+[COMPILING] bar v1.0.0
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/client[EXE]
+[INSTALLING] [ROOT]/home/.cargo/bin/server[EXE]
+[INSTALLED] package `bar v1.0.0` (executables `client[EXE]`, `server[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+    assert_has_installed_exe(paths::cargo_home(), "client");
+    assert_has_installed_exe(paths::cargo_home(), "server");
+
+    Package::new("bar", "2.0.0")
+        .file("src/bin/client.rs", "fn main() {}")
+        .publish();
+
+    cargo_process("-Z unstable-options install --dry-run bar")
+        .masquerade_as_nightly_cargo(&["install::dry-run"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v2.0.0 (registry `dummy-registry`)
+[INSTALLING] bar v2.0.0
+[REPLACING] [ROOT]/home/.cargo/bin/client[EXE]
+[REMOVING] executable `[ROOT]/home/.cargo/bin/server[EXE]` from previous version bar v1.0.0
+[WARNING] aborting install due to dry run
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+    assert_has_installed_exe(paths::cargo_home(), "client");
+    // Ensure server is still installed after the dry run
+    assert_has_installed_exe(paths::cargo_home(), "server");
+}

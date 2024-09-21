@@ -297,7 +297,7 @@ impl<'gctx> InstallablePackage<'gctx> {
         Ok(duplicates)
     }
 
-    fn install_one(mut self) -> CargoResult<bool> {
+    fn install_one(mut self, dry_run: bool) -> CargoResult<bool> {
         self.gctx.shell().status("Installing", &self.pkg)?;
 
         let dst = self.root.join("bin").into_path_unlocked();
@@ -321,6 +321,7 @@ impl<'gctx> InstallablePackage<'gctx> {
         self.check_yanked_install()?;
 
         let exec: Arc<dyn Executor> = Arc::new(DefaultExecutor);
+        self.opts.build_config.dry_run = dry_run;
         let compile = ops::compile_ws(&self.ws, &self.opts, &exec).with_context(|| {
             if let Some(td) = td_opt.take() {
                 // preserve the temporary directory, so the user can inspect it
@@ -419,13 +420,15 @@ impl<'gctx> InstallablePackage<'gctx> {
         let staging_dir = TempFileBuilder::new()
             .prefix("cargo-install")
             .tempdir_in(&dst)?;
-        for &(bin, src) in binaries.iter() {
-            let dst = staging_dir.path().join(bin);
-            // Try to move if `target_dir` is transient.
-            if !self.source_id.is_path() && fs::rename(src, &dst).is_ok() {
-                continue;
+        if !dry_run {
+            for &(bin, src) in binaries.iter() {
+                let dst = staging_dir.path().join(bin);
+                // Try to move if `target_dir` is transient.
+                if !self.source_id.is_path() && fs::rename(src, &dst).is_ok() {
+                    continue;
+                }
+                paths::copy(src, &dst)?;
             }
-            paths::copy(src, &dst)?;
         }
 
         let (to_replace, to_install): (Vec<&str>, Vec<&str>) = binaries
@@ -441,11 +444,13 @@ impl<'gctx> InstallablePackage<'gctx> {
             let src = staging_dir.path().join(bin);
             let dst = dst.join(bin);
             self.gctx.shell().status("Installing", dst.display())?;
-            fs::rename(&src, &dst).with_context(|| {
-                format!("failed to move `{}` to `{}`", src.display(), dst.display())
-            })?;
-            installed.bins.push(dst);
-            successful_bins.insert(bin.to_string());
+            if !dry_run {
+                fs::rename(&src, &dst).with_context(|| {
+                    format!("failed to move `{}` to `{}`", src.display(), dst.display())
+                })?;
+                installed.bins.push(dst);
+                successful_bins.insert(bin.to_string());
+            }
         }
 
         // Repeat for binaries which replace existing ones but don't pop the error
@@ -456,10 +461,12 @@ impl<'gctx> InstallablePackage<'gctx> {
                     let src = staging_dir.path().join(bin);
                     let dst = dst.join(bin);
                     self.gctx.shell().status("Replacing", dst.display())?;
-                    fs::rename(&src, &dst).with_context(|| {
-                        format!("failed to move `{}` to `{}`", src.display(), dst.display())
-                    })?;
-                    successful_bins.insert(bin.to_string());
+                    if !dry_run {
+                        fs::rename(&src, &dst).with_context(|| {
+                            format!("failed to move `{}` to `{}`", src.display(), dst.display())
+                        })?;
+                        successful_bins.insert(bin.to_string());
+                    }
                 }
                 Ok(())
             };
@@ -476,9 +483,14 @@ impl<'gctx> InstallablePackage<'gctx> {
                 &self.rustc.verbose_version,
             );
 
-            if let Err(e) =
-                remove_orphaned_bins(&self.ws, &mut tracker, &duplicates, &self.pkg, &dst)
-            {
+            if let Err(e) = remove_orphaned_bins(
+                &self.ws,
+                &mut tracker,
+                &duplicates,
+                &self.pkg,
+                &dst,
+                dry_run,
+            ) {
                 // Don't hard error on remove.
                 self.gctx
                     .shell()
@@ -515,7 +527,10 @@ impl<'gctx> InstallablePackage<'gctx> {
             }
         }
 
-        if duplicates.is_empty() {
+        if dry_run {
+            self.gctx.shell().warn("aborting install due to dry run")?;
+            Ok(true)
+        } else if duplicates.is_empty() {
             self.gctx.shell().status(
                 "Installed",
                 format!(
@@ -620,6 +635,7 @@ pub fn install(
     opts: &ops::CompileOptions,
     force: bool,
     no_track: bool,
+    dry_run: bool,
 ) -> CargoResult<()> {
     let root = resolve_root(root, gctx)?;
     let dst = root.join("bin").into_path_unlocked();
@@ -654,7 +670,7 @@ pub fn install(
         )?;
         let mut installed_anything = true;
         if let Some(installable_pkg) = installable_pkg {
-            installed_anything = installable_pkg.install_one()?;
+            installed_anything = installable_pkg.install_one(dry_run)?;
         }
         (installed_anything, false)
     } else {
@@ -705,7 +721,7 @@ pub fn install(
 
         let install_results: Vec<_> = pkgs_to_install
             .into_iter()
-            .map(|(krate, installable_pkg)| (krate, installable_pkg.install_one()))
+            .map(|(krate, installable_pkg)| (krate, installable_pkg.install_one(dry_run)))
             .collect();
 
         for (krate, result) in install_results {
@@ -857,6 +873,7 @@ fn remove_orphaned_bins(
     duplicates: &BTreeMap<String, Option<PackageId>>,
     pkg: &Package,
     dst: &Path,
+    dry_run: bool,
 ) -> CargoResult<()> {
     let filter = ops::CompileFilter::new_all_targets();
     let all_self_names = exe_names(pkg, &filter);
@@ -894,8 +911,10 @@ fn remove_orphaned_bins(
                         old_pkg
                     ),
                 )?;
-                paths::remove_file(&full_path)
-                    .with_context(|| format!("failed to remove {:?}", full_path))?;
+                if !dry_run {
+                    paths::remove_file(&full_path)
+                        .with_context(|| format!("failed to remove {:?}", full_path))?;
+                }
             }
         }
     }

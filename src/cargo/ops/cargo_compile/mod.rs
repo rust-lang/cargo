@@ -156,7 +156,11 @@ pub fn compile_ws<'a>(
     }
     crate::core::gc::auto_gc(bcx.gctx);
     let build_runner = BuildRunner::new(&bcx)?;
-    build_runner.compile(exec)
+    if options.build_config.dry_run {
+        build_runner.dry_run()
+    } else {
+        build_runner.compile(exec)
+    }
 }
 
 /// Executes `rustc --print <VALUE>`.

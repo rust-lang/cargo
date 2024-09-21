@@ -126,6 +126,27 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         })
     }
 
+    /// Dry-run the compilation without actually running it.
+    ///
+    /// This is expected to collect information like the location of output artifacts.
+    /// Please keep in sync with non-compilation part in [`BuildRunner::compile`].
+    pub fn dry_run(mut self) -> CargoResult<Compilation<'gctx>> {
+        let _lock = self
+            .bcx
+            .gctx
+            .acquire_package_cache_lock(CacheLockMode::Shared)?;
+        self.lto = super::lto::generate(self.bcx)?;
+        self.prepare_units()?;
+        self.prepare()?;
+        self.check_collisions()?;
+
+        for unit in &self.bcx.roots {
+            self.collect_tests_and_executables(unit)?;
+        }
+
+        Ok(self.compilation)
+    }
+
     /// Starts compilation, waits for it to finish, and returns information
     /// about the result of compilation.
     ///
@@ -214,31 +235,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
 
         // Collect the result of the build into `self.compilation`.
         for unit in &self.bcx.roots {
-            // Collect tests and executables.
-            for output in self.outputs(unit)?.iter() {
-                if output.flavor == FileFlavor::DebugInfo || output.flavor == FileFlavor::Auxiliary
-                {
-                    continue;
-                }
-
-                let bindst = output.bin_dst();
-
-                if unit.mode == CompileMode::Test {
-                    self.compilation
-                        .tests
-                        .push(self.unit_output(unit, &output.path));
-                } else if unit.target.is_executable() {
-                    self.compilation
-                        .binaries
-                        .push(self.unit_output(unit, bindst));
-                } else if unit.target.is_cdylib()
-                    && !self.compilation.cdylibs.iter().any(|uo| uo.unit == *unit)
-                {
-                    self.compilation
-                        .cdylibs
-                        .push(self.unit_output(unit, bindst));
-                }
-            }
+            self.collect_tests_and_executables(unit)?;
 
             // Collect information for `rustdoc --test`.
             if unit.mode.is_doc_test() {
@@ -305,6 +302,33 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             }
         }
         Ok(self.compilation)
+    }
+
+    fn collect_tests_and_executables(&mut self, unit: &Unit) -> CargoResult<()> {
+        for output in self.outputs(unit)?.iter() {
+            if output.flavor == FileFlavor::DebugInfo || output.flavor == FileFlavor::Auxiliary {
+                continue;
+            }
+
+            let bindst = output.bin_dst();
+
+            if unit.mode == CompileMode::Test {
+                self.compilation
+                    .tests
+                    .push(self.unit_output(unit, &output.path));
+            } else if unit.target.is_executable() {
+                self.compilation
+                    .binaries
+                    .push(self.unit_output(unit, bindst));
+            } else if unit.target.is_cdylib()
+                && !self.compilation.cdylibs.iter().any(|uo| uo.unit == *unit)
+            {
+                self.compilation
+                    .cdylibs
+                    .push(self.unit_output(unit, bindst));
+            }
+        }
+        Ok(())
     }
 
     /// Returns the executable for the specified unit (if any).

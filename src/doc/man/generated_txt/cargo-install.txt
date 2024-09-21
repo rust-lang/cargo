@@ -120,6 +120,9 @@ OPTIONS
        --list
            List all installed packages and their versions.
 
+       -n, --dry-run
+           (unstable) Perform all checks without installing.
+
        -f, --force
            Force overwriting existing crates or binaries. This can be used if a
            package has installed a binary with the same name as another
