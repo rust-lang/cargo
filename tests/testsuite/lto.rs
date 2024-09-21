@@ -132,7 +132,7 @@ fn build_dep_not_ltod() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn complicated() {
     Package::new("dep-shared", "0.0.1")

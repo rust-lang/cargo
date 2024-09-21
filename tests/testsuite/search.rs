@@ -178,7 +178,7 @@ fn ignore_quiet() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn colored_results() {
     let registry = setup().build();

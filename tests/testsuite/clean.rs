@@ -824,7 +824,7 @@ fn clean_spec_reserved() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn clean_dry_run() {
     // Basic `clean --dry-run` test.

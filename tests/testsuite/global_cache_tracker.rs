@@ -749,7 +749,7 @@ fn both_git_and_http_index_cleans() {
     drop(lock);
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn clean_gc_dry_run() {
     // Basic `clean --gc --dry-run` test.
@@ -895,7 +895,7 @@ fn tracks_sizes() {
     assert!(db_sizes[1] > 26000);
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn max_size() {
     // Checks --max-crate-size and --max-src-size with various cleaning thresholds.
@@ -993,7 +993,7 @@ fn max_size() {
     }
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn max_size_untracked_crate() {
     // When a .crate file exists from an older version of cargo that did not
@@ -1070,7 +1070,7 @@ fn max_size_untracked_verify(gctx: &GlobalContext) {
     drop(lock);
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn max_size_untracked_src_from_use() {
     // When a src directory exists from an older version of cargo that did not
@@ -1100,7 +1100,7 @@ fn max_size_untracked_src_from_use() {
     max_size_untracked_verify(&gctx);
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn max_size_untracked_src_from_clean() {
     // When a src directory exists from an older version of cargo that did not
@@ -1116,7 +1116,7 @@ fn max_size_untracked_src_from_clean() {
     max_size_untracked_verify(&gctx);
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn max_download_size() {
     // --max-download-size
@@ -1363,7 +1363,7 @@ fn delete_index_also_deletes_crates() {
     assert_eq!(get_registry_names("cache").len(), 0);
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn clean_syncs_missing_files() {
     // When files go missing in the cache, clean operations that need to track
@@ -1460,7 +1460,7 @@ fn offline_doesnt_auto_gc() {
     assert_eq!(get_registry_names("cache"), &[] as &[String]);
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn can_handle_future_schema() -> anyhow::Result<()> {
     // It should work when a future version of cargo has made schema changes
@@ -1673,7 +1673,7 @@ fn clean_max_src_crate_age() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn clean_max_git_size() {
     // clean --max-git-size

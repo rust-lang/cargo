@@ -1834,7 +1834,7 @@ test test_in_bench ... ok
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn test_run_implicit_example_target() {
     let prj = project()
@@ -1922,7 +1922,7 @@ fn test_run_implicit_example_target() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn test_filtered_excludes_compiling_examples() {
     let p = project()
@@ -3621,7 +3621,7 @@ test b ... ok
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn test_virtual_manifest_one_project() {
     let p = project()
@@ -3644,7 +3644,7 @@ fn test_virtual_manifest_one_project() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn test_virtual_manifest_glob() {
     let p = project()
@@ -3897,7 +3897,7 @@ fn doctest_and_registry() {
     p.cargo("test --workspace -v").run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn cargo_test_env() {
     let src = format!(
@@ -4361,7 +4361,6 @@ fn test_hint_workspace_nonvirtual() {
         .run();
 }
 
-#[allow(deprecated)]
 #[cargo_test]
 fn json_artifact_includes_test_flag() {
     // Verify that the JSON artifact output includes `test` flag.
@@ -4422,7 +4421,6 @@ fn json_artifact_includes_test_flag() {
         .run();
 }
 
-#[allow(deprecated)]
 #[cargo_test]
 fn json_artifact_includes_executable_for_library_tests() {
     let p = project()
@@ -4470,7 +4468,6 @@ fn json_artifact_includes_executable_for_library_tests() {
         .run();
 }
 
-#[allow(deprecated)]
 #[cargo_test]
 fn json_artifact_includes_executable_for_integration_tests() {
     let p = project()
@@ -4587,7 +4584,7 @@ fn doctest_skip_staticlib() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn can_not_mix_doc_tests_and_regular_tests() {
     let p = project()
@@ -5439,7 +5436,7 @@ Caused by:
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn nonzero_exit_status() {
     // Tests for nonzero exit codes from tests.

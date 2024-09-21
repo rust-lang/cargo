@@ -3511,7 +3511,7 @@ fn deps_with_bin_only() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn filter_platform() {
     // Testing the --filter-platform flag.

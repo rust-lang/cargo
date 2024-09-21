@@ -132,7 +132,7 @@ fn cargo_compile_incremental() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn incremental_profile() {
     let p = project()
@@ -176,7 +176,7 @@ fn incremental_profile() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn incremental_config() {
     let p = project()
@@ -1524,7 +1524,6 @@ fn ignores_carriage_return_in_lockfile() {
     p.cargo("build").run();
 }
 
-#[allow(deprecated)]
 #[cargo_test]
 fn cargo_default_env_metadata_env_var() {
     // Ensure that path dep + dylib + env_var get metadata
@@ -4124,7 +4123,7 @@ fn panic_abort_compiles_with_panic_abort() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn compiler_json_error_format() {
     let p = project()
@@ -4314,7 +4313,7 @@ fn wrong_message_format_option() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn message_format_json_forward_stderr() {
     let p = project()
@@ -5177,7 +5176,7 @@ WRAPPER CALLED: rustc --crate-name foo [..]
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn rustc_wrapper_queries() {
     // Check that the invocations querying rustc for information are done with the wrapper.
@@ -5917,7 +5916,7 @@ fn build_filter_infer_profile() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn targets_selected_default() {
     let p = project().file("src/main.rs", "fn main() {}").build();
@@ -6871,7 +6870,7 @@ Caused by:
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn build_script_o0_default() {
     let p = project()
@@ -6884,7 +6883,7 @@ fn build_script_o0_default() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn build_script_o0_default_even_with_release() {
     let p = project()

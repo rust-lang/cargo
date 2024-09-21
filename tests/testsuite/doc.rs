@@ -1859,7 +1859,6 @@ fn doc_cap_lints() {
         .run();
 }
 
-#[allow(deprecated)]
 #[cargo_test]
 fn doc_message_format() {
     let p = project().file("src/lib.rs", BAD_INTRA_LINK_LIB).build();
@@ -1889,7 +1888,6 @@ fn doc_message_format() {
         .run();
 }
 
-#[allow(deprecated)]
 #[cargo_test]
 fn doc_json_artifacts() {
     // Checks the output of json artifact messages.

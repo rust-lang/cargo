@@ -137,7 +137,7 @@ fn list_command_looks_at_path_case_mismatch() {
     );
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn list_command_handles_known_external_commands() {
     let p = project()
@@ -358,7 +358,7 @@ fn override_cargo_home() {
     assert!(paths::root().join("foo2/.git").is_dir());
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn cargo_subcommand_env() {
     let src = format!(

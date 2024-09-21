@@ -346,7 +346,7 @@ Caused by:
     t.join().ok().unwrap();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn net_err_suggests_fetch_with_cli() {
     let p = project()

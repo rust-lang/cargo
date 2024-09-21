@@ -869,7 +869,7 @@ fn prepare_for_already_on_latest_unstable() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn prepare_for_already_on_latest_stable() {
     // Stable counterpart of prepare_for_already_on_latest_unstable.
@@ -1393,7 +1393,7 @@ fn fix_in_existing_repo_weird_ignore() {
     p.cargo("fix").cwd("src").run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn fix_color_message() {
     // Check that color appears in diagnostics.
@@ -1688,7 +1688,7 @@ Original diagnostics will follow.
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn fix_with_run_cargo_in_proc_macros() {
     let p = project()

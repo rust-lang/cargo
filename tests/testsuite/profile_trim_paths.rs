@@ -91,7 +91,7 @@ fn release_profile_default_to_object() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
 fn one_option() {
     let build = |option| {
@@ -388,7 +388,7 @@ bar-0.0.1/src/lib.rs
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test(nightly, reason = "-Zremap-path-scope is unstable")]
 fn diagnostics_works() {
     Package::new("bar", "0.0.1")
