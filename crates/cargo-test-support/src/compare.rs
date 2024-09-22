@@ -3,7 +3,7 @@
 //! # Deprecated comparisons
 //!
 //! Cargo's tests are in transition from internal-only pattern and normalization routines used in
-//! asserts like [`crate::Execs::with_stdout`] to [`assert_e2e`] and [`assert_ui`].
+//! asserts like [`crate::Execs::with_stdout_contains`] to [`assert_e2e`] and [`assert_ui`].
 //!
 //! ## Patterns
 //!
