@@ -993,7 +993,6 @@ fn max_size() {
     }
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn max_size_untracked_crate() {
     // When a .crate file exists from an older version of cargo that did not
@@ -1018,7 +1017,10 @@ fn max_size_untracked_crate() {
     // This should scan the directory and populate the db with the size information.
     cargo_process("clean gc -Zgc -v --max-crate-size=100000")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_stderr("[REMOVED] 0 files")
+        .with_stderr_data(str![[r#"
+[REMOVED] 0 files
+
+"#]])
         .run();
     // Check that it stored the size data.
     let _lock = gctx
@@ -1070,7 +1072,6 @@ fn max_size_untracked_verify(gctx: &GlobalContext) {
     drop(lock);
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn max_size_untracked_src_from_use() {
     // When a src directory exists from an older version of cargo that did not
@@ -1095,12 +1096,14 @@ fn max_size_untracked_src_from_use() {
     // Fix the size.
     p.cargo("clean gc -v --max-src-size=10000 -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_stderr("[REMOVED] 0 files")
+        .with_stderr_data(str![[r#"
+[REMOVED] 0 files
+
+"#]])
         .run();
     max_size_untracked_verify(&gctx);
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn max_size_untracked_src_from_clean() {
     // When a src directory exists from an older version of cargo that did not
@@ -1111,7 +1114,10 @@ fn max_size_untracked_src_from_clean() {
     // Clean should scan the src and update the db.
     p.cargo("clean gc -v --max-src-size=10000 -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_stderr("[REMOVED] 0 files")
+        .with_stderr_data(str![[r#"
+[REMOVED] 0 files
+
+"#]])
         .run();
     max_size_untracked_verify(&gctx);
 }
@@ -1363,7 +1369,6 @@ fn delete_index_also_deletes_crates() {
     assert_eq!(get_registry_names("cache").len(), 0);
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn clean_syncs_missing_files() {
     // When files go missing in the cache, clean operations that need to track
@@ -1417,7 +1422,10 @@ fn clean_syncs_missing_files() {
     // Clean should update the db.
     p.cargo("clean gc -v --max-download-size=1GB -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_stderr("[REMOVED] 0 files")
+        .with_stderr_data(str![[r#"
+[REMOVED] 0 files
+
+"#]])
         .run();
 
     // Verify
@@ -1460,7 +1468,6 @@ fn offline_doesnt_auto_gc() {
     assert_eq!(get_registry_names("cache"), &[] as &[String]);
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn can_handle_future_schema() -> anyhow::Result<()> {
     // It should work when a future version of cargo has made schema changes
@@ -1484,7 +1491,10 @@ fn can_handle_future_schema() -> anyhow::Result<()> {
     // Verify it doesn't blow up.
     p.cargo("clean gc --max-download-size=0 -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_stderr("[REMOVED] 4 files, [..] total")
+        .with_stderr_data(str![[r#"
+[REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
+
+"#]])
         .run();
     Ok(())
 }
@@ -1746,9 +1756,9 @@ fn clean_max_git_size() {
 
     p.cargo(&format!("clean gc --max-git-size={threshold} -Zgc -v"))
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_stderr(&format!(
+        .with_stderr_data(&format!(
             "\
-[REMOVING] [ROOT]/home/.cargo/git/checkouts/{db_name}/{first_co_name}
+[REMOVING] [ROOT]/home/.cargo/git/checkouts/bar-[HASH]/{first_co_name}
 [REMOVED] [..]
 "
         ))

@@ -68,9 +68,21 @@ fn cargo_renders() {
 
     p.cargo("check --message-format json-render-diagnostics")
         .with_status(101)
-        .with_stdout(
-            "{\"reason\":\"compiler-artifact\",[..]\n\
-             {\"reason\":\"build-finished\",\"success\":false}",
+        .with_stdout_data(
+            str![[r#"
+[
+  {
+    "reason": "compiler-artifact",
+    "...": "{...}"
+  },
+  {
+    "reason": "build-finished",
+    "success": false
+  }
+]
+"#]]
+            .is_json()
+            .against_jsonlines(),
         )
         .with_stderr_contains(
             "\
