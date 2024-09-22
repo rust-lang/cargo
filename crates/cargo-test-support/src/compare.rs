@@ -44,7 +44,7 @@
 use crate::cross_compile::try_alternate;
 use crate::paths;
 use crate::{diff, rustc_host};
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Result};
 use serde_json::Value;
 use std::fmt;
 use std::path::Path;
@@ -652,84 +652,6 @@ pub(crate) fn match_with_without(
             itertools::join(matches, "\n")
         ),
     }
-}
-
-/// Checks that the given string of JSON objects match the given set of
-/// expected JSON objects.
-///
-/// See [`crate::Execs::with_json`] for more details.
-pub(crate) fn match_json(expected: &str, actual: &str, cwd: Option<&Path>) -> Result<()> {
-    let (exp_objs, act_objs) = collect_json_objects(expected, actual)?;
-    if exp_objs.len() != act_objs.len() {
-        bail!(
-            "expected {} json lines, got {}, stdout:\n{}",
-            exp_objs.len(),
-            act_objs.len(),
-            actual
-        );
-    }
-    for (exp_obj, act_obj) in exp_objs.iter().zip(act_objs) {
-        find_json_mismatch(exp_obj, &act_obj, cwd)?;
-    }
-    Ok(())
-}
-
-/// Checks that the given string of JSON objects match the given set of
-/// expected JSON objects, ignoring their order.
-///
-/// See [`crate::Execs::with_json_contains_unordered`] for more details and
-/// cautions when using.
-pub(crate) fn match_json_contains_unordered(
-    expected: &str,
-    actual: &str,
-    cwd: Option<&Path>,
-) -> Result<()> {
-    let (exp_objs, mut act_objs) = collect_json_objects(expected, actual)?;
-    for exp_obj in exp_objs {
-        match act_objs
-            .iter()
-            .position(|act_obj| find_json_mismatch(&exp_obj, act_obj, cwd).is_ok())
-        {
-            Some(index) => act_objs.remove(index),
-            None => {
-                bail!(
-                    "Did not find expected JSON:\n\
-                     {}\n\
-                     Remaining available output:\n\
-                     {}\n",
-                    serde_json::to_string_pretty(&exp_obj).unwrap(),
-                    itertools::join(
-                        act_objs.iter().map(|o| serde_json::to_string(o).unwrap()),
-                        "\n"
-                    )
-                );
-            }
-        };
-    }
-    Ok(())
-}
-
-fn collect_json_objects(
-    expected: &str,
-    actual: &str,
-) -> Result<(Vec<serde_json::Value>, Vec<serde_json::Value>)> {
-    let expected_objs: Vec<_> = expected
-        .split("\n\n")
-        .map(|expect| {
-            expect
-                .parse()
-                .with_context(|| format!("failed to parse expected JSON object:\n{}", expect))
-        })
-        .collect::<Result<_>>()?;
-    let actual_objs: Vec<_> = actual
-        .lines()
-        .filter(|line| line.starts_with('{'))
-        .map(|line| {
-            line.parse()
-                .with_context(|| format!("failed to parse JSON object:\n{}", line))
-        })
-        .collect::<Result<_>>()?;
-    Ok((expected_objs, actual_objs))
 }
 
 /// Compares JSON object for approximate equality.
