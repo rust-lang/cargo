@@ -208,7 +208,7 @@ fn add_regex_redactions(subs: &mut snapbox::Redactions) {
     .unwrap();
     subs.insert(
         "[FILE_NUM]",
-        regex!(r"\[(REMOVED|SUMMARY)\] (?<redacted>[0-9]+) files"),
+        regex!(r"\[(REMOVED|SUMMARY)\] (?<redacted>[1-9][0-9]*) files"),
     )
     .unwrap();
     subs.insert(

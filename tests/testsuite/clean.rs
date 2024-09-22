@@ -849,7 +849,7 @@ fn clean_dry_run() {
     p.cargo("clean --dry-run")
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[SUMMARY] [FILE_NUM] files
+[SUMMARY] 0 files
 [WARNING] no files deleted due to --dry-run
 
 "#]])
