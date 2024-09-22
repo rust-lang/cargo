@@ -45,7 +45,6 @@ use crate::cross_compile::try_alternate;
 use crate::paths;
 use crate::{diff, rustc_host};
 use anyhow::{bail, Result};
-use serde_json::Value;
 use std::fmt;
 use std::path::Path;
 use std::str;
@@ -651,81 +650,6 @@ pub(crate) fn match_with_without(
             without,
             itertools::join(matches, "\n")
         ),
-    }
-}
-
-/// Compares JSON object for approximate equality.
-/// You can use `[..]` wildcard in strings (useful for OS-dependent things such
-/// as paths). You can use a `"{...}"` string literal as a wildcard for
-/// arbitrary nested JSON (useful for parts of object emitted by other programs
-/// (e.g., rustc) rather than Cargo itself).
-pub(crate) fn find_json_mismatch(
-    expected: &Value,
-    actual: &Value,
-    cwd: Option<&Path>,
-) -> Result<()> {
-    match find_json_mismatch_r(expected, actual, cwd) {
-        Some((expected_part, actual_part)) => bail!(
-            "JSON mismatch\nExpected:\n{}\nWas:\n{}\nExpected part:\n{}\nActual part:\n{}\n",
-            serde_json::to_string_pretty(expected).unwrap(),
-            serde_json::to_string_pretty(&actual).unwrap(),
-            serde_json::to_string_pretty(expected_part).unwrap(),
-            serde_json::to_string_pretty(actual_part).unwrap(),
-        ),
-        None => Ok(()),
-    }
-}
-
-fn find_json_mismatch_r<'a>(
-    expected: &'a Value,
-    actual: &'a Value,
-    cwd: Option<&Path>,
-) -> Option<(&'a Value, &'a Value)> {
-    use serde_json::Value::*;
-    match (expected, actual) {
-        (&Number(ref l), &Number(ref r)) if l == r => None,
-        (&Bool(l), &Bool(r)) if l == r => None,
-        (&String(ref l), _) if l == "{...}" => None,
-        (&String(ref l), &String(ref r)) => {
-            if match_exact(l, r, "", "", cwd).is_err() {
-                Some((expected, actual))
-            } else {
-                None
-            }
-        }
-        (&Array(ref l), &Array(ref r)) => {
-            if l.len() != r.len() {
-                return Some((expected, actual));
-            }
-
-            l.iter()
-                .zip(r.iter())
-                .filter_map(|(l, r)| find_json_mismatch_r(l, r, cwd))
-                .next()
-        }
-        (&Object(ref l), &Object(ref r)) => {
-            let mut expected_entries = l.iter();
-            let mut actual_entries = r.iter();
-
-            loop {
-                match (expected_entries.next(), actual_entries.next()) {
-                    (None, None) => return None,
-                    (Some((expected_key, expected_value)), Some((actual_key, actual_value)))
-                        if expected_key == actual_key =>
-                    {
-                        if let mismatch @ Some(_) =
-                            find_json_mismatch_r(expected_value, actual_value, cwd)
-                        {
-                            return mismatch;
-                        }
-                    }
-                    _ => return Some((expected, actual)),
-                }
-            }
-        }
-        (&Null, &Null) => None,
-        // Magic string literal `"{...}"` acts as wildcard for any sub-JSON.
-        _ => Some((expected, actual)),
     }
 }
 

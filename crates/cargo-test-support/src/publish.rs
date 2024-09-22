@@ -57,9 +57,10 @@
 //! );
 //! ```
 
-use crate::compare::{assert_match_exact, find_json_mismatch};
+use crate::compare::assert_match_exact;
 use crate::registry::{self, alt_api_path, FeatureMap};
 use flate2::read::GzDecoder;
+use snapbox::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::fs::File;
@@ -133,12 +134,8 @@ fn _validate_upload(
     let json_sz = read_le_u32(&mut f).expect("read json length");
     let mut json_bytes = vec![0; json_sz as usize];
     f.read_exact(&mut json_bytes).expect("read JSON data");
-    let actual_json = serde_json::from_slice(&json_bytes).expect("uploaded JSON should be valid");
-    let expected_json = serde_json::from_str(expected_json).expect("expected JSON does not parse");
 
-    if let Err(e) = find_json_mismatch(&expected_json, &actual_json, None) {
-        panic!("{}", e);
-    }
+    snapbox::assert_data_eq!(json_bytes, expected_json.is_json());
 
     // 32-bit little-endian integer of length of crate file.
     let crate_sz = read_le_u32(&mut f).expect("read crate length");
