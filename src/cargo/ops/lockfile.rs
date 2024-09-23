@@ -35,7 +35,7 @@ pub fn resolve_to_string(ws: &Workspace<'_>, resolve: &Resolve) -> CargoResult<S
     Ok(out)
 }
 
-/// Ensure the resolve result is written to fisk
+/// Ensure the resolve result is written to disk
 ///
 /// Returns `true` if the lockfile changed
 #[tracing::instrument(skip_all)]

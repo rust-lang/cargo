@@ -12,6 +12,7 @@
 use std::collections::{HashMap, HashSet};
 use std::task::{ready, Poll};
 
+use crate::core::resolver::VersionPreferences;
 use crate::core::PackageSet;
 use crate::core::{Dependency, PackageId, SourceId, Summary};
 use crate::sources::config::SourceConfigMap;
@@ -63,6 +64,12 @@ pub trait Registry {
 
     /// Block until all outstanding [`Poll::Pending`] requests are [`Poll::Ready`].
     fn block_until_ready(&mut self) -> CargoResult<()>;
+
+    /// Get version preferences.
+    fn version_prefs(&self) -> &VersionPreferences;
+
+    /// Set version preferences.
+    fn set_version_prefs(&mut self, version_prefs: VersionPreferences);
 }
 
 /// This structure represents a registry of known packages. It internally
@@ -131,6 +138,9 @@ pub struct PackageRegistry<'gctx> {
     /// This is constructed during calls to [`PackageRegistry::patch`],
     /// along with the `patches` field, thoough these entries never get locked.
     patches_available: HashMap<CanonicalUrl, Vec<PackageId>>,
+
+    /// Version preferences.
+    version_prefs: VersionPreferences,
 }
 
 /// A map of all "locked packages" which is filled in when parsing a lock file
@@ -209,6 +219,7 @@ impl<'gctx> PackageRegistry<'gctx> {
             patches: HashMap::new(),
             patches_locked: false,
             patches_available: HashMap::new(),
+            version_prefs: VersionPreferences::default(),
         })
     }
 
@@ -503,7 +514,12 @@ impl<'gctx> PackageRegistry<'gctx> {
         for summaries in self.patches.values_mut() {
             for summary in summaries {
                 debug!("locking patch {:?}", summary);
-                *summary = lock(&self.locked, &self.patches_available, summary.clone());
+                *summary = lock(
+                    &self.locked,
+                    &self.patches_available,
+                    summary.clone(),
+                    &self.version_prefs,
+                );
             }
         }
         self.patches_locked = true;
@@ -581,7 +597,12 @@ impl<'gctx> PackageRegistry<'gctx> {
     /// through.
     pub fn lock(&self, summary: Summary) -> Summary {
         assert!(self.patches_locked);
-        lock(&self.locked, &self.patches_available, summary)
+        lock(
+            &self.locked,
+            &self.patches_available,
+            summary,
+            &self.version_prefs,
+        )
     }
 
     fn warn_bad_override(
@@ -734,7 +755,12 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
                         }
                     }
                     let summary = summary.into_summary();
-                    f(IndexSummary::Candidate(lock(locked, all_patches, summary)))
+                    f(IndexSummary::Candidate(lock(
+                        locked,
+                        all_patches,
+                        summary,
+                        &self.version_prefs,
+                    )))
                 };
                 return source.query(dep, kind, callback);
             }
@@ -799,6 +825,14 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
         }
         Ok(())
     }
+
+    fn version_prefs(&self) -> &VersionPreferences {
+        &self.version_prefs
+    }
+
+    fn set_version_prefs(&mut self, version_prefs: VersionPreferences) {
+        self.version_prefs = version_prefs;
+    }
 }
 
 /// See [`PackageRegistry::lock`].
@@ -806,6 +840,7 @@ fn lock(
     locked: &LockedMap,
     patches: &HashMap<CanonicalUrl, Vec<PackageId>>,
     summary: Summary,
+    version_prefs: &VersionPreferences,
 ) -> Summary {
     let pair = locked
         .get(&(summary.source_id(), summary.name()))
@@ -892,12 +927,30 @@ fn lock(
             }
         }
 
-        // If this dependency did not have a locked version, then we query
-        // all known locked packages to see if they match this dependency.
-        // If anything does then we lock it to that and move on.
-        let v = locked
-            .get(&(dep.source_id(), dep.package_name()))
-            .and_then(|vec| vec.iter().find(|&&(id, _)| dep.matches_id(id)));
+        // If this dependency did not have a locked version, we check if multiple
+        // versions of the dependency already exists in the lockfile. In this case we want
+        // to do the full resolving instead of locking a specific version.
+        // Otherwise, we query all known locked packages to see if they match this dependency,
+        // and if anything does then we lock it to that and move on.
+
+        let compatible_versions_count = version_prefs
+            .get_try_to_use()
+            .iter()
+            .filter(|&&id| {
+                id.source_id() == dep.source_id()
+                    && id.name() == dep.package_name()
+                    && dep.matches_id(id)
+            })
+            .count();
+
+        let v = if compatible_versions_count > 1 {
+            None
+        } else {
+            locked
+                .get(&(dep.source_id(), dep.package_name()))
+                .and_then(|vec| vec.iter().find(|&&(id, _)| dep.matches_id(id)))
+        };
+
         if let Some(&(id, _)) = v {
             trace!("\tsecond hit on {}", id);
             let mut dep = dep;

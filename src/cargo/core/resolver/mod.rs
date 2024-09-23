@@ -126,7 +126,6 @@ pub fn resolve(
     summaries: &[(Summary, ResolveOpts)],
     replacements: &[(PackageIdSpec, Dependency)],
     registry: &mut dyn Registry,
-    version_prefs: &VersionPreferences,
     resolve_version: ResolveVersion,
     gctx: Option<&GlobalContext>,
 ) -> CargoResult<Resolve> {
@@ -136,7 +135,7 @@ pub fn resolve(
         }
         _ => None,
     };
-    let mut registry = RegistryQueryer::new(registry, replacements, version_prefs);
+    let mut registry = RegistryQueryer::new(registry, replacements);
     let resolver_ctx = loop {
         let resolver_ctx = ResolverContext::new();
         let resolver_ctx =

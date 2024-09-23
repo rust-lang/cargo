@@ -32,6 +32,10 @@ pub enum VersionOrdering {
 }
 
 impl VersionPreferences {
+    pub fn get_try_to_use(&self) -> &HashSet<PackageId> {
+        &self.try_to_use
+    }
+
     /// Indicate that the given package (specified as a [`PackageId`]) should be preferred.
     pub fn prefer_package_id(&mut self, pkg_id: PackageId) {
         self.try_to_use.insert(pkg_id);

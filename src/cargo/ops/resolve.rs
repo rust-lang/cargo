@@ -64,7 +64,6 @@ use crate::core::resolver::{
     self, HasDevUnits, Resolve, ResolveOpts, ResolveVersion, VersionOrdering, VersionPreferences,
 };
 use crate::core::summary::Summary;
-use crate::core::Dependency;
 use crate::core::GitReference;
 use crate::core::PackageId;
 use crate::core::PackageIdSpec;
@@ -72,6 +71,7 @@ use crate::core::PackageIdSpecQuery;
 use crate::core::PackageSet;
 use crate::core::SourceId;
 use crate::core::Workspace;
+use crate::core::{Dependency, Registry};
 use crate::ops;
 use crate::sources::RecursivePathSource;
 use crate::util::cache_lock::CacheLockMode;
@@ -398,6 +398,8 @@ pub fn resolve_with_previous<'gctx>(
         registry.lock_patches();
     }
 
+    registry.set_version_prefs(version_prefs);
+
     let summaries: Vec<(Summary, ResolveOpts)> = {
         let _span = tracing::span!(tracing::Level::TRACE, "registry.lock").entered();
         ws.members_with_features(specs, cli_features)?
@@ -421,7 +423,6 @@ pub fn resolve_with_previous<'gctx>(
         &summaries,
         &replace,
         registry,
-        &version_prefs,
         ResolveVersion::with_rust_version(ws.rust_version()),
         Some(ws.gctx()),
     )?;
