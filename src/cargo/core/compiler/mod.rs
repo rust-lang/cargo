@@ -694,6 +694,11 @@ fn prepare_rustc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResult
     base.inherit_jobserver(&build_runner.jobserver);
     build_deps_args(&mut base, build_runner, unit)?;
     add_cap_lints(build_runner.bcx, unit, &mut base);
+    if cargo_rustc_higher_args_precedence(build_runner) {
+        if let Some(args) = build_runner.bcx.extra_args_for(unit) {
+            base.args(args);
+        }
+    }
     base.args(&unit.rustflags);
     if build_runner.bcx.gctx.cli_unstable().binary_dep_depinfo {
         base.arg("-Z").arg("binary-dep-depinfo");
@@ -753,8 +758,11 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
     }
 
     rustdoc.args(unit.pkg.manifest().lint_rustflags());
-    if let Some(args) = build_runner.bcx.extra_args_for(unit) {
-        rustdoc.args(args);
+
+    if !cargo_rustc_higher_args_precedence(build_runner) {
+        if let Some(args) = build_runner.bcx.extra_args_for(unit) {
+            rustdoc.args(args);
+        }
     }
 
     let metadata = build_runner.metadata_for_doc_units[unit];
@@ -795,6 +803,11 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
 
     rustdoc::add_output_format(build_runner, unit, &mut rustdoc)?;
 
+    if cargo_rustc_higher_args_precedence(build_runner) {
+        if let Some(args) = build_runner.bcx.extra_args_for(unit) {
+            rustdoc.args(args);
+        }
+    }
     rustdoc.args(&unit.rustdocflags);
 
     if !crate_version_flag_already_present(&rustdoc) {
@@ -1097,8 +1110,10 @@ fn build_base_args(
 
     cmd.args(unit.pkg.manifest().lint_rustflags());
     cmd.args(&profile_rustflags);
-    if let Some(args) = build_runner.bcx.extra_args_for(unit) {
-        cmd.args(args);
+    if !cargo_rustc_higher_args_precedence(build_runner) {
+        if let Some(args) = build_runner.bcx.extra_args_for(unit) {
+            cmd.args(args);
+        }
     }
 
     // `-C overflow-checks` is implied by the setting of `-C debug-assertions`,
@@ -1968,4 +1983,20 @@ fn scrape_output_path(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoR
     build_runner
         .outputs(unit)
         .map(|outputs| outputs[0].path.clone())
+}
+
+/// Provides a way to change the precedence of `cargo rustc -- <flags>`.
+///
+/// This is intended to be a short-live function.
+///
+/// See <https://github.com/rust-lang/cargo/issues/14346>
+fn cargo_rustc_higher_args_precedence(build_runner: &BuildRunner<'_, '_>) -> bool {
+    build_runner.bcx.gctx.nightly_features_allowed
+        && build_runner
+            .bcx
+            .gctx
+            .get_env("__CARGO_RUSTC_ORIG_ARGS_PRIO")
+            .ok()
+            .as_deref()
+            != Some("1")
 }

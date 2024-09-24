@@ -819,14 +819,13 @@ fn precedence() {
 
     p.cargo("rustc --release -v -- --cfg cargo_rustc -C strip=symbols")
         .env("RUSTFLAGS", "--cfg from_rustflags")
-        .with_stderr_data(
-            str![[r#"
+        .masquerade_as_nightly_cargo(&["cargo-rustc-precedence"])
+        .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc [..]--cfg cargo_rustc -C strip=symbols [..]-C strip=debuginfo [..]--cfg from_rustflags`
+[RUNNING] `rustc [..]-C strip=debuginfo [..]--cfg cargo_rustc -C strip=symbols --cfg from_rustflags`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 
-"#]]
-        )
+"#]])
         .run();
 
     // Ensure the short-live env var to work
