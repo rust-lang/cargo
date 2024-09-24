@@ -14,7 +14,6 @@ use crate::core::resolver::errors::describe_path_in_context;
 use crate::core::resolver::types::{ConflictReason, DepInfo, FeaturesSet};
 use crate::core::resolver::{
     ActivateError, ActivateResult, CliFeatures, RequestedFeatures, ResolveOpts, VersionOrdering,
-    VersionPreferences,
 };
 use crate::core::{
     Dependency, FeatureValue, PackageId, PackageIdSpec, PackageIdSpecQuery, Registry, Summary,
@@ -32,7 +31,6 @@ use tracing::debug;
 pub struct RegistryQueryer<'a> {
     pub registry: &'a mut (dyn Registry + 'a),
     replacements: &'a [(PackageIdSpec, Dependency)],
-    version_prefs: &'a VersionPreferences,
     /// a cache of `Candidate`s that fulfil a `Dependency` (and whether `first_version`)
     registry_cache: HashMap<(Dependency, Option<VersionOrdering>), Poll<Rc<Vec<Summary>>>>,
     /// a cache of `Dependency`s that are required for a `Summary`
@@ -52,12 +50,10 @@ impl<'a> RegistryQueryer<'a> {
     pub fn new(
         registry: &'a mut dyn Registry,
         replacements: &'a [(PackageIdSpec, Dependency)],
-        version_prefs: &'a VersionPreferences,
     ) -> Self {
         RegistryQueryer {
             registry,
             replacements,
-            version_prefs,
             registry_cache: HashMap::new(),
             summary_cache: HashMap::new(),
             used_replacements: HashMap::new(),
@@ -208,7 +204,9 @@ impl<'a> RegistryQueryer<'a> {
         }
 
         let first_version = first_version;
-        self.version_prefs.sort_summaries(&mut ret, first_version);
+        self.registry
+            .version_prefs()
+            .sort_summaries(&mut ret, first_version);
 
         let out = Poll::Ready(Rc::new(ret));
 

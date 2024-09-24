@@ -362,6 +362,108 @@ fn change_package_version() {
 }
 
 #[cargo_test]
+fn update_choose_between_multiple_major_versions() {
+    Package::new("log", "0.1.0").publish();
+    Package::new("log", "0.2.0").publish();
+    Package::new("log", "0.3.0").publish();
+    Package::new("log", "0.4.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "bar"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+
+            [dependencies]
+            log1 = { package = "log", version = "0.1" }
+            log2 = { package = "log", version = "0.2" }
+            log3 = { package = "log", version = "0.3" }
+            log4 = { package = "log", version = "0.4" }
+            foo = { path = "foo" }
+        "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "foo/Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.0.1"
+            edition = "2015"
+            authors = []
+
+            [dependencies]
+            log = ">=0.1, <0.5"
+        "#,
+        )
+        .file("foo/src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile").run();
+
+    assert!(p.read_lockfile().contains(
+        r#"[[package]]
+name = "foo"
+version = "0.0.1"
+dependencies = [
+ "log 0.4.0",
+]"#
+    ));
+
+    p.cargo("update foo").run();
+
+    assert!(p.read_lockfile().contains(
+        r#"[[package]]
+name = "foo"
+version = "0.0.1"
+dependencies = [
+ "log 0.4.0",
+]"#
+    ));
+
+    p.cargo("update foo -Zminimal-versions")
+        .masquerade_as_nightly_cargo(&["minimal-versions"])
+        .run();
+
+    assert!(p.read_lockfile().contains(
+        r#"[[package]]
+name = "foo"
+version = "0.0.1"
+dependencies = [
+ "log 0.1.0",
+]"#
+    ));
+
+    p.cargo("update foo -Zminimal-versions")
+        .masquerade_as_nightly_cargo(&["minimal-versions"])
+        .run();
+
+    assert!(p.read_lockfile().contains(
+        r#"[[package]]
+name = "foo"
+version = "0.0.1"
+dependencies = [
+ "log 0.1.0",
+]"#
+    ));
+
+    p.cargo("update foo").run();
+
+    assert!(p.read_lockfile().contains(
+        r#"[[package]]
+name = "foo"
+version = "0.0.1"
+dependencies = [
+ "log 0.4.0",
+]"#
+    ));
+}
+
+#[cargo_test]
 fn update_precise() {
     Package::new("serde", "0.1.0").publish();
     Package::new("serde", "0.2.1").publish();

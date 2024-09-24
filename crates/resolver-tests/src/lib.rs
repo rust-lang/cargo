@@ -102,6 +102,7 @@ pub fn resolve_with_global_context_raw(
     struct MyRegistry<'a> {
         list: &'a [Summary],
         used: HashSet<PackageId>,
+        version_prefs: VersionPreferences,
     }
     impl<'a> Registry for MyRegistry<'a> {
         fn query(
@@ -135,6 +136,14 @@ pub fn resolve_with_global_context_raw(
         fn block_until_ready(&mut self) -> CargoResult<()> {
             Ok(())
         }
+
+        fn version_prefs(&self) -> &VersionPreferences {
+            &self.version_prefs
+        }
+
+        fn set_version_prefs(&mut self, version_prefs: VersionPreferences) {
+            self.version_prefs = version_prefs;
+        }
     }
     impl<'a> Drop for MyRegistry<'a> {
         fn drop(&mut self) {
@@ -157,6 +166,7 @@ pub fn resolve_with_global_context_raw(
     let mut registry = MyRegistry {
         list: registry,
         used: HashSet::new(),
+        version_prefs: VersionPreferences::default(),
     };
     let summary = Summary::new(
         pkg_id("root"),
@@ -172,11 +182,11 @@ pub fn resolve_with_global_context_raw(
     if gctx.cli_unstable().minimal_versions {
         version_prefs.version_ordering(VersionOrdering::MinimumVersionsFirst)
     }
+    registry.set_version_prefs(version_prefs);
     let resolve = resolver::resolve(
         &[(summary, opts)],
         &[],
         &mut registry,
-        &version_prefs,
         ResolveVersion::with_rust_version(None),
         Some(gctx),
     );
