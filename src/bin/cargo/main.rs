@@ -31,9 +31,9 @@ fn main() {
 
     let nightly_features_allowed = matches!(&*features::channel(), "nightly" | "dev");
     if nightly_features_allowed {
-        clap_complete::CompleteEnv::with_factory(|| cli::cli(&mut gctx))
-            .var("CARGO_COMPLETE")
-            .complete();
+        let completer =
+            clap_complete::CompleteEnv::with_factory(|| cli::cli(&mut gctx)).var("CARGO_COMPLETE");
+        completer.complete();
     }
 
     let result = if let Some(lock_addr) = cargo::ops::fix_get_proxy_lock_addr() {
