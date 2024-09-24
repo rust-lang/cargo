@@ -827,12 +827,15 @@ fn main() {
 
     p.cargo("-Zscript -v script.rs --help")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
-        .with_stdout_data(str![""])
+        .with_stdout_data(str![[r#"
+Hello world!
+
+"#]])
         .with_stderr_data(str![[r#"
-...
-[..]compile_error!{"must not be built"}[..]
-...
+[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[COMPILING] script v0.0.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] --help`
 
 "#]])
         .run();

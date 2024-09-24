@@ -8,7 +8,13 @@ use crate::GlobalContext;
 
 const DEFAULT_EDITION: crate::core::features::Edition =
     crate::core::features::Edition::LATEST_STABLE;
-const AUTO_FIELDS: &[&str] = &["autobins", "autoexamples", "autotests", "autobenches"];
+const AUTO_FIELDS: &[&str] = &[
+    "autolib",
+    "autobins",
+    "autoexamples",
+    "autotests",
+    "autobenches",
+];
 
 pub(super) fn expand_manifest(
     content: &str,
@@ -289,6 +295,7 @@ path = "/home/me/test.rs"
 autobenches = false
 autobins = false
 autoexamples = false
+autolib = false
 autotests = false
 build = false
 edition = "2021"
@@ -324,6 +331,7 @@ time = "0.1.25"
 autobenches = false
 autobins = false
 autoexamples = false
+autolib = false
 autotests = false
 build = false
 edition = "2021"
@@ -359,6 +367,7 @@ time = "0.1.25"
 autobenches = false
 autobins = false
 autoexamples = false
+autolib = false
 autotests = false
 build = false
 edition = "2021"

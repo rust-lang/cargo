@@ -2272,6 +2272,7 @@ name = "foo"
 version = "0.1.0"
 authors = []
 build = false
+autolib = false
 autobins = false
 autoexamples = false
 autotests = false

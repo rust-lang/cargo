@@ -129,9 +129,22 @@ pub fn normalize_lib(
     package_root: &Path,
     package_name: &str,
     edition: Edition,
+    autodiscover: Option<bool>,
     warnings: &mut Vec<String>,
 ) -> CargoResult<Option<TomlLibTarget>> {
-    {
+    if is_normalized(original_lib, autodiscover) {
+        let Some(lib) = original_lib.cloned() else {
+            return Ok(None);
+        };
+
+        // Check early to improve error messages
+        validate_lib_name(&lib, warnings)?;
+
+        validate_proc_macro(&lib, "library", edition, warnings)?;
+        validate_crate_types(&lib, "library", edition, warnings)?;
+
+        Ok(Some(lib))
+    } else {
         let inferred = inferred_lib(package_root);
         let lib = original_lib.cloned().or_else(|| {
             inferred.as_ref().map(|lib| TomlTarget {
@@ -528,7 +541,15 @@ fn to_bench_targets(
     Ok(result)
 }
 
+fn is_normalized(toml_target: Option<&TomlTarget>, autodiscover: Option<bool>) -> bool {
+    are_normalized_(toml_target.map(std::slice::from_ref), autodiscover)
+}
+
 fn are_normalized(toml_targets: Option<&Vec<TomlTarget>>, autodiscover: Option<bool>) -> bool {
+    are_normalized_(toml_targets.map(|v| v.as_slice()), autodiscover)
+}
+
+fn are_normalized_(toml_targets: Option<&[TomlTarget]>, autodiscover: Option<bool>) -> bool {
     if autodiscover != Some(false) {
         return false;
     }

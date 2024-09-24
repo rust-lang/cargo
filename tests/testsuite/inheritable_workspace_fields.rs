@@ -224,6 +224,7 @@ include = [
     "Cargo.toml",
 ]
 publish = true
+autolib = false
 autobins = false
 autoexamples = false
 autotests = false
@@ -394,6 +395,7 @@ name = "bar"
 version = "0.2.0"
 authors = []
 build = false
+autolib = false
 autobins = false
 autoexamples = false
 autotests = false
@@ -533,6 +535,7 @@ name = "bar"
 version = "0.2.0"
 authors = []
 build = false
+autolib = false
 autobins = false
 autoexamples = false
 autotests = false
@@ -793,6 +796,7 @@ include = [
     "README.md",
 ]
 publish = true
+autolib = false
 autobins = false
 autoexamples = false
 autotests = false
@@ -966,6 +970,7 @@ name = "bar"
 version = "0.2.0"
 authors = []
 build = false
+autolib = false
 autobins = false
 autoexamples = false
 autotests = false
