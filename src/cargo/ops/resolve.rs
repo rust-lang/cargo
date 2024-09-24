@@ -79,6 +79,7 @@ use crate::util::errors::CargoResult;
 use crate::util::CanonicalUrl;
 use anyhow::Context as _;
 use cargo_util::paths;
+use cargo_util_schemas::core::PartialVersion;
 use std::collections::{HashMap, HashSet};
 use tracing::{debug, trace};
 
@@ -357,14 +358,16 @@ pub fn resolve_with_previous<'gctx>(
         version_prefs.version_ordering(VersionOrdering::MinimumVersionsFirst)
     }
     if ws.resolve_honors_rust_version() {
-        let rust_version = if let Some(ver) = ws.rust_version() {
-            ver.clone().into_partial()
-        } else {
+        let mut rust_versions: Vec<_> = ws
+            .members()
+            .filter_map(|p| p.rust_version().map(|rv| rv.as_partial().clone()))
+            .collect();
+        if rust_versions.is_empty() {
             let rustc = ws.gctx().load_global_rustc(Some(ws))?;
-            let rustc_version = rustc.version.clone().into();
-            rustc_version
-        };
-        version_prefs.max_rust_version(Some(rust_version));
+            let rust_version: PartialVersion = rustc.version.clone().into();
+            rust_versions.push(rust_version);
+        }
+        version_prefs.rust_versions(rust_versions);
     }
 
     let avoid_patch_ids = if register_patches {
@@ -422,7 +425,7 @@ pub fn resolve_with_previous<'gctx>(
         &replace,
         registry,
         &version_prefs,
-        ResolveVersion::with_rust_version(ws.rust_version()),
+        ResolveVersion::with_rust_version(ws.lowest_rust_version()),
         Some(ws.gctx()),
     )?;
 

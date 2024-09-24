@@ -409,22 +409,36 @@ foo v0.0.1 ([ROOT]/foo)
 
 #[cargo_test]
 fn resolve_with_multiple_rust_versions() {
-    Package::new("only-newer", "1.6.0")
+    Package::new(&format!("shared-only-newer"), "1.65.0")
         .rust_version("1.65.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
-    Package::new("newer-and-older", "1.5.0")
-        .rust_version("1.45.0")
-        .file("src/lib.rs", "fn other_stuff() {}")
-        .publish();
-    Package::new("newer-and-older", "1.5.1")
-        .rust_version("1.55.0")
-        .file("src/lib.rs", "fn other_stuff() {}")
-        .publish();
-    Package::new("newer-and-older", "1.6.0")
+    for ver in ["1.45.0", "1.55.0", "1.65.0"] {
+        Package::new(&format!("shared-newer-and-older"), ver)
+            .rust_version(ver)
+            .file("src/lib.rs", "fn other_stuff() {}")
+            .publish();
+    }
+    Package::new(&format!("lower-only-newer"), "1.65.0")
         .rust_version("1.65.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
+    for ver in ["1.45.0", "1.55.0"] {
+        Package::new(&format!("lower-newer-and-older"), ver)
+            .rust_version(ver)
+            .file("src/lib.rs", "fn other_stuff() {}")
+            .publish();
+    }
+    Package::new(&format!("higher-only-newer"), "1.65.0")
+        .rust_version("1.65.0")
+        .file("src/lib.rs", "fn other_stuff() {}")
+        .publish();
+    for ver in ["1.55.0", "1.65.0"] {
+        Package::new(&format!("higher-newer-and-older"), ver)
+            .rust_version(ver)
+            .file("src/lib.rs", "fn other_stuff() {}")
+            .publish();
+    }
 
     let p = project()
         .file(
@@ -441,8 +455,10 @@ fn resolve_with_multiple_rust_versions() {
             rust-version = "1.60.0"
 
             [dependencies]
-            only-newer = "1.0.0"
-            newer-and-older = "1.0.0"
+            higher-only-newer = "1"
+            higher-newer-and-older = "1"
+            shared-only-newer = "1"
+            shared-newer-and-older = "1"
         "#,
         )
         .file("src/main.rs", "fn main() {}")
@@ -457,8 +473,10 @@ fn resolve_with_multiple_rust_versions() {
             rust-version = "1.50.0"
 
             [dependencies]
-            only-newer = "1.0.0"
-            newer-and-older = "1.0.0"
+            lower-only-newer = "1"
+            lower-newer-and-older = "1"
+            shared-only-newer = "1"
+            shared-newer-and-older = "1"
         "#,
         )
         .file("lower/src/main.rs", "fn main() {}")
@@ -470,15 +488,17 @@ fn resolve_with_multiple_rust_versions() {
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 6 packages to latest compatible versions
 
 "#]])
         .run();
     p.cargo("tree")
         .with_stdout_data(str![[r#"
 higher v0.0.1 ([ROOT]/foo)
-├── newer-and-older v1.6.0
-└── only-newer v1.6.0
+├── higher-newer-and-older v1.65.0
+├── higher-only-newer v1.65.0
+├── shared-newer-and-older v1.65.0
+└── shared-only-newer v1.65.0
 
 "#]])
         .run();
@@ -489,17 +509,23 @@ higher v0.0.1 ([ROOT]/foo)
         .masquerade_as_nightly_cargo(&["msrv-policy"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest Rust 1.50.0 compatible versions
-[ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.65.0)
-[ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
+[LOCKING] 6 packages to latest Rust 1.50.0 compatible versions
+[ADDING] higher-newer-and-older v1.55.0 (available: v1.65.0, requires Rust 1.65.0)
+[ADDING] higher-only-newer v1.65.0 (requires Rust 1.65.0)
+[ADDING] lower-newer-and-older v1.45.0 (available: v1.55.0, requires Rust 1.55.0)
+[ADDING] lower-only-newer v1.65.0 (requires Rust 1.65.0)
+[ADDING] shared-newer-and-older v1.45.0 (available: v1.65.0, requires Rust 1.65.0)
+[ADDING] shared-only-newer v1.65.0 (requires Rust 1.65.0)
 
 "#]])
         .run();
     p.cargo("tree")
         .with_stdout_data(str![[r#"
 higher v0.0.1 ([ROOT]/foo)
-├── newer-and-older v1.5.0
-└── only-newer v1.6.0
+├── higher-newer-and-older v1.55.0
+├── higher-only-newer v1.65.0
+├── shared-newer-and-older v1.45.0
+└── shared-only-newer v1.65.0
 
 "#]])
         .run();
