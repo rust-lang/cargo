@@ -163,9 +163,14 @@ will have `edition` explicitly specified to a newer value.
 ### The `rust-version` field
 
 The `rust-version` field is an optional key that tells cargo what version of the
-Rust language and compiler your package can be compiled with. If the currently
-selected version of the Rust compiler is older than the stated version, cargo
-will exit with an error, telling the user what version is required.
+Rust language and compiler your package can be compiled with.
+If the currently selected version of the Rust compiler is older than the stated
+version, cargo will exit with an error, telling the user what version is
+required.
+This affects all targets/crates in the package, including test suites,
+benchmarks, binaries, examples, etc.
+
+The `rust-version` may be ignored using the `--ignore-rust-version` option.
 
 ```toml
 [package]
@@ -176,11 +181,6 @@ rust-version = "1.56"
 The Rust version must be a bare version number with at least one component; it
 cannot include semver operators or pre-release identifiers. Compiler pre-release
 identifiers such as -nightly will be ignored while checking the Rust version.
-
-The `rust-version` may be ignored using the `--ignore-rust-version` option.
-
-Setting the `rust-version` key in `[package]` will affect all targets/crates in
-the package, including test suites, benchmarks, binaries, examples, etc.
 
 To find the minimum `rust-version` compatible with your project, you can use third-party tools like [`cargo-msrv`](https://crates.io/crates/cargo-msrv).
 
