@@ -241,7 +241,7 @@ pub fn normalize_bins(
     errors: &mut Vec<String>,
     has_lib: bool,
 ) -> CargoResult<Vec<TomlBinTarget>> {
-    if is_normalized(toml_bins, autodiscover) {
+    if are_normalized(toml_bins, autodiscover) {
         let toml_bins = toml_bins.cloned().unwrap_or_default();
         for bin in &toml_bins {
             validate_bin_name(bin, warnings)?;
@@ -528,7 +528,7 @@ fn to_bench_targets(
     Ok(result)
 }
 
-fn is_normalized(toml_targets: Option<&Vec<TomlTarget>>, autodiscover: Option<bool>) -> bool {
+fn are_normalized(toml_targets: Option<&Vec<TomlTarget>>, autodiscover: Option<bool>) -> bool {
     if autodiscover != Some(false) {
         return false;
     }
@@ -581,7 +581,7 @@ fn normalize_targets_with_legacy_path(
     legacy_path: &mut dyn FnMut(&TomlTarget) -> Option<PathBuf>,
     autodiscover_flag_name: &str,
 ) -> CargoResult<Vec<TomlTarget>> {
-    if is_normalized(toml_targets, autodiscover) {
+    if are_normalized(toml_targets, autodiscover) {
         let toml_targets = toml_targets.cloned().unwrap_or_default();
         for target in &toml_targets {
             // Check early to improve error messages
