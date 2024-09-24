@@ -1513,6 +1513,7 @@ impl Package {
         t!(fs::create_dir_all(dst.parent().unwrap()));
         let f = t!(File::create(&dst));
         let mut a = Builder::new(GzEncoder::new(f, Compression::none()));
+        a.sparse(false);
 
         if !self
             .files

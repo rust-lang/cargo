@@ -94,7 +94,7 @@ shell-escape = "0.1.5"
 similar = "2.6.0"
 supports-hyperlinks = "3.0.0"
 snapbox = { version = "0.6.17", features = ["diff", "dir", "term-svg", "regex", "json"] }
-tar = { version = "0.4.41", default-features = false }
+tar = { version = "0.4.42", default-features = false }
 tempfile = "3.10.1"
 thiserror = "1.0.63"
 time = { version = "0.3.36", features = ["parsing", "formatting", "serde"] }
