@@ -167,9 +167,6 @@ Rust language and compiler your package can be compiled with. If the currently
 selected version of the Rust compiler is older than the stated version, cargo
 will exit with an error, telling the user what version is required.
 
-The first version of Cargo that supports this field was released with Rust 1.56.0.
-In older releases, the field will be ignored, and Cargo will display a warning.
-
 ```toml
 [package]
 # ...
