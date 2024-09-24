@@ -173,7 +173,7 @@ will exit with an error, telling the user what version is required.
 rust-version = "1.56"
 ```
 
-The Rust version must be a bare version number with two or three components; it
+The Rust version must be a bare version number with at least one component; it
 cannot include semver operators or pre-release identifiers. Compiler pre-release
 identifiers such as -nightly will be ignored while checking the Rust version.
 
