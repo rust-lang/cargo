@@ -283,7 +283,7 @@ fn cargo_compile_git_dep_pull_request() {
         .with_stderr_data(str![[r#"
 [UPDATING] git repository `[ROOTURL]/dep1`
 [LOCKING] 1 package to latest compatible version
-[COMPILING] dep1 v0.5.0 ([ROOTURL]/dep1?rev=refs/pull/330/head#[..])
+[COMPILING] dep1 v0.5.0 ([ROOTURL]/dep1?rev=refs%2Fpull%2F330%2Fhead#[..])
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

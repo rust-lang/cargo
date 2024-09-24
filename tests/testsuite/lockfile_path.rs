@@ -441,7 +441,7 @@ fn run_embed() {
 }
 
 const VALID_LOCKFILE: &str = r#"# Test lockfile
-version = 3
+version = 4
 
 [[package]]
 name = "test_foo"

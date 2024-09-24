@@ -226,12 +226,8 @@ fn ident_shallow(id: &SourceId, is_shallow: bool) -> String {
 impl<'gctx> Debug for GitSource<'gctx> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "git repo at {}", self.remote.url())?;
-
-        // TODO(-Znext-lockfile-bump): set it to true when the default is
-        // lockfile v4, because we want Source ID serialization to be
-        // consistent with lockfile.
         match &self.locked_rev {
-            Revision::Deferred(git_ref) => match git_ref.pretty_ref(false) {
+            Revision::Deferred(git_ref) => match git_ref.pretty_ref(true) {
                 Some(s) => write!(f, " ({})", s),
                 None => Ok(()),
             },
