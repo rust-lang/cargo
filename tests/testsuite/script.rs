@@ -814,6 +814,31 @@ Hello world!
 }
 
 #[cargo_test]
+fn test_no_autolib() {
+    let script = r#"#!/usr/bin/env cargo
+
+fn main() {
+    println!("Hello world!");
+}"#;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .file("src/lib.rs", r#"compile_error!{"must not be built"}"#)
+        .build();
+
+    p.cargo("-Zscript -v script.rs --help")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stdout_data(str![""])
+        .with_stderr_data(str![[r#"
+...
+[..]compile_error!{"must not be built"}[..]
+...
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn implicit_target_dir() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
