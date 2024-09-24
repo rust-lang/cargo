@@ -1,11 +1,9 @@
 #![allow(clippy::print_stderr)]
 
-use std::cell::RefCell;
 use std::cmp::{max, min};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 use std::fmt::Write;
-use std::rc::Rc;
 use std::sync::OnceLock;
 use std::task::Poll;
 use std::time::Instant;
@@ -19,7 +17,6 @@ use cargo::core::{GitReference, SourceId};
 use cargo::sources::source::QueryKind;
 use cargo::sources::IndexSummary;
 use cargo::util::{CargoResult, GlobalContext, IntoUrl};
-use cargo_util_schemas::manifest::RustVersion;
 
 use proptest::collection::{btree_map, vec};
 use proptest::prelude::*;
@@ -35,18 +32,17 @@ pub fn resolve(deps: Vec<Dependency>, registry: &[Summary]) -> CargoResult<Vec<P
 pub fn resolve_and_validated(
     deps: Vec<Dependency>,
     registry: &[Summary],
-    sat_resolve: Option<SatResolve>,
+    sat_resolver: &mut SatResolver,
 ) -> CargoResult<Vec<PackageId>> {
     let resolve =
         resolve_with_global_context_raw(deps.clone(), registry, &GlobalContext::default().unwrap());
 
     match resolve {
         Err(e) => {
-            let sat_resolve = sat_resolve.unwrap_or_else(|| SatResolve::new(registry));
-            if sat_resolve.sat_resolve(&deps) {
+            if sat_resolver.sat_resolve(&deps) {
                 panic!(
-                    "the resolve err but the sat_resolve thinks this will work:\n{}",
-                    sat_resolve.use_packages().unwrap()
+                    "`resolve()` returned an error but the sat resolver thinks this will work:\n{}",
+                    sat_resolver.used_packages().unwrap()
                 );
             }
             Err(e)
@@ -73,11 +69,10 @@ pub fn resolve_and_validated(
             let out = resolve.sort();
             assert_eq!(out.len(), used.len());
 
-            let sat_resolve = sat_resolve.unwrap_or_else(|| SatResolve::new(registry));
-            if !sat_resolve.sat_is_valid_solution(&out) {
+            if !sat_resolver.sat_is_valid_solution(&out) {
                 panic!(
-                    "the sat_resolve err but the resolve thinks this will work:\n{:?}",
-                    resolve
+                    "`resolve()` thinks this will work, but the solution is \
+                     invalid according to the sat resolver:\n{resolve:?}",
                 );
             }
             Ok(out)
@@ -158,22 +153,26 @@ pub fn resolve_with_global_context_raw(
         list: registry,
         used: HashSet::new(),
     };
-    let summary = Summary::new(
+
+    let root_summary = Summary::new(
         pkg_id("root"),
         deps,
         &BTreeMap::new(),
         None::<&String>,
-        None::<RustVersion>,
+        None,
     )
     .unwrap();
+
     let opts = ResolveOpts::everything();
+
     let start = Instant::now();
     let mut version_prefs = VersionPreferences::default();
     if gctx.cli_unstable().minimal_versions {
         version_prefs.version_ordering(VersionOrdering::MinimumVersionsFirst)
     }
+
     let resolve = resolver::resolve(
-        &[(summary, opts)],
+        &[(root_summary, opts)],
         &[],
         &mut registry,
         &version_prefs,
@@ -181,8 +180,8 @@ pub fn resolve_with_global_context_raw(
         Some(gctx),
     );
 
-    // The largest test in our suite takes less then 30 sec.
-    // So lets fail the test if we have ben running for two long.
+    // The largest test in our suite takes less then 30 secs.
+    // So let's fail the test if we have been running for more than 60 secs.
     assert!(start.elapsed().as_secs() < 60);
     resolve
 }
@@ -249,18 +248,15 @@ fn sat_at_most_one_by_key<K: std::hash::Hash + Eq>(
 /// find a valid resolution if one exists. The big thing that the real resolver does,
 /// that this one does not do is work with features and optional dependencies.
 ///
-/// The SAT library dose not optimize for the newer version,
+/// The SAT library does not optimize for the newer version,
 /// so the selected packages may not match the real resolver.
-#[derive(Clone)]
-pub struct SatResolve(Rc<RefCell<SatResolveInner>>);
-
-struct SatResolveInner {
+pub struct SatResolver {
     solver: varisat::Solver<'static>,
     var_for_is_packages_used: HashMap<PackageId, varisat::Var>,
     by_name: HashMap<&'static str, Vec<PackageId>>,
 }
 
-impl SatResolve {
+impl SatResolver {
     pub fn new(registry: &[Summary]) -> Self {
         let mut cnf = varisat::CnfFormula::new();
         // That represents each package version which is set to "true" if the packages in the lock file and "false" if it is unused.
@@ -325,27 +321,28 @@ impl SatResolve {
         solver
             .solve()
             .expect("docs say it can't error in default config");
-        SatResolve(Rc::new(RefCell::new(SatResolveInner {
+
+        SatResolver {
             solver,
             var_for_is_packages_used,
             by_name,
-        })))
+        }
     }
-    pub fn sat_resolve(&self, deps: &[Dependency]) -> bool {
-        let mut s = self.0.borrow_mut();
+
+    pub fn sat_resolve(&mut self, root_dependencies: &[Dependency]) -> bool {
         let mut assumption = vec![];
         let mut this_call = None;
 
         // the starting `deps` need to be satisfied
-        for dep in deps.iter() {
+        for dep in root_dependencies {
             let empty_vec = vec![];
-            let matches: Vec<varisat::Lit> = s
+            let matches: Vec<varisat::Lit> = self
                 .by_name
                 .get(dep.package_name().as_str())
                 .unwrap_or(&empty_vec)
                 .iter()
                 .filter(|&p| dep.matches_id(*p))
-                .map(|p| s.var_for_is_packages_used[p].positive())
+                .map(|p| self.var_for_is_packages_used[p].positive())
                 .collect();
             if matches.is_empty() {
                 return false;
@@ -353,43 +350,44 @@ impl SatResolve {
                 assumption.extend_from_slice(&matches)
             } else {
                 if this_call.is_none() {
-                    let new_var = s.solver.new_var();
+                    let new_var = self.solver.new_var();
                     this_call = Some(new_var);
                     assumption.push(new_var.positive());
                 }
                 let mut matches = matches;
                 matches.push(this_call.unwrap().negative());
-                s.solver.add_clause(&matches);
+                self.solver.add_clause(&matches);
             }
         }
 
-        s.solver.assume(&assumption);
+        self.solver.assume(&assumption);
 
-        s.solver
+        self.solver
             .solve()
             .expect("docs say it can't error in default config")
     }
-    pub fn sat_is_valid_solution(&self, pids: &[PackageId]) -> bool {
-        let mut s = self.0.borrow_mut();
+
+    pub fn sat_is_valid_solution(&mut self, pids: &[PackageId]) -> bool {
         for p in pids {
-            if p.name().as_str() != "root" && !s.var_for_is_packages_used.contains_key(p) {
+            if p.name().as_str() != "root" && !self.var_for_is_packages_used.contains_key(p) {
                 return false;
             }
         }
-        let assumption: Vec<_> = s
+        let assumption: Vec<_> = self
             .var_for_is_packages_used
             .iter()
             .map(|(p, v)| v.lit(pids.contains(p)))
             .collect();
 
-        s.solver.assume(&assumption);
+        self.solver.assume(&assumption);
 
-        s.solver
+        self.solver
             .solve()
             .expect("docs say it can't error in default config")
     }
-    fn use_packages(&self) -> Option<String> {
-        self.0.borrow().solver.model().map(|lits| {
+
+    fn used_packages(&self) -> Option<String> {
+        self.solver.model().map(|lits| {
             let lits: HashSet<_> = lits
                 .iter()
                 .filter(|l| l.is_positive())
@@ -397,7 +395,7 @@ impl SatResolve {
                 .collect();
             let mut out = String::new();
             out.push_str("used:\n");
-            for (p, v) in self.0.borrow().var_for_is_packages_used.iter() {
+            for (p, v) in self.var_for_is_packages_used.iter() {
                 if lits.contains(v) {
                     writeln!(&mut out, "    {}", p).unwrap();
                 }
@@ -409,16 +407,38 @@ impl SatResolve {
 
 pub trait ToDep {
     fn to_dep(self) -> Dependency;
+    fn to_opt_dep(self) -> Dependency;
+    fn to_dep_with(self, features: &[&'static str]) -> Dependency;
 }
 
 impl ToDep for &'static str {
     fn to_dep(self) -> Dependency {
         Dependency::parse(self, Some("1.0.0"), registry_loc()).unwrap()
     }
+    fn to_opt_dep(self) -> Dependency {
+        let mut dep = self.to_dep();
+        dep.set_optional(true);
+        dep
+    }
+    fn to_dep_with(self, features: &[&'static str]) -> Dependency {
+        let mut dep = self.to_dep();
+        dep.set_default_features(false);
+        dep.set_features(features.into_iter().copied());
+        dep
+    }
 }
 
 impl ToDep for Dependency {
     fn to_dep(self) -> Dependency {
+        self
+    }
+    fn to_opt_dep(mut self) -> Dependency {
+        self.set_optional(true);
+        self
+    }
+    fn to_dep_with(mut self, features: &[&'static str]) -> Dependency {
+        self.set_default_features(false);
+        self.set_features(features.into_iter().copied());
         self
     }
 }
@@ -448,8 +468,8 @@ impl<T: AsRef<str>, U: AsRef<str>> ToPkgId for (T, U) {
 
 #[macro_export]
 macro_rules! pkg {
-    ($pkgid:expr => [$($deps:expr),+ $(,)* ]) => ({
-        let d: Vec<Dependency> = vec![$($deps.to_dep()),+];
+    ($pkgid:expr => [$($deps:expr),* $(,)? ]) => ({
+        let d: Vec<Dependency> = vec![$($deps.to_dep()),*];
         $crate::pkg_dep($pkgid, d)
     });
 
@@ -473,18 +493,29 @@ pub fn pkg<T: ToPkgId>(name: T) -> Summary {
 pub fn pkg_dep<T: ToPkgId>(name: T, dep: Vec<Dependency>) -> Summary {
     let pkgid = name.to_pkgid();
     let link = if pkgid.name().ends_with("-sys") {
-        Some(pkgid.name().as_str())
+        Some(pkgid.name())
     } else {
         None
     };
-    Summary::new(
-        name.to_pkgid(),
-        dep,
-        &BTreeMap::new(),
-        link,
-        None::<RustVersion>,
-    )
-    .unwrap()
+    Summary::new(name.to_pkgid(), dep, &BTreeMap::new(), link, None).unwrap()
+}
+
+pub fn pkg_dep_with<T: ToPkgId>(
+    name: T,
+    dep: Vec<Dependency>,
+    features: &[(&'static str, &[&'static str])],
+) -> Summary {
+    let pkgid = name.to_pkgid();
+    let link = if pkgid.name().ends_with("-sys") {
+        Some(pkgid.name())
+    } else {
+        None
+    };
+    let features = features
+        .into_iter()
+        .map(|&(name, values)| (name.into(), values.into_iter().map(|&v| v.into()).collect()))
+        .collect();
+    Summary::new(name.to_pkgid(), dep, &features, link, None).unwrap()
 }
 
 pub fn pkg_id(name: &str) -> PackageId {
@@ -510,7 +541,7 @@ pub fn pkg_loc(name: &str, loc: &str) -> Summary {
         Vec::new(),
         &BTreeMap::new(),
         link,
-        None::<RustVersion>,
+        None,
     )
     .unwrap()
 }
@@ -519,14 +550,7 @@ pub fn remove_dep(sum: &Summary, ind: usize) -> Summary {
     let mut deps = sum.dependencies().to_vec();
     deps.remove(ind);
     // note: more things will need to be copied over in the future, but it works for now.
-    Summary::new(
-        sum.package_id(),
-        deps,
-        &BTreeMap::new(),
-        sum.links().map(|a| a.as_str()),
-        None::<RustVersion>,
-    )
-    .unwrap()
+    Summary::new(sum.package_id(), deps, &BTreeMap::new(), sum.links(), None).unwrap()
 }
 
 pub fn dep(name: &str) -> Dependency {
@@ -629,7 +653,7 @@ fn meta_test_deep_pretty_print_registry() {
                 pkg!(("foo", "1.0.0") => [dep_req("bar", "2")]),
                 pkg!(("foo", "2.0.0") => [dep_req("bar", "*")]),
                 pkg!(("bar", "1.0.0") => [dep_req("baz", "=1.0.2"),
-                                  dep_req("other", "1")]),
+                                          dep_req("other", "1")]),
                 pkg!(("bar", "2.0.0") => [dep_req("baz", "=1.0.1")]),
                 pkg!(("baz", "1.0.2") => [dep_req("other", "2")]),
                 pkg!(("baz", "1.0.1")),
@@ -654,8 +678,8 @@ fn meta_test_deep_pretty_print_registry() {
 }
 
 /// This generates a random registry index.
-/// Unlike vec((Name, Ver, vec((Name, VerRq), ..), ..)
-/// This strategy has a high probability of having valid dependencies
+/// Unlike `vec((Name, Ver, vec((Name, VerRq), ..), ..)`,
+/// this strategy has a high probability of having valid dependencies.
 pub fn registry_strategy(
     max_crates: usize,
     max_versions: usize,
