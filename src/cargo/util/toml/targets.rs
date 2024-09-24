@@ -131,46 +131,48 @@ pub fn normalize_lib(
     edition: Edition,
     warnings: &mut Vec<String>,
 ) -> CargoResult<Option<TomlLibTarget>> {
-    let inferred = inferred_lib(package_root);
-    let lib = original_lib.cloned().or_else(|| {
-        inferred.as_ref().map(|lib| TomlTarget {
-            path: Some(PathValue(lib.clone())),
-            ..TomlTarget::new()
-        })
-    });
-    let Some(mut lib) = lib else { return Ok(None) };
-    lib.name
-        .get_or_insert_with(|| package_name.replace("-", "_"));
+    {
+        let inferred = inferred_lib(package_root);
+        let lib = original_lib.cloned().or_else(|| {
+            inferred.as_ref().map(|lib| TomlTarget {
+                path: Some(PathValue(lib.clone())),
+                ..TomlTarget::new()
+            })
+        });
+        let Some(mut lib) = lib else { return Ok(None) };
+        lib.name
+            .get_or_insert_with(|| package_name.replace("-", "_"));
 
-    // Check early to improve error messages
-    validate_lib_name(&lib, warnings)?;
+        // Check early to improve error messages
+        validate_lib_name(&lib, warnings)?;
 
-    validate_proc_macro(&lib, "library", edition, warnings)?;
-    validate_crate_types(&lib, "library", edition, warnings)?;
+        validate_proc_macro(&lib, "library", edition, warnings)?;
+        validate_crate_types(&lib, "library", edition, warnings)?;
 
-    if lib.path.is_none() {
-        if let Some(inferred) = inferred {
-            lib.path = Some(PathValue(inferred));
-        } else {
-            let name = name_or_panic(&lib);
-            let legacy_path = Path::new("src").join(format!("{name}.rs"));
-            if edition == Edition::Edition2015 && package_root.join(&legacy_path).exists() {
-                warnings.push(format!(
-                    "path `{}` was erroneously implicitly accepted for library `{name}`,\n\
-                     please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
-                    legacy_path.display(),
-                ));
-                lib.path = Some(PathValue(legacy_path));
+        if lib.path.is_none() {
+            if let Some(inferred) = inferred {
+                lib.path = Some(PathValue(inferred));
             } else {
-                anyhow::bail!(
-                    "can't find library `{name}`, \
+                let name = name_or_panic(&lib);
+                let legacy_path = Path::new("src").join(format!("{name}.rs"));
+                if edition == Edition::Edition2015 && package_root.join(&legacy_path).exists() {
+                    warnings.push(format!(
+                        "path `{}` was erroneously implicitly accepted for library `{name}`,\n\
+                     please rename the file to `src/lib.rs` or set lib.path in Cargo.toml",
+                        legacy_path.display(),
+                    ));
+                    lib.path = Some(PathValue(legacy_path));
+                } else {
+                    anyhow::bail!(
+                        "can't find library `{name}`, \
                      rename file to `src/lib.rs` or specify lib.path",
-                )
+                    )
+                }
             }
         }
-    }
 
-    Ok(Some(lib))
+        Ok(Some(lib))
+    }
 }
 
 #[tracing::instrument(skip_all)]
