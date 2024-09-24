@@ -125,28 +125,21 @@ impl ResolveVersion {
             return ResolveVersion::default();
         };
 
-        let rust_1_41 = PartialVersion {
-            major: 1,
-            minor: Some(41),
-            patch: None,
-            pre: None,
-            build: None,
-        }
-        .try_into()
-        .expect("PartialVersion 1.41");
-        let rust_1_53 = PartialVersion {
-            major: 1,
-            minor: Some(53),
-            patch: None,
-            pre: None,
-            build: None,
-        }
-        .try_into()
-        .expect("PartialVersion 1.53");
+        let rust = |major, minor| -> RustVersion {
+            PartialVersion {
+                major,
+                minor: Some(minor),
+                patch: None,
+                pre: None,
+                build: None,
+            }
+            .try_into()
+            .unwrap()
+        };
 
-        if rust_version >= &rust_1_53 {
+        if rust_version >= &rust(1, 53) {
             ResolveVersion::V3
-        } else if rust_version >= &rust_1_41 {
+        } else if rust_version >= &rust(1, 41) {
             ResolveVersion::V2
         } else {
             ResolveVersion::V1
