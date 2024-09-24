@@ -472,9 +472,10 @@ impl Project {
     /// # Example:
     ///
     /// ```no_run
+    /// # use cargo_test_support::str;
     /// # let p = cargo_test_support::project().build();
     /// p.process(&p.bin("foo"))
-    ///     .with_stdout("bar\n")
+    ///     .with_stdout_data(str!["bar\n"])
     ///     .run();
     /// ```
     pub fn process<T: AsRef<OsStr>>(&self, program: T) -> Execs {
@@ -644,9 +645,7 @@ struct RawOutput {
 pub struct Execs {
     ran: bool,
     process_builder: Option<ProcessBuilder>,
-    expect_stdout: Option<String>,
     expect_stdin: Option<String>,
-    expect_stderr: Option<String>,
     expect_exit_code: Option<i32>,
     expect_stdout_data: Option<snapbox::Data>,
     expect_stderr_data: Option<snapbox::Data>,
@@ -673,22 +672,6 @@ impl Execs {
 
 /// # Configure assertions
 impl Execs {
-    /// Verifies that stdout is equal to the given lines.
-    /// See [`compare`] for supported patterns.
-    #[deprecated(note = "replaced with `Execs::with_stdout_data(expected)`")]
-    pub fn with_stdout<S: ToString>(&mut self, expected: S) -> &mut Self {
-        self.expect_stdout = Some(expected.to_string());
-        self
-    }
-
-    /// Verifies that stderr is equal to the given lines.
-    /// See [`compare`] for supported patterns.
-    #[deprecated(note = "replaced with `Execs::with_stderr_data(expected)`")]
-    pub fn with_stderr<S: ToString>(&mut self, expected: S) -> &mut Self {
-        self.expect_stderr = Some(expected.to_string());
-        self
-    }
-
     /// Verifies that stdout is equal to the given lines.
     ///
     /// See [`compare::assert_e2e`] for assertion details.
@@ -1058,9 +1041,7 @@ impl Execs {
     #[track_caller]
     fn verify_checks_output(&self, stdout: &[u8], stderr: &[u8]) {
         if self.expect_exit_code.unwrap_or(0) != 0
-            && self.expect_stdout.is_none()
             && self.expect_stdin.is_none()
-            && self.expect_stderr.is_none()
             && self.expect_stdout_data.is_none()
             && self.expect_stderr_data.is_none()
             && self.expect_stdout_contains.is_empty()
@@ -1154,12 +1135,6 @@ impl Execs {
             ),
         }
 
-        if let Some(expect_stdout) = &self.expect_stdout {
-            compare::match_exact(expect_stdout, stdout, "stdout", stderr, cwd)?;
-        }
-        if let Some(expect_stderr) = &self.expect_stderr {
-            compare::match_exact(expect_stderr, stderr, "stderr", stdout, cwd)?;
-        }
         if let Some(expect_stdout_data) = &self.expect_stdout_data {
             if let Err(err) = self.assert.try_eq(
                 Some(&"stdout"),
@@ -1227,8 +1202,6 @@ pub fn execs() -> Execs {
     Execs {
         ran: false,
         process_builder: None,
-        expect_stdout: None,
-        expect_stderr: None,
         expect_stdin: None,
         expect_exit_code: Some(0),
         expect_stdout_data: None,

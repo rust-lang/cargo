@@ -46,7 +46,7 @@ fn double_json_works() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn cargo_renders() {
     let p = project()
@@ -68,9 +68,21 @@ fn cargo_renders() {
 
     p.cargo("check --message-format json-render-diagnostics")
         .with_status(101)
-        .with_stdout(
-            "{\"reason\":\"compiler-artifact\",[..]\n\
-             {\"reason\":\"build-finished\",\"success\":false}",
+        .with_stdout_data(
+            str![[r#"
+[
+  {
+    "reason": "compiler-artifact",
+    "...": "{...}"
+  },
+  {
+    "reason": "build-finished",
+    "success": false
+  }
+]
+"#]]
+            .is_json()
+            .against_jsonlines(),
         )
         .with_stderr_contains(
             "\
@@ -101,7 +113,7 @@ error[E0601]: `main` function not found in crate `foo`
 }
 
 #[cargo_test]
-#[allow(deprecated)]
+#[expect(deprecated)]
 fn cargo_renders_ansi() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))

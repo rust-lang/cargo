@@ -33,7 +33,7 @@ fn basic_project() -> Project {
         .build()
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn ignores_on_stable() {
     // Requires -Zrustdoc-map to use.
@@ -61,7 +61,7 @@ fn simple() {
     assert!(myfun.contains(r#"href="https://docs.rs/bar/1.0.0/bar/struct.Straw.html""#));
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[ignore = "Broken, temporarily disabled until https://github.com/rust-lang/rust/pull/82776 is resolved."]
 #[cargo_test]
 // #[cargo_test(nightly, reason = "--extern-html-root-url is unstable")]
@@ -451,7 +451,7 @@ fn alt_sparse_registry() {
     assert!(gold.contains(r#"href="https://docs.rs/grimm/1.0.0/grimm/struct.Gold.html""#));
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test(nightly, reason = "--extern-html-root-url is unstable")]
 fn same_deps_multi_occurrence_in_dep_tree() {
     // rust-lang/cargo#13543

@@ -5,6 +5,7 @@
 //! ```no_run
 //! use cargo_test_support::registry::Package;
 //! use cargo_test_support::project;
+//! use cargo_test_support::str;
 //!
 //! // Publish package "a" depending on "b".
 //! Package::new("a", "1.0.0")
@@ -38,7 +39,7 @@
 //!     "#)
 //!     .build();
 //!
-//! p.cargo("run").with_stdout("24").run();
+//! p.cargo("run").with_stdout_data(str!["24"]).run();
 //! ```
 
 use crate::git::repo;

@@ -1617,7 +1617,7 @@ fn reuse_panic_pm() {
     // bar is built once without panic (for proc-macro) and once with (for the
     // normal dependency).
     // TODO: Migrating to Snapbox might cause flakyness here. See https://github.com/rust-lang/cargo/pull/14161/files#r1660071433
-    #[allow(deprecated)]
+    #[expect(deprecated)]
     p.cargo("build -v")
             .with_stderr_unordered(
                 "\

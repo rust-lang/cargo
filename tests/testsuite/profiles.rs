@@ -439,7 +439,7 @@ fn panic_unwind_does_not_build_twice() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn debug_0_report() {
     // The finished line handles 0 correctly.
@@ -584,7 +584,7 @@ fn strip_accepts_true_to_strip_symbols() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn strip_accepts_false_to_disable_strip() {
     let p = project()
@@ -670,7 +670,7 @@ fn strip_debuginfo_without_debug() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn do_not_strip_debuginfo_with_requested_debug() {
     let p = project()
@@ -834,7 +834,7 @@ Caused by:
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn debug_options_valid() {
     let build = |option| {

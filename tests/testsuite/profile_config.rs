@@ -316,7 +316,7 @@ fn profile_config_override_precedence() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn profile_config_no_warn_unknown_override() {
     let p = project()
@@ -487,7 +487,7 @@ fn named_env_profile() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn test_with_dev_profile() {
     // The `test` profile inherits from `dev` for both local crates and

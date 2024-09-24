@@ -824,7 +824,7 @@ fn clean_spec_reserved() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn clean_dry_run() {
     // Basic `clean --dry-run` test.
@@ -849,7 +849,7 @@ fn clean_dry_run() {
     p.cargo("clean --dry-run")
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[SUMMARY] [FILE_NUM] files
+[SUMMARY] 0 files
 [WARNING] no files deleted due to --dry-run
 
 "#]])

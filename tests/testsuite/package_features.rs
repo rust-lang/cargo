@@ -426,7 +426,7 @@ feature set
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn virtual_member_slash() {
     // member slash feature syntax

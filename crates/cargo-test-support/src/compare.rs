@@ -3,7 +3,7 @@
 //! # Deprecated comparisons
 //!
 //! Cargo's tests are in transition from internal-only pattern and normalization routines used in
-//! asserts like [`crate::Execs::with_stdout`] to [`assert_e2e`] and [`assert_ui`].
+//! asserts like [`crate::Execs::with_stdout_contains`] to [`assert_e2e`] and [`assert_ui`].
 //!
 //! ## Patterns
 //!
@@ -208,7 +208,7 @@ fn add_regex_redactions(subs: &mut snapbox::Redactions) {
     .unwrap();
     subs.insert(
         "[FILE_NUM]",
-        regex!(r"\[(REMOVED|SUMMARY)\] (?<redacted>[0-9]+) files"),
+        regex!(r"\[(REMOVED|SUMMARY)\] (?<redacted>[1-9][0-9]*) files"),
     )
     .unwrap();
     subs.insert(

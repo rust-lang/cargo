@@ -3779,7 +3779,7 @@ fn custom_target_dir() {
     p.cargo("build -v").run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn panic_abort_with_build_scripts() {
     let p = project()

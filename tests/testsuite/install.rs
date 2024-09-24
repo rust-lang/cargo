@@ -1437,7 +1437,7 @@ fn use_path_workspace() {
     assert_eq!(lock, lock2, "different lockfiles");
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn path_install_workspace_root_despite_default_members() {
     let p = project()
@@ -1484,7 +1484,7 @@ fn path_install_workspace_root_despite_default_members() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn git_install_workspace_root_despite_default_members() {
     let p = git::repo(&paths::root().join("foo"))
@@ -2087,7 +2087,7 @@ fn install_path_config() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn install_version_req() {
     // Try using a few versionreq styles.

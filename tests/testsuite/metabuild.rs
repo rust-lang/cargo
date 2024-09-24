@@ -162,7 +162,7 @@ Caused by:
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn metabuild_optional_dep() {
     let p = project()
@@ -244,7 +244,7 @@ fn metabuild_lib_name() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn metabuild_fresh() {
     if is_coarse_mtime() {
@@ -378,7 +378,7 @@ fn metabuild_override() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn metabuild_workspace() {
     let p = project()
@@ -735,7 +735,6 @@ fn metabuild_external_dependency() {
     assert_eq!(p.glob("target/.metabuild/metabuild-dep-*.rs").count(), 1);
 }
 
-#[allow(deprecated)]
 #[cargo_test]
 fn metabuild_json_artifact() {
     let p = basic_project();
@@ -787,7 +786,6 @@ fn metabuild_json_artifact() {
         .run();
 }
 
-#[allow(deprecated)]
 #[cargo_test]
 fn metabuild_failed_build_json() {
     let p = basic_project();

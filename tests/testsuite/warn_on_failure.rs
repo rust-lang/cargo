@@ -77,7 +77,7 @@ fn no_warning_on_success() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn no_warning_on_bin_failure() {
     make_lib("");
@@ -96,7 +96,7 @@ fn no_warning_on_bin_failure() {
         .run();
 }
 
-#[allow(deprecated)]
+#[expect(deprecated)]
 #[cargo_test]
 fn warning_on_lib_failure() {
     make_lib("err()");
