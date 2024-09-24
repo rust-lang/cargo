@@ -31,6 +31,7 @@ fn main() {
 
     let nightly_features_allowed = matches!(&*features::channel(), "nightly" | "dev");
     if nightly_features_allowed {
+        let _span = tracing::span!(tracing::Level::TRACE, "completions").entered();
         let args = std::env::args_os();
         let current_dir = std::env::current_dir().ok();
         let completer =
