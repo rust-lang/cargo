@@ -38,7 +38,6 @@ cargo_metadata = "0.18.1"
 clap = "4.5.18"
 clap_complete = { version = "4.5.29", features = ["unstable-dynamic"] }
 color-print = "0.3.6"
-completest-pty = "0.5.3"
 core-foundation = { version = "0.10.0", features = ["mac_os_10_7_support"] }
 crates-io = { version = "0.40.4", path = "crates/crates-io" }
 criterion = { version = "0.5.1", features = ["html_reports"] }
@@ -242,7 +241,6 @@ features = [
 [dev-dependencies]
 annotate-snippets = { workspace = true, features = ["testing-colors"] }
 cargo-test-support.workspace = true
-completest-pty.workspace = true
 gix = { workspace = true, features = ["revision"] }
 same-file.workspace = true
 snapbox.workspace = true
