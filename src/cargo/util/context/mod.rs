@@ -1581,12 +1581,12 @@ impl GlobalContext {
     where
         F: FnMut(&Path) -> CargoResult<()>,
     {
-        let mut stash: HashSet<PathBuf> = HashSet::new();
+        let mut seen = HashSet::new();
 
         for current in paths::ancestors(pwd, self.search_stop_path.as_deref()) {
             if let Some(path) = self.get_file_path(&current.join(".cargo"), "config", true)? {
                 walk(&path)?;
-                stash.insert(path);
+                seen.insert(path);
             }
         }
 
@@ -1594,7 +1594,7 @@ impl GlobalContext {
         // in our history to be sure we pick up that standard location for
         // information.
         if let Some(path) = self.get_file_path(home, "config", true)? {
-            if !stash.contains(&path) {
+            if !seen.contains(&path) {
                 walk(&path)?;
             }
         }
