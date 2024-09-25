@@ -314,8 +314,6 @@ f1 = 1
         .with_stderr_data(str![[r#"
 [WARNING] `[ROOT]/home/.cargo/config` is deprecated in favor of `config.toml`
 [NOTE] if you need to support cargo 1.38 or earlier, you can symlink `config` to `config.toml`
-[WARNING] `[ROOT]/home/.cargo/config` is deprecated in favor of `config.toml`
-[NOTE] if you need to support cargo 1.38 or earlier, you can symlink `config` to `config.toml`
 
 "#]])
         .run();
