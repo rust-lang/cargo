@@ -120,6 +120,7 @@ Each new feature described below should explain how to use it.
     * [package-workspace](#package-workspace) --- Allows for packaging and publishing multiple crates in a workspace.
     * [native-completions](#native-completions) --- Move cargo shell completions to native completions.
     * [warnings](#warnings) --- controls warning behavior; options for allowing or denying warnings.
+    * [check-target-cfgs](#check-target-cfgs) --- Allows checking unexpected cfgs in `[target.'cfg(...)']`
 
 ## allow-features
 
@@ -1740,6 +1741,31 @@ Controls how Cargo handles warnings. Allowed values are:
 * `warn`: warnings are emitted as warnings (default).
 * `allow`: warnings are hidden.
 * `deny`: if warnings are emitted, an error will be raised at the end of the operation and the process will exit with a failure exit code. 
+
+## check-target-cfgs
+
+* Tracking Issue: [#00000](https://github.com/rust-lang/cargo/issues/00000)
+
+**WARNING: Incomplete/WIP!**
+
+This feature checks for unexpected cfgs in `[target.'cfg(...)']` entries, based
+on `rustc --print=check-cfg`.
+
+```sh
+cargo check -Zcheck-target-cfgs
+```
+
+It follows the lint Rust `unexpected_cfgs` lint configuration:
+
+```toml
+[target.'cfg(foo)'.dependencies]
+cfg-if = "1.0"
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = ['cfg(foo)']
+```
+
 # Stabilized and removed features
 
 ## Compile progress
