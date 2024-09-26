@@ -278,7 +278,7 @@ dependencies = [
  "cargo-credential-libsecret",
  "cargo-credential-macos-keychain",
  "cargo-credential-wincred",
- "cargo-platform 0.1.8",
+ "cargo-platform 0.1.9",
  "cargo-test-support",
  "cargo-util",
  "cargo-util-schemas",
@@ -345,7 +345,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "anyhow",
  "libc",
@@ -359,7 +359,7 @@ dependencies = [
 
 [[package]]
 name = "cargo-credential-1password"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "cargo-credential",
  "serde",
@@ -394,15 +394,15 @@ dependencies = [
 [[package]]
 name = "cargo-platform"
 version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24b1f0365a6c6bb4020cd05806fd0d33c44d38046b8bd7f0e40814b9763cabfc"
 dependencies = [
  "serde",
 ]
 
 [[package]]
 name = "cargo-platform"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24b1f0365a6c6bb4020cd05806fd0d33c44d38046b8bd7f0e40814b9763cabfc"
+version = "0.1.9"
 dependencies = [
  "serde",
 ]
@@ -482,7 +482,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2d886547e41f740c616ae73108f6eb70afe6d940c7bc697cb30f13daec073037"
 dependencies = [
  "camino",
- "cargo-platform 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cargo-platform 0.1.8",
  "semver",
  "serde",
  "serde_json",
@@ -2974,7 +2974,7 @@ checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
 name = "rustfix"
-version = "0.8.6"
+version = "0.8.7"
 dependencies = [
  "anyhow",
  "proptest",
