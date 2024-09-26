@@ -1581,20 +1581,21 @@ impl GlobalContext {
     where
         F: FnMut(&Path) -> CargoResult<()>,
     {
-        let mut stash: HashSet<PathBuf> = HashSet::new();
+        let mut seen_dir = HashSet::new();
 
         for current in paths::ancestors(pwd, self.search_stop_path.as_deref()) {
-            if let Some(path) = self.get_file_path(&current.join(".cargo"), "config", true)? {
+            let config_root = current.join(".cargo");
+            if let Some(path) = self.get_file_path(&config_root, "config", true)? {
                 walk(&path)?;
-                stash.insert(path);
             }
+            seen_dir.insert(config_root);
         }
 
         // Once we're done, also be sure to walk the home directory even if it's not
         // in our history to be sure we pick up that standard location for
         // information.
-        if let Some(path) = self.get_file_path(home, "config", true)? {
-            if !stash.contains(&path) {
+        if !seen_dir.contains(home) {
+            if let Some(path) = self.get_file_path(home, "config", true)? {
                 walk(&path)?;
             }
         }
