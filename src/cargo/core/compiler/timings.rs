@@ -609,8 +609,36 @@ static HTML_TMPL: &str = r#"
   <title>Cargo Build Timings — {ROOTS}</title>
   <meta charset="utf-8">
 <style type="text/css">
+:root {
+  --error-text: #e80000;
+  --text: #000;
+  --background: #fff;
+  --h1-border-bottom: #c0c0c0;
+  --table-box-shadow: rgba(0, 0, 0, 0.1);
+  --table-th: #d5dde5;
+  --table-th-background: #1b1e24;
+  --table-th-border-bottom: #9ea7af;
+  --table-th-border-right: #343a45;
+  --table-tr-border-top: #c1c3d1;
+  --table-tr-border-bottom: #c1c3d1;
+  --table-tr-odd-background: #ebebeb;
+  --table-td-background: #ffffff;
+  --table-td-border-right: #C1C3D1;
+  --canvas-background: #f7f7f7;
+  --canvas-axes: #303030;
+  --canvas-grid: #e6e6e6;
+  --canvas-block: #aa95e8;
+  --canvas-custom-build: #f0b165;
+  --canvas-not-custom-build: #95cce8;
+  --canvas-dep-line: #ddd;
+  --canvas-dep-line-highlighted: #000;
+  --canvas-cpu: rgba(250, 119, 0, 0.2);
+}
+
 html {
   font-family: sans-serif;
+  color: var(--text);
+  background: var(--background);
 }
 
 .canvas-container {
@@ -620,7 +648,7 @@ html {
 }
 
 h1 {
-  border-bottom: 1px solid #c0c0c0;
+  border-bottom: 1px solid var(--h1-border-bottom);
 }
 
 .graph {
@@ -631,14 +659,14 @@ h1 {
   margin-top: 20px;
   margin-bottom: 20px;
   border-collapse: collapse;
-  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 5px 10px var(--table-box-shadow);
 }
 
 .my-table th {
-  color: #d5dde5;
-  background: #1b1e24;
-  border-bottom: 4px solid #9ea7af;
-  border-right: 1px solid #343a45;
+  color: var(--table-th);
+  background: var(--table-th-background);
+  border-bottom: 4px solid var(--table-th-border-bottom);
+  border-right: 1px solid var(--table-th-border-right);
   font-size: 18px;
   font-weight: 100;
   padding: 12px;
@@ -656,8 +684,8 @@ h1 {
 }
 
 .my-table tr {
-  border-top: 1px solid #c1c3d1;
-  border-bottom: 1px solid #c1c3d1;
+  border-top: 1px solid var(--table-tr-border-top);
+  border-bottom: 1px solid var(--table-tr-border-bottom);
   font-size: 16px;
   font-weight: normal;
 }
@@ -671,7 +699,7 @@ h1 {
 }
 
 .my-table tr:nth-child(odd) td {
-  background: #ebebeb;
+  background: var(--table-tr-odd-background);
 }
 
 .my-table tr:last-child td:first-child {
@@ -683,13 +711,13 @@ h1 {
 }
 
 .my-table td {
-  background: #ffffff;
+  background: var(--table-td-background);
   padding: 10px;
   text-align: left;
   vertical-align: middle;
   font-weight: 300;
   font-size: 14px;
-  border-right: 1px solid #C1C3D1;
+  border-right: 1px solid var(--table-td-border-right);
 }
 
 .my-table td:last-child {
@@ -706,7 +734,7 @@ h1 {
 }
 
 .error-text {
-  color: #e80000;
+  color: var(--error-text);
 }
 
 </style>

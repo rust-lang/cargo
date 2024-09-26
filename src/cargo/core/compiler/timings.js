@@ -22,6 +22,21 @@ let UNIT_COORDS = {};
 // Map of unit index to the index it was unlocked by.
 let REVERSE_UNIT_DEPS = {};
 let REVERSE_UNIT_RMETA_DEPS = {};
+
+// Colors from css
+const getCssColor = name => getComputedStyle(document.body).getPropertyValue(name);
+const TEXT_COLOR = getCssColor('--text');
+const BG_COLOR = getCssColor('--background');
+const CANVAS_BG = getCssColor('--canvas-background');
+const AXES_COLOR = getCssColor('--canvas-axes');
+const GRID_COLOR = getCssColor('--canvas-grid');
+const BLOCK_COLOR = getCssColor('--canvas-block');
+const CUSTOM_BUILD_COLOR = getCssColor('--canvas-custom-build');
+const NOT_CUSTOM_BUILD_COLOR = getCssColor('--canvas-not-custom-build');
+const DEP_LINE_COLOR = getCssColor('--canvas-dep-line');
+const DEP_LINE_HIGHLIGHTED_COLOR = getCssColor('--canvas-dep-line-highlighted');
+const CPU_COLOR = getCssColor('--canvas-cpu');
+
 for (let n=0; n<UNIT_DATA.length; n++) {
   let unit = UNIT_DATA[n];
   for (let unlocked of unit.unlocked_units) {
@@ -52,7 +67,7 @@ function render_pipeline_graph() {
   // Canvas for hover highlights. This is a separate layer to improve performance.
   const linectx = setup_canvas('pipeline-graph-lines', canvas_width, canvas_height);
   linectx.clearRect(0, 0, canvas_width, canvas_height);
-
+  ctx.strokeStyle = AXES_COLOR;
   // Draw Y tick marks.
   for (let n=1; n<units.length; n++) {
     const y = MARGIN + Y_TICK_DIST * n;
@@ -65,6 +80,7 @@ function render_pipeline_graph() {
   // Draw Y labels.
   ctx.textAlign = 'end';
   ctx.textBaseline = 'middle';
+  ctx.fillStyle = AXES_COLOR;
   for (let n=0; n<units.length; n++) {
     let y = MARGIN + Y_TICK_DIST * n + Y_TICK_DIST / 2;
     ctx.fillText(n+1, X_LINE-4, y);
@@ -101,18 +117,18 @@ function render_pipeline_graph() {
     HIT_BOXES.push({x: X_LINE+x, y:MARGIN+y, x2: X_LINE+x+width, y2: MARGIN+y+BOX_HEIGHT, i: unit.i});
 
     ctx.beginPath();
-    ctx.fillStyle = unit.mode == 'run-custom-build' ? '#f0b165' : '#95cce8';
+    ctx.fillStyle = unit.mode == 'run-custom-build' ? CUSTOM_BUILD_COLOR : NOT_CUSTOM_BUILD_COLOR;
     roundedRect(ctx, x, y, width, BOX_HEIGHT, RADIUS);
     ctx.fill();
 
     if (unit.rmeta_time != null) {
       ctx.beginPath();
-      ctx.fillStyle = '#aa95e8';
+      ctx.fillStyle = BLOCK_COLOR;
       let ctime = unit.duration - unit.rmeta_time;
       roundedRect(ctx, rmeta_x, y, px_per_sec * ctime, BOX_HEIGHT, RADIUS);
       ctx.fill();
     }
-    ctx.fillStyle = "#000";
+    ctx.fillStyle = TEXT_COLOR;
     ctx.textAlign = 'start';
     ctx.textBaseline = 'middle';
     ctx.font = '14px sans-serif';
@@ -145,7 +161,7 @@ function draw_dep_lines(ctx, unit_idx, highlighted) {
 function draw_one_dep_line(ctx, from_x, from_y, to_unit, highlighted) {
   if (to_unit in UNIT_COORDS) {
     let {x: u_x, y: u_y} = UNIT_COORDS[to_unit];
-    ctx.strokeStyle = highlighted ? '#000' : '#ddd';
+    ctx.strokeStyle = highlighted ? DEP_LINE_HIGHLIGHTED_COLOR: DEP_LINE_COLOR;
     ctx.setLineDash([2]);
     ctx.beginPath();
     ctx.moveTo(from_x, from_y+BOX_HEIGHT/2);
@@ -204,7 +220,7 @@ function render_timing_graph() {
     };
   }
 
-  const cpuFillStyle = 'rgba(250, 119, 0, 0.2)';
+  const cpuFillStyle = CPU_COLOR;
   if (CPU_USAGE.length > 1) {
     ctx.beginPath();
     ctx.fillStyle = cpuFillStyle;
@@ -245,8 +261,8 @@ function render_timing_graph() {
   ctx.save();
   ctx.translate(canvas_width-200, MARGIN);
   // background
-  ctx.fillStyle = '#fff';
-  ctx.strokeStyle = '#000';
+  ctx.fillStyle = BG_COLOR;
+  ctx.strokeStyle = TEXT_COLOR;
   ctx.lineWidth = 1;
   ctx.textBaseline = 'middle'
   ctx.textAlign = 'start';
@@ -255,7 +271,7 @@ function render_timing_graph() {
   ctx.stroke();
   ctx.fill();
 
-  ctx.fillStyle = '#000'
+  ctx.fillStyle = TEXT_COLOR;
   ctx.beginPath();
   ctx.lineWidth = 2;
   ctx.strokeStyle = 'red';
@@ -282,7 +298,7 @@ function render_timing_graph() {
   ctx.fillStyle = cpuFillStyle
   ctx.fillRect(15, 60, 30, 15);
   ctx.fill();
-  ctx.fillStyle = 'black';
+  ctx.fillStyle = TEXT_COLOR;
   ctx.fillText('CPU Usage', 54, 71);
 
   ctx.restore();
@@ -311,12 +327,13 @@ function draw_graph_axes(id, graph_height) {
   const canvas_width = Math.max(graph_width + X_LINE + 30, X_LINE + 250);
   const canvas_height = graph_height + MARGIN + Y_LINE;
   let ctx = setup_canvas(id, canvas_width, canvas_height);
-  ctx.fillStyle = '#f7f7f7';
+  ctx.fillStyle = CANVAS_BG;
   ctx.fillRect(0, 0, canvas_width, canvas_height);
 
   ctx.lineWidth = 2;
   ctx.font = '16px sans-serif';
   ctx.textAlign = 'center';
+  ctx.strokeStyle = AXES_COLOR;
 
   // Draw main axes.
   ctx.beginPath();
@@ -327,7 +344,7 @@ function draw_graph_axes(id, graph_height) {
 
   // Draw X tick marks.
   const {step, tick_dist, num_ticks} = split_ticks(DURATION, px_per_sec, graph_width);
-  ctx.fillStyle = '#303030';
+  ctx.fillStyle = AXES_COLOR;
   for (let n=0; n<num_ticks; n++) {
     const x = X_LINE + ((n + 1) * tick_dist);
     ctx.beginPath();
@@ -339,7 +356,7 @@ function draw_graph_axes(id, graph_height) {
   }
 
   // Draw vertical lines.
-  ctx.strokeStyle = '#e6e6e6';
+  ctx.strokeStyle = GRID_COLOR;
   ctx.setLineDash([2, 4]);
   for (n=0; n<num_ticks; n++) {
     const x = X_LINE + ((n + 1) * tick_dist);
@@ -348,7 +365,7 @@ function draw_graph_axes(id, graph_height) {
     ctx.lineTo(x, MARGIN+graph_height);
     ctx.stroke();
   }
-  ctx.strokeStyle = '#000';
+  ctx.strokeStyle = TEXT_COLOR;
   ctx.setLineDash([]);
   return {canvas_width, canvas_height, graph_width, graph_height, ctx, px_per_sec};
 }
