@@ -6,6 +6,9 @@
 //!
 //! See `examples/matches.rs` for an example of how to match against a `Platform`.
 //!
+//! > This crate is maintained by the Cargo team for use by the wider
+//! > ecosystem. This crate follows semver compatibility for its APIs.
+//!
 //! [`Platform`]: enum.Platform.html
 
 use std::fmt;

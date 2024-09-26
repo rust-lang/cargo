@@ -2,6 +2,11 @@
 
 A Cargo [credential provider] for [1password].
 
+> This crate is maintained by the Cargo team as a part of an experiment around
+> 1password integration. We encourage people to try to use this crate in their projects and
+> provide feedback through [issues](https://github.com/rust-lang/cargo/issues/), but do not
+> guarantee long term maintenance.
+
 ## Usage
 
 `cargo-credential-1password` uses the 1password `op` CLI to store the token. You
