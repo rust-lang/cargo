@@ -46,7 +46,6 @@ struct InstallablePackage<'gctx> {
     vers: Option<VersionReq>,
     force: bool,
     no_track: bool,
-
     pkg: Package,
     ws: Workspace<'gctx>,
     rustc: Rustc,
@@ -68,6 +67,7 @@ impl<'gctx> InstallablePackage<'gctx> {
         no_track: bool,
         needs_update_if_source_is_index: bool,
         current_rust_version: Option<&PartialVersion>,
+        lockfile_path: Option<&Path>,
     ) -> CargoResult<Option<Self>> {
         if let Some(name) = krate {
             if name == "." {
@@ -155,6 +155,7 @@ impl<'gctx> InstallablePackage<'gctx> {
                     &root,
                     &dst,
                     force,
+                    lockfile_path,
                 ) {
                     let msg = format!(
                         "package `{}` is already installed, use --force to override",
@@ -179,15 +180,32 @@ impl<'gctx> InstallablePackage<'gctx> {
             }
         };
 
-        let (ws, rustc, target) =
-            make_ws_rustc_target(gctx, &original_opts, &source_id, pkg.clone())?;
-        // If we're installing in --locked mode and there's no `Cargo.lock` published
-        // ie. the bin was published before https://github.com/rust-lang/cargo/pull/7026
-        if gctx.locked() && !ws.root().join("Cargo.lock").exists() {
-            gctx.shell().warn(format!(
-                "no Cargo.lock file published in {}",
-                pkg.to_string()
-            ))?;
+        let (ws, rustc, target) = make_ws_rustc_target(
+            gctx,
+            &original_opts,
+            &source_id,
+            pkg.clone(),
+            lockfile_path.clone(),
+        )?;
+
+        if gctx.locked() {
+            // When --lockfile-path is set, check that passed lock file exists
+            // (unlike the usual flag behavior, lockfile won't be created as we imply --locked)
+            if let Some(requested_lockfile_path) = ws.requested_lockfile_path() {
+                if !requested_lockfile_path.is_file() {
+                    bail!(
+                        "no Cargo.lock file found in the requested path {}",
+                        requested_lockfile_path.display()
+                    );
+                }
+            // If we're installing in --locked mode and there's no `Cargo.lock` published
+            // ie. the bin was published before https://github.com/rust-lang/cargo/pull/7026
+            } else if !ws.root().join("Cargo.lock").exists() {
+                gctx.shell().warn(format!(
+                    "no Cargo.lock file published in {}",
+                    pkg.to_string()
+                ))?;
+            }
         }
         let pkg = if source_id.is_git() {
             // Don't use ws.current() in order to keep the package source as a git source so that
@@ -246,7 +264,6 @@ impl<'gctx> InstallablePackage<'gctx> {
             vers: vers.cloned(),
             force,
             no_track,
-
             pkg,
             ws,
             rustc,
@@ -636,6 +653,7 @@ pub fn install(
     force: bool,
     no_track: bool,
     dry_run: bool,
+    lockfile_path: Option<&Path>,
 ) -> CargoResult<()> {
     let root = resolve_root(root, gctx)?;
     let dst = root.join("bin").into_path_unlocked();
@@ -667,6 +685,7 @@ pub fn install(
             no_track,
             true,
             current_rust_version.as_ref(),
+            lockfile_path,
         )?;
         let mut installed_anything = true;
         if let Some(installable_pkg) = installable_pkg {
@@ -698,6 +717,7 @@ pub fn install(
                     no_track,
                     !did_update,
                     current_rust_version.as_ref(),
+                    lockfile_path,
                 ) {
                     Ok(Some(installable_pkg)) => {
                         did_update = true;
@@ -804,6 +824,7 @@ fn installed_exact_package<T>(
     root: &Filesystem,
     dst: &Path,
     force: bool,
+    lockfile_path: Option<&Path>,
 ) -> CargoResult<Option<Package>>
 where
     T: Source,
@@ -819,7 +840,7 @@ where
     // best-effort check to see if we can avoid hitting the network.
     if let Ok(pkg) = select_dep_pkg(source, dep, gctx, false, None) {
         let (_ws, rustc, target) =
-            make_ws_rustc_target(gctx, opts, &source.source_id(), pkg.clone())?;
+            make_ws_rustc_target(gctx, opts, &source.source_id(), pkg.clone(), lockfile_path)?;
         if let Ok(true) = is_installed(&pkg, gctx, opts, &rustc, &target, root, dst, force) {
             return Ok(Some(pkg));
         }
@@ -832,6 +853,7 @@ fn make_ws_rustc_target<'gctx>(
     opts: &ops::CompileOptions,
     source_id: &SourceId,
     pkg: Package,
+    lockfile_path: Option<&Path>,
 ) -> CargoResult<(Workspace<'gctx>, Rustc, String)> {
     let mut ws = if source_id.is_git() || source_id.is_path() {
         Workspace::new(pkg.manifest_path(), gctx)?
@@ -841,6 +863,11 @@ fn make_ws_rustc_target<'gctx>(
         ws
     };
     ws.set_ignore_lock(gctx.lock_update_allowed());
+    ws.set_requested_lockfile_path(lockfile_path.map(|p| p.to_path_buf()));
+    // if --lockfile-path is set, imply --locked
+    if ws.requested_lockfile_path().is_some() {
+        ws.set_ignore_lock(false);
+    }
     ws.set_require_optional_deps(false);
 
     let rustc = gctx.load_global_rustc(Some(&ws))?;
