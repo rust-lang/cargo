@@ -135,6 +135,7 @@ The degree of process is correlated with the degree of change being proposed:
     These decisions are usually processed via private channels by the entirety of the team.
   - A change that is a "one-way door".
     That is, something that is difficult to reverse without breaking backwards compatibility.
+  - New or transferred "Intentional Artifact" crates to the team, see also [Rust crate ownership policy](https://forge.rust-lang.org/policies/crate-ownership.html)
 
 - Larger features should usually go through the [RFC process].
   This usually involves first soliciting feedback from the Cargo team and the rest of the community, often via the [Rust Internals] discussion board, [Cargo's issue tracker], and the [Zulip] channel.
