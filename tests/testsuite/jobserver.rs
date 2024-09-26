@@ -232,6 +232,7 @@ this is a runner
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/cargo-jobserver-check[EXE]`
+...
 thread 'main' panicked at src/main.rs:5:43:
 no jobserver from env: NotPresent
 [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
@@ -248,9 +249,11 @@ no jobserver from env: NotPresent
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `runner target/debug/cargo-jobserver-check[EXE]`
 this is a runner
+...
 thread 'main' panicked at src/main.rs:5:43:
 no jobserver from env: NotPresent
 [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+...
 thread 'main' panicked at src/main.rs:6:17:
 assertion failed: status.success()
 [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
@@ -268,6 +271,7 @@ test test ... FAILED
 failures:
 
 ---- test stdout ----
+...
 thread 'test' panicked at src/lib.rs:4:42:
 no jobserver from env: NotPresent
 [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
@@ -290,6 +294,7 @@ test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; 
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/debug/deps/cargo_jobserver_check-[HASH][EXE])
 this is a runner
+...
 thread 'main' panicked at src/main.rs:6:17:
 assertion failed: status.success()
 [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
@@ -304,6 +309,7 @@ test test ... FAILED
 failures:
 
 ---- test stdout ----
+...
 thread 'test' panicked at src/lib.rs:4:42:
 no jobserver from env: NotPresent
 [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace

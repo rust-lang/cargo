@@ -1327,6 +1327,7 @@ fn reports_unsuccessful_subcommand_result() {
     cargo_process("fail")
         .with_status(101)
         .with_stderr_data(str![[r#"
+...
 thread 'main' panicked at [ROOT]/home/.cargo/registry/src/-[HASH]/cargo-fail-1.0.0/src/main.rs:1:13:
 explicit panic
 [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace

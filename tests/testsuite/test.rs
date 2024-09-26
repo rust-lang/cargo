@@ -516,6 +516,7 @@ test test_hello ... FAILED
 failures:
 
 ---- test_hello stdout ----
+...
 thread 'test_hello' panicked at src/lib.rs:1:27:
 assertion failed: false
 ...
