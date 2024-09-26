@@ -635,6 +635,34 @@ static HTML_TMPL: &str = r#"
   --canvas-cpu: rgba(250, 119, 0, 0.2);
 }
 
+@media (prefers-color-scheme: dark) {
+  :root {
+    --error-text: #e80000;
+    --text: #fff;
+    --background: #121212;
+    --h1-border-bottom: #444;
+    --table-box-shadow: rgba(255, 255, 255, 0.1);
+    --table-th: #a0a0a0;
+    --table-th-background: #2c2c2c;
+    --table-th-border-bottom: #555;
+    --table-th-border-right: #444;
+    --table-tr-border-top: #333;
+    --table-tr-border-bottom: #333;
+    --table-tr-odd-background: #1e1e1e;
+    --table-td-background: #262626;
+    --table-td-border-right: #333;
+    --canvas-background: #1a1a1a;
+    --canvas-axes: #b0b0b0;
+    --canvas-grid: #333;
+    --canvas-block: #aa95e8;
+    --canvas-custom-build: #f0b165;
+    --canvas-not-custom-build: #95cce8;
+    --canvas-dep-line: #444;
+    --canvas-dep-line-highlighted: #fff;
+    --canvas-cpu: rgba(250, 119, 0, 0.2);
+  }
+}
+
 html {
   font-family: sans-serif;
   color: var(--text);
