@@ -89,6 +89,29 @@ impl CfgExpr {
             CfgExpr::Value(ref e) => cfg.contains(e),
         }
     }
+
+    /// Walk over all the `CfgExpr`s of the given `CfgExpr`, recursing into `not(...)`, `all(...)`,
+    /// `any(...)` and stopping at the first error and returning that error.
+    pub fn walk_expr<E>(&self, mut f: impl FnMut(&CfgExpr) -> Result<(), E>) -> Result<(), E> {
+        fn walk_expr_inner<E>(
+            cfg_expr: &CfgExpr,
+            f: &mut impl FnMut(&CfgExpr) -> Result<(), E>,
+        ) -> Result<(), E> {
+            f(cfg_expr)?;
+            match *cfg_expr {
+                CfgExpr::Not(ref e) => walk_expr_inner(e, &mut *f),
+                CfgExpr::All(ref e) | CfgExpr::Any(ref e) => {
+                    for e in e {
+                        let _ = walk_expr_inner(e, &mut *f)?;
+                    }
+                    Ok(())
+                }
+                CfgExpr::Value(_) => Ok(()),
+            }
+        }
+
+        walk_expr_inner(self, &mut f)
+    }
 }
 
 impl FromStr for CfgExpr {
