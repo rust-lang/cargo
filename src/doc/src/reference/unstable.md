@@ -125,6 +125,7 @@ Each new feature described below should explain how to use it.
     * [native-completions](#native-completions) --- Move cargo shell completions to native completions.
     * [warnings](#warnings) --- controls warning behavior; options for allowing or denying warnings.
     * [Package message format](#package-message-format) --- Message format for `cargo package`.
+    * [check-target-cfgs](#check-target-cfgs) --- Allows checking unexpected cfgs in `[target.'cfg(...)']`
 
 ## allow-features
 
@@ -1912,6 +1913,30 @@ for more information.
 The `-Z rustdoc-depinfo` flag leverages rustdoc's dep-info files to determine
 whether documentations are required to re-generate. This can be combined with
 `-Z checksum-freshness` to detect checksum changes rather than file mtime.
+
+## check-target-cfgs
+
+* Tracking Issue: [#00000](https://github.com/rust-lang/cargo/issues/00000)
+
+**WARNING: Incomplete/WIP!**
+
+This feature checks for unexpected cfgs in `[target.'cfg(...)']` entries, based
+on `rustc --print=check-cfg`.
+
+```sh
+cargo check -Zcheck-target-cfgs
+```
+
+It follows the lint Rust `unexpected_cfgs` lint configuration:
+
+```toml
+[target.'cfg(foo)'.dependencies]
+cfg-if = "1.0"
+
+[lints.rust.unexpected_cfgs]
+level = "warn"
+check-cfg = ['cfg(foo)']
+```
 
 # Stabilized and removed features
 
