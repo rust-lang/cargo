@@ -15,10 +15,12 @@ use std::str::FromStr;
 use std::{fmt, path::Path};
 
 mod cfg;
+mod check_cfg;
 mod error;
 
 use cfg::KEYWORDS;
 pub use cfg::{Cfg, CfgExpr, Ident};
+pub use check_cfg::{CheckCfg, ExpectedValues};
 pub use error::{ParseError, ParseErrorKind};
 
 /// Platform definition.
