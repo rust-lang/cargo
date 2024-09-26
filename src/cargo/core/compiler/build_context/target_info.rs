@@ -259,16 +259,21 @@ impl TargetInfo {
                 res
             };
 
-            let cfg = lines
-                .map(|line| Ok(Cfg::from_str(line)?))
-                .filter(TargetInfo::not_user_specific_cfg)
-                .collect::<CargoResult<Vec<_>>>()
-                .with_context(|| {
-                    format!(
-                        "failed to parse the cfg from `rustc --print=cfg`, got:\n{}",
-                        output
-                    )
-                })?;
+            let cfg = {
+                let mut res = Vec::new();
+                for line in &mut lines {
+                    let cfg = Cfg::from_str(line).with_context(|| {
+                        format!(
+                            "failed to parse the cfg from `rustc --print=cfg`, got:\n{}",
+                            output
+                        )
+                    })?;
+                    if TargetInfo::not_user_specific_cfg(&cfg) {
+                        res.push(cfg);
+                    }
+                }
+                res
+            };
 
             // recalculate `rustflags` from above now that we have `cfg`
             // information
@@ -360,8 +365,8 @@ impl TargetInfo {
         }
     }
 
-    fn not_user_specific_cfg(cfg: &CargoResult<Cfg>) -> bool {
-        if let Ok(Cfg::Name(cfg_name)) = cfg {
+    fn not_user_specific_cfg(cfg: &Cfg) -> bool {
+        if let Cfg::Name(cfg_name) = cfg {
             // This should also include "debug_assertions", but it causes
             // regressions. Maybe some day in the distant future it can be
             // added (and possibly change the warning to an error).
