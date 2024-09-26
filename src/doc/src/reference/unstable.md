@@ -1466,7 +1466,7 @@ This will not affect any hard-coded paths in the source code, such as in strings
     Values in a non-empty array would be joined into a comma-separated list.
     If the build script introduces absolute paths to built artifacts (such as by invoking a compiler),
     the user may request them to be sanitized in different types of artifacts.
-    Common paths requiring sanitization include `OUT_DIR` and `CARGO_MANIFEST_DIR`,
+    Common paths requiring sanitization include `OUT_DIR`, `CARGO_MANIFEST_DIR` and `CARGO_MANIFEST_PATH`,
     plus any other introduced by the build script, such as include directories.
 
 ## gc

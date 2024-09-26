@@ -1623,6 +1623,7 @@ fn crate_env_vars() {
                 static VERSION_PRE: &'static str = env!("CARGO_PKG_VERSION_PRE");
                 static VERSION: &'static str = env!("CARGO_PKG_VERSION");
                 static CARGO_MANIFEST_DIR: &'static str = env!("CARGO_MANIFEST_DIR");
+                static CARGO_MANIFEST_PATH: &'static str = env!("CARGO_MANIFEST_PATH");
                 static PKG_NAME: &'static str = env!("CARGO_PKG_NAME");
                 static HOMEPAGE: &'static str = env!("CARGO_PKG_HOMEPAGE");
                 static REPOSITORY: &'static str = env!("CARGO_PKG_REPOSITORY");
@@ -1636,9 +1637,9 @@ fn crate_env_vars() {
 
 
                 fn main() {
-                    let s = format!("{}-{}-{} @ {} in {}", VERSION_MAJOR,
+                    let s = format!("{}-{}-{} @ {} in {} file {}", VERSION_MAJOR,
                                     VERSION_MINOR, VERSION_PATCH, VERSION_PRE,
-                                    CARGO_MANIFEST_DIR);
+                                    CARGO_MANIFEST_DIR, CARGO_MANIFEST_PATH);
                      assert_eq!(s, foo::version());
                      println!("{}", s);
                      assert_eq!("foo", PKG_NAME);
@@ -1672,12 +1673,13 @@ fn crate_env_vars() {
                 use std::path::PathBuf;
 
                 pub fn version() -> String {
-                    format!("{}-{}-{} @ {} in {}",
+                    format!("{}-{}-{} @ {} in {} file {}",
                             env!("CARGO_PKG_VERSION_MAJOR"),
                             env!("CARGO_PKG_VERSION_MINOR"),
                             env!("CARGO_PKG_VERSION_PATCH"),
                             env!("CARGO_PKG_VERSION_PRE"),
-                            env!("CARGO_MANIFEST_DIR"))
+                            env!("CARGO_MANIFEST_DIR"),
+                            env!("CARGO_MANIFEST_PATH"))
                 }
 
                 pub fn check_no_int_test_env() {
@@ -1793,7 +1795,7 @@ fn crate_env_vars() {
     println!("bin");
     p.process(&p.bin("foo-bar"))
         .with_stdout_data(str![[r#"
-0-5-1 @ alpha.1 in [ROOT]/foo
+0-5-1 @ alpha.1 in [ROOT]/foo file [ROOT]/foo/Cargo.toml
 
 "#]])
         .run();
@@ -1861,12 +1863,15 @@ fn cargo_rustc_current_dir_foreign_workspace_dep() {
             fn baz_env() {
                 let workspace_dir = Path::new(option_env!("CARGO_RUSTC_CURRENT_DIR").expect("CARGO_RUSTC_CURRENT_DIR"));
                 let manifest_dir = Path::new(option_env!("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"));
+                let manifest_path = Path::new(option_env!("CARGO_MANIFEST_PATH").expect("CARGO_MANIFEST_PATH"));
                 let current_dir = std::env::current_dir().expect("current_dir");
                 let file_path = workspace_dir.join(file!());
                 assert!(file_path.exists(), "{}", file_path.display());
                 let workspace_dir = std::fs::canonicalize(current_dir.join(workspace_dir)).expect("CARGO_RUSTC_CURRENT_DIR");
+                let manifest_path = std::fs::canonicalize(current_dir.join(manifest_dir.clone()).join("Cargo.toml")).expect("CARGO_MANIFEST_PATH");
                 let manifest_dir = std::fs::canonicalize(current_dir.join(manifest_dir)).expect("CARGO_MANIFEST_DIR");
-                assert_eq!(workspace_dir, manifest_dir);
+                assert_eq!(workspace_dir, manifest_dir.clone());
+                assert_eq!(manifest_dir.join("Cargo.toml"), manifest_path);
             }
         "#,
         )
@@ -1955,12 +1960,15 @@ fn cargo_rustc_current_dir_non_local_dep() {
             fn bar_env() {
                 let workspace_dir = Path::new(option_env!("CARGO_RUSTC_CURRENT_DIR").expect("CARGO_RUSTC_CURRENT_DIR"));
                 let manifest_dir = Path::new(option_env!("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"));
+                let manifest_path = Path::new(option_env!("CARGO_MANIFEST_PATH").expect("CARGO_MANIFEST_PATH"));
                 let current_dir = std::env::current_dir().expect("current_dir");
                 let file_path = workspace_dir.join(file!());
                 assert!(file_path.exists(), "{}", file_path.display());
                 let workspace_dir = std::fs::canonicalize(current_dir.join(workspace_dir)).expect("CARGO_RUSTC_CURRENT_DIR");
+                let manifest_path = std::fs::canonicalize(current_dir.join(manifest_dir.clone()).join("Cargo.toml")).expect("CARGO_MANIFEST_PATH");
                 let manifest_dir = std::fs::canonicalize(current_dir.join(manifest_dir)).expect("CARGO_MANIFEST_DIR");
-                assert_eq!(workspace_dir, manifest_dir);
+                assert_eq!(workspace_dir, manifest_dir.clone());
+                assert_eq!(manifest_dir.join("Cargo.toml"), manifest_path);
             }
         "#,
         )
