@@ -5,7 +5,27 @@ Note: [Cargo's linting system is unstable](unstable.md#lintscargo) and can only 
 ## Warn-by-default
 
 These lints are all set to the 'warn' level by default.
+- [`unexpected_cfgs`](#unexpected_cfgs)
 - [`unknown_lints`](#unknown_lints)
+
+## `unexpected_cfgs`
+Set to `warn` by default
+
+### What it does
+Checks for unexpected cfgs in `[target.'cfg(...)']`
+
+### Why it is bad
+The lint helps with verifying that the crate is correctly handling conditional
+compilation for different target platforms. It ensures that the cfg settings are
+consistent between what is intended and what is used, helping to
+catch potential bugs or errors early in the development process.
+
+### Example
+```toml
+[lints.cargo]
+unexpected_cfgs = "warn"
+```
+
 
 ## `unknown_lints`
 Set to `warn` by default
