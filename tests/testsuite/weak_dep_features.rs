@@ -630,6 +630,7 @@ edition = "2015"
 name = "foo"
 version = "0.1.0"
 build = false
+autolib = false
 autobins = false
 autoexamples = false
 autotests = false

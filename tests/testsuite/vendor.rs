@@ -294,6 +294,7 @@ include = [
     "src/lib.rs",
     "build.rs",
 ]
+autolib = false
 autobins = false
 autoexamples = false
 autotests = false
@@ -379,6 +380,7 @@ version = "0.0.1"
 authors = []
 build = false
 include = ["src/lib.rs"]
+autolib = false
 autobins = false
 autoexamples = false
 autotests = false
@@ -467,6 +469,7 @@ include = [
     "src/main.rs",
     "src/lib.rs",
 ]
+autolib = false
 autobins = false
 autoexamples = false
 autotests = false
@@ -556,6 +559,7 @@ version = "0.0.1"
 authors = []
 build = false
 include = ["src/main.rs"]
+autolib = false
 autobins = false
 autoexamples = false
 autotests = false
@@ -650,6 +654,7 @@ include = [
     "tests/test_foo.rs",
     "benches/bench_foo.rs",
 ]
+autolib = false
 autobins = false
 autoexamples = false
 autotests = false
@@ -754,6 +759,7 @@ version = "0.0.1"
 authors = []
 build = false
 include = ["src/lib.rs"]
+autolib = false
 autobins = false
 autoexamples = false
 autotests = false
@@ -1527,6 +1533,7 @@ name = "git_dep"
 version = "0.0.1"
 authors = []
 build = false
+autolib = false
 autobins = false
 autoexamples = false
 autotests = false
@@ -1542,27 +1549,27 @@ path = "src/lib.rs"
 
 [[example]]
 name = "a"
-path = [..]
+path = "examples/a.rs"
 
 [[example]]
 name = "b"
-path = [..]
+path = "examples/b.rs"
 
 [[example]]
 name = "c"
-path = [..]
+path = "examples/c.rs"
 
 [[example]]
 name = "x"
-path = [..]
+path = "examples/x.rs"
 
 [[example]]
 name = "y"
-path = [..]
+path = "examples/y.rs"
 
 [[example]]
 name = "z"
-path = [..]
+path = "examples/z.rs"
 
 "##]],
     );

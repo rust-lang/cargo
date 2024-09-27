@@ -30,6 +30,7 @@ Every manifest file consists of the following sections:
   * [`publish`](#the-publish-field) --- Can be used to prevent publishing the package.
   * [`metadata`](#the-metadata-table) --- Extra settings for external tools.
   * [`default-run`](#the-default-run-field) --- The default binary to run by [`cargo run`].
+  * [`autolib`](cargo-targets.md#target-auto-discovery) --- Disables library auto discovery.
   * [`autobins`](cargo-targets.md#target-auto-discovery) --- Disables binary auto discovery.
   * [`autoexamples`](cargo-targets.md#target-auto-discovery) --- Disables example auto discovery.
   * [`autotests`](cargo-targets.md#target-auto-discovery) --- Disables test auto discovery.

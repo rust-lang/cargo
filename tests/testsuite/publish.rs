@@ -1583,6 +1583,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
                      version = \"0.1.0\"\n\
                      authors = []\n\
                      build = false\n\
+                     autolib = false\n\
                      autobins = false\n\
                      autoexamples = false\n\
                      autotests = false\n\
@@ -1963,6 +1964,7 @@ name = "foo"
 version = "0.1.0"
 authors = []
 build = false
+autolib = false
 autobins = false
 autoexamples = false
 autotests = false

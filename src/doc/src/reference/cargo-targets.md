@@ -323,13 +323,14 @@ configuration tables, such as `[lib]`, `[[bin]]`, `[[test]]`, `[[bench]]`, or
 standard directory layout.
 
 The automatic target discovery can be disabled so that only manually
-configured targets will be built. Setting the keys `autobins`, `autoexamples`,
+configured targets will be built. Setting the keys `autolib`, `autobins`, `autoexamples`,
 `autotests`, or `autobenches` to `false` in the `[package]` section will
 disable auto-discovery of the corresponding target type.
 
 ```toml
 [package]
 # ...
+autolib = false
 autobins = false
 autoexamples = false
 autotests = false
@@ -363,6 +364,9 @@ autobins = false
 > is `false` if at least one target is manually defined in `Cargo.toml`.
 > Beginning with the 2018 edition, the default is always `true`.
 
+> **MSRV:** Respected as of 1.27 for `autobins`, `autoexamples`, `autotests`, and `autobenches`
+
+> **MSRV:** Respected as of 1.83 for `autolib`
 
 [Build cache]: ../guide/build-cache.md
 [Rust Edition]: ../../edition-guide/index.html

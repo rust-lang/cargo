@@ -334,6 +334,7 @@ fn normalize_toml(
             package_root,
             &original_package.name,
             edition,
+            original_package.autolib,
             warnings,
         )?;
         normalized_toml.bin = Some(targets::normalize_bins(
@@ -624,6 +625,7 @@ fn normalize_package_toml<'a>(
             .map(manifest::InheritableField::Value),
         workspace: original_package.workspace.clone(),
         im_a_teapot: original_package.im_a_teapot.clone(),
+        autolib: Some(false),
         autobins: Some(false),
         autoexamples: Some(false),
         autotests: Some(false),
