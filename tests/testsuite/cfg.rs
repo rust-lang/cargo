@@ -860,10 +860,39 @@ fn unexpected_cfgs_target() {
         .file("c/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcheck-target-cfgs")
+    p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
         .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
-        // FIXME: We should warn on multiple cfgs
         .with_stderr_data(str![[r#"
+[WARNING] unexpected `cfg` condition name: foo
+  --> Cargo.toml:11:25
+   |
+11 |                 [target."cfg(any(foo, all(bar)))".dependencies]
+   |                         -------------------------
+   |
+[WARNING] unexpected `cfg` condition name: bar
+  --> Cargo.toml:11:25
+   |
+11 |                 [target."cfg(any(foo, all(bar)))".dependencies]
+   |                         -------------------------
+   |
+[WARNING] unexpected `cfg` condition value: `` for `windows = ""`
+  --> Cargo.toml:18:25
+   |
+18 |                 [target.'cfg(not(windows = ""))'.dependencies]
+   |                         ------------------------
+   |
+[WARNING] unexpected `cfg` condition value: `zoo` for `unix = "zoo"`
+  --> Cargo.toml:14:25
+   |
+14 |                 [target.'cfg(unix = "zoo")'.dependencies]
+   |                         -------------------
+   |
+[WARNING] unexpected `cfg` condition value: `zoo` for `unix = "zoo"`
+  --> Cargo.toml:14:25
+   |
+14 |                 [target.'cfg(unix = "zoo")'.dependencies]
+   |                         -------------------
+   |
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] b v0.0.1 ([ROOT]/foo/b)
 [CHECKING] a v0.0.1 ([ROOT]/foo)
@@ -910,10 +939,28 @@ fn unexpected_cfgs_target_with_lint() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcheck-target-cfgs")
+    p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
         .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
-        // FIXME: We should warn on multiple cfgs
+        // FIXME: We should not warn on `cfg(foo = "foo")` but we currently do
         .with_stderr_data(str![[r#"
+[WARNING] unexpected `cfg` condition name: bar
+  --> Cargo.toml:14:25
+   |
+14 |                 [target."cfg(bar)".dependencies]
+   |                         ----------
+   |
+[WARNING] unexpected `cfg` condition name: foo for `foo = "foo"`
+  --> Cargo.toml:11:25
+   |
+11 |                 [target.'cfg(foo = "foo")'.dependencies] # should not warn here
+   |                         ------------------
+   |
+[WARNING] unexpected `cfg` condition name: foo
+ --> Cargo.toml:8:25
+  |
+8 |                 [target."cfg(foo)".dependencies] # should not warn here
+  |                         ----------
+  |
 [LOCKING] 1 package to latest compatible version
 [CHECKING] a v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -934,10 +981,10 @@ fn unexpected_cfgs_target_diagnostics() {
                 edition = "2015"
                 authors = []
 
-                [target."cfg(target_pointer_width)".dependencies]
+                [target."cfg(target_pointer_width)".dependencies] # expect (none) as value
                 b = { path = 'b' }
 
-                [target.'cfg( all(foo ,   bar))'.dependencies]
+                [target.'cfg( all(foo ,   bar))'.dependencies] # no snippet due to weird formatting
                 b = { path = 'b' }
             "#,
         )
@@ -946,9 +993,19 @@ fn unexpected_cfgs_target_diagnostics() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcheck-target-cfgs")
+    p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
         .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
         .with_stderr_data(str![[r#"
+[WARNING] unexpected `cfg` condition name: foo in `[target.'cfg(all(foo, bar))']`
+ = [HELP] occurred in `[ROOT]/foo/Cargo.toml`
+[WARNING] unexpected `cfg` condition name: bar in `[target.'cfg(all(foo, bar))']`
+ = [HELP] occurred in `[ROOT]/foo/Cargo.toml`
+[WARNING] unexpected `cfg` condition value: (none) for `target_pointer_width`
+ --> Cargo.toml:8:25
+  |
+8 |                 [target."cfg(target_pointer_width)".dependencies] # expect (none) as value
+  |                         ---------------------------
+  |
 [LOCKING] 1 package to latest compatible version
 [CHECKING] a v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -981,10 +1038,16 @@ fn unexpected_cfgs_target_lint_level_allow() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcheck-target-cfgs")
+    p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
         .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
-        // FIXME: We should warn on multiple cfgs
+        // FIXME: We shouldn't warn any target cfgs because of the level="allow"
         .with_stderr_data(str![[r#"
+[WARNING] unexpected `cfg` condition name: foo
+ --> Cargo.toml:8:25
+  |
+8 |                 [target."cfg(foo)".dependencies]
+  |                         ----------
+  |
 [LOCKING] 1 package to latest compatible version
 [CHECKING] a v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1017,9 +1080,15 @@ fn unexpected_cfgs_target_lint_level_deny() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcheck-target-cfgs")
+    p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
         .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
         .with_stderr_data(str![[r#"
+[WARNING] unexpected `cfg` condition name: foo
+ --> Cargo.toml:8:25
+  |
+8 |                 [target."cfg(foo)".dependencies]
+  |                         ----------
+  |
 [LOCKING] 1 package to latest compatible version
 [CHECKING] a v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1055,9 +1124,16 @@ fn unexpected_cfgs_target_cfg_any() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcheck-target-cfgs")
+    p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
         .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
+        // FIXME: We shouldn't be linting `cfg(foo)` because of the `cfg(any())`
         .with_stderr_data(str![[r#"
+[WARNING] unexpected `cfg` condition name: foo
+ --> Cargo.toml:8:25
+  |
+8 |                 [target."cfg(foo)".dependencies]
+  |                         ----------
+  |
 [LOCKING] 1 package to latest compatible version
 [CHECKING] a v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1110,9 +1186,6 @@ fn no_unexpected_cfgs_target() {
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["requires -Zcargo-lints"])
         .with_stderr_data(str![[r#"
-[LOCKING] 1 package to latest compatible version
-[CHECKING] b v0.0.1 ([ROOT]/foo/b)
-[CHECKING] a v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
