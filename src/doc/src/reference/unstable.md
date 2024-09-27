@@ -1977,7 +1977,7 @@ This feature checks for unexpected cfgs in `[target.'cfg(...)']` entries, based
 on `rustc --print=check-cfg`.
 
 ```sh
-cargo check -Zcheck-target-cfgs
+cargo check -Zcargo-lints -Zcheck-target-cfgs
 ```
 
 It follows the lint Rust `unexpected_cfgs` lint configuration:

@@ -865,13 +865,39 @@ fn unexpected_cfgs_target() {
         .file("c/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcheck-target-cfgs")
+    p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
         .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
-        // FIXME: We should warn on multiple cfgs
         .with_stderr_data(str![[r#"
-[WARNING] unused manifest key `lints.cargo` (may be supported in a future version)
-
-consider passing `-Zcargo-lints` to enable this feature.
+[WARNING] unexpected `cfg` condition name: foo
+  --> Cargo.toml:16:25
+   |
+16 |                 [target."cfg(any(foo, all(bar)))".dependencies]
+   |                         -------------------------
+   |
+[WARNING] unexpected `cfg` condition name: bar
+  --> Cargo.toml:16:25
+   |
+16 |                 [target."cfg(any(foo, all(bar)))".dependencies]
+   |                         -------------------------
+   |
+[WARNING] unexpected `cfg` condition value: `` for `windows = ""`
+  --> Cargo.toml:23:25
+   |
+23 |                 [target.'cfg(not(windows = ""))'.dependencies]
+   |                         ------------------------
+   |
+[WARNING] unexpected `cfg` condition value: `zoo` for `unix = "zoo"`
+  --> Cargo.toml:19:25
+   |
+19 |                 [target.'cfg(unix = "zoo")'.dependencies]
+   |                         -------------------
+   |
+[WARNING] unexpected `cfg` condition value: `zoo` for `unix = "zoo"`
+  --> Cargo.toml:19:25
+   |
+19 |                 [target.'cfg(unix = "zoo")'.dependencies]
+   |                         -------------------
+   |
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] b v0.0.1 ([ROOT]/foo/b)
 [CHECKING] a v0.0.1 ([ROOT]/foo)
@@ -923,13 +949,28 @@ fn unexpected_cfgs_target_with_lint() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcheck-target-cfgs")
+    p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
         .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
-        // FIXME: We should warn on multiple cfgs
+        // FIXME: We should not warn on `cfg(foo = "foo")` but we currently do
         .with_stderr_data(str![[r#"
-[WARNING] unused manifest key `lints.cargo` (may be supported in a future version)
-
-consider passing `-Zcargo-lints` to enable this feature.
+[WARNING] unexpected `cfg` condition name: bar
+  --> Cargo.toml:19:25
+   |
+19 |                 [target."cfg(bar)".dependencies]
+   |                         ----------
+   |
+[WARNING] unexpected `cfg` condition name: foo for `foo = "foo"`
+  --> Cargo.toml:16:25
+   |
+16 |                 [target.'cfg(foo = "foo")'.dependencies] # should not warn here
+   |                         ------------------
+   |
+[WARNING] unexpected `cfg` condition name: foo
+  --> Cargo.toml:13:25
+   |
+13 |                 [target."cfg(foo)".dependencies] # should not warn here
+   |                         ----------
+   |
 [LOCKING] 1 package to latest compatible version
 [CHECKING] a v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -955,10 +996,10 @@ fn unexpected_cfgs_target_diagnostics() {
                 [lints.cargo]
                 unexpected_cfgs = "warn"
 
-                [target."cfg(target_pointer_width)".dependencies]
+                [target."cfg(target_pointer_width)".dependencies] # expect (none) as value
                 b = { path = 'b' }
 
-                [target.'cfg( all(foo ,   bar))'.dependencies]
+                [target.'cfg( all(foo ,   bar))'.dependencies] # no snippet due to weird formatting
                 b = { path = 'b' }
             "#,
         )
@@ -967,12 +1008,19 @@ fn unexpected_cfgs_target_diagnostics() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcheck-target-cfgs")
+    p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
         .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
         .with_stderr_data(str![[r#"
-[WARNING] unused manifest key `lints.cargo` (may be supported in a future version)
-
-consider passing `-Zcargo-lints` to enable this feature.
+[WARNING] unexpected `cfg` condition name: foo in `[target.'cfg(all(foo, bar))']`
+ = [HELP] occurred in `[ROOT]/foo/Cargo.toml`
+[WARNING] unexpected `cfg` condition name: bar in `[target.'cfg(all(foo, bar))']`
+ = [HELP] occurred in `[ROOT]/foo/Cargo.toml`
+[WARNING] unexpected `cfg` condition value: (none) for `target_pointer_width`
+  --> Cargo.toml:13:25
+   |
+13 |                 [target."cfg(target_pointer_width)".dependencies] # expect (none) as value
+   |                         ---------------------------
+   |
 [LOCKING] 1 package to latest compatible version
 [CHECKING] a v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1010,13 +1058,9 @@ fn unexpected_cfgs_target_lint_level_allow() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcheck-target-cfgs")
+    p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
         .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
-        // FIXME: We should warn on multiple cfgs
         .with_stderr_data(str![[r#"
-[WARNING] unused manifest key `lints.cargo` (may be supported in a future version)
-
-consider passing `-Zcargo-lints` to enable this feature.
 [LOCKING] 1 package to latest compatible version
 [CHECKING] a v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1054,19 +1098,18 @@ fn unexpected_cfgs_target_lint_level_deny() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcheck-target-cfgs")
+    p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
         .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
         .with_stderr_data(str![[r#"
-[WARNING] unused manifest key `lints.cargo` (may be supported in a future version)
-
-consider passing `-Zcargo-lints` to enable this feature.
-[LOCKING] 1 package to latest compatible version
-[CHECKING] a v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] unexpected `cfg` condition name: foo
+  --> Cargo.toml:10:25
+   |
+10 |                 [target."cfg(foo)".dependencies]
+   |                         ^^^^^^^^^^
+   |
 
 "#]])
-        // FIXME: this test should fail
-        // .with_status(101)
+        .with_status(101)
         .run();
 }
 
@@ -1100,12 +1143,15 @@ fn unexpected_cfgs_target_cfg_any() {
         .file("b/src/lib.rs", "")
         .build();
 
-    p.cargo("check -Zcheck-target-cfgs")
+    p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
         .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
         .with_stderr_data(str![[r#"
-[WARNING] unused manifest key `lints.cargo` (may be supported in a future version)
-
-consider passing `-Zcargo-lints` to enable this feature.
+[WARNING] unexpected `cfg` condition name: foo
+  --> Cargo.toml:13:25
+   |
+13 |                 [target."cfg(foo)".dependencies]
+   |                         ----------
+   |
 [LOCKING] 1 package to latest compatible version
 [CHECKING] a v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1167,13 +1213,6 @@ consider passing `-Zcargo-lints` to enable this feature.
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["requires -Zcargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unexpected_cfgs`
-  --> Cargo.toml:11:17
-   |
-11 |                 unexpected_cfgs = "warn"
-   |                 ^^^^^^^^^^^^^^^
-   |
-   = [NOTE] `cargo::unknown_lints` is set to `warn` by default
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -1215,15 +1254,16 @@ switch to nightly channel you can pass
     p.cargo("check -Zcargo-lints")
         .masquerade_as_nightly_cargo(&["requires -Zcargo-lints"])
         .with_stderr_data(str![[r#"
-[WARNING] unknown lint: `unexpected_cfgs`
+[ERROR] use of unstable lint `unexpected_cfgs`
  --> Cargo.toml:9:17
   |
 9 |                 unexpected_cfgs = "warn"
-  |                 ^^^^^^^^^^^^^^^
+  |                 ^^^^^^^^^^^^^^^ this is behind `check-target-cfgs`, which is not enabled
   |
-  = [NOTE] `cargo::unknown_lints` is set to `warn` by default
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+  = [HELP] consider adding `cargo-features = ["check-target-cfgs"]` to the top of the manifest
+[ERROR] encountered 1 errors(s) while verifying lints
 
 "#]])
+        .with_status(101)
         .run();
 }
