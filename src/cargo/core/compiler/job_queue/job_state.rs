@@ -103,7 +103,7 @@ impl<'a, 'gctx> JobState<'a, 'gctx> {
     }
 
     /// See [`Message::Diagnostic`] and [`Message::WarningCount`].
-    pub fn emit_diag(&self, level: String, diag: String, fixable: bool) -> CargoResult<()> {
+    pub fn emit_diag(&self, level: &str, diag: String, fixable: bool) -> CargoResult<()> {
         if let Some(dedupe) = self.output {
             let emitted = dedupe.emit_diag(&diag)?;
             if level == "warning" {
@@ -116,7 +116,7 @@ impl<'a, 'gctx> JobState<'a, 'gctx> {
         } else {
             self.messages.push_bounded(Message::Diagnostic {
                 id: self.id,
-                level,
+                level: level.to_string(),
                 diag,
                 fixable,
             });

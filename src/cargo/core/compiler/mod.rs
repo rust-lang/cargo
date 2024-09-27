@@ -54,6 +54,7 @@ mod unit;
 pub mod unit_dependencies;
 pub mod unit_graph;
 
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::ffi::{OsStr, OsString};
@@ -1756,10 +1757,15 @@ fn on_stderr_line_inner(
             ..
         } => {
             #[derive(serde::Deserialize)]
-            struct CompilerMessage {
+            struct CompilerMessage<'a> {
+                // `rendered` contains escape sequences, which can't be
+                // zero-copy deserialized by serde_json.
+                // See https://github.com/serde-rs/json/issues/742
                 rendered: String,
-                message: String,
-                level: String,
+                #[serde(borrow)]
+                message: Cow<'a, str>,
+                #[serde(borrow)]
+                level: Cow<'a, str>,
                 children: Vec<PartialDiagnostic>,
             }
 
@@ -1782,7 +1788,8 @@ fn on_stderr_line_inner(
                 suggestion_applicability: Option<Applicability>,
             }
 
-            if let Ok(mut msg) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
+            if let Ok(mut msg) = serde_json::from_str::<CompilerMessage<'_>>(compiler_message.get())
+            {
                 if msg.message.starts_with("aborting due to")
                     || msg.message.ends_with("warning emitted")
                     || msg.message.ends_with("warnings emitted")
@@ -1808,7 +1815,7 @@ fn on_stderr_line_inner(
                         })
                         .any(|b| b);
                     count_diagnostic(&msg.level, options);
-                    state.emit_diag(msg.level, rendered, machine_applicable)?;
+                    state.emit_diag(&msg.level, rendered, machine_applicable)?;
                 }
                 return Ok(true);
             }
@@ -1819,12 +1826,14 @@ fn on_stderr_line_inner(
         // cached replay to enable/disable colors without re-invoking rustc.
         MessageFormat::Json { ansi: false, .. } => {
             #[derive(serde::Deserialize, serde::Serialize)]
-            struct CompilerMessage {
+            struct CompilerMessage<'a> {
                 rendered: String,
-                #[serde(flatten)]
-                other: std::collections::BTreeMap<String, serde_json::Value>,
+                #[serde(flatten, borrow)]
+                other: std::collections::BTreeMap<Cow<'a, str>, serde_json::Value>,
             }
-            if let Ok(mut error) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
+            if let Ok(mut error) =
+                serde_json::from_str::<CompilerMessage<'_>>(compiler_message.get())
+            {
                 error.rendered = anstream::adapter::strip_str(&error.rendered).to_string();
                 let new_line = serde_json::to_string(&error)?;
                 let new_msg: Box<serde_json::value::RawValue> = serde_json::from_str(&new_line)?;
@@ -1866,12 +1875,14 @@ fn on_stderr_line_inner(
     }
 
     #[derive(serde::Deserialize)]
-    struct CompilerMessage {
-        message: String,
-        level: String,
+    struct CompilerMessage<'a> {
+        #[serde(borrow)]
+        message: Cow<'a, str>,
+        #[serde(borrow)]
+        level: Cow<'a, str>,
     }
 
-    if let Ok(msg) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
+    if let Ok(msg) = serde_json::from_str::<CompilerMessage<'_>>(compiler_message.get()) {
         if msg.message.starts_with("aborting due to")
             || msg.message.ends_with("warning emitted")
             || msg.message.ends_with("warnings emitted")
