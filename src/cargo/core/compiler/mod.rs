@@ -1836,8 +1836,7 @@ fn on_stderr_line_inner(
             {
                 error.rendered = anstream::adapter::strip_str(&error.rendered).to_string();
                 let new_line = serde_json::to_string(&error)?;
-                let new_msg: Box<serde_json::value::RawValue> = serde_json::from_str(&new_line)?;
-                compiler_message = new_msg;
+                compiler_message = serde_json::value::RawValue::from_string(new_line)?;
             }
         }
 
