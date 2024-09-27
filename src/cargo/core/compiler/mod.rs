@@ -1867,10 +1867,19 @@ fn on_stderr_line_inner(
 
     #[derive(serde::Deserialize)]
     struct CompilerMessage {
+        message: String,
         level: String,
     }
-    if let Ok(message) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
-        count_diagnostic(&message.level, options);
+
+    if let Ok(msg) = serde_json::from_str::<CompilerMessage>(compiler_message.get()) {
+        if msg.message.starts_with("aborting due to")
+            || msg.message.ends_with("warning emitted")
+            || msg.message.ends_with("warnings emitted")
+        {
+            // Skip this line; we'll print our own summary at the end.
+            return Ok(true);
+        }
+        count_diagnostic(&msg.level, options);
     }
 
     let msg = machine_message::FromCompiler {

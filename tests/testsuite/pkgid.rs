@@ -330,12 +330,6 @@ fn pkgid_json_message_metadata_consistency() {
   {
     "manifest_path": "[ROOT]/foo/Cargo.toml",
     "package_id": "path+[ROOTURL]/foo#0.5.0",
-    "reason": "compiler-message",
-    "...": "{...}"
-  },
-  {
-    "manifest_path": "[ROOT]/foo/Cargo.toml",
-    "package_id": "path+[ROOTURL]/foo#0.5.0",
     "reason": "compiler-artifact",
     "...": "{...}"
   },
