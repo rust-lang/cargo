@@ -95,7 +95,7 @@ fn cargo_fail_with_no_stderr() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[ERROR] could not compile `foo` (bin "foo") due to 2 previous errors
+[ERROR] could not compile `foo` (bin "foo") due to 1 previous error
 
 "#]])
         .run();
