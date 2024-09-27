@@ -9,7 +9,7 @@ use crate::core::summary::MissingDependencyError;
 use crate::AlreadyPrintedError;
 use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
-use cargo_util::paths::{self, normalize_path};
+use cargo_util::paths;
 use cargo_util_schemas::manifest::{
     self, PackageName, PathBaseName, TomlDependency, TomlDetailedDependency, TomlManifest,
 };
@@ -3039,8 +3039,12 @@ pub fn prepare_target_for_publish(
     context: &str,
     gctx: &GlobalContext,
 ) -> CargoResult<Option<manifest::TomlTarget>> {
-    let path = target.path.as_ref().expect("previously normalized");
-    let path = normalize_path(&path.0);
+    let path = target
+        .path
+        .as_ref()
+        .expect("previously normalized")
+        .0
+        .clone();
     if let Some(packaged_files) = packaged_files {
         if !packaged_files.contains(&path) {
             let name = target.name.as_ref().expect("previously normalized");
