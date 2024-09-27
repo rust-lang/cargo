@@ -216,6 +216,7 @@ fn build_feature_map(
         .flatten()
         .filter_map(|fv| fv.explicit_dep_name())
         .collect();
+
     for dep in dependencies {
         if !dep.is_optional() {
             continue;
@@ -242,7 +243,7 @@ fn build_feature_map(
                         if !is_any_dep {
                             bail!(
                                 "feature `{feature}` includes `{fv}` which is neither a dependency \
-                                 nor another feature"                              
+                                 nor another feature"
                               );
                         }
                         if is_optional_dep {

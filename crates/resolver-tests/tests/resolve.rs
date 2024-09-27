@@ -6,9 +6,10 @@ use cargo::util::GlobalContext;
 use cargo_util::is_ci;
 
 use resolver_tests::{
-    assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names, names, pkg, pkg_id,
-    pkg_loc, registry, registry_strategy, remove_dep, resolve, resolve_and_validated,
-    resolve_with_global_context, PrettyPrintRegistry, SatResolve, ToDep, ToPkgId,
+    assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names, names, pkg, pkg_dep,
+    pkg_dep_with, pkg_id, pkg_loc, registry, registry_strategy, remove_dep, resolve,
+    resolve_and_validated, resolve_with_global_context, PrettyPrintRegistry, SatResolver, ToDep,
+    ToPkgId,
 };
 
 use proptest::prelude::*;
@@ -40,15 +41,15 @@ proptest! {
         PrettyPrintRegistry(input) in registry_strategy(50, 20, 60)
     )  {
         let reg = registry(input.clone());
-        let sat_resolve = SatResolve::new(&reg);
-        // there is only a small chance that any one
-        // crate will be interesting.
+        let mut sat_resolver = SatResolver::new(&reg);
+
+        // There is only a small chance that a crate will be interesting.
         // So we try some of the most complicated.
         for this in input.iter().rev().take(20) {
             let _ = resolve_and_validated(
                 vec![dep_req(&this.name(), &format!("={}", this.version()))],
                 &reg,
-                Some(sat_resolve.clone()),
+                &mut sat_resolver,
             );
         }
     }
@@ -75,23 +76,15 @@ proptest! {
             .unwrap();
 
         let reg = registry(input.clone());
-        // there is only a small chance that any one
-        // crate will be interesting.
+
+        // There is only a small chance that a crate will be interesting.
         // So we try some of the most complicated.
         for this in input.iter().rev().take(10) {
-            // minimal-versions change what order the candidates
-            // are tried but not the existence of a solution
-            let res = resolve(
-                vec![dep_req(&this.name(), &format!("={}", this.version()))],
-                &reg,
-            );
+            let deps = vec![dep_req(&this.name(), &format!("={}", this.version()))];
+            let res = resolve(deps.clone(), &reg);
+            let mres = resolve_with_global_context(deps, &reg, &gctx);
 
-            let mres = resolve_with_global_context(
-                vec![dep_req(&this.name(), &format!("={}", this.version()))],
-                &reg,
-                &gctx,
-            );
-
+            // `minimal-versions` changes what order the candidates are tried but not the existence of a solution.
             prop_assert_eq!(
                 res.is_ok(),
                 mres.is_ok(),
@@ -124,23 +117,16 @@ proptest! {
             .unwrap();
 
         let reg = registry(input.clone());
-        // there is only a small chance that any one
-        // crate will be interesting.
+
+        // There is only a small chance that a crate will be interesting.
         // So we try some of the most complicated.
         for this in input.iter().rev().take(10) {
-            // direct-minimal-versions reduces the number of available solutions, so we verify that
-            // we do not come up with solutions maximal versions does not
-            let res = resolve(
-                vec![dep_req(&this.name(), &format!("={}", this.version()))],
-                &reg,
-            );
+            let deps = vec![dep_req(&this.name(), &format!("={}", this.version()))];
+            let res = resolve(deps.clone(), &reg);
+            let mres = resolve_with_global_context(deps, &reg, &gctx);
 
-            let mres = resolve_with_global_context(
-                vec![dep_req(&this.name(), &format!("={}", this.version()))],
-                &reg,
-                &gctx,
-            );
-
+            // `direct-minimal-versions` reduces the number of available solutions,
+            //  so we verify that we do not come up with solutions not seen in `maximal-versions`.
             if res.is_err() {
                 prop_assert!(
                     mres.is_err(),
@@ -179,8 +165,8 @@ proptest! {
             }
         }
         let removed_reg = registry(removed_input);
-        // there is only a small chance that any one
-        // crate will be interesting.
+
+        // There is only a small chance that a crate will be interesting.
         // So we try some of the most complicated.
         for this in input.iter().rev().take(10) {
             if resolve(
@@ -207,8 +193,8 @@ proptest! {
         indexes_to_unpublish in prop::collection::vec(any::<prop::sample::Index>(), ..10)
     )  {
         let reg = registry(input.clone());
-        // there is only a small chance that any one
-        // crate will be interesting.
+
+        // There is only a small chance that a crate will be interesting.
         // So we try some of the most complicated.
         for this in input.iter().rev().take(10) {
             let res = resolve(
@@ -225,6 +211,7 @@ proptest! {
                         .cloned()
                         .filter(|x| !r.contains(&x.package_id()))
                         .collect();
+
                     if !not_selected.is_empty() {
                         let indexes_to_unpublish: Vec<_> = indexes_to_unpublish.iter().map(|x| x.get(&not_selected)).collect();
 
@@ -460,7 +447,10 @@ fn test_resolving_minimum_version_with_transitive_deps() {
         &reg,
         &gctx,
     )
-    .unwrap();
+    .unwrap()
+    .into_iter()
+    .map(|(pkg, _)| pkg)
+    .collect::<Vec<_>>();
 
     assert_contains(
         &res,
@@ -659,8 +649,8 @@ fn resolving_with_constrained_sibling_backtrack_parent() {
         let vsn = format!("1.0.{}", i);
         reglist.push(
             pkg!(("bar", vsn.clone()) => [dep_req("backtrack_trap1", "1.0.2"),
-                                                   dep_req("backtrack_trap2", "1.0.2"),
-                                                   dep_req("constrained", "1.0.1")]),
+                                          dep_req("backtrack_trap2", "1.0.2"),
+                                          dep_req("constrained", "1.0.1")]),
         );
         reglist.push(pkg!(("backtrack_trap1", vsn.clone())));
         reglist.push(pkg!(("backtrack_trap2", vsn.clone())));
@@ -1227,7 +1217,8 @@ fn off_by_one_bug() {
     ];
 
     let reg = registry(input);
-    let _ = resolve_and_validated(vec![dep("f")], &reg, None);
+    let mut sat_resolver = SatResolver::new(&reg);
+    assert!(resolve_and_validated(vec![dep("f")], &reg, &mut sat_resolver).is_ok());
 }
 
 #[test]
@@ -1267,7 +1258,8 @@ fn conflict_store_bug() {
     ];
 
     let reg = registry(input);
-    let _ = resolve_and_validated(vec![dep("j")], &reg, None);
+    let mut sat_resolver = SatResolver::new(&reg);
+    assert!(resolve_and_validated(vec![dep("j")], &reg, &mut sat_resolver).is_err());
 }
 
 #[test]
@@ -1295,7 +1287,8 @@ fn conflict_store_more_then_one_match() {
         ]),
     ];
     let reg = registry(input);
-    let _ = resolve_and_validated(vec![dep("nA")], &reg, None);
+    let mut sat_resolver = SatResolver::new(&reg);
+    assert!(resolve_and_validated(vec![dep("nA")], &reg, &mut sat_resolver).is_err());
 }
 
 #[test]
@@ -1304,7 +1297,7 @@ fn bad_lockfile_from_8249() {
         pkg!(("a-sys", "0.2.0")),
         pkg!(("a-sys", "0.1.0")),
         pkg!(("b", "0.1.0") => [
-            dep_req("a-sys", "0.1"), // should be optional: true, but not deeded for now
+            dep_req("a-sys", "0.1"), // should be optional: true, but not needed for now
         ]),
         pkg!(("c", "1.0.0") => [
             dep_req("b", "=0.1.0"),
@@ -1320,7 +1313,100 @@ fn bad_lockfile_from_8249() {
         ]),
     ];
     let reg = registry(input);
-    let _ = resolve_and_validated(vec![dep("foo")], &reg, None);
+    let mut sat_resolver = SatResolver::new(&reg);
+    assert!(resolve_and_validated(vec![dep("foo")], &reg, &mut sat_resolver).is_err());
+}
+
+#[test]
+fn registry_with_features() {
+    let reg = registry(vec![
+        pkg!("a"),
+        pkg!("b"),
+        pkg_dep_with(
+            "image",
+            vec!["a".to_opt_dep(), "b".to_opt_dep(), "jpg".to_dep()],
+            &[("default", &["a"]), ("b", &["dep:b"])],
+        ),
+        pkg!("jpg"),
+        pkg!("log"),
+        pkg!("man"),
+        pkg_dep_with("rgb", vec!["man".to_opt_dep()], &[("man", &["dep:man"])]),
+        pkg_dep_with(
+            "dep",
+            vec![
+                "image".to_dep_with(&["b"]),
+                "log".to_opt_dep(),
+                "rgb".to_opt_dep(),
+            ],
+            &[
+                ("default", &["log", "image/default"]),
+                ("man", &["rgb?/man"]),
+            ],
+        ),
+    ]);
+
+    for deps in [
+        vec!["dep".to_dep_with(&["default", "man", "log", "rgb"])],
+        vec!["dep".to_dep_with(&["default"])],
+        vec!["dep".to_dep_with(&[])],
+        vec!["dep".to_dep_with(&["man"])],
+        vec!["dep".to_dep_with(&["man", "rgb"])],
+    ] {
+        let mut sat_resolver = SatResolver::new(&reg);
+        assert!(resolve_and_validated(deps, &reg, &mut sat_resolver).is_ok());
+    }
+}
+
+#[test]
+fn missing_feature() {
+    let reg = registry(vec![pkg!("a")]);
+    let mut sat_resolver = SatResolver::new(&reg);
+    assert!(resolve_and_validated(vec!["a".to_dep_with(&["f"])], &reg, &mut sat_resolver).is_err());
+}
+
+#[test]
+fn conflict_feature_and_sys() {
+    let reg = registry(vec![
+        pkg(("a-sys", "1.0.0")),
+        pkg(("a-sys", "2.0.0")),
+        pkg_dep_with(
+            ("a", "1.0.0"),
+            vec![dep_req("a-sys", "1.0.0")],
+            &[("f", &[])],
+        ),
+        pkg_dep_with(
+            ("a", "2.0.0"),
+            vec![dep_req("a-sys", "2.0.0")],
+            &[("g", &[])],
+        ),
+        pkg_dep("dep", vec![dep_req("a", "2.0.0")]),
+    ]);
+
+    let deps = vec![dep_req("a", "*").to_dep_with(&["f"]), dep("dep")];
+    let mut sat_resolver = SatResolver::new(&reg);
+    assert!(resolve_and_validated(deps, &reg, &mut sat_resolver).is_err());
+}
+
+#[test]
+fn conflict_weak_features() {
+    let reg = registry(vec![
+        pkg(("a-sys", "1.0.0")),
+        pkg(("a-sys", "2.0.0")),
+        pkg_dep("a1", vec![dep_req("a-sys", "1.0.0").to_opt_dep()]),
+        pkg_dep("a2", vec![dep_req("a-sys", "2.0.0").to_opt_dep()]),
+        pkg_dep_with(
+            "dep",
+            vec!["a1".to_opt_dep(), "a2".to_opt_dep()],
+            &[("a1", &["a1?/a-sys"]), ("a2", &["a2?/a-sys"])],
+        ),
+    ]);
+
+    let deps = vec![dep("dep").to_dep_with(&["a1", "a2"])];
+
+    // The following asserts should be updated when support for weak dependencies
+    // is added to the dependency resolver.
+    assert!(resolve(deps.clone(), &reg).is_err());
+    assert!(SatResolver::new(&reg).sat_resolve(&deps));
 }
 
 #[test]
