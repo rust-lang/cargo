@@ -1,8 +1,11 @@
-use crate::core::{Edition, Feature, Features, Manifest, Package};
+use crate::core::compiler::{CompileKind, TargetInfo};
+use crate::core::{Edition, Feature, Features, Manifest, Package, Workspace};
 use crate::{CargoResult, GlobalContext};
 use annotate_snippets::{Level, Snippet};
+use cargo_platform::{Cfg, ExpectedValues, Platform};
 use cargo_util_schemas::manifest::{TomlLintLevel, TomlToolLints};
 use pathdiff::diff_paths;
+use std::borrow::Cow;
 use std::fmt::Display;
 use std::ops::Range;
 use std::path::Path;
@@ -600,6 +603,132 @@ fn output_unknown_lints(
         }
 
         gctx.shell().print_message(message)?;
+    }
+
+    Ok(())
+}
+
+pub fn unexpected_target_cfgs(
+    ws: &Workspace<'_>,
+    pkg: &Package,
+    path: &Path,
+    error_count: &mut usize,
+    gctx: &GlobalContext,
+) -> CargoResult<()> {
+    let manifest = pkg.manifest();
+
+    // FIXME: We should get the lint level from `[lints.rust.unexpected_cfgs]`
+    let lint_level = LintLevel::Warn;
+
+    let rustc = gctx.load_global_rustc(Some(ws))?;
+    // FIXME: While it doesn't doesn't really matter for `--print=check-cfg`, we should
+    // still pass the actual requested targets instead of an empty array so that the
+    // target info can always be de-duplicated.
+    // FIXME: Move the target info creation before any linting is done and re-use it for
+    // all the packages.
+    let compile_kinds = CompileKind::from_requested_targets(gctx, &[])?;
+    let target_info = TargetInfo::new(gctx, &compile_kinds, &rustc, CompileKind::Host)?;
+
+    let Some(global_check_cfg) = target_info.check_cfg() else {
+        return Ok(());
+    };
+
+    if !global_check_cfg.exhaustive {
+        return Ok(());
+    }
+
+    // FIXME: If the `[lints.rust.unexpected_cfgs.check-cfg]` config is set we should
+    // re-fetch the check-cfg informations with those extra args
+
+    for dep in pkg.summary().dependencies() {
+        let Some(platform) = dep.platform() else {
+            continue;
+        };
+        let Platform::Cfg(cfg_expr) = platform else {
+            continue;
+        };
+
+        cfg_expr.walk(|cfg| -> CargoResult<()> {
+            let (name, value) = match cfg {
+                Cfg::Name(name) => (name, None),
+                Cfg::KeyPair(name, value) => (name, Some(value.to_string())),
+            };
+
+            match global_check_cfg.expecteds.get(name.as_str()) {
+                Some(ExpectedValues::Some(values)) if !values.contains(&value) => {
+                    let level = lint_level.to_diagnostic_level();
+                    if lint_level == LintLevel::Forbid || lint_level == LintLevel::Deny {
+                        *error_count += 1;
+                    }
+
+                    let value = match value {
+                        Some(value) => Cow::from(format!("`{value}`")),
+                        None => Cow::from("(none)"),
+                    };
+
+                    // Retrieving the span can fail if our pretty-priting doesn't match what the
+                    // user wrote: `unix="foo"` and `unix = "foo"`, for that reason we don't fail
+                    // and just produce a slightly worth diagnostic.
+                    if let Some(span) = get_span(manifest.document(), &["target", &*format!("cfg({cfg_expr})")], false) {
+                        let manifest_path = rel_cwd_manifest_path(path, gctx);
+                        let title = format!(
+                            "unexpected `cfg` condition value: {value} for `{cfg}`"
+                        );
+                        let diag = level.title(&*title).snippet(
+                            Snippet::source(manifest.contents())
+                                .origin(&manifest_path)
+                                .annotation(level.span(span))
+                                .fold(true)
+                        );
+                        gctx.shell().print_message(diag)?;
+                    } else {
+                        let title = format!(
+                            "unexpected `cfg` condition value: {value} for `{cfg}` in `[target.'cfg({cfg_expr})']`"
+                        );
+                        let help_where = format!("occurred in `{path}`", path = path.display());
+                        let diag = level.title(&*title).footer(Level::Help.title(&*help_where));
+                        gctx.shell().print_message(diag)?;
+                    }
+                }
+                None => {
+                    let level = lint_level.to_diagnostic_level();
+                    if lint_level == LintLevel::Forbid || lint_level == LintLevel::Deny {
+                        *error_count += 1;
+                    }
+
+                    let for_cfg = match value {
+                        Some(_value) => Cow::from(format!(" for `{cfg}`")),
+                        None => Cow::from(""),
+                    };
+
+                    // Retrieving the span can fail if our pretty-priting doesn't match what the
+                    // user wrote: `unix="foo"` and `unix = "foo"`, for that reason we don't fail
+                    // and just produce a slightly worth diagnostic.
+                    if let Some(span) = get_span(manifest.document(), &["target", &*format!("cfg({cfg_expr})")], false) {
+                        let manifest_path = rel_cwd_manifest_path(path, gctx);
+                        let title = format!(
+                            "unexpected `cfg` condition name: {name}{for_cfg}"
+                        );
+                        let diag = level.title(&*title).snippet(
+                            Snippet::source(manifest.contents())
+                                .origin(&manifest_path)
+                                .annotation(level.span(span))
+                                .fold(true)
+                        );
+                        gctx.shell().print_message(diag)?;
+                    } else {
+                        let title = format!(
+                            "unexpected `cfg` condition name: {name}{for_cfg} in `[target.'cfg({cfg_expr})']`"
+                        );
+                        let help_where = format!("occurred in `{path}`", path = path.display());
+                        let diag = level.title(&*title).footer(Level::Help.title(&*help_where));
+                        gctx.shell().print_message(diag)?;
+                    }
+                }
+                _ => { /* not unexpected */ }
+            }
+            Ok(())
+        })?;
     }
 
     Ok(())
