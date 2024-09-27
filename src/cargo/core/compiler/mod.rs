@@ -1852,11 +1852,12 @@ fn on_stderr_line_inner(
     // Look for a matching directive and inform Cargo internally that a
     // metadata file has been produced.
     #[derive(serde::Deserialize)]
-    struct ArtifactNotification {
-        artifact: String,
+    struct ArtifactNotification<'a> {
+        #[serde(borrow)]
+        artifact: Cow<'a, str>,
     }
 
-    if let Ok(artifact) = serde_json::from_str::<ArtifactNotification>(compiler_message.get()) {
+    if let Ok(artifact) = serde_json::from_str::<ArtifactNotification<'_>>(compiler_message.get()) {
         trace!("found directive from rustc: `{}`", artifact.artifact);
         if artifact.artifact.ends_with(".rmeta") {
             debug!("looks like metadata finished early!");
