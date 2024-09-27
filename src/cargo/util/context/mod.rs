@@ -1142,6 +1142,10 @@ impl GlobalContext {
         self.locked
     }
 
+    pub fn set_locked(&mut self, locked: bool) {
+        self.locked = locked;
+    }
+
     pub fn lock_update_allowed(&self) -> bool {
         !self.frozen && !self.locked
     }

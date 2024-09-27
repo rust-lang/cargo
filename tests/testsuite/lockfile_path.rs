@@ -5,11 +5,12 @@ use std::fs;
 use snapbox::str;
 
 use cargo_test_support::compare::assert_e2e;
+use cargo_test_support::install::assert_has_installed_exe;
 use cargo_test_support::registry::{Package, RegistryBuilder};
 use cargo_test_support::{
-    basic_bin_manifest, cargo_test, project, symlink_supported, ProjectBuilder,
+    basic_bin_manifest, cargo_process, cargo_test, paths, project, symlink_supported,
+    ProjectBuilder,
 };
-
 ///////////////////////////////
 //// Unstable feature tests start
 ///////////////////////////////
@@ -398,6 +399,99 @@ bar = "0.1.0"
     let contents = fs::read_to_string(path).unwrap();
 
     assert_e2e().eq(contents, lockfile_original);
+}
+
+#[cargo_test]
+fn install_respects_lock_file_path() {
+    // `cargo install` will imply --locked when lockfile path is provided
+    Package::new("bar", "0.1.0").publish();
+    Package::new("bar", "0.1.1")
+        .file("src/lib.rs", "not rust")
+        .publish();
+    // Publish with lockfile containing bad version of `bar` (0.1.1)
+    Package::new("foo", "0.1.0")
+        .dep("bar", "0.1")
+        .file("src/lib.rs", "")
+        .file(
+            "src/main.rs",
+            "extern crate foo; extern crate bar; fn main() {}",
+        )
+        .file(
+            "Cargo.lock",
+            r#"
+[[package]]
+name = "bar"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "foo"
+version = "0.1.0"
+dependencies = [
+ "bar 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+"#,
+        )
+        .publish();
+
+    cargo_process("install foo --locked")
+        .with_stderr_data(str![[r#"
+...
+[..]not rust[..]
+...
+"#]])
+        .with_status(101)
+        .run();
+
+    // Create lockfile with the good `bar` version (0.1.0) and use it for install
+    project()
+        .file(
+            "Cargo.lock",
+            r#"
+[[package]]
+name = "bar"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "foo"
+version = "0.1.0"
+dependencies = [
+ "bar 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+"#,
+        )
+        .build();
+    cargo_process("install foo -Zunstable-options --lockfile-path foo/Cargo.lock")
+        .masquerade_as_nightly_cargo(&["lockfile-path"])
+        .run();
+
+    assert!(paths::root().join("foo/Cargo.lock").is_file());
+    assert_has_installed_exe(paths::cargo_home(), "foo");
+}
+
+#[cargo_test]
+fn install_lock_file_path_must_present() {
+    // `cargo install` will imply --locked when lockfile path is provided
+    Package::new("bar", "0.1.0").publish();
+    Package::new("foo", "0.1.0")
+        .dep("bar", "0.1")
+        .file("src/lib.rs", "")
+        .file(
+            "src/main.rs",
+            "extern crate foo; extern crate bar; fn main() {}",
+        )
+        .publish();
+
+    cargo_process("install foo -Zunstable-options --lockfile-path lockfile_dir/Cargo.lock")
+        .masquerade_as_nightly_cargo(&["lockfile-path"])
+        .with_stderr_data(str![[r#"
+...
+[ERROR] no Cargo.lock file found in the requested path [ROOT]/lockfile_dir/Cargo.lock
+...
+"#]])
+        .with_status(101)
+        .run();
 }
 
 #[cargo_test]
