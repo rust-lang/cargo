@@ -555,7 +555,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
             &script_out_dir,
             nightly_features_allowed,
             &targets,
-            &msrv,
+            msrv.as_ref(),
         )?;
 
         if json_messages {
@@ -583,7 +583,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
                 &script_out_dir,
                 nightly_features_allowed,
                 &targets_fresh,
-                &msrv_fresh,
+                msrv_fresh.as_ref(),
             )?,
         };
 
@@ -639,7 +639,7 @@ impl BuildOutput {
         script_out_dir: &Path,
         nightly_features_allowed: bool,
         targets: &[Target],
-        msrv: &Option<RustVersion>,
+        msrv: Option<&RustVersion>,
     ) -> CargoResult<BuildOutput> {
         let contents = paths::read_bytes(path)?;
         BuildOutput::parse(
@@ -667,7 +667,7 @@ impl BuildOutput {
         script_out_dir: &Path,
         nightly_features_allowed: bool,
         targets: &[Target],
-        msrv: &Option<RustVersion>,
+        msrv: Option<&RustVersion>,
     ) -> CargoResult<BuildOutput> {
         let mut library_paths = Vec::new();
         let mut library_links = Vec::new();
@@ -717,7 +717,7 @@ impl BuildOutput {
 
         fn check_minimum_supported_rust_version_for_new_syntax(
             pkg_descr: &str,
-            msrv: &Option<RustVersion>,
+            msrv: Option<&RustVersion>,
             flag: &str,
         ) -> CargoResult<()> {
             if let Some(msrv) = msrv {
@@ -1250,7 +1250,7 @@ fn prev_build_output(
             &script_out_dir,
             build_runner.bcx.gctx.nightly_features_allowed,
             unit.pkg.targets(),
-            &unit.pkg.rust_version().cloned(),
+            unit.pkg.rust_version(),
         )
         .ok(),
         prev_script_out_dir,

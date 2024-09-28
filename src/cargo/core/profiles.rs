@@ -372,7 +372,7 @@ impl Profiles {
             {
                 continue;
             }
-            let found = validate_packages_unique(resolve, name, &profile.toml)?;
+            let found = validate_packages_unique(resolve, name, profile.toml.as_ref())?;
             // We intentionally do not validate unmatched packages for config
             // profiles, in case they are defined in a central location. This
             // iterates over the manifest profiles only.
@@ -1330,7 +1330,7 @@ fn get_config_profile(ws: &Workspace<'_>, name: &str) -> CargoResult<Option<Toml
 fn validate_packages_unique(
     resolve: &Resolve,
     name: &str,
-    toml: &Option<TomlProfile>,
+    toml: Option<&TomlProfile>,
 ) -> CargoResult<HashSet<PackageIdSpec>> {
     let Some(toml) = toml else {
         return Ok(HashSet::new());

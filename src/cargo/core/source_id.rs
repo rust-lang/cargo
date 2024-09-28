@@ -468,30 +468,30 @@ impl SourceId {
 
     /// Creates a new `SourceId` from this source with the given `precise`.
     pub fn with_git_precise(self, fragment: Option<String>) -> SourceId {
-        self.with_precise(&fragment.map(|f| Precise::GitUrlFragment(f)))
+        self.with_precise(fragment.map(|f| Precise::GitUrlFragment(f)))
     }
 
     /// Creates a new `SourceId` from this source without a `precise`.
     pub fn without_precise(self) -> SourceId {
-        self.with_precise(&None)
+        self.with_precise(None)
     }
 
     /// Creates a new `SourceId` from this source without a `precise`.
     pub fn with_locked_precise(self) -> SourceId {
-        self.with_precise(&Some(Precise::Locked))
+        self.with_precise(Some(Precise::Locked))
     }
 
     /// Creates a new `SourceId` from this source with the `precise` from some other `SourceId`.
     pub fn with_precise_from(self, v: Self) -> SourceId {
-        self.with_precise(&v.inner.precise)
+        self.with_precise(v.inner.precise.clone())
     }
 
-    fn with_precise(self, precise: &Option<Precise>) -> SourceId {
-        if &self.inner.precise == precise {
+    fn with_precise(self, precise: Option<Precise>) -> SourceId {
+        if self.inner.precise == precise {
             self
         } else {
             SourceId::wrap(SourceIdInner {
-                precise: precise.clone(),
+                precise,
                 ..(*self.inner).clone()
             })
         }

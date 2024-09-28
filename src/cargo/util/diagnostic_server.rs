@@ -4,7 +4,7 @@
 use std::collections::HashSet;
 use std::io::{BufReader, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
-use std::path::PathBuf;
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
@@ -83,7 +83,7 @@ pub struct DiagnosticPrinter<'a> {
     /// This is used to get the correct bug report URL. For instance,
     /// if `clippy-driver` is set as the value for the wrapper,
     /// then the correct bug report URL for `clippy` can be obtained.
-    workspace_wrapper: &'a Option<PathBuf>,
+    workspace_wrapper: Option<&'a Path>,
     // A set of messages that have already been printed.
     dedupe: HashSet<Message>,
 }
@@ -91,7 +91,7 @@ pub struct DiagnosticPrinter<'a> {
 impl<'a> DiagnosticPrinter<'a> {
     pub fn new(
         gctx: &'a GlobalContext,
-        workspace_wrapper: &'a Option<PathBuf>,
+        workspace_wrapper: Option<&'a Path>,
     ) -> DiagnosticPrinter<'a> {
         DiagnosticPrinter {
             gctx,
@@ -243,7 +243,7 @@ fn gen_please_report_this_bug_text(url: &str) -> String {
     )
 }
 
-fn get_bug_report_url(rustc_workspace_wrapper: &Option<PathBuf>) -> &str {
+fn get_bug_report_url(rustc_workspace_wrapper: Option<&Path>) -> &str {
     let clippy = std::ffi::OsStr::new("clippy-driver");
     let issue_link = match rustc_workspace_wrapper.as_ref().and_then(|x| x.file_stem()) {
         Some(wrapper) if wrapper == clippy => "https://github.com/rust-lang/rust-clippy/issues",

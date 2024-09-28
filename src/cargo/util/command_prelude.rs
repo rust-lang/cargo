@@ -1319,7 +1319,7 @@ fn new_gctx_for_completions() -> CargoResult<GlobalContext> {
         frozen,
         locked,
         offline,
-        &target_dir,
+        target_dir,
         unstable_flags,
         cli_config,
     )?;

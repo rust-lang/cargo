@@ -370,7 +370,7 @@ pub fn create_bcx<'a, 'gctx>(
         explicit_host_kind,
         mode: build_config.mode,
         resolve: &resolve,
-        workspace_resolve: &workspace_resolve,
+        workspace_resolve: workspace_resolve.as_ref(),
         resolved_features: &resolved_features,
         package_set: &pkg_set,
         profiles: &profiles,

@@ -36,7 +36,7 @@ fn main() {
         false,
         false,
         false,
-        &None,
+        None,
         &["gc".to_string()],
         &[],
     )

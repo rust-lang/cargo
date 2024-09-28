@@ -133,7 +133,7 @@ fn run_unit_tests(
             cwd,
             unit,
             path,
-            script_meta,
+            script_meta.as_ref(),
             test_args,
             compilation,
             "unittests",
@@ -331,7 +331,7 @@ fn display_no_run_information(
             cwd,
             unit,
             path,
-            script_meta,
+            script_meta.as_ref(),
             test_args,
             compilation,
             exec_type,
@@ -355,7 +355,7 @@ fn cmd_builds(
     cwd: &Path,
     unit: &Unit,
     path: &PathBuf,
-    script_meta: &Option<Metadata>,
+    script_meta: Option<&Metadata>,
     test_args: &[&str],
     compilation: &Compilation<'_>,
     exec_type: &str,
@@ -380,7 +380,7 @@ fn cmd_builds(
         ),
     };
 
-    let mut cmd = compilation.target_process(path, unit.kind, &unit.pkg, *script_meta)?;
+    let mut cmd = compilation.target_process(path, unit.kind, &unit.pkg, script_meta.cloned())?;
     cmd.args(test_args);
     if unit.target.harness() && gctx.shell().verbosity() == Verbosity::Quiet {
         cmd.arg("--quiet");

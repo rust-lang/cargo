@@ -114,7 +114,7 @@ impl OnePasswordKeychain {
         Ok(Some(buffer))
     }
 
-    fn make_cmd(&self, session: &Option<String>, args: &[&str]) -> Command {
+    fn make_cmd(&self, session: Option<&str>, args: &[&str]) -> Command {
         let mut cmd = Command::new("op");
         cmd.args(args);
         if let Some(account) = &self.account {
@@ -153,7 +153,7 @@ impl OnePasswordKeychain {
         Ok(buffer)
     }
 
-    fn search(&self, session: &Option<String>, index_url: &str) -> Result<Option<String>, Error> {
+    fn search(&self, session: Option<&str>, index_url: &str) -> Result<Option<String>, Error> {
         let cmd = self.make_cmd(
             session,
             &[
@@ -192,7 +192,7 @@ impl OnePasswordKeychain {
 
     fn modify(
         &self,
-        session: &Option<String>,
+        session: Option<&str>,
         id: &str,
         token: Secret<&str>,
         _name: Option<&str>,
@@ -207,7 +207,7 @@ impl OnePasswordKeychain {
 
     fn create(
         &self,
-        session: &Option<String>,
+        session: Option<&str>,
         index_url: &str,
         token: Secret<&str>,
         name: Option<&str>,
@@ -235,7 +235,7 @@ impl OnePasswordKeychain {
         Ok(())
     }
 
-    fn get_token(&self, session: &Option<String>, id: &str) -> Result<Secret<String>, Error> {
+    fn get_token(&self, session: Option<&str>, id: &str) -> Result<Secret<String>, Error> {
         let cmd = self.make_cmd(session, &["item", "get", "--format=json", id]);
         let buffer = self.run_cmd(cmd)?;
         let item: Login = serde_json::from_str(&buffer)
@@ -250,7 +250,7 @@ impl OnePasswordKeychain {
         }
     }
 
-    fn delete(&self, session: &Option<String>, id: &str) -> Result<(), Error> {
+    fn delete(&self, session: Option<&str>, id: &str) -> Result<(), Error> {
         let cmd = self.make_cmd(session, &["item", "delete", id]);
         self.run_cmd(cmd)?;
         Ok(())
@@ -270,8 +270,8 @@ impl Credential for OnePasswordCredential {
         match action {
             Action::Get(_) => {
                 let session = op.signin()?;
-                if let Some(id) = op.search(&session, registry.index_url)? {
-                    op.get_token(&session, &id)
+                if let Some(id) = op.search(session.as_deref(), registry.index_url)? {
+                    op.get_token(session.as_deref(), &id)
                         .map(|token| CredentialResponse::Get {
                             token,
                             cache: CacheControl::Session,
@@ -284,21 +284,26 @@ impl Credential for OnePasswordCredential {
             Action::Login(options) => {
                 let session = op.signin()?;
                 // Check if an item already exists.
-                if let Some(id) = op.search(&session, registry.index_url)? {
+                if let Some(id) = op.search(session.as_deref(), registry.index_url)? {
                     eprintln!("note: token already exists for `{}`", registry.index_url);
                     let token = cargo_credential::read_token(options, registry)?;
-                    op.modify(&session, &id, token.as_deref(), None)?;
+                    op.modify(session.as_deref(), &id, token.as_deref(), None)?;
                 } else {
                     let token = cargo_credential::read_token(options, registry)?;
-                    op.create(&session, registry.index_url, token.as_deref(), None)?;
+                    op.create(
+                        session.as_deref(),
+                        registry.index_url,
+                        token.as_deref(),
+                        None,
+                    )?;
                 }
                 Ok(CredentialResponse::Login)
             }
             Action::Logout => {
                 let session = op.signin()?;
                 // Check if an item already exists.
-                if let Some(id) = op.search(&session, registry.index_url)? {
-                    op.delete(&session, &id)?;
+                if let Some(id) = op.search(session.as_deref(), registry.index_url)? {
+                    op.delete(session.as_deref(), &id)?;
                     Ok(CredentialResponse::Logout)
                 } else {
                     Err(Error::NotFound)

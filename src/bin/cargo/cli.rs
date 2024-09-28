@@ -436,7 +436,7 @@ fn configure_gctx(
         frozen,
         locked,
         offline,
-        arg_target_dir,
+        arg_target_dir.as_deref(),
         &unstable_flags,
         &config_args,
     )?;

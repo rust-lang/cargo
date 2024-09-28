@@ -239,8 +239,11 @@ impl TomlPackage {
         }
     }
 
-    pub fn normalized_edition(&self) -> Result<Option<&String>, UnresolvedError> {
-        self.edition.as_ref().map(|v| v.normalized()).transpose()
+    pub fn normalized_edition(&self) -> Result<Option<&str>, UnresolvedError> {
+        self.edition
+            .as_ref()
+            .map(|v| v.normalized().map(String::as_str))
+            .transpose()
     }
 
     pub fn normalized_rust_version(&self) -> Result<Option<&RustVersion>, UnresolvedError> {
@@ -258,7 +261,7 @@ impl TomlPackage {
         self.authors.as_ref().map(|v| v.normalized()).transpose()
     }
 
-    pub fn normalized_build(&self) -> Result<Option<&String>, UnresolvedError> {
+    pub fn normalized_build(&self) -> Result<Option<&str>, UnresolvedError> {
         let readme = self.build.as_ref().ok_or(UnresolvedError)?;
         match readme {
             StringOrBool::Bool(false) => Ok(None),
@@ -279,30 +282,33 @@ impl TomlPackage {
         self.publish.as_ref().map(|v| v.normalized()).transpose()
     }
 
-    pub fn normalized_description(&self) -> Result<Option<&String>, UnresolvedError> {
+    pub fn normalized_description(&self) -> Result<Option<&str>, UnresolvedError> {
         self.description
             .as_ref()
-            .map(|v| v.normalized())
+            .map(|v| v.normalized().map(String::as_str))
             .transpose()
     }
 
-    pub fn normalized_homepage(&self) -> Result<Option<&String>, UnresolvedError> {
-        self.homepage.as_ref().map(|v| v.normalized()).transpose()
+    pub fn normalized_homepage(&self) -> Result<Option<&str>, UnresolvedError> {
+        self.homepage
+            .as_ref()
+            .map(|v| v.normalized().map(String::as_str))
+            .transpose()
     }
 
-    pub fn normalized_documentation(&self) -> Result<Option<&String>, UnresolvedError> {
+    pub fn normalized_documentation(&self) -> Result<Option<&str>, UnresolvedError> {
         self.documentation
             .as_ref()
-            .map(|v| v.normalized())
+            .map(|v| v.normalized().map(String::as_str))
             .transpose()
     }
 
-    pub fn normalized_readme(&self) -> Result<Option<&String>, UnresolvedError> {
+    pub fn normalized_readme(&self) -> Result<Option<&str>, UnresolvedError> {
         let readme = self.readme.as_ref().ok_or(UnresolvedError)?;
         readme.normalized().and_then(|sb| match sb {
             StringOrBool::Bool(false) => Ok(None),
             StringOrBool::Bool(true) => Err(UnresolvedError),
-            StringOrBool::String(value) => Ok(Some(value)),
+            StringOrBool::String(value) => Ok(Some(value.as_str())),
         })
     }
 
@@ -314,19 +320,25 @@ impl TomlPackage {
         self.categories.as_ref().map(|v| v.normalized()).transpose()
     }
 
-    pub fn normalized_license(&self) -> Result<Option<&String>, UnresolvedError> {
-        self.license.as_ref().map(|v| v.normalized()).transpose()
-    }
-
-    pub fn normalized_license_file(&self) -> Result<Option<&String>, UnresolvedError> {
-        self.license_file
+    pub fn normalized_license(&self) -> Result<Option<&str>, UnresolvedError> {
+        self.license
             .as_ref()
-            .map(|v| v.normalized())
+            .map(|v| v.normalized().map(String::as_str))
             .transpose()
     }
 
-    pub fn normalized_repository(&self) -> Result<Option<&String>, UnresolvedError> {
-        self.repository.as_ref().map(|v| v.normalized()).transpose()
+    pub fn normalized_license_file(&self) -> Result<Option<&str>, UnresolvedError> {
+        self.license_file
+            .as_ref()
+            .map(|v| v.normalized().map(String::as_str))
+            .transpose()
+    }
+
+    pub fn normalized_repository(&self) -> Result<Option<&str>, UnresolvedError> {
+        self.repository
+            .as_ref()
+            .map(|v| v.normalized().map(String::as_str))
+            .transpose()
     }
 }
 

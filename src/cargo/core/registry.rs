@@ -414,7 +414,7 @@ impl<'gctx> PackageRegistry<'gctx> {
                 let summaries = summaries.into_iter().map(|s| s.into_summary()).collect();
 
                 let (summary, should_unlock) =
-                    match summary_for_patch(orig_patch, &locked, summaries, source) {
+                    match summary_for_patch(orig_patch, locked.as_ref(), summaries, source) {
                         Poll::Ready(x) => x,
                         Poll::Pending => {
                             patch_deps_pending.push(patch_dep_remaining);
@@ -918,7 +918,7 @@ fn lock(
 /// via the original patch, so we need to inform the resolver to "unlock" it.
 fn summary_for_patch(
     orig_patch: &Dependency,
-    locked: &Option<LockedPatchDependency>,
+    locked: Option<&LockedPatchDependency>,
     mut summaries: Vec<Summary>,
     source: &mut dyn Source,
 ) -> Poll<CargoResult<(Summary, Option<PackageId>)>> {
@@ -964,7 +964,7 @@ fn summary_for_patch(
 
         let orig_matches = orig_matches.into_iter().map(|s| s.into_summary()).collect();
 
-        let summary = ready!(summary_for_patch(orig_patch, &None, orig_matches, source))?;
+        let summary = ready!(summary_for_patch(orig_patch, None, orig_matches, source))?;
         return Poll::Ready(Ok((summary.0, Some(locked.package_id))));
     }
     // Try checking if there are *any* packages that match this by name.

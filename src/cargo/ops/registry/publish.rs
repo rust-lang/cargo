@@ -690,7 +690,7 @@ fn package_list(pkgs: impl IntoIterator<Item = PackageId>, final_sep: &str) -> S
 
 fn validate_registry(pkgs: &[&Package], reg_or_index: Option<&RegistryOrIndex>) -> CargoResult<()> {
     for pkg in pkgs {
-        if pkg.publish() == &Some(Vec::new()) {
+        if pkg.publish() == Some(Vec::new()).as_ref() {
             bail!(
                     "`{}` cannot be published.\n\
                     `package.publish` must be set to `true` or a non-empty list in Cargo.toml to publish.",

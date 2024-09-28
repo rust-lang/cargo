@@ -45,7 +45,7 @@ pub fn analyze_cargo_lints_table(
         let (_, reason, _) = level_priority(
             name,
             *default_level,
-            *edition_lint_opts,
+            edition_lint_opts.cloned(),
             pkg_lints,
             manifest.edition(),
         );
@@ -97,22 +97,22 @@ fn find_lint_or_group<'a>(
 ) -> Option<(
     &'static str,
     &LintLevel,
-    &Option<(Edition, LintLevel)>,
-    &Option<&'static Feature>,
+    Option<&(Edition, LintLevel)>,
+    Option<&'static Feature>,
 )> {
     if let Some(lint) = LINTS.iter().find(|l| l.name == name) {
         Some((
             lint.name,
             &lint.default_level,
-            &lint.edition_lint_opts,
-            &lint.feature_gate,
+            lint.edition_lint_opts.as_ref(),
+            lint.feature_gate,
         ))
     } else if let Some(group) = LINT_GROUPS.iter().find(|g| g.name == name) {
         Some((
             group.name,
             &group.default_level,
-            &group.edition_lint_opts,
-            &group.feature_gate,
+            group.edition_lint_opts.as_ref(),
+            group.feature_gate,
         ))
     } else {
         None

@@ -251,7 +251,7 @@ fn do_package<'a>(
         } else {
             let tarball = create_package(ws, &pkg, ar_files, local_reg.as_ref())?;
             if let Some(local_reg) = local_reg.as_mut() {
-                if pkg.publish() != &Some(Vec::new()) {
+                if pkg.publish() != Some(Vec::new()).as_ref() {
                     local_reg.add_package(ws, &pkg, &tarball)?;
                 }
             }

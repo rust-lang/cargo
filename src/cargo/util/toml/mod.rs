@@ -254,11 +254,11 @@ fn to_workspace_root_config(
     };
     let ws_root_config = WorkspaceRootConfig::new(
         package_root,
-        &normalized_toml.members,
-        &normalized_toml.default_members,
-        &normalized_toml.exclude,
-        &Some(inheritable),
-        &normalized_toml.metadata,
+        normalized_toml.members.as_ref(),
+        normalized_toml.default_members.as_ref(),
+        normalized_toml.exclude.as_ref(),
+        Some(&inheritable),
+        normalized_toml.metadata.as_ref(),
     );
     ws_root_config
 }
@@ -399,8 +399,8 @@ fn normalize_toml(
             warnings,
         )?;
         deprecated_underscore(
-            &original_toml.dev_dependencies2,
-            &original_toml.dev_dependencies,
+            original_toml.dev_dependencies2.as_ref(),
+            original_toml.dev_dependencies.as_ref(),
             "dev-dependencies",
             package_name,
             "package",
@@ -420,8 +420,8 @@ fn normalize_toml(
             warnings,
         )?;
         deprecated_underscore(
-            &original_toml.build_dependencies2,
-            &original_toml.build_dependencies,
+            original_toml.build_dependencies2.as_ref(),
+            original_toml.build_dependencies.as_ref(),
             "build-dependencies",
             package_name,
             "package",
@@ -455,8 +455,8 @@ fn normalize_toml(
                 warnings,
             )?;
             deprecated_underscore(
-                &platform.dev_dependencies2,
-                &platform.dev_dependencies,
+                platform.dev_dependencies2.as_ref(),
+                platform.dev_dependencies.as_ref(),
                 "dev-dependencies",
                 name,
                 "platform target",
@@ -476,8 +476,8 @@ fn normalize_toml(
                 warnings,
             )?;
             deprecated_underscore(
-                &platform.build_dependencies2,
-                &platform.build_dependencies,
+                platform.build_dependencies2.as_ref(),
+                platform.build_dependencies.as_ref(),
                 "build-dependencies",
                 name,
                 "platform target",
@@ -779,8 +779,8 @@ fn normalize_dependencies<'a>(
         )?;
         if let manifest::TomlDependency::Detailed(ref mut d) = resolved {
             deprecated_underscore(
-                &d.default_features2,
-                &d.default_features,
+                d.default_features2.as_ref(),
+                d.default_features.as_ref(),
                 "default-features",
                 name_in_toml,
                 "dependency",
@@ -1306,7 +1306,7 @@ pub fn to_real_manifest(
         &normalized_toml,
         package_root,
         edition,
-        &normalized_package.metabuild,
+        normalized_package.metabuild.as_ref(),
         warnings,
     )?;
 
@@ -1454,19 +1454,19 @@ pub fn to_real_manifest(
         description: normalized_package
             .normalized_description()
             .expect("previously normalized")
-            .cloned(),
+            .map(str::to_string),
         homepage: normalized_package
             .normalized_homepage()
             .expect("previously normalized")
-            .cloned(),
+            .map(str::to_string),
         documentation: normalized_package
             .normalized_documentation()
             .expect("previously normalized")
-            .cloned(),
+            .map(str::to_string),
         readme: normalized_package
             .normalized_readme()
             .expect("previously normalized")
-            .cloned(),
+            .map(str::to_string),
         authors: normalized_package
             .normalized_authors()
             .expect("previously normalized")
@@ -1475,15 +1475,15 @@ pub fn to_real_manifest(
         license: normalized_package
             .normalized_license()
             .expect("previously normalized")
-            .cloned(),
+            .map(str::to_string),
         license_file: normalized_package
             .normalized_license_file()
             .expect("previously normalized")
-            .cloned(),
+            .map(str::to_string),
         repository: normalized_package
             .normalized_repository()
             .expect("previously normalized")
-            .cloned(),
+            .map(str::to_string),
         keywords: normalized_package
             .normalized_keywords()
             .expect("previously normalized")
@@ -2632,8 +2632,8 @@ fn emit_diagnostic(
 
 /// Warn about paths that have been deprecated and may conflict.
 fn deprecated_underscore<T>(
-    old: &Option<T>,
-    new: &Option<T>,
+    old: Option<&T>,
+    new: Option<&T>,
     new_path: &str,
     name: &str,
     kind: &str,

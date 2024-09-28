@@ -98,7 +98,7 @@ fn global_context_configure(gctx: &mut GlobalContext, args: &ArgMatches) -> CliR
         frozen,
         locked,
         offline,
-        &None,
+        None,
         &unstable_flags,
         &config_args,
     )?;
@@ -333,7 +333,7 @@ fn changed<'r, 'ws>(
     let ws_members = ws
         .members()
         .filter(|pkg| pkg.name() != root_pkg_name) // Only take care of sub crates here.
-        .filter(|pkg| pkg.publish() != &Some(vec![])) // filter out `publish = false`
+        .filter(|pkg| pkg.publish() != Some(&vec![])) // filter out `publish = false`
         .map(|pkg| {
             // Having relative package root path so that we can compare with
             // paths of changed files to determine which package has changed.

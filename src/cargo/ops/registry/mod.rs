@@ -326,7 +326,7 @@ pub(crate) fn infer_registry(pkgs: &[&Package]) -> CargoResult<Option<RegistryOr
     // Ignore "publish = false" packages while inferring the registry.
     let publishable_pkgs: Vec<_> = pkgs
         .iter()
-        .filter(|p| p.publish() != &Some(Vec::new()))
+        .filter(|p| p.publish() != Some(Vec::new()).as_ref())
         .collect();
 
     let Some((first, rest)) = publishable_pkgs.split_first() else {
@@ -335,7 +335,7 @@ pub(crate) fn infer_registry(pkgs: &[&Package]) -> CargoResult<Option<RegistryOr
 
     // If all packages have the same publish settings, we take that as the default.
     if rest.iter().all(|p| p.publish() == first.publish()) {
-        match publishable_pkgs[0].publish().as_deref() {
+        match publishable_pkgs[0].publish().map(Vec::as_slice) {
             Some([unique_pkg_reg]) => {
                 Ok(Some(RegistryOrIndex::Registry(unique_pkg_reg.to_owned())))
             }
@@ -358,7 +358,7 @@ pub(crate) fn infer_registry(pkgs: &[&Package]) -> CargoResult<Option<RegistryOr
             .iter()
             // `None` means "all registries", so drop them instead of including them
             // in the intersection.
-            .filter_map(|p| p.publish().as_deref())
+            .filter_map(|p| p.publish())
             .map(|p| p.iter().collect::<HashSet<_>>())
             .reduce(|xs, ys| xs.intersection(&ys).cloned().collect())
             .unwrap_or_default();

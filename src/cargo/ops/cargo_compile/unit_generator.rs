@@ -53,7 +53,7 @@ pub(super) struct UnitGenerator<'a, 'gctx> {
     pub explicit_host_kind: CompileKind,
     pub mode: CompileMode,
     pub resolve: &'a Resolve,
-    pub workspace_resolve: &'a Option<Resolve>,
+    pub workspace_resolve: Option<&'a Resolve>,
     pub resolved_features: &'a features::ResolvedFeatures,
     pub package_set: &'a PackageSet<'gctx>,
     pub profiles: &'a Profiles,
@@ -564,9 +564,8 @@ Rustdoc did not scrape the following examples because they require dev-dependenc
         required_features: &[String],
         summary: &Summary,
     ) -> CargoResult<()> {
-        let resolve = match self.workspace_resolve {
-            None => return Ok(()),
-            Some(resolve) => resolve,
+        let Some(resolve) = self.workspace_resolve else {
+            return Ok(());
         };
 
         let mut shell = self.ws.gctx().shell();

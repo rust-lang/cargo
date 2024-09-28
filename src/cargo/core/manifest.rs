@@ -555,8 +555,8 @@ impl Manifest {
     pub fn profiles(&self) -> Option<&TomlProfiles> {
         self.normalized_toml.profile.as_ref()
     }
-    pub fn publish(&self) -> &Option<Vec<String>> {
-        &self.publish
+    pub fn publish(&self) -> Option<&Vec<String>> {
+        self.publish.as_ref()
     }
     pub fn replace(&self) -> &[(PackageIdSpec, Dependency)] {
         &self.replace

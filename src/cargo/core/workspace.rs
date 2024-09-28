@@ -1852,19 +1852,19 @@ impl WorkspaceRootConfig {
     /// Creates a new Intermediate Workspace Root configuration.
     pub fn new(
         root_dir: &Path,
-        members: &Option<Vec<String>>,
-        default_members: &Option<Vec<String>>,
-        exclude: &Option<Vec<String>>,
-        inheritable: &Option<InheritableFields>,
-        custom_metadata: &Option<toml::Value>,
+        members: Option<&Vec<String>>,
+        default_members: Option<&Vec<String>>,
+        exclude: Option<&Vec<String>>,
+        inheritable: Option<&InheritableFields>,
+        custom_metadata: Option<&toml::Value>,
     ) -> WorkspaceRootConfig {
         WorkspaceRootConfig {
             root_dir: root_dir.to_path_buf(),
-            members: members.clone(),
-            default_members: default_members.clone(),
-            exclude: exclude.clone().unwrap_or_default(),
-            inheritable_fields: inheritable.clone().unwrap_or_default(),
-            custom_metadata: custom_metadata.clone(),
+            members: members.cloned(),
+            default_members: default_members.cloned(),
+            exclude: exclude.cloned().unwrap_or_default(),
+            inheritable_fields: inheritable.cloned().unwrap_or_default(),
+            custom_metadata: custom_metadata.cloned(),
         }
     }
     /// Checks the path against the `excluded` list.

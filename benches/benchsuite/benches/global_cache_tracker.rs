@@ -43,7 +43,7 @@ fn initialize_context() -> GlobalContext {
         false,
         false,
         false,
-        &None,
+        None,
         &["gc".to_string()],
         &[],
     )

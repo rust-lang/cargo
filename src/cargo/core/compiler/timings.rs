@@ -289,7 +289,7 @@ impl<'gctx> Timings<'gctx> {
     pub fn finished(
         &mut self,
         build_runner: &BuildRunner<'_, '_>,
-        error: &Option<anyhow::Error>,
+        error: Option<&anyhow::Error>,
     ) -> CargoResult<()> {
         if !self.enabled {
             return Ok(());
@@ -308,7 +308,7 @@ impl<'gctx> Timings<'gctx> {
     fn report_html(
         &self,
         build_runner: &BuildRunner<'_, '_>,
-        error: &Option<anyhow::Error>,
+        error: Option<&anyhow::Error>,
     ) -> CargoResult<()> {
         let duration = self.start.elapsed().as_secs_f64();
         let timestamp = self.start_str.replace(&['-', ':'][..], "");
@@ -362,7 +362,7 @@ impl<'gctx> Timings<'gctx> {
         f: &mut impl Write,
         duration: f64,
         bcx: &BuildContext<'_, '_>,
-        error: &Option<anyhow::Error>,
+        error: Option<&anyhow::Error>,
     ) -> CargoResult<()> {
         let targets: Vec<String> = self
             .root_targets

@@ -69,7 +69,7 @@ proptest! {
                 false,
                 false,
                 false,
-                &None,
+                None,
                 &["minimal-versions".to_string()],
                 &[],
             )
@@ -110,7 +110,7 @@ proptest! {
                 false,
                 false,
                 false,
-                &None,
+                None,
                 &["direct-minimal-versions".to_string()],
                 &[],
             )
@@ -436,7 +436,7 @@ fn test_resolving_minimum_version_with_transitive_deps() {
         false,
         false,
         false,
-        &None,
+        None,
         &["minimal-versions".to_string()],
         &[],
     )

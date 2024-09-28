@@ -38,7 +38,7 @@ pub(super) fn to_targets(
     normalized_toml: &TomlManifest,
     package_root: &Path,
     edition: Edition,
-    metabuild: &Option<StringOrVec>,
+    metabuild: Option<&StringOrVec>,
     warnings: &mut Vec<String>,
 ) -> CargoResult<Vec<Target>> {
     let mut targets = Vec::new();
@@ -1127,8 +1127,8 @@ fn validate_proc_macro(
     warnings: &mut Vec<String>,
 ) -> CargoResult<()> {
     deprecated_underscore(
-        &target.proc_macro2,
-        &target.proc_macro,
+        target.proc_macro2.as_ref(),
+        target.proc_macro.as_ref(),
         "proc-macro",
         name_or_panic(target),
         format!("{kind} target").as_str(),
@@ -1166,8 +1166,8 @@ fn validate_crate_types(
     warnings: &mut Vec<String>,
 ) -> CargoResult<()> {
     deprecated_underscore(
-        &target.crate_type2,
-        &target.crate_type,
+        target.crate_type2.as_ref(),
+        target.crate_type.as_ref(),
         "crate-type",
         name_or_panic(target),
         format!("{kind} target").as_str(),

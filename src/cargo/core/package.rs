@@ -160,7 +160,7 @@ impl Package {
     /// Returns `None` if the package is set to publish.
     /// Returns `Some(allowed_registries)` if publishing is limited to specified
     /// registries or if package is set to not publish.
-    pub fn publish(&self) -> &Option<Vec<String>> {
+    pub fn publish(&self) -> Option<&Vec<String>> {
         self.manifest().publish()
     }
     /// Returns `true` if this package is a proc-macro.
@@ -250,7 +250,7 @@ impl Package {
             edition: self.manifest().edition().to_string(),
             links: self.manifest().links().map(|s| s.to_owned()),
             metabuild: self.manifest().metabuild().cloned(),
-            publish: self.publish().as_ref().cloned(),
+            publish: self.publish().cloned(),
             default_run: self.manifest().default_run().map(|s| s.to_owned()),
             rust_version: self.rust_version().cloned(),
         }

@@ -117,7 +117,7 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use std::thread::{self, Scope};
 use std::time::Duration;
@@ -499,7 +499,7 @@ impl<'gctx> JobQueue<'gctx> {
             pending_queue: Vec::new(),
             print: DiagnosticPrinter::new(
                 build_runner.bcx.gctx,
-                &build_runner.bcx.rustc().workspace_wrapper,
+                build_runner.bcx.rustc().workspace_wrapper.as_deref(),
             ),
             finished: 0,
             per_package_future_incompat_reports: Vec::new(),
@@ -661,7 +661,7 @@ impl<'gctx> DrainState<'gctx> {
                         self.report_warning_count(
                             build_runner.bcx.gctx,
                             id,
-                            &build_runner.bcx.rustc().workspace_wrapper,
+                            build_runner.bcx.rustc().workspace_wrapper.as_deref(),
                         );
                         self.active.remove(&id).unwrap()
                     }
@@ -807,7 +807,10 @@ impl<'gctx> DrainState<'gctx> {
         }
 
         let time_elapsed = util::elapsed(build_runner.bcx.gctx.creation_time().elapsed());
-        if let Err(e) = self.timings.finished(build_runner, &errors.to_error()) {
+        if let Err(e) = self
+            .timings
+            .finished(build_runner, errors.to_error().as_ref())
+        {
             self.handle_error(&mut build_runner.bcx.gctx.shell(), &mut errors, e);
         }
         if build_runner.bcx.build_config.emit_json() {
@@ -1021,7 +1024,7 @@ impl<'gctx> DrainState<'gctx> {
         &mut self,
         gctx: &GlobalContext,
         id: JobId,
-        rustc_workspace_wrapper: &Option<PathBuf>,
+        rustc_workspace_wrapper: Option<&Path>,
     ) {
         let count = match self.warning_count.remove(&id) {
             // An error could add an entry for a `Unit`

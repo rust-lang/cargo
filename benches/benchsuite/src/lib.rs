@@ -188,7 +188,7 @@ impl Fixtures {
             false,
             false,
             false,
-            &Some(self.target_dir()),
+            Some(&self.target_dir()),
             &[],
             &[],
         )

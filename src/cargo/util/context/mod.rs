@@ -415,7 +415,9 @@ impl GlobalContext {
     /// Gets the path to the `rustdoc` executable.
     pub fn rustdoc(&self) -> CargoResult<&Path> {
         self.rustdoc
-            .try_borrow_with(|| Ok(self.get_tool(Tool::Rustdoc, &self.build_config()?.rustdoc)))
+            .try_borrow_with(|| {
+                Ok(self.get_tool(Tool::Rustdoc, self.build_config()?.rustdoc.as_ref()))
+            })
             .map(AsRef::as_ref)
     }
 
@@ -426,14 +428,15 @@ impl GlobalContext {
                 .join(".rustc_info.json")
                 .into_path_unlocked()
         });
-        let wrapper = self.maybe_get_tool("rustc_wrapper", &self.build_config()?.rustc_wrapper);
+        let wrapper =
+            self.maybe_get_tool("rustc_wrapper", self.build_config()?.rustc_wrapper.as_ref());
         let rustc_workspace_wrapper = self.maybe_get_tool(
             "rustc_workspace_wrapper",
-            &self.build_config()?.rustc_workspace_wrapper,
+            self.build_config()?.rustc_workspace_wrapper.as_ref(),
         );
 
         Rustc::new(
-            self.get_tool(Tool::Rustc, &self.build_config()?.rustc),
+            self.get_tool(Tool::Rustc, self.build_config()?.rustc.as_ref()),
             wrapper,
             rustc_workspace_wrapper,
             &self
@@ -1016,7 +1019,7 @@ impl GlobalContext {
         frozen: bool,
         locked: bool,
         offline: bool,
-        target_dir: &Option<PathBuf>,
+        target_dir: Option<&Path>,
         unstable_flags: &[String],
         cli_config: &[String],
     ) -> CargoResult<()> {
@@ -1093,7 +1096,9 @@ impl GlobalContext {
                 .ok()
                 .and_then(|n| n.offline)
                 .unwrap_or(false);
-        let cli_target_dir = target_dir.as_ref().map(|dir| Filesystem::new(dir.clone()));
+        let cli_target_dir = target_dir
+            .as_ref()
+            .map(|dir| Filesystem::new(dir.to_path_buf()));
         self.target_dir = cli_target_dir;
 
         Ok(())
@@ -1710,7 +1715,7 @@ impl GlobalContext {
     fn maybe_get_tool(
         &self,
         tool: &str,
-        from_config: &Option<ConfigRelativePath>,
+        from_config: Option<&ConfigRelativePath>,
     ) -> Option<PathBuf> {
         let var = tool.to_uppercase();
 
@@ -1739,7 +1744,7 @@ impl GlobalContext {
     ///
     /// This is intended for tools that are rustup proxies. If you need to get
     /// a tool that is not a rustup proxy, use `maybe_get_tool` instead.
-    fn get_tool(&self, tool: Tool, from_config: &Option<ConfigRelativePath>) -> PathBuf {
+    fn get_tool(&self, tool: Tool, from_config: Option<&ConfigRelativePath>) -> PathBuf {
         let tool_str = tool.as_str();
         self.maybe_get_tool(tool_str, from_config)
             .or_else(|| {
