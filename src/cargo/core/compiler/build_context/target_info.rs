@@ -411,6 +411,47 @@ impl TargetInfo {
         true
     }
 
+    /// The [`CheckCfg`] settings with extra arguments passed.
+    pub fn check_cfg_with_extra_args(
+        &self,
+        gctx: &GlobalContext,
+        rustc: &Rustc,
+        extra_args: &[String],
+    ) -> CargoResult<CheckCfg> {
+        let mut process = rustc.workspace_process();
+
+        apply_env_config(gctx, &mut process)?;
+        process
+            .arg("-")
+            .arg("--print=check-cfg")
+            .arg("--check-cfg=cfg()")
+            .arg("-Zunstable-options")
+            .args(&self.rustflags)
+            .args(extra_args)
+            .env_remove("RUSTC_LOG");
+
+        // Removes `FD_CLOEXEC` set by `jobserver::Client` to pass jobserver
+        // as environment variables specify.
+        if let Some(client) = gctx.jobserver_from_env() {
+            process.inherit_jobserver(client);
+        }
+
+        let (output, _error) = rustc
+            .cached_output(&process, 0)
+            .with_context(|| "failed to run `rustc` to learn about check-cfg information")?;
+
+        let lines = output.lines();
+        let mut check_cfg = CheckCfg::default();
+        check_cfg.exhaustive = true;
+
+        for line in lines {
+            check_cfg
+                .parse_print_check_cfg_line(line)
+                .with_context(|| format!("unable to parse a line from `--print=check-cfg`"))?;
+        }
+        Ok(check_cfg)
+    }
+
     /// All the target [`Cfg`] settings.
     pub fn cfg(&self) -> &[Cfg] {
         &self.cfg
