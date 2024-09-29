@@ -783,7 +783,6 @@ fn unexpected_cfgs_target_with_lint() {
 
     p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
         .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
-        // FIXME: We should not warn on `cfg(foo = "foo")` but we currently do
         .with_stderr_data(str![[r#"
 [WARNING] unexpected `cfg` condition name: bar
   --> Cargo.toml:14:25
@@ -791,18 +790,6 @@ fn unexpected_cfgs_target_with_lint() {
 14 |                 [target."cfg(bar)".dependencies]
    |                         ----------
    |
-[WARNING] unexpected `cfg` condition name: foo for `foo = "foo"`
-  --> Cargo.toml:11:25
-   |
-11 |                 [target.'cfg(foo = "foo")'.dependencies] # should not warn here
-   |                         ------------------
-   |
-[WARNING] unexpected `cfg` condition name: foo
- --> Cargo.toml:8:25
-  |
-8 |                 [target."cfg(foo)".dependencies] # should not warn here
-  |                         ----------
-  |
 [LOCKING] 1 package to latest compatible version
 [CHECKING] a v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -957,18 +944,12 @@ fn unexpected_cfgs_target_cfg_any() {
 
     p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
         .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
-        // FIXME: We shouldn't be linting `cfg(foo)` because of the `cfg(any())`
         .with_stderr_data(str![[r#"
-[ERROR] unexpected `cfg` condition name: foo
- --> Cargo.toml:8:25
-  |
-8 |                 [target."cfg(foo)".dependencies]
-  |                         ^^^^^^^^^^
-  |
+[LOCKING] 1 package to latest compatible version
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        // nor should we error out because of the level="deny"
-        .with_status(101)
         .run();
 }
 
