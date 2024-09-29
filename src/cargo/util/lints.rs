@@ -12,7 +12,7 @@ use std::path::Path;
 use toml_edit::ImDocument;
 
 const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
-pub const LINTS: &[Lint] = &[IM_A_TEAPOT, UNKNOWN_LINTS];
+pub const LINTS: &[Lint] = &[IM_A_TEAPOT, UNEXPECTED_CFGS, UNKNOWN_LINTS];
 
 pub fn analyze_cargo_lints_table(
     pkg: &Package,
@@ -608,17 +608,35 @@ fn output_unknown_lints(
     Ok(())
 }
 
+// FIXME: This lint is only used for the Cargo infra, it's actually defined in rustc
+// it-self, which is broken is several ways, as it doesn't take into account
+// `rustc` flags ('via `RUSTFLAGS`), nor the possible `rustc` lints groups, ...
+const UNEXPECTED_CFGS: Lint = Lint {
+    name: "unexpected_cfgs",
+    desc: "lint on unexpected target cfgs",
+    groups: &[],
+    default_level: LintLevel::Warn,
+    edition_lint_opts: None,
+    feature_gate: None,
+    docs: None,
+};
+
 pub fn unexpected_target_cfgs(
     ws: &Workspace<'_>,
     pkg: &Package,
     path: &Path,
+    rust_lints: &TomlToolLints,
     error_count: &mut usize,
     gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let manifest = pkg.manifest();
 
-    // FIXME: We should get the lint level from `[lints.rust.unexpected_cfgs]`
-    let lint_level = LintLevel::Warn;
+    let (lint_level, _lint_reason) =
+        UNEXPECTED_CFGS.level(rust_lints, manifest.edition(), manifest.unstable_features());
+
+    if lint_level == LintLevel::Allow {
+        return Ok(());
+    }
 
     let rustc = gctx.load_global_rustc(Some(ws))?;
     // FIXME: While it doesn't doesn't really matter for `--print=check-cfg`, we should

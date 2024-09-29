@@ -882,14 +882,7 @@ fn unexpected_cfgs_target_lint_level_allow() {
 
     p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
         .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
-        // FIXME: We shouldn't warn any target cfgs because of the level="allow"
         .with_stderr_data(str![[r#"
-[WARNING] unexpected `cfg` condition name: foo
- --> Cargo.toml:8:25
-  |
-8 |                 [target."cfg(foo)".dependencies]
-  |                         ----------
-  |
 [LOCKING] 1 package to latest compatible version
 [CHECKING] a v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -925,19 +918,15 @@ fn unexpected_cfgs_target_lint_level_deny() {
     p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
         .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
         .with_stderr_data(str![[r#"
-[WARNING] unexpected `cfg` condition name: foo
+[ERROR] unexpected `cfg` condition name: foo
  --> Cargo.toml:8:25
   |
 8 |                 [target."cfg(foo)".dependencies]
-  |                         ----------
+  |                         ^^^^^^^^^^
   |
-[LOCKING] 1 package to latest compatible version
-[CHECKING] a v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        // FIXME: this test should fail
-        // .with_status(101)
+        .with_status(101)
         .run();
 }
 
@@ -970,17 +959,16 @@ fn unexpected_cfgs_target_cfg_any() {
         .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
         // FIXME: We shouldn't be linting `cfg(foo)` because of the `cfg(any())`
         .with_stderr_data(str![[r#"
-[WARNING] unexpected `cfg` condition name: foo
+[ERROR] unexpected `cfg` condition name: foo
  --> Cargo.toml:8:25
   |
 8 |                 [target."cfg(foo)".dependencies]
-  |                         ----------
+  |                         ^^^^^^^^^^
   |
-[LOCKING] 1 package to latest compatible version
-[CHECKING] a v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
+        // nor should we error out because of the level="deny"
+        .with_status(101)
         .run();
 }
 

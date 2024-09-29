@@ -1221,6 +1221,10 @@ impl<'gctx> Workspace<'gctx> {
             .get("cargo")
             .cloned()
             .unwrap_or(manifest::TomlToolLints::default());
+        let rust_lints = toml_lints
+            .get("rust")
+            .cloned()
+            .unwrap_or(manifest::TomlToolLints::default());
 
         let ws_contents = match self.root_maybe() {
             MaybePackage::Package(pkg) => pkg.manifest().contents(),
@@ -1242,7 +1246,7 @@ impl<'gctx> Workspace<'gctx> {
             self.gctx,
         )?;
         check_im_a_teapot(pkg, &path, &cargo_lints, &mut error_count, self.gctx)?;
-        unexpected_target_cfgs(self, pkg, &path, &mut error_count, self.gctx)?;
+        unexpected_target_cfgs(self, pkg, &path, &rust_lints, &mut error_count, self.gctx)?;
         if error_count > 0 {
             Err(crate::util::errors::AlreadyPrintedError::new(anyhow!(
                 "encountered {error_count} errors(s) while running lints"
