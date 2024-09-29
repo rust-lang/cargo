@@ -129,20 +129,16 @@ fn registry_with_features() {
         pkg!("b"),
         pkg_dep_with(
             "image",
-            vec!["a".to_opt_dep(), "b".to_opt_dep(), "jpg".to_dep()],
+            vec!["a".opt(), "b".opt(), "jpg".to_dep()],
             &[("default", &["a"]), ("b", &["dep:b"])],
         ),
         pkg!("jpg"),
         pkg!("log"),
         pkg!("man"),
-        pkg_dep_with("rgb", vec!["man".to_opt_dep()], &[("man", &["dep:man"])]),
+        pkg_dep_with("rgb", vec!["man".opt()], &[("man", &["dep:man"])]),
         pkg_dep_with(
             "dep",
-            vec![
-                "image".to_dep_with(&["b"]),
-                "log".to_opt_dep(),
-                "rgb".to_opt_dep(),
-            ],
+            vec!["image".with(&["b"]), "log".opt(), "rgb".opt()],
             &[
                 ("default", &["log", "image/default"]),
                 ("man", &["rgb?/man"]),
@@ -151,11 +147,11 @@ fn registry_with_features() {
     ]);
 
     for deps in [
-        vec!["dep".to_dep_with(&["default", "man", "log", "rgb"])],
-        vec!["dep".to_dep_with(&["default"])],
-        vec!["dep".to_dep_with(&[])],
-        vec!["dep".to_dep_with(&["man"])],
-        vec!["dep".to_dep_with(&["man", "rgb"])],
+        vec!["dep".with(&["default", "man", "log", "rgb"])],
+        vec!["dep".with(&["default"])],
+        vec!["dep".with(&[])],
+        vec!["dep".with(&["man"])],
+        vec!["dep".with(&["man", "rgb"])],
     ] {
         let mut sat_resolver = SatResolver::new(&reg);
         assert!(resolve_and_validated(deps, &reg, &mut sat_resolver).is_ok());
@@ -166,7 +162,7 @@ fn registry_with_features() {
 fn missing_feature() {
     let reg = registry(vec![pkg!("a")]);
     let mut sat_resolver = SatResolver::new(&reg);
-    assert!(resolve_and_validated(vec!["a".to_dep_with(&["f"])], &reg, &mut sat_resolver).is_err());
+    assert!(resolve_and_validated(vec!["a".with(&["f"])], &reg, &mut sat_resolver).is_err());
 }
 
 #[test]
@@ -187,7 +183,7 @@ fn conflict_feature_and_sys() {
         pkg_dep("dep", vec![dep_req("a", "2.0.0")]),
     ]);
 
-    let deps = vec![dep_req("a", "*").to_dep_with(&["f"]), dep("dep")];
+    let deps = vec![dep_req("a", "*").with(&["f"]), dep("dep")];
     let mut sat_resolver = SatResolver::new(&reg);
     assert!(resolve_and_validated(deps, &reg, &mut sat_resolver).is_err());
 }
@@ -197,16 +193,16 @@ fn conflict_weak_features() {
     let reg = registry(vec![
         pkg(("a-sys", "1.0.0")),
         pkg(("a-sys", "2.0.0")),
-        pkg_dep("a1", vec![dep_req("a-sys", "1.0.0").to_opt_dep()]),
-        pkg_dep("a2", vec![dep_req("a-sys", "2.0.0").to_opt_dep()]),
+        pkg_dep("a1", vec![dep_req("a-sys", "1.0.0").opt()]),
+        pkg_dep("a2", vec![dep_req("a-sys", "2.0.0").opt()]),
         pkg_dep_with(
             "dep",
-            vec!["a1".to_opt_dep(), "a2".to_opt_dep()],
+            vec!["a1".opt(), "a2".opt()],
             &[("a1", &["a1?/a-sys"]), ("a2", &["a2?/a-sys"])],
         ),
     ]);
 
-    let deps = vec![dep("dep").to_dep_with(&["a1", "a2"])];
+    let deps = vec![dep("dep").with(&["a1", "a2"])];
 
     // The following asserts should be updated when support for weak dependencies
     // is added to the dependency resolver.

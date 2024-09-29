@@ -5,7 +5,7 @@ use cargo::util::GlobalContext;
 use resolver_tests::{
     helpers::{
         assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names, names, pkg_id,
-        pkg_loc, registry, ToDep, ToPkgId,
+        pkg_loc, registry, ToPkgId,
     },
     pkg, resolve, resolve_with_global_context,
 };
@@ -14,7 +14,7 @@ use resolver_tests::{
 #[should_panic(expected = "assertion failed: !name.is_empty()")]
 fn test_dependency_with_empty_name() {
     // Bug 5229, dependency-names must not be empty
-    "".to_dep();
+    dep("");
 }
 
 #[test]

@@ -8,23 +8,35 @@ use cargo::util::IntoUrl;
 
 pub trait ToDep {
     fn to_dep(self) -> Dependency;
-    fn to_opt_dep(self) -> Dependency;
-    fn to_dep_with(self, features: &[&'static str]) -> Dependency;
+    fn opt(self) -> Dependency;
+    fn with(self, features: &[&'static str]) -> Dependency;
+    fn with_default(self) -> Dependency;
+    fn rename(self, name: &str) -> Dependency;
 }
 
 impl ToDep for &'static str {
     fn to_dep(self) -> Dependency {
         Dependency::parse(self, Some("1.0.0"), registry_loc()).unwrap()
     }
-    fn to_opt_dep(self) -> Dependency {
+    fn opt(self) -> Dependency {
         let mut dep = self.to_dep();
         dep.set_optional(true);
         dep
     }
-    fn to_dep_with(self, features: &[&'static str]) -> Dependency {
+    fn with(self, features: &[&'static str]) -> Dependency {
         let mut dep = self.to_dep();
         dep.set_default_features(false);
         dep.set_features(features.into_iter().copied());
+        dep
+    }
+    fn with_default(self) -> Dependency {
+        let mut dep = self.to_dep();
+        dep.set_default_features(true);
+        dep
+    }
+    fn rename(self, name: &str) -> Dependency {
+        let mut dep = self.to_dep();
+        dep.set_explicit_name_in_toml(name);
         dep
     }
 }
@@ -33,13 +45,21 @@ impl ToDep for Dependency {
     fn to_dep(self) -> Dependency {
         self
     }
-    fn to_opt_dep(mut self) -> Dependency {
+    fn opt(mut self) -> Dependency {
         self.set_optional(true);
         self
     }
-    fn to_dep_with(mut self, features: &[&'static str]) -> Dependency {
+    fn with(mut self, features: &[&'static str]) -> Dependency {
         self.set_default_features(false);
         self.set_features(features.into_iter().copied());
+        self
+    }
+    fn with_default(mut self) -> Dependency {
+        self.set_default_features(true);
+        self
+    }
+    fn rename(mut self, name: &str) -> Dependency {
+        self.set_explicit_name_in_toml(name);
         self
     }
 }
@@ -120,8 +140,21 @@ pub fn pkg_dep_with<T: ToPkgId>(
     Summary::new(name.to_pkgid(), dep, &features, link, None).unwrap()
 }
 
+pub fn pkg_dep_link<T: ToPkgId>(name: T, link: &str, dep: Vec<Dependency>) -> Summary {
+    Summary::new(name.to_pkgid(), dep, &BTreeMap::new(), Some(link), None).unwrap()
+}
+
 pub fn pkg_id(name: &str) -> PackageId {
     PackageId::try_new(name, "1.0.0", registry_loc()).unwrap()
+}
+
+pub fn pkg_id_source(name: &str, source: &str) -> PackageId {
+    PackageId::try_new(
+        name,
+        "1.0.0",
+        SourceId::for_registry(&source.into_url().unwrap()).unwrap(),
+    )
+    .unwrap()
 }
 
 fn pkg_id_loc(name: &str, loc: &str) -> PackageId {
@@ -169,6 +202,12 @@ pub fn dep_req_kind(name: &str, req: &str, kind: DepKind) -> Dependency {
     dep
 }
 
+pub fn dep_req_platform(name: &str, req: &str, platform: &str) -> Dependency {
+    let mut dep = dep_req(name, req);
+    dep.set_platform(Some(platform.parse().unwrap()));
+    dep
+}
+
 pub fn dep_loc(name: &str, location: &str) -> Dependency {
     let url = location.into_url().unwrap();
     let master = GitReference::Branch("master".to_string());
@@ -177,7 +216,15 @@ pub fn dep_loc(name: &str, location: &str) -> Dependency {
 }
 
 pub fn dep_kind(name: &str, kind: DepKind) -> Dependency {
-    dep(name).set_kind(kind).clone()
+    let mut dep = dep(name);
+    dep.set_kind(kind);
+    dep
+}
+
+pub fn dep_platform(name: &str, platform: &str) -> Dependency {
+    let mut dep = dep(name);
+    dep.set_platform(Some(platform.parse().unwrap()));
+    dep
 }
 
 pub fn registry(pkgs: Vec<Summary>) -> Vec<Summary> {

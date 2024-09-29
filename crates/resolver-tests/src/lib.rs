@@ -41,14 +41,27 @@ pub fn resolve(deps: Vec<Dependency>, registry: &[Summary]) -> CargoResult<Vec<P
     )
 }
 
-// Verify that the resolution of cargo resolver can pass the verification of SAT
 pub fn resolve_and_validated(
     deps: Vec<Dependency>,
     registry: &[Summary],
     sat_resolver: &mut SatResolver,
 ) -> CargoResult<Vec<(PackageId, Vec<InternedString>)>> {
-    let resolve =
-        resolve_with_global_context_raw(deps.clone(), registry, &GlobalContext::default().unwrap());
+    resolve_and_validated_raw(deps, registry, pkg_id("root"), sat_resolver)
+}
+
+// Verify that the resolution of cargo resolver can pass the verification of SAT
+pub fn resolve_and_validated_raw(
+    deps: Vec<Dependency>,
+    registry: &[Summary],
+    root_pkg_id: PackageId,
+    sat_resolver: &mut SatResolver,
+) -> CargoResult<Vec<(PackageId, Vec<InternedString>)>> {
+    let resolve = resolve_with_global_context_raw(
+        deps.clone(),
+        registry,
+        root_pkg_id,
+        &GlobalContext::default().unwrap(),
+    );
 
     match resolve {
         Err(e) => {
@@ -61,7 +74,7 @@ pub fn resolve_and_validated(
             Err(e)
         }
         Ok(resolve) => {
-            let mut stack = vec![pkg_id("root")];
+            let mut stack = vec![root_pkg_id];
             let mut used = HashSet::new();
             let mut links = HashSet::new();
             while let Some(p) = stack.pop() {
@@ -106,13 +119,14 @@ pub fn resolve_with_global_context(
     registry: &[Summary],
     gctx: &GlobalContext,
 ) -> CargoResult<Vec<(PackageId, Vec<InternedString>)>> {
-    let resolve = resolve_with_global_context_raw(deps, registry, gctx)?;
+    let resolve = resolve_with_global_context_raw(deps, registry, pkg_id("root"), gctx)?;
     Ok(collect_features(&resolve))
 }
 
 pub fn resolve_with_global_context_raw(
     deps: Vec<Dependency>,
     registry: &[Summary],
+    root_pkg_id: PackageId,
     gctx: &GlobalContext,
 ) -> CargoResult<Resolve> {
     struct MyRegistry<'a> {
@@ -175,14 +189,8 @@ pub fn resolve_with_global_context_raw(
         used: HashSet::new(),
     };
 
-    let root_summary = Summary::new(
-        pkg_id("root"),
-        deps,
-        &BTreeMap::new(),
-        None::<&String>,
-        None,
-    )
-    .unwrap();
+    let root_summary =
+        Summary::new(root_pkg_id, deps, &BTreeMap::new(), None::<&String>, None).unwrap();
 
     let opts = ResolveOpts::everything();
 
