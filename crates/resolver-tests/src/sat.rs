@@ -1,8 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt::Write;
 
+use cargo::core::dependency::DepKind;
 use cargo::core::{Dependency, FeatureMap, FeatureValue, PackageId, Summary};
 use cargo::util::interning::{InternedString, INTERNED_DEFAULT};
+use cargo_platform::Platform;
 use varisat::ExtendFormula;
 
 const fn num_bits<T>() -> usize {
@@ -34,7 +36,7 @@ fn sat_at_most_one(solver: &mut varisat::Solver<'_>, vars: &[varisat::Var]) {
     }
     // There are more efficient ways to do it for large numbers of versions.
     //
-    // use the "Binary Encoding" from
+    // Use the "Binary Encoding" from
     // https://www.it.uu.se/research/group/astra/ModRef10/papers/Alan%20M.%20Frisch%20and%20Paul%20A.%20Giannoros.%20SAT%20Encodings%20of%20the%20At-Most-k%20Constraint%20-%20ModRef%202010.pdf
     let bits: Vec<varisat::Var> = solver.new_var_iter(log_bits(vars.len())).collect();
     for (i, p) in vars.iter().enumerate() {
@@ -48,7 +50,7 @@ fn sat_at_most_one_by_key<K: std::hash::Hash + Eq>(
     solver: &mut varisat::Solver<'_>,
     data: impl Iterator<Item = (K, varisat::Var)>,
 ) -> HashMap<K, Vec<varisat::Var>> {
-    // no two packages with the same keys set
+    // No two packages with the same keys set
     let mut by_keys: HashMap<K, Vec<varisat::Var>> = HashMap::new();
     for (p, v) in data {
         by_keys.entry(p).or_default().push(v)
@@ -59,40 +61,130 @@ fn sat_at_most_one_by_key<K: std::hash::Hash + Eq>(
     by_keys
 }
 
-fn find_compatible_dep_summaries_by_name_in_toml(
+type DependencyVarMap<'a> =
+    HashMap<InternedString, HashMap<(DepKind, Option<&'a Platform>), varisat::Var>>;
+
+type DependencyFeatureVarMap<'a> = HashMap<
+    InternedString,
+    HashMap<(DepKind, Option<&'a Platform>), HashMap<InternedString, varisat::Var>>,
+>;
+
+fn create_dependencies_vars<'a>(
+    solver: &mut varisat::Solver<'_>,
+    pkg_var: varisat::Var,
+    pkg_dependencies: &'a [Dependency],
+    pkg_features: &FeatureMap,
+) -> (DependencyVarMap<'a>, DependencyFeatureVarMap<'a>) {
+    let mut var_for_is_dependencies_used = DependencyVarMap::new();
+    let mut var_for_is_dependencies_features_used = DependencyFeatureVarMap::new();
+
+    for dep in pkg_dependencies {
+        let (name, kind, platform) = (dep.name_in_toml(), dep.kind(), dep.platform());
+
+        var_for_is_dependencies_used
+            .entry(name)
+            .or_default()
+            .insert((kind, platform), solver.new_var());
+
+        let dep_feature_var_map = dep
+            .features()
+            .iter()
+            .map(|&f| (f, solver.new_var()))
+            .collect();
+
+        var_for_is_dependencies_features_used
+            .entry(name)
+            .or_default()
+            .insert((kind, platform), dep_feature_var_map);
+    }
+
+    for feature_values in pkg_features.values() {
+        for feature_value in feature_values {
+            let FeatureValue::DepFeature {
+                dep_name,
+                dep_feature,
+                weak: _,
+            } = *feature_value
+            else {
+                continue;
+            };
+
+            for dep_features_vars in var_for_is_dependencies_features_used
+                .get_mut(&dep_name)
+                .expect("feature dep name exists")
+                .values_mut()
+            {
+                dep_features_vars.insert(dep_feature, solver.new_var());
+            }
+        }
+    }
+
+    // If a package dependency is used, then the package is used
+    for dep_var_map in var_for_is_dependencies_used.values() {
+        for dep_var in dep_var_map.values() {
+            solver.add_clause(&[dep_var.negative(), pkg_var.positive()]);
+        }
+    }
+
+    // If a dependency feature is used, then the dependency is used
+    for (&dep_name, map) in &mut var_for_is_dependencies_features_used {
+        for (&(dep_kind, dep_platform), dep_feature_var_map) in map {
+            for dep_feature_var in dep_feature_var_map.values() {
+                let dep_var_map = &var_for_is_dependencies_used[&dep_name];
+                let dep_var = dep_var_map[&(dep_kind, dep_platform)];
+                solver.add_clause(&[dep_feature_var.negative(), dep_var.positive()]);
+            }
+        }
+    }
+
+    (
+        var_for_is_dependencies_used,
+        var_for_is_dependencies_features_used,
+    )
+}
+
+fn process_pkg_dependencies(
+    solver: &mut varisat::Solver<'_>,
+    var_for_is_dependencies_used: &DependencyVarMap<'_>,
+    var_for_is_dependencies_features_used: &DependencyFeatureVarMap<'_>,
+    pkg_var: varisat::Var,
     pkg_dependencies: &[Dependency],
-    by_name: &HashMap<InternedString, Vec<Summary>>,
-) -> HashMap<InternedString, Vec<Summary>> {
-    let empty_vec = vec![];
+) {
+    // Add clauses for package dependencies
+    for dep in pkg_dependencies {
+        let (name, kind, platform) = (dep.name_in_toml(), dep.kind(), dep.platform());
+        let dep_var_map = &var_for_is_dependencies_used[&name];
+        let dep_var = dep_var_map[&(kind, platform)];
 
-    pkg_dependencies
-        .iter()
-        .map(|dep| {
-            let name_in_toml = dep.name_in_toml();
+        if !dep.is_optional() {
+            solver.add_clause(&[pkg_var.negative(), dep_var.positive()]);
+        }
 
-            let compatible_summaries = by_name
-                .get(&dep.package_name())
-                .unwrap_or(&empty_vec)
-                .iter()
-                .filter(|s| dep.matches_id(s.package_id()))
-                .filter(|s| dep.features().iter().all(|f| s.features().contains_key(f)))
-                .cloned()
-                .collect::<Vec<_>>();
+        for &feature_name in dep.features() {
+            let dep_feature_var =
+                &var_for_is_dependencies_features_used[&name][&(kind, platform)][&feature_name];
 
-            (name_in_toml, compatible_summaries)
-        })
-        .collect()
+            solver.add_clause(&[dep_var.negative(), dep_feature_var.positive()]);
+        }
+    }
 }
 
 fn process_pkg_features(
     solver: &mut varisat::Solver<'_>,
-    var_for_is_packages_used: &HashMap<PackageId, varisat::Var>,
-    var_for_is_packages_features_used: &HashMap<PackageId, HashMap<InternedString, varisat::Var>>,
+    var_for_is_dependencies_used: &DependencyVarMap<'_>,
+    var_for_is_dependencies_features_used: &DependencyFeatureVarMap<'_>,
     pkg_feature_var_map: &HashMap<InternedString, varisat::Var>,
+    pkg_dependencies: &[Dependency],
     pkg_features: &FeatureMap,
-    compatible_dep_summaries_by_name_in_toml: &HashMap<InternedString, Vec<Summary>>,
+    check_dev_dependencies: bool,
 ) {
-    // add clauses for package features
+    let optional_dependencies = pkg_dependencies
+        .iter()
+        .filter(|dep| dep.is_optional())
+        .map(|dep| (dep.kind(), dep.platform(), dep.name_in_toml()))
+        .collect::<HashSet<_>>();
+
+    // Add clauses for package features
     for (&feature_name, feature_values) in pkg_features {
         for feature_value in feature_values {
             let pkg_feature_var = pkg_feature_var_map[&feature_name];
@@ -105,39 +197,56 @@ fn process_pkg_features(
                     ]);
                 }
                 FeatureValue::Dep { dep_name } => {
-                    let dep_clause = compatible_dep_summaries_by_name_in_toml[&dep_name]
-                        .iter()
-                        .map(|dep| var_for_is_packages_used[&dep.package_id()].positive())
-                        .chain([pkg_feature_var.negative()])
-                        .collect::<Vec<_>>();
-
-                    solver.add_clause(&dep_clause);
+                    // Add a clause for each dependency with the provided name (normal/build/dev with target)
+                    for (&(dep_kind, _), &dep_var) in &var_for_is_dependencies_used[&dep_name] {
+                        if dep_kind == DepKind::Development && !check_dev_dependencies {
+                            continue;
+                        }
+                        solver.add_clause(&[pkg_feature_var.negative(), dep_var.positive()]);
+                    }
                 }
                 FeatureValue::DepFeature {
                     dep_name,
                     dep_feature: dep_feature_name,
                     weak,
                 } => {
-                    for dep in &compatible_dep_summaries_by_name_in_toml[&dep_name] {
-                        let dep_var = var_for_is_packages_used[&dep.package_id()];
-                        let dep_feature_var =
-                            var_for_is_packages_features_used[&dep.package_id()][&dep_feature_name];
+                    // Behavior of the feature:
+                    // * if dependency `dep_name` is not optional, its feature `"dep_feature_name"` is activated.
+                    // * if dependency `dep_name` is optional:
+                    //     - if this is a weak dependency feature:
+                    //         - feature `"dep_feature_name"` of dependency `dep_name` is activated if `dep_name` has been activated via another feature.
+                    //     - if this is not a weak dependency feature:
+                    //         - feature `dep_name` is activated if it exists.
+                    //         - dependency `dep_name` is activated.
+                    //         - feature `"dep_feature_name"` of dependency `dep_name` is activated.
+
+                    // Add clauses for each dependency with the provided name (normal/build/dev with target)
+                    let dep_var_map = &var_for_is_dependencies_used[&dep_name];
+                    for (&(dep_kind, dep_platform), &dep_var) in dep_var_map {
+                        if dep_kind == DepKind::Development && !check_dev_dependencies {
+                            continue;
+                        }
+
+                        let dep_feature_var = &var_for_is_dependencies_features_used[&dep_name]
+                            [&(dep_kind, dep_platform)][&dep_feature_name];
 
                         solver.add_clause(&[
                             pkg_feature_var.negative(),
                             dep_var.negative(),
                             dep_feature_var.positive(),
                         ]);
-                    }
 
-                    if !weak {
-                        let dep_clause = compatible_dep_summaries_by_name_in_toml[&dep_name]
-                            .iter()
-                            .map(|dep| var_for_is_packages_used[&dep.package_id()].positive())
-                            .chain([pkg_feature_var.negative()])
-                            .collect::<Vec<_>>();
+                        let key = (dep_kind, dep_platform, dep_name);
+                        if !weak && optional_dependencies.contains(&key) {
+                            solver.add_clause(&[pkg_feature_var.negative(), dep_var.positive()]);
 
-                        solver.add_clause(&dep_clause);
+                            if let Some(other_feature_var) = pkg_feature_var_map.get(&dep_name) {
+                                solver.add_clause(&[
+                                    pkg_feature_var.negative(),
+                                    other_feature_var.positive(),
+                                ]);
+                            }
+                        }
                     }
                 }
             }
@@ -145,48 +254,77 @@ fn process_pkg_features(
     }
 }
 
-fn process_pkg_dependencies(
+fn process_compatible_dep_summaries(
     solver: &mut varisat::Solver<'_>,
+    var_for_is_dependencies_used: &DependencyVarMap<'_>,
+    var_for_is_dependencies_features_used: &DependencyFeatureVarMap<'_>,
     var_for_is_packages_used: &HashMap<PackageId, varisat::Var>,
     var_for_is_packages_features_used: &HashMap<PackageId, HashMap<InternedString, varisat::Var>>,
-    pkg_var: varisat::Var,
+    by_name: &HashMap<InternedString, Vec<Summary>>,
     pkg_dependencies: &[Dependency],
-    compatible_dep_summaries_by_name_in_toml: &HashMap<InternedString, Vec<Summary>>,
+    check_dev_dependencies: bool,
 ) {
     for dep in pkg_dependencies {
-        let compatible_dep_summaries =
-            &compatible_dep_summaries_by_name_in_toml[&dep.name_in_toml()];
-
-        // add clauses for package dependency features
-        for dep_summary in compatible_dep_summaries {
-            let dep_package_id = dep_summary.package_id();
-
-            let default_feature = if dep.uses_default_features()
-                && dep_summary.features().contains_key(&*INTERNED_DEFAULT)
-            {
-                Some(&INTERNED_DEFAULT)
-            } else {
-                None
-            };
-
-            for &feature_name in default_feature.into_iter().chain(dep.features()) {
-                solver.add_clause(&[
-                    pkg_var.negative(),
-                    var_for_is_packages_used[&dep_package_id].negative(),
-                    var_for_is_packages_features_used[&dep_package_id][&feature_name].positive(),
-                ]);
-            }
+        if dep.kind() == DepKind::Development && !check_dev_dependencies {
+            continue;
         }
 
-        // active packages need to activate each of their non-optional dependencies
-        if !dep.is_optional() {
-            let dep_clause = compatible_dep_summaries
+        let (name, kind, platform) = (dep.name_in_toml(), dep.kind(), dep.platform());
+        let dep_var_map = &var_for_is_dependencies_used[&name];
+        let dep_var = dep_var_map[&(kind, platform)];
+
+        let dep_feature_var_map = &var_for_is_dependencies_features_used[&name][&(kind, platform)];
+
+        let compatible_summaries = by_name
+            .get(&dep.package_name())
+            .into_iter()
+            .flatten()
+            .filter(|s| dep.matches(s))
+            .filter(|s| dep.features().iter().all(|f| s.features().contains_key(f)))
+            .cloned()
+            .collect::<Vec<_>>();
+
+        // At least one compatible package should be activated
+        let dep_clause = compatible_summaries
+            .iter()
+            .map(|s| var_for_is_packages_used[&s.package_id()].positive())
+            .chain([dep_var.negative()])
+            .collect::<Vec<_>>();
+
+        solver.add_clause(&dep_clause);
+
+        for (&feature_name, &dep_feature_var) in dep_feature_var_map {
+            // At least one compatible package with the additional feature should be activated
+            let dep_feature_clause = compatible_summaries
                 .iter()
-                .map(|d| var_for_is_packages_used[&d.package_id()].positive())
-                .chain([pkg_var.negative()])
+                .filter_map(|s| {
+                    var_for_is_packages_features_used[&s.package_id()].get(&feature_name)
+                })
+                .map(|var| var.positive())
+                .chain([dep_feature_var.negative()])
                 .collect::<Vec<_>>();
 
-            solver.add_clause(&dep_clause);
+            solver.add_clause(&dep_feature_clause);
+        }
+
+        if dep.uses_default_features() {
+            // For the selected package for this dependency, the `"default"` feature should be activated if it exists
+            let mut dep_default_clause = vec![dep_var.negative()];
+
+            for s in &compatible_summaries {
+                let s_pkg_id = s.package_id();
+                let s_var = var_for_is_packages_used[&s_pkg_id];
+                let s_feature_var_map = &var_for_is_packages_features_used[&s_pkg_id];
+
+                if let Some(s_default_feature_var) = s_feature_var_map.get(&INTERNED_DEFAULT) {
+                    dep_default_clause
+                        .extend_from_slice(&[s_var.negative(), s_default_feature_var.positive()]);
+                } else {
+                    dep_default_clause.push(s_var.positive());
+                }
+            }
+
+            solver.add_clause(&dep_default_clause);
         }
     }
 }
@@ -209,44 +347,50 @@ pub struct SatResolver {
 }
 
 impl SatResolver {
-    pub fn new(registry: &[Summary]) -> Self {
+    pub fn new<'a>(registry: impl IntoIterator<Item = &'a Summary>) -> Self {
+        let check_dev_dependencies = false;
+
+        let mut by_name: HashMap<InternedString, Vec<Summary>> = HashMap::new();
+        for pkg in registry {
+            by_name.entry(pkg.name()).or_default().push(pkg.clone())
+        }
+
         let mut solver = varisat::Solver::new();
 
-        // That represents each package version which is set to "true" if the packages in the lock file and "false" if it is unused.
-        let var_for_is_packages_used = registry
-            .iter()
-            .map(|s| (s.package_id(), solver.new_var()))
-            .collect::<HashMap<_, _>>();
+        // Create boolean variables for packages and packages features
+        let mut var_for_is_packages_used = HashMap::new();
+        let mut var_for_is_packages_features_used = HashMap::<_, HashMap<_, _>>::new();
 
-        // That represents each feature of each package version, which is set to "true" if the package feature is used.
-        let var_for_is_packages_features_used = registry
-            .iter()
-            .map(|s| {
-                (
-                    s.package_id(),
-                    (s.features().keys().map(|&f| (f, solver.new_var()))).collect(),
-                )
-            })
-            .collect::<HashMap<_, HashMap<_, _>>>();
+        for pkg in by_name.values().flatten() {
+            let pkg_id = pkg.package_id();
 
-        // if a package feature is used, then the package is used
-        for (package, pkg_feature_var_map) in &var_for_is_packages_features_used {
-            for (_, package_feature_var) in pkg_feature_var_map {
-                let package_var = var_for_is_packages_used[package];
-                solver.add_clause(&[package_feature_var.negative(), package_var.positive()]);
+            var_for_is_packages_used.insert(pkg_id, solver.new_var());
+
+            var_for_is_packages_features_used.insert(
+                pkg_id,
+                (pkg.features().keys().map(|&f| (f, solver.new_var()))).collect(),
+            );
+        }
+
+        // If a package feature is used, then the package is used
+        for (&pkg_id, pkg_feature_var_map) in &var_for_is_packages_features_used {
+            for pkg_feature_var in pkg_feature_var_map.values() {
+                let pkg_var = var_for_is_packages_used[&pkg_id];
+                solver.add_clause(&[pkg_feature_var.negative(), pkg_var.positive()]);
             }
         }
 
-        // no two packages with the same links set
+        // No two packages with the same links set
         sat_at_most_one_by_key(
             &mut solver,
-            registry
-                .iter()
+            by_name
+                .values()
+                .flatten()
                 .map(|s| (s.links(), var_for_is_packages_used[&s.package_id()]))
                 .filter(|(l, _)| l.is_some()),
         );
 
-        // no two semver compatible versions of the same package
+        // No two semver compatible versions of the same package
         sat_at_most_one_by_key(
             &mut solver,
             var_for_is_packages_used
@@ -254,36 +398,43 @@ impl SatResolver {
                 .map(|(p, &v)| (p.as_activations_key(), v)),
         );
 
-        let mut by_name: HashMap<InternedString, Vec<Summary>> = HashMap::new();
-
-        for p in registry {
-            by_name.entry(p.name()).or_default().push(p.clone())
-        }
-
-        for pkg in registry {
+        for pkg in by_name.values().flatten() {
             let pkg_id = pkg.package_id();
             let pkg_dependencies = pkg.dependencies();
             let pkg_features = pkg.features();
+            let pkg_var = var_for_is_packages_used[&pkg_id];
 
-            let compatible_dep_summaries_by_name_in_toml =
-                find_compatible_dep_summaries_by_name_in_toml(pkg_dependencies, &by_name);
-
-            process_pkg_features(
-                &mut solver,
-                &var_for_is_packages_used,
-                &var_for_is_packages_features_used,
-                &var_for_is_packages_features_used[&pkg_id],
-                pkg_features,
-                &compatible_dep_summaries_by_name_in_toml,
-            );
+            // Create boolean variables for dependencies and dependencies features
+            let (var_for_is_dependencies_used, var_for_is_dependencies_features_used) =
+                create_dependencies_vars(&mut solver, pkg_var, pkg_dependencies, pkg_features);
 
             process_pkg_dependencies(
                 &mut solver,
+                &var_for_is_dependencies_used,
+                &var_for_is_dependencies_features_used,
+                pkg_var,
+                pkg_dependencies,
+            );
+
+            process_pkg_features(
+                &mut solver,
+                &var_for_is_dependencies_used,
+                &var_for_is_dependencies_features_used,
+                &var_for_is_packages_features_used[&pkg_id],
+                pkg_dependencies,
+                pkg_features,
+                check_dev_dependencies,
+            );
+
+            process_compatible_dep_summaries(
+                &mut solver,
+                &var_for_is_dependencies_used,
+                &var_for_is_dependencies_features_used,
                 &var_for_is_packages_used,
                 &var_for_is_packages_features_used,
-                var_for_is_packages_used[&pkg_id],
+                &by_name,
                 pkg_dependencies,
-                &compatible_dep_summaries_by_name_in_toml,
+                check_dev_dependencies,
             );
         }
 
@@ -313,8 +464,31 @@ impl SatResolver {
 
         let root_var = solver.new_var();
 
-        // root package is always used
-        // root vars from previous runs are deactivated
+        // Create boolean variables for dependencies and dependencies features
+        let (var_for_is_dependencies_used, var_for_is_dependencies_features_used) =
+            create_dependencies_vars(solver, root_var, root_dependencies, &FeatureMap::new());
+
+        process_pkg_dependencies(
+            solver,
+            &var_for_is_dependencies_used,
+            &var_for_is_dependencies_features_used,
+            root_var,
+            root_dependencies,
+        );
+
+        process_compatible_dep_summaries(
+            solver,
+            &var_for_is_dependencies_used,
+            &var_for_is_dependencies_features_used,
+            var_for_is_packages_used,
+            var_for_is_packages_features_used,
+            by_name,
+            root_dependencies,
+            true,
+        );
+
+        // Root package is always used.
+        // Root vars from previous runs are deactivated.
         let assumption = old_root_vars
             .iter()
             .map(|v| v.negative())
@@ -322,18 +496,6 @@ impl SatResolver {
             .collect::<Vec<_>>();
 
         old_root_vars.push(root_var);
-
-        let compatible_dep_summaries_by_name_in_toml =
-            find_compatible_dep_summaries_by_name_in_toml(root_dependencies, &by_name);
-
-        process_pkg_dependencies(
-            solver,
-            var_for_is_packages_used,
-            var_for_is_packages_features_used,
-            root_var,
-            root_dependencies,
-            &compatible_dep_summaries_by_name_in_toml,
-        );
 
         solver.assume(&assumption);
 
@@ -353,7 +515,7 @@ impl SatResolver {
             }
         }
 
-        // root vars from previous runs are deactivated
+        // Root vars from previous runs are deactivated
         let assumption = (self.old_root_vars.iter().map(|v| v.negative()))
             .chain(
                 self.var_for_is_packages_used

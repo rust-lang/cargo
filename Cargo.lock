@@ -2936,6 +2936,7 @@ name = "resolver-tests"
 version = "0.0.0"
 dependencies = [
  "cargo",
+ "cargo-platform 0.1.8",
  "cargo-util",
  "cargo-util-schemas",
  "proptest",
