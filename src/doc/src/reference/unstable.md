@@ -1905,8 +1905,6 @@ for more information.
 
 * Tracking Issue: [#00000](https://github.com/rust-lang/cargo/issues/00000)
 
-**WARNING: Incomplete/WIP!**
-
 This feature checks for unexpected cfgs in `[target.'cfg(...)']` entries, based
 on `rustc --print=check-cfg`.
 
