@@ -788,12 +788,6 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
         })
         .filter(|s| package_id.version() != s.version() && version_req.matches(s.version()))
         .max_by_key(|s| s.version());
-    if let Some(summary) = compat_ver_compat_msrv_summary {
-        let warn = style::WARN;
-        let version = summary.version();
-        let report = format!(" {warn}(available: v{version}){warn:#}");
-        return Some(report);
-    }
 
     let incompat_ver_compat_msrv_summary = if !change.is_transitive.unwrap_or(true) {
         possibilities
@@ -813,28 +807,12 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
     } else {
         None
     };
-    if let Some(summary) = incompat_ver_compat_msrv_summary {
-        let warn = style::WARN;
-        let version = summary.version();
-        let report = format!(" {warn}(available: v{version}){warn:#}");
-        return Some(report);
-    }
 
     let compat_ver_summary = possibilities
         .iter()
         .map(|s| s.as_summary())
         .filter(|s| package_id.version() != s.version() && version_req.matches(s.version()))
         .max_by_key(|s| s.version());
-    if let Some(summary) = compat_ver_summary {
-        let msrv_note = summary
-            .rust_version()
-            .map(|rv| format!(", requires Rust {rv}"))
-            .unwrap_or_default();
-        let warn = style::NOP;
-        let version = summary.version();
-        let report = format!(" {warn}(available: v{version}{msrv_note}){warn:#}");
-        return Some(report);
-    }
 
     let incompat_ver_summary = if !change.is_transitive.unwrap_or(true) {
         possibilities
@@ -845,6 +823,29 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
     } else {
         None
     };
+
+    if let Some(summary) = compat_ver_compat_msrv_summary {
+        let warn = style::WARN;
+        let version = summary.version();
+        let report = format!(" {warn}(available: v{version}){warn:#}");
+        return Some(report);
+    }
+    if let Some(summary) = incompat_ver_compat_msrv_summary {
+        let warn = style::WARN;
+        let version = summary.version();
+        let report = format!(" {warn}(available: v{version}){warn:#}");
+        return Some(report);
+    }
+    if let Some(summary) = compat_ver_summary {
+        let msrv_note = summary
+            .rust_version()
+            .map(|rv| format!(", requires Rust {rv}"))
+            .unwrap_or_default();
+        let warn = style::NOP;
+        let version = summary.version();
+        let report = format!(" {warn}(available: v{version}{msrv_note}){warn:#}");
+        return Some(report);
+    }
     if let Some(summary) = incompat_ver_summary {
         let msrv_note = summary
             .rust_version()
