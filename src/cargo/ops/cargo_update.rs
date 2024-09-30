@@ -828,15 +828,13 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
         let warn = style::WARN;
         let version = summary.version();
         let report = format!(" {warn}(available: v{version}){warn:#}");
-        return Some(report);
-    }
-    if let Some(summary) = incompat_ver_compat_msrv_summary {
+        Some(report)
+    } else if let Some(summary) = incompat_ver_compat_msrv_summary {
         let warn = style::WARN;
         let version = summary.version();
         let report = format!(" {warn}(available: v{version}){warn:#}");
-        return Some(report);
-    }
-    if let Some(summary) = compat_ver_summary {
+        Some(report)
+    } else if let Some(summary) = compat_ver_summary {
         let msrv_note = summary
             .rust_version()
             .map(|rv| format!(", requires Rust {rv}"))
@@ -844,9 +842,8 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
         let warn = style::NOP;
         let version = summary.version();
         let report = format!(" {warn}(available: v{version}{msrv_note}){warn:#}");
-        return Some(report);
-    }
-    if let Some(summary) = incompat_ver_summary {
+        Some(report)
+    } else if let Some(summary) = incompat_ver_summary {
         let msrv_note = summary
             .rust_version()
             .map(|rv| format!(", requires Rust {rv}"))
@@ -854,10 +851,10 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
         let warn = style::NOP;
         let version = summary.version();
         let report = format!(" {warn}(available: v{version}{msrv_note}){warn:#}");
-        return Some(report);
+        Some(report)
+    } else {
+        None
     }
-
-    None
 }
 
 fn is_latest(candidate: &semver::Version, current: &semver::Version) -> bool {
