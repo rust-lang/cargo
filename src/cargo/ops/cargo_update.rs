@@ -795,31 +795,29 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
         return Some(report);
     }
 
-    {
-        let incompat_ver_compat_msrv_summary = if !change.is_transitive.unwrap_or(true) {
-            possibilities
-                .iter()
-                .map(|s| s.as_summary())
-                .filter(|s| {
-                    if let (Some(summary_rust_version), Some(required_rust_version)) =
-                        (s.rust_version(), required_rust_version)
-                    {
-                        summary_rust_version.is_compatible_with(required_rust_version)
-                    } else {
-                        true
-                    }
-                })
-                .filter(|s| is_latest(s.version(), package_id.version()))
-                .max_by_key(|s| s.version())
-        } else {
-            None
-        };
-        if let Some(summary) = incompat_ver_compat_msrv_summary {
-            let warn = style::WARN;
-            let version = summary.version();
-            let report = format!(" {warn}(available: v{version}){warn:#}");
-            return Some(report);
-        }
+    let incompat_ver_compat_msrv_summary = if !change.is_transitive.unwrap_or(true) {
+        possibilities
+            .iter()
+            .map(|s| s.as_summary())
+            .filter(|s| {
+                if let (Some(summary_rust_version), Some(required_rust_version)) =
+                    (s.rust_version(), required_rust_version)
+                {
+                    summary_rust_version.is_compatible_with(required_rust_version)
+                } else {
+                    true
+                }
+            })
+            .filter(|s| is_latest(s.version(), package_id.version()))
+            .max_by_key(|s| s.version())
+    } else {
+        None
+    };
+    if let Some(summary) = incompat_ver_compat_msrv_summary {
+        let warn = style::WARN;
+        let version = summary.version();
+        let report = format!(" {warn}(available: v{version}){warn:#}");
+        return Some(report);
     }
 
     let compat_ver_summary = possibilities
@@ -838,26 +836,24 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
         return Some(report);
     }
 
-    {
-        let incompat_ver_summary = if !change.is_transitive.unwrap_or(true) {
-            possibilities
-                .iter()
-                .map(|s| s.as_summary())
-                .filter(|s| is_latest(s.version(), package_id.version()))
-                .max_by_key(|s| s.version())
-        } else {
-            None
-        };
-        if let Some(summary) = incompat_ver_summary {
-            let msrv_note = summary
-                .rust_version()
-                .map(|rv| format!(", requires Rust {rv}"))
-                .unwrap_or_default();
-            let warn = style::NOP;
-            let version = summary.version();
-            let report = format!(" {warn}(available: v{version}{msrv_note}){warn:#}");
-            return Some(report);
-        }
+    let incompat_ver_summary = if !change.is_transitive.unwrap_or(true) {
+        possibilities
+            .iter()
+            .map(|s| s.as_summary())
+            .filter(|s| is_latest(s.version(), package_id.version()))
+            .max_by_key(|s| s.version())
+    } else {
+        None
+    };
+    if let Some(summary) = incompat_ver_summary {
+        let msrv_note = summary
+            .rust_version()
+            .map(|rv| format!(", requires Rust {rv}"))
+            .unwrap_or_default();
+        let warn = style::NOP;
+        let version = summary.version();
+        let report = format!(" {warn}(available: v{version}{msrv_note}){warn:#}");
+        return Some(report);
     }
 
     None
