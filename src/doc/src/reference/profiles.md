@@ -371,7 +371,7 @@ The output for each profile will be placed in a directory of the same name
 as the profile in the [`target` directory]. As in the example above, the
 output would go into the `target/release-lto` directory.
 
-[`target` directory]: ../guide/build-cache.md
+[`target` directory]: build-cache.md
 
 ## Profile selection
 

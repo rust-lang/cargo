@@ -12,5 +12,5 @@ This may also be specified with the `build.target`
 
 Note that specifying this flag makes Cargo run in a different mode where the
 target artifacts are placed in a separate directory. See the
-[build cache](../guide/build-cache.html) documentation for more details.
+[build cache](../reference/build-cache.html) documentation for more details.
 {{/option}}

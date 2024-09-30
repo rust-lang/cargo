@@ -368,7 +368,7 @@ autobins = false
 
 > **MSRV:** Respected as of 1.83 for `autolib`
 
-[Build cache]: ../guide/build-cache.md
+[Build cache]: build-cache.md
 [Rust Edition]: ../../edition-guide/index.html
 [`--test` flag]: ../../rustc/command-line-arguments.html#option-test
 [`cargo bench`]: ../commands/cargo-bench.md

@@ -17,7 +17,6 @@
     * [Continuous Integration](guide/continuous-integration.md)
     * [Publishing on crates.io](reference/publishing.md)
     * [Cargo Home](guide/cargo-home.md)
-    * [Build Cache](guide/build-cache.md)
 
 * [Cargo Reference](reference/index.md)
     * [Specifying Dependencies](reference/specifying-dependencies.md)
@@ -32,6 +31,7 @@
     * [Environment Variables](reference/environment-variables.md)
     * [Build Scripts](reference/build-scripts.md)
         * [Build Script Examples](reference/build-script-examples.md)
+    * [Build Cache](reference/build-cache.md)
     * [Package ID Specifications](reference/pkgid-spec.md)
     * [Source Replacement](reference/source-replacement.md)
     * [External Tools](reference/external-tools.md)
