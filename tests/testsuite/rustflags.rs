@@ -967,7 +967,7 @@ fn build_rustflags_for_build_scripts() {
         .file(
             "build.rs",
             r#"
-                fn main() { assert!(cfg!(foo)); }
+                fn main() { assert!(cfg!(foo), "CFG FOO!"); }
             "#,
         )
         .file(
@@ -986,12 +986,7 @@ fn build_rustflags_for_build_scripts() {
     p.cargo("check --target")
         .arg(host)
         .with_status(101)
-        .with_stderr_data(str![[r#"
-...
-  assertion failed: cfg!(foo)
-  [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-
-"#]])
+        .with_stderr_data("...\n[..]CFG FOO![..]\n...")
         .run();
 
     // Enabling -Ztarget-applies-to-host should not make a difference without the config setting
@@ -1004,12 +999,7 @@ fn build_rustflags_for_build_scripts() {
         .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .arg("-Ztarget-applies-to-host")
         .with_status(101)
-        .with_stderr_data(str![[r#"
-...
-  assertion failed: cfg!(foo)
-  [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-
-"#]])
+        .with_stderr_data("...\n[..]CFG FOO![..]\n...")
         .run();
 
     // When set to false though, the "proper" behavior where host artifacts _only_ pick up on
@@ -1027,24 +1017,14 @@ fn build_rustflags_for_build_scripts() {
         .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .arg("-Ztarget-applies-to-host")
         .with_status(101)
-        .with_stderr_data(str![[r#"
-...
-  assertion failed: cfg!(foo)
-  [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-
-"#]])
+        .with_stderr_data("...\n[..]CFG FOO![..]\n...")
         .run();
     p.cargo("check --target")
         .arg(host)
         .masquerade_as_nightly_cargo(&["target-applies-to-host"])
         .arg("-Ztarget-applies-to-host")
         .with_status(101)
-        .with_stderr_data(str![[r#"
-...
-  assertion failed: cfg!(foo)
-  [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-
-"#]])
+        .with_stderr_data("...\n[..]CFG FOO![..]\n...")
         .run();
 }
 
