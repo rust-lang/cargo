@@ -5497,7 +5497,6 @@ Caused by:
         .run();
 
     p.cargo("test --no-fail-fast -- --nocapture")
-        .env_remove("RUST_BACKTRACE")
         .with_stderr_does_not_contain(
             "test exited abnormally; to see the full output pass --nocapture to the harness.",
         )
