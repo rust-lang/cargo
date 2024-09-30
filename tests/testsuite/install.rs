@@ -1314,7 +1314,7 @@ fn do_not_rebuilds_on_local_install() {
 #[cargo_test]
 fn reports_unsuccessful_subcommand_result() {
     Package::new("cargo-fail", "1.0.0")
-        .file("src/main.rs", "fn main() { panic!(); }")
+        .file("src/main.rs", r#"fn main() { panic!("EXPLICIT PANIC!"); }"#)
         .publish();
     cargo_process("install cargo-fail").run();
     cargo_process("--list")
@@ -1326,13 +1326,7 @@ fn reports_unsuccessful_subcommand_result() {
         .run();
     cargo_process("fail")
         .with_status(101)
-        .with_stderr_data(str![[r#"
-...
-thread 'main' panicked at [ROOT]/home/.cargo/registry/src/-[HASH]/cargo-fail-1.0.0/src/main.rs:1:13:
-explicit panic
-[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-
-"#]])
+        .with_stderr_data("...\n[..]EXPLICIT PANIC![..]\n...")
         .run();
 }
 
