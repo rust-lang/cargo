@@ -1120,11 +1120,7 @@ it is true
     // Make sure the test is fallible.
     p.cargo("test --doc")
         .with_status(101)
-        .with_stdout_data(str![[r#"
-...
-assertion `left == right` failed: common is wrong
-...
-"#]])
+        .with_stdout_data("...\n[..]common is wrong[..]\n...")
         .run();
     p.cargo("test --doc").env("TEST_EXPECTS_ENABLED", "1").run();
     p.cargo("doc").run();
