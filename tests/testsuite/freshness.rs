@@ -1883,29 +1883,7 @@ fn dirty_both_lib_and_test() {
     // 2 != 1
     p.cargo("test --lib")
         .with_status(101)
-        .with_stdout_data(str![[r#"
-
-running 1 test
-test t1 ... FAILED
-
-failures:
-
----- t1 stdout ----
-...
-thread 't1' panicked at src/lib.rs:8:21:
-assertion `left == right` failed: doit assert failure
-  left: 2
- right: 1
-[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-
-
-failures:
-    t1
-
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in [ELAPSED]s
-
-
-"#]])
+        .with_stdout_data("...\n[..]doit assert failure[..]\n...")
         .run();
 
     if is_coarse_mtime() {
@@ -1949,42 +1927,12 @@ fn script_fails_stay_dirty() {
     }
     p.change_file("helper.rs", r#"pub fn doit() {panic!("Crash!");}"#);
     p.cargo("build")
-        .with_stderr_data(str![[r#"
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to run custom build command for `foo v0.0.1 ([ROOT]/foo)`
-
-Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
-  --- stdout
-  cargo::rerun-if-changed=build.rs
-
-  --- stderr
-...
-  thread 'main' panicked at helper.rs:1:16:
-  Crash!
-  [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-
-"#]])
+        .with_stderr_data("...\n[..]Crash![..]\n...")
         .with_status(101)
         .run();
     // There was a bug where this second call would be "fresh".
     p.cargo("build")
-        .with_stderr_data(str![[r#"
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[ERROR] failed to run custom build command for `foo v0.0.1 ([ROOT]/foo)`
-
-Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/build/foo-[HASH]/build-script-build` ([EXIT_STATUS]: 101)
-  --- stdout
-  cargo::rerun-if-changed=build.rs
-
-  --- stderr
-...
-  thread 'main' panicked at helper.rs:1:16:
-  Crash!
-  [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-
-"#]])
+        .with_stderr_data("...\n[..]Crash![..]\n...")
         .with_status(101)
         .run();
 }

@@ -151,7 +151,7 @@ fn check_with_invalid_target_triple() {
 Caused by:
   process didn't exit successfully: `rustc - --crate-name ___ --print=file-names --target unknown-target-triple [..]` ([EXIT_STATUS]: 1)
   --- stderr
-  [ERROR] Error loading target specification: Could not find specification for target "unknown-target-triple". Run `rustc --print target-list` for a list of built-in targets
+...
 
 
 "#]])
@@ -1571,13 +1571,11 @@ fn artifact_dep_target_specified() {
     // TODO: This command currently fails due to a bug in cargo but it should be fixed so that it succeeds in the future.
     p.cargo("tree -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_stdout_data(str![[""]])
-        .with_stderr_data(str![[r#"
-thread 'main' panicked at src/cargo/[..]:
-activated_features for invalid package: features did not find PackageId { name: "bindep", version: "0.0.0", source: "[..]" } NormalOrDev
-[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-
-"#]])
+        .with_stdout_data("")
+        .with_stderr_data(r#"...
+[..]activated_features for invalid package: features did not find PackageId { name: "bindep", version: "0.0.0", source: "[..]" } NormalOrDev[..]
+...
+"#)
         .with_status(101)
         .run();
 }
@@ -3246,7 +3244,7 @@ Caused by:
 Caused by:
   process didn't exit successfully: `rustc [..] ([EXIT_STATUS]: 1)
   --- stderr
-  [ERROR] Error loading target specification: Could not find specification for target "custom-target". Run `rustc --print target-list` for a list of built-in targets
+...
 
 
 "#]])

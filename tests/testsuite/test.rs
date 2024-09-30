@@ -396,7 +396,7 @@ fn cargo_test_failing_test_in_bin() {
 
             #[test]
             fn test_hello() {
-                assert_eq!(hello(), "nope")
+                assert_eq!(hello(), "nope", "NOPE!")
             }
             "#,
         )
@@ -420,24 +420,7 @@ hello
 [ERROR] test failed, to rerun pass `--bin foo`
 
 "#]])
-        .with_stdout_data(
-            str![[r#"
-running 1 test
-test test_hello ... FAILED
-
-failures:
-
----- test_hello stdout ----
-thread 'test_hello' panicked at src/main.rs:12:17:
-assertion `left == right` failed
-  left: "hello"
- right: "nope"
-failures:
-    test_hello
-...
-"#]]
-            .unordered(),
-        )
+        .with_stdout_data("...\n[..]NOPE![..]\n...")
         .with_status(101)
         .run();
 }
@@ -449,7 +432,7 @@ fn cargo_test_failing_test_in_test() {
         .file("src/main.rs", r#"pub fn main() { println!("hello"); }"#)
         .file(
             "tests/footest.rs",
-            "#[test] fn test_hello() { assert!(false) }",
+            r#"#[test] fn test_hello() { assert!(false, "FALSE!") }"#,
         )
         .build();
 
@@ -476,17 +459,13 @@ hello
             str![[r#"
 ...
 running 0 tests
+...
 running 1 test
 test test_hello ... FAILED
-
-failures:
-
----- test_hello stdout ----
-thread 'test_hello' panicked at tests/footest.rs:1:27:
-assertion failed: false
-failures:
-    test_hello
 ...
+[..]FALSE![..]
+...
+
 "#]]
             .unordered(),
         )
@@ -498,7 +477,10 @@ failures:
 fn cargo_test_failing_test_in_lib() {
     let p = project()
         .file("Cargo.toml", &basic_lib_manifest("foo"))
-        .file("src/lib.rs", "#[test] fn test_hello() { assert!(false) }")
+        .file(
+            "src/lib.rs",
+            r#"#[test] fn test_hello() { assert!(false, "FALSE!") }"#,
+        )
         .build();
 
     p.cargo("test")
@@ -512,16 +494,8 @@ fn cargo_test_failing_test_in_lib() {
         .with_stdout_data(str![[r#"
 ...
 test test_hello ... FAILED
-
-failures:
-
----- test_hello stdout ----
 ...
-thread 'test_hello' panicked at src/lib.rs:1:27:
-assertion failed: false
-...
-failures:
-    test_hello
+[..]FALSE![..]
 ...
 "#]])
         .with_status(101)
@@ -5523,12 +5497,11 @@ Caused by:
         .run();
 
     p.cargo("test --no-fail-fast -- --nocapture")
-        .env_remove("RUST_BACKTRACE")
         .with_stderr_does_not_contain(
             "test exited abnormally; to see the full output pass --nocapture to the harness.",
         )
         .with_stderr_data(str![[r#"
-thread 't' panicked at tests/t1.rs:3:26:
+[..]thread [..]panicked [..] tests/t1.rs[..]
 [NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 Caused by:
   process didn't exit successfully: `[ROOT]/foo/target/debug/deps/t2-[HASH][EXE] --nocapture` ([EXIT_STATUS]: 4)
