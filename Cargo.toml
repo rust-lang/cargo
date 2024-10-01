@@ -104,7 +104,7 @@ tracing = { version = "0.1.40", default-features = false, features = ["std"] } #
 tracing-chrome = "0.7.2"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 unicase = "2.7.0"
-unicode-width = "0.1.13"
+unicode-width = "0.2.0"
 unicode-xid = "0.2.4"
 url = "2.5.2"
 varisat = "0.2.2"
