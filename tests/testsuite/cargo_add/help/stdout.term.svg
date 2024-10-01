@@ -1,4 +1,4 @@
-<svg width="860px" height="2522px" xmlns="http://www.w3.org/2000/svg">
+<svg width="860px" height="2576px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
@@ -147,7 +147,7 @@
 </tspan>
     <tspan x="10px" y="1162px">
 </tspan>
-    <tspan x="10px" y="1180px"><tspan>      </tspan><tspan class="fg-cyan bold">--config</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;KEY=VALUE&gt;</tspan>
+    <tspan x="10px" y="1180px"><tspan>      </tspan><tspan class="fg-cyan bold">--config</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;KEY=VALUE|PATH&gt;</tspan>
 </tspan>
     <tspan x="10px" y="1198px"><tspan>          Override a configuration value</tspan>
 </tspan>

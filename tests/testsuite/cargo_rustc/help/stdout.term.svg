@@ -49,7 +49,7 @@
 </tspan>
     <tspan x="10px" y="280px"><tspan>      </tspan><tspan class="fg-cyan bold">--color</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;WHEN&gt;</tspan><tspan>             Coloring: auto, always, never</tspan>
 </tspan>
-    <tspan x="10px" y="298px"><tspan>      </tspan><tspan class="fg-cyan bold">--config</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;KEY=VALUE&gt;</tspan><tspan>       Override a configuration value</tspan>
+    <tspan x="10px" y="298px"><tspan>      </tspan><tspan class="fg-cyan bold">--config</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;KEY=VALUE|PATH&gt;</tspan><tspan>  Override a configuration value</tspan>
 </tspan>
     <tspan x="10px" y="316px"><tspan>  </tspan><tspan class="fg-cyan bold">-Z</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FLAG&gt;</tspan><tspan>                      Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for</tspan>
 </tspan>

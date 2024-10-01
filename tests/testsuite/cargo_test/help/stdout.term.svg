@@ -1,4 +1,4 @@
-<svg width="818px" height="1190px" xmlns="http://www.w3.org/2000/svg">
+<svg width="827px" height="1190px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
@@ -37,27 +37,27 @@
 </tspan>
     <tspan x="10px" y="172px"><tspan class="fg-green bold">Options:</tspan>
 </tspan>
-    <tspan x="10px" y="190px"><tspan>      </tspan><tspan class="fg-cyan bold">--no-run</tspan><tspan>                  Compile, but don't run tests</tspan>
+    <tspan x="10px" y="190px"><tspan>      </tspan><tspan class="fg-cyan bold">--no-run</tspan><tspan>                   Compile, but don't run tests</tspan>
 </tspan>
-    <tspan x="10px" y="208px"><tspan>      </tspan><tspan class="fg-cyan bold">--no-fail-fast</tspan><tspan>            Run all tests regardless of failure</tspan>
+    <tspan x="10px" y="208px"><tspan>      </tspan><tspan class="fg-cyan bold">--no-fail-fast</tspan><tspan>             Run all tests regardless of failure</tspan>
 </tspan>
-    <tspan x="10px" y="226px"><tspan>      </tspan><tspan class="fg-cyan bold">--future-incompat-report</tspan><tspan>  Outputs a future incompatibility report at the end of the build</tspan>
+    <tspan x="10px" y="226px"><tspan>      </tspan><tspan class="fg-cyan bold">--future-incompat-report</tspan><tspan>   Outputs a future incompatibility report at the end of the build</tspan>
 </tspan>
-    <tspan x="10px" y="244px"><tspan>      </tspan><tspan class="fg-cyan bold">--message-format</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FMT&gt;</tspan><tspan>    Error format</tspan>
+    <tspan x="10px" y="244px"><tspan>      </tspan><tspan class="fg-cyan bold">--message-format</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FMT&gt;</tspan><tspan>     Error format</tspan>
 </tspan>
-    <tspan x="10px" y="262px"><tspan>  </tspan><tspan class="fg-cyan bold">-q</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--quiet</tspan><tspan>                   Display one character per test instead of one line</tspan>
+    <tspan x="10px" y="262px"><tspan>  </tspan><tspan class="fg-cyan bold">-q</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--quiet</tspan><tspan>                    Display one character per test instead of one line</tspan>
 </tspan>
-    <tspan x="10px" y="280px"><tspan>  </tspan><tspan class="fg-cyan bold">-v</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--verbose</tspan><tspan class="fg-cyan">...</tspan><tspan>              Use verbose output (-vv very verbose/build.rs output)</tspan>
+    <tspan x="10px" y="280px"><tspan>  </tspan><tspan class="fg-cyan bold">-v</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--verbose</tspan><tspan class="fg-cyan">...</tspan><tspan>               Use verbose output (-vv very verbose/build.rs output)</tspan>
 </tspan>
-    <tspan x="10px" y="298px"><tspan>      </tspan><tspan class="fg-cyan bold">--color</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;WHEN&gt;</tspan><tspan>            Coloring: auto, always, never</tspan>
+    <tspan x="10px" y="298px"><tspan>      </tspan><tspan class="fg-cyan bold">--color</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;WHEN&gt;</tspan><tspan>             Coloring: auto, always, never</tspan>
 </tspan>
-    <tspan x="10px" y="316px"><tspan>      </tspan><tspan class="fg-cyan bold">--config</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;KEY=VALUE&gt;</tspan><tspan>      Override a configuration value</tspan>
+    <tspan x="10px" y="316px"><tspan>      </tspan><tspan class="fg-cyan bold">--config</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;KEY=VALUE|PATH&gt;</tspan><tspan>  Override a configuration value</tspan>
 </tspan>
-    <tspan x="10px" y="334px"><tspan>  </tspan><tspan class="fg-cyan bold">-Z</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FLAG&gt;</tspan><tspan>                     Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for</tspan>
+    <tspan x="10px" y="334px"><tspan>  </tspan><tspan class="fg-cyan bold">-Z</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FLAG&gt;</tspan><tspan>                      Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for</tspan>
 </tspan>
-    <tspan x="10px" y="352px"><tspan>                                details</tspan>
+    <tspan x="10px" y="352px"><tspan>                                 details</tspan>
 </tspan>
-    <tspan x="10px" y="370px"><tspan>  </tspan><tspan class="fg-cyan bold">-h</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--help</tspan><tspan>                    Print help</tspan>
+    <tspan x="10px" y="370px"><tspan>  </tspan><tspan class="fg-cyan bold">-h</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--help</tspan><tspan>                     Print help</tspan>
 </tspan>
     <tspan x="10px" y="388px">
 </tspan>

@@ -1,4 +1,4 @@
-<svg width="860px" height="524px" xmlns="http://www.w3.org/2000/svg">
+<svg width="827px" height="542px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
@@ -35,45 +35,47 @@
 </tspan>
     <tspan x="10px" y="154px"><tspan class="fg-green bold">Options:</tspan>
 </tspan>
-    <tspan x="10px" y="172px"><tspan>  </tspan><tspan class="fg-cyan bold">-a</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--add</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;LOGIN&gt;</tspan><tspan>          Name of a user or team to invite as an owner</tspan>
+    <tspan x="10px" y="172px"><tspan>  </tspan><tspan class="fg-cyan bold">-a</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--add</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;LOGIN&gt;</tspan><tspan>              Name of a user or team to invite as an owner</tspan>
 </tspan>
-    <tspan x="10px" y="190px"><tspan>  </tspan><tspan class="fg-cyan bold">-r</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--remove</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;LOGIN&gt;</tspan><tspan>       Name of a user or team to remove as an owner</tspan>
+    <tspan x="10px" y="190px"><tspan>  </tspan><tspan class="fg-cyan bold">-r</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--remove</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;LOGIN&gt;</tspan><tspan>           Name of a user or team to remove as an owner</tspan>
 </tspan>
-    <tspan x="10px" y="208px"><tspan>  </tspan><tspan class="fg-cyan bold">-l</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--list</tspan><tspan>                 List owners of a crate</tspan>
+    <tspan x="10px" y="208px"><tspan>  </tspan><tspan class="fg-cyan bold">-l</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--list</tspan><tspan>                     List owners of a crate</tspan>
 </tspan>
-    <tspan x="10px" y="226px"><tspan>      </tspan><tspan class="fg-cyan bold">--index</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;INDEX&gt;</tspan><tspan>        Registry index URL to modify owners for</tspan>
+    <tspan x="10px" y="226px"><tspan>      </tspan><tspan class="fg-cyan bold">--index</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;INDEX&gt;</tspan><tspan>            Registry index URL to modify owners for</tspan>
 </tspan>
-    <tspan x="10px" y="244px"><tspan>      </tspan><tspan class="fg-cyan bold">--registry</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;REGISTRY&gt;</tspan><tspan>  Registry to modify owners for</tspan>
+    <tspan x="10px" y="244px"><tspan>      </tspan><tspan class="fg-cyan bold">--registry</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;REGISTRY&gt;</tspan><tspan>      Registry to modify owners for</tspan>
 </tspan>
-    <tspan x="10px" y="262px"><tspan>      </tspan><tspan class="fg-cyan bold">--token</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;TOKEN&gt;</tspan><tspan>        API token to use when authenticating</tspan>
+    <tspan x="10px" y="262px"><tspan>      </tspan><tspan class="fg-cyan bold">--token</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;TOKEN&gt;</tspan><tspan>            API token to use when authenticating</tspan>
 </tspan>
-    <tspan x="10px" y="280px"><tspan>  </tspan><tspan class="fg-cyan bold">-v</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--verbose</tspan><tspan class="fg-cyan">...</tspan><tspan>           Use verbose output (-vv very verbose/build.rs output)</tspan>
+    <tspan x="10px" y="280px"><tspan>  </tspan><tspan class="fg-cyan bold">-v</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--verbose</tspan><tspan class="fg-cyan">...</tspan><tspan>               Use verbose output (-vv very verbose/build.rs output)</tspan>
 </tspan>
-    <tspan x="10px" y="298px"><tspan>  </tspan><tspan class="fg-cyan bold">-q</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--quiet</tspan><tspan>                Do not print cargo log messages</tspan>
+    <tspan x="10px" y="298px"><tspan>  </tspan><tspan class="fg-cyan bold">-q</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--quiet</tspan><tspan>                    Do not print cargo log messages</tspan>
 </tspan>
-    <tspan x="10px" y="316px"><tspan>      </tspan><tspan class="fg-cyan bold">--color</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;WHEN&gt;</tspan><tspan>         Coloring: auto, always, never</tspan>
+    <tspan x="10px" y="316px"><tspan>      </tspan><tspan class="fg-cyan bold">--color</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;WHEN&gt;</tspan><tspan>             Coloring: auto, always, never</tspan>
 </tspan>
-    <tspan x="10px" y="334px"><tspan>      </tspan><tspan class="fg-cyan bold">--config</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;KEY=VALUE&gt;</tspan><tspan>   Override a configuration value</tspan>
+    <tspan x="10px" y="334px"><tspan>      </tspan><tspan class="fg-cyan bold">--config</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;KEY=VALUE|PATH&gt;</tspan><tspan>  Override a configuration value</tspan>
 </tspan>
-    <tspan x="10px" y="352px"><tspan>  </tspan><tspan class="fg-cyan bold">-Z</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FLAG&gt;</tspan><tspan>                  Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details</tspan>
+    <tspan x="10px" y="352px"><tspan>  </tspan><tspan class="fg-cyan bold">-Z</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;FLAG&gt;</tspan><tspan>                      Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for</tspan>
 </tspan>
-    <tspan x="10px" y="370px"><tspan>  </tspan><tspan class="fg-cyan bold">-h</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--help</tspan><tspan>                 Print help</tspan>
+    <tspan x="10px" y="370px"><tspan>                                 details</tspan>
 </tspan>
-    <tspan x="10px" y="388px">
+    <tspan x="10px" y="388px"><tspan>  </tspan><tspan class="fg-cyan bold">-h</tspan><tspan>, </tspan><tspan class="fg-cyan bold">--help</tspan><tspan>                     Print help</tspan>
 </tspan>
-    <tspan x="10px" y="406px"><tspan class="fg-green bold">Manifest Options:</tspan>
+    <tspan x="10px" y="406px">
 </tspan>
-    <tspan x="10px" y="424px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan><tspan>   Assert that `Cargo.lock` will remain unchanged</tspan>
+    <tspan x="10px" y="424px"><tspan class="fg-green bold">Manifest Options:</tspan>
 </tspan>
-    <tspan x="10px" y="442px"><tspan>      </tspan><tspan class="fg-cyan bold">--offline</tspan><tspan>  Run without accessing the network</tspan>
+    <tspan x="10px" y="442px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan><tspan>   Assert that `Cargo.lock` will remain unchanged</tspan>
 </tspan>
-    <tspan x="10px" y="460px"><tspan>      </tspan><tspan class="fg-cyan bold">--frozen</tspan><tspan>   Equivalent to specifying both --locked and --offline</tspan>
+    <tspan x="10px" y="460px"><tspan>      </tspan><tspan class="fg-cyan bold">--offline</tspan><tspan>  Run without accessing the network</tspan>
 </tspan>
-    <tspan x="10px" y="478px">
+    <tspan x="10px" y="478px"><tspan>      </tspan><tspan class="fg-cyan bold">--frozen</tspan><tspan>   Equivalent to specifying both --locked and --offline</tspan>
 </tspan>
-    <tspan x="10px" y="496px"><tspan>Run `</tspan><tspan class="fg-cyan bold">cargo help owner</tspan><tspan class="bold">` for more detailed information.</tspan>
+    <tspan x="10px" y="496px">
 </tspan>
-    <tspan x="10px" y="514px">
+    <tspan x="10px" y="514px"><tspan>Run `</tspan><tspan class="fg-cyan bold">cargo help owner</tspan><tspan class="bold">` for more detailed information.</tspan>
+</tspan>
+    <tspan x="10px" y="532px">
 </tspan>
   </text>
 
