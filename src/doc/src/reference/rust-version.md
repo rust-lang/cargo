@@ -1,7 +1,7 @@
 # Rust Version
 
 The `rust-version` field is an optional key that tells cargo what version of the
-Rust language and compiler your package can be compiled with.
+Rust language and compiler you support for your package.
 If the currently selected version of the Rust compiler is older than the stated
 version, cargo will exit with an error, telling the user what version is
 required.
