@@ -23,6 +23,7 @@
         * [Overriding Dependencies](reference/overriding-dependencies.md)
     * [The Manifest Format](reference/manifest.md)
         * [Cargo Targets](reference/cargo-targets.md)
+        * [Rust version](reference/rust-version.md)
     * [Workspaces](reference/workspaces.md)
     * [Features](reference/features.md)
         * [Features Examples](reference/features-examples.md)
