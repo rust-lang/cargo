@@ -1846,63 +1846,6 @@ fn features_option_given_twice() {
     p.cargo("check --features a --features b").run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 is not stable")]
-fn strong_dep_feature_edition2024() {
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-                cargo-features = ["edition2024"]
-                [package]
-                name = "foo"
-                version = "0.1.0"
-                edition = "2024"
-
-                [features]
-                optional_dep = ["optional_dep/foo"]
-
-                [dependencies]
-                optional_dep = { path = "optional_dep", optional = true }
-            "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-               fn main() {}
-            "#,
-        )
-        .file(
-            "optional_dep/Cargo.toml",
-            r#"
-            [package]
-            name = "optional_dep"
-            [features]
-            foo = []
-"#,
-        )
-        .file(
-            "optional_dep/src/lib.rs",
-            r#"
-"#,
-        )
-        .build();
-
-    p.cargo("metadata")
-        .masquerade_as_nightly_cargo(&["edition2024"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] feature `optional_dep` includes `optional_dep/foo`, but `optional_dep` is not a dependency
- --> Cargo.toml:9:32
-  |
-9 |                 optional_dep = ["optional_dep/foo"]
-  |                                ^^^^^^^^^^^^^^^^^^^^
-  |
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-"#]])
-        .run();
-}
-
 #[cargo_test]
 fn multi_multi_features() {
     let p = project()

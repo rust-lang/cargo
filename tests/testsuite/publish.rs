@@ -3499,57 +3499,6 @@ fn versionless_package() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 is not stable")]
-fn unused_deps_edition_2024() {
-    let registry = RegistryBuilder::new().http_api().http_index().build();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-cargo-features = ["edition2024"]
-[package]
-name = "foo"
-version = "0.0.1"
-authors = []
-license = "MIT"
-description = "foo"
-edition = "2024"
-
-[dependencies]
-bar = { version = "0.1.0", optional = true }
-
-[build-dependencies]
-baz = { version = "0.1.0", optional = true }
-
-[target.'cfg(target_os = "linux")'.dependencies]
-target-dep = { version = "0.1.0", optional = true }
-            "#,
-        )
-        .file("src/main.rs", "")
-        .build();
-
-    p.cargo("publish --no-verify")
-        .masquerade_as_nightly_cargo(&["edition2024"])
-        .replace_crates_io(registry.index_url())
-        .with_stderr_data(str![[r#"
-[UPDATING] crates.io index
-[WARNING] manifest has no documentation, homepage or repository.
-See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
-[PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[UPLOADING] foo v0.0.1 ([ROOT]/foo)
-[UPLOADED] foo v0.0.1 to registry `crates-io`
-[NOTE] waiting for `foo v0.0.1` to be available at registry `crates-io`.
-You may press ctrl-c to skip waiting; the crate should be available shortly.
-[PUBLISHED] foo v0.0.1 at registry `crates-io`
-
-"#]])
-        .run();
-
-    validate_upload_foo();
-}
-
 // A workspace with three projects that depend on one another (level1 -> level2 -> level3).
 // level1 is a binary package, to test lockfile generation.
 fn workspace_with_local_deps_project() -> Project {

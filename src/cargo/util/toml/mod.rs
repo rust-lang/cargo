@@ -1,5 +1,5 @@
 use annotate_snippets::{Level, Snippet};
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -24,7 +24,6 @@ use crate::core::compiler::{CompileKind, CompileTarget};
 use crate::core::dependency::{Artifact, ArtifactTarget, DepKind};
 use crate::core::manifest::{ManifestMetadata, TargetSourcePath};
 use crate::core::resolver::ResolveBehavior;
-use crate::core::FeatureValue::Dep;
 use crate::core::{find_workspace_root, resolve_relative_path, CliUnstable, FeatureValue};
 use crate::core::{Dependency, Manifest, Package, PackageId, Summary, Target};
 use crate::core::{Edition, EitherManifest, Feature, Features, VirtualManifest, Workspace};
@@ -372,26 +371,11 @@ fn normalize_toml(
             errors,
         )?);
 
-        let activated_opt_deps = normalized_toml
-            .features
-            .as_ref()
-            .map(|map| {
-                map.values()
-                    .flatten()
-                    .filter_map(|f| match FeatureValue::new(InternedString::new(f)) {
-                        Dep { dep_name } => Some(dep_name.as_str()),
-                        _ => None,
-                    })
-                    .collect::<HashSet<_>>()
-            })
-            .unwrap_or_default();
-
         normalized_toml.dependencies = normalize_dependencies(
             gctx,
             edition,
             &features,
             original_toml.dependencies.as_ref(),
-            &activated_opt_deps,
             None,
             &inherit,
             &workspace_root,
@@ -412,7 +396,6 @@ fn normalize_toml(
             edition,
             &features,
             original_toml.dev_dependencies(),
-            &activated_opt_deps,
             Some(DepKind::Development),
             &inherit,
             &workspace_root,
@@ -433,7 +416,6 @@ fn normalize_toml(
             edition,
             &features,
             original_toml.build_dependencies(),
-            &activated_opt_deps,
             Some(DepKind::Build),
             &inherit,
             &workspace_root,
@@ -447,7 +429,6 @@ fn normalize_toml(
                 edition,
                 &features,
                 platform.dependencies.as_ref(),
-                &activated_opt_deps,
                 None,
                 &inherit,
                 &workspace_root,
@@ -468,7 +449,6 @@ fn normalize_toml(
                 edition,
                 &features,
                 platform.dev_dependencies(),
-                &activated_opt_deps,
                 Some(DepKind::Development),
                 &inherit,
                 &workspace_root,
@@ -489,7 +469,6 @@ fn normalize_toml(
                 edition,
                 &features,
                 platform.build_dependencies(),
-                &activated_opt_deps,
                 Some(DepKind::Build),
                 &inherit,
                 &workspace_root,
@@ -756,7 +735,6 @@ fn normalize_dependencies<'a>(
     edition: Edition,
     features: &Features,
     orig_deps: Option<&BTreeMap<manifest::PackageName, manifest::InheritableDependency>>,
-    activated_opt_deps: &HashSet<&str>,
     kind: Option<DepKind>,
     inherit: &dyn Fn() -> CargoResult<&'a InheritableFields>,
     workspace_root: &dyn Fn() -> CargoResult<&'a Path>,
@@ -818,18 +796,10 @@ fn normalize_dependencies<'a>(
                 .with_context(|| format!("resolving path dependency {name_in_toml}"))?;
         }
 
-        // if the dependency is not optional, it is always used
-        // if the dependency is optional and activated, it is used
-        // if the dependency is optional and not activated, it is not used
-        let is_dep_activated =
-            !resolved.is_optional() || activated_opt_deps.contains(name_in_toml.as_str());
-        // If the edition is less than 2024, we don't need to check for unused optional dependencies
-        if edition < Edition::Edition2024 || is_dep_activated {
-            deps.insert(
-                name_in_toml.clone(),
-                manifest::InheritableDependency::Value(resolved.clone()),
-            );
-        }
+        deps.insert(
+            name_in_toml.clone(),
+            manifest::InheritableDependency::Value(resolved.clone()),
+        );
     }
     Ok(Some(deps))
 }

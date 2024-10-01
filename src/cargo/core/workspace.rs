@@ -24,9 +24,7 @@ use crate::sources::{PathSource, SourceConfigMap, CRATES_IO_INDEX, CRATES_IO_REG
 use crate::util::edit_distance;
 use crate::util::errors::{CargoResult, ManifestError};
 use crate::util::interning::InternedString;
-use crate::util::lints::{
-    analyze_cargo_lints_table, check_im_a_teapot, check_implicit_features, unused_dependencies,
-};
+use crate::util::lints::{analyze_cargo_lints_table, check_im_a_teapot};
 use crate::util::toml::{read_manifest, InheritableFields};
 use crate::util::{
     context::CargoResolverConfig, context::ConfigRelativePath, context::IncompatibleRustVersions,
@@ -1240,8 +1238,6 @@ impl<'gctx> Workspace<'gctx> {
             self.gctx,
         )?;
         check_im_a_teapot(pkg, &path, &cargo_lints, &mut error_count, self.gctx)?;
-        check_implicit_features(pkg, &path, &cargo_lints, &mut error_count, self.gctx)?;
-        unused_dependencies(pkg, &path, &cargo_lints, &mut error_count, self.gctx)?;
         if error_count > 0 {
             Err(crate::util::errors::AlreadyPrintedError::new(anyhow!(
                 "encountered {error_count} errors(s) while running lints"
