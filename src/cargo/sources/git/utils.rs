@@ -359,8 +359,7 @@ impl<'a> GitCheckout<'a> {
     ///
     /// [`.cargo-ok`]: CHECKOUT_READY_LOCK
     fn reset(&self, gctx: &GlobalContext) -> CargoResult<()> {
-        let ok_file = self.path.join(CHECKOUT_READY_LOCK);
-        let _ = paths::remove_file(&ok_file);
+        let guard = CheckoutGuard::guard(&self.path);
         info!("reset {} to {}", self.repo.path().display(), self.revision);
 
         // Ensure libgit2 won't mess with newlines when we vendor.
@@ -370,7 +369,8 @@ impl<'a> GitCheckout<'a> {
 
         let object = self.repo.find_object(self.revision, None)?;
         reset(&self.repo, &object, gctx)?;
-        paths::create(ok_file)?;
+
+        guard.mark_ok()?;
         Ok(())
     }
 
@@ -476,6 +476,25 @@ impl<'a> GitCheckout<'a> {
             reset(&repo, &obj, gctx)?;
             update_submodules(&repo, gctx, &child_remote_url)
         }
+    }
+}
+
+/// See [`GitCheckout::reset`] for rationale on this type.
+#[must_use]
+struct CheckoutGuard {
+    ok_file: PathBuf,
+}
+
+impl CheckoutGuard {
+    fn guard(path: &Path) -> Self {
+        let ok_file = path.join(CHECKOUT_READY_LOCK);
+        let _ = paths::remove_file(&ok_file);
+        Self { ok_file }
+    }
+
+    fn mark_ok(self) -> CargoResult<()> {
+        let _ = paths::create(self.ok_file)?;
+        Ok(())
     }
 }
 
