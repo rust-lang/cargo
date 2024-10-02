@@ -122,6 +122,7 @@ impl Container {
             return;
         }
         let mut ar = tar::Builder::new(Vec::new());
+        ar.sparse(false);
         let files = std::mem::replace(&mut self.files, Vec::new());
         for mut file in files {
             ar.append_data(&mut file.header, &file.path, file.contents.as_slice())

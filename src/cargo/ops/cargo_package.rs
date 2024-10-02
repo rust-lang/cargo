@@ -903,6 +903,7 @@ fn tar(
 
     // Put all package files into a compressed archive.
     let mut ar = Builder::new(encoder);
+    ar.sparse(false);
     let gctx = ws.gctx();
 
     let base_name = format!("{}-{}", pkg.name(), pkg.version());
