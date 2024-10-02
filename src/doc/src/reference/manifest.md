@@ -164,7 +164,7 @@ will have `edition` explicitly specified to a newer value.
 ### The `rust-version` field
 
 The `rust-version` field tells cargo what version of the
-Rust language and compiler you support for your package.
+Rust toolchain you support for your package.
 See [the Rust version chapter](rust-version.md) for more detail.
 
 ### The `description` field
