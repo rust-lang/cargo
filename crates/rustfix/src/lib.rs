@@ -18,6 +18,10 @@
 //! 3. Create a [`CodeFix`] with the source of a file to modify.
 //! 4. Call [`CodeFix::apply`] to apply a change.
 //! 5. Call [`CodeFix::finish`] to get the result and write it back to disk.
+//!
+//! > This crate is maintained by the Cargo team, primarily for use by Cargo and Rust compiler test suite
+//! > and not intended for external use (except as a transitive dependency). This
+//! > crate may make major changes to its APIs or be deprecated without warning.
 
 use std::collections::HashSet;
 use std::ops::Range;

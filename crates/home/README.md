@@ -20,6 +20,10 @@ that Cargo and rustup store their data.
 
 See [rust-lang/rust#43321].
 
+> This crate is maintained by the Cargo team, primarily for use by Cargo and Rustup
+> and not intended for external use. This
+> crate may make major changes to its APIs or be deprecated without warning.
+
 [rust-lang/rust#43321]: https://github.com/rust-lang/rust/issues/43321
 
 ## License

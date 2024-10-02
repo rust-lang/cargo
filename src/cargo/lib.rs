@@ -7,9 +7,10 @@
 //! - <https://doc.rust-lang.org/nightly/nightly-rustc/cargo>: targeted at cargo contributors
 //!   - Updated on each update of the `cargo` submodule in `rust-lang/rust`
 //!
-//! **WARNING:** Using Cargo as a library has drawbacks, particularly the API is unstable,
-//! and there is no clear path to stabilize it soon at the time of writing.  See [The Cargo Book:
-//! External tools] for more on this topic.
+//! > This library is maintained by the Cargo team, primarily for use by Cargo
+//! > and not intended for external use (except as a transitive dependency). This
+//! > crate may make major changes to its APIs. See [The Cargo Book:
+//! > External tools] for more on this topic.
 //!
 //! ## Overview
 //!

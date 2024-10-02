@@ -12,6 +12,9 @@
 //! While in the `perform` function, stdin and stdout will be re-attached to the
 //! active console. This allows credential providers to be interactive if necessary.
 //!
+//! > This crate is maintained by the Cargo team for use by the wider
+//! > ecosystem. This crate follows semver compatibility for its APIs.
+//!
 //! ## Error handling
 //! ### [`Error::UrlNotSupported`]
 //! A credential provider may only support some registry URLs. If this is the case

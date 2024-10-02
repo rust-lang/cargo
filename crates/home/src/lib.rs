@@ -16,6 +16,10 @@
 //!
 //! See also this [discussion].
 //!
+//! > This crate is maintained by the Cargo team, primarily for use by Cargo and Rustup
+//! > and not intended for external use. This
+//! > crate may make major changes to its APIs or be deprecated without warning.
+//!
 //! [discussion]: https://github.com/rust-lang/rust/pull/46799#issuecomment-361156935
 
 #![allow(clippy::disallowed_methods)]

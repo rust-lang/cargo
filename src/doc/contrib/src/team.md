@@ -166,6 +166,15 @@ The degree of process is correlated with the degree of change being proposed:
 [Stable backports]: process/release.md#stable-backports
 [SemVer chapter]: https://doc.rust-lang.org/cargo/reference/semver.html
 
+## Intentional Artifacts
+
+Per the [Rust crate ownership policy](https://forge.rust-lang.org/policies/crate-ownership.html), the Cargo team's "Intentional Artifacts" include:
+
+- [cargo-credential](https://crates.io/crates/cargo-credential)
+- [cargo-platform](https://crates.io/crates/cargo-platform)
+- [cargo-util-schemas](https://crates.io/crates/cargo-util-schemas)
+- [crates-io](https://crates.io/crates/crates-io)
+
 ## Contacting the team
 
 The team may be contacted through several channels:
