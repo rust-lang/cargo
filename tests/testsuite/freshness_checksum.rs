@@ -9,8 +9,7 @@ use std::thread;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
-    basic_lib_manifest, basic_manifest, is_coarse_mtime, project, rustc_host, rustc_host_env,
-    sleep_ms, str,
+    basic_lib_manifest, basic_manifest, project, rustc_host, rustc_host_env, str,
 };
 
 use super::death;
@@ -115,9 +114,6 @@ fn rebuild_sub_package_then_while_package() {
 "#]])
         .run();
 
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
     p.change_file("b/src/lib.rs", "pub fn b() {}");
 
     p.cargo("build -Zchecksum-freshness -pb -v")
@@ -600,7 +596,6 @@ fn rebuild_tests_if_lib_changes() {
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .run();
 
-    sleep_ms(1000);
     p.change_file("src/lib.rs", "");
 
     p.cargo("build -Zchecksum-freshness -v")
@@ -966,7 +961,6 @@ fn no_rebuild_when_rename_dir() {
     // make sure the most recently modified file is `src/lib.rs`, not
     // `Cargo.toml`, to expose a historical bug where we forgot to strip the
     // `Cargo.toml` path from looking for the package root.
-    cargo_test_support::sleep_ms(100);
     fs::write(p.root().join("src/lib.rs"), "").unwrap();
 
     p.cargo("build -Zchecksum-freshness")
@@ -1510,14 +1504,8 @@ fn bust_patched_dep() {
     p.cargo("build -Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .run();
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
 
     p.change_file("reg1new/src/lib.rs", "// modified");
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
 
     p.cargo("build -Zchecksum-freshness -v")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
@@ -1622,7 +1610,6 @@ fn rebuild_on_mid_build_file_modification() {
 
     let t = thread::spawn(move || {
         let socket = server.accept().unwrap().0;
-        sleep_ms(1000);
         let mut file = OpenOptions::new()
             .write(true)
             .append(true)
@@ -1741,10 +1728,6 @@ fn dirty_both_lib_and_test() {
         .with_stdout_data("...\n[..]doit assert failure[..]\n...")
         .run();
 
-    if is_coarse_mtime() {
-        // #5918
-        sleep_ms(1000);
-    }
     // Fix the mistake.
     p.change_file("slib.rs", &slib(1));
 
@@ -1783,9 +1766,6 @@ fn script_fails_stay_dirty() {
     p.cargo("build -Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
         .run();
-    if is_coarse_mtime() {
-        sleep_ms(1000);
-    }
     p.change_file("helper.rs", r#"pub fn doit() {panic!("Crash!");}"#);
     p.cargo("build -Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
