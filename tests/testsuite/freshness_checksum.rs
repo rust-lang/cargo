@@ -1,4 +1,4 @@
-//! Tests for fingerprinting (rebuild detection).
+//! Tests for checksum-based fingerprinting (rebuild detection).
 
 use std::fs::{self, OpenOptions};
 use std::io;
