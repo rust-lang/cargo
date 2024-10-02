@@ -15,7 +15,7 @@ use cargo_test_support::{
 
 use super::death;
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn modifying_and_moving() {
     let p = project()
         .file("src/main.rs", "mod a; fn main() {}")
@@ -63,7 +63,7 @@ error[E0583]: file not found for module `a`
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn rebuild_sub_package_then_while_package() {
     let p = project()
         .file(
@@ -145,7 +145,7 @@ fn rebuild_sub_package_then_while_package() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn changing_lib_features_caches_targets() {
     let p = project()
         .file(
@@ -204,7 +204,7 @@ fn changing_lib_features_caches_targets() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn changing_profiles_caches_targets() {
     let p = project()
         .file(
@@ -259,7 +259,7 @@ fn changing_profiles_caches_targets() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn changing_bin_paths_common_target_features_caches_targets() {
     // Make sure dep_cache crate is built once per feature
     let p = project()
@@ -444,7 +444,7 @@ ftest on
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn changing_bin_features_caches_targets() {
     let p = project()
         .file(
@@ -552,7 +552,7 @@ feature on
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn rebuild_tests_if_lib_changes() {
     let p = project()
         .file("src/lib.rs", "pub fn foo() {}")
@@ -588,7 +588,7 @@ error[E0425]: cannot find function `foo` in crate `foo`
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn no_rebuild_transitive_target_deps() {
     let p = project()
         .file(
@@ -654,7 +654,7 @@ fn no_rebuild_transitive_target_deps() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn rerun_if_changed_in_dep() {
     let p = project()
         .file(
@@ -702,7 +702,7 @@ fn rerun_if_changed_in_dep() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn same_build_dir_cached_packages() {
     let p = project()
         .no_manifest()
@@ -792,7 +792,7 @@ fn same_build_dir_cached_packages() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
     let p = project()
         .file(
@@ -826,7 +826,7 @@ fn no_rebuild_if_build_artifacts_move_backwards_in_time() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn rebuild_if_environment_changes() {
     let p = project()
         .file(
@@ -891,7 +891,7 @@ new desc
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn no_rebuild_when_rename_dir() {
     let p = project()
         .file(
@@ -937,7 +937,7 @@ fn no_rebuild_when_rename_dir() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn unused_optional_dep() {
     Package::new("registry1", "0.1.0").publish();
     Package::new("registry2", "0.1.0").publish();
@@ -999,7 +999,7 @@ fn unused_optional_dep() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn path_dev_dep_registry_updates() {
     Package::new("registry1", "0.1.0").publish();
     Package::new("registry2", "0.1.0").publish();
@@ -1061,7 +1061,7 @@ fn path_dev_dep_registry_updates() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn change_panic_mode() {
     let p = project()
         .file(
@@ -1099,7 +1099,7 @@ fn change_panic_mode() {
     p.cargo("build -p baz").run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn dont_rebuild_based_on_plugins() {
     let p = project()
         .file(
@@ -1167,7 +1167,7 @@ fn dont_rebuild_based_on_plugins() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn reuse_workspace_lib() {
     let p = project()
         .file(
@@ -1201,7 +1201,7 @@ fn reuse_workspace_lib() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn reuse_shared_build_dep() {
     let p = project()
         .file(
@@ -1250,7 +1250,7 @@ fn reuse_shared_build_dep() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn changing_rustflags_is_cached() {
     let p = project().file("src/lib.rs", "").build();
 
@@ -1294,7 +1294,7 @@ fn changing_rustflags_is_cached() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn reuse_panic_build_dep_test() {
     let p = project()
         .file(
@@ -1338,7 +1338,7 @@ fn reuse_panic_build_dep_test() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn reuse_panic_pm() {
     // foo(panic) -> bar(panic)
     // somepm(nopanic) -> bar(nopanic)
@@ -1401,7 +1401,7 @@ fn reuse_panic_pm() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn bust_patched_dep() {
     Package::new("registry1", "0.1.0").publish();
     Package::new("registry2", "0.1.0")
@@ -1464,7 +1464,7 @@ fn bust_patched_dep() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn rebuild_on_mid_build_file_modification() {
     let server = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = server.local_addr().unwrap();
@@ -1572,7 +1572,7 @@ fn rebuild_on_mid_build_file_modification() {
     t.join().ok().unwrap();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn dirty_both_lib_and_test() {
     // This tests that all artifacts that depend on the results of a build
     // script will get rebuilt when the build script reruns, even for separate
@@ -1664,7 +1664,7 @@ fn dirty_both_lib_and_test() {
     p.cargo("test --lib").run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn script_fails_stay_dirty() {
     // Check if a script is aborted (such as hitting Ctrl-C) that it will re-run.
     // Steps:
@@ -1703,7 +1703,7 @@ fn script_fails_stay_dirty() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn metadata_change_invalidates() {
     let p = project()
         .file(
@@ -1750,7 +1750,7 @@ fn metadata_change_invalidates() {
     assert_eq!(p.glob("target/debug/deps/libfoo-*.rlib").count(), 1);
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn edition_change_invalidates() {
     const MANIFEST: &str = r#"
         [package]
@@ -1797,7 +1797,7 @@ fn edition_change_invalidates() {
     assert_eq!(p.glob("target/debug/deps/libfoo-*.rlib").count(), 1);
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn rename_with_path_deps() {
     let p = project()
         .file(
@@ -1860,7 +1860,7 @@ fn rename_with_path_deps() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn move_target_directory_with_path_deps() {
     let p = project()
         .file(
@@ -1932,7 +1932,7 @@ fn move_target_directory_with_path_deps() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn rerun_if_changes() {
     let p = project()
         .file(
@@ -2017,7 +2017,7 @@ fn rerun_if_changes() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn channel_shares_filenames() {
     // Test that different "nightly" releases use the same output filename.
 
@@ -2191,7 +2191,7 @@ LLVM version: 9.0
     assert_eq!(check("nightly1", true), nightly1_name);
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn linking_interrupted() {
     // Interrupt during the linking phase shouldn't leave test executable as "fresh".
 
@@ -2314,11 +2314,8 @@ fn linking_interrupted() {
         .run();
 }
 
-#[cargo_test]
-#[cfg_attr(
-    not(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc")),
-    ignore
-)]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
+#[cfg(all(target_arch = "x86_64", target_os = "windows", target_env = "msvc"))]
 fn lld_is_fresh() {
     // Check for bug when using lld linker that it remains fresh with dylib.
     let p = project()
@@ -2355,7 +2352,7 @@ fn lld_is_fresh() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn env_in_code_causes_rebuild() {
     let p = project()
         .file(
@@ -2458,7 +2455,7 @@ fn env_in_code_causes_rebuild() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn env_build_script_no_rebuild() {
     let p = project()
         .file(
@@ -2497,7 +2494,7 @@ fn env_build_script_no_rebuild() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn changing_linker() {
     // Changing linker should rebuild.
     let p = project().file("src/main.rs", "fn main() {}").build();
@@ -2516,7 +2513,7 @@ fn changing_linker() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn verify_source_before_recompile() {
     Package::new("bar", "0.1.0")
         .file("src/lib.rs", "")
@@ -2592,7 +2589,7 @@ directory sources are not intended to be edited, if modifications are required t
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn skip_mtime_check_in_selected_cargo_home_subdirs() {
     let p = project()
         .at("cargo_home/registry/foo")
@@ -2621,7 +2618,7 @@ fn skip_mtime_check_in_selected_cargo_home_subdirs() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn use_mtime_cache_in_cargo_home() {
     let p = project()
         .at("cargo_home/foo")
