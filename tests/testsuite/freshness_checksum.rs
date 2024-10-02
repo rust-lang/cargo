@@ -15,6 +15,69 @@ use cargo_test_support::{
 use super::death;
 
 #[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
+fn checksum_actually_uses_checksum() {
+    let p = project()
+        .file("src/main.rs", "mod a; fn main() {}")
+        .file("src/a.rs", "")
+        .build();
+
+    p.cargo("check -Zchecksum-freshness")
+        .masquerade_as_nightly_cargo(&["checksum-freshness"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    p.root().move_into_the_future();
+
+    p.cargo("check -Zchecksum-freshness")
+        .masquerade_as_nightly_cargo(&["checksum-freshness"])
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
+fn same_size_different_content() {
+    let p = project()
+        .file("src/main.rs", "mod a; fn main() {}")
+        .file("src/a.rs", "")
+        .build();
+
+    p.cargo("check -Zchecksum-freshness")
+        .masquerade_as_nightly_cargo(&["checksum-freshness"])
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    p.change_file("src/main.rs", "mod a;fn main() { }");
+
+    p.cargo("check -v -Zchecksum-freshness")
+        .masquerade_as_nightly_cargo(&["checksum-freshness"])
+        .with_stderr_data(str![[r#"
+[DIRTY] foo v0.0.1 ([ROOT]/foo): the file `src/main.rs` has changed (checksum didn't match, blake3=26aa07e1adab787246f9d333be65d2eb78dd5fd0fee834ba7a769098b4b651bc != blake3=fc1a42e376d9c148227c13de41b77143f6b5b8132d2b204b63cdbc9326848894)
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("check -Zchecksum-freshness")
+        .masquerade_as_nightly_cargo(&["checksum-freshness"])
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn modifying_and_moving() {
     let p = project()
         .file("src/main.rs", "mod a; fn main() {}")
