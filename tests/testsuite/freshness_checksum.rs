@@ -14,6 +14,19 @@ use cargo_test_support::{
 
 use super::death;
 
+#[cargo_test]
+fn non_nightly_fails() {
+    let p = project().file("src/main.rs", "fn main() {}").build();
+    p.cargo("build -Zchecksum-freshness")
+        .with_stderr_data(str![[r#"
+[ERROR] the `-Z` flag is only accepted on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+
+"#]])
+        .with_status(101)
+        .run();
+}
+
 #[cargo_test(nightly, reason = "requires -Zchecksum-hash-algorithm")]
 fn checksum_actually_uses_checksum() {
     let p = project()
@@ -1584,7 +1597,8 @@ fn bust_patched_dep() {
 [RUNNING] `rustc --crate-name foo [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]]).run();
+"#]])
+        .run();
 
     p.cargo("build -Zchecksum-freshness -v")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
@@ -1703,7 +1717,8 @@ fn rebuild_on_mid_build_file_modification() {
 [RUNNING] `rustc --crate-name root [..]
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]]).run();
+"#]])
+        .run();
 
     t.join().ok().unwrap();
 }
