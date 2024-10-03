@@ -369,6 +369,22 @@ Can be overridden with
 - Setting the dependency's version requirement higher than any version with a compatible `rust-version`
 - Specifying the version to `cargo update` with `--precise`
 
+### Convert `incompatible_toolchain` error into a lint
+
+Unimplemented
+
+### `--update-rust-version` flag for `cargo add`, `cargo update`
+
+Unimplemented
+
+### `package.rust-version = "toolchain"`
+
+Unimplemented
+
+### Update `cargp new` template to set `package.rust-version = "toolchain"`
+
+Unimplemented
+
 ## precise-pre-release
 
 * Tracking Issue: [#13290](https://github.com/rust-lang/cargo/issues/13290)
