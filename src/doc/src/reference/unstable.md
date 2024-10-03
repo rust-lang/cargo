@@ -331,6 +331,7 @@ Documentation updates:
 - For workspace's "The `dependencies` table" section, include `public` as an unsupported field for `workspace.dependencies`
 
 ## msrv-policy
+- [RFC: MSRV-aware Resolver](https://rust-lang.github.io/rfcs/3537-msrv-resolver.html)
 - [#9930](https://github.com/rust-lang/cargo/issues/9930) (MSRV-aware resolver)
 
 Catch-all unstable feature for MSRV-aware cargo features under
@@ -367,6 +368,22 @@ Can be overridden with
 - `--ignore-rust-version` CLI option
 - Setting the dependency's version requirement higher than any version with a compatible `rust-version`
 - Specifying the version to `cargo update` with `--precise`
+
+### Convert `incompatible_toolchain` error into a lint
+
+Unimplemented
+
+### `--update-rust-version` flag for `cargo add`, `cargo update`
+
+Unimplemented
+
+### `package.rust-version = "toolchain"`
+
+Unimplemented
+
+### Update `cargp new` template to set `package.rust-version = "toolchain"`
+
+Unimplemented
 
 ## precise-pre-release
 
