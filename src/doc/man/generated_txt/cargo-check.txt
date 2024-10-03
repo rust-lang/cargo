@@ -146,7 +146,7 @@ OPTIONS
            Note that specifying this flag makes Cargo run in a different mode
            where the target artifacts are placed in a separate directory. See
            the build cache
-           <https://doc.rust-lang.org/cargo/guide/build-cache.html>
+           <https://doc.rust-lang.org/cargo/reference/build-cache.html>
            documentation for more details.
 
        -r, --release

@@ -554,7 +554,7 @@ overrides the config setting.
 * Environment: `CARGO_BUILD_DEP_INFO_BASEDIR`
 
 Strips the given path prefix from [dep
-info](../guide/build-cache.md#dep-info-files) file paths. This config setting
+info](../reference/build-cache.md#dep-info-files) file paths. This config setting
 is intended to convert absolute paths to relative paths for tools that require
 relative paths.
 
