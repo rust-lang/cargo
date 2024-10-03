@@ -440,7 +440,7 @@ script looks something [like
 this](https://github.com/sfackler/rust-openssl/blob/dc72a8e2c429e46c275e528b61a733a66e7877fc/openssl-sys/build/main.rs#L216):
 
 ```rust,ignore
-println!("cargo::version_number={:x}", openssl_version);
+println!("cargo::metadata=version_number={openssl_version:x}");
 ```
 
 This instruction causes the `DEP_OPENSSL_VERSION_NUMBER` environment variable
