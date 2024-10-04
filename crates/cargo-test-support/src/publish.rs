@@ -184,29 +184,32 @@ pub fn validate_crate_contents(
     let mut contents = Vec::new();
     rdr.read_to_end(&mut contents).unwrap();
     let mut ar = Archive::new(&contents[..]);
-    let files: HashMap<PathBuf, String> = ar
-        .entries()
-        .unwrap()
-        .map(|entry| {
-            let mut entry = entry.unwrap();
-            let name = entry.path().unwrap().into_owned();
-            let mut contents = String::new();
-            entry.read_to_string(&mut contents).unwrap();
-            (name, contents)
-        })
-        .collect();
     let base_crate_name = Path::new(
         expected_crate_name
             .strip_suffix(".crate")
             .expect("must end with .crate"),
     );
-    let actual_files: HashSet<PathBuf> = files.keys().cloned().collect();
-    let expected_files: HashSet<PathBuf> = expected_files
-        .iter()
-        .map(|name| base_crate_name.join(name))
+    let files: HashMap<PathBuf, String> = ar
+        .entries()
+        .unwrap()
+        .map(|entry| {
+            let mut entry = entry.unwrap();
+            let name = entry
+                .path()
+                .unwrap()
+                .strip_prefix(base_crate_name)
+                .unwrap()
+                .to_owned();
+            let mut contents = String::new();
+            entry.read_to_string(&mut contents).unwrap();
+            (name, contents)
+        })
         .collect();
-    let missing: Vec<&PathBuf> = expected_files.difference(&actual_files).collect();
-    let extra: Vec<&PathBuf> = actual_files.difference(&expected_files).collect();
+    let actual_files: HashSet<&Path> = files.keys().map(|p| p.as_path()).collect();
+    let expected_files: HashSet<&Path> =
+        expected_files.iter().map(|name| Path::new(name)).collect();
+    let missing: Vec<&&Path> = expected_files.difference(&actual_files).collect();
+    let extra: Vec<&&Path> = actual_files.difference(&expected_files).collect();
     if !missing.is_empty() || !extra.is_empty() {
         panic!(
             "uploaded archive does not match.\nMissing: {:?}\nExtra: {:?}\n",
@@ -215,10 +218,10 @@ pub fn validate_crate_contents(
     }
     if !expected_contents.is_empty() {
         for (e_file_name, e_file_contents) in expected_contents {
-            let full_e_name = base_crate_name.join(e_file_name);
+            let e_file_name = Path::new(e_file_name);
             let actual_contents = files
-                .get(&full_e_name)
-                .unwrap_or_else(|| panic!("file `{}` missing in archive", e_file_name));
+                .get(e_file_name)
+                .unwrap_or_else(|| panic!("file `{}` missing in archive", e_file_name.display()));
             assert_match_exact(e_file_contents, actual_contents);
         }
     }
