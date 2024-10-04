@@ -39,6 +39,8 @@ macro_rules! e {
     (any($($t:tt),*)) => (CfgExpr::Any(vec![$(e!($t)),*]));
     (all($($t:tt),*)) => (CfgExpr::All(vec![$(e!($t)),*]));
     (not($($t:tt)*)) => (CfgExpr::Not(Box::new(e!($($t)*))));
+    (true) => (CfgExpr::True);
+    (false) => (CfgExpr::False);
     (($($t:tt)*)) => (e!($($t)*));
     ($($t:tt)*) => (CfgExpr::Value(c!($($t)*)));
 }
@@ -121,6 +123,9 @@ fn cfg_expr() {
     good("foo=\"\"", e!(foo = ""));
     good(" foo=\"3\"      ", e!(foo = "3"));
     good("foo = \"3 e\"", e!(foo = "3 e"));
+
+    good("true", e!(true));
+    good("false", e!(false));
 
     good("all()", e!(all()));
     good("all(a)", e!(all(a)));
@@ -249,6 +254,8 @@ fn check_cfg_attributes() {
     ok("windows");
     ok("any(not(unix), windows)");
     ok("foo");
+    ok("true");
+    ok("false");
 
     ok("target_arch = \"abc\"");
     ok("target_feature = \"abc\"");
