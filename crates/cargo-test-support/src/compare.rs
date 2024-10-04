@@ -45,8 +45,11 @@ use crate::cross_compile::try_alternate;
 use crate::paths;
 use crate::{diff, rustc_host};
 use anyhow::{bail, Result};
+use snapbox::Data;
+use snapbox::IntoData;
 use std::fmt;
 use std::path::Path;
+use std::path::PathBuf;
 use std::str;
 use url::Url;
 
@@ -428,46 +431,6 @@ fn substitute_macros(input: &str) -> String {
     result
 }
 
-/// Compares one string against another, checking that they both match.
-///
-/// See [Patterns](index.html#patterns) for more information on pattern matching.
-///
-/// - `description` explains where the output is from (usually "stdout" or "stderr").
-/// - `other_output` is other output to display in the error (usually stdout or stderr).
-pub(crate) fn match_exact(
-    expected: &str,
-    actual: &str,
-    description: &str,
-    other_output: &str,
-    cwd: Option<&Path>,
-) -> Result<()> {
-    let expected = normalize_expected(expected, cwd);
-    let actual = normalize_actual(actual, cwd);
-    let e: Vec<_> = expected.lines().map(WildStr::new).collect();
-    let a: Vec<_> = actual.lines().map(WildStr::new).collect();
-    if e == a {
-        return Ok(());
-    }
-    let diff = diff::colored_diff(&e, &a);
-    bail!(
-        "{} did not match:\n\
-         {}\n\n\
-         other output:\n\
-         {}\n",
-        description,
-        diff,
-        other_output,
-    );
-}
-
-/// Convenience wrapper around [`match_exact`] which will panic on error.
-#[track_caller]
-pub(crate) fn assert_match_exact(expected: &str, actual: &str) {
-    if let Err(e) = match_exact(expected, actual, "", "", None) {
-        crate::panic_error("", e);
-    }
-}
-
 /// Checks that the given string contains the given lines, ignoring the order
 /// of the lines.
 ///
@@ -705,6 +668,145 @@ impl fmt::Debug for WildStr<'_> {
         write!(f, "{:?}", self.line)
     }
 }
+
+pub struct InMemoryDir {
+    files: Vec<(PathBuf, Data)>,
+}
+
+impl InMemoryDir {
+    pub fn paths(&self) -> impl Iterator<Item = &Path> {
+        self.files.iter().map(|(p, _)| p.as_path())
+    }
+
+    #[track_caller]
+    pub fn assert_contains(&self, expected: &Self) {
+        use std::fmt::Write as _;
+        let assert = assert_e2e();
+        let mut errs = String::new();
+        for (path, expected_data) in &expected.files {
+            let actual_data = self
+                .files
+                .iter()
+                .find_map(|(p, d)| (path == p).then(|| d.clone()))
+                .unwrap_or_else(|| Data::new());
+            if let Err(err) =
+                assert.try_eq(Some(&path.display()), actual_data, expected_data.clone())
+            {
+                let _ = write!(&mut errs, "{err}");
+            }
+        }
+        if !errs.is_empty() {
+            panic!("{errs}")
+        }
+    }
+}
+
+impl<P, D> FromIterator<(P, D)> for InMemoryDir
+where
+    P: Into<std::path::PathBuf>,
+    D: IntoData,
+{
+    fn from_iter<I: IntoIterator<Item = (P, D)>>(files: I) -> Self {
+        let files = files
+            .into_iter()
+            .map(|(p, d)| (p.into(), d.into_data()))
+            .collect();
+        Self { files }
+    }
+}
+
+impl<const N: usize, P, D> From<[(P, D); N]> for InMemoryDir
+where
+    P: Into<PathBuf>,
+    D: IntoData,
+{
+    fn from(files: [(P, D); N]) -> Self {
+        let files = files
+            .into_iter()
+            .map(|(p, d)| (p.into(), d.into_data()))
+            .collect();
+        Self { files }
+    }
+}
+
+impl<P, D> From<std::collections::HashMap<P, D>> for InMemoryDir
+where
+    P: Into<PathBuf>,
+    D: IntoData,
+{
+    fn from(files: std::collections::HashMap<P, D>) -> Self {
+        let files = files
+            .into_iter()
+            .map(|(p, d)| (p.into(), d.into_data()))
+            .collect();
+        Self { files }
+    }
+}
+
+impl<P, D> From<std::collections::BTreeMap<P, D>> for InMemoryDir
+where
+    P: Into<PathBuf>,
+    D: IntoData,
+{
+    fn from(files: std::collections::BTreeMap<P, D>) -> Self {
+        let files = files
+            .into_iter()
+            .map(|(p, d)| (p.into(), d.into_data()))
+            .collect();
+        Self { files }
+    }
+}
+
+impl From<()> for InMemoryDir {
+    fn from(_files: ()) -> Self {
+        let files = Vec::new();
+        Self { files }
+    }
+}
+
+/// Create an `impl _ for InMemoryDir` for a generic tuple
+///
+/// Must pass in names for each tuple parameter for
+/// - internal variable name
+/// - `Path` type
+/// - `Data` type
+macro_rules! impl_from_tuple_for_inmemorydir {
+    ($($var:ident $path:ident $data:ident),+) => {
+        impl<$($path: Into<PathBuf>, $data: IntoData),+> From<($(($path, $data)),+ ,)> for InMemoryDir {
+            fn from(files: ($(($path, $data)),+,)) -> Self {
+                let ($($var),+ ,) = files;
+                let files = [$(($var.0.into(), $var.1.into_data())),+];
+                files.into()
+            }
+        }
+    };
+}
+
+/// Extend `impl_from_tuple_for_inmemorydir`` to generate for the specified tuple and all smaller
+/// tuples
+macro_rules! impl_from_tuples_for_inmemorydir {
+    ($var1:ident $path1:ident $data1:ident, $($var:ident $path:ident $data:ident),+) => {
+        impl_from_tuples_for_inmemorydir!(__impl $var1 $path1 $data1; $($var $path $data),+);
+    };
+    (__impl $($var:ident $path:ident $data:ident),+; $var1:ident $path1:ident $data1:ident $(,$var2:ident $path2:ident $data2:ident)*) => {
+        impl_from_tuple_for_inmemorydir!($($var $path $data),+);
+        impl_from_tuples_for_inmemorydir!(__impl $($var $path $data),+, $var1 $path1 $data1; $($var2 $path2 $data2),*);
+    };
+    (__impl $($var:ident $path:ident $data:ident),+;) => {
+        impl_from_tuple_for_inmemorydir!($($var $path $data),+);
+    }
+}
+
+// Generate for tuples of size `1..=7`
+impl_from_tuples_for_inmemorydir!(
+    s1 P1 D1,
+    s2 P2 D2,
+    s3 P3 D3,
+    s4 P4 D4,
+    s5 P5 D5,
+    s6 P6 D6,
+    s7 P7 D7
+);
 
 #[cfg(test)]
 mod test {
