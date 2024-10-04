@@ -659,3 +659,238 @@ fn cfg_keywords() {
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn cfg_booleans() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [target.'cfg(true)'.dependencies]
+                b = { path = 'b' }
+                
+                [target.'cfg(false)'.dependencies]
+                c = { path = 'c' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .file("c/Cargo.toml", &basic_manifest("c", "0.0.1"))
+        .file("c/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        // FIXME: `b` should be compiled
+        .with_stderr_data(str![[r#"
+[WARNING] [[ROOT]/foo/Cargo.toml] future-incompatibility: the meaning of `cfg(false)` will change in the future
+ | Cargo is erroneously allowing `cfg(true)` and `cfg(false)`, but both forms are interpreted as false unless manually overridden with `--cfg`.
+ | In the future these will be built-in defines that will have the corresponding true/false value.
+ | It is recommended to avoid using these configs until they are properly supported.
+ | See <https://github.com/rust-lang/rust/issues/131204> for more information.
+ |
+ | [HELP] use raw-idents instead: `cfg(r#false)`
+[WARNING] [[ROOT]/foo/Cargo.toml] future-incompatibility: the meaning of `cfg(true)` will change in the future
+ | Cargo is erroneously allowing `cfg(true)` and `cfg(false)`, but both forms are interpreted as false unless manually overridden with `--cfg`.
+ | In the future these will be built-in defines that will have the corresponding true/false value.
+ | It is recommended to avoid using these configs until they are properly supported.
+ | See <https://github.com/rust-lang/rust/issues/131204> for more information.
+ |
+ | [HELP] use raw-idents instead: `cfg(r#true)`
+[LOCKING] 2 packages to latest compatible versions
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cfg_booleans_config() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [target.'cfg(true)']
+                rustflags = []
+            "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[WARNING] [.cargo/config.toml] future-incompatibility: the meaning of `cfg(true)` will change in the future
+ | Cargo is erroneously allowing `cfg(true)` and `cfg(false)`, but both forms are interpreted as false unless manually overridden with `--cfg`.
+ | In the future these will be built-in defines that will have the corresponding true/false value.
+ | It is recommended to avoid using these configs until they are properly supported.
+ | See <https://github.com/rust-lang/rust/issues/131204> for more information.
+ |
+ | [HELP] use raw-idents instead: `cfg(r#true)`
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cfg_booleans_not() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [target.'cfg(not(false))'.dependencies]
+                b = { path = 'b' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[WARNING] [[ROOT]/foo/Cargo.toml] future-incompatibility: the meaning of `cfg(false)` will change in the future
+ | Cargo is erroneously allowing `cfg(true)` and `cfg(false)`, but both forms are interpreted as false unless manually overridden with `--cfg`.
+ | In the future these will be built-in defines that will have the corresponding true/false value.
+ | It is recommended to avoid using these configs until they are properly supported.
+ | See <https://github.com/rust-lang/rust/issues/131204> for more information.
+ |
+ | [HELP] use raw-idents instead: `cfg(r#false)`
+[LOCKING] 1 package to latest compatible version
+[CHECKING] b v0.0.1 ([ROOT]/foo/b)
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cfg_booleans_combinators() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [target.'cfg(all(any(true), not(false), true))'.dependencies]
+                b = { path = 'b' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        // FIXME: `b` should be compiled
+        .with_stderr_data(str![[r#"
+[WARNING] [[ROOT]/foo/Cargo.toml] future-incompatibility: the meaning of `cfg(true)` will change in the future
+ | Cargo is erroneously allowing `cfg(true)` and `cfg(false)`, but both forms are interpreted as false unless manually overridden with `--cfg`.
+ | In the future these will be built-in defines that will have the corresponding true/false value.
+ | It is recommended to avoid using these configs until they are properly supported.
+ | See <https://github.com/rust-lang/rust/issues/131204> for more information.
+ |
+ | [HELP] use raw-idents instead: `cfg(r#true)`
+[WARNING] [[ROOT]/foo/Cargo.toml] future-incompatibility: the meaning of `cfg(false)` will change in the future
+ | Cargo is erroneously allowing `cfg(true)` and `cfg(false)`, but both forms are interpreted as false unless manually overridden with `--cfg`.
+ | In the future these will be built-in defines that will have the corresponding true/false value.
+ | It is recommended to avoid using these configs until they are properly supported.
+ | See <https://github.com/rust-lang/rust/issues/131204> for more information.
+ |
+ | [HELP] use raw-idents instead: `cfg(r#false)`
+[WARNING] [[ROOT]/foo/Cargo.toml] future-incompatibility: the meaning of `cfg(true)` will change in the future
+ | Cargo is erroneously allowing `cfg(true)` and `cfg(false)`, but both forms are interpreted as false unless manually overridden with `--cfg`.
+ | In the future these will be built-in defines that will have the corresponding true/false value.
+ | It is recommended to avoid using these configs until they are properly supported.
+ | See <https://github.com/rust-lang/rust/issues/131204> for more information.
+ |
+ | [HELP] use raw-idents instead: `cfg(r#true)`
+[LOCKING] 1 package to latest compatible version
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cfg_booleans_rustflags_no_effect() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [target.'cfg(true)'.dependencies]
+                b = { path = 'b' }
+                
+                [target.'cfg(false)'.dependencies]
+                c = { path = 'c' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .file("c/Cargo.toml", &basic_manifest("c", "0.0.1"))
+        .file("c/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        // FIXME: only `b` should be compiled, the rustflags don't take effect
+        .env("RUSTFLAGS", "--cfg false")
+        .with_stderr_data(str![[r#"
+[WARNING] [[ROOT]/foo/Cargo.toml] future-incompatibility: the meaning of `cfg(false)` will change in the future
+ | Cargo is erroneously allowing `cfg(true)` and `cfg(false)`, but both forms are interpreted as false unless manually overridden with `--cfg`.
+ | In the future these will be built-in defines that will have the corresponding true/false value.
+ | It is recommended to avoid using these configs until they are properly supported.
+ | See <https://github.com/rust-lang/rust/issues/131204> for more information.
+ |
+ | [HELP] use raw-idents instead: `cfg(r#false)`
+[WARNING] [[ROOT]/foo/Cargo.toml] future-incompatibility: the meaning of `cfg(true)` will change in the future
+ | Cargo is erroneously allowing `cfg(true)` and `cfg(false)`, but both forms are interpreted as false unless manually overridden with `--cfg`.
+ | In the future these will be built-in defines that will have the corresponding true/false value.
+ | It is recommended to avoid using these configs until they are properly supported.
+ | See <https://github.com/rust-lang/rust/issues/131204> for more information.
+ |
+ | [HELP] use raw-idents instead: `cfg(r#true)`
+[LOCKING] 2 packages to latest compatible versions
+[CHECKING] b v0.0.1 ([ROOT]/foo/b)
+[CHECKING] c v0.0.1 ([ROOT]/foo/c)
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
