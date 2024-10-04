@@ -12,7 +12,7 @@ Every manifest file consists of the following sections:
   * [`version`](#the-version-field) --- The version of the package.
   * [`authors`](#the-authors-field) --- The authors of the package.
   * [`edition`](#the-edition-field) --- The Rust edition.
-  * [`rust-version`](#the-rust-version-field) --- The minimal supported Rust version.
+  * [`rust-version`](rust-version.md) --- The minimal supported Rust version.
   * [`description`](#the-description-field) --- A description of the package.
   * [`documentation`](#the-documentation-field) --- URL of the package documentation.
   * [`readme`](#the-readme-field) --- Path to the package's README file.
@@ -163,31 +163,9 @@ will have `edition` explicitly specified to a newer value.
 
 ### The `rust-version` field
 
-The `rust-version` field is an optional key that tells cargo what version of the
-Rust language and compiler your package can be compiled with.
-If the currently selected version of the Rust compiler is older than the stated
-version, cargo will exit with an error, telling the user what version is
-required.
-This affects all targets/crates in the package, including test suites,
-benchmarks, binaries, examples, etc.
-
-The `rust-version` may be ignored using the `--ignore-rust-version` option.
-
-```toml
-[package]
-# ...
-rust-version = "1.56"
-```
-
-The Rust version must be a bare version number with at least one component; it
-cannot include semver operators or pre-release identifiers. Compiler pre-release
-identifiers such as -nightly will be ignored while checking the Rust version.
-
-To find the minimum `rust-version` compatible with your project, you can use third-party tools like [`cargo-msrv`](https://crates.io/crates/cargo-msrv).
-
-When used on packages that get published, we recommend [verifying the `rust-version`](../guide/continuous-integration.md#verifying-rust-version).
-
-> **MSRV:** Respected as of 1.56
+The `rust-version` field tells cargo what version of the
+Rust toolchain you support for your package.
+See [the Rust version chapter](rust-version.md) for more detail.
 
 ### The `description` field
 
@@ -685,6 +663,7 @@ more detail.
         "#the-exclude-and-include-fields-optional": "manifest.html#the-exclude-and-include-fields",
         "#the-publish--field-optional": "manifest.html#the-publish-field",
         "#the-metadata-table-optional": "manifest.html#the-metadata-table",
+        "#rust-version": "rust-version.html",
     };
     var target = fragments[window.location.hash];
     if (target) {

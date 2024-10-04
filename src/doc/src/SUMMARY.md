@@ -21,6 +21,7 @@
 * [Cargo Reference](reference/index.md)
     * [The Manifest Format](reference/manifest.md)
         * [Cargo Targets](reference/cargo-targets.md)
+        * [Rust version](reference/rust-version.md)
     * [Workspaces](reference/workspaces.md)
     * [Specifying Dependencies](reference/specifying-dependencies.md)
         * [Overriding Dependencies](reference/overriding-dependencies.md)
