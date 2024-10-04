@@ -129,21 +129,9 @@ fn _validate_upload(
     expected_files: &[&str],
     expected_contents: &[(&str, &str)],
 ) {
-    let mut f = File::open(new_path).unwrap();
-    // 32-bit little-endian integer of length of JSON data.
-    let json_sz = read_le_u32(&mut f).expect("read json length");
-    let mut json_bytes = vec![0; json_sz as usize];
-    f.read_exact(&mut json_bytes).expect("read JSON data");
+    let (actual_json, krate_bytes) = read_new_post(new_path);
 
-    snapbox::assert_data_eq!(json_bytes, expected_json.is_json());
-
-    // 32-bit little-endian integer of length of crate file.
-    let crate_sz = read_le_u32(&mut f).expect("read crate length");
-    let mut krate_bytes = vec![0; crate_sz as usize];
-    f.read_exact(&mut krate_bytes).expect("read crate data");
-    // Check at end.
-    let current = f.seek(SeekFrom::Current(0)).unwrap();
-    assert_eq!(f.seek(SeekFrom::End(0)).unwrap(), current);
+    snapbox::assert_data_eq!(actual_json, expected_json.is_json());
 
     // Verify the tarball.
     validate_crate_contents(
@@ -152,6 +140,26 @@ fn _validate_upload(
         expected_files,
         expected_contents,
     );
+}
+
+fn read_new_post(new_path: &Path) -> (Vec<u8>, Vec<u8>) {
+    let mut f = File::open(new_path).unwrap();
+
+    // 32-bit little-endian integer of length of JSON data.
+    let json_sz = read_le_u32(&mut f).expect("read json length");
+    let mut json_bytes = vec![0; json_sz as usize];
+    f.read_exact(&mut json_bytes).expect("read JSON data");
+
+    // 32-bit little-endian integer of length of crate file.
+    let crate_sz = read_le_u32(&mut f).expect("read crate length");
+    let mut krate_bytes = vec![0; crate_sz as usize];
+    f.read_exact(&mut krate_bytes).expect("read crate data");
+
+    // Check at end.
+    let current = f.seek(SeekFrom::Current(0)).unwrap();
+    assert_eq!(f.seek(SeekFrom::End(0)).unwrap(), current);
+
+    (json_bytes, krate_bytes)
 }
 
 /// Checks the contents of a `.crate` file.
