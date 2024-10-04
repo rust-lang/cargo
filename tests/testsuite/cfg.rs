@@ -549,13 +549,18 @@ fn cfg_booleans_gate() {
         .build();
 
     p.cargo("check")
-        // FIXME: true/false should error out as they are gated
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
-[CHECKING] a v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `cfg-boolean-literals` is required
+
+  The package requires the Cargo feature called `cfg-boolean-literals`, but that feature is not stabilized in this version of Cargo (1.[..]).
+  Consider trying a newer version of Cargo (this may require the nightly release).
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#cfg-boolean-literals for more information about the status of this feature.
 
 "#]])
+        .with_status(101)
         .run();
 }
 
@@ -582,12 +587,11 @@ fn cfg_booleans_gate_config() {
         .build();
 
     p.cargo("check")
-        // FIXME: true/false should error out as they are gated
         .with_stderr_data(str![[r#"
-[CHECKING] a v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[ERROR] `-Zcfg-boolean-literals` should be used to enable cfg boolean literals in `.cargo/config.toml`
 
 "#]])
+        .with_status(101)
         .run();
 }
 
@@ -597,6 +601,8 @@ fn cfg_booleans() {
         .file(
             "Cargo.toml",
             r#"
+                cargo-features = ["cfg-boolean-literals"]
+
                 [package]
                 name = "a"
                 version = "0.0.1"
@@ -618,9 +624,10 @@ fn cfg_booleans() {
         .build();
 
     p.cargo("check")
-        // FIXME: `b` should be compiled
+        .masquerade_as_nightly_cargo(&["cfg-boolean-literals feature"])
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
+[CHECKING] b v0.0.1 ([ROOT]/foo/b)
 [CHECKING] a v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -650,7 +657,8 @@ fn cfg_booleans_config() {
         )
         .build();
 
-    p.cargo("check")
+    p.cargo("check -Zcfg-boolean-literals")
+        .masquerade_as_nightly_cargo(&["cfg-boolean-literals feature"])
         .with_stderr_data(str![[r#"
 [CHECKING] a v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -665,6 +673,8 @@ fn cfg_booleans_not() {
         .file(
             "Cargo.toml",
             r#"
+                cargo-features = ["cfg-boolean-literals"]
+
                 [package]
                 name = "a"
                 version = "0.0.1"
@@ -681,6 +691,7 @@ fn cfg_booleans_not() {
         .build();
 
     p.cargo("check")
+        .masquerade_as_nightly_cargo(&["cfg-boolean-literals feature"])
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [CHECKING] b v0.0.1 ([ROOT]/foo/b)
@@ -697,6 +708,8 @@ fn cfg_booleans_combinators() {
         .file(
             "Cargo.toml",
             r#"
+                cargo-features = ["cfg-boolean-literals"]
+
                 [package]
                 name = "a"
                 version = "0.0.1"
@@ -713,9 +726,10 @@ fn cfg_booleans_combinators() {
         .build();
 
     p.cargo("check")
-        // FIXME: `b` should be compiled
+        .masquerade_as_nightly_cargo(&["cfg-boolean-literals feature"])
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
+[CHECKING] b v0.0.1 ([ROOT]/foo/b)
 [CHECKING] a v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -729,6 +743,8 @@ fn cfg_booleans_rustflags_no_effect() {
         .file(
             "Cargo.toml",
             r#"
+                cargo-features = ["cfg-boolean-literals"]
+
                 [package]
                 name = "a"
                 version = "0.0.1"
@@ -750,15 +766,14 @@ fn cfg_booleans_rustflags_no_effect() {
         .build();
 
     p.cargo("check")
-        // FIXME: only `b` should be compiled, the rustflags don't take effect
+        .masquerade_as_nightly_cargo(&["cfg-boolean-literals feature"])
         .with_stderr_data(str![[r#"
 [LOCKING] 2 packages to latest compatible versions
 [CHECKING] b v0.0.1 ([ROOT]/foo/b)
-[CHECKING] c v0.0.1 ([ROOT]/foo/c)
 [CHECKING] a v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        .env("RUSTFLAGS", "--cfg true --cfg false")
+        .env("RUSTFLAGS", "--cfg false")
         .run();
 }

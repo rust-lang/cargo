@@ -121,6 +121,7 @@ Each new feature described below should explain how to use it.
     * [package-workspace](#package-workspace) --- Allows for packaging and publishing multiple crates in a workspace.
     * [native-completions](#native-completions) --- Move cargo shell completions to native completions.
     * [warnings](#warnings) --- controls warning behavior; options for allowing or denying warnings.
+    * [cfg-boolean-literals](#cfg-boolean-literals) --- Allows the use of boolean literals in `[target.'cfg(<true/false>)']`
 
 ## allow-features
 
@@ -1764,6 +1765,30 @@ Controls how Cargo handles warnings. Allowed values are:
 * `warn`: warnings are emitted as warnings (default).
 * `allow`: warnings are hidden.
 * `deny`: if warnings are emitted, an error will be raised at the end of the operation and the process will exit with a failure exit code. 
+
+## cfg-boolean-literals
+
+* Tracking Issue: [#00000](https://github.com/rust-lang/cargo/issues/00000)
+
+This feature allows the use of boolean literals in `[target.'cfg(<true/false>)']`.
+
+Those boolean literals always evaluate to true and false respectively, they are **not** subject
+to `RUSTFLAGS`.
+
+For example, in this example the `b` dependencies is always compiled, while `c` is never:
+
+```toml
+cargo-features = ["cfg-boolean-literals"]
+
+[target.'cfg(true)'.dependencies]
+b = { path = 'b' }
+
+[target.'cfg(false)'.dependencies]
+c = { path = 'c' }
+```
+
+For cfgs in `.cargo/config.toml`, `-Zcfg-boolean-literals` must be used.
+
 # Stabilized and removed features
 
 ## Compile progress
