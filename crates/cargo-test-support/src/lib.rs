@@ -655,8 +655,6 @@ pub struct Execs {
     expect_stdout_unordered: Vec<String>,
     expect_stderr_unordered: Vec<String>,
     expect_stderr_with_without: Vec<(Vec<String>, Vec<String>)>,
-    expect_json: Option<String>,
-    expect_json_contains_unordered: Option<String>,
     stream_output: bool,
     assert: snapbox::Assert,
 }
@@ -822,56 +820,6 @@ impl Execs {
         let with = with.iter().map(|s| s.to_string()).collect();
         let without = without.iter().map(|s| s.to_string()).collect();
         self.expect_stderr_with_without.push((with, without));
-        self
-    }
-
-    /// Verifies the JSON output matches the given JSON.
-    ///
-    /// This is typically used when testing cargo commands that emit JSON.
-    /// Each separate JSON object should be separated by a blank line.
-    /// Example:
-    ///
-    /// ```rust,ignore
-    /// assert_that(
-    ///     p.cargo("metadata"),
-    ///     execs().with_json(r#"
-    ///         {"example": "abc"}
-    ///
-    ///         {"example": "def"}
-    ///     "#)
-    ///  );
-    /// ```
-    ///
-    /// - Objects should match in the order given.
-    /// - The order of arrays is ignored.
-    /// - Strings support patterns described in [`compare`].
-    /// - Use `"{...}"` to match any object.
-    #[deprecated(
-        note = "replaced with `Execs::with_stdout_data(expected.is_json().against_jsonlines())`"
-    )]
-    pub fn with_json(&mut self, expected: &str) -> &mut Self {
-        self.expect_json = Some(expected.to_string());
-        self
-    }
-
-    /// Verifies JSON output contains the given objects (in any order) somewhere
-    /// in its output.
-    ///
-    /// CAUTION: Be very careful when using this. Make sure every object is
-    /// unique (not a subset of one another). Also avoid using objects that
-    /// could possibly match multiple output lines unless you're very sure of
-    /// what you are doing.
-    ///
-    /// See `with_json` for more detail.
-    #[deprecated]
-    pub fn with_json_contains_unordered(&mut self, expected: &str) -> &mut Self {
-        match &mut self.expect_json_contains_unordered {
-            None => self.expect_json_contains_unordered = Some(expected.to_string()),
-            Some(e) => {
-                e.push_str("\n\n");
-                e.push_str(expected);
-            }
-        }
         self
     }
 }
@@ -1050,8 +998,6 @@ impl Execs {
             && self.expect_stdout_unordered.is_empty()
             && self.expect_stderr_unordered.is_empty()
             && self.expect_stderr_with_without.is_empty()
-            && self.expect_json.is_none()
-            && self.expect_json_contains_unordered.is_none()
         {
             panic!(
                 "`with_status()` is used, but no output is checked.\n\
@@ -1175,14 +1121,6 @@ impl Execs {
         for (with, without) in self.expect_stderr_with_without.iter() {
             compare::match_with_without(stderr, with, without, cwd)?;
         }
-
-        if let Some(ref expect_json) = self.expect_json {
-            compare::match_json(expect_json, stdout, cwd)?;
-        }
-
-        if let Some(ref expected) = self.expect_json_contains_unordered {
-            compare::match_json_contains_unordered(expected, stdout, cwd)?;
-        }
         Ok(())
     }
 }
@@ -1212,8 +1150,6 @@ pub fn execs() -> Execs {
         expect_stdout_unordered: Vec::new(),
         expect_stderr_unordered: Vec::new(),
         expect_stderr_with_without: Vec::new(),
-        expect_json: None,
-        expect_json_contains_unordered: None,
         stream_output: false,
         assert: compare::assert_e2e(),
     }
