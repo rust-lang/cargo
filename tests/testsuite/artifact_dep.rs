@@ -1573,7 +1573,7 @@ fn artifact_dep_target_specified() {
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stdout_data("")
         .with_stderr_data(r#"...
-[..]activated_features for invalid package: features did not find PackageId { name: "bindep", version: "0.0.0", source: "[..]" } NormalOrDev[..]
+[..]did not find features for (PackageId { name: "bindep", version: "0.0.0", source: "[..]" }, NormalOrDev) within activated_features:[..]
 ...
 "#)
         .with_status(101)
