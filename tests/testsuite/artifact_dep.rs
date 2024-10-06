@@ -1658,6 +1658,91 @@ no entry found for key
 }
 
 #[cargo_test]
+fn check_bindep_depending_on_build_only_dep_with_optional_dep() {
+    if cross_compile::disabled() {
+        return;
+    }
+    // i686-unknown-linux-gnu did not trigger a panic so we need to manually specify wasm32-unknown-unknown instead of relying on cross_compile::alternate()
+    // This is possibly because the `cfg(unix)` later on needs to evaluate to false on the cross compile but true on the host.
+    let target = "wasm32-unknown-unknown";
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
+                resolver = "2"
+                edition = "2015"
+
+                [dependencies]
+                bindep = { path = "bindep", artifact = "bin", target = "$TARGET" }
+            "#
+            .replace("$TARGET", target),
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bindep/Cargo.toml",
+            &r#"
+                [package]
+                name = "bindep"
+                version = "0.0.0"
+                authors = []
+
+                [dependencies]
+                depends-on-build-only-dep = { path = "../depends-on-build-only-dep" }
+            "#,
+        )
+        .file("bindep/src/main.rs", "fn main() {}")
+        .file(
+            "depends-on-build-only-dep/Cargo.toml",
+            &r#"
+                [package]
+                name = "depends-on-build-only-dep"
+                version = "0.0.0"
+                authors = []
+
+                [build-dependencies]
+                build-only-dep = { path = "../build-only-dep" }
+            "#,
+        )
+        .file("depends-on-build-only-dep/src/lib.rs", "")
+        .file("depends-on-build-only-dep/build.rs", "fn main() {}")
+        .file(
+            "build-only-dep/Cargo.toml",
+            &r#"
+                [package]
+                name = "build-only-dep"
+                version = "0.0.0"
+                authors = []
+
+                [target.'cfg(unix)'.dependencies]
+                some-leaf-dep = { path = "../some-leaf-dep" }
+            "#,
+        )
+        .file("build-only-dep/src/lib.rs", "")
+        .file(
+            "some-leaf-dep/Cargo.toml",
+            &basic_manifest("some-leaf-dep", "0.0.1"),
+        )
+        .file("some-leaf-dep/src/lib.rs", "")
+        .build();
+
+    // TODO: This command currently fails due to a bug in cargo but it should be fixed so that it succeeds in the future.
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr_data(
+r#"...
+[..]did not find features for (PackageId { name: "some-leaf-dep", version: "0.0.1", source: "[..]" }, ArtifactDep(CompileTarget { name: "wasm32-unknown-unknown" })) within activated_features:[..]
+...
+"#)
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
 fn targets_are_picked_up_from_non_workspace_artifact_deps() {
     if cross_compile::disabled() {
         return;
