@@ -329,6 +329,10 @@ impl Display for LintLevel {
 }
 
 impl LintLevel {
+    pub fn is_error(&self) -> bool {
+        self == &LintLevel::Forbid || self == &LintLevel::Deny
+    }
+
     pub fn to_diagnostic_level(self) -> Level {
         match self {
             LintLevel::Allow => unreachable!("allow does not map to a diagnostic level"),
@@ -440,7 +444,7 @@ pub fn check_im_a_teapot(
         .package()
         .is_some_and(|p| p.im_a_teapot.is_some())
     {
-        if lint_level == LintLevel::Forbid || lint_level == LintLevel::Deny {
+        if lint_level.is_error() {
             *error_count += 1;
         }
         let level = lint_level.to_diagnostic_level();
@@ -514,7 +518,7 @@ fn output_unknown_lints(
     let level = lint_level.to_diagnostic_level();
     let mut emitted_source = None;
     for lint_name in unknown_lints {
-        if lint_level == LintLevel::Forbid || lint_level == LintLevel::Deny {
+        if lint_level.is_error() {
             *error_count += 1;
         }
         let title = format!("{}: `{lint_name}`", UNKNOWN_LINTS.desc);
