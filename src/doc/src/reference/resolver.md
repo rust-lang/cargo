@@ -39,19 +39,6 @@ with leading zeros. For example, `0.1.0` and `0.1.2` are compatible, but
 `0.1.0` and `0.2.0` are not. Similarly, `0.0.1` and `0.0.2` are not
 compatible.
 
-As a quick refresher, the
-[*version requirement* syntax][Specifying Dependencies] Cargo uses for
-dependencies is:
-
-Requirement | Example | Equivalence | Description
-------------|---------|-------------|-------------
-Caret | `1.2.3` or `^1.2.3` | <code>>=1.2.3,&nbsp;<2.0.0</code> | Any SemVer-compatible version of at least the given value.
-Tilde | `~1.2` | <code>>=1.2.0,&nbsp;<1.3.0</code> | Minimum version, with restricted compatibility range.
-Wildcard | `1.*` | <code>>=1.0.0,&nbsp;<2.0.0</code> | Any version in the `*` position.
-Equals | `=1.2.3` | <code>=1.2.3</code> | Exactly the specified version only.
-Comparison | `>1.1` | <code>>=1.2.0</code> | Naive numeric comparison of specified digits.
-Compound | <code>>=1.2,&nbsp;<1.5</code> | <code>>=1.2.0,&nbsp;<1.5.0</code> | Multiple requirements that must be simultaneously satisfied.
-
 When multiple packages specify a dependency for a common package, the resolver
 attempts to ensure that they use the same version of that common package, as
 long as they are within a SemVer compatibility range. It also attempts to use
@@ -62,11 +49,11 @@ requirements:
 ```toml
 # Package A
 [dependencies]
-bitflags = "1.0"
+bitflags = "1.0"  # meaning `>=1.0.0,<2.0.0`
 
 # Package B
 [dependencies]
-bitflags = "1.1"
+bitflags = "1.1"  # meaning `>=1.1.0,<2.0.0`
 ```
 
 If at the time the `Cargo.lock` file is generated, the greatest version of
@@ -81,11 +68,11 @@ the dependency. For example:
 ```toml
 # Package A
 [dependencies]
-rand = "0.7"
+rand = "0.7"  # meaning `>=0.7.0,<0.8.0`
 
 # Package B
 [dependencies]
-rand = "0.6"
+rand = "0.6"  # meaning `>=0.6.0,<0.7.0`
 ```
 
 The above will result in Package A using the greatest `0.7` release (`0.7.3`
