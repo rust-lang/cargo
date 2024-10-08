@@ -254,6 +254,13 @@ cargo test --target foo -Zdoctest-xcompile
 ## Build-plan
 * Tracking Issue: [#5579](https://github.com/rust-lang/cargo/issues/5579)
 
+<div class="warning">
+
+> The build-plan feature is deprecated and may be removed in a future version.
+> See <https://github.com/rust-lang/cargo/issues/7614>.
+
+</div>
+
 The `--build-plan` argument for the `build` command will output JSON with
 information about which commands would be run without actually executing
 anything. This can be useful when integrating with another build tool.
