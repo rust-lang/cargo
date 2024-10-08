@@ -34,8 +34,11 @@ fn main() {
         let _span = tracing::span!(tracing::Level::TRACE, "completions").entered();
         let args = std::env::args_os();
         let current_dir = std::env::current_dir().ok();
-        let completer =
-            clap_complete::CompleteEnv::with_factory(|| cli::cli(&mut gctx)).var("CARGO_COMPLETE");
+        let completer = clap_complete::CompleteEnv::with_factory(|| {
+            let mut gctx = GlobalContext::default().expect("already loaded without errors");
+            cli::cli(&mut gctx)
+        })
+        .var("CARGO_COMPLETE");
         if completer
             .try_complete(args, current_dir.as_deref())
             .unwrap_or_else(|e| {
