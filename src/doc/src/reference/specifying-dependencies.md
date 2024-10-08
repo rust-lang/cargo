@@ -53,8 +53,6 @@ and `x > 0`.
 It is possible to further tweak the logic for selecting compatible versions
 using special operators as described in the [Version requirement syntax](#version-requirement-syntax) section.
 
-Use the default version requirement strategy, e.g. `log = "1.2.3"` where possible to maximize compatibility.
-
 ## Version requirement syntax
 
 ### Caret requirements
