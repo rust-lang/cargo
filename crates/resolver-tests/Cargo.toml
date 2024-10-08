@@ -6,6 +6,7 @@ publish = false
 
 [dependencies]
 cargo.workspace = true
+cargo-platform.workspace = true
 cargo-util-schemas.workspace = true
 cargo-util.workspace = true
 proptest.workspace = true
