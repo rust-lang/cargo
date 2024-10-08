@@ -1521,7 +1521,7 @@ fn dependencies_of_dependencies_work_in_artifacts() {
         .with_stdout_data(str![[r#"
 foo v0.0.0 ([ROOT]/foo)
 [build-dependencies]
-└── bar v0.5.0 ([ROOT]/foo/bar)
+└── bar v0.5.0 (bin) ([ROOT]/foo/bar)
     └── baz v1.0.0
 
 "#]])
@@ -1571,12 +1571,12 @@ fn artifact_dep_target_specified() {
     // TODO: This command currently fails due to a bug in cargo but it should be fixed so that it succeeds in the future.
     p.cargo("tree -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_stdout_data("")
-        .with_stderr_data(r#"...
-[..]did not find features for (PackageId { name: "bindep", version: "0.0.0", source: "[..]" }, NormalOrDev) within activated_features:[..]
-...
-"#)
-        .with_status(101)
+        .with_stdout_data(str![[r#"
+foo v0.0.0 ([ROOT]/foo)
+└── bindep v0.0.0 (bin) ([ROOT]/foo/bindep)
+
+"#]])
+        .with_status(0)
         .run();
 }
 

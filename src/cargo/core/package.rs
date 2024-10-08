@@ -19,7 +19,7 @@ use serde::Serialize;
 use tracing::debug;
 
 use crate::core::compiler::{CompileKind, RustcTargetData};
-use crate::core::dependency::DepKind;
+use crate::core::dependency::{ArtifactKind, DepKind};
 use crate::core::resolver::features::ForceAllTargets;
 use crate::core::resolver::{HasDevUnits, Resolve};
 use crate::core::{
@@ -166,6 +166,14 @@ impl Package {
     /// Returns `true` if this package is a proc-macro.
     pub fn proc_macro(&self) -> bool {
         self.targets().iter().any(|target| target.proc_macro())
+    }
+    // TODO fix this. For now, just wanted it to return a plausible value. Must figure out why .kinds() returns a Vec.
+    /// Gets crate-type in { .., artifact = <crate-type> } of this package
+    pub fn artifact_kind(&self) -> Option<&ArtifactKind> {
+        let found = self.dependencies().iter().find_map(|dep| dep.artifact());
+
+        // TODO for now just returns the first ArtifactKind in the Vec<ArtifactKind>
+        found?.kinds().iter().next()
     }
     /// Gets the package's minimum Rust version.
     pub fn rust_version(&self) -> Option<&RustVersion> {
