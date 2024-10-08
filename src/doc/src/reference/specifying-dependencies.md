@@ -112,6 +112,11 @@ Here are some examples of comparison requirements:
 As shown in the examples above, multiple version requirements can be
 separated with a comma, e.g., `>= 1.2, < 1.5`.
 
+### Version metadata
+
+[Version metadata](manifest.md#the-version-field), such as `1.0.0+21AF26D3`,
+is ignored and should not be used in version requirements.
+
 > **Recommendation:** When in doubt, use the default version requirement operator.
 >
 > In rare circumstances, a package with a "public dependency"

@@ -172,13 +172,6 @@ release. Non-numeric components are compared lexicographically.
 
 [`cargo install`]: ../commands/cargo-install.md
 
-### Version metadata
-
-SemVer has the concept of "version metadata" with a plus in the version, such
-as `1.0.0+21AF26D3`. This metadata is usually ignored, and should not be used
-in a version requirement. You should never publish multiple versions that
-differ only in the metadata tag.
-
 ## Other constraints
 
 Version requirements aren't the only constraint that the resolver considers
@@ -597,3 +590,17 @@ circumstances:
   change of your own library, for example if it exposes types from the
   dependency.
 
+
+<script>
+(function() {
+    var fragments = {
+        "#version-metadata": "specifying-dependencies.html#version-metadata",
+    };
+    var target = fragments[window.location.hash];
+    if (target) {
+        var url = window.location.toString();
+        var base = url.substring(0, url.lastIndexOf('/'));
+        window.location.replace(base + "/" + target);
+    }
+})();
+</script>
