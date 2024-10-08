@@ -122,6 +122,9 @@ pub struct Compilation<'gctx> {
     target_runners: HashMap<CompileKind, Option<(PathBuf, Vec<String>)>>,
     /// The linker to use for each host or target.
     target_linkers: HashMap<CompileKind, Option<PathBuf>>,
+
+    /// The total number of warnings emitted by the compilation.
+    pub warning_count: usize,
 }
 
 impl<'gctx> Compilation<'gctx> {
@@ -169,6 +172,7 @@ impl<'gctx> Compilation<'gctx> {
                 .chain(Some(&CompileKind::Host))
                 .map(|kind| Ok((*kind, target_linker(bcx, *kind)?)))
                 .collect::<CargoResult<HashMap<_, _>>>()?,
+            warning_count: 0,
         })
     }
 
