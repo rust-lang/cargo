@@ -84,6 +84,7 @@ Each new feature described below should explain how to use it.
     * [build-std](#build-std) --- Builds the standard library instead of using pre-built binaries.
     * [build-std-features](#build-std-features) --- Sets features to use with the standard library.
     * [binary-dep-depinfo](#binary-dep-depinfo) --- Causes the dep-info file to track binary dependencies.
+    * [checksum-freshness](#checksum-freshness) --- When passed, the decision as to whether a crate needs to be rebuilt is made using file checksums instead of the file mtime.
     * [panic-abort-tests](#panic-abort-tests) --- Allows running tests with the "abort" panic strategy.
     * [host-config](#host-config) --- Allows setting `[target]`-like configuration settings for host build targets.
     * [target-applies-to-host](#target-applies-to-host) --- Alters whether certain flags will be passed to host build targets.
@@ -535,6 +536,17 @@ that information for change-detection (if any binary dependency changes, then
 the crate will be rebuilt). The primary use case is for building the compiler
 itself, which has implicit dependencies on the standard library that would
 otherwise be untracked for change-detection.
+
+## checksum-freshness
+* Tracking issue: [#14136](https://github.com/rust-lang/cargo/issues/14136)
+
+The `-Z checksum-freshness` flag will replace the use of file mtimes in cargo's
+fingerprints with a file checksum value. This is most useful on systems with a poor
+mtime implementation, or in CI/CD. The checksum algorithm can change without notice
+between cargo versions. Fingerprints are used by cargo to determine when a crate needs to be rebuilt.
+
+For the time being files ingested by build script will continue to use mtimes, even when `checksum-freshness`
+is enabled. This is not intended as a long term solution.
 
 ## panic-abort-tests
 * Tracking Issue: [#67650](https://github.com/rust-lang/rust/issues/67650)

@@ -16,7 +16,7 @@ use jobserver::Client;
 
 use super::build_plan::BuildPlan;
 use super::custom_build::{self, BuildDeps, BuildScriptOutputs, BuildScripts};
-use super::fingerprint::Fingerprint;
+use super::fingerprint::{Checksum, Fingerprint};
 use super::job_queue::JobQueue;
 use super::layout::Layout;
 use super::lto::Lto;
@@ -50,6 +50,8 @@ pub struct BuildRunner<'a, 'gctx> {
     pub fingerprints: HashMap<Unit, Arc<Fingerprint>>,
     /// Cache of file mtimes to reduce filesystem hits.
     pub mtime_cache: HashMap<PathBuf, FileTime>,
+    /// Cache of file checksums to reduce filesystem reads.
+    pub checksum_cache: HashMap<PathBuf, Checksum>,
     /// A set used to track which units have been compiled.
     /// A unit may appear in the job graph multiple times as a dependency of
     /// multiple packages, but it only needs to run once.
@@ -113,6 +115,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             build_script_outputs: Arc::new(Mutex::new(BuildScriptOutputs::default())),
             fingerprints: HashMap::new(),
             mtime_cache: HashMap::new(),
+            checksum_cache: HashMap::new(),
             compiled: HashSet::new(),
             build_scripts: HashMap::new(),
             build_explicit_deps: HashMap::new(),
