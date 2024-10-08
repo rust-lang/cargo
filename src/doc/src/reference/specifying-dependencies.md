@@ -112,6 +112,36 @@ Here are some examples of comparison requirements:
 As shown in the examples above, multiple version requirements can be
 separated with a comma, e.g., `>= 1.2, < 1.5`.
 
+### Pre-releases
+
+Version requirements exclude [pre-release versions](manifest.md#the-version-field), such as `1.0.0-alpha`,
+unless specifically asked for.
+For example, if `1.0.0-alpha` of package
+`foo` is published, then a requirement of `foo = "1.0"` will *not* match, and
+will return an error. The pre-release must be specified, such as `foo =
+"1.0.0-alpha"`.
+Similarly [`cargo install`] will avoid pre-releases unless
+explicitly asked to install one.
+
+Cargo allows "newer" pre-releases to be used automatically. For example, if
+`1.0.0-beta` is published, then a requirement `foo = "1.0.0-alpha"` will allow
+updating to the `beta` version. Note that this only works on the same release
+version, `foo = "1.0.0-alpha"` will not allow updating to `foo = "1.0.1-alpha"`
+or `foo = "1.0.1-beta"`.
+
+Cargo will also upgrade automatically to semver-compatible released versions
+from prereleases. The requirement `foo = "1.0.0-alpha"` will allow updating to
+`foo = "1.0.0"` as well as `foo = "1.2.0"`.
+
+Beware that pre-release versions can be unstable, and as such care should be
+taken when using them. Some projects may choose to publish breaking changes
+between pre-release versions. It is recommended to not use pre-release
+dependencies in a library if your library is not also a pre-release. Care
+should also be taken when updating your `Cargo.lock`, and be prepared if a
+pre-release update causes issues.
+
+[`cargo install`]: ../commands/cargo-install.md
+
 ### Version metadata
 
 [Version metadata](manifest.md#the-version-field), such as `1.0.0+21AF26D3`,

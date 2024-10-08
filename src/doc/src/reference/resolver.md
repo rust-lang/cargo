@@ -137,41 +137,6 @@ ecosystem if you publish a SemVer-incompatible version of a popular library.
 [semver trick]: https://github.com/dtolnay/semver-trick
 [`downcast_ref`]: ../../std/any/trait.Any.html#method.downcast_ref
 
-### Pre-releases
-
-SemVer has the concept of "pre-releases" with a dash in the version, such as
-`1.0.0-alpha`, or `1.0.0-beta`. Cargo will avoid automatically using
-pre-releases unless explicitly asked. For example, if `1.0.0-alpha` of package
-`foo` is published, then a requirement of `foo = "1.0"` will *not* match, and
-will return an error. The pre-release must be specified, such as `foo =
-"1.0.0-alpha"`. Similarly [`cargo install`] will avoid pre-releases unless
-explicitly asked to install one.
-
-Cargo allows "newer" pre-releases to be used automatically. For example, if
-`1.0.0-beta` is published, then a requirement `foo = "1.0.0-alpha"` will allow
-updating to the `beta` version. Note that this only works on the same release
-version, `foo = "1.0.0-alpha"` will not allow updating to `foo = "1.0.1-alpha"`
-or `foo = "1.0.1-beta"`.
-
-Cargo will also upgrade automatically to semver-compatible released versions
-from prereleases. The requirement `foo = "1.0.0-alpha"` will allow updating to
-`foo = "1.0.0"` as well as `foo = "1.2.0"`.
-
-Beware that pre-release versions can be unstable, and as such care should be
-taken when using them. Some projects may choose to publish breaking changes
-between pre-release versions. It is recommended to not use pre-release
-dependencies in a library if your library is not also a pre-release. Care
-should also be taken when updating your `Cargo.lock`, and be prepared if a
-pre-release update causes issues.
-
-The pre-release tag may be separated with periods to distinguish separate
-components. Numeric components will use numeric comparison. For example,
-`1.0.0-alpha.4` will use numeric comparison for the `4` component. That means
-that if `1.0.0-alpha.11` is published, that will be chosen as the greatest
-release. Non-numeric components are compared lexicographically.
-
-[`cargo install`]: ../commands/cargo-install.md
-
 ## Other constraints
 
 Version requirements aren't the only constraint that the resolver considers
@@ -590,11 +555,13 @@ circumstances:
   change of your own library, for example if it exposes types from the
   dependency.
 
+[`cargo install`]: ../commands/cargo-install.md
 
 <script>
 (function() {
     var fragments = {
         "#version-metadata": "specifying-dependencies.html#version-metadata",
+        "#pre-releases": "specifying-dependencies.html#pre-releases",
     };
     var target = fragments[window.location.hash];
     if (target) {
