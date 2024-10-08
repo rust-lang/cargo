@@ -29,10 +29,18 @@ update us to `0.2.0`. If instead we had specified the version string as `1.0`,
 cargo should update to `1.1` if it is the latest `1.y` release, but not `2.0`.
 The version `0.0.x` is not considered compatible with any other version.
 
-[SemVer]: https://semver.org
+It is possible to further tweak the logic for selecting compatible versions
+using special operators as described in the [Version requirement syntax](#version-requirement-syntax) section.
 
-Here are some more examples of version requirements and the versions that would
-be allowed with them:
+## Version requirement syntax
+
+### Default requirements
+
+**Default requirements** specify a minimum version with the ability to update to [SemVer] compatible versions.
+Versions are considered compatible if their left-most non-zero major/minor/patch component is the same.
+This is different from [SemVer] which considers all pre-1.0.0 packages to be incompatible.
+
+`1.2.3` is an example of a default requirement.
 
 ```notrust
 1.2.3  :=  >=1.2.3, <2.0.0
@@ -44,16 +52,6 @@ be allowed with them:
 0.0    :=  >=0.0.0, <0.1.0
 0      :=  >=0.0.0, <1.0.0
 ```
-
-This compatibility convention is different from SemVer in the way it treats
-versions before 1.0.0. While SemVer says there is no compatibility before
-1.0.0, Cargo considers `0.x.y` to be compatible with `0.x.z`, where `y ≥ z`
-and `x > 0`.
-
-It is possible to further tweak the logic for selecting compatible versions
-using special operators as described in the [Version requirement syntax](#version-requirement-syntax) section.
-
-## Version requirement syntax
 
 ### Caret requirements
 
@@ -620,6 +618,7 @@ rand = { workspace = true, optional = true }
 ```
 
 
+[SemVer]: https://semver.org
 [crates.io]: https://crates.io/
 [dev-dependencies]: #development-dependencies
 [workspace.dependencies]: workspaces.md#the-dependencies-table
