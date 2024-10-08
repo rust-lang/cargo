@@ -2154,6 +2154,66 @@ fn crate_library_path_env_var() {
     setenv_for_removing_empty_component(p.cargo("run")).run();
 }
 
+// See https://github.com/rust-lang/cargo/issues/14194
+#[cargo_test]
+fn issue_14194_deduplicate_library_path_env_var() {
+    let p = project()
+        .file(
+            "src/main.rs",
+            &format!(
+                r#"
+                    use std::process::Command;
+                    fn main() {{
+                        let level: i32 = std::env::args().nth(1).unwrap().parse().unwrap();
+                        let txt = "var.txt";
+                        let lib_path = std::env::var("{}").unwrap();
+
+                        // Make sure we really have something in dylib search path.
+                        let count = std::env::split_paths(&lib_path).count();
+                        assert!(count > 0);
+
+                        if level >= 3 {{
+                            std::fs::write(txt, &lib_path).unwrap();
+                        }} else {{
+                            let prev_lib_path = std::fs::read_to_string(txt).unwrap();
+                            // Ensure no duplicate insertion to dylib search paths
+                            // when calling `cargo run` recursively.
+                            assert_eq!(lib_path, prev_lib_path);
+                        }}
+
+                        if level == 0 {{
+                            return;
+                        }}
+                        
+                        let _  = Command::new(std::env!("CARGO"))
+                        .arg("run")
+                        .arg("--")
+                        .arg((level - 1).to_string())
+                        .status()
+                        .unwrap();
+                    }}
+                "#,
+                dylib_path_envvar(),
+            ),
+        )
+        .build();
+
+    setenv_for_removing_empty_component(p.cargo("run -- 3"))
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE] 3`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE] 2`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE] 1`
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE] 0`
+
+"#]])
+        .run();
+}
+
 // Regression test for #4277
 #[cargo_test]
 fn build_with_fake_libc_not_loading() {
