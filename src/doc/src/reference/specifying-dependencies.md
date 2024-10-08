@@ -19,18 +19,13 @@ guide](../guide/index.md), we specified a dependency on the `time` crate:
 time = "0.1.12"
 ```
 
-The string `"0.1.12"` is a version requirement. Although it looks like a
-specific *version* of the `time` crate, it actually specifies a *range* of
-versions and allows [SemVer] compatible updates. An update is allowed if the new
-version number does not modify the left-most non-zero number in the major, minor,
-patch grouping. In this case, if we ran `cargo update time`, cargo should
+The version string `"0.1.12"` is called a [version requirement](#version-requirement-syntax).
+It specifies a range of versions that can be selected from when [resolving dependencies](resolver.md).
+In this case, `"0.1.12"` represents the version range `>=0.1.12, <0.2.0`.
+An update is allowed if it is within that range.
+In this case, if we ran `cargo update time`, cargo should
 update us to version `0.1.13` if it is the latest `0.1.z` release, but would not
-update us to `0.2.0`. If instead we had specified the version string as `1.0`,
-cargo should update to `1.1` if it is the latest `1.y` release, but not `2.0`.
-The version `0.0.x` is not considered compatible with any other version.
-
-It is possible to further tweak the logic for selecting compatible versions
-using special operators as described in the [Version requirement syntax](#version-requirement-syntax) section.
+update us to `0.2.0`.
 
 ## Version requirement syntax
 
