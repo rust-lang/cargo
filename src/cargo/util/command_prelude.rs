@@ -48,6 +48,8 @@ pub mod heading {
 pub trait CommandExt: Sized {
     fn _arg(self, arg: Arg) -> Self;
 
+    fn _name(&self) -> String;
+
     /// Do not use this method, it is only for backwards compatibility.
     /// Use `arg_package_spec_no_all` instead.
     fn arg_package_spec(
@@ -479,6 +481,10 @@ pub trait CommandExt: Sized {
 impl CommandExt for Command {
     fn _arg(self, arg: Arg) -> Self {
         self.arg(arg)
+    }
+
+    fn _name(&self) -> String {
+        self.get_name().to_string()
     }
 }
 
