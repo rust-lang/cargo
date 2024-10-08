@@ -1579,6 +1579,86 @@ foo v0.0.0 ([ROOT]/foo)
         .run();
 }
 
+/// From issue #10593
+/// The case where:
+/// *   artifact dep is { target = <specified> }
+/// *   dependency of that artifact dependency specifies the same target
+/// *   the target is not activated.
+#[cargo_test]
+fn dep_of_artifact_dep_same_target_specified() {
+    if cross_compile::disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+                    edition = "2015"
+                    resolver = "2"
+
+                    [dependencies]
+                    bar = {{ path = "bar", artifact = "bin", target = "{target}" }}
+                "#,
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "bar"
+                    version = "0.1.0"
+
+                    [target.{target}.dependencies]
+                    baz = {{ path = "../baz" }}
+                "#,
+            ),
+        )
+        .file("bar/src/main.rs", "fn main() {}")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.1.0"
+
+            "#,
+        )
+        .file("baz/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr_data(str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+[COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
+[COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .with_status(0)
+        .run();
+
+    // TODO This command currently fails due to a bug in cargo but it should be fixed so that it succeeds in the future.
+    p.cargo("tree -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr_data(
+            r#"...
+no entry found for key
+...
+"#,
+        )
+        .with_status(101)
+        .run();
+}
+
 #[cargo_test]
 fn targets_are_picked_up_from_non_workspace_artifact_deps() {
     if cross_compile::disabled() {
