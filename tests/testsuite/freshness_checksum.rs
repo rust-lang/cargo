@@ -6,6 +6,7 @@ use std::net::TcpListener;
 use std::process::Stdio;
 use std::thread;
 
+use cargo_test_support::assert_deps_contains;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::{
@@ -122,6 +123,76 @@ fn same_size_different_content() {
 
     p.cargo("check -Zchecksum-freshness")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test(
+    nightly,
+    reason = "-Zbinary-dep-depinfo is unstable, also requires -Zchecksum-hash-algorithm"
+)]
+fn binary_depinfo_correctly_encoded() {
+    Package::new("regdep", "0.1.0")
+        .file("src/lib.rs", "pub fn f() {}")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+            edition = "2018"
+
+            [dependencies]
+            regdep = "0.1"
+            bar = {path = "./bar"}
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                regdep::f();
+                bar::f();
+            }
+            "#,
+        )
+        /*********** Path Dependency `bar` ***********/
+        .file("bar/Cargo.toml", &basic_manifest("bar", "0.1.0"))
+        .file("bar/src/lib.rs", "pub fn f() {}")
+        .build();
+
+    let host = rustc_host();
+    p.cargo("build -Zbinary-dep-depinfo -Zchecksum-freshness --target")
+        .arg(&host)
+        .masquerade_as_nightly_cargo(&["binary-dep-depinfo", "checksum-freshness"])
+        .with_stderr_data(str![[r#"
+...
+[COMPILING] foo v0.1.0 ([ROOT]/foo)
+...
+
+"#]])
+        .run();
+
+    assert_deps_contains(
+        &p,
+        &format!("target/{}/debug/.fingerprint/foo-*/dep-bin-foo", host),
+        &[
+            (0, "src/main.rs"),
+            (1, &format!("{}/debug/deps/libbar-*.rlib", host)),
+            (1, &format!("{}/debug/deps/libregdep-*.rlib", host)),
+        ],
+    );
+
+    // Make sure it stays fresh.
+    p.cargo("build -Zbinary-dep-depinfo -Zchecksum-freshness --target")
+        .arg(&host)
+        .masquerade_as_nightly_cargo(&["binary-dep-depinfo", "checksum-freshness"])
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 

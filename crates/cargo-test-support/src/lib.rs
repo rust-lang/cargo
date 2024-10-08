@@ -1582,3 +1582,82 @@ where
     let thread = std::thread::spawn(|| f());
     thread_wait_timeout(n, thread)
 }
+
+// Helper for testing dep-info files in the fingerprint dir.
+#[track_caller]
+pub fn assert_deps(project: &Project, fingerprint: &str, test_cb: impl Fn(&Path, &[(u8, &str)])) {
+    let mut files = project
+        .glob(fingerprint)
+        .map(|f| f.expect("unwrap glob result"))
+        // Filter out `.json` entries.
+        .filter(|f| f.extension().is_none());
+    let info_path = files
+        .next()
+        .unwrap_or_else(|| panic!("expected 1 dep-info file at {}, found 0", fingerprint));
+    assert!(files.next().is_none(), "expected only 1 dep-info file");
+    let dep_info = fs::read(&info_path).unwrap();
+    let dep_info = &mut &dep_info[..];
+    let deps = (0..read_usize(dep_info))
+        .map(|_| {
+            let ty = read_u8(dep_info);
+            let path = std::str::from_utf8(read_bytes(dep_info)).unwrap();
+            let checksum_present = read_bool(dep_info);
+            if checksum_present {
+                // Read out the checksum info without using it
+                let _file_len = read_u64(dep_info);
+                let _checksum = read_bytes(dep_info);
+            }
+            (ty, path)
+        })
+        .collect::<Vec<_>>();
+    test_cb(&info_path, &deps);
+
+    fn read_usize(bytes: &mut &[u8]) -> usize {
+        let ret = &bytes[..4];
+        *bytes = &bytes[4..];
+
+        u32::from_le_bytes(ret.try_into().unwrap()) as usize
+    }
+
+    fn read_u8(bytes: &mut &[u8]) -> u8 {
+        let ret = bytes[0];
+        *bytes = &bytes[1..];
+        ret
+    }
+
+    fn read_bool(bytes: &mut &[u8]) -> bool {
+        read_u8(bytes) != 0
+    }
+
+    fn read_u64(bytes: &mut &[u8]) -> u64 {
+        let ret = &bytes[..8];
+        *bytes = &bytes[8..];
+
+        u64::from_le_bytes(ret.try_into().unwrap())
+    }
+
+    fn read_bytes<'a>(bytes: &mut &'a [u8]) -> &'a [u8] {
+        let n = read_usize(bytes);
+        let ret = &bytes[..n];
+        *bytes = &bytes[n..];
+        ret
+    }
+}
+
+pub fn assert_deps_contains(project: &Project, fingerprint: &str, expected: &[(u8, &str)]) {
+    assert_deps(project, fingerprint, |info_path, entries| {
+        for (e_kind, e_path) in expected {
+            let pattern = glob::Pattern::new(e_path).unwrap();
+            let count = entries
+                .iter()
+                .filter(|(kind, path)| kind == e_kind && pattern.matches(path))
+                .count();
+            if count != 1 {
+                panic!(
+                    "Expected 1 match of {} {} in {:?}, got {}:\n{:#?}",
+                    e_kind, e_path, info_path, count, entries
+                );
+            }
+        }
+    })
+}
