@@ -70,7 +70,9 @@ resolver.
 [dependency specification]: specifying-dependencies.md
 [`cargo tree`]: ../commands/cargo-tree.md
 
-## SemVer compatibility
+## Constraints and Heuristics
+
+### SemVer compatibility
 
 Cargo uses [SemVer] for specifying version numbers. This establishes a common
 convention for what is compatible between different versions of a package. See
@@ -151,7 +153,7 @@ the `0.4` release of the `log` package.
 [SemVer Compatibility]: semver.md
 [Version-incompatibility hazards]: #version-incompatibility-hazards
 
-### Version-incompatibility hazards
+#### Version-incompatibility hazards
 
 When multiple versions of a crate appear in the resolve graph, this can cause
 problems when types from those crates are exposed by the crates using them.
@@ -185,12 +187,6 @@ ecosystem if you publish a SemVer-incompatible version of a popular library.
 
 [semver trick]: https://github.com/dtolnay/semver-trick
 [`downcast_ref`]: ../../std/any/trait.Any.html#method.downcast_ref
-
-## Other constraints
-
-Version requirements aren't the only constraint that the resolver considers
-when selecting and unifying dependencies. The following sections cover some of
-the other constraints that can affect resolution.
 
 ### Features
 
@@ -611,6 +607,7 @@ circumstances:
     var fragments = {
         "#version-metadata": "specifying-dependencies.html#version-metadata",
         "#pre-releases": "specifying-dependencies.html#pre-releases",
+        "#other-constraints": "#constraints-and-heuristics",
     };
     var target = fragments[window.location.hash];
     if (target) {
