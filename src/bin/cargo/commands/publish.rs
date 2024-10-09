@@ -18,7 +18,11 @@ pub fn cli() -> Command {
             "Allow dirty working directories to be packaged",
         ))
         .arg_silent_suggestion()
-        .arg_package("Package to publish")
+        .arg_package_spec_no_all(
+            "Package(s) to publish",
+            "Publish all packages in the workspace (requires nightly)",
+            "Don't publish specified packages (requires nightly)",
+        )
         .arg_features()
         .arg_parallel()
         .arg_target_triple("Build for the target triple")
