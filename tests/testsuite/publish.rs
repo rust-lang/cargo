@@ -3365,6 +3365,111 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
 }
 
 #[cargo_test]
+fn package_selection() {
+    let registry = registry::RegistryBuilder::new().http_api().build();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["a", "b"]
+            "#,
+        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
+        .file("a/src/lib.rs", "#[test] fn a() {}")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
+        .file("b/src/lib.rs", "#[test] fn b() {}")
+        .build();
+
+    p.cargo("publish --no-verify --dry-run -Zpackage-workspace --workspace")
+        .replace_crates_io(registry.index_url())
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_status(1)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected argument '--workspace' found
+
+Usage: cargo publish --no-verify --dry-run -Z <FLAG>
+
+For more information, try '--help'.
+
+"#]])
+        .with_stdout_data(str![[r#""#]])
+        .run();
+
+    p.cargo("publish --no-verify --dry-run -Zpackage-workspace --package a --package b")
+        .replace_crates_io(registry.index_url())
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_status(1)
+        .with_stderr_data(str![[r#"
+[ERROR] the argument '--package [<SPEC>]' cannot be used multiple times
+
+Usage: cargo publish [OPTIONS]
+
+For more information, try '--help'.
+
+"#]])
+        .with_stdout_data(str![[r#""#]])
+        .run();
+
+    p.cargo("publish --no-verify --dry-run -Zpackage-workspace --workspace --exclude b")
+        .replace_crates_io(registry.index_url())
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_status(1)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected argument '--workspace' found
+
+Usage: cargo publish --no-verify --dry-run -Z <FLAG>
+
+For more information, try '--help'.
+
+"#]])
+        .with_stdout_data(str![[r#""#]])
+        .run();
+
+    p.cargo("publish --no-verify --dry-run --package a --package b")
+        .replace_crates_io(registry.index_url())
+        .with_status(1)
+        .with_stderr_data(str![[r#"
+[ERROR] the argument '--package [<SPEC>]' cannot be used multiple times
+
+Usage: cargo publish [OPTIONS]
+
+For more information, try '--help'.
+
+"#]])
+        .with_stdout_data(str![[r#""#]])
+        .run();
+
+    p.cargo("publish --no-verify --dry-run --workspace")
+        .replace_crates_io(registry.index_url())
+        .with_status(1)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected argument '--workspace' found
+
+Usage: cargo publish --no-verify --dry-run
+
+For more information, try '--help'.
+
+"#]])
+        .with_stdout_data(str![[r#""#]])
+        .run();
+
+    p.cargo("publish --no-verify --dry-run --exclude b")
+        .replace_crates_io(registry.index_url())
+        .with_status(1)
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected argument '--exclude' found
+
+Usage: cargo publish --no-verify --dry-run
+
+For more information, try '--help'.
+
+"#]])
+        .with_stdout_data(str![[r#""#]])
+        .run();
+}
+
+#[cargo_test]
 fn wait_for_git_publish() {
     // Slow publish to an index with a git index.
     let registry = registry::RegistryBuilder::new()
