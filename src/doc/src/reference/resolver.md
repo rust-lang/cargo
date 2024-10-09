@@ -6,19 +6,68 @@ is called "dependency resolution" and is performed by the "resolver". The
 result of the resolution is stored in the `Cargo.lock` file which "locks" the
 dependencies to specific versions, and keeps them fixed over time.
 
-The resolver attempts to unify common dependencies while considering possibly
-conflicting requirements. It turns out, however, that in many cases there is no
-single "best" dependency resolution, and so the resolver must use heuristics to
-choose a preferred solution. The sections below provide some details on how
-requirements are handled, and how to work with the resolver.
+In many cases there is no single "best" dependency resolution.
+The resolver operates under various constraints and heuristics to find a generally applicable resolution.
+To understand how these interact, it is helpful to have a coarse understanding of how dependency resolution works.
 
-See the chapter [Specifying Dependencies] for more details about how
-dependency requirements are specified.
+This pseudo-code approximates what Cargo's resolver does:
+```rust
+pub fn resolve(workspace: &[Package], policy: Policy) -> Option<ResolveGraph> {
+    let dep_queue = Queue::new(workspace);
+    let resolved = ResolveGraph::new();
+    resolve_next(pkq_queue, resolved, policy)
+}
+
+fn resolve_next(dep_queue: Queue, resolved: ResolveGraph, policy: Policy) -> Option<ResolveGraph> {
+    let Some(dep_spec) = policy.pick_next_dep(dep_queue) else {
+        // Done
+        return Some(resolved);
+    };
+
+    if let Some(resolved) = policy.try_unify_version(dep_spec, resolved.clone()) {
+        return Some(resolved);
+    }
+
+    let dep_versions = dep_spec.lookup_versions()?;
+    let mut dep_versions = policy.filter_versions(dep_spec, dep_versions);
+    while let Some(dep_version) = policy.pick_next_version(&mut dep_versions) {
+        if policy.needs_version_unification(dep_version, &resolved) {
+            continue;
+        }
+
+        let mut dep_queue = dep_queue.clone();
+        dep_queue.enqueue(dep_version.dependencies);
+        let mut resolved = resolved.clone();
+        resolved.register(dep_version);
+        if let Some(resolved) = resolve_next(dep_queue, resolved) {
+            return Some(resolved);
+        }
+    }
+
+    // No valid solution found, backtrack and `pick_next_version`
+    None
+}
+```
+
+Key steps:
+- Walking dependencies (`pick_next_dep`):
+  The order dependencies are walked can affect
+  how related version requirements for the same dependency get resolved, see unifying versions,
+  and how much the resolver backtracks, affecting resolver performance,
+- Unifying versions (`try_unify_version`, `needs_version_unification`):
+  Cargo reuses versions where possible to reduce build times and allow types from common dependencies to be passed between APIs.
+  If multiple versions would have been unified if it wasn't for conflicts in their [dependency specifications], Cargo will backtrack, erroring if no solution is found, rather than selecting multiple versions.
+  A [dependency specification] or Cargo may decide that a version is undesirable,
+  preferring to backtrack or error rather than use it.
+- Preferring versions (`pick_next_version`):
+  Cargo may decide that it should prefer a specific version,
+  falling back to the next version when backtracking.
 
 The [`cargo tree`] command can be used to visualize the result of the
 resolver.
 
-[Specifying Dependencies]: specifying-dependencies.md
+[dependency specifications]: specifying-dependencies.md
+[dependency specification]: specifying-dependencies.md
 [`cargo tree`]: ../commands/cargo-tree.md
 
 ## SemVer compatibility
