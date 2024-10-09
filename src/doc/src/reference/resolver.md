@@ -71,31 +71,48 @@ Key steps:
   Cargo may decide that it should prefer a specific version,
   falling back to the next version when backtracking.
 
+### Version numbers
+
+Cargo prefers the highest version currently available.
+
+For example, if you had a package in the resolve graph with:
+```toml
+[dependencies]
+bitflags = "*"
+```
+If at the time the `Cargo.lock` file is generated, the greatest version of
+`bitflags` is `1.2.1`, then the package will use `1.2.1`.
+
+### Version requirements
+
+Package specify what versions they support, rejecting all others, through
+[version requirements].
+
+For example, if you had a package in the resolve graph with:
+```toml
+[dependencies]
+bitflags = "1.0"  # meaning `>=1.0.0,<2.0.0`
+```
+If at the time the `Cargo.lock` file is generated, the greatest version of
+`bitflags` is `1.2.1`, then the package will use `1.2.1` because it is the
+greatest within the compatibility range. If `2.0.0` is published, it will
+still use `1.2.1` because `2.0.0` is considered incompatible.
+
+[version requirements]: specifying-dependencies.md#version-requirement-syntax
+
 ### SemVer compatibility
 
-Cargo uses [SemVer] for specifying version numbers. This establishes a common
-convention for what is compatible between different versions of a package. See
-the [SemVer Compatibility] chapter for guidance on what is considered a
-"compatible" change. This notion of "compatibility" is important because Cargo
-assumes it should be safe to update a dependency within a compatibility range
-without breaking the build.
+Cargo assumes packages follow [SemVer] and will unify dependency versions if they are
+[SemVer] compatible according to the [Caret version requirements].
+If two compatible versions cannot be unified because of conflicting version requirements,
+Cargo will error.
 
-Versions are considered compatible if their left-most non-zero
-major/minor/patch component is the same. For example, `1.0.3` and `1.1.0` are
-considered compatible, and thus it should be safe to update from the older
-release to the newer one. However, an update from `1.1.0` to `2.0.0` would not
-be allowed to be made automatically. This convention also applies to versions
-with leading zeros. For example, `0.1.0` and `0.1.2` are compatible, but
-`0.1.0` and `0.2.0` are not. Similarly, `0.0.1` and `0.0.2` are not
-compatible.
+See the [SemVer Compatibility] chapter for guidance on what is considered a
+"compatible" change.
 
-When multiple packages specify a dependency for a common package, the resolver
-attempts to ensure that they use the same version of that common package, as
-long as they are within a SemVer compatibility range. It also attempts to use
-the greatest version currently available within that compatibility range. For
-example, if there are two packages in the resolve graph with the following
-requirements:
+Examples:
 
+The following two packages will have their dependencies on `bitflags` unified because any version picked will be compatible with each other.
 ```toml
 # Package A
 [dependencies]
@@ -106,35 +123,7 @@ bitflags = "1.0"  # meaning `>=1.0.0,<2.0.0`
 bitflags = "1.1"  # meaning `>=1.1.0,<2.0.0`
 ```
 
-If at the time the `Cargo.lock` file is generated, the greatest version of
-`bitflags` is `1.2.1`, then both packages will use `1.2.1` because it is the
-greatest within the compatibility range. If `2.0.0` is published, it will
-still use `1.2.1` because `2.0.0` is considered incompatible.
-
-If multiple packages have a common dependency with semver-incompatible
-versions, then Cargo will allow this, but will build two separate copies of
-the dependency. For example:
-
-```toml
-# Package A
-[dependencies]
-rand = "0.7"  # meaning `>=0.7.0,<0.8.0`
-
-# Package B
-[dependencies]
-rand = "0.6"  # meaning `>=0.6.0,<0.7.0`
-```
-
-The above will result in Package A using the greatest `0.7` release (`0.7.3`
-at the time of this writing) and Package B will use the greatest `0.6` release
-(`0.6.5` for example). This can lead to potential problems, see the
-[Version-incompatibility hazards] section for more details.
-
-Multiple versions within the same compatibility range are not allowed and will
-result in a resolver error if it is constrained to two different versions
-within a compatibility range. For example, if there are two packages in the
-resolve graph with the following requirements:
-
+The following packages will error because the version requirements conflict, selecting two distinct compatible versions.
 ```toml
 # Package A
 [dependencies]
@@ -145,11 +134,36 @@ log = "=0.4.11"
 log = "=0.4.8"
 ```
 
-The above will fail because it is not allowed to have two separate copies of
-the `0.4` release of the `log` package.
+The following two packages will not have their dependencies on `rand` unified because only incompatible versions are available for each.
+Instead, two different versions (e.g. 0.6.5 and 0.7.3) will be resolved and built.
+This can lead to potential problems, see the [Version-incompatibility hazards] section for more details.
+```toml
+# Package A
+[dependencies]
+rand = "0.7"  # meaning `>=0.7.0,<0.8.0`
+
+# Package B
+[dependencies]
+rand = "0.6"  # meaning `>=0.6.0,<0.7.0`
+```
+
+Generally, the following two packages will not have their dependencies unified because incompatible versions are available that satisfy the version requirements:
+Instead, two different versions (e.g. 0.6.5 and 0.7.3) will be resolved and built.
+The application of other constraints or heuristics may cause these to be unified,
+picking one version (e.g. 0.6.5).
+```toml
+# Package A
+[dependencies]
+rand = ">=0.6,<0.8.0"
+
+# Package B
+[dependencies]
+rand = "0.6"  # meaning `>=0.6.0,<0.7.0`
+```
 
 [SemVer]: https://semver.org/
 [SemVer Compatibility]: semver.md
+[Caret version requirements]: specifying-dependencies.md#default-requirements
 [Version-incompatibility hazards]: #version-incompatibility-hazards
 
 #### Version-incompatibility hazards
