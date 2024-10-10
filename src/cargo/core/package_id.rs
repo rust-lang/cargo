@@ -10,6 +10,7 @@ use std::sync::OnceLock;
 use serde::de;
 use serde::ser;
 
+use crate::core::ActivationsKey;
 use crate::core::PackageIdSpec;
 use crate::core::SourceId;
 use crate::util::interning::InternedString;
@@ -159,6 +160,9 @@ impl PackageId {
     }
     pub fn source_id(self) -> SourceId {
         self.inner.source_id
+    }
+    pub fn as_activations_key(self) -> ActivationsKey {
+        (self.name(), self.source_id(), self.version().into())
     }
 
     pub fn with_source_id(self, source: SourceId) -> PackageId {

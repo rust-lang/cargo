@@ -1,3 +1,4 @@
+pub use self::activation_key::ActivationsKey;
 pub use self::dependency::{Dependency, SerializedDependency};
 pub use self::features::{CliUnstable, Edition, Feature, Features};
 pub use self::manifest::{EitherManifest, VirtualManifest};
@@ -16,6 +17,7 @@ pub use self::workspace::{
 };
 pub use cargo_util_schemas::core::{GitReference, PackageIdSpec, SourceKind};
 
+pub mod activation_key;
 pub mod compiler;
 pub mod dependency;
 pub mod features;

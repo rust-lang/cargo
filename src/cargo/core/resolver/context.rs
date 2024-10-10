@@ -2,12 +2,11 @@ use super::dep_cache::RegistryQueryer;
 use super::errors::ActivateResult;
 use super::types::{ConflictMap, ConflictReason, FeaturesSet, ResolveOpts};
 use super::RequestedFeatures;
-use crate::core::{Dependency, PackageId, SourceId, Summary};
+use crate::core::{ActivationsKey, Dependency, PackageId, Summary};
 use crate::util::interning::InternedString;
 use crate::util::Graph;
 use anyhow::format_err;
 use std::collections::HashMap;
-use std::num::NonZeroU64;
 use tracing::debug;
 
 // A `Context` is basically a bunch of local resolution information which is
@@ -22,11 +21,13 @@ pub struct ResolverContext {
     pub resolve_features: im_rc::HashMap<PackageId, FeaturesSet, rustc_hash::FxBuildHasher>,
     /// get the package that will be linking to a native library by its links attribute
     pub links: im_rc::HashMap<InternedString, PackageId, rustc_hash::FxBuildHasher>,
-
     /// a way to look up for a package in activations what packages required it
     /// and all of the exact deps that it fulfilled.
     pub parents: Graph<PackageId, im_rc::HashSet<Dependency, rustc_hash::FxBuildHasher>>,
 }
+
+pub type Activations =
+    im_rc::HashMap<ActivationsKey, (Summary, ContextAge), rustc_hash::FxBuildHasher>;
 
 /// When backtracking it can be useful to know how far back to go.
 /// The `ContextAge` of a `Context` is a monotonically increasing counter of the number
@@ -34,43 +35,6 @@ pub struct ResolverContext {
 /// Several structures store the `ContextAge` when it was added,
 /// to be used in `find_candidate` for backtracking.
 pub type ContextAge = usize;
-
-/// Find the activated version of a crate based on the name, source, and semver compatibility.
-/// By storing this in a hash map we ensure that there is only one
-/// semver compatible version of each crate.
-/// This all so stores the `ContextAge`.
-pub type ActivationsKey = (InternedString, SourceId, SemverCompatibility);
-
-pub type Activations =
-    im_rc::HashMap<ActivationsKey, (Summary, ContextAge), rustc_hash::FxBuildHasher>;
-
-/// A type that represents when cargo treats two Versions as compatible.
-/// Versions `a` and `b` are compatible if their left-most nonzero digit is the
-/// same.
-#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug, PartialOrd, Ord)]
-pub enum SemverCompatibility {
-    Major(NonZeroU64),
-    Minor(NonZeroU64),
-    Patch(u64),
-}
-
-impl From<&semver::Version> for SemverCompatibility {
-    fn from(ver: &semver::Version) -> Self {
-        if let Some(m) = NonZeroU64::new(ver.major) {
-            return SemverCompatibility::Major(m);
-        }
-        if let Some(m) = NonZeroU64::new(ver.minor) {
-            return SemverCompatibility::Minor(m);
-        }
-        SemverCompatibility::Patch(ver.patch)
-    }
-}
-
-impl PackageId {
-    pub fn as_activations_key(self) -> ActivationsKey {
-        (self.name(), self.source_id(), self.version().into())
-    }
-}
 
 impl ResolverContext {
     pub fn new() -> ResolverContext {
