@@ -198,8 +198,7 @@ fn activate_deps_loop(
     let mut backtrack_stack = Vec::new();
     let mut remaining_deps = RemainingDeps::new();
 
-    // `past_conflicting_activations` is a cache of the reasons for each time we
-    // backtrack.
+    // `past_conflicting_activations` is a cache of the reasons for each time we backtrack.
     let mut past_conflicting_activations = conflict_cache::ConflictCache::new();
 
     // Activate all the initial summaries to kick off some work.
@@ -775,7 +774,7 @@ impl RemainingCandidates {
             //
             // Here we throw out our candidate if it's *compatible*, yet not
             // equal, to all previously activated versions.
-            if let Some((a, _)) = cx.activations.get(&b_id.as_activations_key()) {
+            if let Some((a, _)) = cx.activations.get(&b_id.activation_key()) {
                 if *a != b {
                     conflicting_prev_active
                         .entry(a.package_id())

@@ -395,7 +395,7 @@ impl SatResolver {
             &mut solver,
             var_for_is_packages_used
                 .iter()
-                .map(|(p, &v)| (p.as_activations_key(), v)),
+                .map(|(p, &v)| (p.activation_key(), v)),
         );
 
         for pkg in by_name.values().flatten() {
