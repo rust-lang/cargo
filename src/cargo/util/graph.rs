@@ -22,7 +22,7 @@ impl<N: Eq + Ord + Clone, E: Default + Clone> Graph<N, E> {
             .entry(node)
             .or_insert_with(im_rc::OrdMap::new)
             .entry(child)
-            .or_insert_with(Default::default)
+            .or_default()
     }
 
     /// Returns the graph obtained by reversing all edges.
