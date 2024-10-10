@@ -521,3 +521,38 @@ error[E0463]: can't find crate for `bar`
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn cfg_keywords() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [target.'cfg(any(async, fn, const, return, true))'.dependencies]
+                b = { path = "b/" }
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [target."cfg(any(for, match, extern, crate, false))"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+...
+"#]])
+        .run();
+}
