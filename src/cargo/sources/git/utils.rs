@@ -681,6 +681,7 @@ where
             // fails we'll get called again, but we don't have another option so
             // we bail out.
             let mut attempts = 0;
+            let mut user_pass_attempted = false;
             res = f(&mut |_url, username, allowed| {
                 if allowed.contains(git2::CredentialType::USERNAME) {
                     return git2::Cred::username(&s);
@@ -691,6 +692,13 @@ where
                     if attempts == 1 {
                         ssh_agent_attempts.push(s.to_string());
                         return git2::Cred::ssh_key_from_agent(&s);
+                    }
+                }
+                if allowed.contains(git2::CredentialType::USER_PASS_PLAINTEXT) {
+                    debug_assert_eq!(Some(&s[..]), username);
+                    if !user_pass_attempted {
+                        user_pass_attempted = true;
+                        return git2::Cred::credential_helper(cfg, url, username);
                     }
                 }
                 Err(git2::Error::from_str("no authentication methods succeeded"))
