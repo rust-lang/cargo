@@ -19,20 +19,23 @@ guide](../guide/index.md), we specified a dependency on the `time` crate:
 time = "0.1.12"
 ```
 
-The string `"0.1.12"` is a version requirement. Although it looks like a
-specific *version* of the `time` crate, it actually specifies a *range* of
-versions and allows [SemVer] compatible updates. An update is allowed if the new
-version number does not modify the left-most non-zero number in the major, minor,
-patch grouping. In this case, if we ran `cargo update time`, cargo should
+The version string `"0.1.12"` is called a [version requirement](#version-requirement-syntax).
+It specifies a range of versions that can be selected from when [resolving dependencies](resolver.md).
+In this case, `"0.1.12"` represents the version range `>=0.1.12, <0.2.0`.
+An update is allowed if it is within that range.
+In this case, if we ran `cargo update time`, cargo should
 update us to version `0.1.13` if it is the latest `0.1.z` release, but would not
-update us to `0.2.0`. If instead we had specified the version string as `1.0`,
-cargo should update to `1.1` if it is the latest `1.y` release, but not `2.0`.
-The version `0.0.x` is not considered compatible with any other version.
+update us to `0.2.0`.
 
-[SemVer]: https://semver.org
+## Version requirement syntax
 
-Here are some more examples of version requirements and the versions that would
-be allowed with them:
+### Default requirements
+
+**Default requirements** specify a minimum version with the ability to update to [SemVer] compatible versions.
+Versions are considered compatible if their left-most non-zero major/minor/patch component is the same.
+This is different from [SemVer] which considers all pre-1.0.0 packages to be incompatible.
+
+`1.2.3` is an example of a default requirement.
 
 ```notrust
 1.2.3  :=  >=1.2.3, <2.0.0
@@ -44,18 +47,6 @@ be allowed with them:
 0.0    :=  >=0.0.0, <0.1.0
 0      :=  >=0.0.0, <1.0.0
 ```
-
-This compatibility convention is different from SemVer in the way it treats
-versions before 1.0.0. While SemVer says there is no compatibility before
-1.0.0, Cargo considers `0.x.y` to be compatible with `0.x.z`, where `y ≥ z`
-and `x > 0`.
-
-It is possible to further tweak the logic for selecting compatible versions
-using special operators as described in the [Version requirement syntax](#version-requirement-syntax) section.
-
-Use the default version requirement strategy, e.g. `log = "1.2.3"` where possible to maximize compatibility.
-
-## Version requirement syntax
 
 ### Caret requirements
 
@@ -120,6 +111,41 @@ Here are some examples of comparison requirements:
 
 As shown in the examples above, multiple version requirements can be
 separated with a comma, e.g., `>= 1.2, < 1.5`.
+
+### Pre-releases
+
+Version requirements exclude [pre-release versions](manifest.md#the-version-field), such as `1.0.0-alpha`,
+unless specifically asked for.
+For example, if `1.0.0-alpha` of package
+`foo` is published, then a requirement of `foo = "1.0"` will *not* match, and
+will return an error. The pre-release must be specified, such as `foo =
+"1.0.0-alpha"`.
+Similarly [`cargo install`] will avoid pre-releases unless
+explicitly asked to install one.
+
+Cargo allows "newer" pre-releases to be used automatically. For example, if
+`1.0.0-beta` is published, then a requirement `foo = "1.0.0-alpha"` will allow
+updating to the `beta` version. Note that this only works on the same release
+version, `foo = "1.0.0-alpha"` will not allow updating to `foo = "1.0.1-alpha"`
+or `foo = "1.0.1-beta"`.
+
+Cargo will also upgrade automatically to semver-compatible released versions
+from prereleases. The requirement `foo = "1.0.0-alpha"` will allow updating to
+`foo = "1.0.0"` as well as `foo = "1.2.0"`.
+
+Beware that pre-release versions can be unstable, and as such care should be
+taken when using them. Some projects may choose to publish breaking changes
+between pre-release versions. It is recommended to not use pre-release
+dependencies in a library if your library is not also a pre-release. Care
+should also be taken when updating your `Cargo.lock`, and be prepared if a
+pre-release update causes issues.
+
+[`cargo install`]: ../commands/cargo-install.md
+
+### Version metadata
+
+[Version metadata](manifest.md#the-version-field), such as `1.0.0+21AF26D3`,
+is ignored and should not be used in version requirements.
 
 > **Recommendation:** When in doubt, use the default version requirement operator.
 >
@@ -622,6 +648,7 @@ rand = { workspace = true, optional = true }
 ```
 
 
+[SemVer]: https://semver.org
 [crates.io]: https://crates.io/
 [dev-dependencies]: #development-dependencies
 [workspace.dependencies]: workspaces.md#the-dependencies-table

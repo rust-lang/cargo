@@ -26,7 +26,7 @@
     * [Specifying Dependencies](reference/specifying-dependencies.md)
         * [Overriding Dependencies](reference/overriding-dependencies.md)
         * [Source Replacement](reference/source-replacement.md)
-    * [Dependency Resolution](reference/resolver.md)
+        * [Dependency Resolution](reference/resolver.md)
     * [Features](reference/features.md)
         * [Features Examples](reference/features-examples.md)
     * [Profiles](reference/profiles.md)
