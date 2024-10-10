@@ -222,7 +222,11 @@ impl<'e> TextRenderer<'e> {
                         Tag::Image { .. } => {
                             bail!("images are not currently supported")
                         }
-                        Tag::HtmlBlock { .. } | Tag::MetadataBlock { .. } => {}
+                        Tag::HtmlBlock { .. }
+                        | Tag::MetadataBlock { .. }
+                        | Tag::DefinitionList
+                        | Tag::DefinitionListTitle
+                        | Tag::DefinitionListDefinition => {}
                     }
                 }
                 Event::End(tag_end) => match &tag_end {
@@ -231,7 +235,7 @@ impl<'e> TextRenderer<'e> {
                         self.hard_break();
                     }
                     TagEnd::Heading(..) => {}
-                    TagEnd::BlockQuote => {
+                    TagEnd::BlockQuote(..) => {
                         self.indent -= 3;
                     }
                     TagEnd::CodeBlock => {
@@ -274,7 +278,12 @@ impl<'e> TextRenderer<'e> {
                             write!(self.word, "<{}>", dest_url)?;
                         }
                     }
-                    TagEnd::Image | TagEnd::HtmlBlock | TagEnd::MetadataBlock(..) => {}
+                    TagEnd::HtmlBlock { .. }
+                    | TagEnd::MetadataBlock { .. }
+                    | TagEnd::DefinitionList
+                    | TagEnd::DefinitionListTitle
+                    | TagEnd::Image
+                    | TagEnd::DefinitionListDefinition => {}
                 },
                 Event::Text(t) | Event::Code(t) => {
                     if wrap_text {
