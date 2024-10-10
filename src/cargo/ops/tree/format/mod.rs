@@ -75,12 +75,21 @@ impl<'a> fmt::Display for Display<'a> {
                             } else {
                                 ""
                             };
+                            // TODO this is probably NOT the right way to get the ArtifactKind
+                            //
+                            let artifact_suffix =
+                                if let Some(artifact_kind) = package.artifact_kind() {
+                                    format!(" ({})", artifact_kind.crate_type())
+                                } else {
+                                    "".to_string()
+                                };
                             write!(
                                 fmt,
-                                "{} v{}{}",
+                                "{} v{}{}{}",
                                 package.name(),
                                 package.version(),
-                                proc_macro_suffix
+                                proc_macro_suffix,
+                                artifact_suffix,
                             )?;
 
                             let source_id = package.package_id().source_id();
