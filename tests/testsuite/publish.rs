@@ -3365,6 +3365,120 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
 }
 
 #[cargo_test]
+fn package_selection() {
+    let registry = registry::RegistryBuilder::new().http_api().build();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["a", "b"]
+            "#,
+        )
+        .file("a/Cargo.toml", &basic_manifest("a", "0.1.0"))
+        .file("a/src/lib.rs", "#[test] fn a() {}")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.1.0"))
+        .file("b/src/lib.rs", "#[test] fn b() {}")
+        .build();
+
+    p.cargo("publish --no-verify --dry-run -Zpackage-workspace --workspace")
+        .replace_crates_io(registry.index_url())
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] a v0.1.0 ([ROOT]/foo/a)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] b v0.1.0 ([ROOT]/foo/b)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] a v0.1.0 ([ROOT]/foo/a)
+[WARNING] aborting upload due to dry run
+[UPLOADING] b v0.1.0 ([ROOT]/foo/b)
+[WARNING] aborting upload due to dry run
+
+"#]])
+        .with_stdout_data(str![[r#""#]])
+        .run();
+
+    p.cargo("publish --no-verify --dry-run -Zpackage-workspace --package a --package b")
+        .replace_crates_io(registry.index_url())
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] a v0.1.0 ([ROOT]/foo/a)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] b v0.1.0 ([ROOT]/foo/b)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] a v0.1.0 ([ROOT]/foo/a)
+[WARNING] aborting upload due to dry run
+[UPLOADING] b v0.1.0 ([ROOT]/foo/b)
+[WARNING] aborting upload due to dry run
+
+"#]])
+        .with_stdout_data(str![[r#""#]])
+        .run();
+
+    p.cargo("publish --no-verify --dry-run -Zpackage-workspace --workspace --exclude b")
+        .replace_crates_io(registry.index_url())
+        .masquerade_as_nightly_cargo(&["package-workspace"])
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] a v0.1.0 ([ROOT]/foo/a)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] a v0.1.0 ([ROOT]/foo/a)
+[WARNING] aborting upload due to dry run
+
+"#]])
+        .with_stdout_data(str![[r#""#]])
+        .run();
+
+    p.cargo("publish --no-verify --dry-run --package a --package b")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the `--package (multiple occurrences)` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+See https://github.com/rust-lang/cargo/issues/10948 for more information about the `--package (multiple occurrences)` flag.
+
+"#]])
+        .with_stdout_data(str![[r#""#]])
+        .run();
+
+    p.cargo("publish --no-verify --dry-run --workspace")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the `--workspace` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+See https://github.com/rust-lang/cargo/issues/10948 for more information about the `--workspace` flag.
+
+"#]])
+        .with_stdout_data(str![[r#""#]])
+        .run();
+
+    p.cargo("publish --no-verify --dry-run --exclude b")
+        .replace_crates_io(registry.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] the `--exclude` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+See https://github.com/rust-lang/cargo/issues/10948 for more information about the `--exclude` flag.
+
+"#]])
+        .with_stdout_data(str![[r#""#]])
+        .run();
+}
+
+#[cargo_test]
 fn wait_for_git_publish() {
     // Slow publish to an index with a git index.
     let registry = registry::RegistryBuilder::new()
