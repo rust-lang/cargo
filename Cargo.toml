@@ -122,6 +122,7 @@ private_intra_doc_links = "allow"
 [workspace.lints.clippy]
 all = { level = "allow", priority = -1 }
 dbg_macro = "warn"
+derive_ord_xor_partial_ord = "warn"
 disallowed_methods = "warn"
 print_stderr = "warn"
 print_stdout = "warn"
