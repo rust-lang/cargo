@@ -3384,13 +3384,20 @@ fn package_selection() {
     p.cargo("publish --no-verify --dry-run -Zpackage-workspace --workspace")
         .replace_crates_io(registry.index_url())
         .masquerade_as_nightly_cargo(&["package-workspace"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unexpected argument '--workspace' found
-
-Usage: cargo publish --no-verify --dry-run -Z <FLAG>
-
-For more information, try '--help'.
+[UPDATING] crates.io index
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] a v0.1.0 ([ROOT]/foo/a)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] b v0.1.0 ([ROOT]/foo/b)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] a v0.1.0 ([ROOT]/foo/a)
+[WARNING] aborting upload due to dry run
+[UPLOADING] b v0.1.0 ([ROOT]/foo/b)
+[WARNING] aborting upload due to dry run
 
 "#]])
         .with_stdout_data(str![[r#""#]])
@@ -3399,13 +3406,20 @@ For more information, try '--help'.
     p.cargo("publish --no-verify --dry-run -Zpackage-workspace --package a --package b")
         .replace_crates_io(registry.index_url())
         .masquerade_as_nightly_cargo(&["package-workspace"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] the argument '--package [<SPEC>]' cannot be used multiple times
-
-Usage: cargo publish [OPTIONS]
-
-For more information, try '--help'.
+[UPDATING] crates.io index
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] a v0.1.0 ([ROOT]/foo/a)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] b v0.1.0 ([ROOT]/foo/b)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] a v0.1.0 ([ROOT]/foo/a)
+[WARNING] aborting upload due to dry run
+[UPLOADING] b v0.1.0 ([ROOT]/foo/b)
+[WARNING] aborting upload due to dry run
 
 "#]])
         .with_stdout_data(str![[r#""#]])
@@ -3414,13 +3428,14 @@ For more information, try '--help'.
     p.cargo("publish --no-verify --dry-run -Zpackage-workspace --workspace --exclude b")
         .replace_crates_io(registry.index_url())
         .masquerade_as_nightly_cargo(&["package-workspace"])
-        .with_status(1)
         .with_stderr_data(str![[r#"
-[ERROR] unexpected argument '--workspace' found
-
-Usage: cargo publish --no-verify --dry-run -Z <FLAG>
-
-For more information, try '--help'.
+[UPDATING] crates.io index
+[WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
+See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
+[PACKAGING] a v0.1.0 ([ROOT]/foo/a)
+[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPLOADING] a v0.1.0 ([ROOT]/foo/a)
+[WARNING] aborting upload due to dry run
 
 "#]])
         .with_stdout_data(str![[r#""#]])
@@ -3428,13 +3443,11 @@ For more information, try '--help'.
 
     p.cargo("publish --no-verify --dry-run --package a --package b")
         .replace_crates_io(registry.index_url())
-        .with_status(1)
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] the argument '--package [<SPEC>]' cannot be used multiple times
-
-Usage: cargo publish [OPTIONS]
-
-For more information, try '--help'.
+[ERROR] the `--package (multiple occurrences)` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+See https://github.com/rust-lang/cargo/issues/10948 for more information about the `--package (multiple occurrences)` flag.
 
 "#]])
         .with_stdout_data(str![[r#""#]])
@@ -3442,13 +3455,11 @@ For more information, try '--help'.
 
     p.cargo("publish --no-verify --dry-run --workspace")
         .replace_crates_io(registry.index_url())
-        .with_status(1)
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] unexpected argument '--workspace' found
-
-Usage: cargo publish --no-verify --dry-run
-
-For more information, try '--help'.
+[ERROR] the `--workspace` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+See https://github.com/rust-lang/cargo/issues/10948 for more information about the `--workspace` flag.
 
 "#]])
         .with_stdout_data(str![[r#""#]])
@@ -3456,13 +3467,11 @@ For more information, try '--help'.
 
     p.cargo("publish --no-verify --dry-run --exclude b")
         .replace_crates_io(registry.index_url())
-        .with_status(1)
+        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] unexpected argument '--exclude' found
-
-Usage: cargo publish --no-verify --dry-run
-
-For more information, try '--help'.
+[ERROR] the `--exclude` flag is unstable, and only available on the nightly channel of Cargo, but this is the `stable` channel
+See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
+See https://github.com/rust-lang/cargo/issues/10948 for more information about the `--exclude` flag.
 
 "#]])
         .with_stdout_data(str![[r#""#]])
