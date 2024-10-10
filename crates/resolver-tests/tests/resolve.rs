@@ -4,8 +4,8 @@ use cargo::util::GlobalContext;
 
 use resolver_tests::{
     helpers::{
-        assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names, names, pkg_id,
-        pkg_loc, registry, ToPkgId,
+        assert_contains, assert_same, dep, dep_kind, dep_loc, dep_req, loc_names, names, pkg,
+        pkg_dep, pkg_dep_with, pkg_id, pkg_loc, registry, ToDep, ToPkgId,
     },
     pkg, resolve, resolve_with_global_context,
 };
@@ -935,6 +935,50 @@ fn large_conflict_cache() {
     }
     let reg = registry(input);
     let _ = resolve(root_deps, &reg);
+}
+
+#[test]
+fn resolving_slow_case_missing_feature() {
+    let mut reg = Vec::new();
+
+    const LAST_CRATE_VERSION_COUNT: usize = 50;
+
+    // increase in resolve time is at least cubic over `INTERMEDIATE_CRATES_VERSION_COUNT`.
+    // it should be `>= LAST_CRATE_VERSION_COUNT` to reproduce slowdown.
+    const INTERMEDIATE_CRATES_VERSION_COUNT: usize = LAST_CRATE_VERSION_COUNT + 5;
+
+    // should be `>= 2` to reproduce slowdown
+    const TRANSITIVE_CRATES_COUNT: usize = 3;
+
+    reg.push(pkg_dep_with(("last", "1.0.0"), vec![], &[("f", &[])]));
+    for v in 1..LAST_CRATE_VERSION_COUNT {
+        reg.push(pkg(("last", format!("1.0.{v}"))));
+    }
+
+    reg.push(pkg_dep(
+        ("dep", "1.0.0"),
+        vec![
+            dep("last"), // <-- needed to reproduce slowdown
+            dep_req("intermediate-1", "1.0.0"),
+        ],
+    ));
+
+    for n in 0..INTERMEDIATE_CRATES_VERSION_COUNT {
+        let version = format!("1.0.{n}");
+        for c in 1..TRANSITIVE_CRATES_COUNT {
+            reg.push(pkg_dep(
+                (format!("intermediate-{c}"), &version),
+                vec![dep_req(&format!("intermediate-{}", c + 1), &version)],
+            ));
+        }
+        reg.push(pkg_dep(
+            (format!("intermediate-{TRANSITIVE_CRATES_COUNT}"), &version),
+            vec![dep_req("last", "1.0.0").with(&["f"])],
+        ));
+    }
+
+    let deps = vec![dep("dep")];
+    let _ = resolve(deps, &reg);
 }
 
 #[test]
