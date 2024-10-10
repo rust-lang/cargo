@@ -334,6 +334,7 @@ dependencies = [
  "libc",
  "libgit2-sys",
  "memchr",
+ "nohash-hasher",
  "opener",
  "openssl",
  "os_info",
@@ -2385,6 +2386,12 @@ checksum = "359f76430b20a79f9e20e115b3428614e654f04fab314482fc0fda0ebd3c6044"
 dependencies = [
  "windows-sys 0.48.0",
 ]
+
+[[package]]
+name = "nohash-hasher"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bf50223579dc7cdcfb3bfcacf7069ff68243f8c363f62ffa99cf000a6b9c451"
 
 [[package]]
 name = "nom"

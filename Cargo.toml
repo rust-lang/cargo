@@ -67,6 +67,7 @@ libgit2-sys = "0.17.0"
 libloading = "0.8.5"
 memchr = "2.7.4"
 miow = "0.6.0"
+nohash-hasher = "0.2.0"
 opener = "0.7.1"
 openssl = "=0.10.57" # See rust-lang/cargo#13546 and openssl/openssl#23376 for pinning
 openssl-sys = "=0.9.92" # See rust-lang/cargo#13546 and openssl/openssl#23376 for pinning
@@ -182,6 +183,7 @@ jobserver.workspace = true
 lazycell.workspace = true
 libgit2-sys.workspace = true
 memchr.workspace = true
+nohash-hasher.workspace = true
 opener.workspace = true
 os_info.workspace = true
 pasetors.workspace = true

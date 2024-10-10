@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{self, Formatter};
 use std::hash;
@@ -10,7 +11,7 @@ use std::sync::OnceLock;
 use serde::de;
 use serde::ser;
 
-use crate::core::ActivationsKey;
+use crate::core::ActivationKey;
 use crate::core::PackageIdSpec;
 use crate::core::SourceId;
 use crate::util::interning::InternedString;
@@ -24,12 +25,30 @@ pub struct PackageId {
     inner: &'static PackageIdInner,
 }
 
-#[derive(PartialOrd, Eq, Ord)]
 struct PackageIdInner {
     name: InternedString,
     version: semver::Version,
     source_id: SourceId,
+    // This field is used as a cache to improve the resolver speed,
+    // and is not included in the `Eq`, `Hash` and `Ord` impls.
+    activation_key: ActivationKey,
 }
+
+impl Ord for PackageIdInner {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let self_key = (self.name, &self.version, self.source_id);
+        let other_key = (other.name, &other.version, other.source_id);
+        self_key.cmp(&other_key)
+    }
+}
+
+impl PartialOrd for PackageIdInner {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(&other))
+    }
+}
+
+impl Eq for PackageIdInner {}
 
 // Custom equality that uses full equality of SourceId, rather than its custom equality.
 //
@@ -136,6 +155,7 @@ impl PackageId {
 
     pub fn new(name: InternedString, version: semver::Version, source_id: SourceId) -> PackageId {
         let inner = PackageIdInner {
+            activation_key: (name, source_id, (&version).into()).into(),
             name,
             version,
             source_id,
@@ -161,8 +181,8 @@ impl PackageId {
     pub fn source_id(self) -> SourceId {
         self.inner.source_id
     }
-    pub fn as_activations_key(self) -> ActivationsKey {
-        (self.name(), self.source_id(), self.version().into())
+    pub fn activation_key(self) -> ActivationKey {
+        self.inner.activation_key
     }
 
     pub fn with_source_id(self, source: SourceId) -> PackageId {

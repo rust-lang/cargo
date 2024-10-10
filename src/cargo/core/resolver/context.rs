@@ -2,7 +2,7 @@ use super::dep_cache::RegistryQueryer;
 use super::errors::ActivateResult;
 use super::types::{ConflictMap, ConflictReason, FeaturesSet, ResolveOpts};
 use super::RequestedFeatures;
-use crate::core::{ActivationsKey, Dependency, PackageId, Summary};
+use crate::core::{ActivationKey, Dependency, PackageId, Summary};
 use crate::util::interning::InternedString;
 use crate::util::Graph;
 use anyhow::format_err;
@@ -26,8 +26,13 @@ pub struct ResolverContext {
     pub parents: Graph<PackageId, im_rc::HashSet<Dependency, rustc_hash::FxBuildHasher>>,
 }
 
-pub type Activations =
-    im_rc::HashMap<ActivationsKey, (Summary, ContextAge), rustc_hash::FxBuildHasher>;
+/// By storing activation keys in a `HashMap` we ensure that there is only one
+/// semver compatible version of each crate.
+type Activations = im_rc::HashMap<
+    ActivationKey,
+    (Summary, ContextAge),
+    nohash_hasher::BuildNoHashHasher<ActivationKey>,
+>;
 
 /// When backtracking it can be useful to know how far back to go.
 /// The `ContextAge` of a `Context` is a monotonically increasing counter of the number
@@ -62,7 +67,7 @@ impl ResolverContext {
     ) -> ActivateResult<bool> {
         let id = summary.package_id();
         let age: ContextAge = self.age;
-        match self.activations.entry(id.as_activations_key()) {
+        match self.activations.entry(id.activation_key()) {
             im_rc::hashmap::Entry::Occupied(o) => {
                 debug_assert_eq!(
                     &o.get().0,
@@ -101,7 +106,7 @@ impl ResolverContext {
                 // versions came from a `[patch]` source.
                 if let Some((_, dep)) = parent {
                     if dep.source_id() != id.source_id() {
-                        let key = (id.name(), dep.source_id(), id.version().into());
+                        let key = (id.name(), dep.source_id(), id.version().into()).into();
                         let prev = self.activations.insert(key, (summary.clone(), age));
                         if let Some((previous_summary, _)) = prev {
                             return Err(
@@ -145,9 +150,13 @@ impl ResolverContext {
 
     /// If the package is active returns the `ContextAge` when it was added
     pub fn is_active(&self, id: PackageId) -> Option<ContextAge> {
-        self.activations
-            .get(&id.as_activations_key())
-            .and_then(|(s, l)| if s.package_id() == id { Some(*l) } else { None })
+        let (summary, age) = self.activations.get(&id.activation_key())?;
+
+        if summary.package_id() == id {
+            Some(*age)
+        } else {
+            None
+        }
     }
 
     /// Checks whether all of `parent` and the keys of `conflicting activations`
@@ -163,8 +172,8 @@ impl ResolverContext {
             max = std::cmp::max(max, self.is_active(parent)?);
         }
 
-        for id in conflicting_activations.keys() {
-            max = std::cmp::max(max, self.is_active(*id)?);
+        for &id in conflicting_activations.keys() {
+            max = std::cmp::max(max, self.is_active(id)?);
         }
         Some(max)
     }

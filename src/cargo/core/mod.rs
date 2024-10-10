@@ -1,4 +1,4 @@
-pub use self::activation_key::ActivationsKey;
+pub use self::activation_key::ActivationKey;
 pub use self::dependency::{Dependency, SerializedDependency};
 pub use self::features::{CliUnstable, Edition, Feature, Features};
 pub use self::manifest::{EitherManifest, VirtualManifest};
