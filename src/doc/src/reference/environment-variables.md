@@ -101,6 +101,7 @@ In summary, the supported environment variables are:
 * `CARGO_BUILD_DEP_INFO_BASEDIR` --- Dep-info relative directory, see [`build.dep-info-basedir`].
 * `CARGO_CARGO_NEW_VCS` --- The default source control system with [`cargo new`], see [`cargo-new.vcs`].
 * `CARGO_FUTURE_INCOMPAT_REPORT_FREQUENCY` --- How often we should generate a future incompat report notification, see [`future-incompat-report.frequency`].
+* `CARGO_GC_AUTO_FREQUENCY` --- Configures how often automatic garbage collection runs, see [`gc.auto.frequency`].
 * `CARGO_HTTP_DEBUG` --- Enables HTTP debugging, see [`http.debug`].
 * `CARGO_HTTP_PROXY` --- Enables HTTP proxy, see [`http.proxy`].
 * `CARGO_HTTP_TIMEOUT` --- The HTTP timeout, see [`http.timeout`].
@@ -167,6 +168,7 @@ In summary, the supported environment variables are:
 [`cargo-new.email`]: config.md#cargo-newemail
 [`cargo-new.vcs`]: config.md#cargo-newvcs
 [`future-incompat-report.frequency`]: config.md#future-incompat-reportfrequency
+[`gc.auto.frequency`]: config.md#gcautofrequency
 [`http.debug`]: config.md#httpdebug
 [`http.proxy`]: config.md#httpproxy
 [`http.timeout`]: config.md#httptimeout
