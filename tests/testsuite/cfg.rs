@@ -521,3 +521,348 @@ error[E0463]: can't find crate for `bar`
 "#]])
         .run();
 }
+
+#[cargo_test(nightly, reason = "--print=check-cfg is unstable in rustc")]
+fn unexpected_cfgs_target() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [target."cfg(any(windows, unix))".dependencies]
+                b = { path = 'b' }
+
+                [target."cfg(any(foo, all(bar)))".dependencies]
+                b = { path = 'b' }
+
+                [target.'cfg(unix = "zoo")'.dependencies]
+                b = { path = 'b' }
+                c = { path = 'c' }
+
+                [target.'cfg(not(windows = ""))'.dependencies]
+                b = { path = 'b' }
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [target."cfg(any(windows, unix))"]
+                [target."cfg(any(foo, all(bar)))"]
+                [target.'cfg(unix = "zoo")']
+                [target.'cfg(not(windows = ""))']
+            "#,
+        )
+        .file("src/lib.rs", "extern crate b;")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .file("c/Cargo.toml", &basic_manifest("c", "0.0.1"))
+        .file("c/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
+        .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
+        .with_stderr_data(str![[r#"
+[WARNING] unexpected `cfg` condition name: `foo` for `foo`
+  --> Cargo.toml:11:25
+   |
+11 |                 [target."cfg(any(foo, all(bar)))".dependencies]
+   |                         -------------------------
+   |
+[WARNING] unexpected `cfg` condition name: `bar` for `bar`
+  --> Cargo.toml:11:25
+   |
+11 |                 [target."cfg(any(foo, all(bar)))".dependencies]
+   |                         -------------------------
+   |
+[WARNING] unexpected `cfg` condition value: `` for `windows = ""`
+  --> Cargo.toml:18:25
+   |
+18 |                 [target.'cfg(not(windows = ""))'.dependencies]
+   |                         ------------------------
+   |
+[WARNING] unexpected `cfg` condition value: `zoo` for `unix = "zoo"`
+  --> Cargo.toml:14:25
+   |
+14 |                 [target.'cfg(unix = "zoo")'.dependencies]
+   |                         -------------------
+   |
+[LOCKING] 2 packages to latest compatible versions
+[CHECKING] b v0.0.1 ([ROOT]/foo/b)
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "--print=check-cfg is unstable in rustc")]
+fn unexpected_cfgs_target_with_lint() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [target."cfg(foo)".dependencies] # should not warn here
+                b = { path = 'b' }
+
+                [target.'cfg(foo = "foo")'.dependencies] # should not warn here
+                b = { path = 'b' }
+
+                [target."cfg(bar)".dependencies]
+                b = { path = 'b' }
+
+                [lints.rust.unexpected_cfgs]
+                level = "warn"
+                check-cfg = ['cfg(foo, values(none(), "foo"))'] # because of this line
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [target."cfg(foo)"] # but it doesn't have an effect here
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
+        .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
+        .with_stderr_data(str![[r#"
+[WARNING] unexpected `cfg` condition name: `bar` for `bar`
+  --> Cargo.toml:14:25
+   |
+14 |                 [target."cfg(bar)".dependencies]
+   |                         ----------
+   |
+[LOCKING] 1 package to latest compatible version
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "--print=check-cfg is unstable in rustc")]
+fn unexpected_cfgs_target_diagnostics() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [target."cfg(target_pointer_width)".dependencies] # expect (none) as value
+                b = { path = 'b' }
+
+                [target.'cfg( all(foo ,   bar))'.dependencies]
+                b = { path = 'b' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
+        .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
+        .with_stderr_data(str![[r#"
+[WARNING] unexpected `cfg` condition name: `foo` for `foo`
+  --> Cargo.toml:11:25
+   |
+11 |                 [target.'cfg( all(foo ,   bar))'.dependencies]
+   |                         ------------------------
+   |
+[WARNING] unexpected `cfg` condition name: `bar` for `bar`
+  --> Cargo.toml:11:25
+   |
+11 |                 [target.'cfg( all(foo ,   bar))'.dependencies]
+   |                         ------------------------
+   |
+[WARNING] unexpected `cfg` condition value: (none) for `target_pointer_width`
+ --> Cargo.toml:8:25
+  |
+8 |                 [target."cfg(target_pointer_width)".dependencies] # expect (none) as value
+  |                         ---------------------------
+  |
+[LOCKING] 1 package to latest compatible version
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "--print=check-cfg is unstable in rustc")]
+fn unexpected_cfgs_target_lint_level_allow() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [target."cfg(foo)".dependencies]
+                b = { path = 'b' }
+
+                [lints.rust.unexpected_cfgs]
+                level = "allow"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
+        .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "--print=check-cfg is unstable in rustc")]
+fn unexpected_cfgs_target_lint_level_deny() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [target."cfg(foo)".dependencies]
+                b = { path = 'b' }
+
+                [lints.rust.unexpected_cfgs]
+                level = "deny"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
+        .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
+        .with_stderr_data(str![[r#"
+[ERROR] unexpected `cfg` condition name: `foo` for `foo`
+ --> Cargo.toml:8:25
+  |
+8 |                 [target."cfg(foo)".dependencies]
+  |                         ^^^^^^^^^^
+  |
+
+"#]])
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test(nightly, reason = "--print=check-cfg is unstable in rustc")]
+fn unexpected_cfgs_target_cfg_any() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [target."cfg(foo)".dependencies]
+                b = { path = 'b' }
+
+                [lints.rust.unexpected_cfgs]
+                level = "deny"
+                check-cfg = ["cfg(any())"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("check -Zcargo-lints -Zcheck-target-cfgs")
+        .masquerade_as_nightly_cargo(&["requires -Zcheck-target-cfgs"])
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn no_unexpected_cfgs_target() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [target."cfg(any(windows, unix))".dependencies]
+                b = { path = 'b' }
+                
+                [target.'cfg(unix = "zoo")'.dependencies]
+                b = { path = 'b' }
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [target."cfg(any(windows, unix))"]
+                [target.'cfg(unix = "zoo")']
+            "#,
+        )
+        .file("src/lib.rs", "extern crate b;")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[CHECKING] b v0.0.1 ([ROOT]/foo/b)
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("check -Zcargo-lints")
+        .masquerade_as_nightly_cargo(&["requires -Zcargo-lints"])
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}

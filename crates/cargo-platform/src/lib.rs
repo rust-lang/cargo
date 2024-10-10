@@ -15,9 +15,11 @@ use std::fmt;
 use std::str::FromStr;
 
 mod cfg;
+mod check_cfg;
 mod error;
 
 pub use cfg::{Cfg, CfgExpr};
+pub use check_cfg::{CheckCfg, ExpectedValues};
 pub use error::{ParseError, ParseErrorKind};
 
 /// Platform definition.

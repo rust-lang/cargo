@@ -14,7 +14,7 @@ use crate::util::context::{GlobalContext, StringList, TargetConfig};
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, Rustc};
 use anyhow::Context as _;
-use cargo_platform::{Cfg, CfgExpr};
+use cargo_platform::{Cfg, CfgExpr, CheckCfg};
 use cargo_util::{paths, ProcessBuilder};
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
@@ -43,6 +43,8 @@ pub struct TargetInfo {
     crate_types: RefCell<HashMap<CrateType, Option<(String, String)>>>,
     /// `cfg` information extracted from `rustc --print=cfg`.
     cfg: Vec<Cfg>,
+    /// `CheckCfg` informations extracted from `rustc --print=check-cfg`.
+    check_cfg: Option<CheckCfg>,
     /// Supported values for `-Csplit-debuginfo=` flag, queried from rustc
     support_split_debuginfo: Vec<String>,
     /// Path to the sysroot.
@@ -204,6 +206,14 @@ impl TargetInfo {
             process.arg("--print=crate-name"); // `___` as a delimiter.
             process.arg("--print=cfg");
 
+            if gctx.cli_unstable().check_target_cfgs {
+                process.arg("--print=crate-name"); // `___` as a delimiter.
+                process.arg("--print=check-cfg");
+
+                process.arg("--check-cfg=cfg()"); // otherwise `--print=check-cfg` won't output
+                process.arg("-Zunstable-options"); // required by `--print=check-cfg`
+            }
+
             let (output, error) = rustc
                 .cached_output(&process, extra_fingerprint)
                 .with_context(|| {
@@ -253,16 +263,42 @@ impl TargetInfo {
                 res
             };
 
-            let cfg = lines
-                .map(|line| Ok(Cfg::from_str(line)?))
-                .filter(TargetInfo::not_user_specific_cfg)
-                .collect::<CargoResult<Vec<_>>>()
-                .with_context(|| {
-                    format!(
-                        "failed to parse the cfg from `rustc --print=cfg`, got:\n{}",
-                        output
-                    )
-                })?;
+            let cfg = {
+                let mut res = Vec::new();
+                for line in &mut lines {
+                    // HACK: abuse `--print=crate-name` to use `___` as a delimiter.
+                    if line == "___" {
+                        break;
+                    }
+
+                    let cfg = Cfg::from_str(line).with_context(|| {
+                        format!(
+                            "failed to parse the cfg from `rustc --print=cfg`, got:\n{}",
+                            output
+                        )
+                    })?;
+                    if TargetInfo::not_user_specific_cfg(&cfg) {
+                        res.push(cfg);
+                    }
+                }
+                res
+            };
+
+            let check_cfg = if gctx.cli_unstable().check_target_cfgs {
+                let mut check_cfg = CheckCfg::default();
+                check_cfg.exhaustive = true;
+
+                for line in lines {
+                    check_cfg
+                        .parse_print_check_cfg_line(line)
+                        .with_context(|| {
+                            format!("unable to parse a line from `--print=check-cfg`")
+                        })?;
+                }
+                Some(check_cfg)
+            } else {
+                None
+            };
 
             // recalculate `rustflags` from above now that we have `cfg`
             // information
@@ -310,13 +346,14 @@ impl TargetInfo {
                 )?
                 .into(),
                 cfg,
+                check_cfg,
                 support_split_debuginfo,
             });
         }
     }
 
-    fn not_user_specific_cfg(cfg: &CargoResult<Cfg>) -> bool {
-        if let Ok(Cfg::Name(cfg_name)) = cfg {
+    fn not_user_specific_cfg(cfg: &Cfg) -> bool {
+        if let Cfg::Name(cfg_name) = cfg {
             // This should also include "debug_assertions", but it causes
             // regressions. Maybe some day in the distant future it can be
             // added (and possibly change the warning to an error).
@@ -327,9 +364,55 @@ impl TargetInfo {
         true
     }
 
+    /// The [`CheckCfg`] settings with extra arguments passed.
+    pub fn check_cfg_with_extra_args(
+        &self,
+        gctx: &GlobalContext,
+        rustc: &Rustc,
+        extra_args: &[String],
+    ) -> CargoResult<CheckCfg> {
+        let mut process = rustc.workspace_process();
+
+        apply_env_config(gctx, &mut process)?;
+        process
+            .arg("-")
+            .arg("--print=check-cfg")
+            .arg("--check-cfg=cfg()")
+            .arg("-Zunstable-options")
+            .args(&self.rustflags)
+            .args(extra_args)
+            .env_remove("RUSTC_LOG");
+
+        // Removes `FD_CLOEXEC` set by `jobserver::Client` to pass jobserver
+        // as environment variables specify.
+        if let Some(client) = gctx.jobserver_from_env() {
+            process.inherit_jobserver(client);
+        }
+
+        let (output, _error) = rustc
+            .cached_output(&process, 0)
+            .with_context(|| "failed to run `rustc` to learn about check-cfg information")?;
+
+        let lines = output.lines();
+        let mut check_cfg = CheckCfg::default();
+        check_cfg.exhaustive = true;
+
+        for line in lines {
+            check_cfg
+                .parse_print_check_cfg_line(line)
+                .with_context(|| format!("unable to parse a line from `--print=check-cfg`"))?;
+        }
+        Ok(check_cfg)
+    }
+
     /// All the target [`Cfg`] settings.
     pub fn cfg(&self) -> &[Cfg] {
         &self.cfg
+    }
+
+    /// The [`CheckCfg`] settings.
+    pub fn check_cfg(&self) -> &Option<CheckCfg> {
+        &self.check_cfg
     }
 
     /// Returns the list of file types generated by the given crate type.
