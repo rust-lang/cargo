@@ -1568,12 +1568,174 @@ fn artifact_dep_target_specified() {
         .with_status(0)
         .run();
 
-    // TODO: This command currently fails due to a bug in cargo but it should be fixed so that it succeeds in the future.
     p.cargo("tree -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_stdout_data("")
-        .with_stderr_data(r#"...
-[..]did not find features for (PackageId { name: "bindep", version: "0.0.0", source: "[..]" }, NormalOrDev) within activated_features:[..]
+        .with_stdout_data(str![[r#"
+foo v0.0.0 ([ROOT]/foo)
+└── bindep v0.0.0 ([ROOT]/foo/bindep)
+
+"#]])
+        .with_status(0)
+        .run();
+}
+
+/// From issue #10061
+/// The case where:
+/// *   artifact dep is { target = <specified> }
+/// *   dependency of that artifact dependency specifies the same target
+/// *   the target is not activated.
+#[cargo_test]
+fn dep_of_artifact_dep_same_target_specified() {
+    if cross_compile::disabled() {
+        return;
+    }
+    let target = cross_compile::alternate();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+                    edition = "2015"
+                    resolver = "2"
+
+                    [dependencies]
+                    bar = {{ path = "bar", artifact = "bin", target = "{target}" }}
+                "#,
+            ),
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bar/Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "bar"
+                    version = "0.1.0"
+
+                    [target.{target}.dependencies]
+                    baz = {{ path = "../baz" }}
+                "#,
+            ),
+        )
+        .file("bar/src/lib.rs", "")
+        .file(
+            "baz/Cargo.toml",
+            r#"
+                [package]
+                name = "baz"
+                version = "0.1.0"
+
+            "#,
+        )
+        .file("baz/src/lib.rs", "")
+        .build();
+
+    // TODO This command currently fails due to a bug in cargo but it should be fixed so that it succeeds in the future.
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr_data(str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+[ERROR] dependency `bar` in package `foo` requires a `bin` artifact to be present.
+
+"#]])
+        .with_status(101)
+        .run();
+
+    // TODO This command currently fails due to a bug in cargo but it should be fixed so that it succeeds in the future.
+    p.cargo("tree -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr_data(
+            r#"...
+no entry found for key
+...
+"#,
+        )
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn check_bindep_depending_on_build_only_dep_with_optional_dep() {
+    if cross_compile::disabled() {
+        return;
+    }
+    // i686-unknown-linux-gnu did not trigger a panic so we need to manually specify wasm32-unknown-unknown instead of relying on cross_compile::alternate()
+    // This is possibly because the `cfg(unix)` later on needs to evaluate to false on the cross compile but true on the host.
+    let target = "wasm32-unknown-unknown";
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &r#"
+                [package]
+                name = "foo"
+                version = "0.0.0"
+                authors = []
+                resolver = "2"
+                edition = "2015"
+
+                [dependencies]
+                bindep = { path = "bindep", artifact = "bin", target = "$TARGET" }
+            "#
+            .replace("$TARGET", target),
+        )
+        .file("src/lib.rs", "")
+        .file(
+            "bindep/Cargo.toml",
+            &r#"
+                [package]
+                name = "bindep"
+                version = "0.0.0"
+                authors = []
+
+                [dependencies]
+                depends-on-build-only-dep = { path = "../depends-on-build-only-dep" }
+            "#,
+        )
+        .file("bindep/src/main.rs", "fn main() {}")
+        .file(
+            "depends-on-build-only-dep/Cargo.toml",
+            &r#"
+                [package]
+                name = "depends-on-build-only-dep"
+                version = "0.0.0"
+                authors = []
+
+                [build-dependencies]
+                build-only-dep = { path = "../build-only-dep" }
+            "#,
+        )
+        .file("depends-on-build-only-dep/src/lib.rs", "")
+        .file("depends-on-build-only-dep/build.rs", "fn main() {}")
+        .file(
+            "build-only-dep/Cargo.toml",
+            &r#"
+                [package]
+                name = "build-only-dep"
+                version = "0.0.0"
+                authors = []
+
+                [target.'cfg(unix)'.dependencies]
+                some-leaf-dep = { path = "../some-leaf-dep" }
+            "#,
+        )
+        .file("build-only-dep/src/lib.rs", "")
+        .file(
+            "some-leaf-dep/Cargo.toml",
+            &basic_manifest("some-leaf-dep", "0.0.1"),
+        )
+        .file("some-leaf-dep/src/lib.rs", "")
+        .build();
+
+    // TODO: This command currently fails due to a bug in cargo but it should be fixed so that it succeeds in the future.
+    p.cargo("check -Z bindeps")
+        .masquerade_as_nightly_cargo(&["bindeps"])
+        .with_stderr_data(
+r#"...
+[..]did not find features for (PackageId { name: "some-leaf-dep", version: "0.0.1", source: "[..]" }, ArtifactDep(CompileTarget { name: "wasm32-unknown-unknown" })) within activated_features:[..]
 ...
 "#)
         .with_status(101)
