@@ -352,7 +352,7 @@ impl SatResolver {
 
         let mut by_name: HashMap<InternedString, Vec<Summary>> = HashMap::new();
         for pkg in registry {
-            by_name.entry(pkg.name()).or_default().push(pkg.clone())
+            by_name.entry(pkg.name()).or_default().push(pkg.clone());
         }
 
         let mut solver = varisat::Solver::new();

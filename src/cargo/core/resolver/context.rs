@@ -19,13 +19,13 @@ pub struct ResolverContext {
     pub age: ContextAge,
     pub activations: Activations,
     /// list the features that are activated for each package
-    pub resolve_features: im_rc::HashMap<PackageId, FeaturesSet>,
+    pub resolve_features: im_rc::HashMap<PackageId, FeaturesSet, rustc_hash::FxBuildHasher>,
     /// get the package that will be linking to a native library by its links attribute
-    pub links: im_rc::HashMap<InternedString, PackageId>,
+    pub links: im_rc::HashMap<InternedString, PackageId, rustc_hash::FxBuildHasher>,
 
     /// a way to look up for a package in activations what packages required it
     /// and all of the exact deps that it fulfilled.
-    pub parents: Graph<PackageId, im_rc::HashSet<Dependency>>,
+    pub parents: Graph<PackageId, im_rc::HashSet<Dependency, rustc_hash::FxBuildHasher>>,
 }
 
 /// When backtracking it can be useful to know how far back to go.
@@ -40,7 +40,9 @@ pub type ContextAge = usize;
 /// semver compatible version of each crate.
 /// This all so stores the `ContextAge`.
 pub type ActivationsKey = (InternedString, SourceId, SemverCompatibility);
-pub type Activations = im_rc::HashMap<ActivationsKey, (Summary, ContextAge)>;
+
+pub type Activations =
+    im_rc::HashMap<ActivationsKey, (Summary, ContextAge), rustc_hash::FxBuildHasher>;
 
 /// A type that represents when cargo treats two Versions as compatible.
 /// Versions `a` and `b` are compatible if their left-most nonzero digit is the
@@ -74,10 +76,10 @@ impl ResolverContext {
     pub fn new() -> ResolverContext {
         ResolverContext {
             age: 0,
-            resolve_features: im_rc::HashMap::new(),
-            links: im_rc::HashMap::new(),
+            resolve_features: im_rc::HashMap::default(),
+            links: im_rc::HashMap::default(),
             parents: Graph::new(),
-            activations: im_rc::HashMap::new(),
+            activations: im_rc::HashMap::default(),
         }
     }
 

@@ -679,7 +679,7 @@ fn activate(
         Rc::make_mut(
             cx.resolve_features
                 .entry(candidate.package_id())
-                .or_insert_with(Rc::default),
+                .or_default(),
         )
         .extend(used_features);
     }
