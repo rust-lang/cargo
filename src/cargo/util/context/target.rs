@@ -3,7 +3,7 @@ use crate::core::compiler::{BuildOutput, LinkArgTarget};
 use crate::util::CargoResult;
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
 /// Config definition of a `[target.'cfg(…)']` table.
@@ -53,6 +53,13 @@ pub(super) fn load_target_cfgs(
     let target: BTreeMap<String, TargetCfgConfig> = gctx.get("target")?;
     tracing::debug!("Got all targets {:#?}", target);
     for (key, cfg) in target {
+        if let Ok(platform) = key.parse::<cargo_platform::Platform>() {
+            let mut warnings = Vec::new();
+            platform.check_cfg_keywords(&mut warnings, &Path::new(".cargo/config.toml"));
+            for w in warnings {
+                gctx.shell().warn(w)?;
+            }
+        }
         if key.starts_with("cfg(") {
             // Unfortunately this is not able to display the location of the
             // unused key. Using config::Value<toml::Value> doesn't work. One

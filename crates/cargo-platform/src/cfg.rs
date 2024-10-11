@@ -31,6 +31,14 @@ enum Token<'a> {
     String(&'a str),
 }
 
+/// The list of keywords.
+///
+/// We should consider all the keywords, but some are conditional on
+/// the edition so for now we just consider true/false.
+///
+/// <https://doc.rust-lang.org/reference/keywords.html>
+pub(crate) const KEYWORDS: &[&str; 2] = &["true", "false"];
+
 #[derive(Clone)]
 struct Tokenizer<'a> {
     s: iter::Peekable<str::CharIndices<'a>>,
