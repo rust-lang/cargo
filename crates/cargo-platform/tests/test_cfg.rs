@@ -1,13 +1,37 @@
-use cargo_platform::{Cfg, CfgExpr, Platform};
+use cargo_platform::{Cfg, CfgExpr, Ident, Platform};
 use std::fmt;
 use std::str::FromStr;
 
 macro_rules! c {
     ($a:ident) => {
-        Cfg::Name(stringify!($a).to_string())
+        Cfg::Name(Ident {
+            name: stringify!($a).to_string(),
+            raw: false,
+        })
+    };
+    (r # $a:ident) => {
+        Cfg::Name(Ident {
+            name: stringify!($a).to_string(),
+            raw: true,
+        })
     };
     ($a:ident = $e:expr) => {
-        Cfg::KeyPair(stringify!($a).to_string(), $e.to_string())
+        Cfg::KeyPair(
+            Ident {
+                name: stringify!($a).to_string(),
+                raw: false,
+            },
+            $e.to_string(),
+        )
+    };
+    (r # $a:ident = $e:expr) => {
+        Cfg::KeyPair(
+            Ident {
+                name: stringify!($a).to_string(),
+                raw: true,
+            },
+            $e.to_string(),
+        )
     };
 }
 
@@ -56,10 +80,13 @@ fn cfg_syntax() {
     good("_bar", c!(_bar));
     good(" foo", c!(foo));
     good(" foo  ", c!(foo));
+    good("r#foo", c!(r # foo));
     good(" foo  = \"bar\"", c!(foo = "bar"));
     good("foo=\"\"", c!(foo = ""));
+    good("r#foo=\"\"", c!(r # foo = ""));
     good(" foo=\"3\"      ", c!(foo = "3"));
     good("foo = \"3 e\"", c!(foo = "3 e"));
+    good(" r#foo = \"3 e\"", c!(r # foo = "3 e"));
 }
 
 #[test]
@@ -78,6 +105,10 @@ fn cfg_syntax_bad() {
         "foo, bar",
         "unexpected content `, bar` found after cfg expression",
     );
+    bad::<Cfg>("r# foo", "unexpected character");
+    bad::<Cfg>("r #foo", "unexpected content");
+    bad::<Cfg>("r#\"foo\"", "unexpected character");
+    bad::<Cfg>("foo = r#\"\"", "unexpected character");
 }
 
 #[test]
@@ -126,6 +157,9 @@ fn cfg_matches() {
     assert!(e!(not(foo)).matches(&[]));
     assert!(e!(any((not(foo)), (all(foo, bar)))).matches(&[c!(bar)]));
     assert!(e!(any((not(foo)), (all(foo, bar)))).matches(&[c!(foo), c!(bar)]));
+    assert!(e!(foo).matches(&[c!(r # foo)]));
+    assert!(e!(r # foo).matches(&[c!(foo)]));
+    assert!(e!(r # foo).matches(&[c!(r # foo)]));
 
     assert!(!e!(foo).matches(&[]));
     assert!(!e!(foo).matches(&[c!(bar)]));

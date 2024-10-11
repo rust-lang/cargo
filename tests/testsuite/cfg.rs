@@ -543,12 +543,15 @@ fn cfg_raw_idents() {
         .build();
 
     p.cargo("check")
-        .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  failed to parse `any(r#true, r#all, r#target_os = "<>")` as a cfg expression: unexpected character `#` in cfg, expected parens, a comma, an identifier, or a string
+[WARNING] [[ROOT]/foo/Cargo.toml] future-incompatibility: the meaning of `cfg(r#true)` will change in the future
+ | Cargo is erroneously allowing `cfg(true)` and `cfg(false)`, but both forms are interpreted as false unless manually overridden with `--cfg`.
+ | In the future these will be built-in defines that will have the corresponding true/false value.
+ | It is recommended to avoid using these configs until they are properly supported.
+ | See <https://github.com/rust-lang/rust/issues/131204> for more information.
+[LOCKING] 1 package to latest compatible version
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
@@ -577,7 +580,7 @@ fn cfg_raw_idents_empty() {
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  failed to parse `r#)` as a cfg expression: unexpected content `#)` found after cfg expression
+  failed to parse `r#)` as a cfg expression: unexpected character `)` in cfg, expected parens, a comma, an identifier, or a string
 
 "#]])
         .run();
@@ -606,7 +609,7 @@ fn cfg_raw_idents_not_really() {
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
 
 Caused by:
-  failed to parse `r#11)` as a cfg expression: unexpected content `#11)` found after cfg expression
+  failed to parse `r#11)` as a cfg expression: unexpected character `1` in cfg, expected parens, a comma, an identifier, or a string
 
 "#]])
         .run();

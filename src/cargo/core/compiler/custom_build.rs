@@ -353,7 +353,9 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
             // That is because Cargo queries rustc without any profile settings.
             continue;
         }
-        let k = format!("CARGO_CFG_{}", super::envify(&k));
+        // FIXME: We should handle raw-idents somehow instead of predenting they
+        // don't exist here
+        let k = format!("CARGO_CFG_{}", super::envify(k.as_str()));
         cmd.env(&k, v.join(","));
     }
 
