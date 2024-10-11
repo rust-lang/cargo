@@ -69,28 +69,6 @@ args: []
 }
 
 #[cargo_test]
-fn basic_cargo_toml() {
-    let p = cargo_test_support::project()
-        .file("src/main.rs", ECHO_SCRIPT)
-        .build();
-
-    p.cargo("-Zscript -v Cargo.toml")
-        .masquerade_as_nightly_cargo(&["script"])
-        .with_stdout_data(str![[r#"
-bin: target/debug/foo[EXE]
-args: []
-
-"#]])
-        .with_stderr_data(str![[r#"
-[COMPILING] foo v0.0.1 ([ROOT]/foo)
-[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[RUNNING] `target/debug/foo[EXE]`
-
-"#]])
-        .run();
-}
-
-#[cargo_test]
 fn path_required() {
     let p = cargo_test_support::project()
         .file("echo", ECHO_SCRIPT)
