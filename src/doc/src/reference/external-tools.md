@@ -46,6 +46,12 @@ The `package_id` field is a unique identifier for referring to the package, and
 as the `--package` argument to many commands. The syntax grammar can be found in
 chapter [Package ID Specifications].
 
+> **Note:** `--message-format=json` only controls Cargo and Rustc's output.
+> This cannot control the output of other tools,
+> e.g. `cargo run --message-format=json`,
+> or arbitrary output from procedural macros.
+> A possible workaround in these situations is to only interpret a line as JSON if it starts with `{`.
+
 The `--message-format` option can also take additional formatting values which
 alter the way the JSON messages are computed and rendered. See the description
 of the `--message-format` option in the [build command documentation] for more
