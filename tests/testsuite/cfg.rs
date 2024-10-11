@@ -523,6 +523,96 @@ error[E0463]: can't find crate for `bar`
 }
 
 #[cargo_test]
+fn cfg_raw_idents() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [target.'cfg(any(r#true, r#all, r#target_os = "<>"))'.dependencies]
+                b = { path = "b/" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  failed to parse `any(r#true, r#all, r#target_os = "<>")` as a cfg expression: unexpected character `#` in cfg, expected parens, a comma, an identifier, or a string
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cfg_raw_idents_empty() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [target.'cfg(r#))'.dependencies]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  failed to parse `r#)` as a cfg expression: unexpected content `#)` found after cfg expression
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cfg_raw_idents_not_really() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [target.'cfg(r#11))'.dependencies]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  failed to parse `r#11)` as a cfg expression: unexpected content `#11)` found after cfg expression
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn cfg_keywords() {
     let p = project()
         .file(
