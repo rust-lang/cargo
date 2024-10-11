@@ -355,6 +355,9 @@ let out_dir = env::var("OUT_DIR").unwrap();
     * `CARGO_CFG_TARGET_FEATURE=mmx,sse` --- List of CPU [target features] enabled.
   > Note that different [target triples][Target Triple] have different sets of `cfg` values,
   > hence variables present in one target triple might not be available in the other.
+  >
+  > Some cfg values like `debug_assertions`, `test`, and Cargo features like
+  > `feature="foo"` are not available.
 * `OUT_DIR` --- the folder in which all output and intermediate artifacts should
   be placed. This folder is inside the build directory for the package being built,
   and it is unique for the package in question.
