@@ -22,9 +22,9 @@ pub fn cli() -> Command {
             "Check only the specified example",
             "Check all examples",
             "Check only the specified test target",
-            "Check all test targets",
+            "Check all targets that have `test = true` set",
             "Check only the specified bench target",
-            "Check all bench targets",
+            "Check all targets that have `bench = true` set",
             "Check all targets",
         )
         .arg_features()
