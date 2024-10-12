@@ -163,13 +163,19 @@ pub trait CommandExt: Sized {
             ._arg(
                 optional_multi_opt("test", "NAME", test)
                     .help_heading(heading::TARGET_SELECTION)
-                    .add(clap_complete::ArgValueCandidates::new(get_test_candidates)),
+                    .add(clap_complete::ArgValueCandidates::new(|| {
+                        let cwd = std::env::current_dir();
+                        get_test_candidates(cwd.ok())
+                    })),
             )
             ._arg(flag("benches", benches).help_heading(heading::TARGET_SELECTION))
             ._arg(
                 optional_multi_opt("bench", "NAME", bench)
                     .help_heading(heading::TARGET_SELECTION)
-                    .add(clap_complete::ArgValueCandidates::new(get_bench_candidates)),
+                    .add(clap_complete::ArgValueCandidates::new(|| {
+                        let cwd = std::env::current_dir();
+                        get_bench_candidates(cwd.ok())
+                    })),
             )
             ._arg(flag("all-targets", all).help_heading(heading::TARGET_SELECTION))
     }
@@ -187,15 +193,19 @@ pub trait CommandExt: Sized {
             ._arg(
                 optional_multi_opt("bin", "NAME", bin)
                     .help_heading(heading::TARGET_SELECTION)
-                    .add(clap_complete::ArgValueCandidates::new(get_bin_candidates)),
+                    .add(clap_complete::ArgValueCandidates::new(|| {
+                        let cwd = std::env::current_dir();
+                        get_bin_candidates(cwd.ok())
+                    })),
             )
             ._arg(flag("examples", examples).help_heading(heading::TARGET_SELECTION))
             ._arg(
                 optional_multi_opt("example", "NAME", example)
                     .help_heading(heading::TARGET_SELECTION)
-                    .add(clap_complete::ArgValueCandidates::new(
-                        get_example_candidates,
-                    )),
+                    .add(clap_complete::ArgValueCandidates::new(|| {
+                        let cwd = std::env::current_dir();
+                        get_example_candidates(cwd.ok())
+                    })),
             )
     }
 
@@ -209,15 +219,19 @@ pub trait CommandExt: Sized {
         self._arg(
             optional_multi_opt("bin", "NAME", bin)
                 .help_heading(heading::TARGET_SELECTION)
-                .add(clap_complete::ArgValueCandidates::new(get_bin_candidates)),
+                .add(clap_complete::ArgValueCandidates::new(|| {
+                    let cwd = std::env::current_dir();
+                    get_bin_candidates(cwd.ok())
+                })),
         )
         ._arg(flag("bins", bins).help_heading(heading::TARGET_SELECTION))
         ._arg(
             optional_multi_opt("example", "NAME", example)
                 .help_heading(heading::TARGET_SELECTION)
-                .add(clap_complete::ArgValueCandidates::new(
-                    get_example_candidates,
-                )),
+                .add(clap_complete::ArgValueCandidates::new(|| {
+                    let cwd = std::env::current_dir();
+                    get_example_candidates(cwd.ok())
+                })),
         )
         ._arg(flag("examples", examples).help_heading(heading::TARGET_SELECTION))
     }
@@ -226,14 +240,18 @@ pub trait CommandExt: Sized {
         self._arg(
             optional_multi_opt("bin", "NAME", bin)
                 .help_heading(heading::TARGET_SELECTION)
-                .add(clap_complete::ArgValueCandidates::new(get_bin_candidates)),
+                .add(clap_complete::ArgValueCandidates::new(|| {
+                    let cwd = std::env::current_dir();
+                    get_bin_candidates(cwd.ok())
+                })),
         )
         ._arg(
             optional_multi_opt("example", "NAME", example)
                 .help_heading(heading::TARGET_SELECTION)
-                .add(clap_complete::ArgValueCandidates::new(
-                    get_example_candidates,
-                )),
+                .add(clap_complete::ArgValueCandidates::new(|| {
+                    let cwd = std::env::current_dir();
+                    get_example_candidates(cwd.ok())
+                })),
         )
     }
 
@@ -294,7 +312,10 @@ pub trait CommandExt: Sized {
         self._arg(
             optional_multi_opt("target", "TRIPLE", target)
                 .help_heading(heading::COMPILATION_OPTIONS)
-                .add(clap_complete::ArgValueCandidates::new(get_target_triples)),
+                .add(clap_complete::ArgValueCandidates::new(|| {
+                    let cwd = std::env::current_dir();
+                    get_target_triples(cwd.ok())
+                })),
         )
         ._arg(unsupported_short_arg)
     }
@@ -367,8 +388,12 @@ pub trait CommandExt: Sized {
             .value_parser(["git", "hg", "pijul", "fossil", "none"]),
         )
         ._arg(
-            flag("bin", "Use a binary (application) template [default]")
-                .add(clap_complete::ArgValueCandidates::new(get_bin_candidates)),
+            flag("bin", "Use a binary (application) template [default]").add(
+                clap_complete::ArgValueCandidates::new(|| {
+                    let cwd = std::env::current_dir();
+                    get_bin_candidates(cwd.ok())
+                }),
+            ),
         )
         ._arg(flag("lib", "Use a library template"))
         ._arg(
@@ -388,7 +413,8 @@ pub trait CommandExt: Sized {
     fn arg_registry(self, help: &'static str) -> Self {
         self._arg(opt("registry", help).value_name("REGISTRY").add(
             clap_complete::ArgValueCandidates::new(|| {
-                let candidates = get_registry_candidates();
+                let cwd = std::env::current_dir();
+                let candidates = get_registry_candidates(cwd.ok());
                 candidates.unwrap_or_default()
             }),
         ))
@@ -1068,8 +1094,10 @@ pub fn lockfile_path(
     return Ok(Some(path));
 }
 
-pub fn get_registry_candidates() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
-    let gctx = new_gctx_for_completions()?;
+pub fn get_registry_candidates(
+    cwd: Option<PathBuf>,
+) -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
+    let gctx = new_gctx_for_completions(cwd)?;
 
     if let Ok(Some(registries)) =
         gctx.get::<Option<HashMap<String, HashMap<String, String>>>>("registries")
@@ -1083,8 +1111,8 @@ pub fn get_registry_candidates() -> CargoResult<Vec<clap_complete::CompletionCan
     }
 }
 
-fn get_example_candidates() -> Vec<clap_complete::CompletionCandidate> {
-    get_targets_from_metadata()
+fn get_example_candidates(cwd: Option<PathBuf>) -> Vec<clap_complete::CompletionCandidate> {
+    get_targets_from_metadata(cwd)
         .unwrap_or_default()
         .into_iter()
         .filter_map(|target| match target.kind() {
@@ -1094,8 +1122,8 @@ fn get_example_candidates() -> Vec<clap_complete::CompletionCandidate> {
         .collect::<Vec<_>>()
 }
 
-fn get_bench_candidates() -> Vec<clap_complete::CompletionCandidate> {
-    get_targets_from_metadata()
+fn get_bench_candidates(cwd: Option<PathBuf>) -> Vec<clap_complete::CompletionCandidate> {
+    get_targets_from_metadata(cwd)
         .unwrap_or_default()
         .into_iter()
         .filter_map(|target| match target.kind() {
@@ -1105,8 +1133,8 @@ fn get_bench_candidates() -> Vec<clap_complete::CompletionCandidate> {
         .collect::<Vec<_>>()
 }
 
-fn get_test_candidates() -> Vec<clap_complete::CompletionCandidate> {
-    get_targets_from_metadata()
+fn get_test_candidates(cwd: Option<PathBuf>) -> Vec<clap_complete::CompletionCandidate> {
+    get_targets_from_metadata(cwd)
         .unwrap_or_default()
         .into_iter()
         .filter_map(|target| match target.kind() {
@@ -1116,8 +1144,8 @@ fn get_test_candidates() -> Vec<clap_complete::CompletionCandidate> {
         .collect::<Vec<_>>()
 }
 
-fn get_bin_candidates() -> Vec<clap_complete::CompletionCandidate> {
-    get_targets_from_metadata()
+pub fn get_bin_candidates(cwd: Option<PathBuf>) -> Vec<clap_complete::CompletionCandidate> {
+    get_targets_from_metadata(cwd)
         .unwrap_or_default()
         .into_iter()
         .filter_map(|target| match target.kind() {
@@ -1127,10 +1155,9 @@ fn get_bin_candidates() -> Vec<clap_complete::CompletionCandidate> {
         .collect::<Vec<_>>()
 }
 
-fn get_targets_from_metadata() -> CargoResult<Vec<Target>> {
-    let cwd = std::env::current_dir()?;
-    let gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
-    let ws = Workspace::new(&find_root_manifest_for_wd(&cwd)?, &gctx)?;
+fn get_targets_from_metadata(cwd: Option<PathBuf>) -> CargoResult<Vec<Target>> {
+    let gctx = new_gctx_for_completions(cwd)?;
+    let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx)?;
 
     let packages = ws.members().collect::<Vec<_>>();
 
@@ -1142,7 +1169,7 @@ fn get_targets_from_metadata() -> CargoResult<Vec<Target>> {
     Ok(targets)
 }
 
-fn get_target_triples() -> Vec<clap_complete::CompletionCandidate> {
+pub fn get_target_triples(cwd: Option<PathBuf>) -> Vec<clap_complete::CompletionCandidate> {
     let mut candidates = Vec::new();
 
     if let Ok(targets) = get_target_triples_from_rustup() {
@@ -1150,7 +1177,7 @@ fn get_target_triples() -> Vec<clap_complete::CompletionCandidate> {
     }
 
     if candidates.is_empty() {
-        if let Ok(targets) = get_target_triples_from_rustc() {
+        if let Ok(targets) = get_target_triples_from_rustc(cwd) {
             candidates = targets;
         }
     }
@@ -1182,10 +1209,11 @@ fn get_target_triples_from_rustup() -> CargoResult<Vec<clap_complete::Completion
         .collect())
 }
 
-fn get_target_triples_from_rustc() -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
-    let cwd = std::env::current_dir()?;
-    let gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
-    let ws = Workspace::new(&find_root_manifest_for_wd(&PathBuf::from(&cwd))?, &gctx);
+fn get_target_triples_from_rustc(
+    cwd: Option<PathBuf>,
+) -> CargoResult<Vec<clap_complete::CompletionCandidate>> {
+    let gctx = new_gctx_for_completions(cwd)?;
+    let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx);
 
     let rustc = gctx.load_global_rustc(ws.as_ref().ok())?;
 
@@ -1198,12 +1226,12 @@ fn get_target_triples_from_rustc() -> CargoResult<Vec<clap_complete::CompletionC
         .collect())
 }
 
-pub fn get_pkg_id_spec_candidates() -> Vec<clap_complete::CompletionCandidate> {
+pub fn get_pkg_id_spec_candidates(cwd: Option<PathBuf>) -> Vec<clap_complete::CompletionCandidate> {
     let mut candidates = vec![];
 
     let package_map = HashMap::<&str, Vec<Package>>::new();
     let package_map =
-        get_packages()
+        get_packages(cwd)
             .unwrap_or_default()
             .into_iter()
             .fold(package_map, |mut map, package| {
@@ -1285,8 +1313,8 @@ pub fn get_pkg_id_spec_candidates() -> Vec<clap_complete::CompletionCandidate> {
     candidates
 }
 
-fn get_packages() -> CargoResult<Vec<Package>> {
-    let gctx = new_gctx_for_completions()?;
+fn get_packages(cwd: Option<PathBuf>) -> CargoResult<Vec<Package>> {
+    let gctx = new_gctx_for_completions(cwd)?;
 
     let ws = Workspace::new(&find_root_manifest_for_wd(gctx.cwd())?, &gctx)?;
 
@@ -1318,8 +1346,8 @@ fn get_packages() -> CargoResult<Vec<Package>> {
     Ok(packages)
 }
 
-fn new_gctx_for_completions() -> CargoResult<GlobalContext> {
-    let cwd = std::env::current_dir()?;
+pub fn new_gctx_for_completions(cwd: Option<PathBuf>) -> CargoResult<GlobalContext> {
+    let cwd = cwd.unwrap_or(std::env::current_dir()?);
     let mut gctx = GlobalContext::new(shell::Shell::new(), cwd.clone(), cargo_home_with_cwd(&cwd)?);
 
     let verbose = 0;
