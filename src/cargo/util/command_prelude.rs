@@ -22,6 +22,7 @@ use cargo_util_schemas::manifest::RegistryName;
 use cargo_util_schemas::manifest::StringOrVec;
 use clap::builder::UnknownArgumentValueParser;
 use home::cargo_home_with_cwd;
+use itertools::Itertools;
 use semver::Version;
 use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
@@ -1104,6 +1105,7 @@ pub fn get_registry_candidates(
     {
         Ok(registries
             .keys()
+            .sorted()
             .map(|name| clap_complete::CompletionCandidate::new(name.to_owned()))
             .collect())
     } else {
@@ -1111,7 +1113,7 @@ pub fn get_registry_candidates(
     }
 }
 
-fn get_example_candidates(cwd: Option<PathBuf>) -> Vec<clap_complete::CompletionCandidate> {
+pub fn get_example_candidates(cwd: Option<PathBuf>) -> Vec<clap_complete::CompletionCandidate> {
     get_targets_from_metadata(cwd)
         .unwrap_or_default()
         .into_iter()
