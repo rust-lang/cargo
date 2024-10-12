@@ -206,7 +206,7 @@ multiple times and supports common Unix glob patterns.</dd>
 
 
 <dt class="option-term" id="option-cargo-test---tests"><a class="option-anchor" href="#option-cargo-test---tests"></a><code>--tests</code></dt>
-<dd class="option-desc">Test all targets in test mode that have the <code>test = true</code> manifest
+<dd class="option-desc">Test all targets that have the <code>test = true</code> manifest
 flag set. By default this includes the library and binaries built as
 unittests, and integration tests. Be aware that this will also build any
 required dependencies, so the lib target may be built twice (once as a
@@ -221,7 +221,7 @@ times and supports common Unix glob patterns.</dd>
 
 
 <dt class="option-term" id="option-cargo-test---benches"><a class="option-anchor" href="#option-cargo-test---benches"></a><code>--benches</code></dt>
-<dd class="option-desc">Test all targets in benchmark mode that have the <code>bench = true</code>
+<dd class="option-desc">Test all targets that have the <code>bench = true</code>
 manifest flag set. By default this includes the library and binaries built
 as benchmarks, and bench targets. Be aware that this will also build any
 required dependencies, so the lib target may be built twice (once as a

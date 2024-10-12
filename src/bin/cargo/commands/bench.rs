@@ -36,9 +36,9 @@ pub fn cli() -> Command {
             "Benchmark only the specified example",
             "Benchmark all examples",
             "Benchmark only the specified test target",
-            "Benchmark all test targets",
+            "Benchmark all targets that have `test = true` set",
             "Benchmark only the specified bench target",
-            "Benchmark all bench targets",
+            "Benchmark all targets that have `bench = true` set",
             "Benchmark all targets",
         )
         .arg_features()

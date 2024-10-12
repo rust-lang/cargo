@@ -85,11 +85,11 @@
 </tspan>
     <tspan x="10px" y="604px"><tspan>      </tspan><tspan class="fg-cyan bold">--example</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;NAME&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>  Test only the specified example</tspan>
 </tspan>
-    <tspan x="10px" y="622px"><tspan>      </tspan><tspan class="fg-cyan bold">--tests</tspan><tspan>             Test all test targets</tspan>
+    <tspan x="10px" y="622px"><tspan>      </tspan><tspan class="fg-cyan bold">--tests</tspan><tspan>             Test all targets that have `test = true` set</tspan>
 </tspan>
     <tspan x="10px" y="640px"><tspan>      </tspan><tspan class="fg-cyan bold">--test</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;NAME&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>     Test only the specified test target</tspan>
 </tspan>
-    <tspan x="10px" y="658px"><tspan>      </tspan><tspan class="fg-cyan bold">--benches</tspan><tspan>           Test all bench targets</tspan>
+    <tspan x="10px" y="658px"><tspan>      </tspan><tspan class="fg-cyan bold">--benches</tspan><tspan>           Test all targets that have `bench = true` set</tspan>
 </tspan>
     <tspan x="10px" y="676px"><tspan>      </tspan><tspan class="fg-cyan bold">--bench</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;NAME&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>    Test only the specified bench target</tspan>
 </tspan>

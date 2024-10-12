@@ -73,11 +73,11 @@
 </tspan>
     <tspan x="10px" y="496px"><tspan>      </tspan><tspan class="fg-cyan bold">--example</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;NAME&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>  Check only the specified example</tspan>
 </tspan>
-    <tspan x="10px" y="514px"><tspan>      </tspan><tspan class="fg-cyan bold">--tests</tspan><tspan>             Check all test targets</tspan>
+    <tspan x="10px" y="514px"><tspan>      </tspan><tspan class="fg-cyan bold">--tests</tspan><tspan>             Check all targets that have `test = true` set</tspan>
 </tspan>
     <tspan x="10px" y="532px"><tspan>      </tspan><tspan class="fg-cyan bold">--test</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;NAME&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>     Check only the specified test target</tspan>
 </tspan>
-    <tspan x="10px" y="550px"><tspan>      </tspan><tspan class="fg-cyan bold">--benches</tspan><tspan>           Check all bench targets</tspan>
+    <tspan x="10px" y="550px"><tspan>      </tspan><tspan class="fg-cyan bold">--benches</tspan><tspan>           Check all targets that have `bench = true` set</tspan>
 </tspan>
     <tspan x="10px" y="568px"><tspan>      </tspan><tspan class="fg-cyan bold">--bench</tspan><tspan class="fg-cyan"> [</tspan><tspan class="fg-cyan">&lt;NAME&gt;</tspan><tspan class="fg-cyan">]</tspan><tspan>    Check only the specified bench target</tspan>
 </tspan>
