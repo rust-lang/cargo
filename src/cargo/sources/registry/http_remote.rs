@@ -796,15 +796,15 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
         self.downloads.blocking_calls += 1;
 
         loop {
-            self.handle_completed_downloads()?;
-            self.add_sleepers()?;
-
             let remaining_in_multi = tls::set(&self.downloads, || {
                 self.multi
                     .perform()
                     .context("failed to perform http requests")
             })?;
             trace!(target: "network", "{} transfers remaining", remaining_in_multi);
+
+            self.handle_completed_downloads()?;
+            self.add_sleepers()?;
 
             if remaining_in_multi + self.downloads.sleeping.len() as u32 == 0 {
                 return Ok(());
