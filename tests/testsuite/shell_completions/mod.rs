@@ -4,6 +4,20 @@ use cargo::util::command_prelude::*;
 use cargo_test_support::cargo_test;
 
 #[cargo_test]
+fn test_get_test_candidates() {
+    let current_dir = std::env::current_dir().expect("Failed to get current directory");
+    let cwd = PathBuf::from(file!()).parent().unwrap().join("template");
+    let cwd = current_dir.join(cwd);
+
+    let expected = snapbox::str![
+        "test1
+test2"
+    ];
+    let actual = print_candidates(get_test_candidates(Some(cwd)));
+    snapbox::assert_data_eq!(actual, expected);
+}
+
+#[cargo_test]
 fn test_get_example_candidates() {
     let current_dir = std::env::current_dir().expect("Failed to get current directory");
     let cwd = PathBuf::from(file!()).parent().unwrap().join("template");
