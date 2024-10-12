@@ -1,0 +1,3 @@
+[registries]
+my-registry1 = { index = "my-registry1"}
+my-registry2 = { index = "my-registry2"}
