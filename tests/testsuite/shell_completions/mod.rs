@@ -4,6 +4,21 @@ use cargo::util::command_prelude::*;
 use cargo_test_support::cargo_test;
 
 #[cargo_test]
+fn test_get_bin_candidates() {
+    let current_dir = std::env::current_dir().expect("Failed to get current directory");
+    let cwd = PathBuf::from(file!()).parent().unwrap().join("template");
+    let cwd = current_dir.join(cwd);
+
+    let expected = snapbox::str![
+        "bench_crate_1
+bench_crate_2
+template"
+    ];
+    let actual = print_candidates(get_bin_candidates(Some(cwd)));
+    snapbox::assert_data_eq!(actual, expected);
+}
+
+#[cargo_test]
 fn test_get_bench_candidates() {
     let current_dir = std::env::current_dir().expect("Failed to get current directory");
     let cwd = PathBuf::from(file!()).parent().unwrap().join("template");
