@@ -1124,7 +1124,7 @@ pub fn get_example_candidates(cwd: Option<PathBuf>) -> Vec<clap_complete::Comple
         .collect::<Vec<_>>()
 }
 
-fn get_bench_candidates(cwd: Option<PathBuf>) -> Vec<clap_complete::CompletionCandidate> {
+pub fn get_bench_candidates(cwd: Option<PathBuf>) -> Vec<clap_complete::CompletionCandidate> {
     get_targets_from_metadata(cwd)
         .unwrap_or_default()
         .into_iter()
