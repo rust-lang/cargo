@@ -28,7 +28,7 @@ DESCRIPTION
        o  $HOME/.cargo
 
 OPTIONS
-   Install Options
+   Uninstall Options
        -p, --package spec…
            Package to uninstall.
 
