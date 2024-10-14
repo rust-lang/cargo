@@ -45,6 +45,33 @@ packaged lock file if the \fB\-\-locked\fR flag is used.
 about the current VCS checkout hash if available, as well as a flag if the
 worktree is dirty.
 .RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Symlinks are flattened to their target files.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Subdirectories containing \fBCargo.toml\fR are excluded, as they are assumed
+to be separate packages.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'A \fBtarget\fR directory in the root of the package is excluded.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Files and directories matching the \fB[include]\fR and \fB[exclude]\fR fields in
+the manifest are included or excluded. Include patterns can override the
+following rules.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Files that are ignored by VCS are excluded.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Unix hidden files and directories (starting with \fB\&.\fR) are excluded.
+.RE
 .RE
 .sp
 .RS 4

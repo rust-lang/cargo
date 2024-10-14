@@ -14,11 +14,13 @@ DESCRIPTION
        following steps:
 
        1. Load and check the current workspace, performing some basic checks.
+
           o  Path dependencies are not allowed unless they have a version key.
              Cargo will ignore the path key for dependencies in published
              packages. dev-dependencies do not have this restriction.
 
        2. Create the compressed .crate file.
+
           o  The original Cargo.toml file is rewritten and normalized.
 
           o  [patch], [replace], and [workspace] sections are removed from the
@@ -32,7 +34,23 @@ DESCRIPTION
              about the current VCS checkout hash if available, as well as a
              flag if the worktree is dirty.
 
+          o  Symlinks are flattened to their target files.
+
+          o  Subdirectories containing Cargo.toml are excluded, as they are
+             assumed to be separate packages.
+
+          o  A target directory in the root of the package is excluded.
+
+          o  Files and directories matching the [include] and [exclude] fields
+             in the manifest are included or excluded. Include patterns can
+             override the following rules.
+
+          o  Files that are ignored by VCS are excluded.
+
+          o  Unix hidden files and directories (starting with .) are excluded.
+
        3. Extract the .crate file and build it to verify it can build.
+
           o  This will rebuild your package from scratch to ensure that it can
              be built from a pristine state. The --no-verify flag can be used
              to skip this step.
