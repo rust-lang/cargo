@@ -32,6 +32,16 @@ stored in the `target/package` directory. This performs the following steps:
     - A `.cargo_vcs_info.json` file is included that contains information
       about the current VCS checkout hash if available, as well as a flag if the
       worktree is dirty.
+    - Symlinks are flattened to their target files.
+    - Subdirectories containing `Cargo.toml` are excluded, as they are assumed
+      to be separate packages.
+    - A `target` directory in the root of the package is excluded.
+    - Files and directories matching the `[include]` and `[exclude]` fields in
+      the manifest are included or excluded. Include patterns can override the
+      following rules.
+    - Files that are ignored by VCS are excluded.
+    - Unix hidden files and directories (starting with `.`) are excluded.
+
 3. Extract the `.crate` file and build it to verify it can build.
     - This will rebuild your package from scratch to ensure that it can be
       built from a pristine state. The `--no-verify` flag can be used to skip
