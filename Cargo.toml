@@ -83,6 +83,7 @@ rusqlite = { version = "0.32.0", features = ["bundled"] }
 rustc-hash = "2.0.0"
 rustfix = { version = "0.8.2", path = "crates/rustfix" }
 same-file = "1.0.6"
+schemars = "0.8.21"
 security-framework = "2.11.1"
 semver = { version = "1.0.23", features = ["serde"] }
 serde = "1.0.204"
