@@ -446,13 +446,13 @@ fn activate_deps_loop(
                     // conflict with us.
                     let mut has_past_conflicting_dep = just_here_for_the_error_messages;
                     if !has_past_conflicting_dep {
-                        if let Some(conflicting) = frame
-                            .remaining_siblings
-                            .clone()
-                            .filter_map(|(ref new_dep, _, _)| {
-                                past_conflicting_activations.conflicting(&resolver_ctx, new_dep)
-                            })
-                            .next()
+                        if let Some(conflicting) =
+                            frame
+                                .remaining_siblings
+                                .remaining()
+                                .find_map(|(ref new_dep, _, _)| {
+                                    past_conflicting_activations.conflicting(&resolver_ctx, new_dep)
+                                })
                         {
                             // If one of our deps is known unresolvable
                             // then we will not succeed.
@@ -757,7 +757,7 @@ impl RemainingCandidates {
         conflicting_prev_active: &mut ConflictMap,
         cx: &ResolverContext,
     ) -> Option<(Summary, bool)> {
-        for b in self.remaining.by_ref() {
+        for b in self.remaining.iter() {
             let b_id = b.package_id();
             // The `links` key in the manifest dictates that there's only one
             // package in a dependency graph, globally, with that particular
@@ -783,7 +783,7 @@ impl RemainingCandidates {
             // Here we throw out our candidate if it's *compatible*, yet not
             // equal, to all previously activated versions.
             if let Some((a, _)) = cx.activations.get(&b_id.as_activations_key()) {
-                if *a != b {
+                if a != b {
                     conflicting_prev_active
                         .entry(a.package_id())
                         .or_insert(ConflictReason::Semver);
@@ -796,7 +796,7 @@ impl RemainingCandidates {
             // necessarily return the item just yet. Instead we stash it away to
             // get returned later, and if we replaced something then that was
             // actually the candidate to try first so we return that.
-            if let Some(r) = mem::replace(&mut self.has_another, Some(b)) {
+            if let Some(r) = mem::replace(&mut self.has_another, Some(b.clone())) {
                 return Some((r, true));
             }
         }

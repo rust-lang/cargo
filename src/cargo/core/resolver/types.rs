@@ -5,7 +5,6 @@ use crate::util::interning::InternedString;
 use crate::util::GlobalContext;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
-use std::ops::Range;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
@@ -181,13 +180,13 @@ impl DepsFrame {
     fn min_candidates(&self) -> usize {
         self.remaining_siblings
             .peek()
-            .map(|(_, (_, candidates, _))| candidates.len())
+            .map(|(_, candidates, _)| candidates.len())
             .unwrap_or(0)
     }
 
-    pub fn flatten(&self) -> impl Iterator<Item = (PackageId, Dependency)> + '_ {
+    pub fn flatten(&self) -> impl Iterator<Item = (PackageId, &Dependency)> + '_ {
         self.remaining_siblings
-            .clone()
+            .remaining()
             .map(move |(d, _, _)| (self.parent.package_id(), d))
     }
 }
@@ -251,7 +250,8 @@ impl RemainingDeps {
             // Figure out what our next dependency to activate is, and if nothing is
             // listed then we're entirely done with this frame (yay!) and we can
             // move on to the next frame.
-            if let Some(sibling) = deps_frame.remaining_siblings.next() {
+            let sibling = deps_frame.remaining_siblings.iter().next().cloned();
+            if let Some(sibling) = sibling {
                 let parent = Summary::clone(&deps_frame.parent);
                 self.data.insert((deps_frame, insertion_time));
                 return Some((just_here_for_the_error_messages, (parent, sibling)));
@@ -259,7 +259,7 @@ impl RemainingDeps {
         }
         None
     }
-    pub fn iter(&mut self) -> impl Iterator<Item = (PackageId, Dependency)> + '_ {
+    pub fn iter(&mut self) -> impl Iterator<Item = (PackageId, &Dependency)> + '_ {
         self.data.iter().flat_map(|(other, _)| other.flatten())
     }
 }
@@ -324,22 +324,27 @@ pub type ConflictMap = BTreeMap<PackageId, ConflictReason>;
 
 pub struct RcVecIter<T> {
     vec: Rc<Vec<T>>,
-    rest: Range<usize>,
+    offset: usize,
 }
 
 impl<T> RcVecIter<T> {
     pub fn new(vec: Rc<Vec<T>>) -> RcVecIter<T> {
-        RcVecIter {
-            rest: 0..vec.len(),
-            vec,
-        }
+        RcVecIter { vec, offset: 0 }
     }
 
-    fn peek(&self) -> Option<(usize, &T)> {
-        self.rest
-            .clone()
-            .next()
-            .and_then(|i| self.vec.get(i).map(|val| (i, &*val)))
+    pub fn peek(&self) -> Option<&T> {
+        self.vec.get(self.offset)
+    }
+
+    pub fn remaining(&self) -> impl Iterator<Item = &T> + '_ {
+        self.vec.get(self.offset..).into_iter().flatten()
+    }
+
+    pub fn iter(&mut self) -> impl Iterator<Item = &T> + '_ {
+        let iter = self.vec.get(self.offset..).into_iter().flatten();
+        // This call to `ìnspect()` is used to increment `self.offset` when iterating the inner `Vec`,
+        // while keeping the `ExactSizeIterator` property.
+        iter.inspect(|_| self.offset += 1)
     }
 }
 
@@ -348,25 +353,7 @@ impl<T> Clone for RcVecIter<T> {
     fn clone(&self) -> RcVecIter<T> {
         RcVecIter {
             vec: self.vec.clone(),
-            rest: self.rest.clone(),
+            offset: self.offset,
         }
     }
 }
-
-impl<T> Iterator for RcVecIter<T>
-where
-    T: Clone,
-{
-    type Item = T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.rest.next().and_then(|i| self.vec.get(i).cloned())
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        // rest is a std::ops::Range, which is an ExactSizeIterator.
-        self.rest.size_hint()
-    }
-}
-
-impl<T: Clone> ExactSizeIterator for RcVecIter<T> {}
