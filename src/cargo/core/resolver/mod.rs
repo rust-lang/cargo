@@ -137,10 +137,20 @@ pub fn resolve(
         _ => None,
     };
     let mut registry = RegistryQueryer::new(registry, replacements, version_prefs);
+
+    // Global cache of the reasons for each time we backtrack.
+    let mut past_conflicting_activations = conflict_cache::ConflictCache::new();
+
     let resolver_ctx = loop {
         let resolver_ctx = ResolverContext::new();
-        let resolver_ctx =
-            activate_deps_loop(resolver_ctx, &mut registry, summaries, first_version, gctx)?;
+        let resolver_ctx = activate_deps_loop(
+            resolver_ctx,
+            &mut registry,
+            summaries,
+            first_version,
+            gctx,
+            &mut past_conflicting_activations,
+        )?;
         if registry.reset_pending() {
             break resolver_ctx;
         } else {
@@ -194,13 +204,10 @@ fn activate_deps_loop(
     summaries: &[(Summary, ResolveOpts)],
     first_version: Option<VersionOrdering>,
     gctx: Option<&GlobalContext>,
+    past_conflicting_activations: &mut conflict_cache::ConflictCache,
 ) -> CargoResult<ResolverContext> {
     let mut backtrack_stack = Vec::new();
     let mut remaining_deps = RemainingDeps::new();
-
-    // `past_conflicting_activations` is a cache of the reasons for each time we
-    // backtrack.
-    let mut past_conflicting_activations = conflict_cache::ConflictCache::new();
 
     // Activate all the initial summaries to kick off some work.
     for (summary, opts) in summaries {
@@ -313,7 +320,7 @@ fn activate_deps_loop(
                     if let Some(c) = generalize_conflicting(
                         &resolver_ctx,
                         registry,
-                        &mut past_conflicting_activations,
+                        past_conflicting_activations,
                         &parent,
                         &dep,
                         &conflicting_activations,
