@@ -132,7 +132,7 @@ However, this determinism can give a false sense of security because
 `Cargo.lock` does not affect the consumers of your package, only `Cargo.toml` does that.
 For example:
 - [`cargo install`] will select the latest dependencies unless
- `[--locked`](commands/cargo.html#option-cargo---locked) is passed in.
+[`--locked`](commands/cargo.html#option-cargo---locked) is passed in.
 - New dependencies, like those added with [`cargo add`], will be locked to the latest version
 
 The lockfile can also be a source of merge conflicts.
