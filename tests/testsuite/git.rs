@@ -2954,7 +2954,7 @@ fn use_the_cli() {
 
     let stderr = str![[r#"
 [UPDATING] git repository `[ROOTURL]/dep1`
-[RUNNING] `git fetch --verbose --force --update-head-ok [..][ROOTURL]/dep1[..] [..]+HEAD:refs/remotes/origin/HEAD[..]`
+[RUNNING] `git fetch --no-tags --verbose --force --update-head-ok [..][ROOTURL]/dep1[..] [..]+HEAD:refs/remotes/origin/HEAD[..]`
 From [ROOTURL]/dep1
  * [new ref] [..] -> origin/HEAD[..]
 [LOCKING] 1 package to latest compatible version
