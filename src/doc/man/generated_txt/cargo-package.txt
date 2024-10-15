@@ -36,18 +36,9 @@ DESCRIPTION
 
           o  Symlinks are flattened to their target files.
 
-          o  Subdirectories containing Cargo.toml are excluded, as they are
-             assumed to be separate packages.
-
-          o  A target directory in the root of the package is excluded.
-
-          o  Files and directories matching the [include] and [exclude] fields
-             in the manifest are included or excluded. Include patterns can
-             override the following rules.
-
-          o  Files that are ignored by VCS are excluded.
-
-          o  Unix hidden files and directories (starting with .) are excluded.
+          o  Files and directories are included or excluded based on rules
+             mentioned in the [include] and [exclude] fields
+             <https://doc.rust-lang.org/cargo/reference/manifest.html#the-exclude-and-include-fields>.
 
        3. Extract the .crate file and build it to verify it can build.
 
