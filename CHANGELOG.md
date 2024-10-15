@@ -1,5 +1,51 @@
 # Changelog
 
+## Cargo 1.84 (2025-01-09)
+[15fbd2f6...HEAD](https://github.com/rust-lang/cargo/compare/15fbd2f6...HEAD)
+
+### Added
+
+### Changed
+
+- Pass `--no-tags` by default to git CLI when `net.git-fetch-with-cli = true`.
+  [#14688](https://github.com/rust-lang/cargo/pull/14688)
+- Several resolver performance enhancements, including
+  - Use `rustc-hash` to speed up resolver
+    [#14663](https://github.com/rust-lang/cargo/pull/14663)
+  - Share conflict cache between activation retries
+    [#14692](https://github.com/rust-lang/cargo/pull/14692)
+  - Avoid cloning when iterating using `RcVecIter`
+    [#14690](https://github.com/rust-lang/cargo/pull/14690)
+
+### Fixed
+
+### Nightly only
+
+- `-Zbindeps`: Fix panic when running cargo tree on a package with a cross compiled bindep
+  [#14593](https://github.com/rust-lang/cargo/pull/14593)
+- `-Zpackage-workspace`: Support package selection options like `--exclude` in `cargo publish`
+  [#14659](https://github.com/rust-lang/cargo/pull/14659)
+- `-Zscript`: Remove the support for accepting `Cargo.toml`
+  [#14670](https://github.com/rust-lang/cargo/pull/14670)
+
+### Documentation
+
+- Clarify the meaning of `--tests` and `--benches` flags.
+  [#14675](https://github.com/rust-lang/cargo/pull/14675)
+- Clarify tools should only interpret messages with a line starting with `{` as JSON.
+  [#14677](https://github.com/rust-lang/cargo/pull/14677)
+- Clarify what is and isn't included by `cargo package`
+  [#14684](https://github.com/rust-lang/cargo/pull/14684)
+- Document official external commands: `cargo-clippy`, `cargo-fmt`, and `cargo-miri`.
+  [#14669](https://github.com/rust-lang/cargo/pull/14669)
+- Enhanced documentation on dependency resolution
+  [#14662](https://github.com/rust-lang/cargo/pull/14662)
+
+### Internal
+
+- Updated to `pulldown-cmark` 0.12.0 
+  [#14668](https://github.com/rust-lang/cargo/pull/14668)
+
 ## Cargo 1.83 (2024-11-28)
 [8f40fc59...rust-1.83.0](https://github.com/rust-lang/cargo/compare/8f40fc59...rust-1.83.0)
 
