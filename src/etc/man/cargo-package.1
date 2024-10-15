@@ -45,6 +45,15 @@ packaged lock file if the \fB\-\-locked\fR flag is used.
 about the current VCS checkout hash if available, as well as a flag if the
 worktree is dirty.
 .RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Symlinks are flattened to their target files.
+.RE
+.sp
+.RS 4
+\h'-04'\(bu\h'+02'Files and directories are included or excluded based on rules mentioned in
+\fIthe \f(BI[include]\fI and \f(BI[exclude]\fI fields\fR <https://doc.rust\-lang.org/cargo/reference/manifest.html#the\-exclude\-and\-include\-fields>\&.
+.RE
 .RE
 .sp
 .RS 4

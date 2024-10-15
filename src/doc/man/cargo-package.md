@@ -32,6 +32,10 @@ stored in the `target/package` directory. This performs the following steps:
     - A `.cargo_vcs_info.json` file is included that contains information
       about the current VCS checkout hash if available, as well as a flag if the
       worktree is dirty.
+    - Symlinks are flattened to their target files.
+    - Files and directories are included or excluded based on rules mentioned in
+      [the `[include]` and `[exclude]` fields](../reference/manifest.html#the-exclude-and-include-fields).
+
 3. Extract the `.crate` file and build it to verify it can build.
     - This will rebuild your package from scratch to ensure that it can be
       built from a pristine state. The `--no-verify` flag can be used to skip
