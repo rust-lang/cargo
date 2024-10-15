@@ -1193,6 +1193,8 @@ fn fetch_with_cli(
     cmd.arg("fetch");
     if tags {
         cmd.arg("--tags");
+    } else {
+        cmd.arg("--no-tags");
     }
     match gctx.shell().verbosity() {
         Verbosity::Normal => {}
