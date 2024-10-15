@@ -789,8 +789,8 @@ impl<'gctx> RegistryData for HttpRegistry<'gctx> {
     }
 
     fn block_until_ready(&mut self) -> CargoResult<()> {
-        trace!(target: "network",
-            "block_until_ready: {} transfers pending",
+        trace!(target: "network::HttpRegistry::block_until_ready",
+            "{} transfers pending",
             self.downloads.pending.len()
         );
         self.downloads.blocking_calls += 1;
