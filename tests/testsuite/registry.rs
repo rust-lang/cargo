@@ -3315,6 +3315,66 @@ Caused by:
 }
 
 #[cargo_test]
+fn sparse_blocking_count() {
+    let fail_count = Mutex::new(0);
+    let _registry = RegistryBuilder::new()
+        .http_index()
+        .add_responder("/index/3/b/bar", move |req, server| {
+            let mut fail_count = fail_count.lock().unwrap();
+            if *fail_count < 1 {
+                *fail_count += 1;
+                server.internal_server_error(req)
+            } else {
+                server.index(req)
+            }
+        })
+        .build();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                bar = ">= 0.0.0"
+            "#,
+        )
+        .file("src/main.rs", "fn main() {}")
+        .build();
+
+    Package::new("bar", "0.0.1").publish();
+
+    // Ensure we have the expected number of `block_until_ready` calls.
+    // The 1st (0 transfers pending), is the deliberate extra call in `ensure_loaded` for a source.
+    // The 2nd (1 transfers pending), is the registry `config.json`.
+    // the 3rd (1 transfers pending), is the package metadata for `bar`.
+
+    p.cargo("check")
+        .env("CARGO_LOG", "network::HttpRegistry::block_until_ready=trace")
+        .with_stderr_data(str![[r#"
+   [..] TRACE network::HttpRegistry::block_until_ready: 0 transfers pending
+[UPDATING] `dummy-registry` index
+   [..] TRACE network::HttpRegistry::block_until_ready: 1 transfers pending
+   [..] TRACE network::HttpRegistry::block_until_ready: 1 transfers pending
+[WARNING] spurious network error (3 tries remaining): failed to get successful HTTP response from `[..]/index/3/b/bar` ([..]), got 500
+body:
+internal server error
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
+[CHECKING] bar v0.0.1
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]).run();
+}
+
+#[cargo_test]
 fn sparse_retry_single() {
     let fail_count = Mutex::new(0);
     let _registry = RegistryBuilder::new()
