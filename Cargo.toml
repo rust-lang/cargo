@@ -32,7 +32,7 @@ cargo-credential-macos-keychain = { version = "0.4.7", path = "credential/cargo-
 cargo-credential-wincred = { version = "0.4.7", path = "credential/cargo-credential-wincred" }
 cargo-platform = { path = "crates/cargo-platform", version = "0.1.5" }
 cargo-test-macro = { version = "0.3.0", path = "crates/cargo-test-macro" }
-cargo-test-support = { version = "0.5.0", path = "crates/cargo-test-support" }
+cargo-test-support = { version = "0.6.0", path = "crates/cargo-test-support" }
 cargo-util = { version = "0.2.14", path = "crates/cargo-util" }
 cargo-util-schemas = { version = "0.7.0", path = "crates/cargo-util-schemas" }
 cargo_metadata = "0.18.1"
