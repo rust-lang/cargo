@@ -58,7 +58,7 @@ fn simple_cross_package() {
         f,
         "foo-0.0.0.crate",
         &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
-        &[],
+        (),
     );
 }
 
