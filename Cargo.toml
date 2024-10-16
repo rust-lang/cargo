@@ -129,7 +129,7 @@ self_named_module_files = "warn"
 
 [package]
 name = "cargo"
-version = "0.84.0"
+version = "0.85.0"
 edition.workspace = true
 license.workspace = true
 rust-version = "1.81"  # MSRV:1
