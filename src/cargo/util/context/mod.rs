@@ -89,6 +89,7 @@ use lazycell::LazyCell;
 use serde::de::IntoDeserializer as _;
 use serde::Deserialize;
 use serde_untagged::UntaggedEnumVisitor;
+use shlex::Shlex;
 use time::OffsetDateTime;
 use toml_edit::Item;
 use url::Url;
@@ -973,8 +974,8 @@ impl GlobalContext {
             }
         } else {
             output.extend(
-                env_val
-                    .split_whitespace()
+                Shlex::new(env_val)
+                    .into_iter()
                     .map(|s| (s.to_string(), def.clone())),
             );
         }
@@ -2976,8 +2977,12 @@ fn disables_multiplexing_for_bad_curl(
 mod tests {
     use super::disables_multiplexing_for_bad_curl;
     use super::CargoHttpConfig;
+    use super::ConfigKey;
+    use super::Definition;
     use super::GlobalContext;
     use super::Shell;
+
+    use std::collections::HashMap;
 
     #[test]
     fn disables_multiplexing() {
@@ -3013,6 +3018,39 @@ mod tests {
             };
             disables_multiplexing_for_bad_curl(curl_v, &mut http, &gctx);
             assert_eq!(http.multiplexing, result);
+        }
+    }
+
+    #[test]
+    fn env_argument_parsing() {
+        let mut gctx = GlobalContext::new(Shell::new(), "".into(), "".into());
+        gctx.set_search_stop_path(std::path::PathBuf::new());
+
+        let values: &[(&str, &[&str])] = &[
+            ("VAL1", &["--path"]),
+            ("VAL2", &["--path=\"y z\""]),
+            ("VAL3", &["--path", "\"y z\""]),
+        ];
+
+        let mut env = HashMap::new();
+        for (key, value) in values {
+            env.insert(format!("CARGO_{key}"), value.join(" "));
+        }
+        gctx.set_env(env);
+
+        for (key, value) in values {
+            let mut args = Vec::new();
+            gctx.get_env_list(&ConfigKey::from_str(key), &mut args)
+                .unwrap();
+
+            let mut expected = Vec::new();
+            for sub in *value {
+                expected.push((
+                    sub.replace("\"", ""),
+                    Definition::Environment(format!("CARGO_{key}")),
+                ));
+            }
+            assert_eq!(args, expected, "failed for key {}", key);
         }
     }
 }
