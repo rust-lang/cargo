@@ -49,9 +49,6 @@ const DEFAULT_AUTO_FREQUENCY: &str = "1 day";
 /// It should be cheap to call this multiple times (subsequent calls are
 /// ignored), but try not to abuse that.
 pub fn auto_gc(gctx: &GlobalContext) {
-    if !gctx.cli_unstable().gc {
-        return;
-    }
     if !gctx.network_allowed() {
         // As a conservative choice, auto-gc is disabled when offline. If the
         // user is indefinitely offline, we don't want to delete things they
@@ -176,49 +173,74 @@ impl GcOpts {
         let auto_config = gctx
             .get::<Option<AutoConfig>>("gc.auto")?
             .unwrap_or_default();
-        self.update_for_auto_gc_config(&auto_config)
+        self.update_for_auto_gc_config(&auto_config, gctx.cli_unstable().gc)
     }
 
-    fn update_for_auto_gc_config(&mut self, auto_config: &AutoConfig) -> CargoResult<()> {
+    fn update_for_auto_gc_config(
+        &mut self,
+        auto_config: &AutoConfig,
+        unstable_allowed: bool,
+    ) -> CargoResult<()> {
+        macro_rules! config_default {
+            ($auto_config:expr, $field:ident, $default:expr, $unstable_allowed:expr) => {
+                if !unstable_allowed {
+                    // These config options require -Zgc
+                    $default
+                } else {
+                    $auto_config.$field.as_deref().unwrap_or($default)
+                }
+            };
+        }
+
         self.max_src_age = newer_time_span_for_config(
             self.max_src_age,
             "gc.auto.max-src-age",
-            auto_config
-                .max_src_age
-                .as_deref()
-                .unwrap_or(DEFAULT_MAX_AGE_EXTRACTED),
+            config_default!(
+                auto_config,
+                max_src_age,
+                DEFAULT_MAX_AGE_EXTRACTED,
+                unstable_allowed
+            ),
         )?;
         self.max_crate_age = newer_time_span_for_config(
             self.max_crate_age,
             "gc.auto.max-crate-age",
-            auto_config
-                .max_crate_age
-                .as_deref()
-                .unwrap_or(DEFAULT_MAX_AGE_DOWNLOADED),
+            config_default!(
+                auto_config,
+                max_crate_age,
+                DEFAULT_MAX_AGE_DOWNLOADED,
+                unstable_allowed
+            ),
         )?;
         self.max_index_age = newer_time_span_for_config(
             self.max_index_age,
             "gc.auto.max-index-age",
-            auto_config
-                .max_index_age
-                .as_deref()
-                .unwrap_or(DEFAULT_MAX_AGE_DOWNLOADED),
+            config_default!(
+                auto_config,
+                max_index_age,
+                DEFAULT_MAX_AGE_DOWNLOADED,
+                unstable_allowed
+            ),
         )?;
         self.max_git_co_age = newer_time_span_for_config(
             self.max_git_co_age,
             "gc.auto.max-git-co-age",
-            auto_config
-                .max_git_co_age
-                .as_deref()
-                .unwrap_or(DEFAULT_MAX_AGE_EXTRACTED),
+            config_default!(
+                auto_config,
+                max_git_co_age,
+                DEFAULT_MAX_AGE_EXTRACTED,
+                unstable_allowed
+            ),
         )?;
         self.max_git_db_age = newer_time_span_for_config(
             self.max_git_db_age,
             "gc.auto.max-git-db-age",
-            auto_config
-                .max_git_db_age
-                .as_deref()
-                .unwrap_or(DEFAULT_MAX_AGE_DOWNLOADED),
+            config_default!(
+                auto_config,
+                max_git_db_age,
+                DEFAULT_MAX_AGE_DOWNLOADED,
+                unstable_allowed
+            ),
         )?;
         Ok(())
     }
@@ -257,9 +279,6 @@ impl<'a, 'gctx> Gc<'a, 'gctx> {
     /// This returns immediately without doing work if garbage collection has
     /// been performed recently (since `gc.auto.frequency`).
     fn auto(&mut self, clean_ctx: &mut CleanContext<'gctx>) -> CargoResult<()> {
-        if !self.gctx.cli_unstable().gc {
-            return Ok(());
-        }
         let auto_config = self
             .gctx
             .get::<Option<AutoConfig>>("gc.auto")?
@@ -278,7 +297,7 @@ impl<'a, 'gctx> Gc<'a, 'gctx> {
             return Ok(());
         }
         let mut gc_opts = GcOpts::default();
-        gc_opts.update_for_auto_gc_config(&auto_config)?;
+        gc_opts.update_for_auto_gc_config(&auto_config, self.gctx.cli_unstable().gc)?;
         self.gc(clean_ctx, &gc_opts)?;
         if !clean_ctx.dry_run {
             self.global_cache_tracker.set_last_auto_gc()?;
