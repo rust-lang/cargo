@@ -665,7 +665,8 @@ impl<'gctx> RegistrySource<'gctx> {
             // Prevent unpacking the lockfile from the crate itself.
             if entry_path
                 .file_name()
-                .map_or(false, |p| p == PACKAGE_SOURCE_LOCK)
+                .and_then(|p| p.to_str())
+                .is_some_and(|p| PACKAGE_SOURCE_LOCK.eq_ignore_ascii_case(p))
             {
                 continue;
             }
