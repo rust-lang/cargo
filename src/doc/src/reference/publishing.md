@@ -74,8 +74,8 @@ steps:
    before adding it.
 
 It is recommended that you first run `cargo publish --dry-run` (or [`cargo
-package`] which is equivalent) to ensure there aren't any warnings or errors
-before publishing. This will perform the first three steps listed above.
+package`]) to ensure there aren't any warnings or errors before publishing.
+This will perform the first three steps listed above.
 
 ```console
 $ cargo publish --dry-run
