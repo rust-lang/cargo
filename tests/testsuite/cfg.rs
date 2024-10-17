@@ -336,6 +336,18 @@ fn bad_cfg_discovery() {
 
             fn main() {
                 let mode = std::env::var("FUNKY_MODE").unwrap();
+
+                // Cargo may run the shim with parameters for building 'foo' when the mode is set to
+                // "no-target-spec-json". To avoid issues with this, just return in this case.
+                if std::env::args_os().any(|s| s.into_string().unwrap().contains("foo")) {
+                    return;
+                }
+
+                // If Cargo has run the shim with "--print=target-spec-json", return so the test case
+                // receives the correct output
+                if std::env::args_os().any(|s| s.into_string().unwrap().contains("target-spec-json")) {
+                    return;
+                }
                 if mode == "bad-version" {
                     println!("foo");
                     return;
@@ -375,16 +387,20 @@ fn bad_cfg_discovery() {
                         println!("\n{line}");
                         break;
                     } else {
-                        // As the number split-debuginfo options varies,
-                        // concat them into one line.
                         print!("{line},");
                     }
                 };
 
-                if mode != "bad-cfg" {
+                if mode == "bad-cfg" {
+                    println!("123");
+                    return;
+                }
+                for line in lines {
+                    println!("{line}");
+                }
+                if mode != "no-target-spec-json" {
                     panic!("unexpected");
                 }
-                println!("123");
             }
             "#,
         )
@@ -481,6 +497,12 @@ Caused by:
   failed to parse `123` as a cfg expression: unexpected character `1` in cfg, expected parens, a comma, an identifier, or a string
 
 "#]])
+        .run();
+
+    p.cargo("check")
+        .env("RUSTC", &funky_rustc)
+        .env("FUNKY_MODE", "no-target-spec-json")
+        .with_status(0)
         .run();
 }
 

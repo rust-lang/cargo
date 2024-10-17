@@ -164,6 +164,7 @@ trait BuildStd: Sized {
     fn build_std(&mut self, setup: &Setup) -> &mut Self;
     fn build_std_arg(&mut self, setup: &Setup, arg: &str) -> &mut Self;
     fn target_host(&mut self) -> &mut Self;
+    fn target(&mut self, target: &str) -> &mut Self;
 }
 
 impl BuildStd for Execs {
@@ -181,6 +182,11 @@ impl BuildStd for Execs {
 
     fn target_host(&mut self) -> &mut Self {
         self.arg("--target").arg(rustc_host());
+        self
+    }
+
+    fn target(&mut self, target: &str) -> &mut Self {
+        self.arg("--target").arg(target);
         self
     }
 }
@@ -320,6 +326,33 @@ fn check_core() {
 [WARNING] function `unused_fn` is never used
 ...
 "#]])
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
+fn test_std_on_unsupported_target() {
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"
+        fn main() {
+            println!("hello");
+        }
+        "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .build_std(&setup)
+        .target("aarch64-unknown-none")
+        .with_status(101)
+        .with_stderr_data(
+            "\
+[ERROR] building std is not supported on this target: [..]
+",
+        )
         .run();
 }
 
