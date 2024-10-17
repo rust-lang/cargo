@@ -1,6 +1,7 @@
 use super::{ConfigKey, ConfigRelativePath, GlobalContext, OptValue, PathAndArgs, StringList, CV};
 use crate::core::compiler::{BuildOutput, LinkArgTarget};
 use crate::util::CargoResult;
+use cargo_platform::{CfgExpr, Platform};
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
@@ -53,6 +54,17 @@ pub(super) fn load_target_cfgs(
     let target: BTreeMap<String, TargetCfgConfig> = gctx.get("target")?;
     tracing::debug!("Got all targets {:#?}", target);
     for (key, cfg) in target {
+        // Feature gate `cfg(true)`/`cfg(false)` under `-Zcfg-boolean-literals`
+        if !gctx.cli_unstable().cfg_boolean_literals {
+            if let Ok(Platform::Cfg(cfg_expr)) = key.parse() {
+                cfg_expr.walk_expr(|e| match e {
+                    CfgExpr::True | CfgExpr::False => {
+                        anyhow::bail!("`-Zcfg-boolean-literals` should be used to enable cfg boolean literals in `.cargo/config.toml`")
+                    },
+                    _ => Ok(()),
+                })?;
+            }
+        }
         if key.starts_with("cfg(") {
             // Unfortunately this is not able to display the location of the
             // unused key. Using config::Value<toml::Value> doesn't work. One
