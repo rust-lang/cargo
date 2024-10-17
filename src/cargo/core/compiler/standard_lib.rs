@@ -75,13 +75,8 @@ pub fn resolve_std<'gctx>(
     let src_path = detect_sysroot_src_path(target_data)?;
     let std_ws_manifest_path = src_path.join("Cargo.toml");
     let gctx = ws.gctx();
-    // TODO: Consider doing something to enforce --locked? Or to prevent the
-    // lock file from being written, such as setting ephemeral.
     let mut std_ws = Workspace::new(&std_ws_manifest_path, gctx)?;
-    // Don't require optional dependencies in this workspace, aka std's own
-    // `[dev-dependencies]`. No need for us to generate a `Resolve` which has
-    // those included because we'll never use them anyway.
-    std_ws.set_require_optional_deps(false);
+    std_ws.set_is_locked(true);
     // `sysroot` is not in the default set because it is optional, but it needs
     // to be part of the resolve in case we do need it or `libtest`.
     let mut spec_pkgs = Vec::from(crates);
