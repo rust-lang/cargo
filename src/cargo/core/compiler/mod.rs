@@ -75,7 +75,7 @@ pub use self::build_context::{
 use self::build_plan::BuildPlan;
 pub use self::build_runner::{BuildRunner, Metadata};
 pub use self::compilation::{Compilation, Doctest, UnitOutput};
-pub use self::compile_kind::{CompileKind, CompileTarget};
+pub use self::compile_kind::{CompileKind, CompileTarget, HasExtIgnoreCase};
 pub use self::crate_type::CrateType;
 pub use self::custom_build::LinkArgTarget;
 pub use self::custom_build::{BuildOutput, BuildScriptOutputs, BuildScripts};
