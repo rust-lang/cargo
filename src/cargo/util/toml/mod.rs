@@ -1892,8 +1892,13 @@ fn patch(
                 .or_else(|_| toml_url.into_url())
                 .with_context(|| {
                     format!(
-                        "[patch] entry `{}` should be a URL or registry name",
-                        toml_url
+                        "[patch] entry `{}` should be a URL or registry name{}",
+                        toml_url,
+                        if toml_url == "crates" {
+                            "\nFor crates.io, use [patch.crates-io] (with a dash)"
+                        } else {
+                            ""
+                        }
                     )
                 })?,
         };
