@@ -1326,6 +1326,7 @@ pub fn to_real_manifest(
     for (name, platform) in original_toml.target.iter().flatten() {
         let platform_kind: Platform = name.parse()?;
         platform_kind.check_cfg_attributes(warnings);
+        platform_kind.check_cfg_keywords(warnings, manifest_file);
         let platform_kind = Some(platform_kind);
         validate_dependencies(
             platform.dependencies.as_ref(),

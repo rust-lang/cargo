@@ -521,3 +521,159 @@ error[E0463]: can't find crate for `bar`
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn cfg_raw_idents() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [target.'cfg(any(r#fn, r#all, r#target_os = "<>"))'.dependencies]
+                b = { path = "b/" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cfg_raw_idents_empty() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [target.'cfg(r#))'.dependencies]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  failed to parse `r#)` as a cfg expression: unexpected character `)` in cfg, expected parens, a comma, an identifier, or a string
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cfg_raw_idents_not_really() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [target.'cfg(r#11))'.dependencies]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  failed to parse `r#11)` as a cfg expression: unexpected character `1` in cfg, expected parens, a comma, an identifier, or a string
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cfg_keywords() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [target.'cfg(any(async, fn, const, return))'.dependencies]
+                b = { path = "b/" }
+            "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [target."cfg(any(for, match, extern, crate))"]
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "pub fn foo() {}")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[WARNING] [[ROOT]/foo/Cargo.toml] future-incompatibility: `cfg(async)` is deprecated as `async` is a keyword and not an identifier and should not have have been accepted in this position.
+ | this was previously accepted by Cargo but is being phased out; it will become a hard error in a future release!
+ |
+ | [HELP] use raw-idents instead: `cfg(r#async)`
+[WARNING] [[ROOT]/foo/Cargo.toml] future-incompatibility: `cfg(fn)` is deprecated as `fn` is a keyword and not an identifier and should not have have been accepted in this position.
+ | this was previously accepted by Cargo but is being phased out; it will become a hard error in a future release!
+ |
+ | [HELP] use raw-idents instead: `cfg(r#fn)`
+[WARNING] [[ROOT]/foo/Cargo.toml] future-incompatibility: `cfg(const)` is deprecated as `const` is a keyword and not an identifier and should not have have been accepted in this position.
+ | this was previously accepted by Cargo but is being phased out; it will become a hard error in a future release!
+ |
+ | [HELP] use raw-idents instead: `cfg(r#const)`
+[WARNING] [[ROOT]/foo/Cargo.toml] future-incompatibility: `cfg(return)` is deprecated as `return` is a keyword and not an identifier and should not have have been accepted in this position.
+ | this was previously accepted by Cargo but is being phased out; it will become a hard error in a future release!
+ |
+ | [HELP] use raw-idents instead: `cfg(r#return)`
+[WARNING] [.cargo/config.toml] future-incompatibility: `cfg(for)` is deprecated as `for` is a keyword and not an identifier and should not have have been accepted in this position.
+ | this was previously accepted by Cargo but is being phased out; it will become a hard error in a future release!
+ |
+ | [HELP] use raw-idents instead: `cfg(r#for)`
+[WARNING] [.cargo/config.toml] future-incompatibility: `cfg(match)` is deprecated as `match` is a keyword and not an identifier and should not have have been accepted in this position.
+ | this was previously accepted by Cargo but is being phased out; it will become a hard error in a future release!
+ |
+ | [HELP] use raw-idents instead: `cfg(r#match)`
+[WARNING] [.cargo/config.toml] future-incompatibility: `cfg(extern)` is deprecated as `extern` is a keyword and not an identifier and should not have have been accepted in this position.
+ | this was previously accepted by Cargo but is being phased out; it will become a hard error in a future release!
+ |
+ | [HELP] use raw-idents instead: `cfg(r#extern)`
+[WARNING] [.cargo/config.toml] future-incompatibility: `cfg(crate)` is deprecated as `crate` is a keyword and not an identifier and should not have have been accepted in this position.
+ | this was previously accepted by Cargo but is being phased out; it will become a hard error in a future release!
+ |
+ | [HELP] use raw-idents instead: `cfg(r#crate)`
+[LOCKING] 1 package to latest compatible version
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
