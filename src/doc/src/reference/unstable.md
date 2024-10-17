@@ -351,31 +351,7 @@ This was stabilized in 1.79 in [#13608](https://github.com/rust-lang/cargo/pull/
 
 ### MSRV-aware resolver
 
-`-Zmsrv-policy` allows access to an MSRV-aware resolver which can be enabled with:
-- `resolver.incompatible-rust-versions` config field
-- `workspace.resolver = "3"` / `package.resolver = "3"`
-- `package.edition = "2024"` (only in workspace root)
-
-The resolver will prefer dependencies with a `package.rust-version` that is the same or older than your project's MSRV.
-As the resolver is unable to determine which workspace members will eventually
-depend on a package when it is being selected, we prioritize versions based on
-how many workspace member MSRVs they are compatible with.
-If there is no MSRV set then your toolchain version will be used, allowing it to pick up the toolchain version from pinned in rustup (e.g. `rust-toolchain.toml`).
-
-#### `resolver.incompatible-rust-versions`
-* Type: string
-* Default: `"allow"`
-* Environment: `CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS`
-
-When resolving a version for a dependency, select how versions with incompatible `package.rust-version`s are treated.
-Values include:
-- `allow`: treat `rust-version`-incompatible versions like any other version
-- `fallback`: only consider `rust-version`-incompatible versions if no other version matched
-
-Can be overridden with
-- `--ignore-rust-version` CLI option
-- Setting the dependency's version requirement higher than any version with a compatible `rust-version`
-- Specifying the version to `cargo update` with `--precise`
+This was stabilized in 1.83 in [#14639](https://github.com/rust-lang/cargo/pull/14639).
 
 ### Convert `incompatible_toolchain` error into a lint
 

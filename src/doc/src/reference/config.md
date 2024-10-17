@@ -143,6 +143,9 @@ rpath = false            # Sets the rpath linking option.
 [profile.<name>.package.<name>]  # Override profile for a package.
 # Same keys for a normal profile (minus `panic`, `lto`, and `rpath`).
 
+[resolver]
+incompatible-rust-versions = "allow"  # Specifies how resolver reacts to these
+
 [registries.<name>]  # registries other than crates.io
 index = "…"          # URL of the registry index
 token = "…"          # authentication token for the registry
@@ -972,6 +975,30 @@ See [rpath](profiles.md#rpath).
 
 See [strip](profiles.md#strip).
 
+### `[resolver]`
+
+The `[resolver]` table overrides [dependency resolution behavior](resolver.md) for local development (e.g. excludes `cargo install`).
+
+#### `resolver.incompatible-rust-versions`
+* Type: string
+* Default: `"allow"`
+* Environment: `CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS`
+
+When resolving which version of a dependency to use, select how versions with incompatible `package.rust-version`s are treated.
+Values include:
+- `allow`: treat `rust-version`-incompatible versions like any other version
+- `fallback`: only consider `rust-version`-incompatible versions if no other version matched
+
+Can be overridden with
+- `--ignore-rust-version` CLI option
+- Setting the dependency's version requirement higher than any version with a compatible `rust-version`
+- Specifying the version to `cargo update` with `--precise`
+
+See the [resolver](resolver.md#rust-version) chapter for more details.
+
+> **MSRV:**
+> - `allow` is supported on any version
+> - `fallback` is respected as of 1.84
 
 ### `[registries]`
 

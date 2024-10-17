@@ -306,31 +306,12 @@ impl<'gctx> Workspace<'gctx> {
                 }
             }
         }
-        match self.gctx().get::<CargoResolverConfig>("resolver") {
-            Ok(CargoResolverConfig {
-                incompatible_rust_versions: Some(incompatible_rust_versions),
-            }) => {
-                if self.gctx().cli_unstable().msrv_policy {
-                    self.resolve_honors_rust_version =
-                        incompatible_rust_versions == IncompatibleRustVersions::Fallback;
-                } else {
-                    self.gctx()
-                        .shell()
-                        .warn("ignoring `resolver` config table without `-Zmsrv-policy`")?;
-                }
-            }
-            Ok(CargoResolverConfig {
-                incompatible_rust_versions: None,
-            }) => {}
-            Err(err) => {
-                if self.gctx().cli_unstable().msrv_policy {
-                    return Err(err);
-                } else {
-                    self.gctx()
-                        .shell()
-                        .warn("ignoring `resolver` config table without `-Zmsrv-policy`")?;
-                }
-            }
+        if let CargoResolverConfig {
+            incompatible_rust_versions: Some(incompatible_rust_versions),
+        } = self.gctx().get::<CargoResolverConfig>("resolver")?
+        {
+            self.resolve_honors_rust_version =
+                incompatible_rust_versions == IncompatibleRustVersions::Fallback;
         }
 
         Ok(())

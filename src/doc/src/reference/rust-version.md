@@ -29,6 +29,8 @@ benchmarks, etc.
 `cargo add` will auto-select the dependency's version requirement to be the latest version compatible with your `rust-version`.
 If that isn't the latest version, `cargo add` will inform users so they can make the choice on whether to keep it or update your `rust-version`.
 
+The [resolver](resolver.md#rust-version) may take Rust version into account when picking dependencies.
+
 Other tools may also take advantage of it, like `cargo clippy`'s
 [`incompatible_msrv` lint](https://rust-lang.github.io/rust-clippy/stable/index.html#/incompatible_msrv).
 
@@ -130,6 +132,10 @@ potentially limiting access to features of the shared dependency for the workspa
 
 To allow users to patch a dependency on one of your workspace members,
 every package in the workspace would need to be loadable in the oldest Rust version supported by the workspace.
+
+When using [`incompatible-rust-versions = "fallback"`](config.md#resolverincompatible-rust-versions),
+the Rust version of one package can affect dependency versions selected for another package with a different Rust version.
+See the [resolver](resolver.md#rust-version) chapter for more details.
 
 ### One or More Policies
 
