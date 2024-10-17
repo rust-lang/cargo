@@ -1,4 +1,4 @@
-FROM httpd:2.4-alpine
+FROM public.ecr.aws/docker/library/httpd:2.4-alpine
 
 RUN apk add --no-cache git git-daemon openssl
 
