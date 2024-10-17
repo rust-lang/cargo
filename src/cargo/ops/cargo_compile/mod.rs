@@ -48,7 +48,7 @@ use crate::core::compiler::{DefaultExecutor, Executor, UnitInterner};
 use crate::core::profiles::Profiles;
 use crate::core::resolver::features::{self, CliFeatures, FeaturesFor};
 use crate::core::resolver::{HasDevUnits, Resolve};
-use crate::core::{PackageId, PackageSet, SourceId, TargetKind, Workspace};
+use crate::core::{global_cache_tracker, PackageId, PackageSet, SourceId, TargetKind, Workspace};
 use crate::drop_println;
 use crate::ops;
 use crate::ops::resolve::WorkspaceResolve;
@@ -268,6 +268,13 @@ pub fn create_bcx<'a, 'gctx>(
         }
     };
     let dry_run = false;
+    gctx.deferred_global_last_use()?
+        .mark_workspace_src_used(global_cache_tracker::WorkspaceSrc {
+            workspace_manifest_path: InternedString::new(ws.root_manifest().to_str().unwrap()),
+            target_dir_path: InternedString::new(
+                ws.target_dir().as_path_unlocked().to_str().unwrap(),
+            ),
+        });
     let resolve = ops::resolve_ws_with_opts(
         ws,
         &mut target_data,
