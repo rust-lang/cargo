@@ -362,7 +362,7 @@
 mod dirty_reason;
 
 use std::collections::hash_map::{Entry, HashMap};
-
+use std::collections::HashSet;
 use std::env;
 use std::fmt::{self, Display};
 use std::fs::{self, File};
@@ -2124,6 +2124,9 @@ enum DepInfoPathType {
 ///
 /// The serialized Cargo format will contain a list of files, all of which are
 /// relative if they're under `root`. or absolute if they're elsewhere.
+///
+/// The `config_envs` argument is a set of environment variables that are
+/// defined in `[env]` table of the `config.toml`.
 pub fn translate_dep_info(
     rustc_dep_info: &Path,
     cargo_dep_info: &Path,
@@ -2132,6 +2135,7 @@ pub fn translate_dep_info(
     target_root: &Path,
     rustc_cmd: &ProcessBuilder,
     allow_package: bool,
+    config_envs: &HashSet<String>,
 ) -> CargoResult<()> {
     let depinfo = parse_rustc_dep_info(rustc_dep_info)?;
 
@@ -2168,9 +2172,11 @@ pub fn translate_dep_info(
     // This also includes `CARGO` since if the code is explicitly wanting to
     // know that path, it should be rebuilt if it changes. The CARGO path is
     // not tracked elsewhere in the fingerprint.
-    on_disk_info
-        .env
-        .retain(|(key, _)| !rustc_cmd.get_envs().contains_key(key) || key == CARGO_ENV);
+    //
+    // For issue#13280, We trace env vars that are defined in the `config.toml`.
+    on_disk_info.env.retain(|(key, _)| {
+        !rustc_cmd.get_envs().contains_key(key) || key == CARGO_ENV || config_envs.contains(key)
+    });
 
     let serialize_path = |file| {
         // The path may be absolute or relative, canonical or not. Make sure

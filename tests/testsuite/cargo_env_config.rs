@@ -315,10 +315,11 @@ from-config
     p.cargo("run")
         .env("ENV_TEST", "from-env")
         .with_stdout_data(str![[r#"
-from-config
+from-env
 
 "#]])
         .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 
@@ -355,10 +356,11 @@ one
 
     p.cargo(r#"run --config 'env.ENV_TEST="two"'"#)
         .with_stdout_data(str![[r#"
-one
+two
 
 "#]])
         .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 
