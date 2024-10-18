@@ -73,7 +73,7 @@ Key steps:
 
 ### Version numbers
 
-Cargo prefers the highest version currently available.
+Generally, Cargo prefers the highest version currently available.
 
 For example, if you had a package in the resolve graph with:
 ```toml
@@ -82,6 +82,8 @@ bitflags = "*"
 ```
 If at the time the `Cargo.lock` file is generated, the greatest version of
 `bitflags` is `1.2.1`, then the package will use `1.2.1`.
+
+For an example of a possible exception, see [Rust version](#rust-version).
 
 ### Version requirements
 
@@ -200,6 +202,88 @@ ecosystem if you publish a SemVer-incompatible version of a popular library.
 
 [semver trick]: https://github.com/dtolnay/semver-trick
 [`downcast_ref`]: ../../std/any/trait.Any.html#method.downcast_ref
+
+### Rust version
+
+To support developing software with a minimum supported [Rust version],
+the resolver can take into account a dependency version's compatibility with your Rust version.
+This is controlled by the config field [`resolver.incompatible-rust-versions`].
+
+With the `fallback` setting, the resolver will prefer packages with a Rust version that is
+equal to or greater than your own Rust version.
+For example, you are using Rust 1.85 to develop the following package:
+```toml
+[package]
+name = "my-cli"
+rust-version = "1.62"
+
+[dependencies]
+clap = "4.0"  # resolves to 4.0.32
+```
+The resolver would pick version 4.0.32 because it has a Rust version of 1.60.0.
+- 4.0.0 is not picked because it is a [lower version number](#version-numbers) despite it also having a Rust version of 1.60.0.
+- 4.5.20 is not picked because it is incompatible with `my-cli`'s Rust version of 1.62 despite having a much [higher version](#version-numbers) and it has a Rust version of 1.74.0 which is compatible with your 1.85 toolchain.
+
+If a version requirement does not include a Rust version compatible dependency version,
+the resolver won't error but will instead pick a version, even if its potentially suboptimal.
+For example, you change the dependency on `clap`:
+```toml
+[package]
+name = "my-cli"
+rust-version = "1.62"
+
+[dependencies]
+clap = "4.2"  # resolves to 4.5.20
+```
+No version of `clap` matches that [version requirement](#version-requirements)
+that is compatible with Rust version 1.62.
+The resolver will then pick an incompatible version, like 4.5.20 despite it having a Rust version of 1.74.
+
+When the resolver selects a dependency version of a package,
+it does not know all the workspace members that will eventually have a transitive dependency on that version
+and so it cannot take into account only the Rust versions relevant for that dependency.
+The resolver has heuristics to find a "good enough" solution when workspace members have different Rust versions.
+This applies even for packages in a workspace without a Rust version.
+
+When a workspace has members with different Rust versions,
+the resolver may pick a lower dependency version than necessary.
+For example, you have the following workspace members:
+```toml
+[package]
+name = "a"
+rust-version = "1.62"
+
+[package]
+name = "b"
+
+[dependencies]
+clap = "4.2"  # resolves to 4.5.20
+```
+Though package `b` does not have a Rust version and could use a higher version like 4.5.20,
+4.0.32 will be selected because of package `a`'s Rust version of 1.62.
+
+Or the resolver may pick too high of a version.
+For example, you have the following workspace members:
+```toml
+[package]
+name = "a"
+rust-version = "1.62"
+
+[dependencies]
+clap = "4.2"  # resolves to 4.5.20
+
+[package]
+name = "b"
+
+[dependencies]
+clap = "4.5"  # resolves to 4.5.20
+```
+Though each package has a version requirement for `clap` that would meet its own Rust version,
+because of [version unification](#version-numbers),
+the resolver will need to pick one version that works in both cases and that would be a version like 4.5.20.
+
+[Rust version]: rust-version.md
+[`resolver.incompatible-rust-versions`]: config.md#resolverincompatible-rust-versions
 
 ### Features
 

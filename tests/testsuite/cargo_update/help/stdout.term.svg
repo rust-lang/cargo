@@ -67,7 +67,7 @@
 </tspan>
     <tspan x="10px" y="442px"><tspan>      </tspan><tspan class="fg-cyan bold">--lockfile-path</tspan><tspan class="fg-cyan"> </tspan><tspan class="fg-cyan">&lt;PATH&gt;</tspan><tspan>  Path to Cargo.lock (unstable)</tspan>
 </tspan>
-    <tspan x="10px" y="460px"><tspan>      </tspan><tspan class="fg-cyan bold">--ignore-rust-version</tspan><tspan>   Ignore `rust-version` specification in packages (unstable)</tspan>
+    <tspan x="10px" y="460px"><tspan>      </tspan><tspan class="fg-cyan bold">--ignore-rust-version</tspan><tspan>   Ignore `rust-version` specification in packages</tspan>
 </tspan>
     <tspan x="10px" y="478px"><tspan>      </tspan><tspan class="fg-cyan bold">--locked</tspan><tspan>                Assert that `Cargo.lock` will remain unchanged</tspan>
 </tspan>
