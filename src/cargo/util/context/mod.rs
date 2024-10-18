@@ -68,6 +68,7 @@ use std::time::Instant;
 
 use self::ConfigValue as CV;
 use crate::core::compiler::rustdoc::RustdocExternMap;
+use crate::core::compiler::HasExtIgnoreCase as _;
 use crate::core::global_cache_tracker::{DeferredGlobalLastUse, GlobalCacheTracker};
 use crate::core::shell::Verbosity;
 use crate::core::{features, CliUnstable, Shell, SourceId, Workspace, WorkspaceRootConfig};
@@ -2659,7 +2660,7 @@ impl BuildTargetConfig {
     /// Gets values of `build.target` as a list of strings.
     pub fn values(&self, gctx: &GlobalContext) -> CargoResult<Vec<String>> {
         let map = |s: &String| {
-            if s.ends_with(".json") {
+            if s.has_json_ext_ignore_case() {
                 // Path to a target specification file (in JSON).
                 // <https://doc.rust-lang.org/rustc/targets/custom.html>
                 self.inner
