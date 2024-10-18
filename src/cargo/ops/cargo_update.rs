@@ -519,6 +519,7 @@ fn print_lockfile_generation(
     annotate_required_rust_version(ws, resolve, &mut changes);
 
     status_locking(ws, num_pkgs)?;
+    let mut changed_stats = UpdateStats::default();
     for change in changes.values() {
         if change.is_member.unwrap_or(false) {
             continue;
@@ -538,8 +539,9 @@ fn print_lockfile_generation(
                     vec![]
                 };
 
-                let required_rust_version = report_required_rust_version(resolve, change);
-                let latest = report_latest(&possibilities, change);
+                let required_rust_version =
+                    report_required_rust_version(resolve, change, Some(&mut changed_stats));
+                let latest = report_latest(&possibilities, change, Some(&mut changed_stats));
                 let note = required_rust_version.or(latest);
 
                 if let Some(note) = note {
@@ -556,6 +558,22 @@ fn print_lockfile_generation(
             | PackageChangeKind::Unchanged => {
                 unreachable!("without a previous resolve, everything should be added")
             }
+        }
+    }
+
+    let compat_ver_compat_msrv = changed_stats.compat_ver_compat_msrv;
+    if 0 < compat_ver_compat_msrv
+        && !ws.gctx().cli_unstable().direct_minimal_versions
+        && !ws.gctx().cli_unstable().minimal_versions
+    {
+        if compat_ver_compat_msrv == 1 {
+            ws.gctx().shell().note(format!(
+                "{compat_ver_compat_msrv} package may have a higher, compatible version. To update it, run `cargo update <name> --precise <version>"
+            ))?;
+        } else {
+            ws.gctx().shell().note(format!(
+                "{compat_ver_compat_msrv} packages may have a higher, compatible version. To update them, run `cargo update <name> --precise <version>"
+            ))?;
         }
     }
 
@@ -580,6 +598,7 @@ fn print_lockfile_sync(
     annotate_required_rust_version(ws, resolve, &mut changes);
 
     status_locking(ws, num_pkgs)?;
+    let mut changed_stats = UpdateStats::default();
     for change in changes.values() {
         if change.is_member.unwrap_or(false) {
             continue;
@@ -601,8 +620,9 @@ fn print_lockfile_sync(
                     vec![]
                 };
 
-                let required_rust_version = report_required_rust_version(resolve, change);
-                let latest = report_latest(&possibilities, change);
+                let required_rust_version =
+                    report_required_rust_version(resolve, change, Some(&mut changed_stats));
+                let latest = report_latest(&possibilities, change, Some(&mut changed_stats));
                 let note = required_rust_version.or(latest).unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
@@ -613,6 +633,16 @@ fn print_lockfile_sync(
             }
             PackageChangeKind::Removed | PackageChangeKind::Unchanged => {}
         }
+    }
+
+    let compat_ver_compat_msrv = changed_stats.compat_ver_compat_msrv;
+    if 0 < compat_ver_compat_msrv
+        && !ws.gctx().cli_unstable().direct_minimal_versions
+        && !ws.gctx().cli_unstable().minimal_versions
+    {
+        ws.gctx().shell().note(format!(
+                "{compat_ver_compat_msrv} were updated but higher versions may be available by manually updating with `cargo update <name> --precise <version>"
+            ))?;
     }
 
     Ok(())
@@ -636,6 +666,7 @@ fn print_lockfile_updates(
         status_locking(ws, num_pkgs)?;
     }
     let mut unchanged_behind = 0;
+    let mut changed_stats = UpdateStats::default();
     for change in changes.values() {
         let possibilities = if let Some(query) = change.alternatives_query() {
             loop {
@@ -654,8 +685,9 @@ fn print_lockfile_updates(
             PackageChangeKind::Added
             | PackageChangeKind::Upgraded
             | PackageChangeKind::Downgraded => {
-                let required_rust_version = report_required_rust_version(resolve, change);
-                let latest = report_latest(&possibilities, change);
+                let required_rust_version =
+                    report_required_rust_version(resolve, change, Some(&mut changed_stats));
+                let latest = report_latest(&possibilities, change, Some(&mut changed_stats));
                 let note = required_rust_version.or(latest).unwrap_or_default();
 
                 ws.gctx().shell().status_with_color(
@@ -672,14 +704,16 @@ fn print_lockfile_updates(
                 )?;
             }
             PackageChangeKind::Unchanged => {
-                let required_rust_version = report_required_rust_version(resolve, change);
-                let latest = report_latest(&possibilities, change);
+                let mut unchanged_stats = UpdateStats::default();
+                let required_rust_version =
+                    report_required_rust_version(resolve, change, Some(&mut unchanged_stats));
+                let latest = report_latest(&possibilities, change, Some(&mut unchanged_stats));
                 let note = required_rust_version.as_deref().or(latest.as_deref());
 
+                if unchanged_stats.behind() {
+                    unchanged_behind += 1;
+                }
                 if let Some(note) = note {
-                    if latest.is_some() {
-                        unchanged_behind += 1;
-                    }
                     if ws.gctx().shell().verbosity() == Verbosity::Verbose {
                         ws.gctx().shell().status_with_color(
                             change.kind.status(),
@@ -692,6 +726,15 @@ fn print_lockfile_updates(
         }
     }
 
+    let compat_ver_compat_msrv = changed_stats.compat_ver_compat_msrv;
+    if 0 < compat_ver_compat_msrv
+        && !ws.gctx().cli_unstable().direct_minimal_versions
+        && !ws.gctx().cli_unstable().minimal_versions
+    {
+        ws.gctx().shell().note(format!(
+                "{compat_ver_compat_msrv} were updated but higher versions may be available by manually updating with `cargo update <name> --precise <version>"
+            ))?;
+    }
     if ws.gctx().shell().verbosity() == Verbosity::Verbose {
         ws.gctx().shell().note(
             "to see how you depend on a package, run `cargo tree --invert --package <dep>@<ver>`",
@@ -748,7 +791,11 @@ fn required_rust_version(ws: &Workspace<'_>) -> Option<PartialVersion> {
     }
 }
 
-fn report_required_rust_version(resolve: &Resolve, change: &PackageChange) -> Option<String> {
+fn report_required_rust_version(
+    resolve: &Resolve,
+    change: &PackageChange,
+    stats: Option<&mut UpdateStats>,
+) -> Option<String> {
     if change.package_id.source_id().is_path() {
         return None;
     }
@@ -759,13 +806,20 @@ fn report_required_rust_version(resolve: &Resolve, change: &PackageChange) -> Op
         return None;
     }
 
+    if let Some(stats) = stats {
+        stats.required_rust_version += 1;
+    }
     let error = style::ERROR;
     Some(format!(
         " {error}(requires Rust {package_rust_version}){error:#}"
     ))
 }
 
-fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Option<String> {
+fn report_latest(
+    possibilities: &[IndexSummary],
+    change: &PackageChange,
+    mut stats: Option<&mut UpdateStats>,
+) -> Option<String> {
     let package_id = change.package_id;
     if !package_id.source_id().is_registry() {
         return None;
@@ -788,15 +842,14 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
         })
         .filter(|s| package_id.version() != s.version() && version_req.matches(s.version()))
         .max_by_key(|s| s.version());
-    if let Some(summary) = compat_ver_compat_msrv_summary {
-        let warn = style::WARN;
-        let version = summary.version();
-        let report = format!(" {warn}(available: v{version}){warn:#}");
-        return Some(report);
+    if let Some(ref mut stats) = stats {
+        if compat_ver_compat_msrv_summary.is_some() {
+            stats.compat_ver_compat_msrv += 1;
+        }
     }
 
-    if !change.is_transitive.unwrap_or(true) {
-        let incompat_ver_compat_msrv_summary = possibilities
+    let incompat_ver_compat_msrv_summary = if !change.is_transitive.unwrap_or(true) {
+        possibilities
             .iter()
             .map(|s| s.as_summary())
             .filter(|s| {
@@ -809,12 +862,13 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
                 }
             })
             .filter(|s| is_latest(s.version(), package_id.version()))
-            .max_by_key(|s| s.version());
-        if let Some(summary) = incompat_ver_compat_msrv_summary {
-            let warn = style::WARN;
-            let version = summary.version();
-            let report = format!(" {warn}(available: v{version}){warn:#}");
-            return Some(report);
+            .max_by_key(|s| s.version())
+    } else {
+        None
+    };
+    if let Some(stats) = stats.as_mut() {
+        if incompat_ver_compat_msrv_summary.is_some() {
+            stats.incompat_ver_compat_msrv += 1;
         }
     }
 
@@ -823,7 +877,38 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
         .map(|s| s.as_summary())
         .filter(|s| package_id.version() != s.version() && version_req.matches(s.version()))
         .max_by_key(|s| s.version());
-    if let Some(summary) = compat_ver_summary {
+    if let Some(stats) = stats.as_mut() {
+        if compat_ver_summary.is_some() {
+            stats.compat_ver += 1;
+        }
+    }
+
+    let incompat_ver_summary = if !change.is_transitive.unwrap_or(true) {
+        possibilities
+            .iter()
+            .map(|s| s.as_summary())
+            .filter(|s| is_latest(s.version(), package_id.version()))
+            .max_by_key(|s| s.version())
+    } else {
+        None
+    };
+    if let Some(stats) = stats.as_mut() {
+        if incompat_ver_summary.is_some() {
+            stats.incompat_ver += 1;
+        }
+    }
+
+    if let Some(summary) = compat_ver_compat_msrv_summary {
+        let warn = style::WARN;
+        let version = summary.version();
+        let report = format!(" {warn}(available: v{version}){warn:#}");
+        Some(report)
+    } else if let Some(summary) = incompat_ver_compat_msrv_summary {
+        let warn = style::WARN;
+        let version = summary.version();
+        let report = format!(" {warn}(available: v{version}){warn:#}");
+        Some(report)
+    } else if let Some(summary) = compat_ver_summary {
         let msrv_note = summary
             .rust_version()
             .map(|rv| format!(", requires Rust {rv}"))
@@ -831,28 +916,38 @@ fn report_latest(possibilities: &[IndexSummary], change: &PackageChange) -> Opti
         let warn = style::NOP;
         let version = summary.version();
         let report = format!(" {warn}(available: v{version}{msrv_note}){warn:#}");
-        return Some(report);
+        Some(report)
+    } else if let Some(summary) = incompat_ver_summary {
+        let msrv_note = summary
+            .rust_version()
+            .map(|rv| format!(", requires Rust {rv}"))
+            .unwrap_or_default();
+        let warn = style::NOP;
+        let version = summary.version();
+        let report = format!(" {warn}(available: v{version}{msrv_note}){warn:#}");
+        Some(report)
+    } else {
+        None
     }
+}
 
-    if !change.is_transitive.unwrap_or(true) {
-        let incompat_ver_summary = possibilities
-            .iter()
-            .map(|s| s.as_summary())
-            .filter(|s| is_latest(s.version(), package_id.version()))
-            .max_by_key(|s| s.version());
-        if let Some(summary) = incompat_ver_summary {
-            let msrv_note = summary
-                .rust_version()
-                .map(|rv| format!(", requires Rust {rv}"))
-                .unwrap_or_default();
-            let warn = style::NOP;
-            let version = summary.version();
-            let report = format!(" {warn}(available: v{version}{msrv_note}){warn:#}");
-            return Some(report);
-        }
+#[derive(Copy, Clone, Default, Debug)]
+struct UpdateStats {
+    required_rust_version: usize,
+    compat_ver_compat_msrv: usize,
+    incompat_ver_compat_msrv: usize,
+    compat_ver: usize,
+    incompat_ver: usize,
+}
+
+impl UpdateStats {
+    fn behind(&self) -> bool {
+        self.compat_ver_compat_msrv
+            + self.incompat_ver_compat_msrv
+            + self.compat_ver
+            + self.incompat_ver
+            != 0
     }
-
-    None
 }
 
 fn is_latest(candidate: &semver::Version, current: &semver::Version) -> bool {
