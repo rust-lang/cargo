@@ -1,5 +1,9 @@
 #![allow(clippy::self_named_module_files)] // false positive in `commands/build.rs`
 
+#[cfg(not(target_env = "msvc"))]
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
 use cargo::core::features;
 use cargo::core::shell::Shell;
 use cargo::util::network::http::http_handle;
