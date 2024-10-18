@@ -2493,6 +2493,9 @@ LLVM version: 9.0
             "src/main.rs",
             r#"
             fn main() {
+                if std::env::args_os().any(|s| s.into_string().unwrap().contains("unstable-options")) {
+                    return;
+                }
                 if std::env::args_os().any(|a| a == "-vV") {
                     print!("{}", env!("FUNKY_VERSION_TEST"));
                     return;
