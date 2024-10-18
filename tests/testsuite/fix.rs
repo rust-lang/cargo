@@ -1677,13 +1677,13 @@ fn abnormal_exit() {
         )
         // "signal: 6, SIGABRT: process abort signal" on some platforms
         .with_stderr_data(str![[r#"
-...
-[WARNING] failed to automatically apply fixes suggested by rustc to crate `foo`
-...
+[LOCKING] 1 package to latest compatible version
+[COMPILING] pm v0.1.0 ([ROOT]/foo/pm)
+[CHECKING] foo v0.1.0 ([ROOT]/foo)
+[FIXED] src/lib.rs (1 fix)
 I'm not a diagnostic.
-rustc exited abnormally: [..]
-Original diagnostics will follow.
-...
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
 "#]])
         .run();
 }
