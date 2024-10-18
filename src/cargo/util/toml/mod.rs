@@ -8,7 +8,7 @@ use std::str::{self, FromStr};
 use crate::core::summary::MissingDependencyError;
 use crate::AlreadyPrintedError;
 use anyhow::{anyhow, bail, Context as _};
-use cargo_platform::Platform;
+use cargo_platform::{CfgExpr, Platform};
 use cargo_util::paths::{self, normalize_path};
 use cargo_util_schemas::manifest::{
     self, PackageName, PathBaseName, TomlDependency, TomlDetailedDependency, TomlManifest,
@@ -1326,6 +1326,12 @@ pub fn to_real_manifest(
     for (name, platform) in original_toml.target.iter().flatten() {
         let platform_kind: Platform = name.parse()?;
         platform_kind.check_cfg_attributes(warnings);
+        if let Platform::Cfg(cfg_expr) = &platform_kind {
+            cfg_expr.walk_expr(|e| match e {
+                CfgExpr::True | CfgExpr::False => features.require(Feature::cfg_boolean_literals()),
+                _ => Ok(()),
+            })?;
+        }
         let platform_kind = Some(platform_kind);
         validate_dependencies(
             platform.dependencies.as_ref(),
