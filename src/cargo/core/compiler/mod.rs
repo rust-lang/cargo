@@ -330,7 +330,13 @@ fn rustc(
     if hide_diagnostics_for_scrape_unit {
         output_options.show_diagnostics = false;
     }
-
+    let config_envs: HashSet<String> = build_runner
+        .bcx
+        .gctx
+        .env_config()?
+        .keys()
+        .cloned()
+        .collect();
     return Ok(Work::new(move |state| {
         // Artifacts are in a different location than typical units,
         // hence we must assure the crate- and target-dependent
@@ -459,6 +465,7 @@ fn rustc(
                 &rustc,
                 // Do not track source files in the fingerprint for registry dependencies.
                 is_local,
+                &config_envs,
             )
             .with_context(|| {
                 internal(format!(
