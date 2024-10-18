@@ -9,7 +9,7 @@ use crate::core::summary::MissingDependencyError;
 use crate::AlreadyPrintedError;
 use anyhow::{anyhow, bail, Context as _};
 use cargo_platform::Platform;
-use cargo_util::paths::{self, normalize_path};
+use cargo_util::paths;
 use cargo_util_schemas::manifest::{
     self, PackageName, PathBaseName, TomlDependency, TomlDetailedDependency, TomlManifest,
 };
@@ -2818,16 +2818,38 @@ fn prepare_toml_for_publish(
     }
 
     let lib = if let Some(target) = &me.lib {
-        prepare_target_for_publish(target, packaged_files, "library", ws.gctx())?
+        prepare_target_for_publish(target, package_root, packaged_files, "library", ws.gctx())?
     } else {
         None
     };
-    let bin = prepare_targets_for_publish(me.bin.as_ref(), packaged_files, "binary", ws.gctx())?;
-    let example =
-        prepare_targets_for_publish(me.example.as_ref(), packaged_files, "example", ws.gctx())?;
-    let test = prepare_targets_for_publish(me.test.as_ref(), packaged_files, "test", ws.gctx())?;
-    let bench =
-        prepare_targets_for_publish(me.bench.as_ref(), packaged_files, "benchmark", ws.gctx())?;
+    let bin = prepare_targets_for_publish(
+        me.bin.as_ref(),
+        package_root,
+        packaged_files,
+        "binary",
+        ws.gctx(),
+    )?;
+    let example = prepare_targets_for_publish(
+        me.example.as_ref(),
+        package_root,
+        packaged_files,
+        "example",
+        ws.gctx(),
+    )?;
+    let test = prepare_targets_for_publish(
+        me.test.as_ref(),
+        package_root,
+        packaged_files,
+        "test",
+        ws.gctx(),
+    )?;
+    let bench = prepare_targets_for_publish(
+        me.bench.as_ref(),
+        package_root,
+        packaged_files,
+        "benchmark",
+        ws.gctx(),
+    )?;
 
     let all = |_d: &manifest::TomlDependency| true;
     let mut manifest = manifest::TomlManifest {
@@ -2986,6 +3008,7 @@ fn prepare_toml_for_publish(
 
 pub fn prepare_targets_for_publish(
     targets: Option<&Vec<manifest::TomlTarget>>,
+    package_root: &Path,
     packaged_files: Option<&[PathBuf]>,
     context: &str,
     gctx: &GlobalContext,
@@ -2996,7 +3019,8 @@ pub fn prepare_targets_for_publish(
 
     let mut prepared = Vec::with_capacity(targets.len());
     for target in targets {
-        let Some(target) = prepare_target_for_publish(target, packaged_files, context, gctx)?
+        let Some(target) =
+            prepare_target_for_publish(target, package_root, packaged_files, context, gctx)?
         else {
             continue;
         };
@@ -3012,28 +3036,44 @@ pub fn prepare_targets_for_publish(
 
 pub fn prepare_target_for_publish(
     target: &manifest::TomlTarget,
+    package_root: &Path,
     packaged_files: Option<&[PathBuf]>,
     context: &str,
     gctx: &GlobalContext,
 ) -> CargoResult<Option<manifest::TomlTarget>> {
-    let path = target.path.as_ref().expect("previously normalized");
-    let path = normalize_path(&path.0);
-    if let Some(packaged_files) = packaged_files {
-        if !packaged_files.contains(&path) {
-            let name = target.name.as_ref().expect("previously normalized");
-            gctx.shell().warn(format!(
-                "ignoring {context} `{name}` as `{}` is not included in the published package",
-                path.display()
-            ))?;
-            return Ok(None);
+    let path = target
+        .path
+        .as_ref()
+        .expect("previously normalized")
+        .0
+        .clone();
+
+    if path.starts_with(package_root) {
+        let path: PathBuf = path.strip_prefix(package_root).unwrap().to_path_buf();
+        if let Some(packaged_files) = packaged_files {
+            if !packaged_files.contains(&path) {
+                let name = target.name.as_ref().expect("previously normalized");
+                gctx.shell().warn(format!(
+                    "ignoring {context} `{name}` as `{}` is not included in the published package",
+                    path.display()
+                ))?;
+                return Ok(None);
+            }
         }
+
+        let mut target = target.clone();
+        let path = normalize_path_sep(path, context)?;
+        target.path = Some(manifest::PathValue(path.into()));
+
+        Ok(Some(target))
+    } else {
+        let name = target.name.as_ref().expect("previously normalized");
+        gctx.shell().warn(format!(
+            "ignoring {context} `{name}` as `{}` is not included in the published package",
+            path.display()
+        ))?;
+        return Ok(None);
     }
-
-    let mut target = target.clone();
-    let path = normalize_path_sep(path, context)?;
-    target.path = Some(manifest::PathValue(path.into()));
-
-    Ok(Some(target))
 }
 
 fn normalize_path_sep(path: PathBuf, context: &str) -> CargoResult<PathBuf> {

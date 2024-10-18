@@ -15,6 +15,7 @@ use std::fs::{self, DirEntry};
 use std::path::{Path, PathBuf};
 
 use anyhow::Context as _;
+use cargo_util::paths;
 use cargo_util_schemas::manifest::{
     PathValue, StringOrBool, StringOrVec, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
     TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget,
@@ -98,7 +99,7 @@ pub(super) fn to_targets(
         );
         targets.push(Target::custom_build_target(
             &name,
-            package_root.join(custom_build),
+            paths::normalize_path(package_root.join(custom_build).as_path()),
             edition,
         ));
     }
@@ -182,6 +183,12 @@ pub fn normalize_lib(
                     )
                 }
             }
+        }
+
+        if let Some(PathValue(path)) = lib.path.as_ref() {
+            let path = package_root.join(path);
+            let path = paths::normalize_path(&path);
+            lib.path = Some(PathValue(path.into()));
         }
 
         Ok(Some(lib))
@@ -300,7 +307,11 @@ pub fn normalize_bins(
                 }
             });
             let path = match path {
-                Ok(path) => path,
+                Ok(path) => {
+                    let path = package_root.join(path);
+                    let path = paths::normalize_path(&path);
+                    path.into()
+                }
                 Err(e) => anyhow::bail!("{}", e),
             };
             bin.path = Some(PathValue(path));
@@ -651,7 +662,9 @@ fn normalize_targets_with_legacy_path(
                     continue;
                 }
             };
-            target.path = Some(PathValue(path));
+            let path = package_root.join(path);
+            let path = paths::normalize_path(&path);
+            target.path = Some(PathValue(path.into()));
             result.push(target);
         }
         Ok(result)
