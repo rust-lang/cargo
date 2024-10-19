@@ -44,7 +44,7 @@
       matchManagers: [
         'custom.regex',
       ],
-      matchPackageNames: [
+      matchDepNames: [
         'MSRV:1',
       ],
       extractVersion: '^(?<version>\\d+\\.\\d+)',  // Drop the patch version
@@ -58,7 +58,7 @@
       matchManagers: [
         'custom.regex',
       ],
-      matchPackageNames: [
+      matchDepNames: [
         'MSRV:3',
       ],
       extractVersion: '^(?<version>\\d+\\.\\d+)',  // Drop the patch version
