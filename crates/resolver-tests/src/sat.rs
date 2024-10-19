@@ -1,3 +1,4 @@
+use std::collections::hash_map::Entry;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt::Write;
 
@@ -86,16 +87,17 @@ fn create_dependencies_vars<'a>(
             .or_default()
             .insert((kind, platform), solver.new_var());
 
-        let dep_feature_var_map = dep
-            .features()
-            .iter()
-            .map(|&f| (f, solver.new_var()))
-            .collect();
-
-        var_for_is_dependencies_features_used
+        let dep_feature_vars = var_for_is_dependencies_features_used
             .entry(name)
             .or_default()
-            .insert((kind, platform), dep_feature_var_map);
+            .entry((kind, platform))
+            .or_default();
+
+        for &feature_name in dep.features() {
+            if let Entry::Vacant(entry) = dep_feature_vars.entry(feature_name) {
+                entry.insert(solver.new_var());
+            }
+        }
     }
 
     for feature_values in pkg_features.values() {
@@ -109,12 +111,14 @@ fn create_dependencies_vars<'a>(
                 continue;
             };
 
-            for dep_features_vars in var_for_is_dependencies_features_used
+            for dep_feature_vars in var_for_is_dependencies_features_used
                 .get_mut(&dep_name)
                 .expect("feature dep name exists")
                 .values_mut()
             {
-                dep_features_vars.insert(dep_feature, solver.new_var());
+                if let Entry::Vacant(entry) = dep_feature_vars.entry(dep_feature) {
+                    entry.insert(solver.new_var());
+                }
             }
         }
     }
