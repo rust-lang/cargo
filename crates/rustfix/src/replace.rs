@@ -24,7 +24,7 @@ impl State {
 }
 
 /// Span with a change [`State`].
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 struct Span {
     /// Start of this span in parent data
     start: usize,
@@ -32,6 +32,17 @@ struct Span {
     end: usize,
     /// Whether the span is inserted, replaced or still fresh.
     data: State,
+}
+
+impl std::fmt::Debug for Span {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let state = match self.data {
+            State::Initial => "initial",
+            State::Replaced(_) => "replaced",
+            State::Inserted(_) => "inserted",
+        };
+        write!(f, "({}, {}: {state})", self.start, self.end)
+    }
 }
 
 /// A container that allows easily replacing chunks of its data
@@ -102,30 +113,12 @@ impl Data {
             .iter()
             .position(|p| !p.data.is_inserted() && p.start <= range.start && p.end >= range.end)
         else {
-            if tracing::enabled!(tracing::Level::DEBUG) {
-                let slices = self
-                    .parts
-                    .iter()
-                    .map(|p| {
-                        (
-                            p.start,
-                            p.end,
-                            match p.data {
-                                State::Initial => "initial",
-                                State::Replaced(..) => "replaced",
-                                State::Inserted(..) => "inserted",
-                            },
-                        )
-                    })
-                    .collect::<Vec<_>>();
-                tracing::debug!(
-                    "no single slice covering {}..{}, current slices: {:?}",
-                    range.start,
-                    range.end,
-                    slices,
-                );
-            }
-
+            tracing::debug!(
+                "no single slice covering {}..{}, current slices: {:?}",
+                range.start,
+                range.end,
+                self.parts,
+            );
             return Err(Error::MaybeAlreadyReplaced(range));
         };
 
