@@ -37,7 +37,6 @@ use crate::util::toml_mut::dependency::MaybeWorkspace;
 use crate::util::toml_mut::dependency::PathSource;
 use crate::util::toml_mut::dependency::Source;
 use crate::util::toml_mut::dependency::WorkspaceSource;
-use crate::util::toml_mut::is_sorted;
 use crate::util::toml_mut::manifest::DepTable;
 use crate::util::toml_mut::manifest::LocalManifest;
 use crate::CargoResult;
@@ -111,10 +110,14 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
         .map(TomlItem::as_table)
         .map_or(true, |table_option| {
             table_option.map_or(true, |table| {
-                is_sorted(table.get_values().iter_mut().map(|(key, _)| {
-                    // get_values key paths always have at least one key.
-                    key.remove(0)
-                }))
+                table
+                    .get_values()
+                    .iter_mut()
+                    .map(|(key, _)| {
+                        // get_values key paths always have at least one key.
+                        key.remove(0)
+                    })
+                    .is_sorted()
             })
         });
     for dep in deps {

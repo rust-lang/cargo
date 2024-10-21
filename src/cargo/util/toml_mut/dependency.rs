@@ -14,7 +14,6 @@ use crate::core::SourceId;
 use crate::core::Summary;
 use crate::core::{Features, GitReference};
 use crate::util::toml::lookup_path_base;
-use crate::util::toml_mut::is_sorted;
 use crate::CargoResult;
 use crate::GlobalContext;
 
@@ -639,7 +638,7 @@ impl Dependency {
                             .collect::<Option<IndexSet<_>>>()
                     })
                     .unwrap_or_default();
-                let is_already_sorted = is_sorted(features.iter());
+                let is_already_sorted = features.iter().is_sorted();
                 features.extend(new_features.iter().map(|s| s.as_str()));
                 let features = if is_already_sorted {
                     features.into_iter().sorted().collect::<toml_edit::Value>()
