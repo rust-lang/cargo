@@ -167,8 +167,6 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
         }
     }
 
-    let snippets = diagnostic.spans.iter().map(span_to_snippet).collect();
-
     let solutions: Vec<_> = diagnostic
         .children
         .iter()
@@ -204,7 +202,7 @@ pub fn collect_suggestions<S: ::std::hash::BuildHasher>(
     } else {
         Some(Suggestion {
             message: diagnostic.message.clone(),
-            snippets,
+            snippets: diagnostic.spans.iter().map(span_to_snippet).collect(),
             solutions,
         })
     }

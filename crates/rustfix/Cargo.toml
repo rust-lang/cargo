@@ -1,6 +1,6 @@
 [package]
 name = "rustfix"
-version = "0.8.7"
+version = "0.8.8"
 authors = [
     "Pascal Hertleif <killercup@gmail.com>",
     "Oliver Schneider <oli-obk@users.noreply.github.com>",

@@ -24,7 +24,7 @@ impl State {
 }
 
 /// Span with a change [`State`].
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 struct Span {
     /// Start of this span in parent data
     start: usize,
@@ -32,6 +32,17 @@ struct Span {
     end: usize,
     /// Whether the span is inserted, replaced or still fresh.
     data: State,
+}
+
+impl std::fmt::Debug for Span {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let state = match self.data {
+            State::Initial => "initial",
+            State::Replaced(_) => "replaced",
+            State::Inserted(_) => "inserted",
+        };
+        write!(f, "({}, {}: {state})", self.start, self.end)
+    }
 }
 
 /// A container that allows easily replacing chunks of its data
@@ -97,102 +108,82 @@ impl Data {
         // [^empty]: Leading and trailing ones might be empty if we replace
         // the whole chunk. As an optimization and without loss of generality we
         // don't add empty parts.
-        let new_parts = {
-            let Some(index_of_part_to_split) = self.parts.iter().position(|p| {
-                !p.data.is_inserted() && p.start <= range.start && p.end >= range.end
-            }) else {
-                if tracing::enabled!(tracing::Level::DEBUG) {
-                    let slices = self
-                        .parts
-                        .iter()
-                        .map(|p| {
-                            (
-                                p.start,
-                                p.end,
-                                match p.data {
-                                    State::Initial => "initial",
-                                    State::Replaced(..) => "replaced",
-                                    State::Inserted(..) => "inserted",
-                                },
-                            )
-                        })
-                        .collect::<Vec<_>>();
-                    tracing::debug!(
-                        "no single slice covering {}..{}, current slices: {:?}",
-                        range.start,
-                        range.end,
-                        slices,
-                    );
-                }
-
-                return Err(Error::MaybeAlreadyReplaced(range));
-            };
-
-            let part_to_split = &self.parts[index_of_part_to_split];
-
-            // If this replacement matches exactly the part that we would
-            // otherwise split then we ignore this for now. This means that you
-            // can replace the exact same range with the exact same content
-            // multiple times and we'll process and allow it.
-            //
-            // This is currently done to alleviate issues like
-            // rust-lang/rust#51211 although this clause likely wants to be
-            // removed if that's fixed deeper in the compiler.
-            if part_to_split.start == range.start && part_to_split.end == range.end {
-                if let State::Replaced(ref replacement) = part_to_split.data {
-                    if &**replacement == data {
-                        return Ok(());
-                    }
-                }
-            }
-
-            if part_to_split.data != State::Initial {
-                return Err(Error::AlreadyReplaced);
-            }
-
-            let mut new_parts = Vec::with_capacity(self.parts.len() + 2);
-
-            // Previous parts
-            if let Some(ps) = self.parts.get(..index_of_part_to_split) {
-                new_parts.extend_from_slice(ps);
-            }
-
-            // Keep initial data on left side of part
-            if range.start > part_to_split.start {
-                new_parts.push(Span {
-                    start: part_to_split.start,
-                    end: range.start,
-                    data: State::Initial,
-                });
-            }
-
-            // New part
-            new_parts.push(Span {
-                start: range.start,
-                end: range.end,
-                data: if insert_only {
-                    State::Inserted(data.into())
-                } else {
-                    State::Replaced(data.into())
-                },
-            });
-
-            // Keep initial data on right side of part
-            if range.end < part_to_split.end {
-                new_parts.push(Span {
-                    start: range.end,
-                    end: part_to_split.end,
-                    data: State::Initial,
-                });
-            }
-
-            // Following parts
-            if let Some(ps) = self.parts.get(index_of_part_to_split + 1..) {
-                new_parts.extend_from_slice(ps);
-            }
-
-            new_parts
+        let Some(index_of_part_to_split) = self
+            .parts
+            .iter()
+            .position(|p| !p.data.is_inserted() && p.start <= range.start && p.end >= range.end)
+        else {
+            tracing::debug!(
+                "no single slice covering {}..{}, current slices: {:?}",
+                range.start,
+                range.end,
+                self.parts,
+            );
+            return Err(Error::MaybeAlreadyReplaced(range));
         };
+
+        let part_to_split = &self.parts[index_of_part_to_split];
+
+        // If this replacement matches exactly the part that we would
+        // otherwise split then we ignore this for now. This means that you
+        // can replace the exact same range with the exact same content
+        // multiple times and we'll process and allow it.
+        //
+        // This is currently done to alleviate issues like
+        // rust-lang/rust#51211 although this clause likely wants to be
+        // removed if that's fixed deeper in the compiler.
+        if part_to_split.start == range.start && part_to_split.end == range.end {
+            if let State::Replaced(ref replacement) = part_to_split.data {
+                if &**replacement == data {
+                    return Ok(());
+                }
+            }
+        }
+
+        if part_to_split.data != State::Initial {
+            return Err(Error::AlreadyReplaced);
+        }
+
+        let mut new_parts = Vec::with_capacity(self.parts.len() + 2);
+
+        // Previous parts
+        if let Some(ps) = self.parts.get(..index_of_part_to_split) {
+            new_parts.extend_from_slice(ps);
+        }
+
+        // Keep initial data on left side of part
+        if range.start > part_to_split.start {
+            new_parts.push(Span {
+                start: part_to_split.start,
+                end: range.start,
+                data: State::Initial,
+            });
+        }
+
+        // New part
+        new_parts.push(Span {
+            start: range.start,
+            end: range.end,
+            data: if insert_only {
+                State::Inserted(data.into())
+            } else {
+                State::Replaced(data.into())
+            },
+        });
+
+        // Keep initial data on right side of part
+        if range.end < part_to_split.end {
+            new_parts.push(Span {
+                start: range.end,
+                end: part_to_split.end,
+                data: State::Initial,
+            });
+        }
+
+        // Following parts
+        if let Some(ps) = self.parts.get(index_of_part_to_split + 1..) {
+            new_parts.extend_from_slice(ps);
+        }
 
         self.parts = new_parts;
 
