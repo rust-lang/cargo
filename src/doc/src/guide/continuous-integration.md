@@ -165,6 +165,8 @@ jobs:
     name: Latest Dependencies
     runs-on: ubuntu-latest
     continue-on-error: true
+    env:
+      CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS: allow
     steps:
       - uses: actions/checkout@v4
       - run: rustup update stable && rustup default stable
@@ -172,6 +174,9 @@ jobs:
       - run: cargo build --verbose
       - run: cargo test --verbose
 ```
+Notes:
+- [`CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS`](../reference/config.md#resolverincompatible-rust-versions) is set to ensure the [resolver](../reference/resolver.md) doesn't limit selected dependencies because of your project's [Rust version](../reference/rust-version.md).
+
 For projects with higher risks of per-platform or per-Rust version failures,
 more combinations may want to be tested.
 
