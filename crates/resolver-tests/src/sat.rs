@@ -1,3 +1,4 @@
+use std::collections::hash_map::Entry;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt::Write;
 
@@ -86,16 +87,17 @@ fn create_dependencies_vars<'a>(
             .or_default()
             .insert((kind, platform), solver.new_var());
 
-        let dep_feature_var_map = dep
-            .features()
-            .iter()
-            .map(|&f| (f, solver.new_var()))
-            .collect();
-
-        var_for_is_dependencies_features_used
+        let dep_feature_vars = var_for_is_dependencies_features_used
             .entry(name)
             .or_default()
-            .insert((kind, platform), dep_feature_var_map);
+            .entry((kind, platform))
+            .or_default();
+
+        for &feature_name in dep.features() {
+            if let Entry::Vacant(entry) = dep_feature_vars.entry(feature_name) {
+                entry.insert(solver.new_var());
+            }
+        }
     }
 
     for feature_values in pkg_features.values() {
@@ -109,12 +111,14 @@ fn create_dependencies_vars<'a>(
                 continue;
             };
 
-            for dep_features_vars in var_for_is_dependencies_features_used
+            for dep_feature_vars in var_for_is_dependencies_features_used
                 .get_mut(&dep_name)
                 .expect("feature dep name exists")
                 .values_mut()
             {
-                dep_features_vars.insert(dep_feature, solver.new_var());
+                if let Entry::Vacant(entry) = dep_feature_vars.entry(dep_feature) {
+                    entry.insert(solver.new_var());
+                }
             }
         }
     }
@@ -176,7 +180,6 @@ fn process_pkg_features(
     pkg_feature_var_map: &HashMap<InternedString, varisat::Var>,
     pkg_dependencies: &[Dependency],
     pkg_features: &FeatureMap,
-    check_dev_dependencies: bool,
 ) {
     let optional_dependencies = pkg_dependencies
         .iter()
@@ -199,7 +202,7 @@ fn process_pkg_features(
                 FeatureValue::Dep { dep_name } => {
                     // Add a clause for each dependency with the provided name (normal/build/dev with target)
                     for (&(dep_kind, _), &dep_var) in &var_for_is_dependencies_used[&dep_name] {
-                        if dep_kind == DepKind::Development && !check_dev_dependencies {
+                        if dep_kind == DepKind::Development {
                             continue;
                         }
                         solver.add_clause(&[pkg_feature_var.negative(), dep_var.positive()]);
@@ -223,7 +226,7 @@ fn process_pkg_features(
                     // Add clauses for each dependency with the provided name (normal/build/dev with target)
                     let dep_var_map = &var_for_is_dependencies_used[&dep_name];
                     for (&(dep_kind, dep_platform), &dep_var) in dep_var_map {
-                        if dep_kind == DepKind::Development && !check_dev_dependencies {
+                        if dep_kind == DepKind::Development {
                             continue;
                         }
 
@@ -270,24 +273,22 @@ fn process_compatible_dep_summaries(
         }
 
         let (name, kind, platform) = (dep.name_in_toml(), dep.kind(), dep.platform());
-        let dep_var_map = &var_for_is_dependencies_used[&name];
-        let dep_var = dep_var_map[&(kind, platform)];
-
+        let dep_var = var_for_is_dependencies_used[&name][&(kind, platform)];
         let dep_feature_var_map = &var_for_is_dependencies_features_used[&name][&(kind, platform)];
 
-        let compatible_summaries = by_name
+        let compatible_pkg_ids = by_name
             .get(&dep.package_name())
             .into_iter()
             .flatten()
             .filter(|s| dep.matches(s))
             .filter(|s| dep.features().iter().all(|f| s.features().contains_key(f)))
-            .cloned()
+            .map(|s| s.package_id())
             .collect::<Vec<_>>();
 
         // At least one compatible package should be activated
-        let dep_clause = compatible_summaries
+        let dep_clause = compatible_pkg_ids
             .iter()
-            .map(|s| var_for_is_packages_used[&s.package_id()].positive())
+            .map(|id| var_for_is_packages_used[&id].positive())
             .chain([dep_var.negative()])
             .collect::<Vec<_>>();
 
@@ -295,11 +296,9 @@ fn process_compatible_dep_summaries(
 
         for (&feature_name, &dep_feature_var) in dep_feature_var_map {
             // At least one compatible package with the additional feature should be activated
-            let dep_feature_clause = compatible_summaries
+            let dep_feature_clause = compatible_pkg_ids
                 .iter()
-                .filter_map(|s| {
-                    var_for_is_packages_features_used[&s.package_id()].get(&feature_name)
-                })
+                .filter_map(|id| var_for_is_packages_features_used[&id].get(&feature_name))
                 .map(|var| var.positive())
                 .chain([dep_feature_var.negative()])
                 .collect::<Vec<_>>();
@@ -311,10 +310,9 @@ fn process_compatible_dep_summaries(
             // For the selected package for this dependency, the `"default"` feature should be activated if it exists
             let mut dep_default_clause = vec![dep_var.negative()];
 
-            for s in &compatible_summaries {
-                let s_pkg_id = s.package_id();
-                let s_var = var_for_is_packages_used[&s_pkg_id];
-                let s_feature_var_map = &var_for_is_packages_features_used[&s_pkg_id];
+            for &id in &compatible_pkg_ids {
+                let s_var = var_for_is_packages_used[&id];
+                let s_feature_var_map = &var_for_is_packages_features_used[&id];
 
                 if let Some(s_default_feature_var) = s_feature_var_map.get(&INTERNED_DEFAULT) {
                     dep_default_clause
@@ -348,8 +346,6 @@ pub struct SatResolver {
 
 impl SatResolver {
     pub fn new<'a>(registry: impl IntoIterator<Item = &'a Summary>) -> Self {
-        let check_dev_dependencies = false;
-
         let mut by_name: HashMap<InternedString, Vec<Summary>> = HashMap::new();
         for pkg in registry {
             by_name.entry(pkg.name()).or_default().push(pkg.clone());
@@ -423,7 +419,6 @@ impl SatResolver {
                 &var_for_is_packages_features_used[&pkg_id],
                 pkg_dependencies,
                 pkg_features,
-                check_dev_dependencies,
             );
 
             process_compatible_dep_summaries(
@@ -434,7 +429,7 @@ impl SatResolver {
                 &var_for_is_packages_features_used,
                 &by_name,
                 pkg_dependencies,
-                check_dev_dependencies,
+                false,
             );
         }
 
