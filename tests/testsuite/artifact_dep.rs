@@ -1603,6 +1603,7 @@ fn dep_of_artifact_dep_same_target_specified() {
 
                     [dependencies]
                     bar = {{ path = "bar", artifact = "bin", target = "{target}" }}
+                    one = {{ path = "one", artifact = "bin", target = "x86_64-fortanix-unknown-sgx" }}
                 "#,
             ),
         )
@@ -1622,6 +1623,20 @@ fn dep_of_artifact_dep_same_target_specified() {
         )
         .file("bar/src/main.rs", "fn main() {}")
         .file(
+            "one/Cargo.toml",
+            &format!(
+                r#"
+                  [package]
+                  name = "one"
+                  version = "0.1.0"
+
+                  [dependencies]
+                  baz = {{ path = "../baz" }}
+              "#,
+            ),
+        )
+        .file("one/src/main.rs", "fn main() {}")
+        .file(
             "baz/Cargo.toml",
             r#"
                 [package]
@@ -1636,8 +1651,9 @@ fn dep_of_artifact_dep_same_target_specified() {
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
+[COMPILING] one v0.1.0 ([ROOT]/foo/one)
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1646,13 +1662,14 @@ fn dep_of_artifact_dep_same_target_specified() {
         .with_status(0)
         .run();
 
-    p.cargo("tree -Z bindeps")
+    p.cargo("tree -Z bindeps --target all")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stdout_data(str![
             r#"
 foo v0.1.0 ([ROOT]/foo)
-└── bar v0.1.0 ([ROOT]/foo/bar)
-    └── baz v0.1.0 ([ROOT]/foo/baz)
+├── bar v0.1.0 ([ROOT]/foo/bar)
+│   └── baz v0.1.0 ([ROOT]/foo/baz)
+└── one v0.1.0 ([ROOT]/foo/one)
 
 "#
         ])
