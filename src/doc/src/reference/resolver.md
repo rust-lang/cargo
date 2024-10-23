@@ -494,7 +494,7 @@ it so that it remains strictly acyclic.
 
 ## Resolver versions
 
-A different feature resolver algorithm can be used by specifying the resolver
+Different resolver behavior can be specified through the resolver
 version in `Cargo.toml` like this:
 
 ```toml
@@ -503,12 +503,8 @@ name = "my-package"
 version = "1.0.0"
 resolver = "2"
 ```
-
-The version `"1"` resolver is the original resolver that shipped with Cargo up to version 1.50.
-The default is `"2"` if the root package specifies [`edition = "2021"`](manifest.md#the-edition-field) or a newer edition.
-Otherwise the default is `"1"`.
-
-The version `"2"` resolver introduces changes in [feature
+- `"1"` (workspace, [`edition = "2015"`](manifest.md#the-edition-field) default)
+- `"2"` ([`edition = "2021"`](manifest.md#the-edition-field) default): Introduces changes in [feature
 unification](#features). See the [features chapter][features-2] for more
 details.
 
