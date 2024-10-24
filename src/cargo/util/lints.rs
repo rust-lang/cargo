@@ -1,15 +1,18 @@
-use crate::core::{Edition, Feature, Features, Manifest, Package};
+use crate::core::compiler::{CompileKind, TargetInfo};
+use crate::core::{Edition, Feature, Features, Manifest, Package, Workspace};
 use crate::{CargoResult, GlobalContext};
 use annotate_snippets::{Level, Snippet};
+use cargo_platform::{Cfg, ExpectedValues, Platform};
 use cargo_util_schemas::manifest::{TomlLintLevel, TomlToolLints};
 use pathdiff::diff_paths;
+use std::borrow::Cow;
 use std::fmt::Display;
 use std::ops::Range;
 use std::path::Path;
 use toml_edit::ImDocument;
 
 const LINT_GROUPS: &[LintGroup] = &[TEST_DUMMY_UNSTABLE];
-pub const LINTS: &[Lint] = &[IM_A_TEAPOT, UNKNOWN_LINTS];
+pub const LINTS: &[Lint] = &[IM_A_TEAPOT, UNEXPECTED_CFGS, UNKNOWN_LINTS];
 
 pub fn analyze_cargo_lints_table(
     pkg: &Package,
@@ -600,6 +603,117 @@ fn output_unknown_lints(
         }
 
         gctx.shell().print_message(message)?;
+    }
+
+    Ok(())
+}
+
+// FIXME: This lint is only used for the Cargo infra, it's actually defined in rustc
+// it-self, which is broken is several ways, as it doesn't take into account
+// `rustc` flags ('via `RUSTFLAGS`), nor the possible `rustc` lints groups, ...
+const UNEXPECTED_CFGS: Lint = Lint {
+    name: "unexpected_cfgs",
+    desc: "lint on unexpected target cfgs",
+    groups: &[],
+    default_level: LintLevel::Warn,
+    edition_lint_opts: None,
+    feature_gate: None,
+    docs: None,
+};
+
+pub fn unexpected_target_cfgs(
+    ws: &Workspace<'_>,
+    pkg: &Package,
+    path: &Path,
+    rust_lints: &TomlToolLints,
+    error_count: &mut usize,
+    gctx: &GlobalContext,
+) -> CargoResult<()> {
+    let manifest = pkg.manifest();
+
+    let Some(target) = manifest.original_toml().target.as_ref() else {
+        return Ok(());
+    };
+
+    let (lint_level, _lint_reason) =
+        UNEXPECTED_CFGS.level(rust_lints, manifest.edition(), manifest.unstable_features());
+
+    if lint_level == LintLevel::Allow {
+        return Ok(());
+    }
+
+    let rustc = gctx.load_global_rustc(Some(ws))?;
+    // FIXME: While it doesn't doesn't really matter for `--print=check-cfg`, we should
+    // still pass the actual requested targets instead of an empty array so that the
+    // target info can always be de-duplicated.
+    // FIXME: Move the target info creation before any linting is done and re-use it for
+    // all the packages.
+    let compile_kinds = CompileKind::from_requested_targets(gctx, &[])?;
+    let target_info = TargetInfo::new(gctx, &compile_kinds, &rustc, CompileKind::Host)?;
+
+    let Some(global_check_cfg) = target_info.check_cfg() else {
+        return Ok(());
+    };
+
+    // If we have extra `--check-cfg` args comming from the lints config, we need to
+    // refetch the `--print=check-cfg` with those extra args.
+    let lint_rustflags = pkg.manifest().lint_rustflags();
+    let check_cfg = if lint_rustflags.iter().any(|a| a == "--check-cfg") {
+        Some(target_info.check_cfg_with_extra_args(gctx, &rustc, lint_rustflags)?)
+    } else {
+        None
+    };
+    let check_cfg = check_cfg.as_ref().unwrap_or(&global_check_cfg);
+
+    if !check_cfg.exhaustive {
+        return Ok(());
+    }
+
+    let manifest_path = rel_cwd_manifest_path(path, gctx);
+
+    for target_name in target.keys() {
+        let Ok(Platform::Cfg(cfg_expr)) = target_name.parse::<Platform>() else {
+            continue;
+        };
+        cfg_expr.walk(|cfg| -> CargoResult<()> {
+            let (name, value) = match cfg {
+                Cfg::Name(name) => (name, None),
+                Cfg::KeyPair(name, value) => (name, Some(value.to_string())),
+            };
+            if let Some(title) = match check_cfg.expecteds.get(name) {
+                Some(ExpectedValues::Some(values)) if !values.contains(&value) => {
+                    let value = match value {
+                        Some(ref value) => Cow::from(format!("`{value}`")),
+                        None => Cow::from("(none)"),
+                    };
+                    Some(format!(
+                        "unexpected `cfg` condition value: {} for `{cfg}`",
+                        value
+                    ))
+                }
+                None => Some(format!(
+                    "unexpected `cfg` condition name: `{}` for `{cfg}`",
+                    name
+                )),
+                _ => None,
+            } {
+                if let Some(span) = get_span(manifest.document(), &["target", &target_name], false)
+                {
+                    let level = lint_level.to_diagnostic_level();
+                    if lint_level == LintLevel::Forbid || lint_level == LintLevel::Deny {
+                        *error_count += 1;
+                    }
+                    let diag = level.title(&*title).snippet(
+                        Snippet::source(manifest.contents())
+                            .origin(&manifest_path)
+                            .annotation(level.span(span))
+                            .fold(true),
+                    );
+                    gctx.shell().print_message(diag)?;
+                }
+            }
+            Ok(())
+        })?;
     }
 
     Ok(())
