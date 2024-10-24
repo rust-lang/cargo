@@ -6043,7 +6043,7 @@ fn avoid_dev_deps() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `baz` found
-location searched: registry `crates-io`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `bar v0.1.0 ([ROOT]/foo)`
 
 "#]])

@@ -167,7 +167,7 @@ fn nonexistent_http() {
     nonexistent(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `nonexistent` found
-location searched: registry `crates-io`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]]);
@@ -178,7 +178,7 @@ fn nonexistent_git() {
     nonexistent(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `nonexistent` found
-location searched: registry `crates-io`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]]);
@@ -218,7 +218,7 @@ fn wrong_case_http() {
 [ERROR] no matching package found
 searched package name: `Init`
 perhaps you meant:      init
-location searched: registry `crates-io`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]]);
@@ -231,7 +231,7 @@ fn wrong_case_git() {
 [ERROR] no matching package found
 searched package name: `Init`
 perhaps you meant:      init
-location searched: registry `crates-io`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]]);
@@ -272,7 +272,7 @@ fn mis_hyphenated_http() {
 [ERROR] no matching package found
 searched package name: `mis_hyphenated`
 perhaps you meant:      mis-hyphenated
-location searched: registry `crates-io`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]]);
@@ -285,7 +285,7 @@ fn mis_hyphenated_git() {
 [ERROR] no matching package found
 searched package name: `mis_hyphenated`
 perhaps you meant:      mis-hyphenated
-location searched: registry `crates-io`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]]);
@@ -468,7 +468,7 @@ fn update_registry_http() {
         str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `notyet` found
-location searched: registry `crates-io`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]],
@@ -491,7 +491,7 @@ fn update_registry_git() {
         str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `notyet` found
-location searched: registry `crates-io`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]],
@@ -551,7 +551,7 @@ fn package_with_path_deps_http() {
 
 Caused by:
   no matching package named `notyet` found
-  location searched: registry `crates-io`
+  location searched: `dummy-registry` index (which is replacing registry `crates-io`)
   required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]],
@@ -580,7 +580,7 @@ fn package_with_path_deps_git() {
 
 Caused by:
   no matching package named `notyet` found
-  location searched: registry `crates-io`
+  location searched: `dummy-registry` index (which is replacing registry `crates-io`)
   required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]],
@@ -925,7 +925,7 @@ fn yanks_in_lockfiles_are_ok_http() {
         str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `bar` found
-location searched: registry `crates-io`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]],
@@ -942,7 +942,7 @@ fn yanks_in_lockfiles_are_ok_git() {
         str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `bar` found
-location searched: registry `crates-io`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]],
@@ -994,7 +994,7 @@ fn yanks_in_lockfiles_are_ok_for_other_update_http() {
         str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `bar` found
-location searched: registry `crates-io`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]],
@@ -1017,7 +1017,7 @@ fn yanks_in_lockfiles_are_ok_for_other_update_git() {
         str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `bar` found
-location searched: registry `crates-io`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]],
@@ -3226,7 +3226,7 @@ fn unknown_index_version_error() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `bar` found
-location searched: registry `crates-io`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.1.0 ([ROOT]/foo)`
 
 "#]])
@@ -3769,7 +3769,7 @@ foo v0.1.0 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `bar` found
-location searched: registry `crates-io`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.1.0 ([ROOT]/foo)`
 
 "#]])
@@ -3863,7 +3863,7 @@ fn not_found_permutations() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `a-b_c` found
-location searched: registry `crates-io`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]])
