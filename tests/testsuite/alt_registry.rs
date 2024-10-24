@@ -439,7 +439,7 @@ fn alt_registry_and_crates_io_deps() {
 [DOWNLOADING] crates ...
 [DOWNLOADED] crates_io_dep v0.0.1 (registry `dummy-registry`)
 [DOWNLOADED] alt_reg_dep v0.1.0 (registry `alternative`)
-[CHECKING] crates_io_dep v0.0.1
+[CHECKING] crates_io_dep v0.0.1 (registry `dummy-registry`)
 [CHECKING] alt_reg_dep v0.1.0 (registry `alternative`)
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1105,7 +1105,7 @@ fn alt_reg_metadata() {
       "edition": "2015",
       "features": {},
       "homepage": null,
-      "id": "registry+https://github.com/rust-lang/crates.io-index#bar@0.0.1",
+      "id": "registry+[ROOTURL]/registry#bar@0.0.1",
       "keywords": [],
       "license": null,
       "license_file": null,
@@ -1117,7 +1117,7 @@ fn alt_reg_metadata() {
       "readme": null,
       "repository": null,
       "rust_version": null,
-      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "source": "registry+[ROOTURL]/registry",
       "targets": [
         {
           "crate_types": [
@@ -1225,7 +1225,7 @@ fn alt_reg_metadata() {
       "edition": "2015",
       "features": {},
       "homepage": null,
-      "id": "registry+https://github.com/rust-lang/crates.io-index#iodep@0.0.1",
+      "id": "registry+[ROOTURL]/registry#iodep@0.0.1",
       "keywords": [],
       "license": null,
       "license_file": null,
@@ -1237,7 +1237,7 @@ fn alt_reg_metadata() {
       "readme": null,
       "repository": null,
       "rust_version": null,
-      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "source": "registry+[ROOTURL]/registry",
       "targets": [
         {
           "crate_types": [
@@ -1261,7 +1261,7 @@ fn alt_reg_metadata() {
     "nodes": [
       {
         "dependencies": [
-          "registry+https://github.com/rust-lang/crates.io-index#bar@0.0.1"
+          "registry+[ROOTURL]/registry#bar@0.0.1"
         ],
         "deps": [
           {
@@ -1272,7 +1272,7 @@ fn alt_reg_metadata() {
               }
             ],
             "name": "bar",
-            "pkg": "registry+https://github.com/rust-lang/crates.io-index#bar@0.0.1"
+            "pkg": "registry+[ROOTURL]/registry#bar@0.0.1"
           }
         ],
         "features": [],
@@ -1288,12 +1288,12 @@ fn alt_reg_metadata() {
         "dependencies": [],
         "deps": [],
         "features": [],
-        "id": "registry+https://github.com/rust-lang/crates.io-index#bar@0.0.1"
+        "id": "registry+[ROOTURL]/registry#bar@0.0.1"
       },
       {
         "dependencies": [
           "registry+[ROOTURL]/alternative-registry#altdep@0.0.1",
-          "registry+https://github.com/rust-lang/crates.io-index#iodep@0.0.1"
+          "registry+[ROOTURL]/registry#iodep@0.0.1"
         ],
         "deps": [
           {
@@ -1314,7 +1314,7 @@ fn alt_reg_metadata() {
               }
             ],
             "name": "iodep",
-            "pkg": "registry+https://github.com/rust-lang/crates.io-index#iodep@0.0.1"
+            "pkg": "registry+[ROOTURL]/registry#iodep@0.0.1"
           }
         ],
         "features": [],
@@ -1337,7 +1337,7 @@ fn alt_reg_metadata() {
           }
         ],
         "features": [],
-        "id": "registry+https://github.com/rust-lang/crates.io-index#iodep@0.0.1"
+        "id": "registry+[ROOTURL]/registry#iodep@0.0.1"
       }
     ],
     "root": "path+[ROOTURL]/foo#0.0.1"

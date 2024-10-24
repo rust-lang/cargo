@@ -73,7 +73,7 @@ impl<'gctx> Source for ReplacedSource<'gctx> {
 
         self.inner
             .query(&dep, kind, &mut |summary| {
-                f(summary.map_summary(|s| s.map_source(replace_with, to_replace)))
+                f(summary.map_summary(|s| s.map_source(to_replace, replace_with)))
             })
             .map_err(|e| {
                 if self.is_builtin_replacement() {
