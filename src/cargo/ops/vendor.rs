@@ -413,6 +413,7 @@ fn prepare_for_vendor(
     let contents = me.manifest().contents();
     let document = me.manifest().document();
     let original_toml = prepare_toml_for_vendor(
+        me.manifest_path().parent().unwrap(),
         me.manifest().normalized_toml().clone(),
         packaged_files,
         gctx,
@@ -441,6 +442,7 @@ fn prepare_for_vendor(
 }
 
 fn prepare_toml_for_vendor(
+    package_root: &Path,
     mut me: cargo_util_schemas::manifest::TomlManifest,
     packaged_files: &[PathBuf],
     gctx: &GlobalContext,
@@ -472,6 +474,7 @@ fn prepare_toml_for_vendor(
     let lib = if let Some(target) = &me.lib {
         crate::util::toml::prepare_target_for_publish(
             target,
+            package_root,
             Some(packaged_files),
             "library",
             gctx,
@@ -481,24 +484,28 @@ fn prepare_toml_for_vendor(
     };
     let bin = crate::util::toml::prepare_targets_for_publish(
         me.bin.as_ref(),
+        package_root,
         Some(packaged_files),
         "binary",
         gctx,
     )?;
     let example = crate::util::toml::prepare_targets_for_publish(
         me.example.as_ref(),
+        package_root,
         Some(packaged_files),
         "example",
         gctx,
     )?;
     let test = crate::util::toml::prepare_targets_for_publish(
         me.test.as_ref(),
+        package_root,
         Some(packaged_files),
         "test",
         gctx,
     )?;
     let bench = crate::util::toml::prepare_targets_for_publish(
         me.bench.as_ref(),
+        package_root,
         Some(packaged_files),
         "benchmark",
         gctx,

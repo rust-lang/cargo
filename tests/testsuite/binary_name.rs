@@ -2,6 +2,7 @@
 
 use cargo_test_support::install::assert_has_installed_exe;
 use cargo_test_support::install::assert_has_not_installed_exe;
+use cargo_test_support::is_nightly;
 use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
 use cargo_test_support::project;
@@ -339,4 +340,211 @@ fn check_msg_format_json() {
             .against_jsonlines(),
         )
         .run();
+}
+
+#[cargo_test]
+fn targets_with_relative_path_in_workspace_members() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["relative-bar"]
+            resolver = "2"
+        "#,
+        )
+        .file(
+            "relative-bar/Cargo.toml",
+            r#"
+                [package]
+                name = "relative-bar"
+                version = "0.1.0"
+                edition = "2021"
+
+                build = "./build.rs"
+
+                [[bin]]
+                name = "bar"
+                path = "./src/main.rs"
+
+                [lib]
+                name = "lib"
+                path = "./src/lib.rs"
+
+                [[example]]
+                name = "example"
+                path = "./example.rs"
+
+                [[test]]
+                name = "test"
+                path = "./test.rs"
+
+                [[bench]]
+                name = "bench"
+                path = "./bench.rs"
+            "#,
+        )
+        .file("relative-bar/build.rs", "fn main() { let a = 1; }")
+        .file("relative-bar/src/main.rs", "fn main() { let a = 1; }")
+        .file("relative-bar/src/lib.rs", "fn a() {}")
+        .file("relative-bar/example.rs", "fn main() { let a = 1; }")
+        .file(
+            "relative-bar/test.rs",
+            r#"
+                fn main() {}
+
+                #[test]
+                fn test_a() { let a = 1; } 
+            "#,
+        )
+        .file(
+            "relative-bar/bench.rs",
+            r#"  
+                #![feature(test)]
+                #[cfg(test)]
+                extern crate test;
+
+                #[bench]
+                fn bench_a(_b: &mut test::Bencher) { let a = 1; }
+            "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[COMPILING] relative-bar v0.1.0 ([ROOT]/foo/relative-bar)
+[WARNING] unused variable: `a`
+ --> relative-bar/build.rs:1:17
+  |
+1 | fn main() { let a = 1; }
+  |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_a`
+  |
+  = [NOTE] `#[warn(unused_variables)]` on by default
+
+[WARNING] `relative-bar` (build script) generated 1 warning
+[WARNING] function `a` is never used
+ --> relative-bar/src/lib.rs:1:4
+  |
+1 | fn a() {}
+  |    ^
+  |
+  = [NOTE] `#[warn(dead_code)]` on by default
+
+[WARNING] `relative-bar` (lib) generated 1 warning
+[WARNING] unused variable: `a`
+ --> relative-bar/src/main.rs:1:17
+  |
+1 | fn main() { let a = 1; }
+  |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_a`
+  |
+  = [NOTE] `#[warn(unused_variables)]` on by default
+
+[WARNING] `relative-bar` (bin "bar") generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("check --example example")
+        .with_stderr_data(str![[r#"
+[WARNING] unused variable: `a`
+ --> relative-bar/build.rs:1:17
+  |
+1 | fn main() { let a = 1; }
+  |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_a`
+  |
+  = [NOTE] `#[warn(unused_variables)]` on by default
+
+[WARNING] `relative-bar` (build script) generated 1 warning
+[WARNING] function `a` is never used
+ --> relative-bar/src/lib.rs:1:4
+  |
+1 | fn a() {}
+  |    ^
+  |
+  = [NOTE] `#[warn(dead_code)]` on by default
+
+[WARNING] `relative-bar` (lib) generated 1 warning
+[CHECKING] relative-bar v0.1.0 ([ROOT]/foo/relative-bar)
+[WARNING] unused variable: `a`
+ --> relative-bar/example.rs:1:17
+  |
+1 | fn main() { let a = 1; }
+  |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_a`
+  |
+  = [NOTE] `#[warn(unused_variables)]` on by default
+
+[WARNING] `relative-bar` (example "example") generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.cargo("check --test test").with_stderr_data(str![[r#"
+[WARNING] unused variable: `a`
+ --> relative-bar/build.rs:1:17
+  |
+1 | fn main() { let a = 1; }
+  |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_a`
+  |
+  = [NOTE] `#[warn(unused_variables)]` on by default
+
+[WARNING] `relative-bar` (build script) generated 1 warning
+[WARNING] function `a` is never used
+ --> relative-bar/src/lib.rs:1:4
+  |
+1 | fn a() {}
+  |    ^
+  |
+  = [NOTE] `#[warn(dead_code)]` on by default
+
+[WARNING] `relative-bar` (lib) generated 1 warning
+[CHECKING] relative-bar v0.1.0 ([ROOT]/foo/relative-bar)
+[WARNING] unused variable: `a`
+ --> relative-bar/test.rs:5:35
+  |
+5 |                 fn test_a() { let a = 1; } 
+  |                                   ^ [HELP] if this is intentional, prefix it with an underscore: `_a`
+  |
+  = [NOTE] `#[warn(unused_variables)]` on by default
+
+[WARNING] `relative-bar` (test "test") generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]).run();
+
+    if is_nightly() {
+        p.cargo("check --bench bench").with_stderr_data(str![[r#"
+[WARNING] unused variable: `a`
+ --> relative-bar/build.rs:1:17
+  |
+1 | fn main() { let a = 1; }
+  |                 ^ [HELP] if this is intentional, prefix it with an underscore: `_a`
+  |
+  = [NOTE] `#[warn(unused_variables)]` on by default
+
+[WARNING] `relative-bar` (build script) generated 1 warning
+[WARNING] function `a` is never used
+ --> relative-bar/src/lib.rs:1:4
+  |
+1 | fn a() {}
+  |    ^
+  |
+  = [NOTE] `#[warn(dead_code)]` on by default
+
+[WARNING] `relative-bar` (lib) generated 1 warning
+[CHECKING] relative-bar v0.1.0 ([ROOT]/foo/relative-bar)
+[WARNING] unused variable: `a`
+ --> relative-bar/bench.rs:7:58
+  |
+7 |                 fn bench_a(_b: &mut test::Bencher) { let a = 1; }
+  |                                                          ^ [HELP] if this is intentional, prefix it with an underscore: `_a`
+  |
+  = [NOTE] `#[warn(unused_variables)]` on by default
+
+[WARNING] `relative-bar` (bench "bench") generated 1 warning
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]).run();
+    }
 }
