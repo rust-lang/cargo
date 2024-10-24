@@ -1,4 +1,4 @@
-FROM alpine:3.20
+FROM public.ecr.aws/docker/library/alpine:3.20
 
 RUN apk add --no-cache openssh git
 RUN ssh-keygen -A
