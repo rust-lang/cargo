@@ -516,6 +516,9 @@ features! {
 
     /// Allow paths that resolve relatively to a base specified in the config.
     (unstable, path_bases, "", "reference/unstable.html#path-bases"),
+
+    /// Allow boolean literals in `[target.'cfg(<true/false>)']`
+    (unstable, cfg_boolean_literals, "", "reference/unstable.html#cfg-boolean-literals"),
 }
 
 /// Status and metadata for a single unstable feature.
@@ -760,6 +763,7 @@ unstable_cli_options!(
     build_std: Option<Vec<String>>  = ("Enable Cargo to compile the standard library itself as part of a crate graph compilation"),
     build_std_features: Option<Vec<String>>  = ("Configure features enabled for the standard library itself when building the standard library"),
     cargo_lints: bool = ("Enable the `[lints.cargo]` table"),
+    cfg_boolean_literals: bool = ("Allow boolean literals in `[target.'cfg(<true/false>)']`"),
     checksum_freshness: bool = ("Use a checksum to determine if output is fresh rather than filesystem mtime"),
     codegen_backend: bool = ("Enable the `codegen-backend` option in profiles in .cargo/config.toml file"),
     config_include: bool = ("Enable the `include` key in config files"),
@@ -1256,6 +1260,7 @@ impl CliUnstable {
             }
             "build-std-features" => self.build_std_features = Some(parse_features(v)),
             "cargo-lints" => self.cargo_lints = parse_empty(k, v)?,
+            "cfg-boolean-literals" => self.cfg_boolean_literals = parse_empty(k, v)?,
             "codegen-backend" => self.codegen_backend = parse_empty(k, v)?,
             "config-include" => self.config_include = parse_empty(k, v)?,
             "direct-minimal-versions" => self.direct_minimal_versions = parse_empty(k, v)?,

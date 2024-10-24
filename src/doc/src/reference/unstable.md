@@ -119,6 +119,7 @@ Each new feature described below should explain how to use it.
     * [lockfile-path](#lockfile-path) --- Allows to specify a path to lockfile other than the default path `<workspace_root>/Cargo.lock`.
     * [package-workspace](#package-workspace) --- Allows for packaging and publishing multiple crates in a workspace.
     * [native-completions](#native-completions) --- Move cargo shell completions to native completions.
+    * [cfg-boolean-literals](#cfg-boolean-literals) --- Allows the use of boolean literals in `[target.'cfg(<true/false>)']`
 
 ## allow-features
 
@@ -1741,6 +1742,29 @@ When in doubt, you can discuss this in [#14520](https://github.com/rust-lang/car
 
 - powershell:
   Add `CARGO_COMPLETE=powershell cargo +nightly | Invoke-Expression` to `$PROFILE`.
+
+## cfg-boolean-literals
+
+* Tracking Issue: [#00000](https://github.com/rust-lang/cargo/issues/00000)
+
+This feature allows the use of boolean literals in `[target.'cfg(<true/false>)']`.
+
+Those boolean literals always evaluate to true and false respectively, they are **not** subject
+to `RUSTFLAGS`.
+
+For example, in this example the `b` dependencies is always compiled, while `c` is never:
+
+```toml
+cargo-features = ["cfg-boolean-literals"]
+
+[target.'cfg(true)'.dependencies]
+b = { path = 'b' }
+
+[target.'cfg(false)'.dependencies]
+c = { path = 'c' }
+```
+
+For cfgs in `.cargo/config.toml`, `-Zcfg-boolean-literals` must be used.
 
 # Stabilized and removed features
 
