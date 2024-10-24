@@ -2017,9 +2017,6 @@ where
                     let Ok(current_file_len) = fs::metadata(&path).map(|m| m.len()) else {
                         return Some(StaleItem::FailedToReadMetadata(path.to_path_buf()));
                     };
-                    let Ok(file) = File::open(path) else {
-                        return Some(StaleItem::MissingFile(path.to_path_buf()));
-                    };
                     if current_file_len != file_len {
                         return Some(StaleItem::FileSizeChanged {
                             path: path.to_path_buf(),
@@ -2027,6 +2024,9 @@ where
                             old_size: file_len,
                         });
                     }
+                    let Ok(file) = File::open(path) else {
+                        return Some(StaleItem::MissingFile(path.to_path_buf()));
+                    };
                     let Ok(checksum) = Checksum::compute(prior_checksum.algo, file) else {
                         return Some(StaleItem::UnableToReadFile(path.to_path_buf()));
                     };
