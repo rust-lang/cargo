@@ -352,6 +352,7 @@ dependencies = [
  "serde_json",
  "sha1",
  "shell-escape",
+ "shlex",
  "snapbox",
  "supports-hyperlinks",
  "supports-unicode",
