@@ -13,6 +13,7 @@ use bytesize::ByteSize;
 use cargo_util_schemas::manifest::RustVersion;
 use curl::easy::Easy;
 use curl::multi::{EasyHandle, Multi};
+use itertools::Itertools;
 use lazycell::LazyCell;
 use semver::Version;
 use serde::Serialize;
@@ -518,13 +519,22 @@ impl<'gctx> PackageSet<'gctx> {
                 target_data,
                 force_all_targets,
             );
-            for (pkg_id, _dep) in filtered_deps {
+            for (pkg_id, deps) in filtered_deps {
+                let artifact_kinds = deps.iter().filter_map(|dep| {
+                    Some(
+                        dep.artifact()?
+                            .target()?
+                            .to_resolved_compile_kind(*requested_kinds.iter().next().unwrap()),
+                    )
+                });
+                let req_kinds = [artifact_kinds.collect_vec().as_slice(), requested_kinds].concat();
+
                 collect_used_deps(
                     used,
                     resolve,
                     pkg_id,
                     has_dev_units,
-                    requested_kinds,
+                    &req_kinds,
                     target_data,
                     force_all_targets,
                 )?;

@@ -1603,6 +1603,7 @@ fn dep_of_artifact_dep_same_target_specified() {
 
                     [dependencies]
                     bar = {{ path = "bar", artifact = "bin", target = "{target}" }}
+                    one = {{ path = "one", artifact = "bin", target = "x86_64-fortanix-unknown-sgx" }}
                 "#,
             ),
         )
@@ -1622,6 +1623,20 @@ fn dep_of_artifact_dep_same_target_specified() {
         )
         .file("bar/src/main.rs", "fn main() {}")
         .file(
+            "one/Cargo.toml",
+            &format!(
+                r#"
+                  [package]
+                  name = "one"
+                  version = "0.1.0"
+
+                  [dependencies]
+                  baz = {{ path = "../baz" }}
+              "#,
+            ),
+        )
+        .file("one/src/main.rs", "fn main() {}")
+        .file(
             "baz/Cargo.toml",
             r#"
                 [package]
@@ -1636,8 +1651,9 @@ fn dep_of_artifact_dep_same_target_specified() {
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 3 packages to latest compatible versions
 [COMPILING] baz v0.1.0 ([ROOT]/foo/baz)
+[COMPILING] one v0.1.0 ([ROOT]/foo/one)
 [COMPILING] bar v0.1.0 ([ROOT]/foo/bar)
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -1646,16 +1662,18 @@ fn dep_of_artifact_dep_same_target_specified() {
         .with_status(0)
         .run();
 
-    // TODO This command currently fails due to a bug in cargo but it should be fixed so that it succeeds in the future.
-    p.cargo("tree -Z bindeps")
+    p.cargo("tree -Z bindeps --target all")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_stderr_data(
-            r#"...
-no entry found for key
-...
-"#,
-        )
-        .with_status(101)
+        .with_stdout_data(str![
+            r#"
+foo v0.1.0 ([ROOT]/foo)
+├── bar v0.1.0 ([ROOT]/foo/bar)
+│   └── baz v0.1.0 ([ROOT]/foo/baz)
+└── one v0.1.0 ([ROOT]/foo/one)
+
+"#
+        ])
+        .with_status(0)
         .run();
 }
 
@@ -1777,9 +1795,7 @@ perhaps a crate was updated and forgotten to be re-vendored?
         .run();
 }
 
-// FIXME: `download_accessible` should work properly for artifact dependencies
 #[cargo_test]
-#[ignore = "broken, needs download_accessible fix"]
 fn proc_macro_in_artifact_dep() {
     // Forcing FeatureResolver to check a proc-macro for a dependency behind a
     // target dependency.
@@ -1829,7 +1845,17 @@ fn proc_macro_in_artifact_dep() {
 
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_stderr_data(str![[r#""#]])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 2 packages to latest compatible versions
+[DOWNLOADING] crates ...
+[ERROR] failed to download from `[ROOTURL]/dl/pm/1.0.0/download`
+
+Caused by:
+  [37] Could not read a file:// file (Couldn't open file [ROOT]/dl/pm/1.0.0/download)
+
+"#]])
+        .with_status(101)
         .run();
 }
 
