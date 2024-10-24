@@ -958,6 +958,86 @@ fn cargo_install_ignores_msrv_config() {
         .run();
 }
 
+#[cargo_test(nightly, reason = "edition2024 in rustc is unstable")]
+fn cargo_install_ignores_resolver_v3_msrv_change() {
+    Package::new("dep", "1.0.0")
+        .rust_version("1.50")
+        .file("src/lib.rs", "fn hello() {}")
+        .publish();
+    Package::new("dep", "1.1.0")
+        .rust_version("1.70")
+        .file("src/lib.rs", "fn hello() {}")
+        .publish();
+    Package::new("foo", "0.0.1")
+        .rust_version("1.60")
+        .cargo_feature("edition2024")
+        .resolver("3")
+        .file("src/main.rs", "fn main() {}")
+        .dep("dep", "1")
+        .publish();
+
+    cargo_process("install foo")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["edition2024", "msrv-policy"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
+[INSTALLING] foo v0.0.1
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep v1.1.0 (registry `dummy-registry`)
+[COMPILING] dep v1.1.0
+[COMPILING] foo v0.0.1
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+}
+
+#[cargo_test(nightly, reason = "edition2024 in rustc is unstable")]
+fn cargo_install_ignores_edition_2024_msrv_change() {
+    Package::new("dep", "1.0.0")
+        .rust_version("1.50")
+        .file("src/lib.rs", "fn hello() {}")
+        .publish();
+    Package::new("dep", "1.1.0")
+        .rust_version("1.70")
+        .file("src/lib.rs", "fn hello() {}")
+        .publish();
+    Package::new("foo", "0.0.1")
+        .rust_version("1.60")
+        .cargo_feature("edition2024")
+        .edition("2024")
+        .file("src/main.rs", "fn main() {}")
+        .dep("dep", "1")
+        .publish();
+
+    cargo_process("install foo")
+        .arg("-Zmsrv-policy")
+        .masquerade_as_nightly_cargo(&["edition2024", "msrv-policy"])
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[DOWNLOADING] crates ...
+[DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
+[INSTALLING] foo v0.0.1
+[LOCKING] 1 package to latest compatible version
+[DOWNLOADING] crates ...
+[DOWNLOADED] dep v1.1.0 (registry `dummy-registry`)
+[COMPILING] dep v1.1.0
+[COMPILING] foo v0.0.1
+[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
+[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
+[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
+[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
+
+"#]])
+        .run();
+}
+
 #[cargo_test]
 fn report_rust_versions() {
     Package::new("dep-only-low-compatible", "1.55.0")
