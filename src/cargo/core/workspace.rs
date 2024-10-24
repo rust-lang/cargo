@@ -103,6 +103,12 @@ pub struct Workspace<'gctx> {
     /// file. This is set for `cargo install` without `--locked`.
     ignore_lock: bool,
 
+    /// If `true`, then the resolver will not update the `Cargo.lock` file and
+    /// return an error if the lockfile is missing or out of date, similar
+    /// to the `GlobalContext::locked()` behaviour. Note that
+    /// the lockfile is not written if `require_optional_deps` is false.
+    is_locked: bool,
+
     /// Requested path of the lockfile (i.e. passed as the cli flag)
     requested_lockfile_path: Option<PathBuf>,
 
@@ -240,6 +246,7 @@ impl<'gctx> Workspace<'gctx> {
             member_ids: HashSet::new(),
             default_members: Vec::new(),
             is_ephemeral: false,
+            is_locked: false,
             require_optional_deps: true,
             loaded_packages: RefCell::new(HashMap::new()),
             ignore_lock: false,
@@ -614,6 +621,14 @@ impl<'gctx> Workspace<'gctx> {
     pub fn set_ignore_lock(&mut self, ignore_lock: bool) -> &mut Workspace<'gctx> {
         self.ignore_lock = ignore_lock;
         self
+    }
+
+    pub fn is_locked(&self) -> bool {
+        self.is_locked
+    }
+
+    pub fn set_is_locked(&mut self, is_locked: bool) {
+        self.is_locked = is_locked
     }
 
     /// Returns the directory where the lockfile is in.
