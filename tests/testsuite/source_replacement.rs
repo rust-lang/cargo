@@ -320,7 +320,7 @@ fn source_replacement_with_no_package_in_directoy() {
         r#"
             [source.crates-io]
             replace-with = "vendored-sources"
-    
+
             [source.vendored-sources]
             directory = "vendor"
         "#
@@ -331,7 +331,7 @@ fn source_replacement_with_no_package_in_directoy() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no matching package named `bar` found
-location searched: registry `crates-io`
+location searched: directory source `[ROOT]/vendor` (which is replacing registry `crates-io`)
 required by package `foo v0.1.0 ([ROOT]/foo)`
 
 "#]])

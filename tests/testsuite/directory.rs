@@ -199,7 +199,7 @@ Caused by:
   no matching package found
   searched package name: `baz`
   perhaps you meant:      bar or foo
-  location searched: registry `crates-io`
+  location searched: directory source `[ROOT]/index` (which is replacing registry `crates-io`)
   required by package `bar v0.1.0`
 
 "#]])
@@ -283,7 +283,7 @@ fn not_there() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no matching package named `bar` found
-location searched: registry `crates-io`
+location searched: directory source `[ROOT]/index` (which is replacing registry `crates-io`)
 required by package `foo v0.1.0 ([ROOT]/foo)`
 
 "#]])

@@ -456,7 +456,7 @@ perhaps a crate was updated and forgotten to be re-vendored?
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `serde` found
-location searched: registry `crates-io`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `bar v0.0.1 ([ROOT]/foo)`
 
 "#]])
@@ -997,7 +997,7 @@ Caused by:
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `bar` found
-location searched: registry `crates-io`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.1.0 ([ROOT]/foo)`
 
 "#]])
@@ -1017,7 +1017,7 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching package named `bar` found
-location searched: registry `crates-io`
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.1.0 ([ROOT]/foo)`
 
 "#]])

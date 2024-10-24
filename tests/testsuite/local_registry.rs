@@ -101,7 +101,7 @@ fn not_found() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] no matching package named `baz` found
-location searched: registry `crates-io`
+location searched: `[ROOT]/registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
 
 "#]])

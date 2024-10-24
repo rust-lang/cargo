@@ -3932,7 +3932,7 @@ fn workspace_missing_dependency() {
 
 Caused by:
   no matching package named `a` found
-  location searched: registry `crates-io`
+  location searched: crates.io index
   required by package `b v0.0.1 ([ROOT]/foo/target/package/b-0.0.1)`
 
 "#]])
