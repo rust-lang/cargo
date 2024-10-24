@@ -7,6 +7,8 @@
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
+#[cfg(feature = "unstable-schema")]
+use std::collections::HashMap;
 use std::fmt::{self, Display, Write};
 use std::path::PathBuf;
 use std::str;
@@ -25,9 +27,13 @@ pub use crate::restricted_names::NameValidationError;
 pub use rust_version::RustVersion;
 pub use rust_version::RustVersionError;
 
+#[cfg(feature = "unstable-schema")]
+use crate::schema::TomlValueWrapper;
+
 /// This type is used to deserialize `Cargo.toml` files.
 #[derive(Default, Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlManifest {
     // when adding new fields, be sure to check whether `requires_package` should disallow them
     pub cargo_features: Option<Vec<String>>,
@@ -113,11 +119,17 @@ impl TomlManifest {
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlWorkspace {
     pub members: Option<Vec<String>>,
     pub exclude: Option<Vec<String>>,
     pub default_members: Option<Vec<String>>,
     pub resolver: Option<String>,
+
+    #[cfg_attr(
+        feature = "unstable-schema",
+        schemars(with = "Option<TomlValueWrapper>")
+    )]
     pub metadata: Option<toml::Value>,
 
     // Properties that can be inherited by members.
@@ -129,6 +141,7 @@ pub struct TomlWorkspace {
 /// A group of fields that are inheritable by members of the workspace
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct InheritablePackage {
     pub version: Option<semver::Version>,
     pub authors: Option<Vec<String>>,
@@ -146,6 +159,7 @@ pub struct InheritablePackage {
     pub badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
     pub exclude: Option<Vec<String>>,
     pub include: Option<Vec<String>>,
+    #[cfg_attr(feature = "unstable-schema", schemars(with = "Option<String>"))]
     pub rust_version: Option<RustVersion>,
 }
 
@@ -157,9 +171,12 @@ pub struct InheritablePackage {
 /// tables.
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlPackage {
     pub edition: Option<InheritableString>,
+    #[cfg_attr(feature = "unstable-schema", schemars(with = "Option<String>"))]
     pub rust_version: Option<InheritableRustVersion>,
+    #[cfg_attr(feature = "unstable-schema", schemars(with = "String"))]
     pub name: PackageName,
     pub version: Option<InheritableSemverVersion>,
     pub authors: Option<InheritableVecString>,
@@ -192,10 +209,15 @@ pub struct TomlPackage {
     pub repository: Option<InheritableString>,
     pub resolver: Option<String>,
 
+    #[cfg_attr(
+        feature = "unstable-schema",
+        schemars(with = "Option<TomlValueWrapper>")
+    )]
     pub metadata: Option<toml::Value>,
 
     /// Provide a helpful error message for a common user error.
     #[serde(rename = "cargo-features", skip_serializing)]
+    #[cfg_attr(feature = "unstable-schema", schemars(skip))]
     pub _invalid_cargo_features: Option<InvalidCargoFeatures>,
 }
 
@@ -333,6 +355,7 @@ impl TomlPackage {
 /// An enum that allows for inheriting keys from a workspace in a Cargo.toml.
 #[derive(Serialize, Copy, Clone, Debug)]
 #[serde(untagged)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub enum InheritableField<T> {
     /// The type that is used when not inheriting from a workspace.
     Value(T),
@@ -588,6 +611,7 @@ impl<'de> de::Deserialize<'de> for InheritableBtreeMap {
 
 #[derive(Deserialize, Serialize, Copy, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlInheritedField {
     workspace: WorkspaceValue,
 }
@@ -609,6 +633,7 @@ impl Default for TomlInheritedField {
 #[derive(Deserialize, Serialize, Copy, Clone, Debug)]
 #[serde(try_from = "bool")]
 #[serde(into = "bool")]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 struct WorkspaceValue;
 
 impl TryFrom<bool> for WorkspaceValue {
@@ -630,6 +655,7 @@ impl From<WorkspaceValue> for bool {
 
 #[derive(Serialize, Clone, Debug)]
 #[serde(untagged)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub enum InheritableDependency {
     /// The type that is used when not inheriting from a workspace.
     Value(TomlDependency),
@@ -677,6 +703,7 @@ impl<'de> de::Deserialize<'de> for InheritableDependency {
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlInheritedDependency {
     pub workspace: bool,
     pub features: Option<Vec<String>>,
@@ -689,6 +716,7 @@ pub struct TomlInheritedDependency {
     /// This is here to provide a way to see the "unused manifest keys" when deserializing
     #[serde(skip_serializing)]
     #[serde(flatten)]
+    #[cfg_attr(feature = "unstable-schema", schemars(skip))]
     pub _unused_keys: BTreeMap<String, toml::Value>,
 }
 
@@ -700,6 +728,7 @@ impl TomlInheritedDependency {
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(untagged)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub enum TomlDependency<P: Clone = String> {
     /// In the simple format, only a version is specified, eg.
     /// `package = "<version>"`
@@ -765,8 +794,11 @@ impl<'de, P: Deserialize<'de> + Clone> de::Deserialize<'de> for TomlDependency<P
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlDetailedDependency<P: Clone = String> {
     pub version: Option<String>,
+
+    #[cfg_attr(feature = "unstable-schema", schemars(with = "Option<String>"))]
     pub registry: Option<RegistryName>,
     /// The URL of the `registry` field.
     /// This is an internal implementation detail. When Cargo creates a
@@ -778,6 +810,7 @@ pub struct TomlDetailedDependency<P: Clone = String> {
     // `path` is relative to the file it appears in. If that's a `Cargo.toml`, it'll be relative to
     // that TOML file, and if it's a `.cargo/config` file, it'll be relative to that file.
     pub path: Option<P>,
+    #[cfg_attr(feature = "unstable-schema", schemars(with = "Option<String>"))]
     pub base: Option<PathBaseName>,
     pub git: Option<String>,
     pub branch: Option<String>,
@@ -788,6 +821,7 @@ pub struct TomlDetailedDependency<P: Clone = String> {
     pub default_features: Option<bool>,
     #[serde(rename = "default_features")]
     pub default_features2: Option<bool>,
+    #[cfg_attr(feature = "unstable-schema", schemars(with = "Option<String>"))]
     pub package: Option<PackageName>,
     pub public: Option<bool>,
 
@@ -801,6 +835,7 @@ pub struct TomlDetailedDependency<P: Clone = String> {
     /// This is here to provide a way to see the "unused manifest keys" when deserializing
     #[serde(skip_serializing)]
     #[serde(flatten)]
+    #[cfg_attr(feature = "unstable-schema", schemars(skip))]
     pub _unused_keys: BTreeMap<String, toml::Value>,
 }
 
@@ -838,6 +873,7 @@ impl<P: Clone> Default for TomlDetailedDependency<P> {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlProfiles(pub BTreeMap<ProfileName, TomlProfile>);
 
 impl TomlProfiles {
@@ -852,6 +888,7 @@ impl TomlProfiles {
 
 #[derive(Deserialize, Serialize, Clone, Debug, Default, Eq, PartialEq)]
 #[serde(default, rename_all = "kebab-case")]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlProfile {
     pub opt_level: Option<TomlOptLevel>,
     pub lto: Option<StringOrBool>,
@@ -1010,6 +1047,7 @@ impl<'de> de::Deserialize<'de> for ProfilePackageSpec {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlOptLevel(pub String);
 
 impl ser::Serialize for TomlOptLevel {
@@ -1049,6 +1087,7 @@ impl<'de> de::Deserialize<'de> for TomlOptLevel {
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub enum TomlDebugInfo {
     None,
     LineDirectivesOnly,
@@ -1136,6 +1175,7 @@ impl<'de> de::Deserialize<'de> for TomlDebugInfo {
 
 #[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize)]
 #[serde(untagged, rename_all = "kebab-case")]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub enum TomlTrimPaths {
     Values(Vec<TomlTrimPathsValue>),
     All,
@@ -1228,6 +1268,7 @@ impl From<Vec<TomlTrimPathsValue>> for TomlTrimPaths {
 
 #[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub enum TomlTrimPathsValue {
     Diagnostics,
     Macro,
@@ -1258,6 +1299,7 @@ pub type TomlBenchTarget = TomlTarget;
 
 #[derive(Default, Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlTarget {
     pub name: Option<String>,
 
@@ -1267,6 +1309,7 @@ pub struct TomlTarget {
     #[serde(rename = "crate_type")]
     pub crate_type2: Option<Vec<String>>,
 
+    #[cfg_attr(feature = "unstable-schema", schemars(with = "Option<String>"))]
     pub path: Option<PathValue>,
     // Note that `filename` is used for the cargo-feature `different_binary_name`
     pub filename: Option<String>,
@@ -1430,6 +1473,7 @@ impl<T: AsRef<str>> PathBaseName<T> {
 /// Corresponds to a `target` entry, but `TomlTarget` is already used.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlPlatform {
     pub dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
     pub build_dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
@@ -1455,6 +1499,7 @@ impl TomlPlatform {
 }
 
 #[derive(Serialize, Debug, Clone)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct InheritableLints {
     #[serde(skip_serializing_if = "is_false")]
     pub workspace: bool,
@@ -1530,6 +1575,7 @@ pub type TomlToolLints = BTreeMap<String, TomlLint>;
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(untagged)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub enum TomlLint {
     Level(TomlLintLevel),
     Config(TomlLintConfig),
@@ -1574,16 +1620,22 @@ impl TomlLint {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlLintConfig {
     pub level: TomlLintLevel,
     #[serde(default)]
     pub priority: i8,
     #[serde(flatten)]
+    #[cfg_attr(
+        feature = "unstable-schema",
+        schemars(with = "HashMap<String, TomlValueWrapper>")
+    )]
     pub config: toml::Table,
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
 #[serde(rename_all = "kebab-case")]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub enum TomlLintLevel {
     Forbid,
     Deny,
@@ -1610,6 +1662,7 @@ impl<'de> de::Deserialize<'de> for InvalidCargoFeatures {
 /// A StringOrVec can be parsed from either a TOML string or array,
 /// but is always stored as a vector.
 #[derive(Clone, Debug, Serialize, Eq, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct StringOrVec(pub Vec<String>);
 
 impl StringOrVec {
@@ -1633,6 +1686,7 @@ impl<'de> de::Deserialize<'de> for StringOrVec {
 
 #[derive(Clone, Debug, Serialize, Eq, PartialEq)]
 #[serde(untagged)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub enum StringOrBool {
     String(String),
     Bool(bool),
@@ -1652,6 +1706,7 @@ impl<'de> Deserialize<'de> for StringOrBool {
 
 #[derive(PartialEq, Clone, Debug, Serialize)]
 #[serde(untagged)]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub enum VecStringOrBool {
     VecString(Vec<String>),
     Bool(bool),
@@ -1701,4 +1756,13 @@ impl<'de> de::Deserialize<'de> for PathValue {
 #[derive(Debug, thiserror::Error)]
 #[error("manifest field was not resolved")]
 #[non_exhaustive]
+#[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct UnresolvedError;
+
+#[cfg(feature = "unstable-schema")]
+#[test]
+fn dump_manifest_schema() {
+    let schema = schemars::schema_for!(crate::manifest::TomlManifest);
+    let dump = serde_json::to_string_pretty(&schema).unwrap();
+    snapbox::assert_data_eq!(dump, snapbox::file!("../../manifest.schema.json"));
+}

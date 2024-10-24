@@ -9,8 +9,10 @@ repository.workspace = true
 description = "Deserialization schemas for Cargo"
 
 [dependencies]
+schemars = { workspace = true, features = ["preserve_order","semver"], optional = true }
 semver.workspace = true
 serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, optional = true }
 serde-untagged.workspace = true
 serde-value.workspace = true
 thiserror.workspace = true
@@ -23,3 +25,6 @@ workspace = true
 
 [dev-dependencies]
 snapbox.workspace = true
+
+[features]
+unstable-schema = ["dep:schemars", "dep:serde_json"]

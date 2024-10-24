@@ -10,5 +10,7 @@
 
 pub mod core;
 pub mod manifest;
+#[cfg(feature = "unstable-schema")]
+pub mod schema;
 
 mod restricted_names;
