@@ -362,7 +362,6 @@
 mod dirty_reason;
 
 use std::collections::hash_map::{Entry, HashMap};
-
 use std::env;
 use std::fmt::{self, Display};
 use std::fs::{self, File};
@@ -383,6 +382,7 @@ use tracing::{debug, info};
 
 use crate::core::compiler::unit_graph::UnitDep;
 use crate::core::Package;
+use crate::util::context::EnvConfigValue;
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::{self, try_canonicalize};
@@ -849,7 +849,14 @@ impl LocalFingerprint {
                                 .to_string(),
                         )
                     } else {
-                        gctx.get_env(key).ok()
+                        if let Some(value) = gctx.env_config()?.get(key) {
+                            value
+                                .resolve(gctx)
+                                .to_str()
+                                .and_then(|s| Some(s.to_string()))
+                        } else {
+                            gctx.get_env(key).ok()
+                        }
                     };
                     if current == *previous {
                         continue;
@@ -2124,6 +2131,9 @@ enum DepInfoPathType {
 ///
 /// The serialized Cargo format will contain a list of files, all of which are
 /// relative if they're under `root`. or absolute if they're elsewhere.
+///
+/// The `config_envs` argument is a set of environment variables that are
+/// defined in `[env]` table of the `config.toml`.
 pub fn translate_dep_info(
     rustc_dep_info: &Path,
     cargo_dep_info: &Path,
@@ -2132,6 +2142,7 @@ pub fn translate_dep_info(
     target_root: &Path,
     rustc_cmd: &ProcessBuilder,
     allow_package: bool,
+    config_envs: &Arc<HashMap<String, EnvConfigValue>>,
 ) -> CargoResult<()> {
     let depinfo = parse_rustc_dep_info(rustc_dep_info)?;
 
@@ -2168,9 +2179,11 @@ pub fn translate_dep_info(
     // This also includes `CARGO` since if the code is explicitly wanting to
     // know that path, it should be rebuilt if it changes. The CARGO path is
     // not tracked elsewhere in the fingerprint.
-    on_disk_info
-        .env
-        .retain(|(key, _)| !rustc_cmd.get_envs().contains_key(key) || key == CARGO_ENV);
+    //
+    // For issue#13280, We trace env vars that are defined in the `config.toml`.
+    on_disk_info.env.retain(|(key, _)| {
+        config_envs.contains_key(key) || !rustc_cmd.get_envs().contains_key(key) || key == CARGO_ENV
+    });
 
     let serialize_path = |file| {
         // The path may be absolute or relative, canonical or not. Make sure
