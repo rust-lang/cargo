@@ -14,9 +14,10 @@ pub fn cli() -> Command {
             .help_heading(heading::PACKAGE_SELECTION)
             .group("package-group")
             .help("Package to update")
-            .add(clap_complete::ArgValueCandidates::new(
-                get_pkg_id_spec_candidates,
-            ))])
+            .add(clap_complete::ArgValueCandidates::new(|| {
+                let cwd = std::env::current_dir();
+                get_pkg_id_spec_candidates(cwd.ok())
+            }))])
         .arg(
             optional_multi_opt("package", "SPEC", "Package to update")
                 .short('p')
