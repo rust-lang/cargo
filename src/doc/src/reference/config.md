@@ -191,13 +191,14 @@ metadata_key1 = "value"
 metadata_key2 = "value"
 
 [term]
-quiet = false          # whether cargo output is quiet
-verbose = false        # whether cargo provides verbose output
-color = 'auto'         # whether cargo colorizes output
-hyperlinks = true      # whether cargo inserts links into output
-unicode = true         # whether cargo can render output using non-ASCII unicode characters
-progress.when = 'auto' # whether cargo shows progress bar
-progress.width = 80    # width of progress bar
+quiet = false           # whether cargo output is quiet
+verbose = false         # whether cargo provides verbose output
+color = 'auto'          # whether cargo colorizes output
+hyperlinks = true       # whether cargo inserts links into output
+unicode = true          # whether cargo can render output using non-ASCII unicode characters
+progress.when = 'auto'  # whether cargo shows progress bar
+progress.width = 80     # width of progress bar
+progress.taskbar = true # whether cargo reports progress to terminal emulator
 ```
 
 ## Environment variables
@@ -1360,6 +1361,13 @@ Controls whether or not progress bar is shown in the terminal. Possible values:
 * Environment: `CARGO_TERM_PROGRESS_WIDTH`
 
 Sets the width for progress bar.
+
+#### `term.progress.taskbar`
+* Type: bool
+* Default: auto-detect
+* Environment: `CARGO_TERM_PROGRESS_TASKBAR`
+
+Report progess to the teminal emulator for display in places like the task bar.
 
 [`cargo bench`]: ../commands/cargo-bench.md
 [`cargo login`]: ../commands/cargo-login.md
