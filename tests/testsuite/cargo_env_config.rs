@@ -276,3 +276,168 @@ MAIN ENV_TEST:from-env
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn env_changed_defined_in_config_toml() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+        use std::env;
+        fn main() {
+            println!( "{}", env!("ENV_TEST") );
+        }
+        "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [env]
+                ENV_TEST = "from-config"
+            "#,
+        )
+        .build();
+
+    p.cargo("run")
+        .with_stdout_data(str![[r#"
+from-config
+
+"#]])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .run();
+
+    p.cargo("run")
+        .env("ENV_TEST", "from-env")
+        .with_stdout_data(str![[r#"
+from-env
+
+"#]])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .run();
+    // This identical cargo invocation is to ensure no rebuild happen.
+    p.cargo("run")
+        .env("ENV_TEST", "from-env")
+        .with_stdout_data(str![[r#"
+from-env
+
+"#]])
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn forced_env_changed_defined_in_config_toml() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+        use std::env;
+        fn main() {
+            println!( "{}", env!("ENV_TEST") );
+        }
+        "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [env]
+                ENV_TEST = {value = "from-config", force = true}
+            "#,
+        )
+        .build();
+
+    p.cargo("run")
+        .with_stdout_data(str![[r#"
+from-config
+
+"#]])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .run();
+
+    p.cargo("run")
+        .env("ENV_TEST", "from-env")
+        .with_stdout_data(str![[r#"
+from-config
+
+"#]])
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn env_changed_defined_in_config_args() {
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+        use std::env;
+        fn main() {
+            println!( "{}", env!("ENV_TEST") );
+        }
+        "#,
+        )
+        .build();
+    p.cargo(r#"run --config 'env.ENV_TEST="one"'"#)
+        .with_stdout_data(str![[r#"
+one
+
+"#]])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .run();
+
+    p.cargo(r#"run --config 'env.ENV_TEST="two"'"#)
+        .with_stdout_data(str![[r#"
+two
+
+"#]])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .run();
+    // This identical cargo invocation is to ensure no rebuild happen.
+    p.cargo(r#"run --config 'env.ENV_TEST="two"'"#)
+        .with_stdout_data(str![[r#"
+two
+
+"#]])
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .run();
+}

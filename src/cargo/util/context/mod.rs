@@ -63,7 +63,7 @@ use std::io::SeekFrom;
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::sync::Once;
+use std::sync::{Arc, Once};
 use std::time::Instant;
 
 use self::ConfigValue as CV;
@@ -227,7 +227,7 @@ pub struct GlobalContext {
     target_cfgs: LazyCell<Vec<(String, TargetCfgConfig)>>,
     doc_extern_map: LazyCell<RustdocExternMap>,
     progress_config: ProgressConfig,
-    env_config: LazyCell<EnvConfig>,
+    env_config: LazyCell<Arc<HashMap<String, OsString>>>,
     /// This should be false if:
     /// - this is an artifact of the rustc distribution process for "stable" or for "beta"
     /// - this is an `#[test]` that does not opt in with `enable_nightly_features`
@@ -1833,34 +1833,47 @@ impl GlobalContext {
         &self.progress_config
     }
 
-    pub fn env_config(&self) -> CargoResult<&EnvConfig> {
-        let env_config = self
-            .env_config
-            .try_borrow_with(|| self.get::<EnvConfig>("env"))?;
-
-        // Reasons for disallowing these values:
-        //
-        // - CARGO_HOME: The initial call to cargo does not honor this value
-        //   from the [env] table. Recursive calls to cargo would use the new
-        //   value, possibly behaving differently from the outer cargo.
-        //
-        // - RUSTUP_HOME and RUSTUP_TOOLCHAIN: Under normal usage with rustup,
-        //   this will have no effect because the rustup proxy sets
-        //   RUSTUP_HOME and RUSTUP_TOOLCHAIN, and that would override the
-        //   [env] table. If the outer cargo is executed directly
-        //   circumventing the rustup proxy, then this would affect calls to
-        //   rustc (assuming that is a proxy), which could potentially cause
-        //   problems with cargo and rustc being from different toolchains. We
-        //   consider this to be not a use case we would like to support,
-        //   since it will likely cause problems or lead to confusion.
-        for disallowed in &["CARGO_HOME", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN"] {
-            if env_config.contains_key(*disallowed) {
-                bail!(
-                    "setting the `{disallowed}` environment variable is not supported \
-                    in the `[env]` configuration table"
-                );
-            }
-        }
+    /// Get the env vars from the config `[env]` table which
+    /// are `force = true` or don't exist in the env snapshot [`GlobalContext::get_env`].
+    pub fn env_config(&self) -> CargoResult<&Arc<HashMap<String, OsString>>> {
+        let env_config = self.env_config.try_borrow_with(|| {
+            CargoResult::Ok(Arc::new({
+                let env_config = self.get::<EnvConfig>("env")?;
+                // Reasons for disallowing these values:
+                //
+                // - CARGO_HOME: The initial call to cargo does not honor this value
+                //   from the [env] table. Recursive calls to cargo would use the new
+                //   value, possibly behaving differently from the outer cargo.
+                //
+                // - RUSTUP_HOME and RUSTUP_TOOLCHAIN: Under normal usage with rustup,
+                //   this will have no effect because the rustup proxy sets
+                //   RUSTUP_HOME and RUSTUP_TOOLCHAIN, and that would override the
+                //   [env] table. If the outer cargo is executed directly
+                //   circumventing the rustup proxy, then this would affect calls to
+                //   rustc (assuming that is a proxy), which could potentially cause
+                //   problems with cargo and rustc being from different toolchains. We
+                //   consider this to be not a use case we would like to support,
+                //   since it will likely cause problems or lead to confusion.
+                for disallowed in &["CARGO_HOME", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN"] {
+                    if env_config.contains_key(*disallowed) {
+                        bail!(
+                            "setting the `{disallowed}` environment variable is not supported \
+                            in the `[env]` configuration table"
+                        );
+                    }
+                }
+                env_config
+                    .into_iter()
+                    .filter_map(|(k, v)| {
+                        if v.is_force() || self.get_env_os(&k).is_none() {
+                            Some((k, v.resolve(self).to_os_string()))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            }))
+        })?;
 
         Ok(env_config)
     }

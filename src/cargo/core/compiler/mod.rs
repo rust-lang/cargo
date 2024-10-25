@@ -330,7 +330,7 @@ fn rustc(
     if hide_diagnostics_for_scrape_unit {
         output_options.show_diagnostics = false;
     }
-
+    let env_config = Arc::clone(build_runner.bcx.gctx.env_config()?);
     return Ok(Work::new(move |state| {
         // Artifacts are in a different location than typical units,
         // hence we must assure the crate- and target-dependent
@@ -459,6 +459,7 @@ fn rustc(
                 &rustc,
                 // Do not track source files in the fingerprint for registry dependencies.
                 is_local,
+                &env_config,
             )
             .with_context(|| {
                 internal(format!(
@@ -1987,10 +1988,7 @@ pub(crate) fn apply_env_config(
         if cmd.get_envs().contains_key(key) {
             continue;
         }
-
-        if value.is_force() || gctx.get_env_os(key).is_none() {
-            cmd.env(key, value.resolve(gctx));
-        }
+        cmd.env(key, value);
     }
     Ok(())
 }

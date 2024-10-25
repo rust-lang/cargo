@@ -362,8 +362,8 @@
 mod dirty_reason;
 
 use std::collections::hash_map::{Entry, HashMap};
-
 use std::env;
+use std::ffi::OsString;
 use std::fmt::{self, Display};
 use std::fs::{self, File};
 use std::hash::{self, Hash, Hasher};
@@ -849,7 +849,11 @@ impl LocalFingerprint {
                                 .to_string(),
                         )
                     } else {
-                        gctx.get_env(key).ok()
+                        if let Some(value) = gctx.env_config()?.get(key) {
+                            value.to_str().and_then(|s| Some(s.to_string()))
+                        } else {
+                            gctx.get_env(key).ok()
+                        }
                     };
                     if current == *previous {
                         continue;
@@ -2124,6 +2128,9 @@ enum DepInfoPathType {
 ///
 /// The serialized Cargo format will contain a list of files, all of which are
 /// relative if they're under `root`. or absolute if they're elsewhere.
+///
+/// The `env_config` argument is a set of environment variables that are
+/// defined in `[env]` table of the `config.toml`.
 pub fn translate_dep_info(
     rustc_dep_info: &Path,
     cargo_dep_info: &Path,
@@ -2132,6 +2139,7 @@ pub fn translate_dep_info(
     target_root: &Path,
     rustc_cmd: &ProcessBuilder,
     allow_package: bool,
+    env_config: &Arc<HashMap<String, OsString>>,
 ) -> CargoResult<()> {
     let depinfo = parse_rustc_dep_info(rustc_dep_info)?;
 
@@ -2168,9 +2176,11 @@ pub fn translate_dep_info(
     // This also includes `CARGO` since if the code is explicitly wanting to
     // know that path, it should be rebuilt if it changes. The CARGO path is
     // not tracked elsewhere in the fingerprint.
-    on_disk_info
-        .env
-        .retain(|(key, _)| !rustc_cmd.get_envs().contains_key(key) || key == CARGO_ENV);
+    //
+    // For cargo#13280, We trace env vars that are defined in the `[env]` config table.
+    on_disk_info.env.retain(|(key, _)| {
+        env_config.contains_key(key) || !rustc_cmd.get_envs().contains_key(key) || key == CARGO_ENV
+    });
 
     let serialize_path = |file| {
         // The path may be absolute or relative, canonical or not. Make sure
