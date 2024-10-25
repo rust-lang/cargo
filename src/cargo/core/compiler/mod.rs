@@ -1987,10 +1987,7 @@ pub(crate) fn apply_env_config(
         if cmd.get_envs().contains_key(key) {
             continue;
         }
-
-        if value.is_force() || gctx.get_env_os(key).is_none() {
-            cmd.env(key, value.resolve(gctx));
-        }
+        cmd.env(key, value);
     }
     Ok(())
 }
