@@ -837,31 +837,26 @@ impl LocalFingerprint {
                 };
                 for (key, previous) in info.env.iter() {
                     let current = if key == CARGO_ENV {
-                        Some(
-                            cargo_exe
-                                .to_str()
-                                .ok_or_else(|| {
-                                    format_err!(
-                                        "cargo exe path {} must be valid UTF-8",
-                                        cargo_exe.display()
-                                    )
-                                })?
-                                .to_string(),
-                        )
+                        Some(cargo_exe.to_str().ok_or_else(|| {
+                            format_err!(
+                                "cargo exe path {} must be valid UTF-8",
+                                cargo_exe.display()
+                            )
+                        })?)
                     } else {
                         if let Some(value) = gctx.env_config()?.get(key) {
-                            value.to_str().and_then(|s| Some(s.to_string()))
+                            value.to_str()
                         } else {
                             gctx.get_env(key).ok()
                         }
                     };
-                    if current == *previous {
+                    if current == previous.as_deref() {
                         continue;
                     }
                     return Ok(Some(StaleItem::ChangedEnv {
                         var: key.clone(),
                         previous: previous.clone(),
-                        current,
+                        current: current.map(Into::into),
                     }));
                 }
                 if *checksum {

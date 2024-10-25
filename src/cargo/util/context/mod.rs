@@ -815,7 +815,7 @@ impl GlobalContext {
     /// [`GlobalContext`].
     ///
     /// This can be used similarly to [`std::env::var`].
-    pub fn get_env(&self, key: impl AsRef<OsStr>) -> CargoResult<String> {
+    pub fn get_env(&self, key: impl AsRef<OsStr>) -> CargoResult<&str> {
         self.env.get_env(key)
     }
 
@@ -823,7 +823,7 @@ impl GlobalContext {
     /// [`GlobalContext`].
     ///
     /// This can be used similarly to [`std::env::var_os`].
-    pub fn get_env_os(&self, key: impl AsRef<OsStr>) -> Option<OsString> {
+    pub fn get_env_os(&self, key: impl AsRef<OsStr>) -> Option<&OsStr> {
         self.env.get_env_os(key)
     }
 
