@@ -571,6 +571,8 @@ pub struct Package {
     local: bool,
     alternative: bool,
     invalid_json: bool,
+    edition: Option<String>,
+    resolver: Option<String>,
     proc_macro: bool,
     links: Option<String>,
     rust_version: Option<String>,
@@ -1250,6 +1252,8 @@ impl Package {
             local: false,
             alternative: false,
             invalid_json: false,
+            edition: None,
+            resolver: None,
             proc_macro: false,
             links: None,
             rust_version: None,
@@ -1382,6 +1386,18 @@ impl Package {
     /// Specifies whether or not the package is "yanked".
     pub fn yanked(&mut self, yanked: bool) -> &mut Package {
         self.yanked = yanked;
+        self
+    }
+
+    /// Specifies `package.edition`
+    pub fn edition(&mut self, edition: &str) -> &mut Package {
+        self.edition = Some(edition.to_owned());
+        self
+    }
+
+    /// Specifies `package.resolver`
+    pub fn resolver(&mut self, resolver: &str) -> &mut Package {
+        self.resolver = Some(resolver.to_owned());
         self
     }
 
@@ -1570,7 +1586,15 @@ impl Package {
         ));
 
         if let Some(version) = &self.rust_version {
-            manifest.push_str(&format!("rust-version = \"{}\"", version));
+            manifest.push_str(&format!("rust-version = \"{}\"\n", version));
+        }
+
+        if let Some(edition) = &self.edition {
+            manifest.push_str(&format!("edition = \"{}\"\n", edition));
+        }
+
+        if let Some(resolver) = &self.resolver {
+            manifest.push_str(&format!("resolver = \"{}\"\n", resolver));
         }
 
         if !self.features.is_empty() {
