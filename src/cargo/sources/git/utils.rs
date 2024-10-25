@@ -669,7 +669,7 @@ where
         debug_assert!(res.is_err());
         let mut attempts = vec![String::from("git")];
         if let Ok(s) = gctx.get_env("USER").or_else(|_| gctx.get_env("USERNAME")) {
-            attempts.push(s);
+            attempts.push(s.to_string());
         }
         if let Some(ref s) = cred_helper.username {
             attempts.push(s.clone());
