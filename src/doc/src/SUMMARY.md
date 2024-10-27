@@ -81,7 +81,6 @@
         * [cargo tree](commands/cargo-tree.md)
         * [cargo update](commands/cargo-update.md)
         * [cargo vendor](commands/cargo-vendor.md)
-        * [cargo verify-project](commands/cargo-verify-project.md)
     * [Package Commands](commands/package-commands.md)
         * [cargo init](commands/cargo-init.md)
         * [cargo install](commands/cargo-install.md)

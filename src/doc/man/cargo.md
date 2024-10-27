@@ -86,9 +86,6 @@ available at <https://rust-lang.org>.
 {{man "cargo-vendor" 1}}\
 &nbsp;&nbsp;&nbsp;&nbsp;Vendor all dependencies locally.
 
-{{man "cargo-verify-project" 1}}\
-&nbsp;&nbsp;&nbsp;&nbsp;Check correctness of crate manifest.
-
 ### Package Commands
 
 {{man "cargo-init" 1}}\
