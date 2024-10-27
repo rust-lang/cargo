@@ -784,6 +784,9 @@ fn mk(gctx: &GlobalContext, opts: &MkOptions<'_>) -> CargoResult<()> {
         manifest["profile.release"]["lto"] = toml_edit::value(true);
     }
 
+    manifest["profile.bench"] = toml_edit::Item::Table(toml_edit::Table::new());
+    manifest["profile.bench"]["lto"] = toml_edit::value(true);
+
     // Calculate what `[lib]` and `[[bin]]`s we need to append to `Cargo.toml`.
     for i in &opts.source_files {
         if i.bin {
