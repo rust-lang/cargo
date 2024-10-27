@@ -4,3 +4,9 @@ version = "0.1.0"
 edition = "2015"
 
 [dependencies]
+
+["profile.release"]
+lto = true
+
+["profile.bench"]
+lto = true

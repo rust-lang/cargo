@@ -5,5 +5,11 @@ edition = "2021"
 
 [dependencies]
 
+["profile.release"]
+lto = true
+
+["profile.bench"]
+lto = true
+
 [lints]
 workspace = true

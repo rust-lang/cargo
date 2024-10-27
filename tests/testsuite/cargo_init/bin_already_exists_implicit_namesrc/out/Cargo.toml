@@ -5,6 +5,12 @@ edition = "2021"
 
 [dependencies]
 
+["profile.release"]
+lto = true
+
+["profile.bench"]
+lto = true
+
 [[bin]]
 name = "case"
 path = "src/case.rs"

@@ -17,3 +17,9 @@ publish.workspace = true
 repository.workspace = true
 
 [dependencies]
+
+["profile.release"]
+lto = true
+
+["profile.bench"]
+lto = true

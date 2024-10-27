@@ -5,3 +5,9 @@ edition = "2021"
 authors.workspace = true
 
 [dependencies]
+
+["profile.release"]
+lto = true
+
+["profile.bench"]
+lto = true
