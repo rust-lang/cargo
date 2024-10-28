@@ -7,9 +7,9 @@ pub fn cli() -> Command {
         .hide(true)
         .about(color_print::cstr!(
             "\
-Print a JSON representation of a Cargo.toml manifest.
+DEPRECATED: Print a JSON representation of a Cargo.toml manifest.
 
-Deprecated, use `<cyan,bold>cargo metadata --no-deps</>` instead.\
+Use `<cyan,bold>cargo metadata --no-deps</>` instead.\
 "
         ))
         .arg_silent_suggestion()

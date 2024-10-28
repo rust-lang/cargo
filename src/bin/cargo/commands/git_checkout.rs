@@ -6,7 +6,7 @@ const REMOVED: &str = "The `git-checkout` command has been removed.";
 
 pub fn cli() -> Command {
     subcommand("git-checkout")
-        .about("This command has been removed")
+        .about("REMOVED: This command has been removed")
         .hide(true)
         .override_help(REMOVED)
 }

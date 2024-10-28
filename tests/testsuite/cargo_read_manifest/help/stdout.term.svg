@@ -19,11 +19,11 @@
   <rect width="100%" height="100%" y="0" rx="4.5" class="bg" />
 
   <text xml:space="preserve" class="container fg">
-    <tspan x="10px" y="28px"><tspan>Print a JSON representation of a Cargo.toml manifest.</tspan>
+    <tspan x="10px" y="28px"><tspan>DEPRECATED: Print a JSON representation of a Cargo.toml manifest.</tspan>
 </tspan>
     <tspan x="10px" y="46px">
 </tspan>
-    <tspan x="10px" y="64px"><tspan>Deprecated, use `</tspan><tspan class="fg-cyan bold">cargo metadata --no-deps</tspan><tspan class="bold">` instead.</tspan>
+    <tspan x="10px" y="64px"><tspan>Use `</tspan><tspan class="fg-cyan bold">cargo metadata --no-deps</tspan><tspan class="bold">` instead.</tspan>
 </tspan>
     <tspan x="10px" y="82px">
 </tspan>
