@@ -254,10 +254,6 @@ _cargo() {
                         '--dry-run[perform all checks without uploading]'
                         ;;
 
-                read-manifest)
-                    _arguments -s -S $common $manifest
-                        ;;
-
                 remove | rm)
                     _arguments -s -A "^--" $common $manifest \
                         "--dev[remove as a dev dependency]" \
@@ -354,10 +350,6 @@ _cargo() {
                         '(-p --package)'{-p+,--package=}'[specify package to update]:package:_cargo_package_names' \
                         '--precise=[update single dependency to precise release]:release' \
                         '*:package:_cargo_package_names'
-                        ;;
-
-                verify-project)
-                    _arguments -s -S $common $manifest
                         ;;
 
                 version)
