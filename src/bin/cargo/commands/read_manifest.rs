@@ -1,12 +1,15 @@
+//! Deprecated.
+
 use crate::command_prelude::*;
 
 pub fn cli() -> Command {
     subcommand("read-manifest")
+        .hide(true)
         .about(color_print::cstr!(
             "\
-Print a JSON representation of a Cargo.toml manifest.
+DEPRECATED: Print a JSON representation of a Cargo.toml manifest.
 
-Deprecated, use `<cyan,bold>cargo metadata --no-deps</>` instead.\
+Use `<cyan,bold>cargo metadata --no-deps</>` instead.\
 "
         ))
         .arg_silent_suggestion()

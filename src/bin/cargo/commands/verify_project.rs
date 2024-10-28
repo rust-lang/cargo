@@ -1,3 +1,5 @@
+//! Deprecated.
+
 use crate::command_prelude::*;
 
 use std::collections::HashMap;
@@ -5,11 +7,12 @@ use std::process;
 
 pub fn cli() -> Command {
     subcommand("verify-project")
+        .hide(true)
         .about(
             "\
-Check correctness of crate manifest.
+DEPRECATED: Check correctness of crate manifest.
 
-Deprecated, see https://github.com/rust-lang/cargo/issues/14679.",
+See https://github.com/rust-lang/cargo/issues/14679.",
         )
         .arg_silent_suggestion()
         .arg_manifest_path()
