@@ -2220,6 +2220,8 @@ pub fn translate_dep_info(
 #[derive(Default)]
 pub struct RustcDepInfo {
     /// The list of files that the main target in the dep-info file depends on.
+    ///
+    /// The optional checksums are parsed from the special `# checksum:...` comments.
     pub files: HashMap<PathBuf, Option<(u64, Checksum)>>,
     /// The list of environment variables we found that the rustc compilation
     /// depends on.
@@ -2228,6 +2230,8 @@ pub struct RustcDepInfo {
     /// item is the value. `Some` means that the env var was set, and `None`
     /// means that the env var wasn't actually set and the compilation depends
     /// on it not being set.
+    ///
+    /// These are from the special `# env-var:...` comments.
     pub env: Vec<(String, Option<String>)>,
 }
 
@@ -2236,6 +2240,33 @@ pub struct RustcDepInfo {
 ///
 /// This is also stored in an optimized format to make parsing it fast because
 /// Cargo will read it for crates on all future compilations.
+///
+/// Currently the format looks like:
+///
+/// ```text
+/// +------------+------------+---------------+---------------+
+/// | # of files | file paths | # of env vars | env var pairs |
+/// +------------+------------+---------------+---------------+
+/// ```
+///
+/// Each field represents
+///
+/// * _Number of files/envs_ --- A `u32` representing the number of things.
+/// * _File paths_ --- Zero or more paths of files the dep-info file depends on.
+///   Each path is encoded as the following:
+///
+///   ```text
+///   +-----------+-------------+------------+---------------+-----------+-------+
+///   | Path type | len of path | path bytes | cksum exists? | file size | cksum |
+///   +-----------+-------------+------------+---------------+-----------+-------+
+///   ```
+/// * _Env var pairs_ --- Zero or more env vars the dep-info file depends on.
+///   Each env key-value pair is encoded as the following:
+///   ```text
+///   +------------+-----------+---------------+--------------+-------------+
+///   | len of key | key bytes | value exists? | len of value | value bytes |
+///   +------------+-----------+---------------+--------------+-------------+
+///   ```
 #[derive(Default)]
 struct EncodedDepInfo {
     files: Vec<(DepInfoPathType, PathBuf, Option<(u64, String)>)>,
