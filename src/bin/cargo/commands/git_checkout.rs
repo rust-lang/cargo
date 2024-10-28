@@ -1,3 +1,5 @@
+//! Removed.
+
 use crate::command_prelude::*;
 
 const REMOVED: &str = "The `git-checkout` command has been removed.";

@@ -1,7 +1,10 @@
+//! Deprecated.
+
 use crate::command_prelude::*;
 
 pub fn cli() -> Command {
     subcommand("read-manifest")
+        .hide(true)
         .about(color_print::cstr!(
             "\
 Print a JSON representation of a Cargo.toml manifest.

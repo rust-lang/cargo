@@ -1,3 +1,5 @@
+//! Deprecated.
+
 use crate::command_prelude::*;
 
 use std::collections::HashMap;
@@ -5,6 +7,7 @@ use std::process;
 
 pub fn cli() -> Command {
     subcommand("verify-project")
+        .hide(true)
         .about(
             "\
 Check correctness of crate manifest.
