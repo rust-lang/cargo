@@ -94,6 +94,7 @@
         * [cargo package](commands/cargo-package.md)
         * [cargo publish](commands/cargo-publish.md)
         * [cargo yank](commands/cargo-yank.md)
+    * [Deprecated and Removed](commands/deprecated-and-removed.md)
 
 * [FAQ](faq.md)
 * [Appendix: Glossary](appendix/glossary.md)

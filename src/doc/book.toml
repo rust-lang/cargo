@@ -10,3 +10,6 @@ search.use-boolean-and = true
 
 [output.html.redirect]
 "/guide/build-cache.html" = "../reference/build-cache.html"
+"/commands/cargo-git-checkout.html" = "./deprecated-and-removed.html"
+"/commands/cargo-read-manifest.html" = "./deprecated-and-removed.html"
+"/commands/cargo-verify-project.html" = "./deprecated-and-removed.html"
