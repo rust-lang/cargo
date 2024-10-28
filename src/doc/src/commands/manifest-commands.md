@@ -10,4 +10,3 @@
 * [cargo tree](cargo-tree.md)
 * [cargo update](cargo-update.md)
 * [cargo vendor](cargo-vendor.md)
-* [cargo verify-project](cargo-verify-project.md)

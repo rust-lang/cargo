@@ -5,12 +5,14 @@ use std::process;
 
 pub fn cli() -> Command {
     subcommand("verify-project")
-        .about("Check correctness of crate manifest")
+        .about(
+            "\
+Check correctness of crate manifest.
+
+Deprecated, see https://github.com/rust-lang/cargo/issues/14679.",
+        )
         .arg_silent_suggestion()
         .arg_manifest_path()
-        .after_help(color_print::cstr!(
-            "Run `<cyan,bold>cargo help verify-project</>` for more detailed information.\n"
-        ))
 }
 
 pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {

@@ -82,9 +82,6 @@ COMMANDS
        cargo-vendor(1)
            Vendor all dependencies locally.
 
-       cargo-verify-project(1)
-           Check correctness of crate manifest.
-
    Package Commands
        cargo-init(1)
            Create a new Cargo package in an existing directory.
