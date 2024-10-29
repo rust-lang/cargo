@@ -128,6 +128,7 @@ one detailed below.
 * [`cargo::rustc-env=VAR=VALUE`](#rustc-env) --- Sets an environment variable.
 * [`cargo::rustc-cdylib-link-arg=FLAG`](#rustc-cdylib-link-arg) --- Passes custom
   flags to a linker for cdylib crates.
+- [`cargo::error=MESSAGE`](#cargo-error) --- Displays an error on the terminal.
 * [`cargo::warning=MESSAGE`](#cargo-warning) --- Displays a warning on the
   terminal.
 * [`cargo::metadata=KEY=VALUE`](#the-links-manifest-key) --- Metadata, used by `links`
@@ -313,13 +314,27 @@ link-arg=FLAG` option][link-arg] to the compiler, but only when building a
 `cdylib` library target. Its usage is highly platform specific. It is useful
 to set the shared library version or the runtime-path.
 
+### `cargo::error=MESSAGE` {#cargo-error}
+
+The `error` instruction tells Cargo to display an error after the build script
+has finished running, and then fail the build.
+
+ > Note: Build script libraries should carefully consider if they want to
+ > use `cargo::error` versus returning a `Result`. It may be better to return
+ > a `Result`, and allow the caller to decide if the error is fatal or not.
+ > The caller can then decide whether or not to display the `Err` variant
+ > using `cargo::error`.
+
+> **MSRV:** Respected as of 1.84
+
 ### `cargo::warning=MESSAGE` {#cargo-warning}
 
 The `warning` instruction tells Cargo to display a warning after the build
 script has finished running. Warnings are only shown for `path` dependencies
 (that is, those you're working on locally), so for example warnings printed
-out in [crates.io] crates are not emitted by default. The `-vv` "very verbose"
-flag may be used to have Cargo display warnings for all crates.
+out in [crates.io] crates are not emitted by default, unless the build fails.
+The `-vv` "very verbose" flag may be used to have Cargo display warnings for
+all crates.
 
 ## Build Dependencies
 
