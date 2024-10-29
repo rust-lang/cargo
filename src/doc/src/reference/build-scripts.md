@@ -325,7 +325,7 @@ has finished running, and then fail the build.
  > The caller can then decide whether or not to display the `Err` variant
  > using `cargo::error`.
 
-> **MSRV:** Respected as of 1.82
+> **MSRV:** Respected as of 1.84
 
 ### `cargo::warning=MESSAGE` {#cargo-warning}
 
