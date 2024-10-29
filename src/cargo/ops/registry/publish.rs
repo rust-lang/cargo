@@ -133,7 +133,7 @@ pub fn publish(ws: &Workspace<'_>, opts: &PublishOpts<'_>) -> CargoResult<()> {
             .acquire_package_cache_lock(CacheLockMode::DownloadExclusive)?;
 
         for (pkg, _) in &pkgs {
-            verify_unpublished(pkg, &mut source, &source_ids)?;
+            verify_unpublished(pkg, &mut source, &source_ids, opts.dry_run, opts.gctx)?;
             verify_dependencies(pkg, &registry, source_ids.original)?;
         }
     }
@@ -368,6 +368,8 @@ fn verify_unpublished(
     pkg: &Package,
     source: &mut RegistrySource<'_>,
     source_ids: &RegistrySourceIds,
+    dry_run: bool,
+    gctx: &GlobalContext,
 ) -> CargoResult<()> {
     let query = Dependency::parse(
         pkg.name(),
@@ -383,12 +385,24 @@ fn verify_unpublished(
         }
     };
     if !duplicate_query.is_empty() {
-        bail!(
-            "crate {}@{} already exists on {}",
-            pkg.name(),
-            pkg.version(),
-            source.describe()
-        );
+        // Move the registry error earlier in the publish process.
+        // Since dry-run wouldn't talk to the registry to get the error, we downgrade it to a
+        // warning.
+        if dry_run {
+            gctx.shell().warn(format!(
+                "crate {}@{} already exists on {}",
+                pkg.name(),
+                pkg.version(),
+                source.describe()
+            ))?;
+        } else {
+            bail!(
+                "crate {}@{} already exists on {}",
+                pkg.name(),
+                pkg.version(),
+                source.describe()
+            );
+        }
     }
 
     Ok(())
