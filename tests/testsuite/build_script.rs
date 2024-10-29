@@ -3966,7 +3966,7 @@ fn warnings_emitted_from_path_dep() {
 
     p.cargo("build")
         .with_stderr_data(str![[r#"
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [COMPILING] a v0.5.0 ([ROOT]/foo/a)
 [WARNING] a@0.5.0: foo
 [WARNING] a@0.5.0: bar
@@ -4076,7 +4076,7 @@ fn warnings_emitted_when_dependency_panics() {
     .with_status(101)
     .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] published v0.1.0 (registry `dummy-registry`)
 [COMPILING] published v0.1.0
@@ -4148,7 +4148,7 @@ fn log_messages_emitted_when_dependency_logs_errors() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest compatible versions
+[LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] published v0.1.0 (registry `dummy-registry`)
 [COMPILING] published v0.1.0
