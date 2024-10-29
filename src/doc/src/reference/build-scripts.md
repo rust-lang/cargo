@@ -319,6 +319,12 @@ to set the shared library version or the runtime-path.
 The `error` instruction tells Cargo to display an error after the build script
 has finished running, and then fail the build.
 
+ > Note: Build script libraries should carefully consider if they want to
+ > use `cargo::error` versus returning a `Result`. It may be better to return
+ > a `Result`, and allow the caller to decide if the error is fatal or not.
+ > The caller can then decide whether or not to display the `Err` variant
+ > using `cargo::error`.
+
 > **MSRV:** Respected as of 1.82
 
 ### `cargo::warning=MESSAGE` {#cargo-warning}
