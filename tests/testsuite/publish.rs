@@ -150,6 +150,16 @@ fn duplicate_version() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
+    p.cargo("publish --dry-run")
+        .replace_crates_io(registry_dupl.index_url())
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] crates.io index
+[ERROR] crate foo@0.0.1 already exists on crates.io index
+
+"#]])
+        .run();
+
     p.cargo("publish")
         .replace_crates_io(registry_dupl.index_url())
         .with_status(101)
