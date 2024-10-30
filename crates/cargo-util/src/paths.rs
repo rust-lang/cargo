@@ -94,7 +94,7 @@ pub fn normalize_path(path: &Path) -> PathBuf {
         match component {
             Component::Prefix(..) => unreachable!(),
             Component::RootDir => {
-                ret.push(component.as_os_str());
+                ret.push(Component::RootDir);
             }
             Component::CurDir => {}
             Component::ParentDir => {
