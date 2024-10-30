@@ -84,7 +84,7 @@ pub enum DepInfoPathType {
 ///   | len of key | key bytes | value exists? | len of value | value bytes |
 ///   +------------+-----------+---------------+--------------+-------------+
 ///   ```
-#[derive(Default)]
+#[derive(Default, Debug, PartialEq, Eq)]
 pub struct EncodedDepInfo {
     pub files: Vec<(DepInfoPathType, PathBuf, Option<(u64, String)>)>,
     pub env: Vec<(String, Option<String>)>,
@@ -613,4 +613,58 @@ pub enum InvalidChecksum {
     InvalidChecksum(ChecksumAlgo),
     #[error("expected a string with format \"algorithm=hex_checksum\"")]
     InvalidFormat,
+}
+
+#[cfg(test)]
+mod encoded_dep_info {
+    use super::*;
+
+    #[track_caller]
+    fn gen_test(checksum: bool) {
+        let checksum = checksum.then_some((768, "c01efc669f09508b55eced32d3c88702578a7c3e".into()));
+        let lib_rs = (
+            DepInfoPathType::TargetRootRelative,
+            PathBuf::from("src/lib.rs"),
+            checksum.clone(),
+        );
+
+        let depinfo = EncodedDepInfo {
+            files: vec![lib_rs.clone()],
+            env: Vec::new(),
+        };
+        let data = depinfo.serialize().unwrap();
+        assert_eq!(EncodedDepInfo::parse(&data).unwrap(), depinfo);
+
+        let mod_rs = (
+            DepInfoPathType::TargetRootRelative,
+            PathBuf::from("src/mod.rs"),
+            checksum.clone(),
+        );
+        let depinfo = EncodedDepInfo {
+            files: vec![lib_rs.clone(), mod_rs.clone()],
+            env: Vec::new(),
+        };
+        let data = depinfo.serialize().unwrap();
+        assert_eq!(EncodedDepInfo::parse(&data).unwrap(), depinfo);
+
+        let depinfo = EncodedDepInfo {
+            files: vec![lib_rs, mod_rs],
+            env: vec![
+                ("Gimli".into(), Some("Legolas".into())),
+                ("Beren".into(), Some("Lúthien".into())),
+            ],
+        };
+        let data = depinfo.serialize().unwrap();
+        assert_eq!(EncodedDepInfo::parse(&data).unwrap(), depinfo);
+    }
+
+    #[test]
+    fn round_trip() {
+        gen_test(false);
+    }
+
+    #[test]
+    fn round_trip_with_checksums() {
+        gen_test(true);
+    }
 }
