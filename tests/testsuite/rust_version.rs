@@ -553,8 +553,7 @@ fn resolve_edition2024() {
 
     // Edition2024 should resolve for MSRV
     p.cargo("generate-lockfile")
-        .arg("-Zmsrv-policy")
-        .masquerade_as_nightly_cargo(&["edition2024", "msrv-policy"])
+        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
@@ -564,8 +563,7 @@ fn resolve_edition2024() {
 "#]])
         .run();
     p.cargo("tree")
-        .arg("-Zmsrv-policy")
-        .masquerade_as_nightly_cargo(&["edition2024", "msrv-policy"])
+        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stdout_data(str![[r#"
 foo v0.0.1 ([ROOT]/foo)
 ├── newer-and-older v1.5.0
@@ -581,12 +579,10 @@ foo v0.0.1 ([ROOT]/foo)
 [LOCKING] 2 packages to latest compatible versions
 
 "#]])
-        .arg("-Zmsrv-policy")
-        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .masquerade_as_nightly_cargo(&["edition2024"])
         .run();
     p.cargo("tree")
-        .arg("-Zmsrv-policy")
-        .masquerade_as_nightly_cargo(&["edition2024", "msrv-policy"])
+        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stdout_data(str![[r#"
 foo v0.0.1 ([ROOT]/foo)
 ├── newer-and-older v1.6.0
@@ -603,12 +599,10 @@ foo v0.0.1 ([ROOT]/foo)
 [LOCKING] 2 packages to latest compatible versions
 
 "#]])
-        .arg("-Zmsrv-policy")
-        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .masquerade_as_nightly_cargo(&["edition2024"])
         .run();
     p.cargo("tree")
-        .arg("-Zmsrv-policy")
-        .masquerade_as_nightly_cargo(&["edition2024", "msrv-policy"])
+        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stdout_data(str![[r#"
 foo v0.0.1 ([ROOT]/foo)
 ├── newer-and-older v1.6.0
@@ -657,8 +651,7 @@ fn resolve_v3() {
 
     // v3 should resolve for MSRV
     p.cargo("generate-lockfile")
-        .arg("-Zmsrv-policy")
-        .masquerade_as_nightly_cargo(&["edition2024", "msrv-policy"])
+        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
@@ -668,8 +661,7 @@ fn resolve_v3() {
 "#]])
         .run();
     p.cargo("tree")
-        .arg("-Zmsrv-policy")
-        .masquerade_as_nightly_cargo(&["edition2024", "msrv-policy"])
+        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stdout_data(str![[r#"
 foo v0.0.1 ([ROOT]/foo)
 ├── newer-and-older v1.5.0
@@ -685,12 +677,10 @@ foo v0.0.1 ([ROOT]/foo)
 [LOCKING] 2 packages to latest compatible versions
 
 "#]])
-        .arg("-Zmsrv-policy")
-        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .masquerade_as_nightly_cargo(&["edition2024"])
         .run();
     p.cargo("tree")
-        .arg("-Zmsrv-policy")
-        .masquerade_as_nightly_cargo(&["edition2024", "msrv-policy"])
+        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stdout_data(str![[r#"
 foo v0.0.1 ([ROOT]/foo)
 ├── newer-and-older v1.6.0
@@ -707,12 +697,10 @@ foo v0.0.1 ([ROOT]/foo)
 [LOCKING] 2 packages to latest compatible versions
 
 "#]])
-        .arg("-Zmsrv-policy")
-        .masquerade_as_nightly_cargo(&["msrv-policy"])
+        .masquerade_as_nightly_cargo(&["edition2024"])
         .run();
     p.cargo("tree")
-        .arg("-Zmsrv-policy")
-        .masquerade_as_nightly_cargo(&["edition2024", "msrv-policy"])
+        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stdout_data(str![[r#"
 foo v0.0.1 ([ROOT]/foo)
 ├── newer-and-older v1.6.0
@@ -977,8 +965,7 @@ fn cargo_install_ignores_resolver_v3_msrv_change() {
         .publish();
 
     cargo_process("install foo")
-        .arg("-Zmsrv-policy")
-        .masquerade_as_nightly_cargo(&["edition2024", "msrv-policy"])
+        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
@@ -1017,8 +1004,7 @@ fn cargo_install_ignores_edition_2024_msrv_change() {
         .publish();
 
     cargo_process("install foo")
-        .arg("-Zmsrv-policy")
-        .masquerade_as_nightly_cargo(&["edition2024", "msrv-policy"])
+        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
