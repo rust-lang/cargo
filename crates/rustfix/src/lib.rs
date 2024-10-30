@@ -243,9 +243,11 @@ impl CodeFix {
     pub fn apply_solution(&mut self, solution: &Solution) -> Result<(), Error> {
         for r in &solution.replacements {
             self.data
-                .replace_range(r.snippet.range.clone(), r.replacement.as_bytes())?;
-            self.modified = true;
+                .replace_range(r.snippet.range.clone(), r.replacement.as_bytes())
+                .inspect_err(|_| self.data.restore())?;
         }
+        self.data.commit();
+        self.modified = true;
         Ok(())
     }
 
