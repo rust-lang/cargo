@@ -422,6 +422,7 @@ fn env_config_rerun_if_changed() {
     );
     p.cargo("check")
         .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -473,6 +474,7 @@ fn insensitive_env_config_rerun_if_changed() {
     );
     p.cargo("check")
         .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -516,6 +518,7 @@ fn env_config_newly_added_rerun() {
     );
     p.cargo("check")
         .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
