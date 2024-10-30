@@ -612,7 +612,7 @@ foo v0.0.1 ([ROOT]/foo)
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 in rustc is unstable")]
+#[cargo_test]
 fn resolve_v3() {
     Package::new("only-newer", "1.6.0")
         .rust_version("1.65.0")
@@ -631,8 +631,6 @@ fn resolve_v3() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition2024"]
-
             [package]
             name = "foo"
             version = "0.0.1"
@@ -651,7 +649,6 @@ fn resolve_v3() {
 
     // v3 should resolve for MSRV
     p.cargo("generate-lockfile")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
@@ -661,7 +658,6 @@ fn resolve_v3() {
 "#]])
         .run();
     p.cargo("tree")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stdout_data(str![[r#"
 foo v0.0.1 ([ROOT]/foo)
 ├── newer-and-older v1.5.0
@@ -677,10 +673,8 @@ foo v0.0.1 ([ROOT]/foo)
 [LOCKING] 2 packages to latest compatible versions
 
 "#]])
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .run();
     p.cargo("tree")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stdout_data(str![[r#"
 foo v0.0.1 ([ROOT]/foo)
 ├── newer-and-older v1.6.0
@@ -697,28 +691,12 @@ foo v0.0.1 ([ROOT]/foo)
 [LOCKING] 2 packages to latest compatible versions
 
 "#]])
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .run();
     p.cargo("tree")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stdout_data(str![[r#"
 foo v0.0.1 ([ROOT]/foo)
 ├── newer-and-older v1.6.0
 └── only-newer v1.6.0
-
-"#]])
-        .run();
-
-    // unstable
-    p.cargo("generate-lockfile")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
-
-Caused by:
-  the cargo feature `edition2024` requires a nightly version of Cargo, but this is the `stable` channel
-  See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information about Rust release channels.
-  See https://doc.rust-lang.org/cargo/reference/unstable.html#edition-2024 for more information about using this feature.
 
 "#]])
         .run();
@@ -946,7 +924,7 @@ fn cargo_install_ignores_msrv_config() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 in rustc is unstable")]
+#[cargo_test]
 fn cargo_install_ignores_resolver_v3_msrv_change() {
     Package::new("dep", "1.0.0")
         .rust_version("1.50")
@@ -958,14 +936,12 @@ fn cargo_install_ignores_resolver_v3_msrv_change() {
         .publish();
     Package::new("foo", "0.0.1")
         .rust_version("1.60")
-        .cargo_feature("edition2024")
         .resolver("3")
         .file("src/main.rs", "fn main() {}")
         .dep("dep", "1")
         .publish();
 
     cargo_process("install foo")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...
