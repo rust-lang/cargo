@@ -415,6 +415,7 @@ fn rerun_if_env_is_exsited_config() {
 
     p.cargo(r#"check --config 'env.FOO="bar"'"#)
         .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -445,6 +446,7 @@ fn rerun_if_env_newly_added_in_config() {
 
     p.cargo(r#"check --config 'env.FOO="foo"'"#)
         .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
