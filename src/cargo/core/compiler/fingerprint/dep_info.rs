@@ -667,4 +667,35 @@ mod encoded_dep_info {
     fn round_trip_with_checksums() {
         gen_test(true);
     }
+
+    #[test]
+    fn path_type_is_u8_max() {
+        #[rustfmt::skip]
+        let data = [
+            0x01, 0x00, 0x00, 0x00, 0xff,       // magic marker
+            0x01,                               // version
+            0x01, 0x00, 0x00, 0x00,             // # of files
+            0x00,                               // path type
+            0x04, 0x00, 0x00, 0x00,             // len of path
+            0x72, 0x75, 0x73, 0x74,             // path bytes ("rust")
+            0x00,                               // cksum exists?
+            0x00, 0x00, 0x00, 0x00,             // # of env vars
+        ];
+        // The current cargo doesn't recognize the magic marker.
+        assert!(EncodedDepInfo::parse(&data).is_none());
+    }
+
+    #[test]
+    fn parse_v0_fingerprint_dep_info() {
+        #[rustfmt::skip]
+        let data = [
+            0x01, 0x00, 0x00, 0x00, // # of files
+            0x00,                   // path type
+            0x04, 0x00, 0x00, 0x00, // len of path
+            0x72, 0x75, 0x73, 0x74, // path bytes: "rust"
+            0x00, 0x00, 0x00, 0x00, // # of env vars
+        ];
+        // Cargo can't recognize v0 after `-Zchecksum-freshess` added.
+        assert!(EncodedDepInfo::parse(&data).is_none());
+    }
 }
