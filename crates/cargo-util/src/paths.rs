@@ -98,7 +98,14 @@ pub fn normalize_path(path: &Path) -> PathBuf {
             }
             Component::CurDir => {}
             Component::ParentDir => {
-                ret.pop();
+                if ret.ends_with(Component::ParentDir) {
+                    ret.push(Component::ParentDir);
+                } else {
+                    let popped = ret.pop();
+                    if !popped && !ret.has_root() {
+                        ret.push(Component::ParentDir);
+                    }
+                }
             }
             Component::Normal(c) => {
                 ret.push(c);
@@ -879,13 +886,13 @@ mod tests {
             ("foo/bar/./././///", "foo/bar"),
             ("foo/bar/..", "foo"),
             ("foo/bar/../..", ""),
-            ("foo/bar/../../..", ""),
-            ("../../foo/bar", "foo/bar"),
-            ("../../foo/bar/", "foo/bar"),
-            ("../../foo/bar/./././///", "foo/bar"),
-            ("../../foo/bar/..", "foo"),
-            ("../../foo/bar/../..", ""),
-            ("../../foo/bar/../../..", ""),
+            ("foo/bar/../../..", ".."),
+            ("../../foo/bar", "../../foo/bar"),
+            ("../../foo/bar/", "../../foo/bar"),
+            ("../../foo/bar/./././///", "../../foo/bar"),
+            ("../../foo/bar/..", "../../foo"),
+            ("../../foo/bar/../..", "../.."),
+            ("../../foo/bar/../../..", "../../.."),
         ];
         for (input, expected) in cases {
             let actual = normalize_path(std::path::Path::new(input));
