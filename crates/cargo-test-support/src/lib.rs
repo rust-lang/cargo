@@ -1597,6 +1597,12 @@ pub fn assert_deps(project: &Project, fingerprint: &str, test_cb: impl Fn(&Path,
     assert!(files.next().is_none(), "expected only 1 dep-info file");
     let dep_info = fs::read(&info_path).unwrap();
     let dep_info = &mut &dep_info[..];
+
+    // Consume the magic marker and version. Here they don't really matter.
+    read_usize(dep_info);
+    read_u8(dep_info);
+    read_u8(dep_info);
+
     let deps = (0..read_usize(dep_info))
         .map(|_| {
             let ty = read_u8(dep_info);
