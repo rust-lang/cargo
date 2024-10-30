@@ -856,8 +856,42 @@ fn exclude_from_time_machine(path: &Path) {
 #[cfg(test)]
 mod tests {
     use super::join_paths;
+    use super::normalize_path;
     use super::write;
     use super::write_atomic;
+
+    #[test]
+    fn test_normalize_path() {
+        let cases = &[
+            ("", ""),
+            (".", ""),
+            (".////./.", ""),
+            ("/", "/"),
+            ("/..", "/"),
+            ("/foo/bar", "/foo/bar"),
+            ("/foo/bar/", "/foo/bar"),
+            ("/foo/bar/./././///", "/foo/bar"),
+            ("/foo/bar/..", "/foo"),
+            ("/foo/bar/../..", "/"),
+            ("/foo/bar/../../..", "/"),
+            ("foo/bar", "foo/bar"),
+            ("foo/bar/", "foo/bar"),
+            ("foo/bar/./././///", "foo/bar"),
+            ("foo/bar/..", "foo"),
+            ("foo/bar/../..", ""),
+            ("foo/bar/../../..", ""),
+            ("../../foo/bar", "foo/bar"),
+            ("../../foo/bar/", "foo/bar"),
+            ("../../foo/bar/./././///", "foo/bar"),
+            ("../../foo/bar/..", "foo"),
+            ("../../foo/bar/../..", ""),
+            ("../../foo/bar/../../..", ""),
+        ];
+        for (input, expected) in cases {
+            let actual = normalize_path(std::path::Path::new(input));
+            assert_eq!(actual, std::path::Path::new(expected), "input: {input}");
+        }
+    }
 
     #[test]
     fn write_works() {
