@@ -519,7 +519,7 @@ impl<'gctx> PackageSet<'gctx> {
                 target_data,
                 force_all_targets,
             );
-            for (pkg_id, _dep) in filtered_deps {
+            for (pkg_id, deps) in filtered_deps {
                 collect_used_deps(
                     used,
                     resolve,
@@ -529,6 +529,24 @@ impl<'gctx> PackageSet<'gctx> {
                     target_data,
                     force_all_targets,
                 )?;
+                let artifact_kinds = deps.iter().filter_map(|dep| {
+                    Some(
+                        dep.artifact()?
+                            .target()?
+                            .to_resolved_compile_kind(*requested_kinds.iter().next().unwrap()),
+                    )
+                });
+                for artifact_kind in artifact_kinds {
+                    collect_used_deps(
+                        used,
+                        resolve,
+                        pkg_id,
+                        has_dev_units,
+                        artifact_kind,
+                        target_data,
+                        force_all_targets,
+                    )?;
+                }
             }
             Ok(())
         }

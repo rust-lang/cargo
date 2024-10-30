@@ -1646,16 +1646,16 @@ fn dep_of_artifact_dep_same_target_specified() {
         .with_status(0)
         .run();
 
-    // TODO This command currently fails due to a bug in cargo but it should be fixed so that it succeeds in the future.
     p.cargo("tree -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_stderr_data(
+        .with_stdout_data(
             r#"...
-no entry found for key
-...
+foo v0.1.0 ([ROOT]/foo)
+└── bar v0.1.0 ([ROOT]/foo/bar)
+    └── baz v0.1.0 ([ROOT]/foo/baz)
 "#,
         )
-        .with_status(101)
+        .with_status(0)
         .run();
 }
 
@@ -1827,17 +1827,17 @@ fn proc_macro_in_artifact_dep() {
 
     p.cargo("check -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            r#"...
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
 [DOWNLOADING] crates ...
-[DOWNLOADED] bin-uses-pm v1.0.0 (registry `dummy-registry`)
-[DOWNLOADING] crates ...
-thread 'main' panicked at src/cargo/core/compiler/unit_dependencies.rs:1035:33:
-expected pm v1.0.0 to be downloaded
-[NOTE] run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+[ERROR] failed to download from `[ROOTURL]/dl/pm/1.0.0/download`
 
-"#]])
+Caused by:
+  [37] Could[..]t read a file:// file (Couldn't open file [ROOT]/dl/pm/1.0.0/download)
+"#,
+        )
         .with_status(101)
         .run();
 }
