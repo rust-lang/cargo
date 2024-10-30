@@ -499,17 +499,18 @@ impl<'gctx> PackageSet<'gctx> {
         force_all_targets: ForceAllTargets,
     ) -> CargoResult<()> {
         fn collect_used_deps(
-            used: &mut BTreeSet<PackageId>,
+            used: &mut BTreeSet<(PackageId, CompileKind)>,
             resolve: &Resolve,
             pkg_id: PackageId,
             has_dev_units: HasDevUnits,
-            requested_kinds: &[CompileKind],
+            requested_kind: CompileKind,
             target_data: &RustcTargetData<'_>,
             force_all_targets: ForceAllTargets,
         ) -> CargoResult<()> {
-            if !used.insert(pkg_id) {
+            if !used.insert((pkg_id, requested_kind)) {
                 return Ok(());
             }
+            let requested_kinds = &[requested_kind];
             let filtered_deps = PackageSet::filter_deps(
                 pkg_id,
                 resolve,
@@ -518,16 +519,34 @@ impl<'gctx> PackageSet<'gctx> {
                 target_data,
                 force_all_targets,
             );
-            for (pkg_id, _dep) in filtered_deps {
+            for (pkg_id, deps) in filtered_deps {
                 collect_used_deps(
                     used,
                     resolve,
                     pkg_id,
                     has_dev_units,
-                    requested_kinds,
+                    requested_kind,
                     target_data,
                     force_all_targets,
                 )?;
+                let artifact_kinds = deps.iter().filter_map(|dep| {
+                    Some(
+                        dep.artifact()?
+                            .target()?
+                            .to_resolved_compile_kind(*requested_kinds.iter().next().unwrap()),
+                    )
+                });
+                for artifact_kind in artifact_kinds {
+                    collect_used_deps(
+                        used,
+                        resolve,
+                        pkg_id,
+                        has_dev_units,
+                        artifact_kind,
+                        target_data,
+                        force_all_targets,
+                    )?;
+                }
             }
             Ok(())
         }
@@ -538,16 +557,22 @@ impl<'gctx> PackageSet<'gctx> {
         let mut to_download = BTreeSet::new();
 
         for id in root_ids {
-            collect_used_deps(
-                &mut to_download,
-                resolve,
-                *id,
-                has_dev_units,
-                requested_kinds,
-                target_data,
-                force_all_targets,
-            )?;
+            for requested_kind in requested_kinds {
+                collect_used_deps(
+                    &mut to_download,
+                    resolve,
+                    *id,
+                    has_dev_units,
+                    *requested_kind,
+                    target_data,
+                    force_all_targets,
+                )?;
+            }
         }
+        let to_download = to_download
+            .into_iter()
+            .map(|(p, _)| p)
+            .collect::<BTreeSet<_>>();
         self.get_many(to_download.into_iter())?;
         Ok(())
     }
