@@ -247,6 +247,73 @@ fn basic() {
 }
 
 #[cargo_test(build_std_mock)]
+fn shared_std_dependency_rebuild() {
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+    let setup = setup();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            format!(
+                "
+                [package]
+                name = \"foo\"
+                version = \"0.1.0\"
+                edition = \"2021\"
+
+                [build-dependencies]
+                dep_test = {{ path = \"{}/tests/testsuite/mock-std/dep_test\" }}
+            ",
+                manifest_dir
+            )
+            .as_str(),
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                println!("Hello, World!");
+            }
+            "#,
+        )
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                println!("cargo::rerun-if-changed=build.rs");
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("build -v")
+        .build_std(&setup)
+        .target_host()
+        .with_stderr_data(str![[r#"
+...
+[RUNNING] `[..] rustc --crate-name dep_test [..]`
+...
+[RUNNING] `[..] rustc --crate-name dep_test [..]`
+...
+"#]])
+        .run();
+
+    // TODO: Because of the way in which std is resolved, it's mandatory that this is left commented
+    // out as it will fail. This case should result in `dep_test` only being built once, however
+    // it's still being built twice. This is a bug.
+    //
+    //    p.cargo("build -v")
+    //        .build_std(&setup)
+    //        .with_stderr_does_not_contain(str![[r#"
+    //...
+    //[RUNNING] `[..] rustc --crate-name dep_test [..]`
+    //...
+    //[RUNNING] `[..] rustc --crate-name dep_test [..]`
+    //...
+    //"#]])
+    //        .run();
+}
+
+#[cargo_test(build_std_mock)]
 fn simple_lib_std() {
     let setup = setup();
 

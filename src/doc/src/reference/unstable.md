@@ -435,10 +435,6 @@ component:
 $ rustup component add rust-src --toolchain nightly
 ```
 
-It is also required today that the `-Z build-std` flag is combined with the
-`--target` flag. Note that you're not forced to do a cross compilation, you're
-just forced to pass `--target` in one form or another.
-
 Usage looks like:
 
 ```console
@@ -472,7 +468,6 @@ The value here is a comma-separated list of standard library crates to build.
 As a summary, a list of requirements today to use `-Z build-std` are:
 
 * You must install libstd's source code through `rustup component add rust-src`
-* You must pass `--target`
 * You must use both a nightly Cargo and a nightly rustc
 * The `-Z build-std` flag must be passed to all `cargo` invocations.
 
