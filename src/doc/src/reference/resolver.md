@@ -503,7 +503,7 @@ name = "my-package"
 version = "1.0.0"
 resolver = "2"
 ```
-- `"1"` (workspace, [`edition = "2015"`](manifest.md#the-edition-field) default)
+- `"1"` (default)
 - `"2"` ([`edition = "2021"`](manifest.md#the-edition-field) default): Introduces changes in [feature
 unification](#features). See the [features chapter][features-2] for more
 details.
@@ -518,6 +518,8 @@ specified in the `[workspace]` table, for example:
 members = ["member1", "member2"]
 resolver = "2"
 ```
+
+> **MSRV:** Requires 1.51+
 
 [virtual workspace]: workspaces.md#virtual-workspace
 [features-2]: features.md#feature-resolver-version-2
