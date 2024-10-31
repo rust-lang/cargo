@@ -15,6 +15,7 @@ use std::fs::{self, DirEntry};
 use std::path::{Path, PathBuf};
 
 use anyhow::Context as _;
+use cargo_util::paths;
 use cargo_util_schemas::manifest::{
     PathValue, StringOrBool, StringOrVec, TomlBenchTarget, TomlBinTarget, TomlExampleTarget,
     TomlLibTarget, TomlManifest, TomlTarget, TomlTestTarget,
@@ -133,7 +134,7 @@ pub fn normalize_lib(
     warnings: &mut Vec<String>,
 ) -> CargoResult<Option<TomlLibTarget>> {
     if is_normalized(original_lib, autodiscover) {
-        let Some(lib) = original_lib.cloned() else {
+        let Some(mut lib) = original_lib.cloned() else {
             return Ok(None);
         };
 
@@ -142,6 +143,10 @@ pub fn normalize_lib(
 
         validate_proc_macro(&lib, "library", edition, warnings)?;
         validate_crate_types(&lib, "library", edition, warnings)?;
+
+        if let Some(PathValue(path)) = &lib.path {
+            lib.path = Some(PathValue(paths::normalize_path(path).into()));
+        }
 
         Ok(Some(lib))
     } else {
@@ -182,6 +187,10 @@ pub fn normalize_lib(
                     )
                 }
             }
+        }
+
+        if let Some(PathValue(path)) = lib.path.as_ref() {
+            lib.path = Some(PathValue(paths::normalize_path(&path).into()));
         }
 
         Ok(Some(lib))
@@ -255,11 +264,15 @@ pub fn normalize_bins(
     has_lib: bool,
 ) -> CargoResult<Vec<TomlBinTarget>> {
     if are_normalized(toml_bins, autodiscover) {
-        let toml_bins = toml_bins.cloned().unwrap_or_default();
-        for bin in &toml_bins {
+        let mut toml_bins = toml_bins.cloned().unwrap_or_default();
+        for bin in toml_bins.iter_mut() {
             validate_bin_name(bin, warnings)?;
             validate_bin_crate_types(bin, edition, warnings, errors)?;
             validate_bin_proc_macro(bin, edition, warnings, errors)?;
+
+            if let Some(PathValue(path)) = &bin.path {
+                bin.path = Some(PathValue(paths::normalize_path(path).into()));
+            }
         }
         Ok(toml_bins)
     } else {
@@ -300,7 +313,7 @@ pub fn normalize_bins(
                 }
             });
             let path = match path {
-                Ok(path) => path,
+                Ok(path) => paths::normalize_path(&path).into(),
                 Err(e) => anyhow::bail!("{}", e),
             };
             bin.path = Some(PathValue(path));
@@ -603,13 +616,17 @@ fn normalize_targets_with_legacy_path(
     autodiscover_flag_name: &str,
 ) -> CargoResult<Vec<TomlTarget>> {
     if are_normalized(toml_targets, autodiscover) {
-        let toml_targets = toml_targets.cloned().unwrap_or_default();
-        for target in &toml_targets {
+        let mut toml_targets = toml_targets.cloned().unwrap_or_default();
+        for target in toml_targets.iter_mut() {
             // Check early to improve error messages
             validate_target_name(target, target_kind_human, target_kind, warnings)?;
 
             validate_proc_macro(target, target_kind_human, edition, warnings)?;
             validate_crate_types(target, target_kind_human, edition, warnings)?;
+
+            if let Some(PathValue(path)) = &target.path {
+                target.path = Some(PathValue(paths::normalize_path(path).into()));
+            }
         }
         Ok(toml_targets)
     } else {
@@ -651,7 +668,7 @@ fn normalize_targets_with_legacy_path(
                     continue;
                 }
             };
-            target.path = Some(PathValue(path));
+            target.path = Some(PathValue(paths::normalize_path(&path).into()));
             result.push(target);
         }
         Ok(result)
@@ -1037,7 +1054,14 @@ pub fn normalize_build(build: Option<&StringOrBool>, package_root: &Path) -> Opt
             }
         }
         // Explicitly no build script.
-        Some(StringOrBool::Bool(false)) | Some(StringOrBool::String(_)) => build.cloned(),
+        Some(StringOrBool::Bool(false)) => build.cloned(),
+        Some(StringOrBool::String(build_file)) => {
+            let build_file = paths::normalize_path(Path::new(build_file));
+            let build = build_file.into_os_string().into_string().expect(
+                "`build_file` started as a String and `normalize_path` shouldn't have changed that",
+            );
+            Some(StringOrBool::String(build))
+        }
         Some(StringOrBool::Bool(true)) => Some(StringOrBool::String(BUILD_RS.to_owned())),
     }
 }

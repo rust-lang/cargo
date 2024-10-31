@@ -413,11 +413,11 @@ fn targets_with_relative_path_in_workspace_members() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 ...
- --> relative-bar/./build.rs:1:17
+ --> relative-bar/build.rs:1:17
 ...
- --> relative-bar/./src/lib.rs:1:4
+ --> relative-bar/src/lib.rs:1:4
 ...
- --> relative-bar/./src/main.rs:1:17
+ --> relative-bar/src/main.rs:1:17
 ...
 "#]])
         .run();
@@ -425,7 +425,7 @@ fn targets_with_relative_path_in_workspace_members() {
     p.cargo("check --example example")
         .with_stderr_data(str![[r#"
 ...
- --> relative-bar/./example.rs:1:17
+ --> relative-bar/example.rs:1:17
 ...
 "#]])
         .run();
@@ -433,7 +433,7 @@ fn targets_with_relative_path_in_workspace_members() {
     p.cargo("check --test test")
         .with_stderr_data(str![[r#"
 ...
- --> relative-bar/./test.rs:5:35
+ --> relative-bar/test.rs:5:35
 ...
 "#]])
         .run();
@@ -442,7 +442,7 @@ fn targets_with_relative_path_in_workspace_members() {
         p.cargo("check --bench bench")
             .with_stderr_data(str![[r#"
 ...
- --> relative-bar/./bench.rs:7:58
+ --> relative-bar/bench.rs:7:58
 ...
 "#]])
             .run();
@@ -490,11 +490,11 @@ fn targets_with_relative_path_in_workspace_members() {
     p.cargo("check")
         .with_stderr_data(str![[r#"
 ...
- --> relative-bar/./build.rs:1:17
+ --> relative-bar/build.rs:1:17
 ...
- --> relative-bar/./src/lib.rs:1:4
+ --> relative-bar/src/lib.rs:1:4
 ...
- --> relative-bar/./src/main.rs:1:17
+ --> relative-bar/src/main.rs:1:17
 ...
 "#]])
         .run();
@@ -502,7 +502,7 @@ fn targets_with_relative_path_in_workspace_members() {
     p.cargo("check --example example")
         .with_stderr_data(str![[r#"
 ...
- --> relative-bar/./example.rs:1:17
+ --> relative-bar/example.rs:1:17
 ...
 "#]])
         .run();
@@ -510,7 +510,7 @@ fn targets_with_relative_path_in_workspace_members() {
     p.cargo("check --test test")
         .with_stderr_data(str![[r#"
 ...
- --> relative-bar/./test.rs:5:35
+ --> relative-bar/test.rs:5:35
 ...
 "#]])
         .run();
@@ -519,7 +519,7 @@ fn targets_with_relative_path_in_workspace_members() {
         p.cargo("check --bench bench")
             .with_stderr_data(str![[r#"
 ...
- --> relative-bar/./bench.rs:7:58
+ --> relative-bar/bench.rs:7:58
 ...
 "#]])
             .run();
