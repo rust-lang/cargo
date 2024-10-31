@@ -78,6 +78,7 @@ Each new feature described below should explain how to use it.
 * Output behavior
     * [artifact-dir](#artifact-dir) --- Adds a directory where artifacts are copied to.
     * [Different binary name](#different-binary-name) --- Assign a name to the built binary that is separate from the crate name.
+    * [root-dir](#root-dir) --- Controls the root directory relative to which paths are printed
 * Compile behavior
     * [mtime-on-use](#mtime-on-use) --- Updates the last-modified timestamp on every dependency every time it is used, to provide a mechanism to delete unused artifacts.
     * [doctest-xcompile](#doctest-xcompile) --- Supports running doctests with the `--target` flag.
@@ -235,6 +236,13 @@ This can also be specified in `.cargo/config.toml` files.
 [build]
 artifact-dir = "out"
 ```
+
+## root-dir
+* Original Issue: [#9887](https://github.com/rust-lang/cargo/issues/9887)
+* Tracking Issue: None (not currently slated for stabilization)
+
+The `-Zroot-dir` flag sets the root directory relative to which paths are printed.
+This affects both diagnostics and paths emitted by the `file!()` macro.
 
 ## doctest-xcompile
 * Tracking Issue: [#7040](https://github.com/rust-lang/cargo/issues/7040)
