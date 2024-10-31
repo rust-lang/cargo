@@ -1985,7 +1985,8 @@ fn doc_json_artifacts() {
 ]
 "#]]
             .is_json()
-            .against_jsonlines(),
+            .against_jsonlines()
+            .unordered(),
         )
         .run();
 }
