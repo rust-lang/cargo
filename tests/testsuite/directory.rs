@@ -784,3 +784,66 @@ Caused by:
         .with_status(101)
         .run();
 }
+
+#[cargo_test]
+fn root_dir_diagnostics() {
+    let p = ProjectBuilder::new(paths::root())
+        .no_manifest() // we are placing it in a different dir
+        .file(
+            "ws_root/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+            "#,
+        )
+        .file("ws_root/src/lib.rs", "invalid;")
+        .build();
+
+    p.cargo("check")
+        .arg("--manifest-path=ws_root/Cargo.toml")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[CHECKING] foo v0.1.0 ([ROOT]/ws_root)
+[ERROR] [..]
+ --> src/lib.rs:1:8
+  |
+1 | invalid;
+  | [..]
+
+[ERROR] could not compile `foo` (lib) due to 1 previous error
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn root_dir_file_macro() {
+    let p = ProjectBuilder::new(paths::root())
+        .no_manifest() // we are placing it in a different dir
+        .file(
+            "ws_root/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+                authors = []
+            "#,
+        )
+        .file(
+            "ws_root/src/main.rs",
+            r#"fn main() { println!("{}", file!()); }"#,
+        )
+        .build();
+
+    p.cargo("run")
+        .arg("--manifest-path=ws_root/Cargo.toml")
+        .with_stdout_data(str![[r#"
+src/main.rs
+
+"#]])
+        .run();
+}
