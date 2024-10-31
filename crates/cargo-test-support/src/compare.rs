@@ -531,40 +531,6 @@ pub(crate) fn match_does_not_contain(
     }
 }
 
-/// Checks that the given string contains the given contiguous lines
-/// somewhere, and should be repeated `number` times.
-///
-/// See [Patterns](index.html#patterns) for more information on pattern matching.
-pub(crate) fn match_contains_n(
-    expected: &str,
-    number: usize,
-    actual: &str,
-    cwd: Option<&Path>,
-) -> Result<()> {
-    let expected = normalize_expected(expected, cwd);
-    let actual = normalize_actual(actual, cwd);
-    let e: Vec<_> = expected.lines().map(|line| WildStr::new(line)).collect();
-    let a: Vec<_> = actual.lines().map(|line| WildStr::new(line)).collect();
-    if e.len() == 0 {
-        bail!("expected length must not be zero");
-    }
-    let matches = a.windows(e.len()).filter(|window| *window == e).count();
-    if matches == number {
-        Ok(())
-    } else {
-        bail!(
-            "expected to find {} occurrences of:\n\
-             {}\n\n\
-             but found {} matches in the output:\n\
-             {}",
-            number,
-            expected,
-            matches,
-            actual
-        )
-    }
-}
-
 /// Checks that the given string has a line that contains the given patterns,
 /// and that line also does not contain the `without` patterns.
 ///

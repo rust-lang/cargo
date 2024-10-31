@@ -649,7 +649,6 @@ pub struct Execs {
     expect_stderr_data: Option<snapbox::Data>,
     expect_stdout_contains: Vec<String>,
     expect_stderr_contains: Vec<String>,
-    expect_stdout_contains_n: Vec<(String, usize)>,
     expect_stdout_not_contains: Vec<String>,
     expect_stderr_not_contains: Vec<String>,
     expect_stdout_unordered: Vec<String>,
@@ -992,7 +991,6 @@ impl Execs {
             && self.expect_stderr_data.is_none()
             && self.expect_stdout_contains.is_empty()
             && self.expect_stderr_contains.is_empty()
-            && self.expect_stdout_contains_n.is_empty()
             && self.expect_stdout_not_contains.is_empty()
             && self.expect_stderr_not_contains.is_empty()
             && self.expect_stdout_unordered.is_empty()
@@ -1103,9 +1101,6 @@ impl Execs {
         for expect in self.expect_stderr_contains.iter() {
             compare::match_contains(expect, stderr, cwd)?;
         }
-        for &(ref expect, number) in self.expect_stdout_contains_n.iter() {
-            compare::match_contains_n(expect, number, stdout, cwd)?;
-        }
         for expect in self.expect_stdout_not_contains.iter() {
             compare::match_does_not_contain(expect, stdout, cwd)?;
         }
@@ -1144,7 +1139,6 @@ pub fn execs() -> Execs {
         expect_stderr_data: None,
         expect_stdout_contains: Vec::new(),
         expect_stderr_contains: Vec::new(),
-        expect_stdout_contains_n: Vec::new(),
         expect_stdout_not_contains: Vec::new(),
         expect_stderr_not_contains: Vec::new(),
         expect_stdout_unordered: Vec::new(),
