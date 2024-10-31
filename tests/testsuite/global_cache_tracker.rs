@@ -18,6 +18,7 @@ use cargo::core::global_cache_tracker::{self, DeferredGlobalLastUse, GlobalCache
 use cargo::util::cache_lock::CacheLockMode;
 use cargo::util::interning::InternedString;
 use cargo::GlobalContext;
+use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::paths;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::{Package, RegistryBuilder};
@@ -749,7 +750,6 @@ fn both_git_and_http_index_cleans() {
     drop(lock);
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn clean_gc_dry_run() {
     // Basic `clean --gc --dry-run` test.
@@ -772,16 +772,19 @@ fn clean_gc_dry_run() {
     let index = glob_registry("index").ls_r();
     let src = glob_registry("src").ls_r();
     let cache = glob_registry("cache").ls_r();
-    let expected_files = index
+    let mut expected_files = index
         .iter()
         .chain(src.iter())
         .chain(cache.iter())
         .map(|p| p.to_str().unwrap())
         .join("\n");
+    expected_files.push_str("\n");
+    let expected_files = snapbox::filter::normalize_paths(&expected_files);
+    let expected_files = assert_e2e().redactions().redact(&expected_files);
 
     p.cargo("clean gc --dry-run -v -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_stdout_unordered(&expected_files)
+        .with_stdout_data(expected_files.as_str().unordered())
         .with_stderr_data(str![[r#"
 [SUMMARY] [FILE_NUM] files, [FILE_SIZE]B total
 [WARNING] no files deleted due to --dry-run
@@ -792,7 +795,7 @@ fn clean_gc_dry_run() {
     // Again, make sure the information is still tracked.
     p.cargo("clean gc --dry-run -v -Zgc")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_stdout_unordered(&expected_files)
+        .with_stdout_data(expected_files.as_str().unordered())
         .with_stderr_data(str![[r#"
 [SUMMARY] [FILE_NUM] files, [FILE_SIZE]B total
 [WARNING] no files deleted due to --dry-run
@@ -895,7 +898,6 @@ fn tracks_sizes() {
     assert!(db_sizes[1] > 26000);
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn max_size() {
     // Checks --max-crate-size and --max-src-size with various cleaning thresholds.
@@ -924,20 +926,20 @@ fn max_size() {
         .collect();
 
     // This exercises the different boundary conditions.
-    for (clean_size, files, bytes) in [
-        (22, 0, 0),
-        (21, 1, 6),
-        (16, 1, 6),
-        (15, 2, 8),
-        (14, 2, 8),
-        (13, 3, 9),
-        (12, 4, 12),
-        (10, 4, 12),
-        (9, 5, 16),
-        (6, 5, 16),
-        (5, 6, 21),
-        (1, 6, 21),
-        (0, 7, 22),
+    for (clean_size, files) in [
+        (22, 0),
+        (21, 1),
+        (16, 1),
+        (15, 2),
+        (14, 2),
+        (13, 3),
+        (12, 4),
+        (10, 4),
+        (9, 5),
+        (6, 5),
+        (5, 6),
+        (1, 6),
+        (0, 7),
     ] {
         let (removed, kept) = names_by_timestamp.split_at(files);
         // --max-crate-size
@@ -947,19 +949,21 @@ fn max_size() {
             writeln!(stderr, "[REMOVING] [..]{name}.crate").unwrap();
         }
         let total_display = if removed.is_empty() {
-            String::new()
+            ""
         } else {
-            format!(", {bytes}B total")
+            ", [FILE_SIZE]B total"
         };
-        let files_display = if files == 1 {
-            format!("1 file")
+        let files_display = if files == 0 {
+            "0 files"
+        } else if files == 1 {
+            "1 file"
         } else {
-            format!("{files} files")
+            "[FILE_NUM] files"
         };
-        write!(stderr, "[REMOVED] {files_display}{total_display}").unwrap();
+        writeln!(stderr, "[REMOVED] {files_display}{total_display}").unwrap();
         cargo_process(&format!("clean gc -Zgc -v --max-crate-size={clean_size}"))
             .masquerade_as_nightly_cargo(&["gc"])
-            .with_stderr_unordered(&stderr)
+            .with_stderr_data(stderr.unordered())
             .run();
         for name in kept {
             assert!(cache_dir.join(format!("{name}.crate")).exists());
@@ -974,15 +978,15 @@ fn max_size() {
         for name in removed {
             writeln!(stderr, "[REMOVING] [..]{name}").unwrap();
         }
-        let total_display = if files == 0 {
-            String::new()
+        let total_display = if removed.is_empty() {
+            ""
         } else {
-            format!(", {bytes}B total")
+            ", [FILE_SIZE]B total"
         };
-        write!(stderr, "[REMOVED] {files_display}{total_display}").unwrap();
+        writeln!(stderr, "[REMOVED] {files_display}{total_display}").unwrap();
         cargo_process(&format!("clean gc -Zgc -v --max-src-size={clean_size}"))
             .masquerade_as_nightly_cargo(&["gc"])
-            .with_stderr_unordered(&stderr)
+            .with_stderr_data(stderr.unordered())
             .run();
         for name in kept {
             assert!(src_dir.join(name).exists());
@@ -1122,7 +1126,6 @@ fn max_size_untracked_src_from_clean() {
     max_size_untracked_verify(&gctx);
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn max_download_size() {
     // --max-download-size
@@ -1140,13 +1143,13 @@ fn max_download_size() {
         ("b-1.0.0", 1, 1, 7),
     ];
 
-    for (max_size, num_deleted, files_deleted, bytes) in [
-        (30, 0, 0, 0),
-        (29, 1, 1, 5),
-        (24, 2, 2, 9),
-        (20, 3, 3, 12),
-        (1, 7, 7, 29),
-        (0, 8, 8, 30),
+    for (max_size, num_deleted, files_deleted) in [
+        (30, 0, 0),
+        (29, 1, 1),
+        (24, 2, 2),
+        (20, 3, 3),
+        (1, 7, 7),
+        (0, 8, 8),
     ] {
         populate_cache(&gctx, &test_crates);
         // Determine the order things will be deleted.
@@ -1159,20 +1162,22 @@ fn max_download_size() {
         for name in removed {
             writeln!(stderr, "[REMOVING] [..]{name}").unwrap();
         }
-        let files_display = if files_deleted == 1 {
-            format!("1 file")
+        let files_display = if files_deleted == 0 {
+            "0 files"
+        } else if files_deleted == 1 {
+            "1 file"
         } else {
-            format!("{files_deleted} files")
+            "[FILE_NUM] files"
         };
         let total_display = if removed.is_empty() {
-            String::new()
+            ""
         } else {
-            format!(", {bytes}B total")
+            ", [FILE_SIZE]B total"
         };
-        write!(stderr, "[REMOVED] {files_display}{total_display}",).unwrap();
+        writeln!(stderr, "[REMOVED] {files_display}{total_display}",).unwrap();
         cargo_process(&format!("clean gc -Zgc -v --max-download-size={max_size}"))
             .masquerade_as_nightly_cargo(&["gc"])
-            .with_stderr_unordered(&stderr)
+            .with_stderr_data(stderr.unordered())
             .run();
     }
 }
@@ -1683,7 +1688,6 @@ fn clean_max_src_crate_age() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn clean_max_git_size() {
     // clean --max-git-size
@@ -1767,13 +1771,16 @@ fn clean_max_git_size() {
     // And then try cleaning everything.
     p.cargo("clean gc --max-git-size=0 -Zgc -v")
         .masquerade_as_nightly_cargo(&["gc"])
-        .with_stderr_unordered(&format!(
-            "\
-[REMOVING] [ROOT]/home/.cargo/git/checkouts/{db_name}/{second_co_name}
-[REMOVING] [ROOT]/home/.cargo/git/db/{db_name}
+        .with_stderr_data(
+            format!(
+                "\
+[REMOVING] [ROOT]/home/.cargo/git/checkouts/bar-[HASH]/{second_co_name}
+[REMOVING] [ROOT]/home/.cargo/git/db/bar-[HASH]
 [REMOVED] [..]
 "
-        ))
+            )
+            .unordered(),
+        )
         .run();
 }
 
