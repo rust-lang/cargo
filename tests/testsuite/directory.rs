@@ -802,13 +802,17 @@ fn root_dir_diagnostics() {
         .file("ws_root/src/lib.rs", "invalid;")
         .build();
 
+    // Crucially, the rustc error message below says `ws_root/...`, i.e.
+    // it is relative to our fake home, not to the workspace root.
     p.cargo("check")
+        .arg("-Zroot-dir=.")
         .arg("--manifest-path=ws_root/Cargo.toml")
+        .masquerade_as_nightly_cargo(&["-Zroot-dir"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.1.0 ([ROOT]/ws_root)
 [ERROR] [..]
- --> src/lib.rs:1:8
+ --> ws_root/src/lib.rs:1:8
   |
 1 | invalid;
   | [..]
@@ -839,10 +843,23 @@ fn root_dir_file_macro() {
         )
         .build();
 
+    // Crucially, the path is relative to our fake home, not to the workspace root.
     p.cargo("run")
+        .arg("-Zroot-dir=.")
         .arg("--manifest-path=ws_root/Cargo.toml")
+        .masquerade_as_nightly_cargo(&["-Zroot-dir"])
         .with_stdout_data(str![[r#"
-src/main.rs
+ws_root/src/main.rs
+
+"#]])
+        .run();
+    // Try again with an absolute path for `root-dir`.
+    p.cargo("run")
+        .arg(format!("-Zroot-dir={}", p.root().display()))
+        .arg("--manifest-path=ws_root/Cargo.toml")
+        .masquerade_as_nightly_cargo(&["-Zroot-dir"])
+        .with_stdout_data(str![[r#"
+ws_root/src/main.rs
 
 "#]])
         .run();

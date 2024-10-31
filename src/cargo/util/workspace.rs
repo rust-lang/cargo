@@ -4,6 +4,7 @@ use crate::core::{Target, Workspace};
 use crate::ops::CompileOptions;
 use crate::util::CargoResult;
 use anyhow::bail;
+use cargo_util::paths::normalize_path;
 use cargo_util::ProcessBuilder;
 use std::fmt::Write;
 use std::path::PathBuf;
@@ -109,15 +110,20 @@ pub fn print_available_tests(ws: &Workspace<'_>, options: &CompileOptions) -> Ca
 /// The first returned value here is the argument to pass to rustc, and the
 /// second is the cwd that rustc should operate in.
 pub fn path_args(ws: &Workspace<'_>, unit: &Unit) -> (PathBuf, PathBuf) {
-    let ws_root = ws.root();
     let src = match unit.target.src_path() {
         TargetSourcePath::Path(path) => path.to_path_buf(),
         TargetSourcePath::Metabuild => unit.pkg.manifest().metabuild_path(ws.target_dir()),
     };
     assert!(src.is_absolute());
     if unit.pkg.package_id().source_id().is_path() {
-        if let Ok(path) = src.strip_prefix(ws_root) {
-            return (path.to_path_buf(), ws_root.to_path_buf());
+        // Determine which path we make this relative to: usually it's the workspace root,
+        // but this can be overwritten with a `-Z` flag.
+        let root = match &ws.gctx().cli_unstable().root_dir {
+            None => ws.root().to_owned(),
+            Some(root_dir) => normalize_path(&ws.gctx().cwd().join(root_dir)),
+        };
+        if let Ok(path) = src.strip_prefix(&root) {
+            return (path.to_path_buf(), root);
         }
     }
     (src, unit.pkg.root().to_path_buf())
