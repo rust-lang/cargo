@@ -887,7 +887,7 @@ impl<'gctx> DrainState<'gctx> {
             .map(|u| self.name_for_progress(u))
             .collect::<Vec<_>>();
         let _ = self.progress.tick_now(
-            self.finished,
+            self.finished + 1,
             self.total_units,
             &format!(": {}", active_names.join(", ")),
         );
