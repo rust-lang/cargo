@@ -1,17 +1,11 @@
-// This fixes rust-lang/rust#123304.
-// If that lint stops emitting duplicate suggestions,
-// we might need to find a substitution.
-#![warn(unsafe_op_in_unsafe_fn)]
-
+// See <https://github.com/rust-lang/cargo/issues/13027>
 macro_rules! foo {
-    ($x:ident) => {
-        pub unsafe fn $x() {
-            let _ = String::new().as_mut_vec();
-        }
+    () => {
+        &1;
     };
 }
 
 fn main() {
-    foo!(a);
-    foo!(b);
+    foo!();
+    foo!();
 }

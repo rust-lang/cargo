@@ -2308,47 +2308,53 @@ error[E0308]: mismatched types
         .run();
 }
 
-// This fixes rust-lang/rust#123304.
-// If that lint stops emitting duplicate suggestions,
-// we might need to find a substitution.
+// See <https://github.com/rust-lang/cargo/issues/13027>
 #[cargo_test]
 fn fix_only_once_for_duplicates() {
     let p = project()
         .file(
-            "src/lib.rs",
+            "src/main.rs",
             r#"
-                #![warn(unsafe_op_in_unsafe_fn)]
+macro_rules! foo {
+    () => {
+        &1;
+    };
+}
 
-                macro_rules! foo {
-                    ($x:ident) => {
-                        pub unsafe fn $x() {
-                            let _ = String::new().as_mut_vec();
-                        }
-                    };
-                }
-
-                foo!(a);
-                foo!(b);
-            "#,
+fn main() {
+    foo!();
+    foo!();
+}
+"#,
         )
         .build();
 
     p.cargo("fix --allow-no-vcs")
+        .env("__CARGO_FIX_YOLO", "1")
         .with_stderr_data(str![[r#"
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
-[FIXED] src/lib.rs (1 fix)
+[FIXED] src/main.rs (1 fix)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();
 
-    assert_eq!(
-        p.read_file("src/lib.rs").matches("unsafe").count(),
-        4,
-        "unsafe keyword in src/lib.rs:\n\
-            2 in lint name;\n\
-            1 from original unsafe fn;\n\
-            1 from newly-applied unsafe blocks"
+    assert_e2e().eq(
+        p.read_file("src/main.rs"),
+        str![[r#"
+
+macro_rules! foo {
+    () => {
+        let _ = &1;
+    };
+}
+
+fn main() {
+    foo!();
+    foo!();
+}
+
+"#]],
     );
 }
 
