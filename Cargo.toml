@@ -50,7 +50,7 @@ git2 = "0.19.0"
 git2-curl = "0.20.0"
 gix = { version = "0.67.0", default-features = false, features = ["blocking-http-transport-curl", "progress-tree", "parallel", "dirwalk"] }
 glob = "0.3.1"
-handlebars = { version = "5.1.2", features = ["dir_source"] }
+handlebars = { version = "6.0.0", features = ["dir_source"] }
 hex = "0.4.3"
 hmac = "0.12.1"
 home = "0.5.9"

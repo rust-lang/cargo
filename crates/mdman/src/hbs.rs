@@ -24,11 +24,8 @@ pub fn expand(file: &Path, formatter: FormatterRef<'_>) -> Result<String, Error>
     handlebars.register_decorator("set", Box::new(set_decorator));
     handlebars.register_template_file("template", file)?;
     let includes = file.parent().unwrap().join("includes");
-    let options = DirectorySourceOptions {
-        tpl_extension: ".md".to_string(),
-        hidden: false,
-        temporary: false,
-    };
+    let mut options = DirectorySourceOptions::default();
+    options.tpl_extension = ".md".to_string();
     handlebars.register_templates_directory(includes, options)?;
     let man_name = file
         .file_stem()
