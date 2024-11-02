@@ -544,11 +544,6 @@ fn cfg_raw_idents() {
 
     p.cargo("check")
         .with_stderr_data(str![[r#"
-[WARNING] [[ROOT]/foo/Cargo.toml] future-incompatibility: the meaning of `cfg(r#true)` will change in the future
- | Cargo is erroneously allowing `cfg(true)` and `cfg(false)`, but both forms are interpreted as false unless manually overridden with `--cfg`.
- | In the future these will be built-in defines that will have the corresponding true/false value.
- | It is recommended to avoid using these configs until they are properly supported.
- | See <https://github.com/rust-lang/rust/issues/131204> for more information.
 [LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -648,11 +643,15 @@ fn cfg_keywords() {
  | In the future these will be built-in defines that will have the corresponding true/false value.
  | It is recommended to avoid using these configs until they are properly supported.
  | See <https://github.com/rust-lang/rust/issues/131204> for more information.
+ |
+ | [HELP] use raw-idents instead: `cfg(r#true)`
 [WARNING] [.cargo/config.toml] future-incompatibility: the meaning of `cfg(false)` will change in the future
  | Cargo is erroneously allowing `cfg(true)` and `cfg(false)`, but both forms are interpreted as false unless manually overridden with `--cfg`.
  | In the future these will be built-in defines that will have the corresponding true/false value.
  | It is recommended to avoid using these configs until they are properly supported.
  | See <https://github.com/rust-lang/rust/issues/131204> for more information.
+ |
+ | [HELP] use raw-idents instead: `cfg(r#false)`
 [LOCKING] 1 package to latest compatible version
 [CHECKING] foo v0.1.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
