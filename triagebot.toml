@@ -26,6 +26,8 @@ label = "O-windows"
 
 [shortcut]
 
+[transfer]
+
 [autolabel."S-waiting-on-review"]
 new_pr = true
 
