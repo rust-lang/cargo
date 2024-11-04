@@ -171,12 +171,8 @@ pub fn exec_manifest_command(gctx: &mut GlobalContext, cmd: &str, args: &[OsStri
 
     let manifest_path = root_manifest(Some(manifest_path), gctx)?;
 
-    // Treat `cargo foo.rs` like `cargo install --path foo` and re-evaluate the config based on the
-    // location where the script resides, rather than the environment from where it's being run.
-    let parent_path = manifest_path
-        .parent()
-        .expect("a file should always have a parent");
-    gctx.reload_rooted_at(parent_path)?;
+    // Reload to cargo home.
+    gctx.reload_rooted_at(gctx.home().clone().into_path_unlocked())?;
 
     let mut ws = Workspace::new(&manifest_path, gctx)?;
     if gctx.cli_unstable().avoid_dev_deps {
