@@ -105,7 +105,6 @@ pub use cargo_test_macro::cargo_test;
 pub mod compare;
 pub mod containers;
 pub mod cross_compile;
-mod diff;
 pub mod git;
 pub mod install;
 pub mod paths;
@@ -651,8 +650,6 @@ pub struct Execs {
     expect_stderr_contains: Vec<String>,
     expect_stdout_not_contains: Vec<String>,
     expect_stderr_not_contains: Vec<String>,
-    expect_stdout_unordered: Vec<String>,
-    expect_stderr_unordered: Vec<String>,
     expect_stderr_with_without: Vec<(Vec<String>, Vec<String>)>,
     stream_output: bool,
     assert: snapbox::Assert,
@@ -748,43 +745,6 @@ impl Execs {
     #[deprecated]
     pub fn with_stderr_does_not_contain<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr_not_contains.push(expected.to_string());
-        self
-    }
-
-    /// Verifies that all of the stdout output is equal to the given lines,
-    /// ignoring the order of the lines.
-    ///
-    /// See [`Execs::with_stderr_unordered`] for more details.
-    #[deprecated(note = "replaced with `Execs::with_stdout_data(expected.unordered())`")]
-    pub fn with_stdout_unordered<S: ToString>(&mut self, expected: S) -> &mut Self {
-        self.expect_stdout_unordered.push(expected.to_string());
-        self
-    }
-
-    /// Verifies that all of the stderr output is equal to the given lines,
-    /// ignoring the order of the lines.
-    ///
-    /// See [`compare`] for supported patterns.
-    ///
-    /// This is useful when checking the output of `cargo build -v` since
-    /// the order of the output is not always deterministic.
-    /// Recommend use `with_stderr_contains` instead unless you really want to
-    /// check *every* line of output.
-    ///
-    /// Be careful when using patterns such as `[..]`, because you may end up
-    /// with multiple lines that might match, and this is not smart enough to
-    /// do anything like longest-match. For example, avoid something like:
-    ///
-    /// ```text
-    ///  [RUNNING] `rustc [..]
-    ///  [RUNNING] `rustc --crate-name foo [..]
-    /// ```
-    ///
-    /// This will randomly fail if the other crate name is `bar`, and the
-    /// order changes.
-    #[deprecated(note = "replaced with `Execs::with_stderr_data(expected.unordered())`")]
-    pub fn with_stderr_unordered<S: ToString>(&mut self, expected: S) -> &mut Self {
-        self.expect_stderr_unordered.push(expected.to_string());
         self
     }
 
@@ -993,8 +953,6 @@ impl Execs {
             && self.expect_stderr_contains.is_empty()
             && self.expect_stdout_not_contains.is_empty()
             && self.expect_stderr_not_contains.is_empty()
-            && self.expect_stdout_unordered.is_empty()
-            && self.expect_stderr_unordered.is_empty()
             && self.expect_stderr_with_without.is_empty()
         {
             panic!(
@@ -1107,12 +1065,6 @@ impl Execs {
         for expect in self.expect_stderr_not_contains.iter() {
             compare::match_does_not_contain(expect, stderr, cwd)?;
         }
-        for expect in self.expect_stdout_unordered.iter() {
-            compare::match_unordered(expect, stdout, cwd)?;
-        }
-        for expect in self.expect_stderr_unordered.iter() {
-            compare::match_unordered(expect, stderr, cwd)?;
-        }
         for (with, without) in self.expect_stderr_with_without.iter() {
             compare::match_with_without(stderr, with, without, cwd)?;
         }
@@ -1141,8 +1093,6 @@ pub fn execs() -> Execs {
         expect_stderr_contains: Vec::new(),
         expect_stdout_not_contains: Vec::new(),
         expect_stderr_not_contains: Vec::new(),
-        expect_stdout_unordered: Vec::new(),
-        expect_stderr_unordered: Vec::new(),
         expect_stderr_with_without: Vec::new(),
         stream_output: false,
         assert: compare::assert_e2e(),
