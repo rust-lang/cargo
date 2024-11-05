@@ -169,26 +169,21 @@ impl Data {
         // Reject if the change starts before the previous one ends.
         if let Some(before) = ins_point.checked_sub(1).and_then(|i| self.parts.get(i)) {
             if incoming.range.start < before.range.end {
-                return Err(Error::AlreadyReplaced);
+                return Err(Error::AlreadyReplaced {
+                    is_identical: incoming == *before,
+                    range: incoming.range,
+                });
             }
         }
 
-        // Reject if the change ends after the next one starts.
+        // Reject if the change ends after the next one starts,
+        // or if this is an insert and there's already an insert there.
         if let Some(after) = self.parts.get(ins_point) {
-            // If this replacement matches exactly the part that we would
-            // otherwise split then we ignore this for now. This means that you
-            // can replace the exact same range with the exact same content
-            // multiple times and we'll process and allow it.
-            //
-            // This is currently done to alleviate issues like
-            // rust-lang/rust#51211 although this clause likely wants to be
-            // removed if that's fixed deeper in the compiler.
-            if incoming == *after {
-                return Ok(());
-            }
-
-            if incoming.range.end > after.range.start {
-                return Err(Error::AlreadyReplaced);
+            if incoming.range.end > after.range.start || incoming.range == after.range {
+                return Err(Error::AlreadyReplaced {
+                    is_identical: incoming == *after,
+                    range: incoming.range,
+                });
             }
         }
 
@@ -274,7 +269,7 @@ mod tests {
     }
 
     #[test]
-    fn replace_overlapping_stuff_errs() {
+    fn replace_same_range_diff_data() {
         let mut d = Data::new(b"foo bar baz");
 
         d.replace_range(4..7, b"lol").unwrap();
@@ -282,7 +277,26 @@ mod tests {
 
         assert!(matches!(
             d.replace_range(4..7, b"lol2").unwrap_err(),
-            Error::AlreadyReplaced,
+            Error::AlreadyReplaced {
+                is_identical: false,
+                ..
+            },
+        ));
+    }
+
+    #[test]
+    fn replace_same_range_same_data() {
+        let mut d = Data::new(b"foo bar baz");
+
+        d.replace_range(4..7, b"lol").unwrap();
+        assert_eq!("foo lol baz", str(&d.to_vec()));
+
+        assert!(matches!(
+            d.replace_range(4..7, b"lol").unwrap_err(),
+            Error::AlreadyReplaced {
+                is_identical: true,
+                ..
+            },
         ));
     }
 
@@ -296,11 +310,18 @@ mod tests {
     }
 
     #[test]
-    fn replace_same_twice() {
+    fn insert_same_twice() {
         let mut d = Data::new(b"foo");
-        d.replace_range(0..1, b"b").unwrap();
-        d.replace_range(0..1, b"b").unwrap();
-        assert_eq!("boo", str(&d.to_vec()));
+        d.replace_range(1..1, b"b").unwrap();
+        assert_eq!("fboo", str(&d.to_vec()));
+        assert!(matches!(
+            d.replace_range(1..1, b"b").unwrap_err(),
+            Error::AlreadyReplaced {
+                is_identical: true,
+                ..
+            },
+        ));
+        assert_eq!("fboo", str(&d.to_vec()));
     }
 
     #[test]

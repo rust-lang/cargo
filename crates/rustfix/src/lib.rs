@@ -234,8 +234,14 @@ impl CodeFix {
     /// Applies a suggestion to the code.
     pub fn apply(&mut self, suggestion: &Suggestion) -> Result<(), Error> {
         for solution in &suggestion.solutions {
-            self.apply_solution(solution)?;
+            for r in &solution.replacements {
+                self.data
+                    .replace_range(r.snippet.range.clone(), r.replacement.as_bytes())
+                    .inspect_err(|_| self.data.restore())?;
+            }
         }
+        self.data.commit();
+        self.modified = true;
         Ok(())
     }
 
@@ -262,22 +268,25 @@ impl CodeFix {
     }
 }
 
-/// Applies multiple `suggestions` to the given `code`.
+/// Applies multiple `suggestions` to the given `code`, handling certain conflicts automatically.
+///
+/// If a replacement in a suggestion exactly matches a replacement of a previously applied solution,
+/// that entire suggestion will be skipped without generating an error.
+/// This is currently done to alleviate issues like rust-lang/rust#51211,
+/// although it may be removed if that's fixed deeper in the compiler.
+///
+/// The intent of this design is that the overall application process
+/// should repeatedly apply non-conflicting suggestions then rëevaluate the result,
+/// looping until either there are no more suggestions to apply or some budget is exhausted.
 pub fn apply_suggestions(code: &str, suggestions: &[Suggestion]) -> Result<String, Error> {
-    let mut already_applied = HashSet::new();
     let mut fix = CodeFix::new(code);
     for suggestion in suggestions.iter().rev() {
-        // This assumes that if any of the machine applicable fixes in
-        // a diagnostic suggestion is a duplicate, we should see the
-        // entire suggestion as a duplicate.
-        if suggestion
-            .solutions
-            .iter()
-            .any(|sol| !already_applied.insert(sol))
-        {
-            continue;
-        }
-        fix.apply(suggestion)?;
+        fix.apply(suggestion).or_else(|err| match err {
+            Error::AlreadyReplaced {
+                is_identical: true, ..
+            } => Ok(()),
+            _ => Err(err),
+        })?;
     }
     fix.finish()
 }

@@ -968,23 +968,19 @@ fn rustfix_and_fix(
         });
         let mut fixed = CodeFix::new(&code);
 
-        let mut already_applied = HashSet::new();
         for suggestion in suggestions.iter().rev() {
-            // This assumes that if any of the machine applicable fixes in
-            // a diagnostic suggestion is a duplicate, we should see the
-            // entire suggestion as a duplicate.
-            if suggestion
-                .solutions
-                .iter()
-                .any(|sol| !already_applied.insert(sol))
-            {
-                continue;
-            }
+            // As mentioned above in `rustfix_crate`,
+            // we don't immediately warn about suggestions that fail to apply here,
+            // and instead we save them off for later processing.
+            //
+            // However, we don't bother reporting conflicts that exactly match prior replacements.
+            // This is currently done to reduce noise for things like rust-lang/rust#51211,
+            // although it may be removed if that's fixed deeper in the compiler.
             match fixed.apply(suggestion) {
                 Ok(()) => fixed_file.fixes_applied += 1,
-                // As mentioned above in `rustfix_crate`, we don't immediately
-                // warn about suggestions that fail to apply here, and instead
-                // we save them off for later processing.
+                Err(rustfix::Error::AlreadyReplaced {
+                    is_identical: true, ..
+                }) => continue,
                 Err(e) => fixed_file.errors_applying_fixes.push(e.to_string()),
             }
         }
