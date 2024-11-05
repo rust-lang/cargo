@@ -184,6 +184,7 @@ fn bump_check(args: &clap::ArgMatches, gctx: &cargo::util::GlobalContext) -> Car
         let mut cmd = ProcessBuilder::new("cargo");
         cmd.arg("semver-checks")
             .arg("--workspace")
+            .args(&["--exclude", "build-rs"]) // FIXME: Remove once 1.84 is stable.
             .arg("--baseline-rev")
             .arg(referenced_commit.id().to_string());
         for krate in crates_not_check_against_channels {
