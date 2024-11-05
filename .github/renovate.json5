@@ -5,7 +5,7 @@
         "schedule:weekly",
         ":disableDependencyDashboard"
     ],
-    "platformCommit": true,
+    "platformCommit": "enabled",
     "customManagers": [
         {
             "customType": "regex",
@@ -28,7 +28,7 @@
     "packageRules": [
         {
             "automerge": true,
-            "minimumReleaseAge": "6 months",
+            "minimumReleaseAge": "27 weeks", // 6 months + a little slack
             "matchDepNames": [
                 "rust-version"
             ]
