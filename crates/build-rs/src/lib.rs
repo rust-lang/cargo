@@ -2,6 +2,8 @@
 //! protocol. Cargo provides inputs to the build script by environment variable
 //! and accepts commands by printing to stdout.
 #![cfg_attr(all(doc, feature = "unstable"), feature(doc_auto_cfg, doc_cfg))]
+#![allow(clippy::disallowed_methods)] // HACK: deferred resoling this
+#![allow(clippy::print_stdout)] // HACK: deferred resoling this
 
 #[cfg(feature = "unstable")]
 macro_rules! unstable {
