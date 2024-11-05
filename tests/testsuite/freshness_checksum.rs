@@ -1639,22 +1639,22 @@ fn reuse_panic_pm() {
 
     // bar is built once without panic (for proc-macro) and once with (for the
     // normal dependency).
-    // TODO: Migrating to Snapbox might cause flakyness here. See https://github.com/rust-lang/cargo/pull/14161/files#r1660071433
-    #[expect(deprecated)]
     p.cargo("build -Zchecksum-freshness -v")
         .masquerade_as_nightly_cargo(&["checksum-freshness"])
-            .with_stderr_unordered(
-                "\
+        .with_stderr_data(
+            str![[r#"
 [LOCKING] 2 packages to latest compatible versions
-[COMPILING] bar [..]
-[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link[..]
-[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--crate-type lib --emit=[..]link -C panic=abort[..]-C debuginfo=2 [..]
-[COMPILING] somepm [..]
+[COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
+[RUNNING] `rustc --crate-name bar [..] -C panic=abort [..]
+[RUNNING] `rustc --crate-name bar [..]
+[COMPILING] somepm v0.0.1 ([ROOT]/foo/somepm)
 [RUNNING] `rustc --crate-name somepm [..]
-[COMPILING] foo [..]
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]-C panic=abort[..]
-[FINISHED] [..]
-",
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[RUNNING] `rustc --crate-name foo [..] -C panic=abort [..]
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]]
+            .unordered(),
         )
         .run();
 }

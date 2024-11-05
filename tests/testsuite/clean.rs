@@ -1,5 +1,6 @@
 //! Tests for the `cargo clean` command.
 
+use cargo_test_support::compare::assert_e2e;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
@@ -824,7 +825,6 @@ fn clean_spec_reserved() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn clean_dry_run() {
     // Basic `clean --dry-run` test.
@@ -866,11 +866,14 @@ fn clean_dry_run() {
     // Verify it didn't delete anything.
     let after = p.build_dir().ls_r();
     assert_eq!(before, after);
-    let expected = itertools::join(before.iter().map(|p| p.to_str().unwrap()), "\n");
+    let mut expected = itertools::join(before.iter().map(|p| p.to_str().unwrap()), "\n");
+    expected.push_str("\n");
+    let expected = snapbox::filter::normalize_paths(&expected);
+    let expected = assert_e2e().redactions().redact(&expected);
     eprintln!("{expected}");
     // Verify the verbose output.
     p.cargo("clean --dry-run -v")
-        .with_stdout_unordered(expected)
+        .with_stdout_data(expected.unordered())
         .with_stderr_data(str![[r#"
 [SUMMARY] [FILE_NUM] files, [FILE_SIZE]B total
 [WARNING] no files deleted due to --dry-run
