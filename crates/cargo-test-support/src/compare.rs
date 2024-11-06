@@ -43,7 +43,7 @@
 
 use crate::cross_compile::try_alternate;
 use crate::paths;
-use crate::{diff, rustc_host};
+use crate::rustc_host;
 use anyhow::{bail, Result};
 use snapbox::Data;
 use snapbox::IntoData;
@@ -429,56 +429,6 @@ fn substitute_macros(input: &str) -> String {
         result = result.replace(pat, subst)
     }
     result
-}
-
-/// Checks that the given string contains the given lines, ignoring the order
-/// of the lines.
-///
-/// See [Patterns](index.html#patterns) for more information on pattern matching.
-pub(crate) fn match_unordered(expected: &str, actual: &str, cwd: Option<&Path>) -> Result<()> {
-    let expected = normalize_expected(expected, cwd);
-    let actual = normalize_actual(actual, cwd);
-    let e: Vec<_> = expected.lines().map(|line| WildStr::new(line)).collect();
-    let mut a: Vec<_> = actual.lines().map(|line| WildStr::new(line)).collect();
-    // match more-constrained lines first, although in theory we'll
-    // need some sort of recursive match here. This handles the case
-    // that you expect "a\n[..]b" and two lines are printed out,
-    // "ab\n"a", where technically we do match unordered but a naive
-    // search fails to find this. This simple sort at least gets the
-    // test suite to pass for now, but we may need to get more fancy
-    // if tests start failing again.
-    a.sort_by_key(|s| s.line.len());
-    let mut changes = Vec::new();
-    let mut a_index = 0;
-    let mut failure = false;
-
-    use crate::diff::Change;
-    for (e_i, e_line) in e.into_iter().enumerate() {
-        match a.iter().position(|a_line| e_line == *a_line) {
-            Some(index) => {
-                let a_line = a.remove(index);
-                changes.push(Change::Keep(e_i, index, a_line));
-                a_index += 1;
-            }
-            None => {
-                failure = true;
-                changes.push(Change::Remove(e_i, e_line));
-            }
-        }
-    }
-    for unmatched in a {
-        failure = true;
-        changes.push(Change::Add(a_index, unmatched));
-        a_index += 1;
-    }
-    if failure {
-        bail!(
-            "Expected lines did not match (ignoring order):\n{}\n",
-            diff::render_colored_changes(&changes)
-        );
-    } else {
-        Ok(())
-    }
 }
 
 /// Checks that the given string contains the given contiguous lines
