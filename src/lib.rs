@@ -21,6 +21,14 @@ macro_rules! unstable {
     };
 }
 
+macro_rules! msrv {
+    ($ver:literal) => {
+        concat!("> MSRV: Respected as of ", $ver, ".")
+    };
+}
+
 mod allow_use;
+mod ident;
+
 pub mod input;
 pub mod output;

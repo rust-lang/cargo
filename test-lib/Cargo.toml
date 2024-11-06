@@ -5,5 +5,8 @@ edition = "2021"
 rust-version = "1.76"
 publish = false
 
+[features]
+unstable = ["build-rs/unstable"]
+
 [build-dependencies]
 build-rs = { path = ".." }

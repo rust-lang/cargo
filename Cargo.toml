@@ -5,6 +5,9 @@ edition = "2021"
 rust-version = "1.76"
 publish = false
 
+[dependencies]
+unicode-ident = "1.0.13"
+
 [features]
 
 ## Experimental API. This feature flag is **NOT** semver stable.

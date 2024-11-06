@@ -6,8 +6,11 @@
 //!
 //! Reference: <https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script>
 
-use crate::allow_use;
-use std::{ffi::OsStr, fmt::Display, path::Path, str};
+use crate::{
+    allow_use,
+    ident::{is_ascii_ident, is_ident},
+};
+use std::{ffi::OsStr, fmt::Display, fmt::Write, path::Path, str};
 
 fn emit(directive: &str, value: impl Display) {
     if allow_use::double_colon_directives() {
@@ -32,6 +35,7 @@ fn emit(directive: &str, value: impl Display) {
 /// handles whether or not the script itself needs to be recompiled, and of course
 /// the script will be re-run after it has been recompiled. Otherwise, specifying
 /// `build.rs` is redundant and unnecessary.
+#[track_caller]
 pub fn rerun_if_changed(path: impl AsRef<Path>) {
     let Some(path) = path.as_ref().to_str() else {
         panic!("cannot emit rerun-if-changed: path is not UTF-8");
@@ -52,6 +56,7 @@ pub fn rerun_if_changed(path: impl AsRef<Path>) {
 /// those received by the executable of the build script.
 ///
 /// [build-env]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-build-scripts
+#[track_caller]
 pub fn rerun_if_env_changed(key: impl AsRef<OsStr>) {
     let Some(key) = key.as_ref().to_str() else {
         panic!("cannot emit rerun-if-env-changed: key is not UTF-8");
@@ -69,9 +74,10 @@ pub fn rerun_if_env_changed(key: impl AsRef<OsStr>) {
 /// version or linker script.
 ///
 /// [link-arg]: https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg
+#[track_caller]
 pub fn rustc_link_arg(flag: &str) {
-    if flag.contains('\n') {
-        panic!("cannot emit rustc-link-arg: invalid flag");
+    if flag.contains([' ', '\n']) {
+        panic!("cannot emit rustc-link-arg: invalid flag {flag:?}");
     }
     emit("rustc-link-arg", flag);
 }
@@ -82,9 +88,13 @@ pub fn rustc_link_arg(flag: &str) {
 /// is useful to set a linker script or other linker options.
 ///
 /// [link-arg]: https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg
+#[track_caller]
 pub fn rustc_link_arg_bin(bin: &str, flag: &str) {
-    if bin.contains(['=', '\n']) {
-        panic!("cannot emit rustc-link-arg-bin: invalid bin name");
+    if !is_ident(bin) {
+        panic!("cannot emit rustc-link-arg-bin: invalid bin name {bin:?}");
+    }
+    if flag.contains([' ', '\n']) {
+        panic!("cannot emit rustc-link-arg-bin: invalid flag {flag:?}");
     }
     emit("rustc-link-arg-bin", format_args!("{}={}", bin, flag));
 }
@@ -95,9 +105,10 @@ pub fn rustc_link_arg_bin(bin: &str, flag: &str) {
 /// a linker script or other linker options.
 ///
 /// [link-arg]: https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg
+#[track_caller]
 pub fn rustc_link_arg_bins(flag: &str) {
-    if flag.contains('\n') {
-        panic!("cannot emit rustc-link-arg-bins: invalid flag");
+    if flag.contains([' ', '\n']) {
+        panic!("cannot emit rustc-link-arg-bins: invalid flag {flag:?}");
     }
     emit("rustc-link-arg-bins", flag);
 }
@@ -105,9 +116,10 @@ pub fn rustc_link_arg_bins(flag: &str) {
 /// The `rustc-link-arg-tests` instruction tells Cargo to pass the
 /// [`-C link-arg=FLAG` option][link-arg] to the compiler, but only when building
 /// a tests target.
+#[track_caller]
 pub fn rustc_link_arg_tests(flag: &str) {
-    if flag.contains('\n') {
-        panic!("cannot emit rustc-link-arg-tests: invalid flag");
+    if flag.contains([' ', '\n']) {
+        panic!("cannot emit rustc-link-arg-tests: invalid flag {flag:?}");
     }
     emit("rustc-link-arg-tests", flag);
 }
@@ -115,9 +127,10 @@ pub fn rustc_link_arg_tests(flag: &str) {
 /// The `rustc-link-arg-examples` instruction tells Cargo to pass the
 /// [`-C link-arg=FLAG` option][link-arg] to the compiler, but only when building
 /// an examples target.
+#[track_caller]
 pub fn rustc_link_arg_examples(flag: &str) {
-    if flag.contains('\n') {
-        panic!("cannot emit rustc-link-arg-examples: invalid flag");
+    if flag.contains([' ', '\n']) {
+        panic!("cannot emit rustc-link-arg-examples: invalid flag {flag:?}");
     }
     emit("rustc-link-arg-examples", flag);
 }
@@ -125,9 +138,10 @@ pub fn rustc_link_arg_examples(flag: &str) {
 /// The `rustc-link-arg-benches` instruction tells Cargo to pass the
 /// [`-C link-arg=FLAG` option][link-arg] to the compiler, but only when building
 /// a benchmark target.
+#[track_caller]
 pub fn rustc_link_arg_benches(flag: &str) {
-    if flag.contains('\n') {
-        panic!("cannot emit rustc-link-arg-benches: invalid flag");
+    if flag.contains([' ', '\n']) {
+        panic!("cannot emit rustc-link-arg-benches: invalid flag {flag:?}");
     }
     emit("rustc-link-arg-benches", flag);
 }
@@ -153,20 +167,22 @@ pub fn rustc_link_arg_benches(flag: &str) {
 ///
 /// [-l]: https://doc.rust-lang.org/stable/rustc/command-line-arguments.html#option-l-link-lib
 /// [FFI]: https://doc.rust-lang.org/stable/nomicon/ffi.html
+#[track_caller]
 pub fn rustc_link_lib(lib: &str) {
-    if lib.contains('\n') {
-        panic!("cannot emit rustc-link-lib: invalid lib");
+    if lib.contains([' ', '\n']) {
+        panic!("cannot emit rustc-link-lib: invalid lib {lib:?}");
     }
     emit("rustc-link-lib", lib);
 }
 
-/// Like [`rustc_link_lib`], but with KIND specified separately.
+/// Like [`rustc_link_lib`], but with `KIND[:MODIFIERS]` specified separately.
+#[track_caller]
 pub fn rustc_link_lib_kind(kind: &str, lib: &str) {
-    if kind.contains(['=', '\n']) {
-        panic!("cannot emit rustc-link-lib: invalid kind");
+    if kind.contains(['=', ' ', '\n']) {
+        panic!("cannot emit rustc-link-lib: invalid kind {kind:?}");
     }
-    if lib.contains('\n') {
-        panic!("cannot emit rustc-link-lib: invalid lib");
+    if lib.contains([' ', '\n']) {
+        panic!("cannot emit rustc-link-lib: invalid lib {lib:?}");
     }
     emit("rustc-link-lib", format_args!("{kind}={lib}"));
 }
@@ -186,6 +202,7 @@ pub fn rustc_link_lib_kind(kind: &str, lib: &str) {
 ///
 /// [-L]: https://doc.rust-lang.org/stable/rustc/command-line-arguments.html#option-l-search-path
 /// [search-path]: https://doc.rust-lang.org/stable/cargo/reference/environment-variables.html#dynamic-library-paths
+#[track_caller]
 pub fn rustc_link_search(path: impl AsRef<Path>) {
     let Some(path) = path.as_ref().to_str() else {
         panic!("cannot emit rustc-link-search: path is not UTF-8");
@@ -197,9 +214,10 @@ pub fn rustc_link_search(path: impl AsRef<Path>) {
 }
 
 /// Like [`rustc_link_search`], but with KIND specified separately.
+#[track_caller]
 pub fn rustc_link_search_kind(kind: &str, path: impl AsRef<Path>) {
     if kind.contains(['=', '\n']) {
-        panic!("cannot emit rustc-link-search: invalid kind");
+        panic!("cannot emit rustc-link-search: invalid kind {kind:?}");
     }
     let Some(path) = path.as_ref().to_str() else {
         panic!("cannot emit rustc-link-search: path is not UTF-8");
@@ -213,6 +231,7 @@ pub fn rustc_link_search_kind(kind: &str, path: impl AsRef<Path>) {
 /// The `rustc-flags` instruction tells Cargo to pass the given space-separated
 /// flags to the compiler. This only allows the `-l` and `-L` flags, and is
 /// equivalent to using [`rustc_link_lib`] and [`rustc_link_search`].
+#[track_caller]
 pub fn rustc_flags(flags: &str) {
     if flags.contains('\n') {
         panic!("cannot emit rustc-flags: invalid flags");
@@ -221,7 +240,7 @@ pub fn rustc_flags(flags: &str) {
 }
 
 /// The `rustc-cfg` instruction tells Cargo to pass the given value to the
-/// [`--cfg` flag][--cfg] to the compiler. This may be used for compile-time
+/// [`--cfg` flag][cfg] to the compiler. This may be used for compile-time
 /// detection of features to enable conditional compilation.
 ///
 /// Note that this does not affect Cargo’s dependency resolution. This cannot
@@ -235,26 +254,95 @@ pub fn rustc_flags(flags: &str) {
 /// like `rustc_cfg(r#"my_component="foo""#)`. The key should be a Rust identifier,
 /// the value should be a string.
 ///
-/// [--cfg]: https://doc.rust-lang.org/rustc/command-line-arguments.html#option-cfg
+/// [cfg]: https://doc.rust-lang.org/rustc/command-line-arguments.html#option-cfg
 /// [Cargo features]: https://doc.rust-lang.org/cargo/reference/features.html
+#[track_caller]
 pub fn rustc_cfg(key: &str) {
-    if key.contains('\n') {
-        panic!("cannot emit rustc-cfg: invalid key");
+    if !is_ident(key) {
+        panic!("cannot emit rustc-cfg: invalid key {key:?}");
     }
     emit("rustc-cfg", key);
 }
 
-/// Like [`rustc_cfg`], but with the value specified separately.
+/// Like [`rustc_cfg`], but with the value specified separately. To replace the
+/// less convenient `rustc_cfg(r#"my_component="foo""#)`, you can instead use
+/// `rustc_cfg_value("my_component", "foo")`.
+#[track_caller]
 pub fn rustc_cfg_value(key: &str, value: &str) {
-    let value = value.escape_default();
-    if key.contains(['=', '\n']) {
+    if !is_ident(key) {
         panic!("cannot emit rustc-cfg-value: invalid key");
     }
+    let value = value.escape_default();
     emit("rustc-cfg", format_args!("{key}=\"{value}\""));
 }
 
+/// Add to the list of expected config names that is used when checking the
+/// *reachable* cfg expressions with the [`unexpected_cfgs`] lint.
+///
+/// This form is for keys without an expected value, such as `cfg(name)`.
+///
+/// It is recommended to group the `rustc_check_cfg` and `rustc_cfg` calls as
+/// closely as possible in order to avoid typos, missing check_cfg, stale cfgs,
+/// and other mistakes.
+///
+/// [`unexpected_cfgs`]: https://doc.rust-lang.org/rustc/lints/listing/warn-by-default.html#unexpected-cfgs
+#[doc = msrv!("1.80")]
+#[track_caller]
+pub fn rustc_check_cfgs(keys: &[&str]) {
+    if keys.is_empty() {
+        return;
+    }
+    for key in keys {
+        if !is_ident(key) {
+            panic!("cannot emit rustc-check-cfg: invalid key {key:?}");
+        }
+    }
+
+    if allow_use::check_cfg() {
+        let mut directive = keys[0].to_string();
+        for key in &keys[1..] {
+            write!(directive, ", {key}").expect("writing to string should be infallible");
+        }
+        emit("rustc-check-cfg", format_args!("cfg({directive})"));
+    }
+}
+
+/// Add to the list of expected config names that is used when checking the
+/// *reachable* cfg expressions with the [`unexpected_cfgs`] lint.
+///
+/// This form is for keys with expected values, such as `cfg(name = "value")`.
+///
+/// It is recommended to group the `rustc_check_cfg` and `rustc_cfg` calls as
+/// closely as possible in order to avoid typos, missing check_cfg, stale cfgs,
+/// and other mistakes.
+///
+/// [`unexpected_cfgs`]: https://doc.rust-lang.org/rustc/lints/listing/warn-by-default.html#unexpected-cfgs
+#[doc = msrv!("1.80")]
+#[track_caller]
+pub fn rustc_check_cfg_values(key: &str, values: &[&str]) {
+    if !is_ident(key) {
+        panic!("cannot emit rustc-check-cfg: invalid key {key:?}");
+    }
+    if values.is_empty() {
+        rustc_check_cfgs(&[key]);
+        return;
+    }
+
+    if allow_use::check_cfg() {
+        let mut directive = format!("\"{}\"", values[0].escape_default());
+        for value in &values[1..] {
+            write!(directive, ", \"{}\"", value.escape_default())
+                .expect("writing to string should be infallible");
+        }
+        emit(
+            "rustc-check-cfg",
+            format_args!("cfg({key}, values({directive}))"),
+        );
+    }
+}
+
 /// The `rustc-env` instruction tells Cargo to set the given environment variable
-///  when compiling the package. The value can be then retrieved by the
+/// when compiling the package. The value can be then retrieved by the
 /// [`env!` macro][env!] in the compiled crate. This is useful for embedding
 /// additional metadata in crate’s code, such as the hash of git HEAD or the
 /// unique identifier of a continuous integration server.
@@ -262,12 +350,13 @@ pub fn rustc_cfg_value(key: &str, value: &str) {
 /// See also the [environment variables automatically included by Cargo][cargo-env].
 ///
 /// [cargo-env]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
+#[track_caller]
 pub fn rustc_env(key: &str, value: &str) {
     if key.contains(['=', '\n']) {
-        panic!("cannot emit rustc-env: invalid key");
+        panic!("cannot emit rustc-env: invalid key {key:?}");
     }
     if value.contains('\n') {
-        panic!("cannot emit rustc-env: invalid value");
+        panic!("cannot emit rustc-env: invalid value {value:?}");
     }
     emit("rustc-env", format_args!("{key}={value}"));
 }
@@ -278,9 +367,10 @@ pub fn rustc_env(key: &str, value: &str) {
 /// to set the shared library version or the runtime-path.
 ///
 /// [link-arg]: https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg
+#[track_caller]
 pub fn rustc_cdylib_link_arg(flag: &str) {
     if flag.contains('\n') {
-        panic!("cannot emit rustc-cdylib-link-arg: invalid flag");
+        panic!("cannot emit rustc-cdylib-link-arg: invalid flag {flag:?}");
     }
     emit("rustc-cdylib-link-arg", flag);
 }
@@ -292,6 +382,7 @@ pub fn rustc_cdylib_link_arg(flag: &str) {
 /// flag may be used to have Cargo display warnings for all crates.
 ///
 /// [crates.io]: https://crates.io/
+#[track_caller]
 pub fn warning(message: &str) {
     if message.contains('\n') {
         panic!("cannot emit warning: message contains newline");
@@ -300,13 +391,15 @@ pub fn warning(message: &str) {
 }
 
 /// Metadata, used by `links` scripts.
+#[track_caller]
 pub fn metadata(key: &str, val: &str) {
-    if key.contains(['=', '\n']) {
-        panic!("cannot emit metadata: invalid key");
+    if !is_ascii_ident(key) {
+        panic!("cannot emit metadata: invalid key {key:?}");
     }
     if val.contains('\n') {
-        panic!("cannot emit metadata: invalid value");
+        panic!("cannot emit metadata: invalid value {val:?}");
     }
+
     if allow_use::double_colon_directives() {
         emit("metadata", format_args!("{}={}", key, val));
     } else {
