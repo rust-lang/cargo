@@ -1,13 +1,14 @@
 [package]
 name = "build-rs"
-version = "0.1.2"
+version = "0.2.0"
 edition = "2021"
+rust-version = "1.70"
+publish = false
 
-description = "Convenience wrapper for cargo buildscript input/output"
-repository = "https://github.com/cad97/build-rs"
-license = "MIT OR Apache-2.0 OR 0BSD OR CC0-1.0 OR CDDL-1.0 OR MIT-0 OR Unlicense OR WTFPL"
-keywords = ["buildscript","build-script","cargo"]
-categories = ["development-tools::build-utils"]
+[features]
 
-[lib]
-name = "build"
+## Experimental API. This feature flag is **NOT** semver stable.
+unstable = []
+
+[workspace]
+members = ["test-lib"]

@@ -1,0 +1,59 @@
+name: CI
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches:
+      - main
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        toolchain: ["stable", "stable 6 months ago"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.toolchain }}
+      - name: Build tests
+        run: cargo test --workspace --no-run
+      - name: Run tests
+        run: cargo test --workspace
+
+  style:
+    name: Style
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: -Dwarnings
+      RUSTDOCFLAGS: -Dwarnings
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt, clippy
+      - name: Install cargo-docs-rs
+        uses: dtolnay/install@cargo-docs-rs
+      - name: Check docs
+        run: cargo docs-rs
+      - name: Check lints
+        run: cargo clippy
+      - name: Check fmt
+        run: cargo fmt -- --check
+
+  semver:
+    name: API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Semver checks
+        uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          package: build-rs

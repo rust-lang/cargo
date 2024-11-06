@@ -1,0 +1,35 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "schedule": "every 6 weeks on tuesday",
+    "customManagers": [
+        {
+            "customType": "regex",
+            "fileMatch": [
+                "Cargo.toml$"
+            ],
+            "matchStrings": [
+                "rust-version = \"(?<currentValue>\\d+\\.\\d+(\\.\\d+)?)\""
+            ],
+            "depNameTemplate": "rust-version",
+            "packageNameTemplate": "rust-lang/rust",
+            "datasourceTemplate": "github-releases"
+        }
+    ],
+    "packageRules": [
+        {
+            "commitMessageTopic": "bump rust-version",
+            "matchManagers": [
+                "custom.regex"
+            ],
+            "matchPackageNames": [
+                "rust-version"
+            ],
+            "extractVersion": "^(?<version>\\d+\\.\\d+)", // drop patch version
+            "schedule": [
+                "* * * * *"
+            ],
+            "minimumReleaseAge": "6 months",
+            "internalChecksFilter": "strict"
+        }
+    ]
+}

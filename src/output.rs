@@ -1,188 +1,315 @@
-use std::{ffi::OsStr, path::Path};
+//! Outputs from the build script to the build system.
+//!
+//! This crate assumes that stdout is at a new line whenever an output directive
+//! is called. Printing to stdout without a terminating newline (i.e. not using
+//! [`println!`]) may lead to surprising behavior.
+//!
+//! Reference: <https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script>
 
-/// The rustc-link-arg instruction tells Cargo to pass the
-/// [`-C link-arg=FLAG` option](https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg)
-/// to the compiler, but only when building supported targets (benchmarks,
-/// binaries, cdylib crates, examples, and tests). Its usage is highly platform
-/// specific. It is useful to set the shared library version or linker script.
+use crate::allow_use;
+use std::{ffi::OsStr, fmt::Display, path::Path, str};
+
+fn emit(directive: &str, value: impl Display) {
+    if allow_use::double_colon_directives() {
+        println!("cargo::{}={}", directive, value);
+    } else {
+        println!("cargo:{}={}", directive, value);
+    }
+}
+
+/// The `rerun-if-changed` instruction tells Cargo to re-run the build script if the
+/// file at the given path has changed. Currently, Cargo only uses the filesystem
+/// last-modified “mtime” timestamp to determine if the file has changed. It
+/// compares against an internal cached timestamp of when the build script last ran.
+///
+/// If the path points to a directory, it will scan the entire directory for any
+/// modifications.
+///
+/// If the build script inherently does not need to re-run under any circumstance,
+/// then calling `rerun_if_changed("build.rs")` is a simple way to prevent it from
+/// being re-run (otherwise, the default if no `rerun-if` instructions are emitted
+/// is to scan the entire package directory for changes). Cargo automatically
+/// handles whether or not the script itself needs to be recompiled, and of course
+/// the script will be re-run after it has been recompiled. Otherwise, specifying
+/// `build.rs` is redundant and unnecessary.
+pub fn rerun_if_changed(path: impl AsRef<Path>) {
+    let Some(path) = path.as_ref().to_str() else {
+        panic!("cannot emit rerun-if-changed: path is not UTF-8");
+    };
+    if path.contains('\n') {
+        panic!("cannot emit rerun-if-changed: path contains newline");
+    }
+    emit("rerun-if-changed", path);
+}
+
+/// The `rerun-if-env-changed` instruction tells Cargo to re-run the build script
+/// if the value of an environment variable of the given name has changed.
+///
+/// Note that the environment variables here are intended for global environment
+/// variables like `CC` and such, it is not possible to use this for environment
+/// variables like `TARGET` that [Cargo sets for build scripts][build-env]. The
+/// environment variables in use are those received by cargo invocations, not
+/// those received by the executable of the build script.
+///
+/// [build-env]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-build-scripts
+pub fn rerun_if_env_changed(key: impl AsRef<OsStr>) {
+    let Some(key) = key.as_ref().to_str() else {
+        panic!("cannot emit rerun-if-env-changed: key is not UTF-8");
+    };
+    if key.contains('\n') {
+        panic!("cannot emit rerun-if-env-changed: key contains newline");
+    }
+    emit("rerun-if-env-changed", key);
+}
+
+/// The `rustc-link-arg` instruction tells Cargo to pass the
+/// [`-C link-arg=FLAG` option][link-arg] to the compiler, but only when building
+/// supported targets (benchmarks, binaries, cdylib crates, examples, and tests).
+/// Its usage is highly platform specific. It is useful to set the shared library
+/// version or linker script.
+///
+/// [link-arg]: https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg
 pub fn rustc_link_arg(flag: &str) {
-    println!("cargo:rustc-link-arg={flag}");
+    if flag.contains('\n') {
+        panic!("cannot emit rustc-link-arg: invalid flag");
+    }
+    emit("rustc-link-arg", flag);
 }
 
 /// The `rustc-link-arg-bin` instruction tells Cargo to pass the
-/// [`-C link-arg=FLAG` option](https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg)
-/// to the compiler, but only when building the binary target with name `BIN`.
-/// Its usage is highly platform specific. It is useful to set a linker script
-/// or other linker options.
+/// [`-C link-arg=FLAG` option][link-arg] to the compiler, but only when building
+/// the binary target with name `BIN`. Its usage is highly platform specific. It
+/// is useful to set a linker script or other linker options.
+///
+/// [link-arg]: https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg
 pub fn rustc_link_arg_bin(bin: &str, flag: &str) {
-    println!("cargo:rustc-link-arg-bin={bin}={flag}");
+    if bin.contains(['=', '\n']) {
+        panic!("cannot emit rustc-link-arg-bin: invalid bin name");
+    }
+    emit("rustc-link-arg-bin", format_args!("{}={}", bin, flag));
 }
 
 /// The `rustc-link-arg-bins` instruction tells Cargo to pass the
-/// [`-C link-arg=FLAG` option](https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg)
-/// to the compiler, but only when building a binary target. Its usage is
-/// highly platform specific. It is useful to set a linker script or other
-/// linker options.
+/// [`-C link-arg=FLAG` option][link-arg] to the compiler, but only when building
+/// the binary target. Its usage is highly platform specific. It is useful to set
+/// a linker script or other linker options.
+///
+/// [link-arg]: https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg
 pub fn rustc_link_arg_bins(flag: &str) {
-    println!("cargo:rustc-link-arg-bins={flag}");
+    if flag.contains('\n') {
+        panic!("cannot emit rustc-link-arg-bins: invalid flag");
+    }
+    emit("rustc-link-arg-bins", flag);
 }
 
-/// The `rustc-link-lib` instruction tells Cargo to link the given library
-/// using the compiler's [`-l` flag]. This is typically used to link a native
-/// library using [`FFI`].
-///
-/// The `-l` flag is only passed to the library target of the package, unless
-/// there is no library target, in which case it is passed to all targets. This
-/// is done because all other targets have an implicit dependency on the
-/// library target, and the given library to link should only be included once.
-/// This means that if a package has both a library and a binary target, the
-/// _library_ has access to the symbols from the given lib, and the binary
-/// should access them through the library target's public API.
-///
-/// The optional `KIND` may be one of `dylib`, `static`, or `framework`.
-/// See the [rustc book] for more detail.
-///
-/// [`-l` flag]: https://doc.rust-lang.org/rustc/command-line-arguments.html#option-l-link-lib
-/// [rustc book]: https://doc.rust-lang.org/rustc/command-line-arguments.html#option-l-link-lib
-pub fn rustc_link_lib(name: &str) {
-    println!("cargo:rustc-link-lib={name}");
+/// The `rustc-link-arg-tests` instruction tells Cargo to pass the
+/// [`-C link-arg=FLAG` option][link-arg] to the compiler, but only when building
+/// a tests target.
+pub fn rustc_link_arg_tests(flag: &str) {
+    if flag.contains('\n') {
+        panic!("cannot emit rustc-link-arg-tests: invalid flag");
+    }
+    emit("rustc-link-arg-tests", flag);
 }
 
-/// See [`rustc_link_lib`].
-pub fn rustc_link_lib_kind(kind: &str, name: &str) {
-    println!("cargo:rustc-link-lib={kind}={name}");
+/// The `rustc-link-arg-examples` instruction tells Cargo to pass the
+/// [`-C link-arg=FLAG` option][link-arg] to the compiler, but only when building
+/// an examples target.
+pub fn rustc_link_arg_examples(flag: &str) {
+    if flag.contains('\n') {
+        panic!("cannot emit rustc-link-arg-examples: invalid flag");
+    }
+    emit("rustc-link-arg-examples", flag);
 }
 
-/// The `rustc-link-search` instruction tells Cargo to pass the [`-L flag`] to
-/// the compiler to add a directory to the library search path.
+/// The `rustc-link-arg-benches` instruction tells Cargo to pass the
+/// [`-C link-arg=FLAG` option][link-arg] to the compiler, but only when building
+/// a benchmark target.
+pub fn rustc_link_arg_benches(flag: &str) {
+    if flag.contains('\n') {
+        panic!("cannot emit rustc-link-arg-benches: invalid flag");
+    }
+    emit("rustc-link-arg-benches", flag);
+}
+
+/// The `rustc-link-lib` instruction tells Cargo to link the given library using
+/// the compiler’s [`-l` flag][-l]. This is typically used to link a native library
+/// using [FFI].
 ///
-/// The optional `KIND` may be one of `dependency`, `crate`, `native`,
-/// `framework`, or `all`. See the [rustc book] for more detail.
+/// The `LIB` string is passed directly to rustc, so it supports any syntax that
+/// `-l` does. Currently the full supported syntax for `LIB` is
+/// `[KIND[:MODIFIERS]=]NAME[:RENAME]`.
+///
+/// The `-l` flag is only passed to the library target of the package, unless there
+/// is no library target, in which case it is passed to all targets. This is done
+/// because all other targets have an implicit dependency on the library target,
+/// and the given library to link should only be included once. This means that
+/// if a package has both a library and a binary target, the library has access
+/// to the symbols from the given lib, and the binary should access them through
+/// the library target’s public API.
+///
+/// The optional `KIND` may be one of dylib, static, or framework. See the
+/// [rustc book][-l] for more detail.
+///
+/// [-l]: https://doc.rust-lang.org/stable/rustc/command-line-arguments.html#option-l-link-lib
+/// [FFI]: https://doc.rust-lang.org/stable/nomicon/ffi.html
+pub fn rustc_link_lib(lib: &str) {
+    if lib.contains('\n') {
+        panic!("cannot emit rustc-link-lib: invalid lib");
+    }
+    emit("rustc-link-lib", lib);
+}
+
+/// Like [`rustc_link_lib`], but with KIND specified separately.
+pub fn rustc_link_lib_kind(kind: &str, lib: &str) {
+    if kind.contains(['=', '\n']) {
+        panic!("cannot emit rustc-link-lib: invalid kind");
+    }
+    if lib.contains('\n') {
+        panic!("cannot emit rustc-link-lib: invalid lib");
+    }
+    emit("rustc-link-lib", format_args!("{kind}={lib}"));
+}
+
+/// The `rustc-link-search` instruction tells Cargo to pass the [`-L` flag] to the
+/// compiler to add a directory to the library search path.
+///
+/// The optional `KIND` may be one of `dependency`, `crate`, `native`, `framework`,
+/// or `all`. See the [rustc book][-L] for more detail.
 ///
 /// These paths are also added to the
-/// [dynamic library search path environment variable] if they are within the
-/// `OUT_DIR`. Depending on this behavior is discouraged since this makes it
-/// difficult to use the resulting binary. In general, it is best to avoid
-/// creating dynamic libraries in a build script (using existing system
+/// [dynamic library search path environment variable][search-path] if they are
+/// within the `OUT_DIR`. Depending on this behavior is discouraged since this
+/// makes it difficult to use the resulting binary. In general, it is best to
+/// avoid creating dynamic libraries in a build script (using existing system
 /// libraries is fine).
 ///
-/// [`-L flag`]: https://doc.rust-lang.org/rustc/command-line-arguments.html#option-l-search-path
-/// [rustc book]: https://doc.rust-lang.org/rustc/command-line-arguments.html#option-l-search-path
-/// [dynamic library search path environment variable]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#dynamic-library-paths
+/// [-L]: https://doc.rust-lang.org/stable/rustc/command-line-arguments.html#option-l-search-path
+/// [search-path]: https://doc.rust-lang.org/stable/cargo/reference/environment-variables.html#dynamic-library-paths
 pub fn rustc_link_search(path: impl AsRef<Path>) {
-    let path = path
-        .as_ref()
-        .as_os_str()
-        .to_str()
-        .expect("cannot print non-UTF8 path");
-    println!("cargo:rustc-link-search={path}");
+    let Some(path) = path.as_ref().to_str() else {
+        panic!("cannot emit rustc-link-search: path is not UTF-8");
+    };
+    if path.contains('\n') {
+        panic!("cannot emit rustc-link-search: path contains newline");
+    }
+    emit("rustc-link-search", path);
 }
 
-/// See [`rustc_link_search`].
+/// Like [`rustc_link_search`], but with KIND specified separately.
 pub fn rustc_link_search_kind(kind: &str, path: impl AsRef<Path>) {
-    let path = path
-        .as_ref()
-        .as_os_str()
-        .to_str()
-        .expect("cannot print non-UTF8 path");
-    println!("cargo:rustc-link-search={kind}={path}");
+    if kind.contains(['=', '\n']) {
+        panic!("cannot emit rustc-link-search: invalid kind");
+    }
+    let Some(path) = path.as_ref().to_str() else {
+        panic!("cannot emit rustc-link-search: path is not UTF-8");
+    };
+    if path.contains('\n') {
+        panic!("cannot emit rustc-link-search: path contains newline");
+    }
+    emit("rustc-link-search", format_args!("{kind}={path}"));
 }
 
 /// The `rustc-flags` instruction tells Cargo to pass the given space-separated
 /// flags to the compiler. This only allows the `-l` and `-L` flags, and is
-/// equivalent to using `rustc-link-lib` and `rustc-link-search`.
+/// equivalent to using [`rustc_link_lib`] and [`rustc_link_search`].
 pub fn rustc_flags(flags: &str) {
-    println!("cargo:rustc-flags={flags}");
+    if flags.contains('\n') {
+        panic!("cannot emit rustc-flags: invalid flags");
+    }
+    emit("rustc-flags", flags);
 }
 
 /// The `rustc-cfg` instruction tells Cargo to pass the given value to the
-/// [`--cfg` flag](https://doc.rust-lang.org/rustc/command-line-arguments.html#option-cfg)
-/// to the compiler. This may be used for compile-time detection of features to
-/// enable [conditional compilation](https://doc.rust-lang.org/reference/conditional-compilation.html).
+/// [`--cfg` flag][--cfg] to the compiler. This may be used for compile-time
+/// detection of features to enable conditional compilation.
 ///
-/// Note that this does not affect Cargo's dependency resolution. This cannot
+/// Note that this does not affect Cargo’s dependency resolution. This cannot
 /// be used to enable an optional dependency, or enable other Cargo features.
 ///
-/// Be aware that Cargo features use the form `feature="foo"`. `cfg` values
+/// Be aware that [Cargo features] use the form `feature="foo"`. `cfg` values
 /// passed with this flag are not restricted to that form, and may provide just
 /// a single identifier, or any arbitrary key/value pair. For example, emitting
-/// `cargo:rustc-cfg=abc` will then allow code to use `#[cfg(abc)]` (note the
-/// lack of `feature=`). Or an arbitrary key/value pair may be used with an `=`
-/// symbol like `cargo:rustc-cfg=my_component="foo"`. The key should be a Rust
-/// identifier, the value should be a string.
+/// `rustc_cfg("abc")` will then allow code to use `#[cfg(abc)]` (note the lack
+/// of `feature=`). Or an arbitrary key/value pair may be used with an `=` symbol
+/// like `rustc_cfg(r#"my_component="foo""#)`. The key should be a Rust identifier,
+/// the value should be a string.
+///
+/// [--cfg]: https://doc.rust-lang.org/rustc/command-line-arguments.html#option-cfg
+/// [Cargo features]: https://doc.rust-lang.org/cargo/reference/features.html
 pub fn rustc_cfg(key: &str) {
-    println!("cargo:rustc-cfg={key}")
+    if key.contains('\n') {
+        panic!("cannot emit rustc-cfg: invalid key");
+    }
+    emit("rustc-cfg", key);
 }
 
-/// See [`rustc_cfg`].
+/// Like [`rustc_cfg`], but with the value specified separately.
 pub fn rustc_cfg_value(key: &str, value: &str) {
-    println!("cargo:rustc-cfg={key}={value}");
+    let value = value.escape_default();
+    if key.contains(['=', '\n']) {
+        panic!("cannot emit rustc-cfg-value: invalid key");
+    }
+    emit("rustc-cfg", format_args!("{key}=\"{value}\""));
 }
 
-/// The `rustc-env` instruction tells Cargo to set the given environment
-/// variable when compiling the package. The value can be then retrieved by the
-/// [`env! macro`](env!) in the compiled crate. This is useful for embedding
-/// additional metadata in crate's code, such as the hash of git HEAD or the
+/// The `rustc-env` instruction tells Cargo to set the given environment variable
+///  when compiling the package. The value can be then retrieved by the
+/// [`env!` macro][env!] in the compiled crate. This is useful for embedding
+/// additional metadata in crate’s code, such as the hash of git HEAD or the
 /// unique identifier of a continuous integration server.
-pub fn rustc_env(var: &str, value: &str) {
-    println!("cargo:rustc-env={var}={value}");
+///
+/// See also the [environment variables automatically included by Cargo][cargo-env].
+///
+/// [cargo-env]: https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates
+pub fn rustc_env(key: &str, value: &str) {
+    if key.contains(['=', '\n']) {
+        panic!("cannot emit rustc-env: invalid key");
+    }
+    if value.contains('\n') {
+        panic!("cannot emit rustc-env: invalid value");
+    }
+    emit("rustc-env", format_args!("{key}={value}"));
 }
 
 /// The `rustc-cdylib-link-arg` instruction tells Cargo to pass the
-/// [`-C link-arg=FLAG` option](https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg)
-/// to the compiler, but only when building a cdylib library target. Its usage
-/// is highly platform specific. It is useful to set the shared library version
-/// or the runtime-path.
+/// [`-C link-arg=FLAG` option][link-arg] to the compiler, but only when building
+/// a `cdylib` library target. Its usage is highly platform specific. It is useful
+/// to set the shared library version or the runtime-path.
+///
+/// [link-arg]: https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg
 pub fn rustc_cdylib_link_arg(flag: &str) {
-    println!("cargo:rustc-cdylib-link-arg={flag}");
+    if flag.contains('\n') {
+        panic!("cannot emit rustc-cdylib-link-arg: invalid flag");
+    }
+    emit("rustc-cdylib-link-arg", flag);
 }
 
 /// The `warning` instruction tells Cargo to display a warning after the build
 /// script has finished running. Warnings are only shown for path dependencies
-/// (that is, those you're working on locally), so for example warnings printed
-/// out in crates.io crates are not emitted by default. The `-vv` "very verbose"
+/// (that is, those you’re working on locally), so for example warnings printed
+/// out in [crates.io] crates are not emitted by default. The `-vv` “very verbose”
 /// flag may be used to have Cargo display warnings for all crates.
+///
+/// [crates.io]: https://crates.io/
 pub fn warning(message: &str) {
-    println!("cargo:warning={message}");
+    if message.contains('\n') {
+        panic!("cannot emit warning: message contains newline");
+    }
+    emit("warning", message);
 }
 
-/// The `rerun-if-changed` instruction tells Cargo to re-run the build script
-/// if the file at the given path has changed. Currently, Cargo only uses the
-/// filesystem last-modified "mtime" timestamp to determine if the file has
-/// changed. It compares against an internal cached timestamp of when the build
-/// script last ran.
-///
-/// If the path points to a directory, it will scan the entire directory for
-/// any modifications.
-///
-/// If the build script inherently does not need to re-run under any
-/// circumstance, then emitting `cargo:rerun-if-changed=build.rs` is a simple
-/// way to prevent it from being re-run (otherwise, the default if no
-/// `rerun-if` instructions are emitted is to scan the entire package
-/// directory for changes). Cargo automatically handles whether or not the
-/// script itself needs to be recompiled, and of course the script will be
-/// re-run after it has been recompiled. Otherwise, specifying build.rs is
-/// redundant and unnecessary.
-pub fn rerun_if_changed(path: impl AsRef<Path>) {
-    let path = path
-        .as_ref()
-        .as_os_str()
-        .to_str()
-        .expect("cannot print non-UTF8 path");
-    println!("cargo:rerun-if-changed={path}");
-}
-
-/// The `rerun-if-env-changed` instruction tells Cargo to re-run the build
-/// script if the value of an environment variable of the given name has
-/// changed.
-///
-/// Note that the environment variables here are intended for global
-/// environment variables like `CC` and such, it is not necessary to use this
-/// for environment variables like `TARGET` that Cargo sets.
-pub fn rerun_if_env_changed(name: impl AsRef<OsStr>) {
-    let name = name
-        .as_ref()
-        .to_str()
-        .expect("cannot print non-UTF8 env key");
-    println!("cargo:rerun-if-env-changed={name}");
+/// Metadata, used by `links` scripts.
+pub fn metadata(key: &str, val: &str) {
+    if key.contains(['=', '\n']) {
+        panic!("cannot emit metadata: invalid key");
+    }
+    if val.contains('\n') {
+        panic!("cannot emit metadata: invalid value");
+    }
+    if allow_use::double_colon_directives() {
+        emit("metadata", format_args!("{}={}", key, val));
+    } else {
+        emit(key, val);
+    }
 }
