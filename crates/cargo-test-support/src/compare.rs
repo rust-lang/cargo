@@ -458,13 +458,13 @@ fn normalize_expected(content: &str, redactions: &snapbox::Redactions) -> String
 }
 
 /// A single line string that supports `[..]` wildcard matching.
-pub(crate) struct WildStr<'a> {
+struct WildStr<'a> {
     has_meta: bool,
     line: &'a str,
 }
 
 impl<'a> WildStr<'a> {
-    pub fn new(line: &'a str) -> WildStr<'a> {
+    fn new(line: &'a str) -> WildStr<'a> {
         WildStr {
             has_meta: line.contains("[..]"),
             line,
