@@ -3893,9 +3893,14 @@ fn cargo_test_env() {
         .file("src/lib.rs", &src)
         .build();
 
-    let cargo = cargo_exe().canonicalize().unwrap();
+    let cargo = cargo_exe()
+        .canonicalize()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .replace(std::env::consts::EXE_SUFFIX, "[EXE]");
     p.cargo("test --lib -- --nocapture")
-        .with_stderr_contains(cargo.to_str().unwrap())
+        .with_stderr_contains(cargo)
         .with_stdout_data(str![[r#"
 ...
 test env_test ... ok
@@ -3908,11 +3913,14 @@ test env_test ... ok
         .unwrap()
         .canonicalize()
         .unwrap();
-    let rustc = rustc.to_str().unwrap();
+    let stderr_rustc = rustc
+        .to_str()
+        .unwrap()
+        .replace(std::env::consts::EXE_SUFFIX, "[EXE]");
     p.cargo("test --lib -- --nocapture")
         // we use rustc since $CARGO is only used if it points to a path that exists
         .env(cargo::CARGO_ENV, rustc)
-        .with_stderr_contains(rustc)
+        .with_stderr_contains(stderr_rustc)
         .with_stdout_data(str![[r#"
 ...
 test env_test ... ok

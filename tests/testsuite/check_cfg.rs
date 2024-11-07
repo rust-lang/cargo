@@ -945,7 +945,7 @@ fn config_fingerprint() {
 
     p.cargo("check -v")
         // we check that the fingerprint is indeed dirty
-        .with_stderr_contains("[..]Dirty[..]the profile configuration changed")
+        .with_stderr_contains("[..][DIRTY][..]the profile configuration changed")
         // that cause rustc to be called again with the new check-cfg args
         .with_stderr_contains(x!("rustc" => "cfg" of "bar"))
         .with_stderr_contains(x!("rustc" => "cfg" of "foo"))

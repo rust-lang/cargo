@@ -820,10 +820,6 @@ impl Execs {
         self
     }
 
-    fn get_cwd(&self) -> Option<&Path> {
-        self.process_builder.as_ref().and_then(|p| p.get_cwd())
-    }
-
     pub fn env<T: AsRef<OsStr>>(&mut self, key: &str, val: T) -> &mut Self {
         if let Some(ref mut p) = self.process_builder {
             p.env(key, val);
@@ -1021,7 +1017,6 @@ impl Execs {
         self.verify_checks_output(stdout, stderr);
         let stdout = std::str::from_utf8(stdout).expect("stdout is not utf8");
         let stderr = std::str::from_utf8(stderr).expect("stderr is not utf8");
-        let cwd = self.get_cwd();
 
         match self.expect_exit_code {
             None => {}
@@ -1054,19 +1049,19 @@ impl Execs {
             }
         }
         for expect in self.expect_stdout_contains.iter() {
-            compare::match_contains(expect, stdout, cwd)?;
+            compare::match_contains(expect, stdout, self.assert.redactions())?;
         }
         for expect in self.expect_stderr_contains.iter() {
-            compare::match_contains(expect, stderr, cwd)?;
+            compare::match_contains(expect, stderr, self.assert.redactions())?;
         }
         for expect in self.expect_stdout_not_contains.iter() {
-            compare::match_does_not_contain(expect, stdout, cwd)?;
+            compare::match_does_not_contain(expect, stdout, self.assert.redactions())?;
         }
         for expect in self.expect_stderr_not_contains.iter() {
-            compare::match_does_not_contain(expect, stderr, cwd)?;
+            compare::match_does_not_contain(expect, stderr, self.assert.redactions())?;
         }
         for (with, without) in self.expect_stderr_with_without.iter() {
-            compare::match_with_without(stderr, with, without, cwd)?;
+            compare::match_with_without(stderr, with, without, self.assert.redactions())?;
         }
         Ok(())
     }

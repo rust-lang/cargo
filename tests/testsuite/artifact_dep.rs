@@ -1120,23 +1120,19 @@ fn build_script_deps_adopt_specified_target_unconditionally() {
     #[expect(deprecated)]
     p.cargo("check -v -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_stderr_does_not_contain(format!(
-            "[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--target {} [..]",
-            target
-        ))
+        .with_stderr_does_not_contain(
+            "[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--target [ALT_TARGET] [..]",
+        )
         .with_stderr_contains("[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]")
-        .with_stderr_contains(format!(
-            "[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--target {} [..]",
-            target
-        ))
-        .with_stderr_contains(format!(
-            "[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/main.rs [..]--target {} [..]",
-            target
-        ))
-        .with_stderr_does_not_contain(format!(
-            "[RUNNING] `rustc --crate-name foo [..]--target {} [..]",
-            target
-        ))
+        .with_stderr_contains(
+            "[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--target [ALT_TARGET] [..]",
+        )
+        .with_stderr_contains(
+            "[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/main.rs [..]--target [ALT_TARGET] [..]",
+        )
+        .with_stderr_does_not_contain(
+            "[RUNNING] `rustc --crate-name foo [..]--target [ALT_TARGET] [..]",
+        )
         .with_stderr_contains("[RUNNING] `rustc --crate-name foo [..]")
         .run();
 }
@@ -1240,18 +1236,15 @@ fn non_build_script_deps_adopt_specified_target_unconditionally() {
     #[expect(deprecated)]
     p.cargo("check -v -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_stderr_contains(format!(
-            "[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--target {} [..]",
-            target
-        ))
-        .with_stderr_contains(format!(
-            "[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/main.rs [..]--target {} [..]",
-            target
-        ))
-        .with_stderr_does_not_contain(format!(
-            "[RUNNING] `rustc --crate-name foo [..]--target {} [..]",
-            target
-        ))
+        .with_stderr_contains(
+            "[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--target [ALT_TARGET] [..]",
+        )
+        .with_stderr_contains(
+            "[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/main.rs [..]--target [ALT_TARGET] [..]",
+        )
+        .with_stderr_does_not_contain(
+            "[RUNNING] `rustc --crate-name foo [..]--target [ALT_TARGET] [..]",
+        )
         .with_stderr_contains("[RUNNING] `rustc --crate-name foo [..]")
         .run();
 }
@@ -1389,23 +1382,19 @@ fn build_script_deps_adopts_target_platform_if_target_equals_target() {
     p.cargo("check -v -Z bindeps --target")
         .arg(alternate_target)
         .masquerade_as_nightly_cargo(&["bindeps"])
-        .with_stderr_does_not_contain(format!(
-            "[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--target {} [..]",
-            alternate_target
-        ))
+        .with_stderr_does_not_contain(
+            "[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]--target [ALT_TARGET] [..]",
+        )
         .with_stderr_contains("[RUNNING] `rustc --crate-name build_script_build --edition=2015 build.rs [..]")
-        .with_stderr_contains(format!(
-            "[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--target {} [..]",
-            alternate_target
-        ))
-        .with_stderr_contains(format!(
-            "[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/main.rs [..]--target {} [..]",
-            alternate_target
-        ))
-        .with_stderr_contains(format!(
-            "[RUNNING] `rustc --crate-name foo [..]--target {} [..]",
-            alternate_target
-        ))
+        .with_stderr_contains(
+            "[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/lib.rs [..]--target [ALT_TARGET] [..]",
+        )
+        .with_stderr_contains(
+            "[RUNNING] `rustc --crate-name bar --edition=2015 bar/src/main.rs [..]--target [ALT_TARGET] [..]",
+        )
+        .with_stderr_contains(
+            "[RUNNING] `rustc --crate-name foo [..]--target [ALT_TARGET] [..]",
+        )
         .run();
 }
 
