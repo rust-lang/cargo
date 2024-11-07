@@ -216,10 +216,12 @@ fn split_source(input: &str) -> CargoResult<Source<'_>> {
         }
 
         // No other choice than to consider this a shebang.
-        let (shebang, content) = source
+        let newline_end = source
             .content
-            .split_once('\n')
-            .unwrap_or((source.content, ""));
+            .find('\n')
+            .map(|pos| pos + 1)
+            .unwrap_or(source.content.len());
+        let (shebang, content) = source.content.split_at(newline_end);
         source.shebang = Some(shebang);
         source.content = content;
     }
@@ -394,7 +396,7 @@ time="0.1.25"
 fn main() {}
 "#,
             str![[r##"
-shebang: "#!/usr/bin/env cargo"
+shebang: "#!/usr/bin/env cargo\n"
 info: None
 frontmatter: "[dependencies]\ntime=\"0.1.25\"\n"
 content: "fn main() {}\n"
@@ -408,7 +410,7 @@ content: "fn main() {}\n"
         assert_source(
                 "#!/usr/bin/env cargo\r\n---\r\n[dependencies]\r\ntime=\"0.1.25\"\r\n---\r\nfn main() {}",
             str![[r##"
-shebang: "#!/usr/bin/env cargo\r"
+shebang: "#!/usr/bin/env cargo\r\n"
 info: ""
 frontmatter: "[dependencies]\r\ntime=\"0.1.25\"\r\n"
 content: "fn main() {}"
@@ -433,7 +435,7 @@ time="0.1.25"
 fn main() {}
 "#,
             str![[r##"
-shebang: "#!/usr/bin/env cargo"
+shebang: "#!/usr/bin/env cargo\n"
 info: None
 frontmatter: None
 content: "    \n\n\n---\n[dependencies]\ntime=\"0.1.25\"\n---\n\n\nfn main() {}\n"
@@ -473,7 +475,7 @@ time="0.1.25"
 
 fn main() {}"#,
             str![[r##"
-shebang: "#!/usr/bin/env cargo"
+shebang: "#!/usr/bin/env cargo\n"
 info: None
 frontmatter: "[dependencies]\ntime=\"0.1.25\"\n"
 content: "\nfn main() {}"
