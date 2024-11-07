@@ -245,7 +245,7 @@ fn split_source(input: &str) -> CargoResult<Source<'_>> {
         _ => source.content.split_at(fence_end),
     };
     let (info, content) = rest.split_once("\n").unwrap_or((rest, ""));
-    let info = info.trim_end();
+    let info = info.trim();
     if !info.is_empty() {
         source.info = Some(info);
     }
@@ -378,7 +378,7 @@ fn main() {}
 "#,
             str![[r#"
 shebang: None
-info: " cargo"
+info: "cargo"
 frontmatter: "[dependencies]\ntime=\"0.1.25\"\n"
 content: "fn main() {}\n"
 
