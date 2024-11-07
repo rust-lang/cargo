@@ -343,12 +343,12 @@ pub(crate) fn match_contains(
     let expected = normalize_expected(expected, redactions);
     let actual = normalize_actual(actual, redactions);
     let e: Vec<_> = expected.lines().map(|line| WildStr::new(line)).collect();
-    let a: Vec<_> = actual.lines().map(|line| WildStr::new(line)).collect();
+    let a: Vec<_> = actual.lines().collect();
     if e.len() == 0 {
         bail!("expected length must not be zero");
     }
     for window in a.windows(e.len()) {
-        if window == e {
+        if e == window {
             return Ok(());
         }
     }
@@ -407,7 +407,6 @@ pub(crate) fn match_with_without(
 
     let matches: Vec<_> = actual
         .lines()
-        .map(WildStr::new)
         .filter(|line| with_wild.iter().all(|with| with == line))
         .filter(|line| !without_wild.iter().any(|without| without == line))
         .collect();
@@ -472,13 +471,12 @@ impl<'a> WildStr<'a> {
     }
 }
 
-impl<'a> PartialEq for WildStr<'a> {
-    fn eq(&self, other: &Self) -> bool {
-        match (self.has_meta, other.has_meta) {
-            (false, false) => self.line == other.line,
-            (true, false) => meta_cmp(self.line, other.line),
-            (false, true) => meta_cmp(other.line, self.line),
-            (true, true) => panic!("both lines cannot have [..]"),
+impl PartialEq<&str> for WildStr<'_> {
+    fn eq(&self, other: &&str) -> bool {
+        if self.has_meta {
+            meta_cmp(self.line, other)
+        } else {
+            self.line == *other
         }
     }
 }
@@ -666,10 +664,10 @@ mod test {
             ("[..]", "a b"),
             ("[..]b", "a b"),
         ] {
-            assert_eq!(WildStr::new(a), WildStr::new(b));
+            assert_eq!(WildStr::new(a), b);
         }
         for (a, b) in &[("[..]b", "c"), ("b", "c"), ("b", "cb")] {
-            assert_ne!(WildStr::new(a), WildStr::new(b));
+            assert_ne!(WildStr::new(a), b);
         }
     }
 
