@@ -224,13 +224,12 @@ fn split_source(input: &str) -> CargoResult<Source<'_>> {
         source.content = content;
     }
 
-    // Experiment: let us try which char works better
-    let fence_char = '-';
+    const FENCE_CHAR: char = '-';
 
     let fence_end = source
         .content
         .char_indices()
-        .find_map(|(i, c)| (c != fence_char).then_some(i))
+        .find_map(|(i, c)| (c != FENCE_CHAR).then_some(i))
         .unwrap_or(source.content.len());
     let (fence_pattern, rest) = match fence_end {
         0 => {
@@ -238,7 +237,7 @@ fn split_source(input: &str) -> CargoResult<Source<'_>> {
         }
         1 | 2 => {
             anyhow::bail!(
-                "found {fence_end} `{fence_char}` in rust frontmatter, expected at least 3"
+                "found {fence_end} `{FENCE_CHAR}` in rust frontmatter, expected at least 3"
             )
         }
         _ => source.content.split_at(fence_end),
