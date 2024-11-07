@@ -9,4 +9,4 @@ publish = false
 unstable = ["build-rs/unstable"]
 
 [build-dependencies]
-build-rs = { path = ".." }
+build-rs = { path = "../build-rs" }
