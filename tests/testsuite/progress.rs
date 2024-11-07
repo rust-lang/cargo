@@ -125,7 +125,6 @@ fn always_shows_progress() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn never_progress() {
     const N: usize = 3;

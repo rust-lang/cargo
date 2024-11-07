@@ -816,7 +816,6 @@ impl Execs {
     /// - `expected` can end up being ambiguous, causing the assertion to succeed when it should fail
     ///
     /// </div>
-    #[deprecated(note = "replaced with `Execs::with_stdout_data(expected)`")]
     pub fn with_stdout_contains<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stdout_contains.push(expected.to_string());
         self
@@ -834,7 +833,6 @@ impl Execs {
     /// - `expected` can end up being ambiguous, causing the assertion to succeed when it should fail
     ///
     /// </div>
-    #[deprecated(note = "replaced with `Execs::with_stderr_data(expected)`")]
     pub fn with_stderr_contains<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr_contains.push(expected.to_string());
         self
@@ -857,7 +855,6 @@ impl Execs {
     /// [`Execs::with_stdout_contains`].
     ///
     /// </div>
-    #[deprecated]
     pub fn with_stdout_does_not_contain<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stdout_not_contains.push(expected.to_string());
         self
@@ -879,7 +876,6 @@ impl Execs {
     /// with [`Execs::with_stderr_line_without`].
     ///
     /// </div>
-    #[deprecated]
     pub fn with_stderr_does_not_contain<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr_not_contains.push(expected.to_string());
         self
@@ -916,7 +912,6 @@ impl Execs {
     /// This will check that a build line includes `-C opt-level=3` but does
     /// not contain `-C debuginfo` or `-C incremental`.
     ///
-    #[deprecated]
     pub fn with_stderr_line_without<S: ToString>(
         &mut self,
         with: &[S],

@@ -687,7 +687,6 @@ fn build_script_with_bin_artifact_and_lib_false() {
         )
         .build();
 
-    #[expect(deprecated)]
     p.cargo("build -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_status(101)
@@ -731,7 +730,6 @@ fn lib_with_bin_artifact_and_lib_false() {
         )
         .build();
 
-    #[expect(deprecated)]
     p.cargo("build -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_status(101)
@@ -1117,7 +1115,6 @@ fn build_script_deps_adopt_specified_target_unconditionally() {
         .file("bar/src/lib.rs", "pub fn doit() {}")
         .build();
 
-    #[expect(deprecated)]
     p.cargo("check -v -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_does_not_contain(
@@ -1233,7 +1230,6 @@ fn non_build_script_deps_adopt_specified_target_unconditionally() {
         .file("bar/src/lib.rs", "pub fn doit() {}")
         .build();
 
-    #[expect(deprecated)]
     p.cargo("check -v -Z bindeps")
         .masquerade_as_nightly_cargo(&["bindeps"])
         .with_stderr_contains(
@@ -1378,7 +1374,6 @@ fn build_script_deps_adopts_target_platform_if_target_equals_target() {
         .build();
 
     let alternate_target = cross_compile::alternate();
-    #[expect(deprecated)]
     p.cargo("check -v -Z bindeps --target")
         .arg(alternate_target)
         .masquerade_as_nightly_cargo(&["bindeps"])

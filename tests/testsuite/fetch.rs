@@ -67,7 +67,6 @@ fn fetch_all_platform_dependencies_when_no_target_is_given() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn fetch_platform_specific_dependencies() {
     if cross_compile::disabled() {

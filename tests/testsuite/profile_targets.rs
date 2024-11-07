@@ -77,7 +77,6 @@ fn all_target_project() -> Project {
         .build()
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn profile_selection_build() {
     let p = all_target_project();
@@ -158,7 +157,6 @@ fn profile_selection_build_release() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn profile_selection_build_all_targets() {
     let p = all_target_project();

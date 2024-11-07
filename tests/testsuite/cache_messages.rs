@@ -527,7 +527,6 @@ WRAPPER CALLED: rustc [..]
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn wacky_hashless_fingerprint() {
     // On Windows, executables don't have hashes. This checks for a bad

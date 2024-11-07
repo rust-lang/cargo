@@ -137,7 +137,6 @@ fn list_command_looks_at_path_case_mismatch() {
     );
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn list_command_handles_known_external_commands() {
     let p = project()

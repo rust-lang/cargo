@@ -9,7 +9,6 @@ use cargo_test_support::{
     str, Execs,
 };
 
-#[expect(deprecated)]
 #[cargo_test]
 fn offline_unused_target_dep() {
     // --offline with a target dependency that is not used and not downloaded.
@@ -45,7 +44,6 @@ fn offline_unused_target_dep() {
     p.cargo("check --offline").run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn offline_missing_optional() {
     Package::new("opt_dep", "1.0.0").publish();

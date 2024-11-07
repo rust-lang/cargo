@@ -1149,7 +1149,6 @@ it is false
         .exists());
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn proc_macro_ws() {
     // Checks for bug with proc-macro in a workspace with dependency (shouldn't panic).
