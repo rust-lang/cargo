@@ -331,27 +331,6 @@ static E2E_LITERAL_REDACTIONS: &[(&str, &str)] = &[
     ("[OPENING]", "     Opening"),
 ];
 
-/// Normalizes the output so that it can be compared against the expected value.
-fn normalize_actual(content: &str, redactions: &snapbox::Redactions) -> String {
-    use snapbox::filter::Filter as _;
-    let content = snapbox::filter::FilterPaths.filter(content.into_data());
-    let content = snapbox::filter::FilterNewlines.filter(content);
-    let content = content.render().expect("came in as a String");
-    let content = redactions.redact(&content);
-    content
-}
-
-/// Normalizes the expected string so that it can be compared against the actual output.
-fn normalize_expected(content: &str, redactions: &snapbox::Redactions) -> String {
-    use snapbox::filter::Filter as _;
-    let content = snapbox::filter::FilterPaths.filter(content.into_data());
-    let content = snapbox::filter::FilterNewlines.filter(content);
-    // Remove any conditionally absent redactions like `[EXE]`
-    let content = content.render().expect("came in as a String");
-    let content = redactions.clear_unused(&content);
-    content.into_owned()
-}
-
 /// Checks that the given string contains the given contiguous lines
 /// somewhere.
 ///
@@ -455,6 +434,27 @@ pub(crate) fn match_with_without(
             itertools::join(matches, "\n")
         ),
     }
+}
+
+/// Normalizes the output so that it can be compared against the expected value.
+fn normalize_actual(content: &str, redactions: &snapbox::Redactions) -> String {
+    use snapbox::filter::Filter as _;
+    let content = snapbox::filter::FilterPaths.filter(content.into_data());
+    let content = snapbox::filter::FilterNewlines.filter(content);
+    let content = content.render().expect("came in as a String");
+    let content = redactions.redact(&content);
+    content
+}
+
+/// Normalizes the expected string so that it can be compared against the actual output.
+fn normalize_expected(content: &str, redactions: &snapbox::Redactions) -> String {
+    use snapbox::filter::Filter as _;
+    let content = snapbox::filter::FilterPaths.filter(content.into_data());
+    let content = snapbox::filter::FilterNewlines.filter(content);
+    // Remove any conditionally absent redactions like `[EXE]`
+    let content = content.render().expect("came in as a String");
+    let content = redactions.clear_unused(&content);
+    content.into_owned()
 }
 
 /// A single line string that supports `[..]` wildcard matching.
