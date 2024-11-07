@@ -225,21 +225,23 @@ fn split_source(input: &str) -> CargoResult<Source<'_>> {
     }
 
     // Experiment: let us try which char works better
-    let tick_char = '-';
+    let fence_char = '-';
 
-    let tick_end = source
+    let fence_end = source
         .content
         .char_indices()
-        .find_map(|(i, c)| (c != tick_char).then_some(i))
+        .find_map(|(i, c)| (c != fence_char).then_some(i))
         .unwrap_or(source.content.len());
-    let (fence_pattern, rest) = match tick_end {
+    let (fence_pattern, rest) = match fence_end {
         0 => {
             return Ok(source);
         }
         1 | 2 => {
-            anyhow::bail!("found {tick_end} `{tick_char}` in rust frontmatter, expected at least 3")
+            anyhow::bail!(
+                "found {fence_end} `{fence_char}` in rust frontmatter, expected at least 3"
+            )
         }
-        _ => source.content.split_at(tick_end),
+        _ => source.content.split_at(fence_end),
     };
     let (info, content) = rest.split_once("\n").unwrap_or((rest, ""));
     if !info.is_empty() {
