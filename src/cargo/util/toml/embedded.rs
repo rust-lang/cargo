@@ -188,6 +188,7 @@ fn sanitize_name(name: &str) -> String {
     name
 }
 
+#[derive(Debug)]
 struct Source<'s> {
     shebang: Option<&'s str>,
     info: Option<&'s str>,
@@ -298,6 +299,32 @@ mod test_expand {
         }
     }
 
+    #[track_caller]
+    fn assert_err(
+        result: Result<impl std::fmt::Debug, impl std::fmt::Display>,
+        err: impl IntoData,
+    ) {
+        match result {
+            Ok(d) => panic!("unexpected Ok({d:#?})"),
+            Err(actual) => snapbox::assert_data_eq!(actual.to_string(), err.raw()),
+        }
+    }
+
+    #[test]
+    fn split_default() {
+        assert_source(
+            r#"fn main() {}
+"#,
+            str![[r#"
+shebang: None
+info: None
+frontmatter: None
+content: "fn main() {}\n"
+
+"#]],
+        );
+    }
+
     #[test]
     fn split_dependencies() {
         assert_source(
@@ -314,6 +341,190 @@ frontmatter: "[dependencies]\ntime=\"0.1.25\"\n"
 content: "fn main() {}\n"
 
 "#]],
+        );
+    }
+
+    #[test]
+    fn split_infostring() {
+        assert_source(
+            r#"---cargo
+[dependencies]
+time="0.1.25"
+---
+fn main() {}
+"#,
+            str![[r#"
+shebang: None
+info: "cargo"
+frontmatter: "[dependencies]\ntime=\"0.1.25\"\n"
+content: "fn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn split_infostring_whitespace() {
+        assert_source(
+            r#"--- cargo 
+[dependencies]
+time="0.1.25"
+---
+fn main() {}
+"#,
+            str![[r#"
+shebang: None
+info: " cargo"
+frontmatter: "[dependencies]\ntime=\"0.1.25\"\n"
+content: "fn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn split_shebang() {
+        assert_source(
+            r#"#!/usr/bin/env cargo
+---
+[dependencies]
+time="0.1.25"
+---
+fn main() {}
+"#,
+            str![[r##"
+shebang: "#!/usr/bin/env cargo"
+info: None
+frontmatter: "[dependencies]\ntime=\"0.1.25\"\n"
+content: "fn main() {}\n"
+
+"##]],
+        );
+    }
+
+    #[test]
+    fn split_crlf() {
+        assert_source(
+                "#!/usr/bin/env cargo\r\n---\r\n[dependencies]\r\ntime=\"0.1.25\"\r\n---\r\nfn main() {}",
+            str![[r##"
+shebang: "#!/usr/bin/env cargo\r"
+info: ""
+frontmatter: "[dependencies]\r\ntime=\"0.1.25\"\r\n"
+content: "fn main() {}"
+
+"##]]
+        );
+    }
+
+    #[test]
+    fn split_leading_newlines() {
+        assert_source(
+            r#"#!/usr/bin/env cargo
+    
+
+
+---
+[dependencies]
+time="0.1.25"
+---
+
+
+fn main() {}
+"#,
+            str![[r##"
+shebang: "#!/usr/bin/env cargo"
+info: None
+frontmatter: None
+content: "    \n\n\n---\n[dependencies]\ntime=\"0.1.25\"\n---\n\n\nfn main() {}\n"
+
+"##]],
+        );
+    }
+
+    #[test]
+    fn split_attribute() {
+        assert_source(
+            r#"#[allow(dead_code)]
+---
+[dependencies]
+time="0.1.25"
+---
+fn main() {}
+"#,
+            str![[r##"
+shebang: None
+info: None
+frontmatter: None
+content: "#[allow(dead_code)]\n---\n[dependencies]\ntime=\"0.1.25\"\n---\nfn main() {}\n"
+
+"##]],
+        );
+    }
+
+    #[test]
+    fn split_extra_dash() {
+        assert_source(
+            r#"#!/usr/bin/env cargo
+----------
+[dependencies]
+time="0.1.25"
+----------
+
+fn main() {}"#,
+            str![[r##"
+shebang: "#!/usr/bin/env cargo"
+info: None
+frontmatter: "[dependencies]\ntime=\"0.1.25\"\n"
+content: "\nfn main() {}"
+
+"##]],
+        );
+    }
+
+    #[test]
+    fn split_too_few_dashes() {
+        assert_err(
+            split_source(
+                r#"#!/usr/bin/env cargo
+--
+[dependencies]
+time="0.1.25"
+--
+fn main() {}
+"#,
+            ),
+            str!["found 2 `-` in rust frontmatter, expected at least 3"],
+        );
+    }
+
+    #[test]
+    fn split_mismatched_dashes() {
+        assert_err(
+            split_source(
+                r#"#!/usr/bin/env cargo
+---
+[dependencies]
+time="0.1.25"
+----
+fn main() {}
+"#,
+            ),
+            str!["unexpected trailing content on closing fence: `-`"],
+        );
+    }
+
+    #[test]
+    fn split_missing_close() {
+        assert_err(
+            split_source(
+                r#"#!/usr/bin/env cargo
+---
+[dependencies]
+time="0.1.25"
+fn main() {}
+"#,
+            ),
+            str!["no closing `---` found for frontmatter"],
         );
     }
 
