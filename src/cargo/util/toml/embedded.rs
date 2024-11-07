@@ -228,8 +228,17 @@ fn split_source(input: &str) -> CargoResult<Source<'_>> {
 
     const FENCE_CHAR: char = '-';
 
-    let fence_end = source
-        .content
+    let mut trimmed_content = source.content;
+    while !trimmed_content.is_empty() {
+        let c = trimmed_content;
+        let c = c.trim_start_matches([' ', '\t']);
+        let c = c.trim_start_matches(['\r', '\n']);
+        if c == trimmed_content {
+            break;
+        }
+        trimmed_content = c;
+    }
+    let fence_end = trimmed_content
         .char_indices()
         .find_map(|(i, c)| (c != FENCE_CHAR).then_some(i))
         .unwrap_or(source.content.len());
@@ -242,7 +251,7 @@ fn split_source(input: &str) -> CargoResult<Source<'_>> {
                 "found {fence_end} `{FENCE_CHAR}` in rust frontmatter, expected at least 3"
             )
         }
-        _ => source.content.split_at(fence_end),
+        _ => trimmed_content.split_at(fence_end),
     };
     let (info, content) = rest.split_once("\n").unwrap_or((rest, ""));
     let info = info.trim();
@@ -438,8 +447,8 @@ fn main() {}
             str![[r##"
 shebang: "#!/usr/bin/env cargo\n"
 info: None
-frontmatter: None
-content: "    \n\n\n---\n[dependencies]\ntime=\"0.1.25\"\n---\n\n\nfn main() {}\n"
+frontmatter: "[dependencies]\ntime=\"0.1.25\"\n"
+content: "\n\nfn main() {}\n"
 
 "##]],
         );
