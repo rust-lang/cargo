@@ -507,7 +507,7 @@ fn normalize_toml(
 
         normalized_toml.badges = original_toml.badges.clone();
     } else {
-        for field in original_toml.requires_package() {
+        if let Some(field) = original_toml.requires_package().next() {
             bail!("this virtual manifest specifies a `{field}` section, which is not allowed");
         }
     }
