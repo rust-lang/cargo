@@ -268,9 +268,54 @@ fn split_source(input: &str) -> CargoResult<Source<'_>> {
 #[cfg(test)]
 mod test_expand {
     use snapbox::assert_data_eq;
+    use snapbox::prelude::*;
     use snapbox::str;
 
     use super::*;
+
+    #[track_caller]
+    fn assert_source(source: &str, expected: impl IntoData) {
+        use std::fmt::Write as _;
+
+        let actual = match split_source(source) {
+            Ok(actual) => actual,
+            Err(err) => panic!("unexpected err: {err}"),
+        };
+
+        let mut rendered = String::new();
+        write_optional_field(&mut rendered, "shebang", actual.shebang);
+        write_optional_field(&mut rendered, "info", actual.info);
+        write_optional_field(&mut rendered, "frontmatter", actual.frontmatter);
+        writeln!(&mut rendered, "content: {:?}", actual.content).unwrap();
+        assert_data_eq!(rendered, expected.raw());
+    }
+
+    fn write_optional_field(writer: &mut dyn std::fmt::Write, field: &str, value: Option<&str>) {
+        if let Some(value) = value {
+            writeln!(writer, "{field}: {value:?}").unwrap();
+        } else {
+            writeln!(writer, "{field}: None").unwrap();
+        }
+    }
+
+    #[test]
+    fn split_dependencies() {
+        assert_source(
+            r#"---
+[dependencies]
+time="0.1.25"
+---
+fn main() {}
+"#,
+            str![[r#"
+shebang: None
+info: None
+frontmatter: "[dependencies]\ntime=\"0.1.25\"\n"
+content: "fn main() {}\n"
+
+"#]],
+        );
+    }
 
     #[track_caller]
     fn expand(source: &str) -> String {
@@ -283,7 +328,7 @@ mod test_expand {
     }
 
     #[test]
-    fn test_default() {
+    fn expand_default() {
         assert_data_eq!(
             expand(r#"fn main() {}"#),
             str![[r#"
@@ -311,48 +356,10 @@ strip = true
     }
 
     #[test]
-    fn test_dependencies() {
+    fn expand_dependencies() {
         assert_data_eq!(
             expand(
                 r#"---cargo
-[dependencies]
-time="0.1.25"
----
-fn main() {}
-"#
-            ),
-            str![[r#"
-[[bin]]
-name = "test-"
-path = [..]
-
-[dependencies]
-time = "0.1.25"
-
-[package]
-autobenches = false
-autobins = false
-autoexamples = false
-autolib = false
-autotests = false
-build = false
-edition = "2021"
-name = "test-"
-
-[profile.release]
-strip = true
-
-[workspace]
-
-"#]]
-        );
-    }
-
-    #[test]
-    fn test_no_infostring() {
-        assert_data_eq!(
-            expand(
-                r#"---
 [dependencies]
 time="0.1.25"
 ---
