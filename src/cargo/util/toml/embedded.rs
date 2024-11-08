@@ -272,21 +272,20 @@ mod test_expand {
 
     use super::*;
 
-    macro_rules! si {
-        ($i:expr) => {{
-            let shell = crate::Shell::from_write(Box::new(Vec::new()));
-            let cwd = std::env::current_dir().unwrap();
-            let home = home::cargo_home_with_cwd(&cwd).unwrap();
-            let gctx = GlobalContext::new(shell, cwd, home);
-            expand_manifest($i, std::path::Path::new("/home/me/test.rs"), &gctx)
-                .unwrap_or_else(|err| panic!("{}", err))
-        }};
+    #[track_caller]
+    fn expand(source: &str) -> String {
+        let shell = crate::Shell::from_write(Box::new(Vec::new()));
+        let cwd = std::env::current_dir().unwrap();
+        let home = home::cargo_home_with_cwd(&cwd).unwrap();
+        let gctx = GlobalContext::new(shell, cwd, home);
+        expand_manifest(source, std::path::Path::new("/home/me/test.rs"), &gctx)
+            .unwrap_or_else(|err| panic!("{}", err))
     }
 
     #[test]
     fn test_default() {
         assert_data_eq!(
-            si!(r#"fn main() {}"#),
+            expand(r#"fn main() {}"#),
             str![[r#"
 [[bin]]
 name = "test-"
@@ -314,12 +313,14 @@ strip = true
     #[test]
     fn test_dependencies() {
         assert_data_eq!(
-            si!(r#"---cargo
+            expand(
+                r#"---cargo
 [dependencies]
 time="0.1.25"
 ---
 fn main() {}
-"#),
+"#
+            ),
             str![[r#"
 [[bin]]
 name = "test-"
@@ -350,12 +351,14 @@ strip = true
     #[test]
     fn test_no_infostring() {
         assert_data_eq!(
-            si!(r#"---
+            expand(
+                r#"---
 [dependencies]
 time="0.1.25"
 ---
 fn main() {}
-"#),
+"#
+            ),
             str![[r#"
 [[bin]]
 name = "test-"
