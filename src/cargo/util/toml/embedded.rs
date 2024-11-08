@@ -267,6 +267,7 @@ fn split_source(input: &str) -> CargoResult<Source<'_>> {
 
 #[cfg(test)]
 mod test_expand {
+    use snapbox::assert_data_eq;
     use snapbox::str;
 
     use super::*;
@@ -284,7 +285,7 @@ mod test_expand {
 
     #[test]
     fn test_default() {
-        snapbox::assert_data_eq!(
+        assert_data_eq!(
             si!(r#"fn main() {}"#),
             str![[r#"
 [[bin]]
@@ -312,7 +313,7 @@ strip = true
 
     #[test]
     fn test_dependencies() {
-        snapbox::assert_data_eq!(
+        assert_data_eq!(
             si!(r#"---cargo
 [dependencies]
 time="0.1.25"
@@ -348,7 +349,7 @@ strip = true
 
     #[test]
     fn test_no_infostring() {
-        snapbox::assert_data_eq!(
+        assert_data_eq!(
             si!(r#"---
 [dependencies]
 time="0.1.25"
