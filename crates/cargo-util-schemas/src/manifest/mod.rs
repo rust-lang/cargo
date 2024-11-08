@@ -418,6 +418,13 @@ impl<'de> de::Deserialize<'de> for InheritableString {
                 Ok(InheritableString::Value(value))
             }
 
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                self.visit_string(value.to_owned())
+            }
+
             fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
             where
                 V: de::MapAccess<'de>,
@@ -452,6 +459,13 @@ impl<'de> de::Deserialize<'de> for InheritableRustVersion {
             {
                 let value = value.parse::<RustVersion>().map_err(|e| E::custom(e))?;
                 Ok(InheritableRustVersion::Value(value))
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                self.visit_string(value.to_owned())
             }
 
             fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
@@ -531,6 +545,13 @@ impl<'de> de::Deserialize<'de> for InheritableStringOrBool {
             {
                 let string = de::value::StringDeserializer::new(v);
                 StringOrBool::deserialize(string).map(InheritableField::Value)
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                self.visit_string(value.to_owned())
             }
 
             fn visit_map<V>(self, map: V) -> Result<Self::Value, V::Error>
