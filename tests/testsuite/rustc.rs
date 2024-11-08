@@ -437,7 +437,6 @@ fn build_only_bar_dependency() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn targets_selected_default() {
     let p = project().file("src/main.rs", "fn main() {}").build();
@@ -589,7 +588,6 @@ fn rustc_with_other_profile() {
     p.cargo("rustc --profile test").run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn rustc_fingerprint() {
     // Verify that the fingerprint includes the rustc args.

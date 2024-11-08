@@ -1385,7 +1385,6 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
     );
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn publish_checks_for_token_before_verify() {
     let registry = registry::RegistryBuilder::new()

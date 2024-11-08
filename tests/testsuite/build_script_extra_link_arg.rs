@@ -233,7 +233,6 @@ the future. For more information, see <https://github.com/rust-lang/cargo/issues
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn link_arg_transitive_not_allowed() {
     // Verify that transitive dependencies don't pass link args.

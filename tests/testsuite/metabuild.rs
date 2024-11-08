@@ -162,7 +162,6 @@ Caused by:
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn metabuild_optional_dep() {
     let p = project()
@@ -244,7 +243,6 @@ fn metabuild_lib_name() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn metabuild_fresh() {
     if is_coarse_mtime() {
@@ -378,7 +376,6 @@ fn metabuild_override() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn metabuild_workspace() {
     let p = project()

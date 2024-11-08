@@ -93,7 +93,6 @@ fn test_zero_future_incompat() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test(
     nightly,
     reason = "-Zfuture-incompat-test requires nightly (permanently)"
@@ -163,7 +162,6 @@ frequency = 'never'
     }
 }
 
-#[expect(deprecated)]
 #[cargo_test(
     nightly,
     reason = "-Zfuture-incompat-test requires nightly (permanently)"
@@ -316,7 +314,6 @@ The package `second-dep v0.0.2` currently triggers the following future incompat
     assert_eq!(lines.next(), None);
 }
 
-#[expect(deprecated)]
 #[cargo_test(
     nightly,
     reason = "-Zfuture-incompat-test requires nightly (permanently)"

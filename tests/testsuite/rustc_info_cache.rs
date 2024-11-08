@@ -10,7 +10,6 @@ const MISS: &str = "[..] rustc info cache miss[..]";
 const HIT: &str = "[..]rustc info cache hit[..]";
 const UPDATE: &str = "[..]updated rustc info cache[..]";
 
-#[expect(deprecated)]
 #[cargo_test]
 fn rustc_info_cache() {
     let p = project()
@@ -106,7 +105,6 @@ fn rustc_info_cache() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn rustc_info_cache_with_wrappers() {
     let wrapper_project = project()

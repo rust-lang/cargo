@@ -132,7 +132,6 @@ fn cargo_compile_incremental() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn incremental_profile() {
     let p = project()
@@ -176,7 +175,6 @@ fn incremental_profile() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn incremental_config() {
     let p = project()
@@ -5180,7 +5178,6 @@ WRAPPER CALLED: rustc --crate-name foo [..]
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn rustc_wrapper_queries() {
     // Check that the invocations querying rustc for information are done with the wrapper.
@@ -5920,7 +5917,6 @@ fn build_filter_infer_profile() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn targets_selected_default() {
     let p = project().file("src/main.rs", "fn main() {}").build();
@@ -6874,7 +6870,6 @@ Caused by:
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn build_script_o0_default() {
     let p = project()
@@ -6887,7 +6882,6 @@ fn build_script_o0_default() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn build_script_o0_default_even_with_release() {
     let p = project()

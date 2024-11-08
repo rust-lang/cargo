@@ -628,7 +628,6 @@ fn package_git_submodule() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 /// Tests if a symlink to a git submodule is properly handled.
 ///

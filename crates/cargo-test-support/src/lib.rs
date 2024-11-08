@@ -667,6 +667,57 @@ impl Execs {
     /// Verifies that stdout is equal to the given lines.
     ///
     /// See [`compare::assert_e2e`] for assertion details.
+    ///
+    /// <div class="warning">
+    ///
+    /// Prefer passing in [`str!`] for `expected` to get snapshot updating.
+    ///
+    /// If `format!` is needed for content that changes from run to run that you don't care about,
+    /// consider whether you could have [`compare::assert_e2e`] redact the content.
+    /// If nothing else, a wildcard (`[..]`, `...`) may be useful.
+    ///
+    /// However, `""` may be preferred for intentionally empty output so people don't accidentally
+    /// bless a change.
+    ///
+    /// </div>
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use cargo_test_support::prelude::*;
+    /// use cargo_test_support::str;
+    /// use cargo_test_support::execs;
+    ///
+    /// execs().with_stdout_data(str![r#"
+    /// Hello world!
+    /// "#]);
+    /// ```
+    ///
+    /// Non-deterministic compiler output
+    /// ```no_run
+    /// use cargo_test_support::prelude::*;
+    /// use cargo_test_support::str;
+    /// use cargo_test_support::execs;
+    ///
+    /// execs().with_stdout_data(str![r#"
+    /// [COMPILING] foo
+    /// [COMPILING] bar
+    /// "#].unordered());
+    /// ```
+    ///
+    /// jsonlines
+    /// ```no_run
+    /// use cargo_test_support::prelude::*;
+    /// use cargo_test_support::str;
+    /// use cargo_test_support::execs;
+    ///
+    /// execs().with_stdout_data(str![r#"
+    /// [
+    ///   {},
+    ///   {}
+    /// ]
+    /// "#].is_json().against_jsonlines());
+    /// ```
     pub fn with_stdout_data(&mut self, expected: impl snapbox::IntoData) -> &mut Self {
         self.expect_stdout_data = Some(expected.into_data());
         self
@@ -675,6 +726,57 @@ impl Execs {
     /// Verifies that stderr is equal to the given lines.
     ///
     /// See [`compare::assert_e2e`] for assertion details.
+    ///
+    /// <div class="warning">
+    ///
+    /// Prefer passing in [`str!`] for `expected` to get snapshot updating.
+    ///
+    /// If `format!` is needed for content that changes from run to run that you don't care about,
+    /// consider whether you could have [`compare::assert_e2e`] redact the content.
+    /// If nothing else, a wildcard (`[..]`, `...`) may be useful.
+    ///
+    /// However, `""` may be preferred for intentionally empty output so people don't accidentally
+    /// bless a change.
+    ///
+    /// </div>
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use cargo_test_support::prelude::*;
+    /// use cargo_test_support::str;
+    /// use cargo_test_support::execs;
+    ///
+    /// execs().with_stderr_data(str![r#"
+    /// Hello world!
+    /// "#]);
+    /// ```
+    ///
+    /// Non-deterministic compiler output
+    /// ```no_run
+    /// use cargo_test_support::prelude::*;
+    /// use cargo_test_support::str;
+    /// use cargo_test_support::execs;
+    ///
+    /// execs().with_stderr_data(str![r#"
+    /// [COMPILING] foo
+    /// [COMPILING] bar
+    /// "#].unordered());
+    /// ```
+    ///
+    /// jsonlines
+    /// ```no_run
+    /// use cargo_test_support::prelude::*;
+    /// use cargo_test_support::str;
+    /// use cargo_test_support::execs;
+    ///
+    /// execs().with_stderr_data(str![r#"
+    /// [
+    ///   {},
+    ///   {}
+    /// ]
+    /// "#].is_json().against_jsonlines());
+    /// ```
     pub fn with_stderr_data(&mut self, expected: impl snapbox::IntoData) -> &mut Self {
         self.expect_stderr_data = Some(expected.into_data());
         self
@@ -706,7 +808,14 @@ impl Execs {
     /// its output.
     ///
     /// See [`compare`] for supported patterns.
-    #[deprecated(note = "replaced with `Execs::with_stdout_data(expected)`")]
+    ///
+    /// <div class="warning">
+    ///
+    /// Prefer [`Execs::with_stdout_data`] where possible.
+    /// - `expected` cannot be snapshotted
+    /// - `expected` can end up being ambiguous, causing the assertion to succeed when it should fail
+    ///
+    /// </div>
     pub fn with_stdout_contains<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stdout_contains.push(expected.to_string());
         self
@@ -716,7 +825,14 @@ impl Execs {
     /// its output.
     ///
     /// See [`compare`] for supported patterns.
-    #[deprecated(note = "replaced with `Execs::with_stderr_data(expected)`")]
+    ///
+    /// <div class="warning">
+    ///
+    /// Prefer [`Execs::with_stderr_data`] where possible.
+    /// - `expected` cannot be snapshotted
+    /// - `expected` can end up being ambiguous, causing the assertion to succeed when it should fail
+    ///
+    /// </div>
     pub fn with_stderr_contains<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr_contains.push(expected.to_string());
         self
@@ -727,7 +843,18 @@ impl Execs {
     /// See [`compare`] for supported patterns.
     ///
     /// See note on [`Self::with_stderr_does_not_contain`].
-    #[deprecated]
+    ///
+    /// <div class="warning">
+    ///
+    /// Prefer [`Execs::with_stdout_data`] where possible.
+    /// - `expected` cannot be snapshotted
+    /// - The absence of `expected` can either mean success or that the string being looked for
+    ///   changed.
+    ///
+    /// To mitigate this, consider matching this up with
+    /// [`Execs::with_stdout_contains`].
+    ///
+    /// </div>
     pub fn with_stdout_does_not_contain<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stdout_not_contains.push(expected.to_string());
         self
@@ -737,12 +864,18 @@ impl Execs {
     ///
     /// See [`compare`] for supported patterns.
     ///
-    /// Care should be taken when using this method because there is a
-    /// limitless number of possible things that *won't* appear. A typo means
-    /// your test will pass without verifying the correct behavior. If
-    /// possible, write the test first so that it fails, and then implement
-    /// your fix/feature to make it pass.
-    #[deprecated]
+    /// <div class="warning">
+    ///
+    /// Prefer [`Execs::with_stdout_data`] where possible.
+    /// - `expected` cannot be snapshotted
+    /// - The absence of `expected` can either mean success or that the string being looked for
+    ///   changed.
+    ///
+    /// To mitigate this, consider either matching this up with
+    /// [`Execs::with_stdout_contains`] or replace it
+    /// with [`Execs::with_stderr_line_without`].
+    ///
+    /// </div>
     pub fn with_stderr_does_not_contain<S: ToString>(&mut self, expected: S) -> &mut Self {
         self.expect_stderr_not_contains.push(expected.to_string());
         self
@@ -751,7 +884,18 @@ impl Execs {
     /// Verify that a particular line appears in stderr with and without the
     /// given substrings. Exactly one line must match.
     ///
-    /// The substrings are matched as `contains`. Example:
+    /// The substrings are matched as `contains`.
+    ///
+    /// <div class="warning">
+    ///
+    /// Prefer [`Execs::with_stdout_data`] where possible.
+    /// - `with` cannot be snapshotted
+    /// - The absence of `without`` can either mean success or that the string being looked for
+    ///   changed.
+    ///
+    /// </div>
+    ///
+    /// # Example
     ///
     /// ```no_run
     /// use cargo_test_support::execs;
@@ -768,9 +912,6 @@ impl Execs {
     /// This will check that a build line includes `-C opt-level=3` but does
     /// not contain `-C debuginfo` or `-C incremental`.
     ///
-    /// Be careful writing the `without` fragments, see note in
-    /// `with_stderr_does_not_contain`.
-    #[deprecated]
     pub fn with_stderr_line_without<S: ToString>(
         &mut self,
         with: &[S],

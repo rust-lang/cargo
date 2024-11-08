@@ -226,7 +226,6 @@ fn collision_doc_multiple_versions() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn collision_doc_host_target_feature_split() {
     // Same dependency built twice due to different features.

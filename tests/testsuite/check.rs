@@ -406,7 +406,6 @@ fn check_all() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn check_all_exclude() {
     let p = project()
@@ -433,7 +432,6 @@ fn check_all_exclude() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn check_all_exclude_glob() {
     let p = project()
@@ -491,7 +489,6 @@ fn check_virtual_all_implied() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn check_virtual_manifest_one_project() {
     let p = project()
@@ -518,7 +515,6 @@ fn check_virtual_manifest_one_project() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn check_virtual_manifest_glob() {
     let p = project()
@@ -559,7 +555,6 @@ fn exclude_warns_on_non_existing_package() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn targets_selected_default() {
     let foo = project()
@@ -633,7 +628,6 @@ error[E0425]: cannot find value `badtext` in this scope
         .run();
 }
 
-#[expect(deprecated)]
 // Verify what is checked with various command-line filters.
 #[cargo_test]
 fn check_filters() {
@@ -1000,7 +994,6 @@ WRAPPER CALLED: rustc --crate-name foo [..]
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn rustc_workspace_wrapper_respects_primary_units() {
     let p = project()
@@ -1024,7 +1017,6 @@ fn rustc_workspace_wrapper_respects_primary_units() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn rustc_workspace_wrapper_excludes_published_deps() {
     let p = project()

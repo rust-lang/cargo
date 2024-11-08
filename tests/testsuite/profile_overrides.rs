@@ -420,7 +420,6 @@ fn profile_override_spec() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn override_proc_macro() {
     Package::new("shared", "1.0.0").publish();

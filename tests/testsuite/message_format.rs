@@ -46,7 +46,6 @@ fn double_json_works() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn cargo_renders() {
     let p = project()
@@ -113,7 +112,6 @@ error[E0601]: `main` function not found in crate `foo`
 }
 
 #[cargo_test]
-#[expect(deprecated)]
 fn cargo_renders_ansi() {
     let p = project()
         .file("Cargo.toml", &basic_manifest("foo", "0.1.0"))

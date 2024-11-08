@@ -77,7 +77,6 @@ fn no_warning_on_success() {
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn no_warning_on_bin_failure() {
     make_lib("");
@@ -101,7 +100,6 @@ error[E0425]: cannot find function `hi` in this scope
         .run();
 }
 
-#[expect(deprecated)]
 #[cargo_test]
 fn warning_on_lib_failure() {
     make_lib("err()");
