@@ -269,7 +269,6 @@ corresponding environment variable is set to the empty string, `""`.
   where integration tests or benchmarks are free to put any data needed by
   the tests/benches. Cargo initially creates this directory but doesn't
   manage its content in any way, this is the responsibility of the test code.
-* `CARGO_RUSTC_CURRENT_DIR` --- This is a path that `rustc` is invoked from **(nightly only)**.
 
 [Cargo target]: cargo-targets.md
 [binaries]: cargo-targets.md#binaries
