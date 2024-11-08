@@ -255,6 +255,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::reversed_empty_ranges)]
     fn replace_invalid_range() {
         let mut d = Data::new(b"foo!");
 
