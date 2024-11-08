@@ -23,6 +23,7 @@ jobs:
       - clippy
       - msrv
       - docs
+      - lint-docs
       - lockfile
       - resolver
       - rustfmt
