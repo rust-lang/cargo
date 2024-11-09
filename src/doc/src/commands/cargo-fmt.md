@@ -2,7 +2,7 @@
 
 ## NAME
 
-carog-fmt --- Formats all bin and lib files of the current crate using rustfmt
+cargo-fmt --- Formats all bin and lib files of the current crate using rustfmt
 
 ## DESCRIPTION
 
