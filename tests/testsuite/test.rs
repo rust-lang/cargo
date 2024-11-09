@@ -3870,6 +3870,7 @@ fn doctest_and_registry() {
 
 #[cargo_test]
 fn cargo_test_env() {
+    let rustc_host = rustc_host();
     let src = format!(
         r#"
         #![crate_type = "rlib"]
@@ -3888,12 +3889,16 @@ fn cargo_test_env() {
         .file("src/lib.rs", &src)
         .build();
 
-    let cargo = cargo_exe()
-        .canonicalize()
-        .unwrap()
-        .to_str()
-        .unwrap()
-        .replace(std::env::consts::EXE_SUFFIX, "[EXE]");
+    let cargo = format!(
+        "{}[EXE]",
+        cargo_exe()
+            .canonicalize()
+            .unwrap()
+            .with_extension("")
+            .to_str()
+            .unwrap()
+            .replace(rustc_host, "[HOST_TARGET]")
+    );
     p.cargo("test --lib -- --nocapture")
         .with_stderr_contains(cargo)
         .with_stdout_data(str![[r#"
@@ -3908,10 +3913,14 @@ test env_test ... ok
         .unwrap()
         .canonicalize()
         .unwrap();
-    let stderr_rustc = rustc
-        .to_str()
-        .unwrap()
-        .replace(std::env::consts::EXE_SUFFIX, "[EXE]");
+    let stderr_rustc = format!(
+        "{}[EXE]",
+        rustc
+            .with_extension("")
+            .to_str()
+            .unwrap()
+            .replace(rustc_host, "[HOST_TARGET]")
+    );
     p.cargo("test --lib -- --nocapture")
         // we use rustc since $CARGO is only used if it points to a path that exists
         .env(cargo::CARGO_ENV, rustc)
