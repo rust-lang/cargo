@@ -2022,6 +2022,15 @@ impl GlobalContext {
         })?;
         Ok(deferred.borrow_mut())
     }
+
+    /// Get the global [`WarningHandling`] configuration.
+    pub fn warning_handling(&self) -> CargoResult<WarningHandling> {
+        if self.unstable_flags.warnings {
+            Ok(self.build_config()?.warnings.unwrap_or_default())
+        } else {
+            Ok(WarningHandling::default())
+        }
+    }
 }
 
 /// Internal error for serde errors.
@@ -2633,6 +2642,20 @@ pub struct CargoBuildConfig {
     // deprecated alias for artifact-dir
     pub out_dir: Option<ConfigRelativePath>,
     pub artifact_dir: Option<ConfigRelativePath>,
+    pub warnings: Option<WarningHandling>,
+}
+
+/// Whether warnings should warn, be allowed, or cause an error.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum WarningHandling {
+    #[default]
+    /// Output warnings.
+    Warn,
+    /// Allow warnings (do not output them).
+    Allow,
+    /// Error if  warnings are emitted.
+    Deny,
 }
 
 /// Configuration for `build.target`.

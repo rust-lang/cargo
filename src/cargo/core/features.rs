@@ -793,6 +793,7 @@ unstable_cli_options!(
     target_applies_to_host: bool = ("Enable the `target-applies-to-host` key in the .cargo/config.toml file"),
     trim_paths: bool = ("Enable the `trim-paths` option in profiles"),
     unstable_options: bool = ("Allow the usage of unstable options"),
+    warnings: bool = ("Allow use of the build.warnings config key"),
 );
 
 const STABILIZED_COMPILE_PROGRESS: &str = "The progress bar is now always \
@@ -1298,6 +1299,7 @@ impl CliUnstable {
             "script" => self.script = parse_empty(k, v)?,
             "target-applies-to-host" => self.target_applies_to_host = parse_empty(k, v)?,
             "unstable-options" => self.unstable_options = parse_empty(k, v)?,
+            "warnings" => self.warnings = parse_empty(k, v)?,
             _ => bail!("\
             unknown `-Z` flag specified: {k}\n\n\
             For available unstable features, see https://doc.rust-lang.org/nightly/cargo/reference/unstable.html\n\

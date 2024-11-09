@@ -52,7 +52,7 @@ use crate::core::{PackageId, PackageSet, SourceId, TargetKind, Workspace};
 use crate::drop_println;
 use crate::ops;
 use crate::ops::resolve::WorkspaceResolve;
-use crate::util::context::GlobalContext;
+use crate::util::context::{GlobalContext, WarningHandling};
 use crate::util::interning::InternedString;
 use crate::util::{CargoResult, StableHasher};
 
@@ -138,7 +138,11 @@ pub fn compile_with_exec<'a>(
     exec: &Arc<dyn Executor>,
 ) -> CargoResult<Compilation<'a>> {
     ws.emit_warnings()?;
-    compile_ws(ws, options, exec)
+    let compilation = compile_ws(ws, options, exec)?;
+    if ws.gctx().warning_handling()? == WarningHandling::Deny && compilation.warning_count > 0 {
+        anyhow::bail!("warnings are denied by `build.warnings` configuration")
+    }
+    Ok(compilation)
 }
 
 /// Like [`compile_with_exec`] but without warnings from manifest parsing.

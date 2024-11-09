@@ -91,6 +91,7 @@ pub use crate::core::compiler::unit::{Unit, UnitInterner};
 use crate::core::manifest::TargetSourcePath;
 use crate::core::profiles::{PanicStrategy, Profile, StripInner};
 use crate::core::{Feature, PackageId, Target, Verbosity};
+use crate::util::context::WarningHandling;
 use crate::util::errors::{CargoResult, VerboseError};
 use crate::util::interning::InternedString;
 use crate::util::machine_message::{self, Message};
@@ -202,13 +203,15 @@ fn compile<'gctx>(
         } else {
             // We always replay the output cache,
             // since it might contain future-incompat-report messages
+            let show_diagnostics = unit.show_warnings(bcx.gctx)
+                && build_runner.bcx.gctx.warning_handling()? != WarningHandling::Allow;
             let work = replay_output_cache(
                 unit.pkg.package_id(),
                 PathBuf::from(unit.pkg.manifest_path()),
                 &unit.target,
                 build_runner.files().message_cache_path(unit),
                 build_runner.bcx.build_config.message_format,
-                unit.show_warnings(bcx.gctx),
+                show_diagnostics,
             );
             // Need to link targets on both the dirty and fresh.
             work.then(link_targets(build_runner, unit, true)?)
@@ -1648,10 +1651,12 @@ impl OutputOptions {
         // Remove old cache, ignore ENOENT, which is the common case.
         drop(fs::remove_file(&path));
         let cache_cell = Some((path, LazyCell::new()));
+        let show_diagnostics =
+            build_runner.bcx.gctx.warning_handling().unwrap_or_default() != WarningHandling::Allow;
         OutputOptions {
             format: build_runner.bcx.build_config.message_format,
             cache_cell,
-            show_diagnostics: true,
+            show_diagnostics,
             warnings_seen: 0,
             errors_seen: 0,
         }

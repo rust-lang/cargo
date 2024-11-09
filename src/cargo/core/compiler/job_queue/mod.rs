@@ -141,6 +141,7 @@ use crate::core::compiler::future_incompat::{
 };
 use crate::core::resolver::ResolveBehavior;
 use crate::core::{PackageId, Shell, TargetKind};
+use crate::util::context::WarningHandling;
 use crate::util::diagnostic_server::{self, DiagnosticPrinter};
 use crate::util::errors::AlreadyPrintedError;
 use crate::util::machine_message::{self, Message as _};
@@ -602,6 +603,7 @@ impl<'gctx> DrainState<'gctx> {
         plan: &mut BuildPlan,
         event: Message,
     ) -> Result<(), ErrorToHandle> {
+        let warning_handling = build_runner.bcx.gctx.warning_handling()?;
         match event {
             Message::Run(id, cmd) => {
                 build_runner
@@ -639,7 +641,9 @@ impl<'gctx> DrainState<'gctx> {
                 }
             }
             Message::Warning { id, warning } => {
-                build_runner.bcx.gctx.shell().warn(warning)?;
+                if warning_handling != WarningHandling::Allow {
+                    build_runner.bcx.gctx.shell().warn(warning)?;
+                }
                 self.bump_warning_count(id, true, false);
             }
             Message::WarningCount {
@@ -660,7 +664,7 @@ impl<'gctx> DrainState<'gctx> {
                         trace!("end: {:?}", id);
                         self.finished += 1;
                         self.report_warning_count(
-                            build_runner.bcx.gctx,
+                            build_runner,
                             id,
                             &build_runner.bcx.rustc().workspace_wrapper,
                         );
@@ -964,7 +968,7 @@ impl<'gctx> DrainState<'gctx> {
     }
 
     fn emit_log_messages(
-        &mut self,
+        &self,
         unit: &Unit,
         build_runner: &mut BuildRunner<'_, '_>,
         show_warnings: bool,
@@ -1024,17 +1028,19 @@ impl<'gctx> DrainState<'gctx> {
     /// Displays a final report of the warnings emitted by a particular job.
     fn report_warning_count(
         &mut self,
-        gctx: &GlobalContext,
+        runner: &mut BuildRunner<'_, '_>,
         id: JobId,
         rustc_workspace_wrapper: &Option<PathBuf>,
     ) {
-        let count = match self.warning_count.remove(&id) {
+        let gctx = runner.bcx.gctx;
+        let count = match self.warning_count.get(&id) {
             // An error could add an entry for a `Unit`
             // with 0 warnings but having fixable
             // warnings be disallowed
             Some(count) if count.total > 0 => count,
             None | Some(_) => return,
         };
+        runner.compilation.warning_count += count.total;
         let unit = &self.active[&id];
         let mut message = descriptive_pkg_name(&unit.pkg.name(), &unit.target, &unit.mode);
         message.push_str(" generated ");
