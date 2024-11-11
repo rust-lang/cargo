@@ -3881,9 +3881,11 @@ fn _corrupted_checkout(with_cli: bool) {
     ));
     let dep1_co_path = dep1_co_paths.next().unwrap().unwrap();
     let dep1_ok = dep1_co_path.join(".cargo-ok");
+    let dep1_manifest = dep1_co_path.join("Cargo.toml");
 
     // Deleting this file simulates an interrupted checkout.
     t!(fs::remove_file(&dep1_ok));
+    t!(fs::remove_file(&dep1_manifest));
 
     // This should refresh the checkout.
     let mut e = p.cargo("fetch");
@@ -3892,6 +3894,7 @@ fn _corrupted_checkout(with_cli: bool) {
     }
     e.run();
     assert!(dep1_ok.exists());
+    assert!(dep1_manifest.exists());
 }
 
 #[cargo_test]
