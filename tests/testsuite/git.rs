@@ -3873,17 +3873,17 @@ fn _corrupted_checkout(with_cli: bool) {
 
     p.cargo("fetch").run();
 
-    let mut paths = t!(glob::glob(
+    let mut dep1_co_paths = t!(glob::glob(
         paths::home()
             .join(".cargo/git/checkouts/dep1-*/*")
             .to_str()
             .unwrap()
     ));
-    let path = paths.next().unwrap().unwrap();
-    let ok = path.join(".cargo-ok");
+    let dep1_co_path = dep1_co_paths.next().unwrap().unwrap();
+    let dep1_ok = dep1_co_path.join(".cargo-ok");
 
     // Deleting this file simulates an interrupted checkout.
-    t!(fs::remove_file(&ok));
+    t!(fs::remove_file(&dep1_ok));
 
     // This should refresh the checkout.
     let mut e = p.cargo("fetch");
@@ -3891,7 +3891,7 @@ fn _corrupted_checkout(with_cli: bool) {
         e.env("CARGO_NET_GIT_FETCH_WITH_CLI", "true");
     }
     e.run();
-    assert!(ok.exists());
+    assert!(dep1_ok.exists());
 }
 
 #[cargo_test]
