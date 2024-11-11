@@ -1,6 +1,7 @@
 use serde::{Serialize, Serializer};
 use serde_untagged::UntaggedEnumVisitor;
 use std::borrow::Borrow;
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::ffi::OsStr;
@@ -46,7 +47,7 @@ impl<'a> From<&'a String> for InternedString {
 
 impl From<String> for InternedString {
     fn from(item: String) -> Self {
-        InternedString::new(&item)
+        InternedString::from_cow(item.into())
     }
 }
 
@@ -72,9 +73,13 @@ impl Eq for InternedString {}
 
 impl InternedString {
     pub fn new(str: &str) -> InternedString {
+        InternedString::from_cow(str.into())
+    }
+
+    fn from_cow<'a>(str: Cow<'a, str>) -> InternedString {
         let mut cache = interned_storage();
-        let s = cache.get(str).copied().unwrap_or_else(|| {
-            let s = str.to_string().leak();
+        let s = cache.get(str.as_ref()).copied().unwrap_or_else(|| {
+            let s = str.into_owned().leak();
             cache.insert(s);
             s
         });
