@@ -181,9 +181,14 @@ impl GitDatabase {
             .filter(|co| co.is_fresh())
         {
             Some(co) => co,
-            None => GitCheckout::clone_into(dest, self, rev, gctx)?,
+            None => {
+                let (checkout, guard) = GitCheckout::clone_into(dest, self, rev, gctx)?;
+                checkout.update_submodules(gctx)?;
+                guard.mark_ok()?;
+                checkout
+            }
         };
-        checkout.update_submodules(gctx)?;
+
         Ok(checkout)
     }
 
@@ -280,7 +285,7 @@ impl<'a> GitCheckout<'a> {
         database: &'a GitDatabase,
         revision: git2::Oid,
         gctx: &GlobalContext,
-    ) -> CargoResult<GitCheckout<'a>> {
+    ) -> CargoResult<(GitCheckout<'a>, CheckoutGuard)> {
         let dirname = into.parent().unwrap();
         paths::create_dir_all(&dirname)?;
         if into.exists() {
@@ -329,8 +334,8 @@ impl<'a> GitCheckout<'a> {
         let repo = repo.unwrap();
 
         let checkout = GitCheckout::new(database, revision, repo);
-        checkout.reset(gctx)?;
-        Ok(checkout)
+        let guard = checkout.reset(gctx)?;
+        Ok((checkout, guard))
     }
 
     /// Checks if the `HEAD` of this checkout points to the expected revision.
@@ -355,12 +360,12 @@ impl<'a> GitCheckout<'a> {
     /// To enable this we have a dummy file in our checkout, [`.cargo-ok`],
     /// which if present means that the repo has been successfully reset and is
     /// ready to go. Hence if we start to do a reset, we make sure this file
-    /// *doesn't* exist, and then once we're done we create the file.
+    /// *doesn't* exist. The caller of [`reset`] has an option to perform additional operations
+    /// (e.g. submodule update) before marking the check-out as ready.
     ///
     /// [`.cargo-ok`]: CHECKOUT_READY_LOCK
-    fn reset(&self, gctx: &GlobalContext) -> CargoResult<()> {
-        let ok_file = self.path.join(CHECKOUT_READY_LOCK);
-        let _ = paths::remove_file(&ok_file);
+    fn reset(&self, gctx: &GlobalContext) -> CargoResult<CheckoutGuard> {
+        let guard = CheckoutGuard::guard(&self.path);
         info!("reset {} to {}", self.repo.path().display(), self.revision);
 
         // Ensure libgit2 won't mess with newlines when we vendor.
@@ -370,8 +375,8 @@ impl<'a> GitCheckout<'a> {
 
         let object = self.repo.find_object(self.revision, None)?;
         reset(&self.repo, &object, gctx)?;
-        paths::create(ok_file)?;
-        Ok(())
+
+        Ok(guard)
     }
 
     /// Like `git submodule update --recursive` but for this git checkout.
@@ -476,6 +481,25 @@ impl<'a> GitCheckout<'a> {
             reset(&repo, &obj, gctx)?;
             update_submodules(&repo, gctx, &child_remote_url)
         }
+    }
+}
+
+/// See [`GitCheckout::reset`] for rationale on this type.
+#[must_use]
+struct CheckoutGuard {
+    ok_file: PathBuf,
+}
+
+impl CheckoutGuard {
+    fn guard(path: &Path) -> Self {
+        let ok_file = path.join(CHECKOUT_READY_LOCK);
+        let _ = paths::remove_file(&ok_file);
+        Self { ok_file }
+    }
+
+    fn mark_ok(self) -> CargoResult<()> {
+        let _ = paths::create(self.ok_file)?;
+        Ok(())
     }
 }
 
