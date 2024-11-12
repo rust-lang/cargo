@@ -199,7 +199,10 @@ impl<'gctx> Compilation<'gctx> {
         unit: &Unit,
         script_meta: Option<Metadata>,
     ) -> CargoResult<ProcessBuilder> {
-        let rustdoc = ProcessBuilder::new(&*self.gctx.rustdoc()?);
+        let mut rustdoc = ProcessBuilder::new(&*self.gctx.rustdoc()?);
+        if self.gctx.extra_verbose() {
+            rustdoc.display_env_vars();
+        }
         let cmd = fill_rustc_tool_env(rustdoc, unit);
         let mut cmd = self.fill_env(cmd, &unit.pkg, script_meta, unit.kind, ToolKind::Rustdoc)?;
         cmd.retry_with_argfile(true);
