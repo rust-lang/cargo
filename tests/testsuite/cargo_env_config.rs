@@ -490,7 +490,6 @@ foo
 
 "#]])
         .with_stderr_data(str![[r#"
-[COMPILING] foo v0.5.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `target/debug/foo[EXE]`
 
