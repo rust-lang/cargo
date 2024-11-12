@@ -441,3 +441,59 @@ two
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn override_env_set_by_cargo() {
+    // Cargo disallows overridding envs set by itself.
+    let p = project()
+        .file("Cargo.toml", &basic_bin_manifest("foo"))
+        .file(
+            "src/main.rs",
+            r#"
+        use std::env;
+        fn main() {
+            println!( "{}", env!("CARGO_MANIFEST_DIR") );
+            println!( "{}", env!("CARGO_PKG_NAME") );
+        }
+        "#,
+        )
+        .build();
+
+    let args = [
+        "--config",
+        "env.CARGO_MANIFEST_DIR='Sauron'",
+        "--config",
+        "env.CARGO_PKG_NAME='Saruman'",
+    ];
+
+    p.cargo("run")
+        .args(&args)
+        .with_stdout_data(str![[r#"
+[ROOT]/foo
+foo
+
+"#]])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .run();
+
+    // The second run shouldn't trigger a rebuild
+    p.cargo("run")
+        .args(&args)
+        .with_stdout_data(str![[r#"
+[ROOT]/foo
+foo
+
+"#]])
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.5.0 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `target/debug/foo[EXE]`
+
+"#]])
+        .run();
+}
