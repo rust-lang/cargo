@@ -35,7 +35,7 @@ pub fn join_paths<T: AsRef<OsStr>>(paths: &[T], env: &str) -> Result<OsString> {
 
 /// Returns the name of the environment variable used for searching for
 /// dynamic libraries.
-pub fn dylib_path_envvar() -> &'static str {
+pub const fn dylib_path_envvar() -> &'static str {
     if cfg!(windows) {
         "PATH"
     } else if cfg!(target_os = "macos") {

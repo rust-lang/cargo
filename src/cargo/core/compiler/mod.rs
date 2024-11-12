@@ -74,6 +74,7 @@ pub use self::build_context::{
 };
 use self::build_plan::BuildPlan;
 pub use self::build_runner::{BuildRunner, Metadata, UnitHash};
+pub(crate) use self::compilation::is_env_set_by_cargo;
 pub use self::compilation::{Compilation, Doctest, UnitOutput};
 pub use self::compile_kind::{CompileKind, CompileTarget};
 pub use self::crate_type::CrateType;
@@ -331,6 +332,10 @@ fn rustc(
         output_options.show_diagnostics = false;
     }
     let env_config = Arc::clone(build_runner.bcx.gctx.env_config()?);
+
+    #[cfg(debug_assertions)]
+    compilation::assert_only_envs_set_by_cargo(rustc.get_envs().keys(), &env_config);
+
     return Ok(Work::new(move |state| {
         // Artifacts are in a different location than typical units,
         // hence we must assure the crate- and target-dependent
