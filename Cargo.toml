@@ -121,7 +121,8 @@ rust_2018_idioms = "warn" # TODO: could this be removed?
 private_intra_doc_links = "allow"
 
 [workspace.lints.clippy]
-all = { level = "allow", priority = -1 }
+all = { level = "allow", priority = -2 }
+correctness = { level = "warn", priority = -1 }
 dbg_macro = "warn"
 disallowed_methods = "warn"
 print_stderr = "warn"

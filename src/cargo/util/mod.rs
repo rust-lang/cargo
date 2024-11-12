@@ -176,8 +176,8 @@ mod test {
         );
         assert_eq!(human_readable_bytes(1024 * 1024 * 1024), (1., "GiB"));
         assert_eq!(
-            human_readable_bytes((1024. * 1024. * 1024. * 3.1415) as u64),
-            (3.1415, "GiB")
+            human_readable_bytes((1024. * 1024. * 1024. * 1.2345) as u64),
+            (1.2345, "GiB")
         );
         assert_eq!(human_readable_bytes(1024 * 1024 * 1024 * 1024), (1., "TiB"));
         assert_eq!(

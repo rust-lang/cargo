@@ -207,7 +207,6 @@ impl<'a> RegistryQueryer<'a> {
             }
         }
 
-        let first_version = first_version;
         self.version_prefs.sort_summaries(&mut ret, first_version);
 
         let out = Poll::Ready(Rc::new(ret));
