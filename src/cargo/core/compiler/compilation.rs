@@ -129,19 +129,9 @@ pub struct Compilation<'gctx> {
 
 impl<'gctx> Compilation<'gctx> {
     pub fn new<'a>(bcx: &BuildContext<'a, 'gctx>) -> CargoResult<Compilation<'gctx>> {
-        let mut rustc = bcx.rustc().process();
-        let mut primary_rustc_process = bcx.build_config.primary_unit_rustc.clone();
-        let mut rustc_workspace_wrapper_process = bcx.rustc().workspace_process();
-
-        if bcx.gctx.extra_verbose() {
-            rustc.display_env_vars();
-            rustc_workspace_wrapper_process.display_env_vars();
-
-            if let Some(rustc) = primary_rustc_process.as_mut() {
-                rustc.display_env_vars();
-            }
-        }
-
+        let rustc_process = bcx.rustc().process();
+        let primary_rustc_process = bcx.build_config.primary_unit_rustc.clone();
+        let rustc_workspace_wrapper_process = bcx.rustc().workspace_process();
         Ok(Compilation {
             native_dirs: BTreeSet::new(),
             root_output: HashMap::new(),
@@ -155,7 +145,7 @@ impl<'gctx> Compilation<'gctx> {
             to_doc_test: Vec::new(),
             gctx: bcx.gctx,
             host: bcx.host_triple().to_string(),
-            rustc_process: rustc,
+            rustc_process,
             rustc_workspace_wrapper_process,
             primary_rustc_process,
             target_runners: bcx
@@ -189,14 +179,16 @@ impl<'gctx> Compilation<'gctx> {
         is_primary: bool,
         is_workspace: bool,
     ) -> CargoResult<ProcessBuilder> {
-        let rustc = if is_primary && self.primary_rustc_process.is_some() {
+        let mut rustc = if is_primary && self.primary_rustc_process.is_some() {
             self.primary_rustc_process.clone().unwrap()
         } else if is_workspace {
             self.rustc_workspace_wrapper_process.clone()
         } else {
             self.rustc_process.clone()
         };
-
+        if self.gctx.extra_verbose() {
+            rustc.display_env_vars();
+        }
         let cmd = fill_rustc_tool_env(rustc, unit);
         self.fill_env(cmd, &unit.pkg, None, unit.kind, ToolKind::Rustc)
     }
@@ -207,7 +199,10 @@ impl<'gctx> Compilation<'gctx> {
         unit: &Unit,
         script_meta: Option<Metadata>,
     ) -> CargoResult<ProcessBuilder> {
-        let rustdoc = ProcessBuilder::new(&*self.gctx.rustdoc()?);
+        let mut rustdoc = ProcessBuilder::new(&*self.gctx.rustdoc()?);
+        if self.gctx.extra_verbose() {
+            rustdoc.display_env_vars();
+        }
         let cmd = fill_rustc_tool_env(rustdoc, unit);
         let mut cmd = self.fill_env(cmd, &unit.pkg, script_meta, unit.kind, ToolKind::Rustdoc)?;
         cmd.retry_with_argfile(true);
