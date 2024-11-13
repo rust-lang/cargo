@@ -9,6 +9,8 @@ use cargo_test_support::Project;
 #[cargo_test]
 fn case() {
     cargo_test_support::registry::init();
+    cargo_test_support::registry::Package::new("invalid-dependency-name", "0.6.2+my-package")
+        .publish();
     cargo_test_support::registry::Package::new("docopt", "0.6.2+my-package").publish();
     cargo_test_support::registry::Package::new("semver", "0.1.1")
         .feature("std", &[])

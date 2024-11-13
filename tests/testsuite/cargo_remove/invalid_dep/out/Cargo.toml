@@ -11,6 +11,7 @@ path = "src/main.rs"
 semver = "0.1.0"
 
 [dependencies]
+invalid-dependency-name = "0.6"
 docopt = "0.6"
 semver = "0.1"
 
