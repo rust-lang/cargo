@@ -112,6 +112,21 @@ pub fn cargo_manifest_links() -> Option<String> {
     get_opt_str("CARGO_MANIFEST_LINKS")
 }
 
+/// Contains parameters needed for Cargo’s [jobserver] implementation to parallelize
+/// subprocesses.
+///
+/// Rustc or cargo invocations from build.rs can already read
+/// `CARGO_MAKEFLAGS`, but GNU Make requires the flags to be specified either
+/// directly as arguments, or through the `MAKEFLAGS` environment variable.
+/// Currently Cargo doesn’t set the `MAKEFLAGS` variable, but it’s free for build
+/// scripts invoking GNU Make to set it to the contents of `CARGO_MAKEFLAGS`.
+///
+/// [jobserver]: https://www.gnu.org/software/make/manual/html_node/Job-Slots.html
+#[track_caller]
+pub fn cargo_makeflags() -> Option<String> {
+    get_opt_str("CARGO_MAKEFLAGS")
+}
+
 /// For each activated feature of the package being built, this will be `true`.
 #[track_caller]
 pub fn cargo_feature(name: &str) -> bool {
