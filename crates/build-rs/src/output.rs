@@ -21,7 +21,9 @@ fn emit(directive: &str, value: impl Display) {
 }
 
 /// The `rerun-if-changed` instruction tells Cargo to re-run the build script if the
-/// file at the given path has changed. Currently, Cargo only uses the filesystem
+/// file at the given path has changed.
+///
+/// Currently, Cargo only uses the filesystem
 /// last-modified “mtime” timestamp to determine if the file has changed. It
 /// compares against an internal cached timestamp of when the build script last ran.
 ///
@@ -70,6 +72,7 @@ pub fn rerun_if_env_changed(key: impl AsRef<OsStr>) {
 /// The `rustc-link-arg` instruction tells Cargo to pass the
 /// [`-C link-arg=FLAG` option][link-arg] to the compiler, but only when building
 /// supported targets (benchmarks, binaries, cdylib crates, examples, and tests).
+///
 /// Its usage is highly platform specific. It is useful to set the shared library
 /// version or linker script.
 ///
@@ -84,7 +87,9 @@ pub fn rustc_link_arg(flag: &str) {
 
 /// The `rustc-link-arg-bin` instruction tells Cargo to pass the
 /// [`-C link-arg=FLAG` option][link-arg] to the compiler, but only when building
-/// the binary target with name `BIN`. Its usage is highly platform specific. It
+/// the binary target with name `BIN`. Its usage is highly platform specific.
+///
+/// It
 /// is useful to set a linker script or other linker options.
 ///
 /// [link-arg]: https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg
@@ -101,7 +106,9 @@ pub fn rustc_link_arg_bin(bin: &str, flag: &str) {
 
 /// The `rustc-link-arg-bins` instruction tells Cargo to pass the
 /// [`-C link-arg=FLAG` option][link-arg] to the compiler, but only when building
-/// the binary target. Its usage is highly platform specific. It is useful to set
+/// the binary target.
+///
+/// Its usage is highly platform specific. It is useful to set
 /// a linker script or other linker options.
 ///
 /// [link-arg]: https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg
@@ -147,7 +154,9 @@ pub fn rustc_link_arg_benches(flag: &str) {
 }
 
 /// The `rustc-link-lib` instruction tells Cargo to link the given library using
-/// the compiler’s [`-l` flag][-l]. This is typically used to link a native library
+/// the compiler’s [`-l` flag][-l].
+///
+/// This is typically used to link a native library
 /// using [FFI].
 ///
 /// The `LIB` string is passed directly to rustc, so it supports any syntax that
@@ -229,7 +238,9 @@ pub fn rustc_link_search_kind(kind: &str, path: impl AsRef<Path>) {
 }
 
 /// The `rustc-flags` instruction tells Cargo to pass the given space-separated
-/// flags to the compiler. This only allows the `-l` and `-L` flags, and is
+/// flags to the compiler.
+///
+/// This only allows the `-l` and `-L` flags, and is
 /// equivalent to using [`rustc_link_lib`] and [`rustc_link_search`].
 #[track_caller]
 pub fn rustc_flags(flags: &str) {
@@ -240,7 +251,9 @@ pub fn rustc_flags(flags: &str) {
 }
 
 /// The `rustc-cfg` instruction tells Cargo to pass the given value to the
-/// [`--cfg` flag][cfg] to the compiler. This may be used for compile-time
+/// [`--cfg` flag][cfg] to the compiler.
+///
+/// This may be used for compile-time
 /// detection of features to enable conditional compilation.
 ///
 /// Note that this does not affect Cargo’s dependency resolution. This cannot
@@ -264,7 +277,9 @@ pub fn rustc_cfg(key: &str) {
     emit("rustc-cfg", key);
 }
 
-/// Like [`rustc_cfg`], but with the value specified separately. To replace the
+/// Like [`rustc_cfg`], but with the value specified separately.
+///
+/// To replace the
 /// less convenient `rustc_cfg(r#"my_component="foo""#)`, you can instead use
 /// `rustc_cfg_value("my_component", "foo")`.
 #[track_caller]
@@ -342,7 +357,9 @@ pub fn rustc_check_cfg_values(key: &str, values: &[&str]) {
 }
 
 /// The `rustc-env` instruction tells Cargo to set the given environment variable
-/// when compiling the package. The value can be then retrieved by the
+/// when compiling the package.
+///
+/// The value can be then retrieved by the
 /// [`env!` macro][env!] in the compiled crate. This is useful for embedding
 /// additional metadata in crate’s code, such as the hash of git HEAD or the
 /// unique identifier of a continuous integration server.
@@ -363,7 +380,9 @@ pub fn rustc_env(key: &str, value: &str) {
 
 /// The `rustc-cdylib-link-arg` instruction tells Cargo to pass the
 /// [`-C link-arg=FLAG` option][link-arg] to the compiler, but only when building
-/// a `cdylib` library target. Its usage is highly platform specific. It is useful
+/// a `cdylib` library target.
+///
+/// Its usage is highly platform specific. It is useful
 /// to set the shared library version or the runtime-path.
 ///
 /// [link-arg]: https://doc.rust-lang.org/rustc/codegen-options/index.html#link-arg
@@ -376,7 +395,9 @@ pub fn rustc_cdylib_link_arg(flag: &str) {
 }
 
 /// The `warning` instruction tells Cargo to display a warning after the build
-/// script has finished running. Warnings are only shown for path dependencies
+/// script has finished running.
+///
+/// Warnings are only shown for path dependencies
 /// (that is, those you’re working on locally), so for example warnings printed
 /// out in [crates.io] crates are not emitted by default. The `-vv` “very verbose”
 /// flag may be used to have Cargo display warnings for all crates.

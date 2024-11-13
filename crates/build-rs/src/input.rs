@@ -97,7 +97,9 @@ pub fn cargo() -> PathBuf {
 }
 
 /// The directory containing the manifest for the package being built (the package
-/// containing the build script). Also note that this is the value of the current
+/// containing the build script).
+///
+/// Also note that this is the value of the current
 /// working directory of the build script when it starts.
 #[track_caller]
 pub fn cargo_manifest_dir() -> PathBuf {
@@ -105,7 +107,9 @@ pub fn cargo_manifest_dir() -> PathBuf {
 }
 
 /// Contains parameters needed for Cargo’s [jobserver] implementation to parallelize
-/// subprocesses. Rustc or cargo invocations from build.rs can already read
+/// subprocesses.
+///
+/// Rustc or cargo invocations from build.rs can already read
 /// `CARGO_MAKEFLAGS`, but GNU Make requires the flags to be specified either
 /// directly as arguments, or through the `MAKEFLAGS` environment variable.
 /// Currently Cargo doesn’t set the `MAKEFLAGS` variable, but it’s free for build
@@ -129,7 +133,9 @@ pub fn cargo_feature(name: &str) -> bool {
 }
 
 /// For each [configuration option] of the package being built, this will contain
-/// the value of the configuration. This includes values built-in to the compiler
+/// the value of the configuration.
+///
+/// This includes values built-in to the compiler
 /// (which can be seen with `rustc --print=cfg`) and values set by build scripts
 /// and extra flags passed to rustc (such as those defined in `RUSTFLAGS`).
 ///
@@ -374,6 +380,7 @@ mod cfg {
 }
 
 /// The folder in which all output and intermediate artifacts should be placed.
+///
 /// This folder is inside the build directory for the package being built, and
 /// it is unique for the package in question.
 #[track_caller]
@@ -396,7 +403,9 @@ pub fn host() -> String {
     get_str("HOST")
 }
 
-/// The parallelism specified as the top-level parallelism. This can be useful to
+/// The parallelism specified as the top-level parallelism.
+///
+/// This can be useful to
 /// pass a `-j` parameter to a system like `make`. Note that care should be taken
 /// when interpreting this value. For historical purposes this is still provided
 /// but Cargo, for example, does not need to run `make -j`, and instead can set the
@@ -421,7 +430,9 @@ pub fn debug() -> String {
     get_str("DEBUG")
 }
 
-/// `release` for release builds, `debug` for other builds. This is determined based
+/// `release` for release builds, `debug` for other builds.
+///
+/// This is determined based
 /// on if the [profile] inherits from the [`dev`] or [`release`] profile. Using this
 /// function is not recommended. Using other functions like [`opt_level`] provides
 /// a more correct view of the actual settings being used.
