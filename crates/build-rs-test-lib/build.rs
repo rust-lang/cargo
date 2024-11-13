@@ -47,6 +47,7 @@ fn smoke_test_inputs() {
     dbg!(cargo_encoded_rustflags());
     dbg!(cargo_feature("unstable"));
     dbg!(cargo_manifest_dir());
+    dbg!(cargo_manifest_path());
     dbg!(cargo_manifest_links());
     dbg!(cargo_pkg_authors());
     dbg!(cargo_pkg_description());

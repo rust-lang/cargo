@@ -29,6 +29,18 @@ pub fn cargo_manifest_dir() -> PathBuf {
     to_path(var_or_panic("CARGO_MANIFEST_DIR"))
 }
 
+/// The path to the manifest of your package.
+#[track_caller]
+pub fn cargo_manifest_path() -> PathBuf {
+    var_os("CARGO_MANIFEST_PATH")
+        .map(to_path)
+        .unwrap_or_else(|| {
+            let mut path = cargo_manifest_dir();
+            path.push("Cargo.toml");
+            path
+        })
+}
+
 /// The manifest `links` value.
 #[track_caller]
 pub fn cargo_manifest_links() -> Option<String> {
