@@ -9,6 +9,7 @@ use anyhow::Context as _;
 use super::dependency::Dependency;
 use crate::core::dependency::DepKind;
 use crate::core::{FeatureValue, Features, Workspace};
+use crate::util::closest;
 use crate::util::interning::InternedString;
 use crate::{CargoResult, GlobalContext};
 
@@ -381,6 +382,13 @@ impl LocalManifest {
                 }
             }
             None => {
+                let names = parent_table
+                    .as_table_like()
+                    .map(|t| t.iter())
+                    .into_iter()
+                    .flatten();
+                let alt_name = closest(name, names.map(|(k, _)| k), |k| k).map(|n| n.to_owned());
+
                 // Search in other tables.
                 let sections = self.get_sections();
                 let found_table_path = sections.iter().find_map(|(t, i)| {
@@ -393,6 +401,7 @@ impl LocalManifest {
                     name,
                     table_path.join("."),
                     found_table_path,
+                    alt_name.as_deref(),
                 ));
             }
         }
@@ -605,10 +614,13 @@ fn non_existent_dependency_err(
     name: impl std::fmt::Display,
     search_table: impl std::fmt::Display,
     found_table: Option<impl std::fmt::Display>,
+    alt_name: Option<&str>,
 ) -> anyhow::Error {
     let mut msg = format!("the dependency `{name}` could not be found in `{search_table}`");
     if let Some(found_table) = found_table {
         msg.push_str(&format!("; it is present in `{found_table}`",));
+    } else if let Some(alt_name) = alt_name {
+        msg.push_str(&format!("; dependency `{alt_name}` exists",));
     }
     anyhow::format_err!(msg)
 }
