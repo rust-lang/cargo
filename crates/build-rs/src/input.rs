@@ -27,7 +27,7 @@ macro_rules! invalid {
 }
 
 #[track_caller]
-fn get_bool(key: &str) -> bool {
+fn is_present(key: &str) -> bool {
     env::var_os(key).is_some()
 }
 
@@ -135,7 +135,7 @@ pub fn cargo_feature(name: &str) -> bool {
     }
     let name = name.to_uppercase().replace('-', "_");
     let key = format!("CARGO_FEATURE_{name}");
-    get_bool(&key)
+    is_present(&key)
 }
 
 /// For each [configuration option] of the package being built, this will contain
@@ -162,31 +162,31 @@ mod cfg {
     #[cfg(any())]
     #[track_caller]
     pub fn cargo_cfg_clippy() -> bool {
-        get_bool("CARGO_CFG_CLIPPY")
+        is_present("CARGO_CFG_CLIPPY")
     }
 
     /// If we are compiling with debug assertions enabled.
     #[track_caller]
     pub fn cargo_cfg_debug_assertions() -> bool {
-        get_bool("CARGO_CFG_DEBUG_ASSERTIONS")
+        is_present("CARGO_CFG_DEBUG_ASSERTIONS")
     }
 
     #[cfg(any())]
     #[track_caller]
     pub fn cargo_cfg_doc() -> bool {
-        get_bool("CARGO_CFG_DOC")
+        is_present("CARGO_CFG_DOC")
     }
 
     #[cfg(any())]
     #[track_caller]
     pub fn cargo_cfg_docsrs() -> bool {
-        get_bool("CARGO_CFG_DOCSRS")
+        is_present("CARGO_CFG_DOCSRS")
     }
 
     #[cfg(any())]
     #[track_caller]
     pub fn cargo_cfg_doctest() -> bool {
-        get_bool("CARGO_CFG_DOCTEST")
+        is_present("CARGO_CFG_DOCTEST")
     }
 
     /// The level of detail provided by derived [`Debug`] implementations.
@@ -200,7 +200,7 @@ mod cfg {
     #[cfg(any())]
     #[track_caller]
     pub fn cargo_cfg_miri() -> bool {
-        get_bool("CARGO_CFG_MIRI")
+        is_present("CARGO_CFG_MIRI")
     }
 
     /// If we are compiling with overflow checks enabled.
@@ -208,7 +208,7 @@ mod cfg {
     #[cfg(feature = "unstable")]
     #[track_caller]
     pub fn cargo_cfg_overflow_checks() -> bool {
-        get_bool("CARGO_CFG_OVERFLOW_CHECKS")
+        is_present("CARGO_CFG_OVERFLOW_CHECKS")
     }
 
     /// The [panic strategy](https://doc.rust-lang.org/stable/reference/conditional-compilation.html#panic).
@@ -220,7 +220,7 @@ mod cfg {
     /// If the crate is being compiled as a procedural macro.
     #[track_caller]
     pub fn cargo_cfg_proc_macro() -> bool {
-        get_bool("CARGO_CFG_PROC_MACRO")
+        is_present("CARGO_CFG_PROC_MACRO")
     }
 
     /// The target relocation model.
@@ -234,7 +234,7 @@ mod cfg {
     #[cfg(any())]
     #[track_caller]
     pub fn cargo_cfg_rustfmt() -> bool {
-        get_bool("CARGO_CFG_RUSTFMT")
+        is_present("CARGO_CFG_RUSTFMT")
     }
 
     /// Sanitizers enabled for the crate being compiled.
@@ -251,7 +251,7 @@ mod cfg {
     #[cfg(feature = "unstable")]
     #[track_caller]
     pub fn cargo_cfg_sanitizer_cfi_generalize_pointers() -> bool {
-        get_bool("CARGO_CFG_SANITIZER_CFI_GENERALIZE_POINTERS")
+        is_present("CARGO_CFG_SANITIZER_CFI_GENERALIZE_POINTERS")
     }
 
     /// If CFI sanitization is normalizing integers.
@@ -259,7 +259,7 @@ mod cfg {
     #[cfg(feature = "unstable")]
     #[track_caller]
     pub fn cargo_cfg_sanitizer_cfi_normalize_integers() -> bool {
-        get_bool("CARGO_CFG_SANITIZER_CFI_NORMALIZE_INTEGERS")
+        is_present("CARGO_CFG_SANITIZER_CFI_NORMALIZE_INTEGERS")
     }
 
     /// Disambiguation of the [target ABI](https://doc.rust-lang.org/stable/reference/conditional-compilation.html#target_abi)
@@ -349,7 +349,7 @@ mod cfg {
     #[cfg(feature = "unstable")]
     #[track_caller]
     pub fn cargo_cfg_target_thread_local() -> bool {
-        get_bool("CARGO_CFG_TARGET_THREAD_LOCAL")
+        is_present("CARGO_CFG_TARGET_THREAD_LOCAL")
     }
 
     /// The [target vendor](https://doc.rust-lang.org/stable/reference/conditional-compilation.html#target_vendor).
@@ -361,7 +361,7 @@ mod cfg {
     #[cfg(any())]
     #[track_caller]
     pub fn cargo_cfg_test() -> bool {
-        get_bool("CARGO_CFG_TEST")
+        is_present("CARGO_CFG_TEST")
     }
 
     /// If we are compiling with UB checks enabled.
@@ -369,19 +369,19 @@ mod cfg {
     #[cfg(feature = "unstable")]
     #[track_caller]
     pub fn cargo_cfg_ub_checks() -> bool {
-        get_bool("CARGO_CFG_UB_CHECKS")
+        is_present("CARGO_CFG_UB_CHECKS")
     }
 
     /// Set on [unix-like platforms](https://doc.rust-lang.org/stable/reference/conditional-compilation.html#unix-and-windows).
     #[track_caller]
     pub fn cargo_cfg_unix() -> bool {
-        get_bool("CARGO_CFG_UNIX")
+        is_present("CARGO_CFG_UNIX")
     }
 
     /// Set on [windows-like platforms](https://doc.rust-lang.org/stable/reference/conditional-compilation.html#unix-and-windows).
     #[track_caller]
     pub fn cargo_cfg_windows() -> bool {
-        get_bool("CARGO_CFG_WINDOWS")
+        is_present("CARGO_CFG_WINDOWS")
     }
 }
 
