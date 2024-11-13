@@ -457,7 +457,7 @@ fn custom_build_env_var_rustc_linker() {
 
     // no crate type set => linker never called => build succeeds if and
     // only if build.rs succeeds, despite linker binary not existing.
-    p.cargo("build --target").arg(&target).run();
+    p.cargo("build").target(&target).run();
 }
 
 // Only run this test on linux, since it's difficult to construct
@@ -494,7 +494,7 @@ fn custom_build_env_var_rustc_linker_with_target_cfg() {
 
     // no crate type set => linker never called => build succeeds if and
     // only if build.rs succeeds, despite linker binary not existing.
-    p.cargo("build --target").arg(&target).run();
+    p.cargo("build").target(&target).run();
 }
 
 #[cargo_test]

@@ -42,7 +42,6 @@ fn enable_build_std(e: &mut Execs, arg: Option<&str>) {
 trait BuildStd: Sized {
     fn build_std(&mut self) -> &mut Self;
     fn build_std_arg(&mut self, arg: &str) -> &mut Self;
-    fn target_host(&mut self) -> &mut Self;
 }
 
 impl BuildStd for Execs {
@@ -53,11 +52,6 @@ impl BuildStd for Execs {
 
     fn build_std_arg(&mut self, arg: &str) -> &mut Self {
         enable_build_std(self, Some(arg));
-        self
-    }
-
-    fn target_host(&mut self) -> &mut Self {
-        self.arg("--target").arg(rustc_host());
         self
     }
 }
@@ -192,7 +186,9 @@ fn cross_custom() {
         )
         .build();
 
-    p.cargo("build --target custom-target.json -v")
+    p.cargo("build")
+        .target("custom-target.json")
+        .arg("-v")
         .build_std_arg("core")
         .run();
 }

@@ -163,7 +163,6 @@ fn enable_build_std(e: &mut Execs, setup: &Setup) {
 trait BuildStd: Sized {
     fn build_std(&mut self, setup: &Setup) -> &mut Self;
     fn build_std_arg(&mut self, setup: &Setup, arg: &str) -> &mut Self;
-    fn target_host(&mut self) -> &mut Self;
 }
 
 impl BuildStd for Execs {
@@ -176,11 +175,6 @@ impl BuildStd for Execs {
     fn build_std_arg(&mut self, setup: &Setup, arg: &str) -> &mut Self {
         enable_build_std(self, setup);
         self.arg(format!("-Zbuild-std={}", arg));
-        self
-    }
-
-    fn target_host(&mut self) -> &mut Self {
-        self.arg("--target").arg(rustc_host());
         self
     }
 }

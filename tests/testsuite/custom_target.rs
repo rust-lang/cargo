@@ -53,8 +53,13 @@ fn custom_target_minimal() {
         .file("custom-target.json", SIMPLE_SPEC)
         .build();
 
-    p.cargo("build --lib --target custom-target.json -v").run();
-    p.cargo("build --lib --target src/../custom-target.json -v")
+    p.cargo("build --lib")
+        .target("custom-target.json")
+        .arg("-v")
+        .run();
+    p.cargo("build --lib")
+        .target("src/../custom-target.json")
+        .arg("-v")
         .run();
 
     // Ensure that the correct style of flag is passed to --target with doc tests.
@@ -140,7 +145,10 @@ fn custom_bin_target() {
         .file("custom-bin-target.json", SIMPLE_SPEC)
         .build();
 
-    p.cargo("build --target custom-bin-target.json -v").run();
+    p.cargo("build")
+        .target("custom-bin-target.json")
+        .arg("-v")
+        .run();
 }
 
 #[cargo_test(nightly, reason = "requires features no_core, lang_items")]

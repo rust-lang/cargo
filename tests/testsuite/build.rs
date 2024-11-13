@@ -3991,7 +3991,7 @@ fn custom_target_dir_line_parameter() {
 
     let exe_name = format!("foo{}", env::consts::EXE_SUFFIX);
 
-    p.cargo("build --target-dir foo/target").run();
+    p.cargo("build").target_dir("foo/target").run();
     assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());
     assert!(!p.root().join("target/debug").join(&exe_name).is_file());
 
@@ -4006,12 +4006,13 @@ fn custom_target_dir_line_parameter() {
             target-dir = "foo/target"
         "#,
     );
-    p.cargo("build --target-dir bar/target").run();
+    p.cargo("build").target_dir("bar/target").run();
     assert!(p.root().join("bar/target/debug").join(&exe_name).is_file());
     assert!(p.root().join("foo/target/debug").join(&exe_name).is_file());
     assert!(p.root().join("target/debug").join(&exe_name).is_file());
 
-    p.cargo("build --target-dir foobar/target")
+    p.cargo("build")
+        .target_dir("foobar/target")
         .env("CARGO_TARGET_DIR", "bar/target")
         .run();
     assert!(p
@@ -4456,8 +4457,8 @@ fn cargo_build_empty_target() {
         .file("src/main.rs", "fn main() {}")
         .build();
 
-    p.cargo("build --target")
-        .arg("")
+    p.cargo("build")
+        .target("")
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] target was empty

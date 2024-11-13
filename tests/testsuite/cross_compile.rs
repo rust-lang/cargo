@@ -150,7 +150,7 @@ fn simple_deps() {
         .build();
 
     let target = cross_compile::alternate();
-    p.cargo("build --target").arg(&target).run();
+    p.cargo("build").target(&target).run();
     assert!(p.target_bin(target, "foo").is_file());
 
     if cross_compile::can_run_on_host() {

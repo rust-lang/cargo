@@ -1123,6 +1123,21 @@ impl Execs {
         }
         Ok(())
     }
+
+    pub fn target(&mut self, target: &str) -> &mut Self {
+        self.arg("--target").arg(target);
+        self
+    }
+
+    pub fn target_host(&mut self) -> &mut Self {
+        self.target(rustc_host());
+        self
+    }
+
+    pub fn target_dir(&mut self, dir: &str) -> &mut Self {
+        self.arg("--target-dir").arg(dir);
+        self
+    }
 }
 
 impl Drop for Execs {
