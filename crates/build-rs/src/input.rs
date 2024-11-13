@@ -11,8 +11,6 @@ use std::path::PathBuf;
 
 use crate::ident::{is_ascii_ident, is_crate_name, is_feature_name};
 
-// docs last updated to match release 1.82.0 reference
-
 /// Path to the `cargo` binary performing the build.
 #[track_caller]
 pub fn cargo() -> PathBuf {
