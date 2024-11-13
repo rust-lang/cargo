@@ -2253,7 +2253,7 @@ fn api_error_json() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to publish to registry at http://127.0.0.1:[..]/
 
@@ -2301,7 +2301,7 @@ fn api_error_200() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to publish to registry at http://127.0.0.1:[..]/
 
@@ -2349,7 +2349,7 @@ fn api_error_code() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to publish to registry at http://127.0.0.1:[..]/
 
@@ -2406,7 +2406,7 @@ fn api_curl_error() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to publish to registry at http://127.0.0.1:[..]/
 
@@ -2454,7 +2454,7 @@ fn api_other_error() {
         .with_stderr_data(str![[r#"
 [UPDATING] `alternative` index
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [ERROR] failed to publish to registry at http://127.0.0.1:[..]/
 
@@ -2979,7 +2979,7 @@ fn wait_for_first_publish() {
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] delay v0.0.1 ([ROOT]/foo)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] delay v0.0.1 ([ROOT]/foo)
 [UPLOADED] delay v0.0.1 to registry `crates-io`
 [NOTE] waiting for `delay v0.0.1` to be available at registry `crates-io`.
@@ -3072,7 +3072,7 @@ fn wait_for_first_publish_underscore() {
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] delay_with_underscore v0.0.1 ([ROOT]/foo)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] delay_with_underscore v0.0.1 ([ROOT]/foo)
 [UPLOADED] delay_with_underscore v0.0.1 to registry `crates-io`
 [NOTE] waiting for `delay_with_underscore v0.0.1` to be available at registry `crates-io`.
@@ -3172,7 +3172,7 @@ fn wait_for_subsequent_publish() {
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] delay v0.0.2 ([ROOT]/foo)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] delay v0.0.2 ([ROOT]/foo)
 [UPLOADED] delay v0.0.2 to registry `crates-io`
 [NOTE] waiting for `delay v0.0.2` to be available at registry `crates-io`.
@@ -3290,7 +3290,7 @@ fn timeout_waiting_for_publish() {
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] delay v0.0.1 ([ROOT]/foo)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] delay v0.0.1 ([ROOT]/foo)
 [UPLOADED] delay v0.0.1 to registry `crates-io`
 [NOTE] waiting for `delay v0.0.1` to be available at registry `crates-io`.
@@ -3381,7 +3381,7 @@ fn timeout_waiting_for_dependency_publish() {
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] dep v0.0.1 ([ROOT]/foo/dep)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] main v0.0.1 ([ROOT]/foo/main)
@@ -3427,11 +3427,11 @@ fn package_selection() {
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] a v0.1.0 ([ROOT]/foo/a)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] b v0.1.0 ([ROOT]/foo/b)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] a v0.1.0 ([ROOT]/foo/a)
 [WARNING] aborting upload due to dry run
 [UPLOADING] b v0.1.0 ([ROOT]/foo/b)
@@ -3449,11 +3449,11 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] a v0.1.0 ([ROOT]/foo/a)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] b v0.1.0 ([ROOT]/foo/b)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] a v0.1.0 ([ROOT]/foo/a)
 [WARNING] aborting upload due to dry run
 [UPLOADING] b v0.1.0 ([ROOT]/foo/b)
@@ -3471,7 +3471,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [WARNING] manifest has no description, license, license-file, documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] a v0.1.0 ([ROOT]/foo/a)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] a v0.1.0 ([ROOT]/foo/a)
 [WARNING] aborting upload due to dry run
 
@@ -3553,7 +3553,7 @@ fn wait_for_git_publish() {
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] delay v0.0.2 ([ROOT]/foo)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] delay v0.0.2 ([ROOT]/foo)
 [UPLOADED] delay v0.0.2 to registry `crates-io`
 [NOTE] waiting for `delay v0.0.2` to be available at registry `crates-io`.
@@ -3746,9 +3746,10 @@ fn workspace_with_local_deps_nightly() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [PACKAGING] level3 v0.0.1 ([ROOT]/foo/level3)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] level2 v0.0.1 ([ROOT]/foo/level2)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
 [UPDATING] crates.io index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
@@ -3854,11 +3855,11 @@ fn workspace_parallel() {
             str![[r#"
 [UPDATING] crates.io index
 [PACKAGING] a v0.0.1 ([ROOT]/foo/a)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] b v0.0.1 ([ROOT]/foo/b)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] c v0.0.1 ([ROOT]/foo/c)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] a v0.0.1 ([ROOT]/foo/a)
 [COMPILING] a v0.0.1 ([ROOT]/foo/target/package/a-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -3885,6 +3886,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
 [PUBLISHED] c v0.0.1 at registry `crates-io`
 [UPLOADING] a v0.0.1 ([ROOT]/foo/a)
 [UPLOADING] b v0.0.1 ([ROOT]/foo/b)
+[UPDATING] crates.io index
 
 "#]]
             .unordered(),
@@ -3943,15 +3945,13 @@ fn workspace_missing_dependency() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [PACKAGING] b v0.0.1 ([ROOT]/foo/b)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[VERIFYING] b v0.0.1 ([ROOT]/foo/b)
 [UPDATING] crates.io index
-[ERROR] failed to verify package tarball
+[ERROR] failed to prepare local package for uploading
 
 Caused by:
   no matching package named `a` found
   location searched: crates.io index
-  required by package `b v0.0.1 ([ROOT]/foo/target/package/b-0.0.1)`
+  required by package `b v0.0.1 ([ROOT]/foo/b)`
 
 "#]])
         .run();
@@ -3962,7 +3962,7 @@ Caused by:
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [PACKAGING] a v0.0.1 ([ROOT]/foo/a)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] a v0.0.1 ([ROOT]/foo/a)
 [COMPILING] a v0.0.1 ([ROOT]/foo/target/package/a-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

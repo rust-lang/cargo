@@ -505,9 +505,7 @@ fn _list_files(pkg: &Package, gctx: &GlobalContext) -> CargoResult<Vec<PathBuf>>
         };
 
         let rel = relative_path.as_os_str();
-        if rel == "Cargo.lock" {
-            return pkg.include_lockfile();
-        } else if rel == "Cargo.toml" {
+        if rel == "Cargo.lock" || rel == "Cargo.toml" {
             return true;
         }
 

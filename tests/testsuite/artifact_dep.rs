@@ -2271,7 +2271,8 @@ fn publish_artifact_dep() {
         .with_stderr_data(str![[r#"
 [UPDATING] crates.io index
 [PACKAGING] foo v0.1.0 ([ROOT]/foo)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [UPLOADING] foo v0.1.0 ([ROOT]/foo)
 [UPLOADED] foo v0.1.0 to registry `crates-io`
 [NOTE] waiting for `foo v0.1.0` to be available at registry `crates-io`.
@@ -2331,7 +2332,7 @@ You may press ctrl-c to skip waiting; the crate should be available shortly.
         }
         "#,
         "foo-0.1.0.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs", "Cargo.lock"],
         [(
             "Cargo.toml",
             str![[r##"

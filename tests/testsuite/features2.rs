@@ -1826,7 +1826,7 @@ path = "src/lib.rs"
     validate_crate_contents(
         f,
         "a-0.1.0.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs", "Cargo.lock"],
         [("Cargo.toml", rewritten_toml)],
     );
 }

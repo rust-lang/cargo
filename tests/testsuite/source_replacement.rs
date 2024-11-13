@@ -211,9 +211,9 @@ fn publish_with_replacement() {
 [WARNING] manifest has no documentation, homepage or repository.
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [UPDATING] `alternative` index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `alternative`)
 [COMPILING] bar v1.0.0
