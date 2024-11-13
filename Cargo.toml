@@ -24,6 +24,7 @@ anstyle = "1.0.8"
 anyhow = "1.0.86"
 base64 = "0.22.1"
 blake3 = "1.5.2"
+build-rs = { version = "0.2.0", path = "crates/build-rs" }
 bytesize = "1.3"
 cargo = { path = "" }
 cargo-credential = { version = "0.4.2", path = "credential/cargo-credential" }
@@ -107,6 +108,7 @@ tracing = { version = "0.1.40", default-features = false, features = ["std"] } #
 tracing-chrome = "0.7.2"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 unicase = "2.7.0"
+unicode-ident = "1.0.13"
 unicode-width = "0.2.0"
 unicode-xid = "0.2.4"
 url = "2.5.2"

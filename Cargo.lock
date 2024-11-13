@@ -253,6 +253,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "build-rs"
+version = "0.2.0"
+dependencies = [
+ "unicode-ident",
+]
+
+[[package]]
+name = "build-rs-test-lib"
+version = "0.0.0"
+dependencies = [
+ "build-rs",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3760,9 +3774,9 @@ checksum = "7eec5d1121208364f6793f7d2e222bf75a915c19557537745b195b253dd64217"
 
 [[package]]
 name = "unicode-ident"
-version = "1.0.12"
+version = "1.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b"
+checksum = "e91b56cd4cadaeb79bbf1a5645f6b4f8dc5bde8834ad5894a8db35fda9efa1fe"
 
 [[package]]
 name = "unicode-normalization"
