@@ -494,7 +494,7 @@ pub fn cargo_pkg_version_pre() -> Option<String> {
     to_opt(var_or_panic("CARGO_PKG_VERSION_PRE")).map(to_string)
 }
 
-/// Colon separated list of authors from the manifest of your package.
+/// The authors from the manifest of your package.
 #[track_caller]
 pub fn cargo_pkg_authors() -> Vec<String> {
     to_strings(var_or_panic("CARGO_PKG_AUTHORS"), ':')
