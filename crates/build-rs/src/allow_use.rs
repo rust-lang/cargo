@@ -25,7 +25,7 @@ fn cargo_version_minor() -> u32 {
         // > cargo -V # example output
         // cargo 1.82.0 (8f40fc59f 2024-08-21)
 
-        String::from_utf8(out.stdout).expect("`cargo -V` should output valid UTF-8")
+        std::str::from_utf8(&out.stdout).expect("`cargo -V` should output valid UTF-8")
             ["cargo 1.".len()..]
             .split('.')
             .next()
