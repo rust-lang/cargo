@@ -3,7 +3,7 @@ use std::{process::Command, sync::OnceLock};
 fn rust_version_minor() -> u32 {
     static VERSION_MINOR: OnceLock<u32> = OnceLock::new();
     *VERSION_MINOR.get_or_init(|| {
-        version_minor(&crate::input::cargo_pkg_rust_version())
+        version_minor(&crate::input::cargo_pkg_rust_version().unwrap_or_default())
             // assume build-rs's MSRV if none specified for the current package
             .unwrap_or_else(|| version_minor(env!("CARGO_PKG_RUST_VERSION")).unwrap())
     })

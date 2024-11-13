@@ -197,12 +197,12 @@ mod cfg {
     /// Disambiguation of the [target ABI](https://doc.rust-lang.org/stable/reference/conditional-compilation.html#target_abi)
     /// when the [target env](cargo_cfg_target_env) isn't sufficient.
     ///
-    /// For historical reasons, this value is only defined as not the empty-string when
+    /// For historical reasons, this value is only defined as `Some` when
     /// actually needed for disambiguation. Thus, for example, on many GNU platforms,
-    /// this value will be empty.
+    /// this value will be `None`.
     #[track_caller]
-    pub fn cargo_cfg_target_abi() -> String {
-        to_string(var_or_panic("CARGO_CFG_TARGET_ABI"))
+    pub fn cargo_cfg_target_abi() -> Option<String> {
+        to_opt(var_or_panic("CARGO_CFG_TARGET_ABI")).map(to_string)
     }
 
     /// The CPU [target architecture](https://doc.rust-lang.org/stable/reference/conditional-compilation.html#target_arch).
@@ -480,8 +480,8 @@ pub fn cargo_pkg_version_patch() -> u64 {
 
 /// The pre-release version of your package.
 #[track_caller]
-pub fn cargo_pkg_version_pre() -> String {
-    to_string(var_or_panic("CARGO_PKG_VERSION_PRE"))
+pub fn cargo_pkg_version_pre() -> Option<String> {
+    to_opt(var_or_panic("CARGO_PKG_VERSION_PRE")).map(to_string)
 }
 
 /// Colon separated list of authors from the manifest of your package.
@@ -498,45 +498,45 @@ pub fn cargo_pkg_name() -> String {
 
 /// The description from the manifest of your package.
 #[track_caller]
-pub fn cargo_pkg_description() -> String {
-    to_string(var_or_panic("CARGO_PKG_DESCRIPTION"))
+pub fn cargo_pkg_description() -> Option<String> {
+    to_opt(var_or_panic("CARGO_PKG_DESCRIPTION")).map(to_string)
 }
 
 /// The home page from the manifest of your package.
 #[track_caller]
-pub fn cargo_pkg_homepage() -> String {
-    to_string(var_or_panic("CARGO_PKG_HOMEPAGE"))
+pub fn cargo_pkg_homepage() -> Option<String> {
+    to_opt(var_or_panic("CARGO_PKG_HOMEPAGE")).map(to_string)
 }
 
 /// The repository from the manifest of your package.
 #[track_caller]
-pub fn cargo_pkg_repository() -> String {
-    to_string(var_or_panic("CARGO_PKG_REPOSITORY"))
+pub fn cargo_pkg_repository() -> Option<String> {
+    to_opt(var_or_panic("CARGO_PKG_REPOSITORY")).map(to_string)
 }
 
 /// The license from the manifest of your package.
 #[track_caller]
-pub fn cargo_pkg_license() -> String {
-    to_string(var_or_panic("CARGO_PKG_LICENSE"))
+pub fn cargo_pkg_license() -> Option<String> {
+    to_opt(var_or_panic("CARGO_PKG_LICENSE")).map(to_string)
 }
 
 /// The license file from the manifest of your package.
 #[track_caller]
-pub fn cargo_pkg_license_file() -> PathBuf {
-    to_path(var_or_panic("CARGO_PKG_LICENSE_FILE"))
+pub fn cargo_pkg_license_file() -> Option<PathBuf> {
+    to_opt(var_or_panic("CARGO_PKG_LICENSE_FILE")).map(to_path)
 }
 
 /// The Rust version from the manifest of your package. Note that this is the
 /// minimum Rust version supported by the package, not the current Rust version.
 #[track_caller]
-pub fn cargo_pkg_rust_version() -> String {
-    to_string(var_or_panic("CARGO_PKG_RUST_VERSION"))
+pub fn cargo_pkg_rust_version() -> Option<String> {
+    to_opt(var_or_panic("CARGO_PKG_RUST_VERSION")).map(to_string)
 }
 
 /// Path to the README file of your package.
 #[track_caller]
-pub fn cargo_pkg_readme() -> PathBuf {
-    to_path(var_or_panic("CARGO_PKG_README"))
+pub fn cargo_pkg_readme() -> Option<PathBuf> {
+    to_opt(var_or_panic("CARGO_PKG_README")).map(to_path)
 }
 
 fn is_present(key: &str) -> bool {
@@ -563,8 +563,15 @@ fn to_string(value: std::ffi::OsString) -> String {
     }
 }
 
+fn to_opt(value: std::ffi::OsString) -> Option<std::ffi::OsString> {
+    (!value.is_empty()).then_some(value)
+}
+
 #[track_caller]
 fn to_strings(value: std::ffi::OsString, sep: char) -> Vec<String> {
+    if value.is_empty() {
+        return Vec::new();
+    }
     let value = to_string(value);
     value.split(sep).map(str::to_owned).collect()
 }
