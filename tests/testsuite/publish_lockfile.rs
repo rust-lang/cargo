@@ -150,7 +150,7 @@ src/main.rs
 }
 
 #[cargo_test]
-fn no_lock_file_with_library() {
+fn lock_file_with_library() {
     let p = project()
         .file("Cargo.toml", &pl_manifest("foo", "0.0.1", ""))
         .file("src/lib.rs", "")
@@ -162,7 +162,7 @@ fn no_lock_file_with_library() {
     validate_crate_contents(
         f,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs", "Cargo.lock"],
         (),
     );
 }

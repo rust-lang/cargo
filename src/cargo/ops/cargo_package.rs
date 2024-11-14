@@ -459,17 +459,16 @@ fn build_ar_list(
         ))?;
     }
 
-    if pkg.include_lockfile() {
-        let rel_str = "Cargo.lock";
-        result
-            .entry(UncasedAscii::new(rel_str))
-            .or_insert_with(Vec::new)
-            .push(ArchiveFile {
-                rel_path: PathBuf::from(rel_str),
-                rel_str: rel_str.to_string(),
-                contents: FileContents::Generated(GeneratedFile::Lockfile),
-            });
-    }
+    let rel_str = "Cargo.lock";
+    result
+        .entry(UncasedAscii::new(rel_str))
+        .or_insert_with(Vec::new)
+        .push(ArchiveFile {
+            rel_path: PathBuf::from(rel_str),
+            rel_str: rel_str.to_string(),
+            contents: FileContents::Generated(GeneratedFile::Lockfile),
+        });
+
     if let Some(vcs_info) = vcs_info {
         let rel_str = VCS_INFO_FILE;
         result

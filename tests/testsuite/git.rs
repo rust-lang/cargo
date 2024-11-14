@@ -2737,6 +2737,7 @@ fn include_overrides_gitignore() {
     p.cargo("package --list --allow-dirty")
         .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
+Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 ignored.txt
@@ -4048,6 +4049,7 @@ fn git_worktree_with_original_repo_renamed() {
         .cwd(&new)
         .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
+Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 README.md
@@ -4116,6 +4118,7 @@ fn git_worktree_with_bare_original_repo() {
         .cwd(wt.path())
         .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
+Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 README.md

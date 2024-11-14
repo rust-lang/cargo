@@ -72,7 +72,13 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
     validate_crate_contents(
         f,
         "foo-0.0.1.crate",
-        &["Cargo.lock", "Cargo.toml", "Cargo.toml.orig", "src/main.rs"],
+        &[
+            "Cargo.lock",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/main.rs",
+            "Cargo.lock",
+        ],
         (),
     );
 }
@@ -207,10 +213,11 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info.
 [PACKAGING] a v0.0.1 ([ROOT]/all/a/a)
 [ARCHIVING] .cargo_vcs_info.json
+[ARCHIVING] Cargo.lock
 [ARCHIVING] Cargo.toml
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/lib.rs
-[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]])
         .run();
@@ -229,6 +236,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
         f,
         "a-0.0.1.crate",
         &[
+            "Cargo.lock",
             "Cargo.toml",
             "Cargo.toml.orig",
             "src/lib.rs",
@@ -1138,6 +1146,7 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
         .with_stderr_data("")
         .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
+Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/build/mod.rs
@@ -1181,6 +1190,7 @@ fn issue_13695_allow_dirty_vcs_info() {
             "Cargo.toml",
             "Cargo.toml.orig",
             "src/lib.rs",
+            "Cargo.lock",
         ],
         [(
             ".cargo_vcs_info.json",
@@ -1202,6 +1212,7 @@ fn issue_13695_allow_dirty_vcs_info() {
         .with_stderr_data("")
         .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
+Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/lib.rs
@@ -1241,6 +1252,7 @@ fn issue_13695_allowing_dirty_vcs_info_but_clean() {
             "Cargo.toml",
             "Cargo.toml.orig",
             "src/lib.rs",
+            "Cargo.lock",
         ],
         [(
             ".cargo_vcs_info.json",
@@ -1282,7 +1294,7 @@ fn issue_14354_allowing_dirty_bare_commit() {
     validate_crate_contents(
         f,
         "foo-0.1.0.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs", "Cargo.lock"],
         (),
     );
 }
@@ -1456,7 +1468,7 @@ path = "src/lib.rs"
     validate_crate_contents(
         f,
         "bar-0.1.0.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs", "Cargo.lock"],
         [("Cargo.toml", rewritten_toml)],
     );
 }
@@ -1873,6 +1885,7 @@ fn include_cargo_toml_implicit() {
 
     p.cargo("package --list")
         .with_stdout_data(str![[r#"
+Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/lib.rs
@@ -1925,7 +1938,8 @@ fn package_include_ignore_only() {
         r#"["Cargo.toml", "src/abc**", "src/lib.rs"]"#,
         "[]",
         &["src/lib.rs", "src/abc1.rs", "src/abc2.rs", "src/abc/mod.rs"],
-        "Cargo.toml\n\
+        "Cargo.lock\n\
+         Cargo.toml\n\
          Cargo.toml.orig\n\
          src/abc/mod.rs\n\
          src/abc1.rs\n\
@@ -1941,7 +1955,8 @@ fn gitignore_patterns() {
         r#"["Cargo.toml", "foo"]"#, // include
         "[]",
         &["src/lib.rs", "foo", "a/foo", "a/b/foo", "x/foo/y", "bar"],
-        "Cargo.toml\n\
+        "Cargo.lock\n\
+         Cargo.toml\n\
          Cargo.toml.orig\n\
          a/b/foo\n\
          a/foo\n\
@@ -1954,7 +1969,8 @@ fn gitignore_patterns() {
         r#"["Cargo.toml", "/foo"]"#, // include
         "[]",
         &["src/lib.rs", "foo", "a/foo", "a/b/foo", "x/foo/y", "bar"],
-        "Cargo.toml\n\
+        "Cargo.lock\n\
+         Cargo.toml\n\
          Cargo.toml.orig\n\
          foo\n\
          ",
@@ -1964,7 +1980,8 @@ fn gitignore_patterns() {
         "[]",
         r#"["foo/"]"#, // exclude
         &["src/lib.rs", "foo", "a/foo", "x/foo/y", "bar"],
-        "Cargo.toml\n\
+        "Cargo.lock\n\
+         Cargo.toml\n\
          Cargo.toml.orig\n\
          a/foo\n\
          bar\n\
@@ -1988,7 +2005,8 @@ fn gitignore_patterns() {
             "y",
             "z",
         ],
-        "Cargo.toml\n\
+        "Cargo.lock\n\
+         Cargo.toml\n\
          Cargo.toml.orig\n\
          c\n\
          other\n\
@@ -2000,7 +2018,8 @@ fn gitignore_patterns() {
         r#"["Cargo.toml", "**/foo/bar"]"#, // include
         "[]",
         &["src/lib.rs", "a/foo/bar", "foo", "bar"],
-        "Cargo.toml\n\
+        "Cargo.lock\n\
+         Cargo.toml\n\
          Cargo.toml.orig\n\
          a/foo/bar\n\
          ",
@@ -2010,7 +2029,8 @@ fn gitignore_patterns() {
         r#"["Cargo.toml", "foo/**"]"#, // include
         "[]",
         &["src/lib.rs", "a/foo/bar", "foo/x/y/z"],
-        "Cargo.toml\n\
+        "Cargo.lock\n\
+         Cargo.toml\n\
          Cargo.toml.orig\n\
          foo/x/y/z\n\
          ",
@@ -2020,7 +2040,8 @@ fn gitignore_patterns() {
         r#"["Cargo.toml", "a/**/b"]"#, // include
         "[]",
         &["src/lib.rs", "a/b", "a/x/b", "a/x/y/b"],
-        "Cargo.toml\n\
+        "Cargo.lock\n\
+         Cargo.toml\n\
          Cargo.toml.orig\n\
          a/b\n\
          a/x/b\n\
@@ -2036,6 +2057,7 @@ fn gitignore_negate() {
         "[]",
         &["src/lib.rs", "foo.rs", "!important"],
         "!important\n\
+         Cargo.lock\n\
          Cargo.toml\n\
          Cargo.toml.orig\n\
          src/lib.rs\n\
@@ -2050,7 +2072,8 @@ fn gitignore_negate() {
         r#"["Cargo.toml", "src/", "!src/foo.rs"]"#, // include
         "[]",
         &["src/lib.rs", "src/foo.rs"],
-        "Cargo.toml\n\
+        "Cargo.lock\n\
+         Cargo.toml\n\
          Cargo.toml.orig\n\
          src/lib.rs\n\
          ",
@@ -2060,7 +2083,8 @@ fn gitignore_negate() {
         r#"["Cargo.toml", "src/*.rs", "!foo.rs"]"#, // include
         "[]",
         &["src/lib.rs", "foo.rs", "src/foo.rs", "src/bar/foo.rs"],
-        "Cargo.toml\n\
+        "Cargo.lock\n\
+         Cargo.toml\n\
          Cargo.toml.orig\n\
          src/lib.rs\n\
          ",
@@ -2070,7 +2094,8 @@ fn gitignore_negate() {
         "[]",
         r#"["*.rs", "!foo.rs", "\\!important"]"#, // exclude
         &["src/lib.rs", "foo.rs", "!important"],
-        "Cargo.toml\n\
+        "Cargo.lock\n\
+         Cargo.toml\n\
          Cargo.toml.orig\n\
          foo.rs\n\
          ",
@@ -2083,7 +2108,8 @@ fn exclude_dot_files_and_directories_by_default() {
         "[]",
         "[]",
         &["src/lib.rs", ".dotfile", ".dotdir/file"],
-        "Cargo.toml\n\
+        "Cargo.lock\n\
+         Cargo.toml\n\
          Cargo.toml.orig\n\
          src/lib.rs\n\
          ",
@@ -2095,6 +2121,7 @@ fn exclude_dot_files_and_directories_by_default() {
         &["src/lib.rs", ".dotfile", ".dotdir/file"],
         ".dotdir/file\n\
          .dotfile\n\
+         Cargo.lock\n\
          Cargo.toml\n\
          Cargo.toml.orig\n\
          src/lib.rs\n\
@@ -2278,6 +2305,7 @@ fn license_file_implicit_include() {
     p.cargo("package --list")
         .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
+Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/lib.rs
@@ -2291,11 +2319,12 @@ subdir/LICENSE
         .with_stderr_data(str![[r#"
 [PACKAGING] foo v1.0.0 ([ROOT]/foo)
 [ARCHIVING] .cargo_vcs_info.json
+[ARCHIVING] Cargo.lock
 [ARCHIVING] Cargo.toml
 [ARCHIVING] Cargo.toml.orig
 [ARCHIVING] src/lib.rs
 [ARCHIVING] subdir/LICENSE
-[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 6 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]])
         .run();
@@ -2305,6 +2334,7 @@ subdir/LICENSE
         "foo-1.0.0.crate",
         &[
             ".cargo_vcs_info.json",
+            "Cargo.lock",
             "Cargo.toml",
             "Cargo.toml.orig",
             "subdir/LICENSE",
@@ -2336,6 +2366,7 @@ fn relative_license_included() {
 
     p.cargo("package --list")
         .with_stdout_data(str![[r#"
+Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 LICENSE
@@ -2348,7 +2379,7 @@ src/lib.rs
     p.cargo("package")
         .with_stderr_data(str![[r#"
 [PACKAGING] foo v1.0.0 ([ROOT]/foo)
-[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v1.0.0 ([ROOT]/foo)
 [COMPILING] foo v1.0.0 ([ROOT]/foo/target/package/foo-1.0.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -2359,7 +2390,13 @@ src/lib.rs
     validate_crate_contents(
         f,
         "foo-1.0.0.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "LICENSE", "src/lib.rs"],
+        &[
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "LICENSE",
+            "src/lib.rs",
+            "Cargo.lock",
+        ],
         [("LICENSE", "license text")],
     );
     let manifest =
@@ -2393,6 +2430,7 @@ fn relative_license_include_collision() {
 
     p.cargo("package --list")
         .with_stdout_data(str![[r#"
+Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 LICENSE
@@ -2408,7 +2446,7 @@ src/lib.rs
     p.cargo("package").with_stderr_data(str![[r#"
 [WARNING] license-file `../LICENSE` appears to be a path outside of the package, but there is already a file named `LICENSE` in the root of the package. The archived crate will contain the copy in the root of the package. Update the license-file to point to the path relative to the root of the package to remove this warning.
 [PACKAGING] foo v1.0.0 ([ROOT]/foo)
-[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v1.0.0 ([ROOT]/foo)
 [COMPILING] foo v1.0.0 ([ROOT]/foo/target/package/foo-1.0.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -2418,7 +2456,13 @@ src/lib.rs
     validate_crate_contents(
         f,
         "foo-1.0.0.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "LICENSE", "src/lib.rs"],
+        &[
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "LICENSE",
+            "src/lib.rs",
+            "Cargo.lock",
+        ],
         [("LICENSE", "inner license")],
     );
     let manifest = read_to_string(p.root().join("target/package/foo-1.0.0/Cargo.toml")).unwrap();
@@ -2455,7 +2499,7 @@ fn package_restricted_windows() {
 [WARNING] file src/con.rs is a reserved Windows filename, it will not work on Windows platforms
 [WARNING] file src/aux/mod.rs is a reserved Windows filename, it will not work on Windows platforms
 [PACKAGING] foo v0.1.0 ([ROOT]/foo)
-[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 6 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.1.0 ([ROOT]/foo)
 [COMPILING] foo v0.1.0 ([ROOT]/foo/target/package/foo-0.1.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -2484,6 +2528,7 @@ fn finds_git_in_parent() {
     p.cargo("package --list --allow-dirty")
         .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
+Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 ignoreme
@@ -2498,6 +2543,7 @@ src/lib.rs
         .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
 .gitignore
+Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 ignoreme2
@@ -2511,6 +2557,7 @@ src/lib.rs
         .with_stdout_data(str![[r#"
 .cargo_vcs_info.json
 .gitignore
+Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/lib.rs
@@ -3052,7 +3099,7 @@ path = "src/lib.rs"
     validate_crate_contents(
         f,
         "bar-0.1.0.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs", "Cargo.lock"],
         [("Cargo.toml", rewritten_toml)],
     );
 
@@ -3090,7 +3137,7 @@ path = "src/lib.rs"
     validate_crate_contents(
         f,
         "baz-0.1.0.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs", "Cargo.lock"],
         [("Cargo.toml", rewritten_toml)],
     );
 }
@@ -4036,7 +4083,7 @@ fn discovery_inferred_build_rs_included() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -4048,7 +4095,13 @@ fn discovery_inferred_build_rs_included() {
     validate_crate_contents(
         f,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs", "build.rs"],
+        &[
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+            "build.rs",
+            "Cargo.lock",
+        ],
         [(
             "Cargo.toml",
             str![[r##"
@@ -4118,7 +4171,7 @@ fn discovery_inferred_build_rs_excluded() {
         .with_stderr_data(str![[r#"
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] ignoring `package.build` as `build.rs` is not included in the published package
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -4130,7 +4183,7 @@ fn discovery_inferred_build_rs_excluded() {
     validate_crate_contents(
         f,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs", "Cargo.lock"],
         [(
             "Cargo.toml",
             str![[r##"
@@ -4197,7 +4250,7 @@ fn discovery_explicit_build_rs_included() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
-[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -4209,7 +4262,13 @@ fn discovery_explicit_build_rs_included() {
     validate_crate_contents(
         f,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs", "build.rs"],
+        &[
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+            "build.rs",
+            "Cargo.lock",
+        ],
         [(
             "Cargo.toml",
             str![[r##"
@@ -4280,7 +4339,7 @@ fn discovery_explicit_build_rs_excluded() {
         .with_stderr_data(str![[r#"
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [WARNING] ignoring `package.build` as `build.rs` is not included in the published package
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -4292,7 +4351,7 @@ fn discovery_explicit_build_rs_excluded() {
     validate_crate_contents(
         f,
         "foo-0.0.1.crate",
-        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs"],
+        &["Cargo.toml", "Cargo.toml.orig", "src/lib.rs", "Cargo.lock"],
         [(
             "Cargo.toml",
             str![[r##"
@@ -5302,17 +5361,15 @@ fn workspace_with_local_deps() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [PACKAGING] level3 v0.0.1 ([ROOT]/foo/level3)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] level2 v0.0.1 ([ROOT]/foo/level2)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
 [UPDATING] crates.io index
 [ERROR] failed to prepare local package for uploading
 
 Caused by:
-  no matching package named `level2` found
+  no matching package named `level3` found
   location searched: crates.io index
-  required by package `level1 v0.0.1 ([ROOT]/foo/level1)`
+  required by package `level2 v0.0.1 ([ROOT]/foo/level2)`
 
 "#]])
         .run();
@@ -5329,11 +5386,11 @@ fn workspace_with_local_deps_nightly() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [PACKAGING] level3 v0.0.1 ([ROOT]/foo/level3)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] level2 v0.0.1 ([ROOT]/foo/level2)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
 [UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] level3 v0.0.1 ([ROOT]/foo/level3)
 [COMPILING] level3 v0.0.1 ([ROOT]/foo/target/package/level3-0.0.1)
@@ -5488,15 +5545,13 @@ fn workspace_with_local_deps_packaging_one_fails() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[VERIFYING] level1 v0.0.1 ([ROOT]/foo/level1)
 [UPDATING] crates.io index
-[ERROR] failed to verify package tarball
+[ERROR] failed to prepare local package for uploading
 
 Caused by:
   no matching package named `level2` found
   location searched: crates.io index
-  required by package `level1 v0.0.1 ([ROOT]/foo/target/package/level1-0.0.1)`
+  required by package `level1 v0.0.1 ([ROOT]/foo/level1)`
 
 "#]])
         .run();
@@ -5515,15 +5570,13 @@ fn workspace_with_local_deps_packaging_one_fails_nightly() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
-[VERIFYING] level1 v0.0.1 ([ROOT]/foo/level1)
 [UPDATING] crates.io index
-[ERROR] failed to verify package tarball
+[ERROR] failed to prepare local package for uploading
 
 Caused by:
   no matching package named `level2` found
   location searched: crates.io index
-  required by package `level1 v0.0.1 ([ROOT]/foo/target/package/level1-0.0.1)`
+  required by package `level1 v0.0.1 ([ROOT]/foo/level1)`
 
 "#]])
         .run();
@@ -5664,14 +5717,14 @@ fn workspace_with_local_deps_packaging_one_with_needed_deps() {
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
 [PACKAGING] level3 v0.0.1 ([ROOT]/foo/level3)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] level2 v0.0.1 ([ROOT]/foo/level2)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[UPDATING] crates.io index
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] level3 v0.0.1 ([ROOT]/foo/level3)
 [COMPILING] level3 v0.0.1 ([ROOT]/foo/target/package/level3-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] level2 v0.0.1 ([ROOT]/foo/level2)
-[UPDATING] crates.io index
 [UNPACKING] level3 v0.0.1 (registry `[ROOT]/foo/target/package/tmp-registry`)
 [COMPILING] level3 v0.0.1
 [COMPILING] level2 v0.0.1 ([ROOT]/foo/target/package/level2-0.0.1)
@@ -5730,6 +5783,7 @@ fn workspace_with_local_deps_list() {
     p.cargo("package --list")
         .replace_crates_io(crates_io.index_url())
         .with_stdout_data(str![[r#"
+Cargo.lock
 Cargo.toml
 Cargo.toml.orig
 src/lib.rs
@@ -5801,7 +5855,7 @@ fn workspace_with_local_deps_index_mismatch() {
     .with_stdout_data("")
     .with_stderr_data(str![[r#"
 [PACKAGING] level2 v0.0.1 ([ROOT]/foo/level2)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
 [UPDATING] crates.io index
 [ERROR] failed to prepare local package for uploading
@@ -5871,7 +5925,7 @@ fn workspace_with_local_deps_alternative_index() {
     .with_stdout_data("")
     .with_stderr_data(str![[r#"
 [PACKAGING] level2 v0.0.1 ([ROOT]/foo/level2)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
 [UPDATING] `alternative` index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
@@ -5974,7 +6028,6 @@ fn workspace_with_local_dep_already_published() {
         .with_stderr_data(
             str![[r#"
 [PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] crates.io index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
@@ -5987,6 +6040,7 @@ fn workspace_with_local_dep_already_published() {
 [COMPILING] dep v0.1.0
 [COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]]
             .unordered(),
@@ -6006,7 +6060,6 @@ fn workspace_with_local_dep_already_published_nightly() {
         .with_stderr_data(
             str![[r#"
 [PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] crates.io index
 [ERROR] failed to prepare local package for uploading
@@ -6016,6 +6069,7 @@ Caused by:
 
 Caused by:
   found a package in the remote registry and the local overlay: dep@0.1.0
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]]
             .unordered(),
@@ -6077,7 +6131,6 @@ fn workspace_with_local_and_remote_deps() {
         .with_stderr_data(
             str![[r#"
 [PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] crates.io index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
@@ -6092,6 +6145,7 @@ fn workspace_with_local_and_remote_deps() {
 [COMPILING] dep v0.1.0
 [COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]]
             .unordered(),
@@ -6186,7 +6240,7 @@ fn registry_inferred_from_unique_option() {
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .with_stderr_data(str![[r#"
 [PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] `alternative` index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
@@ -6281,7 +6335,7 @@ The registry `alternative` is not listed in the `package.publish` value in Cargo
     .masquerade_as_nightly_cargo(&["package-workspace"])
     .with_stderr_data(str![[r#"
 [PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] `alternative` index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
@@ -6354,7 +6408,7 @@ fn registry_inference_ignores_unpublishable() {
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .with_stderr_data(str![[r#"
 [PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] `alternative` index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
@@ -6375,7 +6429,7 @@ fn registry_inference_ignores_unpublishable() {
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .with_stderr_data(str![[r#"
 [PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] `alternative` index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
@@ -6456,7 +6510,7 @@ fn registry_not_inferred_because_of_multiple_options() {
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .with_stderr_data(str![[r#"
 [PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] `alternative` index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
@@ -6539,7 +6593,7 @@ fn registry_not_inferred_because_of_mismatch() {
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .with_stderr_data(str![[r#"
 [PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] `alternative` index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
@@ -6612,7 +6666,7 @@ fn unpublishable_dependency() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
-[PACKAGED] 3 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] `alternative` index
 [ERROR] failed to prepare local package for uploading
