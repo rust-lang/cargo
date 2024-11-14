@@ -666,15 +666,12 @@ impl fmt::Display for SourceId {
 }
 
 /// The hash of SourceId is used in the name of some Cargo folders, so shouldn't
-/// vary. `as_str` gives the serialisation of a url (which has a spec) and so
+/// vary. [`CanonicalUrl`] uses `as_str`, the serialisation of a url (which has a spec), and so
 /// insulates against possible changes in how the url crate does hashing.
 impl Hash for SourceId {
     fn hash<S: hash::Hasher>(&self, into: &mut S) {
         self.inner.kind.hash(into);
-        match self.inner.kind {
-            SourceKind::Git(_) => self.inner.canonical_url.hash(into),
-            _ => self.inner.url.as_str().hash(into),
-        }
+        self.inner.canonical_url.hash(into);
     }
 }
 
