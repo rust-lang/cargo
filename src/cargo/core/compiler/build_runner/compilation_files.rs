@@ -671,7 +671,7 @@ fn compute_metadata(
 
     MetaInfo {
         meta_hash: Metadata(hasher.finish()),
-        use_extra_filename: should_use_metadata(bcx, unit),
+        use_extra_filename: use_extra_filename(bcx, unit),
     }
 }
 
@@ -717,8 +717,8 @@ fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher, uni
     // between different backends without recompiling.
 }
 
-/// Returns whether or not this unit should use a metadata hash.
-fn should_use_metadata(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
+/// Returns whether or not this unit should use a hash in the filename to make it unique.
+fn use_extra_filename(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
     if unit.mode.is_doc_test() || unit.mode.is_doc() {
         // Doc tests do not have metadata.
         return false;
