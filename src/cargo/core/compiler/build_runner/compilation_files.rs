@@ -41,24 +41,25 @@ impl fmt::Debug for UnitHash {
     }
 }
 
-/// The `Metadata` is a hash used to make unique file names for each unit in a
-/// build. It is also used for symbol mangling.
-///
-/// For example:
-/// - A project may depend on crate `A` and crate `B`, so the package name must be in the file name.
-/// - Similarly a project may depend on two versions of `A`, so the version must be in the file name.
-///
-/// In general this must include all things that need to be distinguished in different parts of
-/// the same build. This is absolutely required or we override things before
-/// we get chance to use them.
-///
-/// It is also used for symbol mangling, because if you have two versions of
-/// the same crate linked together, their symbols need to be differentiated.
+/// [`Metadata`] tracks several [`UnitHash`]s, including
+/// [`Metadata::unit_id`], [`Metadata::c_metadata`], and [`Metadata::c_extra_filename`].
 ///
 /// We use a hash because it is an easy way to guarantee
 /// that all the inputs can be converted to a valid path.
 ///
-/// This also acts as the main layer of caching provided by Cargo.
+/// [`Metadata::unit_id`] is used to uniquely identify a unit in the build graph.
+/// This serves as a similar role as [`Metadata::c_extra_filename`] in that it uniquely identifies output
+/// on the filesystem except that its always present.
+///
+/// [`Metadata::c_extra_filename`] is needed for cases like:
+/// - A project may depend on crate `A` and crate `B`, so the package name must be in the file name.
+/// - Similarly a project may depend on two versions of `A`, so the version must be in the file name.
+///
+/// This also acts as the main layer of caching provided by Cargo
+/// so this must include all things that need to be distinguished in different parts of
+/// the same build. This is absolutely required or we override things before
+/// we get chance to use them.
+///
 /// For example, we want to cache `cargo build` and `cargo doc` separately, so that running one
 /// does not invalidate the artifacts for the other. We do this by including [`CompileMode`] in the
 /// hash, thus the artifacts go in different folders and do not override each other.
@@ -73,17 +74,20 @@ impl fmt::Debug for UnitHash {
 /// more space than needed. This makes not including something in `Metadata`
 /// a form of cache invalidation.
 ///
-/// You should also avoid anything that would interfere with reproducible
+/// Note that the `Fingerprint` is in charge of tracking everything needed to determine if a
+/// rebuild is needed.
+///
+/// [`Metadata::c_metadata`] is used for symbol mangling, because if you have two versions of
+/// the same crate linked together, their symbols need to be differentiated.
+///
+/// You should avoid anything that would interfere with reproducible
 /// builds. For example, *any* absolute path should be avoided. This is one
-/// reason that `RUSTFLAGS` is not in `Metadata`, because it often has
+/// reason that `RUSTFLAGS` is not in [`Metadata::c_metadata`], because it often has
 /// absolute paths (like `--remap-path-prefix` which is fundamentally used for
 /// reproducible builds and has absolute paths in it). Also, in some cases the
 /// mangled symbols need to be stable between different builds with different
 /// settings. For example, profile-guided optimizations need to swap
 /// `RUSTFLAGS` between runs, but needs to keep the same symbol names.
-///
-/// Note that the `Fingerprint` is in charge of tracking everything needed to determine if a
-/// rebuild is needed.
 #[derive(Copy, Clone, Debug)]
 pub struct Metadata {
     unit_id: UnitHash,
