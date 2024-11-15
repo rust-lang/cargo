@@ -73,7 +73,7 @@ pub use self::build_context::{
     BuildContext, FileFlavor, FileType, RustDocFingerprint, RustcTargetData, TargetInfo,
 };
 use self::build_plan::BuildPlan;
-pub use self::build_runner::{BuildRunner, Metadata};
+pub use self::build_runner::{BuildRunner, Metadata, UnitHash};
 pub use self::compilation::{Compilation, Doctest, UnitOutput};
 pub use self::compile_kind::{CompileKind, CompileTarget};
 pub use self::crate_type::CrateType;
@@ -279,11 +279,11 @@ fn rustc(
     // don't pass the `-l` flags.
     let pass_l_flag = unit.target.is_lib() || !unit.pkg.targets().iter().any(|t| t.is_lib());
 
-    let dep_info_name = if build_runner.files().use_extra_filename(unit) {
+    let dep_info_name = if build_runner.files().metadata(unit).use_extra_filename() {
         format!(
             "{}-{}.d",
             unit.target.crate_name(),
-            build_runner.files().metadata(unit)
+            build_runner.files().metadata(unit).meta_hash()
         )
     } else {
         format!("{}.d", unit.target.crate_name())
@@ -764,7 +764,9 @@ fn prepare_rustdoc(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> CargoResu
     }
 
     let metadata = build_runner.metadata_for_doc_units[unit];
-    rustdoc.arg("-C").arg(format!("metadata={}", metadata));
+    rustdoc
+        .arg("-C")
+        .arg(format!("metadata={}", metadata.meta_hash()));
 
     if unit.mode.is_doc_scrape() {
         debug_assert!(build_runner.bcx.scrape_units.contains(unit));
@@ -842,7 +844,7 @@ fn rustdoc(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResult<W
                 .iter()
                 .map(|unit| {
                     Ok((
-                        build_runner.files().metadata(unit),
+                        build_runner.files().metadata(unit).meta_hash(),
                         scrape_output_path(build_runner, unit)?,
                     ))
                 })
@@ -1156,9 +1158,10 @@ fn build_base_args(
     cmd.args(&check_cfg_args(unit));
 
     let meta = build_runner.files().metadata(unit);
-    cmd.arg("-C").arg(&format!("metadata={}", meta));
-    if build_runner.files().use_extra_filename(unit) {
-        cmd.arg("-C").arg(&format!("extra-filename=-{}", meta));
+    cmd.arg("-C").arg(&format!("metadata={}", meta.meta_hash()));
+    if meta.use_extra_filename() {
+        cmd.arg("-C")
+            .arg(&format!("extra-filename=-{}", meta.meta_hash()));
     }
 
     if rpath {
@@ -1518,7 +1521,7 @@ fn build_deps_args(
 fn add_custom_flags(
     cmd: &mut ProcessBuilder,
     build_script_outputs: &BuildScriptOutputs,
-    metadata: Option<Metadata>,
+    metadata: Option<UnitHash>,
 ) -> CargoResult<()> {
     if let Some(metadata) = metadata {
         if let Some(output) = build_script_outputs.get(metadata) {

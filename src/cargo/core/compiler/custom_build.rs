@@ -33,7 +33,7 @@
 
 use super::{fingerprint, BuildRunner, Job, Unit, Work};
 use crate::core::compiler::artifact;
-use crate::core::compiler::build_runner::Metadata;
+use crate::core::compiler::build_runner::UnitHash;
 use crate::core::compiler::fingerprint::DirtyReason;
 use crate::core::compiler::job_queue::JobState;
 use crate::core::{profiles::ProfileRoot, PackageId, Target};
@@ -111,13 +111,13 @@ pub struct BuildOutput {
 /// inserted during `build_map`. The rest of the entries are added
 /// immediately after each build script runs.
 ///
-/// The `Metadata` is the unique metadata hash for the `RunCustomBuild` Unit of
+/// The [`UnitHash`] is the unique metadata hash for the `RunCustomBuild` Unit of
 /// the package. It needs a unique key, since the build script can be run
 /// multiple times with different profiles or features. We can't embed a
 /// `Unit` because this structure needs to be shareable between threads.
 #[derive(Default)]
 pub struct BuildScriptOutputs {
-    outputs: HashMap<Metadata, BuildOutput>,
+    outputs: HashMap<UnitHash, BuildOutput>,
 }
 
 /// Linking information for a `Unit`.
@@ -141,9 +141,9 @@ pub struct BuildScripts {
     /// usage here doesn't blow up too much.
     ///
     /// For more information, see #2354.
-    pub to_link: Vec<(PackageId, Metadata)>,
+    pub to_link: Vec<(PackageId, UnitHash)>,
     /// This is only used while constructing `to_link` to avoid duplicates.
-    seen_to_link: HashSet<(PackageId, Metadata)>,
+    seen_to_link: HashSet<(PackageId, UnitHash)>,
     /// Host-only dependencies that have build scripts. Each element is an
     /// index into `BuildScriptOutputs`.
     ///
@@ -152,7 +152,7 @@ pub struct BuildScripts {
     /// Any `BuildOutput::library_paths` path relative to `target` will be
     /// added to `LD_LIBRARY_PATH` so that the compiler can find any dynamic
     /// libraries a build script may have generated.
-    pub plugins: BTreeSet<(PackageId, Metadata)>,
+    pub plugins: BTreeSet<(PackageId, UnitHash)>,
 }
 
 /// Dependency information as declared by a build script that might trigger
@@ -649,7 +649,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
 fn insert_log_messages_in_build_outputs(
     build_script_outputs: Arc<Mutex<BuildScriptOutputs>>,
     id: PackageId,
-    metadata_hash: Metadata,
+    metadata_hash: UnitHash,
     log_messages: Vec<LogMessage>,
 ) {
     let build_output_with_only_log_messages = BuildOutput {
@@ -1245,7 +1245,7 @@ pub fn build_map(build_runner: &mut BuildRunner<'_, '_>) -> CargoResult<()> {
 
     // When adding an entry to 'to_link' we only actually push it on if the
     // script hasn't seen it yet (e.g., we don't push on duplicates).
-    fn add_to_link(scripts: &mut BuildScripts, pkg: PackageId, metadata: Metadata) {
+    fn add_to_link(scripts: &mut BuildScripts, pkg: PackageId, metadata: UnitHash) {
         if scripts.seen_to_link.insert((pkg, metadata)) {
             scripts.to_link.push((pkg, metadata));
         }
@@ -1297,7 +1297,7 @@ fn prev_build_output(
 
 impl BuildScriptOutputs {
     /// Inserts a new entry into the map.
-    fn insert(&mut self, pkg_id: PackageId, metadata: Metadata, parsed_output: BuildOutput) {
+    fn insert(&mut self, pkg_id: PackageId, metadata: UnitHash, parsed_output: BuildOutput) {
         match self.outputs.entry(metadata) {
             Entry::Vacant(entry) => {
                 entry.insert(parsed_output);
@@ -1314,17 +1314,17 @@ impl BuildScriptOutputs {
     }
 
     /// Returns `true` if the given key already exists.
-    fn contains_key(&self, metadata: Metadata) -> bool {
+    fn contains_key(&self, metadata: UnitHash) -> bool {
         self.outputs.contains_key(&metadata)
     }
 
     /// Gets the build output for the given key.
-    pub fn get(&self, meta: Metadata) -> Option<&BuildOutput> {
+    pub fn get(&self, meta: UnitHash) -> Option<&BuildOutput> {
         self.outputs.get(&meta)
     }
 
     /// Returns an iterator over all entries.
-    pub fn iter(&self) -> impl Iterator<Item = (&Metadata, &BuildOutput)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&UnitHash, &BuildOutput)> {
         self.outputs.iter()
     }
 }
