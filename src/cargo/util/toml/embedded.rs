@@ -188,6 +188,7 @@ fn sanitize_name(name: &str) -> String {
     name
 }
 
+#[derive(Debug)]
 struct Source<'s> {
     shebang: Option<&'s str>,
     info: Option<&'s str>,
@@ -215,34 +216,47 @@ fn split_source(input: &str) -> CargoResult<Source<'_>> {
         }
 
         // No other choice than to consider this a shebang.
-        let (shebang, content) = source
+        let newline_end = source
             .content
-            .split_once('\n')
-            .unwrap_or((source.content, ""));
+            .find('\n')
+            .map(|pos| pos + 1)
+            .unwrap_or(source.content.len());
+        let (shebang, content) = source.content.split_at(newline_end);
         source.shebang = Some(shebang);
         source.content = content;
     }
 
-    // Experiment: let us try which char works better
-    let tick_char = '-';
+    const FENCE_CHAR: char = '-';
 
-    let tick_end = source
-        .content
+    let mut trimmed_content = source.content;
+    while !trimmed_content.is_empty() {
+        let c = trimmed_content;
+        let c = c.trim_start_matches([' ', '\t']);
+        let c = c.trim_start_matches(['\r', '\n']);
+        if c == trimmed_content {
+            break;
+        }
+        trimmed_content = c;
+    }
+    let fence_end = trimmed_content
         .char_indices()
-        .find_map(|(i, c)| (c != tick_char).then_some(i))
+        .find_map(|(i, c)| (c != FENCE_CHAR).then_some(i))
         .unwrap_or(source.content.len());
-    let (fence_pattern, rest) = match tick_end {
+    let (fence_pattern, rest) = match fence_end {
         0 => {
             return Ok(source);
         }
         1 | 2 => {
-            anyhow::bail!("found {tick_end} `{tick_char}` in rust frontmatter, expected at least 3")
+            anyhow::bail!(
+                "found {fence_end} `{FENCE_CHAR}` in rust frontmatter, expected at least 3"
+            )
         }
-        _ => source.content.split_at(tick_end),
+        _ => trimmed_content.split_at(fence_end),
     };
     let (info, content) = rest.split_once("\n").unwrap_or((rest, ""));
+    let info = info.trim();
     if !info.is_empty() {
-        source.info = Some(info.trim_end());
+        source.info = Some(info);
     }
     source.content = content;
 
@@ -267,25 +281,280 @@ fn split_source(input: &str) -> CargoResult<Source<'_>> {
 
 #[cfg(test)]
 mod test_expand {
+    use snapbox::assert_data_eq;
+    use snapbox::prelude::*;
     use snapbox::str;
 
     use super::*;
 
-    macro_rules! si {
-        ($i:expr) => {{
-            let shell = crate::Shell::from_write(Box::new(Vec::new()));
-            let cwd = std::env::current_dir().unwrap();
-            let home = home::cargo_home_with_cwd(&cwd).unwrap();
-            let gctx = GlobalContext::new(shell, cwd, home);
-            expand_manifest($i, std::path::Path::new("/home/me/test.rs"), &gctx)
-                .unwrap_or_else(|err| panic!("{}", err))
-        }};
+    #[track_caller]
+    fn assert_source(source: &str, expected: impl IntoData) {
+        use std::fmt::Write as _;
+
+        let actual = match split_source(source) {
+            Ok(actual) => actual,
+            Err(err) => panic!("unexpected err: {err}"),
+        };
+
+        let mut rendered = String::new();
+        write_optional_field(&mut rendered, "shebang", actual.shebang);
+        write_optional_field(&mut rendered, "info", actual.info);
+        write_optional_field(&mut rendered, "frontmatter", actual.frontmatter);
+        writeln!(&mut rendered, "content: {:?}", actual.content).unwrap();
+        assert_data_eq!(rendered, expected.raw());
+    }
+
+    fn write_optional_field(writer: &mut dyn std::fmt::Write, field: &str, value: Option<&str>) {
+        if let Some(value) = value {
+            writeln!(writer, "{field}: {value:?}").unwrap();
+        } else {
+            writeln!(writer, "{field}: None").unwrap();
+        }
+    }
+
+    #[track_caller]
+    fn assert_err(
+        result: Result<impl std::fmt::Debug, impl std::fmt::Display>,
+        err: impl IntoData,
+    ) {
+        match result {
+            Ok(d) => panic!("unexpected Ok({d:#?})"),
+            Err(actual) => snapbox::assert_data_eq!(actual.to_string(), err.raw()),
+        }
     }
 
     #[test]
-    fn test_default() {
-        snapbox::assert_data_eq!(
-            si!(r#"fn main() {}"#),
+    fn split_default() {
+        assert_source(
+            r#"fn main() {}
+"#,
+            str![[r#"
+shebang: None
+info: None
+frontmatter: None
+content: "fn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn split_dependencies() {
+        assert_source(
+            r#"---
+[dependencies]
+time="0.1.25"
+---
+fn main() {}
+"#,
+            str![[r#"
+shebang: None
+info: None
+frontmatter: "[dependencies]\ntime=\"0.1.25\"\n"
+content: "fn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn split_infostring() {
+        assert_source(
+            r#"---cargo
+[dependencies]
+time="0.1.25"
+---
+fn main() {}
+"#,
+            str![[r#"
+shebang: None
+info: "cargo"
+frontmatter: "[dependencies]\ntime=\"0.1.25\"\n"
+content: "fn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn split_infostring_whitespace() {
+        assert_source(
+            r#"--- cargo 
+[dependencies]
+time="0.1.25"
+---
+fn main() {}
+"#,
+            str![[r#"
+shebang: None
+info: "cargo"
+frontmatter: "[dependencies]\ntime=\"0.1.25\"\n"
+content: "fn main() {}\n"
+
+"#]],
+        );
+    }
+
+    #[test]
+    fn split_shebang() {
+        assert_source(
+            r#"#!/usr/bin/env cargo
+---
+[dependencies]
+time="0.1.25"
+---
+fn main() {}
+"#,
+            str![[r##"
+shebang: "#!/usr/bin/env cargo\n"
+info: None
+frontmatter: "[dependencies]\ntime=\"0.1.25\"\n"
+content: "fn main() {}\n"
+
+"##]],
+        );
+    }
+
+    #[test]
+    fn split_crlf() {
+        assert_source(
+                "#!/usr/bin/env cargo\r\n---\r\n[dependencies]\r\ntime=\"0.1.25\"\r\n---\r\nfn main() {}",
+            str![[r##"
+shebang: "#!/usr/bin/env cargo\r\n"
+info: None
+frontmatter: "[dependencies]\r\ntime=\"0.1.25\"\r\n"
+content: "fn main() {}"
+
+"##]]
+        );
+    }
+
+    #[test]
+    fn split_leading_newlines() {
+        assert_source(
+            r#"#!/usr/bin/env cargo
+    
+
+
+---
+[dependencies]
+time="0.1.25"
+---
+
+
+fn main() {}
+"#,
+            str![[r##"
+shebang: "#!/usr/bin/env cargo\n"
+info: None
+frontmatter: "[dependencies]\ntime=\"0.1.25\"\n"
+content: "\n\nfn main() {}\n"
+
+"##]],
+        );
+    }
+
+    #[test]
+    fn split_attribute() {
+        assert_source(
+            r#"#[allow(dead_code)]
+---
+[dependencies]
+time="0.1.25"
+---
+fn main() {}
+"#,
+            str![[r##"
+shebang: None
+info: None
+frontmatter: None
+content: "#[allow(dead_code)]\n---\n[dependencies]\ntime=\"0.1.25\"\n---\nfn main() {}\n"
+
+"##]],
+        );
+    }
+
+    #[test]
+    fn split_extra_dash() {
+        assert_source(
+            r#"#!/usr/bin/env cargo
+----------
+[dependencies]
+time="0.1.25"
+----------
+
+fn main() {}"#,
+            str![[r##"
+shebang: "#!/usr/bin/env cargo\n"
+info: None
+frontmatter: "[dependencies]\ntime=\"0.1.25\"\n"
+content: "\nfn main() {}"
+
+"##]],
+        );
+    }
+
+    #[test]
+    fn split_too_few_dashes() {
+        assert_err(
+            split_source(
+                r#"#!/usr/bin/env cargo
+--
+[dependencies]
+time="0.1.25"
+--
+fn main() {}
+"#,
+            ),
+            str!["found 2 `-` in rust frontmatter, expected at least 3"],
+        );
+    }
+
+    #[test]
+    fn split_mismatched_dashes() {
+        assert_err(
+            split_source(
+                r#"#!/usr/bin/env cargo
+---
+[dependencies]
+time="0.1.25"
+----
+fn main() {}
+"#,
+            ),
+            str!["unexpected trailing content on closing fence: `-`"],
+        );
+    }
+
+    #[test]
+    fn split_missing_close() {
+        assert_err(
+            split_source(
+                r#"#!/usr/bin/env cargo
+---
+[dependencies]
+time="0.1.25"
+fn main() {}
+"#,
+            ),
+            str!["no closing `---` found for frontmatter"],
+        );
+    }
+
+    #[track_caller]
+    fn expand(source: &str) -> String {
+        let shell = crate::Shell::from_write(Box::new(Vec::new()));
+        let cwd = std::env::current_dir().unwrap();
+        let home = home::cargo_home_with_cwd(&cwd).unwrap();
+        let gctx = GlobalContext::new(shell, cwd, home);
+        expand_manifest(source, std::path::Path::new("/home/me/test.rs"), &gctx)
+            .unwrap_or_else(|err| panic!("{}", err))
+    }
+
+    #[test]
+    fn expand_default() {
+        assert_data_eq!(
+            expand(r#"fn main() {}"#),
             str![[r#"
 [[bin]]
 name = "test-"
@@ -311,50 +580,16 @@ strip = true
     }
 
     #[test]
-    fn test_dependencies() {
-        snapbox::assert_data_eq!(
-            si!(r#"---cargo
+    fn expand_dependencies() {
+        assert_data_eq!(
+            expand(
+                r#"---cargo
 [dependencies]
 time="0.1.25"
 ---
 fn main() {}
-"#),
-            str![[r#"
-[[bin]]
-name = "test-"
-path = [..]
-
-[dependencies]
-time = "0.1.25"
-
-[package]
-autobenches = false
-autobins = false
-autoexamples = false
-autolib = false
-autotests = false
-build = false
-edition = "2021"
-name = "test-"
-
-[profile.release]
-strip = true
-
-[workspace]
-
-"#]]
-        );
-    }
-
-    #[test]
-    fn test_no_infostring() {
-        snapbox::assert_data_eq!(
-            si!(r#"---
-[dependencies]
-time="0.1.25"
----
-fn main() {}
-"#),
+"#
+            ),
             str![[r#"
 [[bin]]
 name = "test-"
