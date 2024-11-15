@@ -265,7 +265,7 @@ pub fn add(workspace: &Workspace<'_>, options: &AddOptions<'_>) -> CargoResult<(
 pub struct DepOp {
     /// Describes the crate
     pub crate_spec: Option<String>,
-    /// Dependency key, overriding the package name in crate_spec
+    /// Dependency key, overriding the package name in `crate_spec`
     pub rename: Option<String>,
 
     /// Feature flags to activate

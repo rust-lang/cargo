@@ -175,7 +175,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     ///
     /// See [`Metadata`] and [`fingerprint`] module for more.
     ///
-    /// [`fingerprint`]: ../../fingerprint/index.html#fingerprints-and-metadata
+    /// [`fingerprint`]: super::super::fingerprint#fingerprints-and-metadata
     pub fn metadata(&self, unit: &Unit) -> Metadata {
         self.metas[unit].meta_hash
     }
@@ -328,7 +328,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         self.layout(unit.kind).build().join(dir)
     }
 
-    /// Returns the "OUT_DIR" directory for running a build script.
+    /// Returns the "`OUT_DIR`" directory for running a build script.
     /// `/path/to/target/{debug,release}/build/PKG-HASH/out`
     pub fn build_script_out_dir(&self, unit: &Unit) -> PathBuf {
         self.build_script_run_dir(unit).join("out")
@@ -375,7 +375,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
             .map(Arc::clone)
     }
 
-    /// Returns the path where the output for the given unit and FileType
+    /// Returns the path where the output for the given unit and `FileType`
     /// should be uplifted to.
     ///
     /// Returns `None` if the unit shouldn't be uplifted (for example, a

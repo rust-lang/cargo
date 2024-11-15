@@ -111,7 +111,7 @@ pub struct BuildOutput {
 /// inserted during `build_map`. The rest of the entries are added
 /// immediately after each build script runs.
 ///
-/// The `Metadata` is the unique metadata hash for the RunCustomBuild Unit of
+/// The `Metadata` is the unique metadata hash for the `RunCustomBuild` Unit of
 /// the package. It needs a unique key, since the build script can be run
 /// multiple times with different profiles or features. We can't embed a
 /// `Unit` because this structure needs to be shareable between threads.
@@ -150,7 +150,7 @@ pub struct BuildScripts {
     /// This is the set of transitive dependencies that are host-only
     /// (proc-macro, plugin, build-dependency) that contain a build script.
     /// Any `BuildOutput::library_paths` path relative to `target` will be
-    /// added to LD_LIBRARY_PATH so that the compiler can find any dynamic
+    /// added to `LD_LIBRARY_PATH` so that the compiler can find any dynamic
     /// libraries a build script may have generated.
     pub plugins: BTreeSet<(PackageId, Metadata)>,
 }

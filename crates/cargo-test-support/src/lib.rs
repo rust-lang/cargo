@@ -890,7 +890,7 @@ impl Execs {
     ///
     /// Prefer [`Execs::with_stdout_data`] where possible.
     /// - `with` cannot be snapshotted
-    /// - The absence of `without`` can either mean success or that the string being looked for
+    /// - The absence of `without` can either mean success or that the string being looked for
     ///   changed.
     ///
     /// </div>
@@ -1565,9 +1565,10 @@ pub fn is_coarse_mtime() -> bool {
     cfg!(target_os = "macos") && is_ci()
 }
 
+/// A way for to increase the cut off for all the time based test.
+///
 /// Some CI setups are much slower then the equipment used by Cargo itself.
 /// Architectures that do not have a modern processor, hardware emulation, etc.
-/// This provides a way for those setups to increase the cut off for all the time based test.
 pub fn slow_cpu_multiplier(main: u64) -> Duration {
     static SLOW_CPU_MULTIPLIER: OnceLock<u64> = OnceLock::new();
     let slow_cpu_multiplier = SLOW_CPU_MULTIPLIER.get_or_init(|| {

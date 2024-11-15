@@ -1680,7 +1680,7 @@ impl<'de> de::Deserialize<'de> for InvalidCargoFeatures {
     }
 }
 
-/// A StringOrVec can be parsed from either a TOML string or array,
+/// This can be parsed from either a TOML string or array,
 /// but is always stored as a vector.
 #[derive(Clone, Debug, Serialize, Eq, PartialEq, PartialOrd, Ord)]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]

@@ -1,7 +1,7 @@
 //! Network tests for SSH connections.
 //!
-//! Note that these tests will generally require setting CARGO_CONTAINER_TESTS
-//! or CARGO_PUBLIC_NETWORK_TESTS.
+//! Note that these tests will generally require setting `CARGO_CONTAINER_TESTS`
+//! or `CARGO_PUBLIC_NETWORK_TESTS`.
 //!
 //! NOTE: The container tests almost certainly won't work on Windows.
 

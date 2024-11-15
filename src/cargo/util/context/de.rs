@@ -16,9 +16,9 @@ pub(super) struct Deserializer<'gctx> {
     pub(super) key: ConfigKey,
     /// Whether or not this key part is allowed to be an inner table. For
     /// example, `profile.dev.build-override` needs to check if
-    /// CARGO_PROFILE_DEV_BUILD_OVERRIDE_ prefixes exist. But
-    /// CARGO_BUILD_TARGET should not check for prefixes because it would
-    /// collide with CARGO_BUILD_TARGET_DIR. See `ConfigMapAccess` for
+    /// `CARGO_PROFILE_DEV_BUILD_OVERRIDE_` prefixes exist. But
+    /// `CARGO_BUILD_TARGET` should not check for prefixes because it would
+    /// collide with `CARGO_BUILD_TARGET_DIR`. See `ConfigMapAccess` for
     /// details.
     pub(super) env_prefix_ok: bool,
 }

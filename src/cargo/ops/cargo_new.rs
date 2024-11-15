@@ -572,7 +572,7 @@ pub fn init(opts: &NewOptions, gctx: &GlobalContext) -> CargoResult<NewProjectKi
     Ok(kind)
 }
 
-/// IgnoreList
+/// `IgnoreList`
 struct IgnoreList {
     /// git like formatted entries
     ignore: Vec<String>,
@@ -613,7 +613,7 @@ impl IgnoreList {
         ignore_items.join("\n") + "\n"
     }
 
-    /// format_existing is used to format the IgnoreList when the ignore file
+    /// `format_existing` is used to format the `IgnoreList` when the ignore file
     /// already exists. It reads the contents of the given `BufRead` and
     /// checks if the contents of the ignore list are already existing in the
     /// file.

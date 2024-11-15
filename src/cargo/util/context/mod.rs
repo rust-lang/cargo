@@ -113,10 +113,10 @@ use environment::Env;
 
 use super::auth::RegistryConfig;
 
-// Helper macro for creating typed access methods.
+/// Helper macro for creating typed access methods.
 macro_rules! get_value_typed {
     ($name:ident, $ty:ty, $variant:ident, $expected:expr) => {
-        /// Low-level private method for getting a config value as an OptValue.
+        /// Low-level private method for getting a config value as an [`OptValue`].
         fn $name(&self, key: &ConfigKey) -> Result<OptValue<$ty>, ConfigError> {
             let cv = self.get_cv(key)?;
             let env = self.get_config_env::<$ty>(key)?;
@@ -244,7 +244,7 @@ pub struct GlobalContext {
     /// NOTE: this should be set before `configure()`. If calling this from an integration test,
     /// consider using `ConfigBuilder::enable_nightly_features` instead.
     pub nightly_features_allowed: bool,
-    /// WorkspaceRootConfigs that have been found
+    /// `WorkspaceRootConfigs` that have been found
     pub ws_roots: RefCell<HashMap<PathBuf, WorkspaceRootConfig>>,
     /// The global cache tracker is a database used to track disk cache usage.
     global_cache_tracker: LazyCell<RefCell<GlobalCacheTracker>>,
@@ -909,7 +909,7 @@ impl GlobalContext {
         }
     }
 
-    /// Helper for StringList type to get something that is a string or list.
+    /// Helper for `StringList` type to get something that is a string or list.
     fn get_list_or_string(
         &self,
         key: &ConfigKey,
@@ -1888,7 +1888,7 @@ impl GlobalContext {
         Ok(())
     }
 
-    /// Returns a list of [target.'cfg()'] tables.
+    /// Returns a list of [target.'`cfg()`'] tables.
     ///
     /// The list is sorted by the table name.
     pub fn target_cfgs(&self) -> CargoResult<&Vec<(String, TargetCfgConfig)>> {
@@ -2916,11 +2916,11 @@ impl StringList {
     }
 }
 
-/// StringList automatically merges config values with environment values,
-/// this instead follows the precedence rules, so that eg. a string list found
-/// in the environment will be used instead of one in a config file.
+/// Alternative to [`StringList`] that follows precedence rules, rather than merging config values with environment values,
 ///
-/// This is currently only used by `PathAndArgs`
+/// e.g. a string list found in the environment will be used instead of one in a config file.
+///
+/// This is currently only used by [`PathAndArgs`]
 #[derive(Debug, Deserialize)]
 pub struct UnmergedStringList(Vec<String>);
 

@@ -1,7 +1,7 @@
 //! Utility for capturing a global cache last-use database based on the files
 //! on a real-world system.
 //!
-//! This will look in the CARGO_HOME of the current system and record last-use
+//! This will look in the `CARGO_HOME` of the current system and record last-use
 //! data for all files in the cache. This is intended to provide a real-world
 //! example for a benchmark that should be close to what a real set of data
 //! should look like.

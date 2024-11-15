@@ -422,7 +422,7 @@ pub trait RegistryData {
     /// Returns the [`Path`] to the [`Filesystem`].
     fn assert_index_locked<'a>(&self, path: &'a Filesystem) -> &'a Path;
 
-    /// Block until all outstanding Poll::Pending requests are Poll::Ready.
+    /// Block until all outstanding `Poll::Pending` requests are `Poll::Ready`.
     fn block_until_ready(&mut self) -> CargoResult<()>;
 }
 

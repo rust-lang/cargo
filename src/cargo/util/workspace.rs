@@ -95,6 +95,8 @@ pub fn print_available_tests(ws: &Workspace<'_>, options: &CompileOptions) -> Ca
     print_available_targets(Target::is_test, ws, options, "--test", "test targets")
 }
 
+/// The source path and its current dir for use in compilation.
+///
 /// The path that we pass to rustc is actually fairly important because it will
 /// show up in error messages (important for readability), debug information
 /// (important for caching), etc. As a result we need to be pretty careful how we

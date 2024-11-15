@@ -1020,7 +1020,7 @@ impl GlobalCacheTracker {
         Ok(())
     }
 
-    /// Adds paths to delete from either registry_crate or registry_src whose
+    /// Adds paths to delete from either `registry_crate` or `registry_src` whose
     /// last use is older than the given timestamp.
     fn get_registry_items_to_clean_age(
         conn: &Connection,

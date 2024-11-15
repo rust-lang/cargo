@@ -176,7 +176,7 @@ fn registry<'gctx>(
     ))
 }
 
-/// Gets the SourceId for an index or registry setting.
+/// Gets the `SourceId` for an index or registry setting.
 ///
 /// The `index` and `reg` values are from the command-line or config settings.
 /// If both are None, and no source-replacement is configured, returns the source for crates.io.
@@ -314,7 +314,7 @@ pub(crate) struct RegistrySourceIds {
     /// Use when interacting with the source (querying / publishing , etc)
     ///
     /// The source for crates.io may be replaced by a built-in source for accessing crates.io with
-    /// the sparse protocol, or a source for the testing framework (when the replace_crates_io
+    /// the sparse protocol, or a source for the testing framework (when the `replace_crates_io`
     /// function is used)
     ///
     /// User-defined source replacement is not applied.

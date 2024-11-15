@@ -130,7 +130,7 @@ impl OptVersionReq {
     }
 
     /// Allows to match pre-release in SemVer-Compatible way.
-    /// See [`semver_eval_ext`] for matches_prerelease semantics.
+    /// See [`semver_eval_ext`] for `matches_prerelease` semantics.
     pub fn matches_prerelease(&self, version: &Version) -> bool {
         if let OptVersionReq::Req(req) = self {
             return req.matches_prerelease(version);

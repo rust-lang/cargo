@@ -24,7 +24,7 @@ pub fn parse_name_and_section(text: &str) -> Result<(&str, u8), Error> {
     Ok((name, section))
 }
 
-/// Extracts the text from a header after Tag::Heading has been received.
+/// Extracts the text from a header after `Tag::Heading` has been received.
 pub fn header_text<'e>(parser: &mut EventIter<'e>) -> Result<CowStr<'e>, Error> {
     let text = match parser.next() {
         Some((Event::Text(t), _range)) => t,

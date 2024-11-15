@@ -166,7 +166,7 @@ fn read_new_post(new_path: &Path) -> (Vec<u8>, Vec<u8>) {
 ///
 /// - `expected_crate_name` should be something like `foo-0.0.1.crate`.
 /// - `expected_files` should be a complete list of files in the crate
-///   (relative to expected_crate_name).
+///   (relative to `expected_crate_name`).
 /// - `expected_contents` should be a list of `(file_name, contents)` tuples
 ///   to validate the contents of the given file. Only the listed files will
 ///   be checked (others will be ignored).

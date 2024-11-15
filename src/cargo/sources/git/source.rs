@@ -1,4 +1,4 @@
-//! See [GitSource].
+//! See [`GitSource`].
 
 use crate::core::global_cache_tracker;
 use crate::core::GitReference;

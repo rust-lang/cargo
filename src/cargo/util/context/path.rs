@@ -82,7 +82,7 @@ impl<'de> serde::Deserialize<'de> for PathAndArgs {
 }
 
 impl PathAndArgs {
-    /// Construct a PathAndArgs from a string. The string will be split on ascii whitespace,
+    /// Construct a `PathAndArgs` from a string. The string will be split on ascii whitespace,
     /// with the first item being treated as a `ConfigRelativePath` to the executable, and subsequent
     /// items as arguments.
     pub fn from_whitespace_separated_string(p: &Value<String>) -> PathAndArgs {

@@ -1,7 +1,7 @@
 //! Network tests for https transport.
 //!
-//! Note that these tests will generally require setting CARGO_CONTAINER_TESTS
-//! or CARGO_PUBLIC_NETWORK_TESTS.
+//! Note that these tests will generally require setting `CARGO_CONTAINER_TESTS`
+//! or `CARGO_PUBLIC_NETWORK_TESTS`.
 
 use cargo_test_support::containers::Container;
 use cargo_test_support::prelude::*;

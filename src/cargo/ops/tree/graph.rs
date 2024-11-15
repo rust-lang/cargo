@@ -74,9 +74,9 @@ pub struct Graph<'a> {
     /// For example `--features foo` will mark the "foo" node here.
     cli_features: HashSet<usize>,
     /// Map of dependency names, used for building internal feature map for
-    /// dep_name/feat_name syntax.
+    /// `dep_name/feat_name` syntax.
     ///
-    /// Key is the index of a package node, value is a map of dep_name to a
+    /// Key is the index of a package node, value is a map of `dep_name` to a
     /// set of `(pkg_node_index, is_optional)`.
     dep_name_map: HashMap<usize, HashMap<InternedString, HashSet<(usize, bool)>>>,
 }
@@ -126,7 +126,7 @@ impl<'a> Graph<'a> {
         &self.nodes[index]
     }
 
-    /// Given a slice of PackageIds, returns the indexes of all nodes that match.
+    /// Given a slice of `PackageIds`, returns the indexes of all nodes that match.
     pub fn indexes_from_ids(&self, package_ids: &[PackageId]) -> Vec<usize> {
         let mut result: Vec<(&Node, usize)> = self
             .nodes

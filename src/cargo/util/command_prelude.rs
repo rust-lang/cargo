@@ -62,7 +62,7 @@ pub trait CommandExt: Sized {
         )
     }
 
-    /// Variant of arg_package_spec that does not include the `--all` flag
+    /// Variant of `arg_package_spec` that does not include the `--all` flag
     /// (but does include `--workspace`). Used to avoid confusion with
     /// historical uses of `--all`.
     fn arg_package_spec_no_all(

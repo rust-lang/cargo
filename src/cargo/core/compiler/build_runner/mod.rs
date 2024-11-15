@@ -80,7 +80,7 @@ pub struct BuildRunner<'a, 'gctx> {
     pub lto: HashMap<Unit, Lto>,
 
     /// Map of Doc/Docscrape units to metadata for their -Cmetadata flag.
-    /// See Context::find_metadata_units for more details.
+    /// See `Context::find_metadata_units` for more details.
     pub metadata_for_doc_units: HashMap<Unit, Metadata>,
 
     /// Set of metadata of Docscrape units that fail before completion, e.g.
@@ -155,7 +155,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
     ///
     /// See [`ops::cargo_compile`] for a higher-level view of the compile process.
     ///
-    /// [`ops::cargo_compile`]: ../../../ops/cargo_compile/index.html
+    /// [`ops::cargo_compile`]: crate::ops::cargo_compile
     #[tracing::instrument(skip_all)]
     pub fn compile(mut self, exec: &Arc<dyn Executor>) -> CargoResult<Compilation<'gctx>> {
         // A shared lock is held during the duration of the build since rustc
@@ -415,7 +415,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         &self.bcx.unit_graph[unit]
     }
 
-    /// Returns the RunCustomBuild Unit associated with the given Unit.
+    /// Returns the `RunCustomBuild` Unit associated with the given Unit.
     ///
     /// If the package does not have a build script, this returns None.
     pub fn find_build_script_unit(&self, unit: &Unit) -> Option<Unit> {
@@ -431,7 +431,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
             .map(|unit_dep| unit_dep.unit.clone())
     }
 
-    /// Returns the metadata hash for the RunCustomBuild Unit associated with
+    /// Returns the metadata hash for the `RunCustomBuild` Unit associated with
     /// the given unit.
     ///
     /// If the package does not have a build script, this returns None.
@@ -440,7 +440,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
         Some(self.get_run_build_script_metadata(&script_unit))
     }
 
-    /// Returns the metadata hash for a RunCustomBuild unit.
+    /// Returns the metadata hash for a `RunCustomBuild` unit.
     pub fn get_run_build_script_metadata(&self, unit: &Unit) -> Metadata {
         assert!(unit.mode.is_run_custom_build());
         self.files().metadata(unit)

@@ -747,7 +747,7 @@ fn traverse_and_share(
     new_unit
 }
 
-/// Removes duplicate CompileMode::Doc units that would cause problems with
+/// Removes duplicate `CompileMode::Doc` units that would cause problems with
 /// filename collisions.
 ///
 /// Rustdoc only separates units by crate name in the file directory

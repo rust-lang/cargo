@@ -209,7 +209,7 @@ impl SourceId {
         SourceId::new(SourceKind::Git(reference), url.clone(), None)
     }
 
-    /// Creates a SourceId from a remote registry URL when the registry name
+    /// Creates a `SourceId` from a remote registry URL when the registry name
     /// cannot be determined, e.g. a user passes `--index` directly from CLI.
     ///
     /// Use [`SourceId::for_alt_registry`] if a name can provided, which
@@ -446,7 +446,7 @@ impl SourceId {
     }
 
     /// Check if the precise data field stores information for this `name`
-    /// from a call to [SourceId::with_precise_registry_version].
+    /// from a call to [`SourceId::with_precise_registry_version`].
     ///
     /// If so return the version currently in the lock file and the version to be updated to.
     pub fn precise_registry_version(
@@ -502,7 +502,7 @@ impl SourceId {
     /// On a registry dependency we also need to keep track of the package that
     /// should be updated and even which of the versions should be updated.
     /// All of this gets encoded in the precise field using this method.
-    /// The data can be read with [SourceId::precise_registry_version]
+    /// The data can be read with [`SourceId::precise_registry_version`]
     pub fn with_precise_registry_version(
         self,
         name: InternedString,
@@ -665,7 +665,7 @@ impl fmt::Display for SourceId {
     }
 }
 
-/// The hash of SourceId is used in the name of some Cargo folders, so shouldn't
+/// The hash of `SourceId` is used in the name of some Cargo folders, so shouldn't
 /// vary. `as_str` gives the serialisation of a url (which has a spec) and so
 /// insulates against possible changes in how the url crate does hashing.
 impl Hash for SourceId {

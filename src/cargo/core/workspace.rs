@@ -396,7 +396,7 @@ impl<'gctx> Workspace<'gctx> {
             .unwrap_or(&self.current_manifest)
     }
 
-    /// Returns the root Package or VirtualManifest.
+    /// Returns the root Package or `VirtualManifest`.
     pub fn root_maybe(&self) -> &MaybePackage {
         self.packages.get(self.root_manifest())
     }

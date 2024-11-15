@@ -69,13 +69,13 @@
 //! `cargo rustc` extra args                   | ✓           | ✓
 //! [`CompileMode`]                            | ✓           | ✓
 //! Target Name                                | ✓           | ✓
-//! TargetKind (bin/lib/etc.)                  | ✓           | ✓
+//! `TargetKind` (bin/lib/etc.)                | ✓           | ✓
 //! Enabled Features                           | ✓           | ✓
 //! Declared Features                          | ✓           |
 //! Immediate dependency’s hashes              | ✓[^1]       | ✓
 //! [`CompileKind`] (host/target)              | ✓           | ✓
-//! __CARGO_DEFAULT_LIB_METADATA[^4]           |             | ✓
-//! package_id                                 |             | ✓
+//! `__CARGO_DEFAULT_LIB_METADATA`[^4]         |             | ✓
+//! `package_id`                               |             | ✓
 //! authors, description, homepage, repo       | ✓           |
 //! Target src path relative to ws             | ✓           |
 //! Target flags (test/bench/for_host/edition) | ✓           |
@@ -84,7 +84,7 @@
 //! RUSTFLAGS/RUSTDOCFLAGS                     | ✓           |
 //! [`Lto`] flags                              | ✓           | ✓
 //! config settings[^5]                        | ✓           |
-//! is_std                                     |             | ✓
+//! `is_std`                                   |             | ✓
 //! `[lints]` table[^6]                        | ✓           |
 //! `[lints.rust.unexpected_cfgs.check-cfg]`   | ✓           |
 //!
@@ -738,7 +738,7 @@ enum LocalFingerprint {
     /// for us to look at. If any of those files are newer than this file then
     /// we need to recompile.
     ///
-    /// If the `checksum` bool is true then the dep_info file is expected to
+    /// If the `checksum` bool is true then the `dep_info` file is expected to
     /// contain file checksums instead of file mtimes.
     CheckDepInfo { dep_info: PathBuf, checksum: bool },
 

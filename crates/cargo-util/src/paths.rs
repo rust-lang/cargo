@@ -189,7 +189,7 @@ pub fn write<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()>
 
 /// Writes a file to disk atomically.
 ///
-/// write_atomic uses tempfile::persist to accomplish atomic writes.
+/// This uses `tempfile::persist` to accomplish atomic writes.
 pub fn write_atomic<P: AsRef<Path>, C: AsRef<[u8]>>(path: P, contents: C) -> Result<()> {
     let path = path.as_ref();
 
