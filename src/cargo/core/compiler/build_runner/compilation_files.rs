@@ -588,6 +588,12 @@ fn compute_metadata(
     metas: &mut HashMap<Unit, Metadata>,
 ) -> Metadata {
     let bcx = &build_runner.bcx;
+    let deps_metadata = build_runner
+        .unit_deps(unit)
+        .iter()
+        .map(|dep| *metadata_of(&dep.unit, build_runner, metas))
+        .collect::<Vec<_>>();
+
     let mut hasher = StableHasher::new();
 
     METADATA_VERSION.hash(&mut hasher);
@@ -604,13 +610,12 @@ fn compute_metadata(
     unit.features.hash(&mut hasher);
 
     // Mix in the target-metadata of all the dependencies of this target.
-    let mut deps_metadata = build_runner
-        .unit_deps(unit)
+    let mut dep_hashes = deps_metadata
         .iter()
-        .map(|dep| metadata_of(&dep.unit, build_runner, metas).meta_hash)
+        .map(|m| m.meta_hash)
         .collect::<Vec<_>>();
-    deps_metadata.sort();
-    deps_metadata.hash(&mut hasher);
+    dep_hashes.sort();
+    dep_hashes.hash(&mut hasher);
 
     // Throw in the profile we're compiling with. This helps caching
     // `panic=abort` and `panic=unwind` artifacts, additionally with various
