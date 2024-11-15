@@ -113,7 +113,7 @@ use environment::Env;
 
 use super::auth::RegistryConfig;
 
-// Helper macro for creating typed access methods.
+/// Helper macro for creating typed access methods.
 macro_rules! get_value_typed {
     ($name:ident, $ty:ty, $variant:ident, $expected:expr) => {
         /// Low-level private method for getting a config value as an [`OptValue`].
@@ -2916,11 +2916,11 @@ impl StringList {
     }
 }
 
-/// `StringList` automatically merges config values with environment values,
-/// this instead follows the precedence rules, so that eg. a string list found
-/// in the environment will be used instead of one in a config file.
+/// Alternative to [`StringList`] that follows precedence rules, rather than merging config values with environment values,
 ///
-/// This is currently only used by `PathAndArgs`
+/// e.g. a string list found in the environment will be used instead of one in a config file.
+///
+/// This is currently only used by [`PathAndArgs`]
 #[derive(Debug, Deserialize)]
 pub struct UnmergedStringList(Vec<String>);
 

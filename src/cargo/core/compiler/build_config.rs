@@ -154,6 +154,7 @@ pub enum MessageFormat {
 }
 
 /// The general "mode" for what to do.
+///
 /// This is used for two purposes. The commands themselves pass this in to
 /// `compile_ws` to tell it the general execution strategy. This influences
 /// the default targets selected. The other use is in the `Unit` struct

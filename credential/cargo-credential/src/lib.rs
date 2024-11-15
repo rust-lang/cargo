@@ -211,7 +211,9 @@ pub enum CacheControl {
     Unknown,
 }
 
-/// Credential process JSON protocol version. If the protocol needs to make
+/// Credential process JSON protocol version.
+///
+/// If the protocol needs to make
 /// a breaking change, a new protocol version should be defined (`PROTOCOL_VERSION_2`).
 /// This library should offer support for both protocols if possible, by signaling
 /// in the `CredentialHello` message. Cargo will then choose which protocol to use,

@@ -47,7 +47,9 @@ pub fn home_dir_with_env(env: &dyn Env) -> Option<PathBuf> {
     env.home_dir()
 }
 
-/// Variant of `cargo_home` where the environment source is parameterized. This is
+/// Variant of `cargo_home` where the environment source is parameterized.
+///
+/// This is
 /// specifically to support in-process testing scenarios as environment
 /// variables and user home metadata are normally process global state. See the
 /// [`Env`] trait.
@@ -57,7 +59,9 @@ pub fn cargo_home_with_env(env: &dyn Env) -> io::Result<PathBuf> {
 }
 
 /// Variant of `cargo_home_with_cwd` where the environment source is
-/// parameterized. This is specifically to support in-process testing scenarios
+/// parameterized.
+///
+/// This is specifically to support in-process testing scenarios
 /// as environment variables and user home metadata are normally process global
 /// state. See the `OsEnv` trait.
 pub fn cargo_home_with_cwd_env(env: &dyn Env, cwd: &Path) -> io::Result<PathBuf> {
@@ -77,7 +81,9 @@ pub fn cargo_home_with_cwd_env(env: &dyn Env, cwd: &Path) -> io::Result<PathBuf>
 }
 
 /// Variant of `cargo_home_with_cwd` where the environment source is
-/// parameterized. This is specifically to support in-process testing scenarios
+/// parameterized.
+///
+/// This is specifically to support in-process testing scenarios
 /// as environment variables and user home metadata are normally process global
 /// state. See the `OsEnv` trait.
 pub fn rustup_home_with_env(env: &dyn Env) -> io::Result<PathBuf> {
@@ -86,7 +92,9 @@ pub fn rustup_home_with_env(env: &dyn Env) -> io::Result<PathBuf> {
 }
 
 /// Variant of `cargo_home_with_cwd` where the environment source is
-/// parameterized. This is specifically to support in-process testing scenarios
+/// parameterized.
+///
+/// This is specifically to support in-process testing scenarios
 /// as environment variables and user home metadata are normally process global
 /// state. See the `OsEnv` trait.
 pub fn rustup_home_with_cwd_env(env: &dyn Env, cwd: &Path) -> io::Result<PathBuf> {
