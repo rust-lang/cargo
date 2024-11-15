@@ -6,6 +6,7 @@
 
 use std::hash::{Hasher, SipHasher};
 
+#[derive(Clone)]
 pub struct StableHasher(SipHasher);
 
 impl StableHasher {

@@ -86,24 +86,25 @@ impl fmt::Debug for UnitHash {
 /// rebuild is needed.
 #[derive(Copy, Clone, Debug)]
 pub struct Metadata {
-    meta_hash: UnitHash,
-    use_extra_filename: bool,
+    unit_id: UnitHash,
+    c_metadata: UnitHash,
+    c_extra_filename: Option<UnitHash>,
 }
 
 impl Metadata {
     /// A hash to identify a given [`Unit`] in the build graph
     pub fn unit_id(&self) -> UnitHash {
-        self.meta_hash
+        self.unit_id
     }
 
     /// A hash to add to symbol naming through `-C metadata`
     pub fn c_metadata(&self) -> UnitHash {
-        self.meta_hash
+        self.c_metadata
     }
 
     /// A hash to add to file names through `-C extra-filename`
     pub fn c_extra_filename(&self) -> Option<UnitHash> {
-        self.use_extra_filename.then_some(self.meta_hash)
+        self.c_extra_filename
     }
 }
 
@@ -678,19 +679,34 @@ fn compute_metadata(
         target_configs_are_different.hash(&mut shared_hasher);
     }
 
+    let mut c_metadata_hasher = shared_hasher.clone();
     // Mix in the target-metadata of all the dependencies of this target.
-    let mut dep_hashes = deps_metadata
+    let mut dep_c_metadata_hashes = deps_metadata
         .iter()
-        .map(|m| m.meta_hash)
+        .map(|m| m.c_metadata)
         .collect::<Vec<_>>();
-    dep_hashes.sort();
-    dep_hashes.hash(&mut shared_hasher);
+    dep_c_metadata_hashes.sort();
+    dep_c_metadata_hashes.hash(&mut c_metadata_hasher);
 
-    let meta_hash = UnitHash(shared_hasher.finish());
+    let mut c_extra_filename_hasher = shared_hasher.clone();
+    // Mix in the target-metadata of all the dependencies of this target.
+    let mut dep_c_extra_filename_hashes = deps_metadata
+        .iter()
+        .map(|m| m.c_extra_filename)
+        .collect::<Vec<_>>();
+    dep_c_extra_filename_hashes.sort();
+    dep_c_extra_filename_hashes.hash(&mut c_extra_filename_hasher);
+
+    let c_metadata = UnitHash(c_metadata_hasher.finish());
+    let c_extra_filename = UnitHash(c_extra_filename_hasher.finish());
+    let unit_id = c_extra_filename;
+
+    let c_extra_filename = use_extra_filename.then_some(c_extra_filename);
 
     Metadata {
-        meta_hash,
-        use_extra_filename,
+        unit_id,
+        c_metadata,
+        c_extra_filename,
     }
 }
 
