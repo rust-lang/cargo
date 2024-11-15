@@ -595,47 +595,47 @@ fn compute_metadata(
         .collect::<Vec<_>>();
     let use_extra_filename = use_extra_filename(bcx, unit);
 
-    let mut hasher = StableHasher::new();
+    let mut shared_hasher = StableHasher::new();
 
-    METADATA_VERSION.hash(&mut hasher);
+    METADATA_VERSION.hash(&mut shared_hasher);
 
     // Unique metadata per (name, source, version) triple. This'll allow us
     // to pull crates from anywhere without worrying about conflicts.
     unit.pkg
         .package_id()
         .stable_hash(bcx.ws.root())
-        .hash(&mut hasher);
+        .hash(&mut shared_hasher);
 
     // Also mix in enabled features to our metadata. This'll ensure that
     // when changing feature sets each lib is separately cached.
-    unit.features.hash(&mut hasher);
+    unit.features.hash(&mut shared_hasher);
 
     // Throw in the profile we're compiling with. This helps caching
     // `panic=abort` and `panic=unwind` artifacts, additionally with various
     // settings like debuginfo and whatnot.
-    unit.profile.hash(&mut hasher);
-    unit.mode.hash(&mut hasher);
-    build_runner.lto[unit].hash(&mut hasher);
+    unit.profile.hash(&mut shared_hasher);
+    unit.mode.hash(&mut shared_hasher);
+    build_runner.lto[unit].hash(&mut shared_hasher);
 
     // Artifacts compiled for the host should have a different
     // metadata piece than those compiled for the target, so make sure
     // we throw in the unit's `kind` as well.  Use `fingerprint_hash`
     // so that the StableHash doesn't change based on the pathnames
     // of the custom target JSON spec files.
-    unit.kind.fingerprint_hash().hash(&mut hasher);
+    unit.kind.fingerprint_hash().hash(&mut shared_hasher);
 
     // Finally throw in the target name/kind. This ensures that concurrent
     // compiles of targets in the same crate don't collide.
-    unit.target.name().hash(&mut hasher);
-    unit.target.kind().hash(&mut hasher);
+    unit.target.name().hash(&mut shared_hasher);
+    unit.target.kind().hash(&mut shared_hasher);
 
-    hash_rustc_version(bcx, &mut hasher, unit);
+    hash_rustc_version(bcx, &mut shared_hasher, unit);
 
     if build_runner.bcx.ws.is_member(&unit.pkg) {
         // This is primarily here for clippy. This ensures that the clippy
         // artifacts are separate from the `check` ones.
         if let Some(path) = &build_runner.bcx.rustc().workspace_wrapper {
-            path.hash(&mut hasher);
+            path.hash(&mut shared_hasher);
         }
     }
 
@@ -646,7 +646,7 @@ fn compute_metadata(
         .gctx
         .get_env("__CARGO_DEFAULT_LIB_METADATA")
     {
-        channel.hash(&mut hasher);
+        channel.hash(&mut shared_hasher);
     }
 
     // std units need to be kept separate from user dependencies. std crates
@@ -656,7 +656,7 @@ fn compute_metadata(
     // don't need unstable support. A future experiment might be to set
     // `is_std` to false for build dependencies so that they can be shared
     // with user dependencies.
-    unit.is_std.hash(&mut hasher);
+    unit.is_std.hash(&mut shared_hasher);
 
     // While we don't hash RUSTFLAGS because it may contain absolute paths that
     // hurts reproducibility, we track whether a unit's RUSTFLAGS is from host
@@ -675,7 +675,7 @@ fn compute_metadata(
                 .target_config(CompileKind::Host)
                 .links_overrides
                 != unit.links_overrides;
-        target_configs_are_different.hash(&mut hasher);
+        target_configs_are_different.hash(&mut shared_hasher);
     }
 
     // Mix in the target-metadata of all the dependencies of this target.
@@ -684,9 +684,9 @@ fn compute_metadata(
         .map(|m| m.meta_hash)
         .collect::<Vec<_>>();
     dep_hashes.sort();
-    dep_hashes.hash(&mut hasher);
+    dep_hashes.hash(&mut shared_hasher);
 
-    let meta_hash = UnitHash(hasher.finish());
+    let meta_hash = UnitHash(shared_hasher.finish());
 
     Metadata {
         meta_hash,
