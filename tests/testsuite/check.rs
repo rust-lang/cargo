@@ -1077,14 +1077,12 @@ fn warn_manifest_with_project() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024")]
+#[cargo_test]
 fn error_manifest_with_project_on_2024() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["edition2024"]
-
                 [project]
                 name = "foo"
                 version = "0.0.1"
@@ -1095,7 +1093,6 @@ fn error_manifest_with_project_on_2024() {
         .build();
 
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`

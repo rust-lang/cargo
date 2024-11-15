@@ -76,7 +76,7 @@ resolver = "2"
 [package]
 name = "hello_world" # the name of the package
 version = "0.1.0"    # the current version, obeying semver
-edition = "2021"     # the edition, will have no effect on a resolver used in the workspace
+edition = "2024"     # the edition, will have no effect on a resolver used in the workspace
 authors = ["Alice <a@example.com>", "Bob <b@example.com>"]
 ```
 

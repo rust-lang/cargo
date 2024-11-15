@@ -515,7 +515,7 @@ higher v0.0.1 ([ROOT]/foo)
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 in rustc is unstable")]
+#[cargo_test]
 fn resolve_edition2024() {
     Package::new("only-newer", "1.6.0")
         .rust_version("1.90.0")
@@ -534,8 +534,6 @@ fn resolve_edition2024() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition2024"]
-
             [package]
             name = "foo"
             version = "0.0.1"
@@ -553,7 +551,6 @@ fn resolve_edition2024() {
 
     // Edition2024 should resolve for MSRV
     p.cargo("generate-lockfile")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest Rust 1.85.0 compatible versions
@@ -563,7 +560,6 @@ fn resolve_edition2024() {
 "#]])
         .run();
     p.cargo("tree")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stdout_data(str![[r#"
 foo v0.0.1 ([ROOT]/foo)
 ├── newer-and-older v1.5.0
@@ -581,10 +577,8 @@ foo v0.0.1 ([ROOT]/foo)
 [ADDING] only-newer v1.6.0 (requires Rust 1.90.0)
 
 "#]])
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .run();
     p.cargo("tree")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stdout_data(str![[r#"
 foo v0.0.1 ([ROOT]/foo)
 ├── newer-and-older v1.6.0
@@ -603,10 +597,8 @@ foo v0.0.1 ([ROOT]/foo)
 [ADDING] only-newer v1.6.0 (requires Rust 1.90.0)
 
 "#]])
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .run();
     p.cargo("tree")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stdout_data(str![[r#"
 foo v0.0.1 ([ROOT]/foo)
 ├── newer-and-older v1.6.0

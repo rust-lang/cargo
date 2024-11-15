@@ -869,7 +869,7 @@ fn prepare_for_already_on_latest_unstable() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn prepare_for_already_on_latest_stable() {
     // Stable counterpart of prepare_for_already_on_latest_unstable.
     if Edition::LATEST_UNSTABLE.is_some() {
@@ -2361,8 +2361,6 @@ fn migrate_project_to_package() {
         .file(
             "Cargo.toml",
             r#"
-cargo-features = ["edition2024"]
-
 # Before project
 [ project ] # After project header
 # After project header line
@@ -2375,7 +2373,6 @@ edition = "2021"
         .build();
 
     p.cargo("fix --edition --allow-no-vcs")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stderr_data(str![[r#"
 [MIGRATING] Cargo.toml from 2021 edition to 2024
 [FIXED] Cargo.toml (1 fix)
@@ -2388,8 +2385,6 @@ edition = "2021"
     assert_e2e().eq(
         p.read_file("Cargo.toml"),
         str![[r#"
-
-cargo-features = ["edition2024"]
 
 # Before project
 [ package ] # After project header
@@ -2408,8 +2403,6 @@ fn migrate_removes_project() {
         .file(
             "Cargo.toml",
             r#"
-cargo-features = ["edition2024"]
-
 # Before package
 [ package ] # After package header
 # After package header line
@@ -2429,7 +2422,6 @@ edition = "2021"
         .build();
 
     p.cargo("fix --edition --allow-no-vcs")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stderr_data(str![[r#"
 [MIGRATING] Cargo.toml from 2021 edition to 2024
 [FIXED] Cargo.toml (1 fix)
@@ -2442,8 +2434,6 @@ edition = "2021"
     assert_e2e().eq(
         p.read_file("Cargo.toml"),
         str![[r#"
-
-cargo-features = ["edition2024"]
 
 # Before package
 [ package ] # After package header
@@ -2462,8 +2452,6 @@ fn migrate_rename_underscore_fields() {
         .file(
             "Cargo.toml",
             r#"
-cargo-features = ["edition2024"]
-
 [workspace.dependencies]
 # Before default_features
 a = {path = "a", default_features = false}  # After default_features value
@@ -2531,7 +2519,6 @@ a = {path = "a", default_features = false}
         .build();
 
     p.cargo("fix --edition --allow-no-vcs")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stderr_data(str![[r#"
 [MIGRATING] Cargo.toml from 2021 edition to 2024
 [FIXED] Cargo.toml (11 fixes)
@@ -2546,8 +2533,6 @@ a = {path = "a", default_features = false}
     assert_e2e().eq(
         p.read_file("Cargo.toml"),
         str![[r#"
-
-cargo-features = ["edition2024"]
 
 [workspace.dependencies]
 # Before default_features
@@ -2691,7 +2676,6 @@ dep_df_false = { version = "0.1.0", default-features = false }
         .build();
 
     p.cargo("fix --all --edition --allow-no-vcs")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stderr_data(
             str![[r#"
 [MIGRATING] pkg_default/Cargo.toml from 2021 edition to 2024

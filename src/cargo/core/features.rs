@@ -202,9 +202,9 @@ impl Edition {
     /// The latest edition that is unstable.
     ///
     /// This is `None` if there is no next unstable edition.
-    pub const LATEST_UNSTABLE: Option<Edition> = Some(Edition::Edition2024);
+    pub const LATEST_UNSTABLE: Option<Edition> = None;
     /// The latest stable edition.
-    pub const LATEST_STABLE: Edition = Edition::Edition2021;
+    pub const LATEST_STABLE: Edition = Edition::Edition2024;
     pub const ALL: &'static [Edition] = &[
         Self::Edition2015,
         Self::Edition2018,
@@ -225,7 +225,7 @@ impl Edition {
             Edition2015 => None,
             Edition2018 => Some(semver::Version::new(1, 31, 0)),
             Edition2021 => Some(semver::Version::new(1, 56, 0)),
-            Edition2024 => None,
+            Edition2024 => Some(semver::Version::new(1, 85, 0)),
         }
     }
 
@@ -236,7 +236,7 @@ impl Edition {
             Edition2015 => true,
             Edition2018 => true,
             Edition2021 => true,
-            Edition2024 => false,
+            Edition2024 => true,
         }
     }
 
@@ -509,7 +509,7 @@ features! {
     (stable, workspace_inheritance, "1.64", "reference/unstable.html#workspace-inheritance"),
 
     /// Support for 2024 edition.
-    (unstable, edition2024, "", "reference/unstable.html#edition-2024"),
+    (stable, edition2024, "1.85", "reference/manifest.html#the-edition-field"),
 
     /// Allow setting trim-paths in a profile to control the sanitisation of file paths in build outputs.
     (unstable, trim_paths, "", "reference/unstable.html#profile-trim-paths-option"),
