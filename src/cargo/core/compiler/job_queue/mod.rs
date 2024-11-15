@@ -685,7 +685,7 @@ impl<'gctx> DrainState<'gctx> {
                             .failed_scrape_units
                             .lock()
                             .unwrap()
-                            .insert(build_runner.files().metadata(&unit).meta_hash());
+                            .insert(build_runner.files().metadata(&unit).unit_id());
                         self.queue.finish(&unit, &artifact);
                     }
                     Err(error) => {

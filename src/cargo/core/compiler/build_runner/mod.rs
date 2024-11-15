@@ -443,7 +443,7 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
     /// Returns the metadata hash for a `RunCustomBuild` unit.
     pub fn get_run_build_script_metadata(&self, unit: &Unit) -> UnitHash {
         assert!(unit.mode.is_run_custom_build());
-        self.files().metadata(unit).meta_hash()
+        self.files().metadata(unit).unit_id()
     }
 
     pub fn is_primary_package(&self, unit: &Unit) -> bool {

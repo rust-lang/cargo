@@ -91,17 +91,19 @@ pub struct Metadata {
 }
 
 impl Metadata {
-    /// The symbol hash to use.
-    pub fn meta_hash(&self) -> UnitHash {
+    /// A hash to identify a given [`Unit`] in the build graph
+    pub fn unit_id(&self) -> UnitHash {
         self.meta_hash
     }
 
-    /// Whether or not the `-C extra-filename` flag is used to generate unique
-    /// output filenames for this `Unit`.
-    ///
-    /// If this is `true`, the `meta_hash` is used for the filename.
-    pub fn use_extra_filename(&self) -> bool {
-        self.use_extra_filename
+    /// A hash to add to symbol naming through `-C metadata`
+    pub fn c_metadata(&self) -> UnitHash {
+        self.meta_hash
+    }
+
+    /// A hash to add to file names through `-C extra-filename`
+    pub fn c_extra_filename(&self) -> Option<UnitHash> {
+        self.use_extra_filename.then_some(self.meta_hash)
     }
 }
 
@@ -230,8 +232,8 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     fn pkg_dir(&self, unit: &Unit) -> String {
         let name = unit.pkg.package_id().name();
         let meta = self.metas[unit];
-        if meta.use_extra_filename() {
-            format!("{}-{}", name, meta.meta_hash())
+        if let Some(c_extra_filename) = meta.c_extra_filename() {
+            format!("{}-{}", name, c_extra_filename)
         } else {
             format!("{}-{}", name, self.target_short_hash(unit))
         }
@@ -475,7 +477,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
                 let file_name = format!(
                     "{}-{}.examples",
                     unit.pkg.name(),
-                    self.metadata(unit).meta_hash()
+                    self.metadata(unit).unit_id()
                 );
                 let path = self.deps_dir(unit).join(file_name);
                 vec![OutputFile {
@@ -533,9 +535,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         let mut outputs = Vec::new();
         for file_type in file_types {
             let meta = self.metas[unit];
-            let meta_opt = meta
-                .use_extra_filename()
-                .then(|| meta.meta_hash().to_string());
+            let meta_opt = meta.c_extra_filename().map(|h| h.to_string());
             let path = out_dir.join(file_type.output_filename(&unit.target, meta_opt.as_deref()));
 
             // If, the `different_binary_name` feature is enabled, the name of the hardlink will
