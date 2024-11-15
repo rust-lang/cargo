@@ -593,6 +593,7 @@ fn compute_metadata(
         .iter()
         .map(|dep| *metadata_of(&dep.unit, build_runner, metas))
         .collect::<Vec<_>>();
+    let use_extra_filename = use_extra_filename(bcx, unit);
 
     let mut hasher = StableHasher::new();
 
@@ -685,9 +686,11 @@ fn compute_metadata(
     dep_hashes.sort();
     dep_hashes.hash(&mut hasher);
 
+    let meta_hash = UnitHash(hasher.finish());
+
     Metadata {
-        meta_hash: UnitHash(hasher.finish()),
-        use_extra_filename: use_extra_filename(bcx, unit),
+        meta_hash,
+        use_extra_filename,
     }
 }
 
