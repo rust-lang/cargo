@@ -609,14 +609,6 @@ fn compute_metadata(
     // when changing feature sets each lib is separately cached.
     unit.features.hash(&mut hasher);
 
-    // Mix in the target-metadata of all the dependencies of this target.
-    let mut dep_hashes = deps_metadata
-        .iter()
-        .map(|m| m.meta_hash)
-        .collect::<Vec<_>>();
-    dep_hashes.sort();
-    dep_hashes.hash(&mut hasher);
-
     // Throw in the profile we're compiling with. This helps caching
     // `panic=abort` and `panic=unwind` artifacts, additionally with various
     // settings like debuginfo and whatnot.
@@ -684,6 +676,14 @@ fn compute_metadata(
                 != unit.links_overrides;
         target_configs_are_different.hash(&mut hasher);
     }
+
+    // Mix in the target-metadata of all the dependencies of this target.
+    let mut dep_hashes = deps_metadata
+        .iter()
+        .map(|m| m.meta_hash)
+        .collect::<Vec<_>>();
+    dep_hashes.sort();
+    dep_hashes.hash(&mut hasher);
 
     Metadata {
         meta_hash: UnitHash(hasher.finish()),
