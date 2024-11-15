@@ -981,7 +981,7 @@ The `[resolver]` table overrides [dependency resolution behavior](resolver.md) f
 
 #### `resolver.incompatible-rust-versions`
 * Type: string
-* Default: `"allow"`
+* Default: See [`resolver`](resolver.md#resolver-versions) docs
 * Environment: `CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS`
 
 When resolving which version of a dependency to use, select how versions with incompatible `package.rust-version`s are treated.
