@@ -244,7 +244,6 @@ fn works_with_cli() {
     p.cargo("check -v -Z config-include")
         .masquerade_as_nightly_cargo(&["config-include"])
         .with_stderr_data(str![[r#"
-[DIRTY] foo v0.0.1 ([ROOT]/foo): the rustflags changed
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc [..]-W unsafe-code -W unused`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

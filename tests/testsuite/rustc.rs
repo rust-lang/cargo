@@ -616,7 +616,6 @@ fn rustc_fingerprint() {
     p.cargo("rustc -v")
         .with_stderr_does_not_contain("-C debug-assertions")
         .with_stderr_data(str![[r#"
-[DIRTY] foo v0.5.0 ([ROOT]/foo): the profile configuration changed
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo [..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s

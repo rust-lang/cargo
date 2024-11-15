@@ -68,7 +68,7 @@
 //! -------------------------------------------|-------------|---------------------|------------------------|----------
 //! rustc                                      | ✓           | ✓                   | ✓                      | ✓
 //! [`Profile`]                                | ✓           | ✓                   | ✓                      | ✓
-//! `cargo rustc` extra args                   | ✓           |                     |                        |
+//! `cargo rustc` extra args                   | ✓           | ✓                   |                        | ✓
 //! [`CompileMode`]                            | ✓           | ✓                   | ✓                      | ✓
 //! Target Name                                | ✓           | ✓                   | ✓                      | ✓
 //! `TargetKind` (bin/lib/etc.)                | ✓           | ✓                   | ✓                      | ✓
@@ -83,7 +83,7 @@
 //! Target flags (test/bench/for_host/edition) | ✓           |                     |                        |
 //! -C incremental=… flag                      | ✓           |                     |                        |
 //! mtime of sources                           | ✓[^3]       |                     |                        |
-//! RUSTFLAGS/RUSTDOCFLAGS                     | ✓           |                     |                        |
+//! RUSTFLAGS/RUSTDOCFLAGS                     | ✓           | ✓                   |                        | ✓
 //! [`Lto`] flags                              | ✓           | ✓                   | ✓                      | ✓
 //! config settings[^5]                        | ✓           |                     |                        |
 //! `is_std`                                   |             | ✓                   | ✓                      | ✓

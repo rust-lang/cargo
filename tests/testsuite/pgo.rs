@@ -103,7 +103,6 @@ fn pgo_works() {
             ),
         )
         .with_stderr_data(str![[r#"
-[DIRTY] foo v0.0.0 ([ROOT]/foo): the rustflags changed
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]-Cprofile-use=[ROOT]/foo/target/merged.profdata -Cllvm-args=-pgo-warn-missing-function`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s

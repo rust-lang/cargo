@@ -700,6 +700,18 @@ fn compute_metadata(
         .collect::<Vec<_>>();
     dep_c_extra_filename_hashes.sort();
     dep_c_extra_filename_hashes.hash(&mut c_extra_filename_hasher);
+    // Avoid trashing the caches on RUSTFLAGS changing via `c_extra_filename`
+    //
+    // Limited to `c_extra_filename` to help with reproducible build / PGO issues.
+    build_runner
+        .bcx
+        .extra_args_for(unit)
+        .hash(&mut c_extra_filename_hasher);
+    if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
+        unit.rustdocflags.hash(&mut c_extra_filename_hasher);
+    } else {
+        unit.rustflags.hash(&mut c_extra_filename_hasher);
+    }
 
     let c_metadata = UnitHash(c_metadata_hasher.finish());
     let c_extra_filename = UnitHash(c_extra_filename_hasher.finish());
