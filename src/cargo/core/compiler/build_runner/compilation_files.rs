@@ -175,7 +175,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     ///
     /// See [`Metadata`] and [`fingerprint`] module for more.
     ///
-    /// [`fingerprint`]: ../../fingerprint/index.html#fingerprints-and-metadata
+    /// [`fingerprint`]: super::super::fingerprint#fingerprints-and-metadata
     pub fn metadata(&self, unit: &Unit) -> Metadata {
         self.metas[unit].meta_hash
     }
