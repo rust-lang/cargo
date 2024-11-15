@@ -1746,6 +1746,24 @@ When in doubt, you can discuss this in [#14520](https://github.com/rust-lang/car
 - powershell:
   Add `CARGO_COMPLETE=powershell cargo +nightly | Invoke-Expression` to `$PROFILE`.
 
+## warnings
+
+The `-Z warnings` feature enables the `build.warnings` configuration option to control how
+Cargo handles warnings. If the `-Z warnings` unstable flag is not enabled, then
+the `build.warnings` config will be ignored.
+
+This setting currently only applies to rustc warnings. It may apply to additional warnings (such as Cargo lints or Cargo warnings)
+in the future.
+
+### `build.warnings`
+* Type: string
+* Default: `warn`
+* Environment: `CARGO_BUILD_WARNINGS`
+
+Controls how Cargo handles warnings. Allowed values are:
+* `warn`: warnings are emitted as warnings (default).
+* `allow`: warnings are hidden.
+* `deny`: if warnings are emitted, an error will be raised at the end of the operation and the process will exit with a failure exit code. 
 # Stabilized and removed features
 
 ## Compile progress
@@ -1992,22 +2010,3 @@ default behavior.
 
 See the [build script documentation](build-scripts.md#rustc-check-cfg) for information
 about specifying custom cfgs.
-
-## warnings
-
-The `-Z warnings` feature enables the `build.warnings` configuration option to control how
-Cargo handles warnings. If the `-Z warnings` unstable flag is not enabled, then
-the `build.warnings` config will be ignored.
-
-This setting currently only applies to rustc warnings. It may apply to additional warnings (such as Cargo lints or Cargo warnings)
-in the future.
-
-### `build.warnings`
-* Type: string
-* Default: `warn`
-* Environment: `CARGO_BUILD_WARNINGS`
-
-Controls how Cargo handles warnings. Allowed values are:
-* `warn`: warnings are emitted as warnings (default).
-* `allow`: warnings are hidden.
-* `deny`: if warnings are emitted, an error will be raised at the end of the operation and the process will exit with a failure exit code. 
