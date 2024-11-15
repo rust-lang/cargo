@@ -210,7 +210,7 @@ impl FeatureOpts {
         Ok(opts)
     }
 
-    /// Creates a new FeatureOpts for the given behavior.
+    /// Creates a new `FeatureOpts` for the given behavior.
     pub fn new_behavior(behavior: ResolveBehavior, has_dev_units: HasDevUnits) -> FeatureOpts {
         match behavior {
             ResolveBehavior::V1 => FeatureOpts::default(),
@@ -259,7 +259,7 @@ pub struct CliFeatures {
 }
 
 impl CliFeatures {
-    /// Creates a new CliFeatures from the given command-line flags.
+    /// Creates a new `CliFeatures` from the given command-line flags.
     pub fn from_command_line(
         features: &[String],
         all_features: bool,
@@ -291,7 +291,7 @@ impl CliFeatures {
         })
     }
 
-    /// Creates a new CliFeatures with the given `all_features` setting.
+    /// Creates a new `CliFeatures` with the given `all_features` setting.
     pub fn new_all(all_features: bool) -> CliFeatures {
         CliFeatures {
             features: Rc::new(BTreeSet::new()),
@@ -330,7 +330,7 @@ impl ResolvedFeatures {
     }
 
     /// Variant of `activated_features` that returns `None` if this is
-    /// not a valid pkg_id/is_build combination. Used in places which do
+    /// not a valid `pkg_id/is_build` combination. Used in places which do
     /// not know which packages are activated (like `cargo clean`).
     pub fn activated_features_unverified(
         &self,
@@ -559,7 +559,7 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
         Ok(())
     }
 
-    /// Activate a single FeatureValue for a package.
+    /// Activate a single `FeatureValue` for a package.
     fn activate_fv(
         &mut self,
         pkg_id: PackageId,
@@ -734,7 +734,7 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
         Ok(())
     }
 
-    /// Returns Vec of FeatureValues from a Dependency definition.
+    /// Returns Vec of `FeatureValues` from a Dependency definition.
     fn fvs_from_dependency(&self, dep_id: PackageId, dep: &Dependency) -> Vec<FeatureValue> {
         let summary = self.resolve.summary(dep_id);
         let feature_map = summary.features();
@@ -749,7 +749,7 @@ impl<'a, 'gctx> FeatureResolver<'a, 'gctx> {
         result
     }
 
-    /// Returns Vec of FeatureValues from a set of command-line features.
+    /// Returns Vec of `FeatureValues` from a set of command-line features.
     fn fvs_from_requested(
         &self,
         pkg_id: PackageId,

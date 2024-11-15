@@ -150,7 +150,7 @@ pub struct ResolveOpts {
 }
 
 impl ResolveOpts {
-    /// Creates a ResolveOpts that resolves everything.
+    /// Creates a `ResolveOpts` that resolves everything.
     pub fn everything() -> ResolveOpts {
         ResolveOpts {
             dev_deps: true,
@@ -227,7 +227,7 @@ pub struct RemainingDeps {
     time: u32,
     /// the data is augmented by the insertion time.
     /// This insures that no two items will cmp eq.
-    /// Forcing the OrdSet into a multi set.
+    /// Forcing the `OrdSet` into a multi set.
     data: im_rc::OrdSet<(DepsFrame, u32)>,
 }
 

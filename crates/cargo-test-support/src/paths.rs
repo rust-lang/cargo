@@ -17,7 +17,7 @@ static CARGO_INTEGRATION_TEST_DIR: &str = "cit";
 static GLOBAL_ROOT: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
 
 /// This is used when running cargo is pre-CARGO_TARGET_TMPDIR
-/// TODO: Remove when CARGO_TARGET_TMPDIR grows old enough.
+/// TODO: Remove when `CARGO_TARGET_TMPDIR` grows old enough.
 fn global_root_legacy() -> PathBuf {
     let mut path = t!(env::current_exe());
     path.pop(); // chop off exe name

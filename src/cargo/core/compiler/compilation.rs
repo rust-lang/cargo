@@ -81,7 +81,7 @@ pub struct Compilation<'gctx> {
     /// All directories for the output of native build commands.
     ///
     /// This is currently used to drive some entries which are added to the
-    /// LD_LIBRARY_PATH as appropriate.
+    /// `LD_LIBRARY_PATH` as appropriate.
     ///
     /// The order should be deterministic.
     pub native_dirs: BTreeSet<PathBuf>,
@@ -113,10 +113,10 @@ pub struct Compilation<'gctx> {
 
     /// Rustc process to be used by default
     rustc_process: ProcessBuilder,
-    /// Rustc process to be used for workspace crates instead of rustc_process
+    /// Rustc process to be used for workspace crates instead of `rustc_process`
     rustc_workspace_wrapper_process: ProcessBuilder,
-    /// Optional rustc process to be used for primary crates instead of either rustc_process or
-    /// rustc_workspace_wrapper_process
+    /// Optional rustc process to be used for primary crates instead of either `rustc_process` or
+    /// `rustc_workspace_wrapper_process`
     primary_rustc_process: Option<ProcessBuilder>,
 
     target_runners: HashMap<CompileKind, Option<(PathBuf, Vec<String>)>>,
@@ -403,7 +403,7 @@ impl<'gctx> Compilation<'gctx> {
     }
 }
 
-/// Prepares a rustc_tool process with additional environment variables
+/// Prepares a `rustc_tool` process with additional environment variables
 /// that are only relevant in a context that has a unit
 fn fill_rustc_tool_env(mut cmd: ProcessBuilder, unit: &Unit) -> ProcessBuilder {
     if unit.target.is_executable() {

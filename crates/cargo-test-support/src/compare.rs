@@ -621,7 +621,7 @@ macro_rules! impl_from_tuple_for_inmemorydir {
     };
 }
 
-/// Extend `impl_from_tuple_for_inmemorydir`` to generate for the specified tuple and all smaller
+/// Extend `impl_from_tuple_for_inmemorydir` to generate for the specified tuple and all smaller
 /// tuples
 macro_rules! impl_from_tuples_for_inmemorydir {
     ($var1:ident $path1:ident $data1:ident, $($var:ident $path:ident $data:ident),+) => {

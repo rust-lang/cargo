@@ -26,9 +26,9 @@ pub struct Rustc {
     pub workspace_wrapper: Option<PathBuf>,
     /// Verbose version information (the output of `rustc -vV`)
     pub verbose_version: String,
-    /// The rustc version (`1.23.4-beta.2`), this comes from verbose_version.
+    /// The rustc version (`1.23.4-beta.2`), this comes from `verbose_version`.
     pub version: semver::Version,
-    /// The host triple (arch-platform-OS), this comes from verbose_version.
+    /// The host triple (arch-platform-OS), this comes from `verbose_version`.
     pub host: InternedString,
     /// The rustc full commit hash, this comes from `verbose_version`.
     pub commit_hash: Option<String>,

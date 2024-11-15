@@ -3,7 +3,7 @@
 //!
 //! These tests use a replacement of rustc ("rustc-fix-shim") which emits JSON
 //! messages based on what the test is exercising. It uses an environment
-//! variable RUSTC_FIX_SHIM_SEQUENCE which determines how it should behave
+//! variable `RUSTC_FIX_SHIM_SEQUENCE` which determines how it should behave
 //! based on how many times `rustc` has run. It keeps track of how many times
 //! rustc has run in a local file.
 //!

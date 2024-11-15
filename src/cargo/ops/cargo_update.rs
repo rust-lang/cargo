@@ -380,7 +380,7 @@ fn upgrade_dependency(
 /// cargo-edit. Returns true if any file has changed.
 ///
 /// Some of the checks here are duplicating checks already done in
-/// upgrade_manifests/upgrade_dependency. Why? Let's say upgrade_dependency has
+/// `upgrade_manifests/upgrade_dependency`. Why? Let's say `upgrade_dependency` has
 /// found that dependency foo was eligible for an upgrade. But foo can occur in
 /// multiple manifest files, and even multiple times in the same manifest file,
 /// and may be pinned, renamed, etc. in some of the instances. So we still need

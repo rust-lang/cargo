@@ -567,7 +567,7 @@ impl<'gctx> Timings<'gctx> {
 }
 
 impl UnitTime {
-    /// Returns the codegen time as (rmeta_time, codegen_time, percent of total)
+    /// Returns the codegen time as (`rmeta_time`, `codegen_time`, percent of total)
     fn codegen_time(&self) -> Option<(f64, f64, f64)> {
         self.rmeta_time.map(|rmeta_time| {
             let ctime = self.duration - rmeta_time;

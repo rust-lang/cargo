@@ -86,7 +86,7 @@ pub enum ResolveVersion {
     /// * Introduced in 2020 in version 1.47.
     /// * New lockfiles use V3 by default from in 1.53 to 1.82.
     V3,
-    /// SourceId URL serialization is aware of URL encoding. For example,
+    /// `SourceId` URL serialization is aware of URL encoding. For example,
     /// `?branch=foo bar` is now encoded as `?branch=foo+bar` and can be decoded
     /// back and forth correctly.
     ///

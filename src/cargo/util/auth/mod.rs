@@ -573,7 +573,7 @@ fn credential_action(
 
 /// Returns the token to use for the given registry.
 /// If a `login_url` is provided and a token is not available, the
-/// login_url will be included in the returned error.
+/// `login_url` will be included in the returned error.
 pub fn auth_token(
     gctx: &GlobalContext,
     sid: &SourceId,

@@ -3,7 +3,7 @@
 //! Note that cross-testing is very limited. You need to install the
 //! "alternate" target to the host (32-bit for 64-bit hosts or vice-versa).
 //!
-//! Set CFG_DISABLE_CROSS_TESTS=1 environment variable to disable these tests
+//! Set `CFG_DISABLE_CROSS_TESTS=1` environment variable to disable these tests
 //! if you are unable to use the alternate target. Unfortunately 32-bit
 //! support on macOS is going away, so macOS users are out of luck.
 //!

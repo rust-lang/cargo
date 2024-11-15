@@ -185,7 +185,7 @@ const _: fn() = || {
 };
 
 /// Checks features for errors, bailing out a CargoResult:Err if invalid,
-/// and creates FeatureValues for each feature.
+/// and creates `FeatureValues` for each feature.
 fn build_feature_map(
     features: &BTreeMap<InternedString, Vec<InternedString>>,
     dependencies: &[Dependency],
@@ -351,7 +351,7 @@ fn build_feature_map(
     Ok(map)
 }
 
-/// FeatureValue represents the types of dependencies a feature can have.
+/// `FeatureValue` represents the types of dependencies a feature can have.
 #[derive(Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum FeatureValue {
     /// A feature enabling another feature.

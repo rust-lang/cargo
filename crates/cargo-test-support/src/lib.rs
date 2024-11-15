@@ -890,7 +890,7 @@ impl Execs {
     ///
     /// Prefer [`Execs::with_stdout_data`] where possible.
     /// - `with` cannot be snapshotted
-    /// - The absence of `without`` can either mean success or that the string being looked for
+    /// - The absence of `without` can either mean success or that the string being looked for
     ///   changed.
     ///
     /// </div>

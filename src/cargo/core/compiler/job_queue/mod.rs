@@ -151,7 +151,7 @@ use crate::util::{DependencyQueue, GlobalContext, Progress, ProgressStyle, Queue
 
 /// This structure is backed by the `DependencyQueue` type and manages the
 /// queueing of compilation steps for each package. Packages enqueue units of
-/// work and then later on the entire graph is converted to DrainState and
+/// work and then later on the entire graph is converted to `DrainState` and
 /// executed.
 pub struct JobQueue<'gctx> {
     queue: DependencyQueue<Unit, Artifact, Job>,
@@ -163,7 +163,7 @@ pub struct JobQueue<'gctx> {
 /// actual compilation step of each package. Packages enqueue units of work and
 /// then later on the entire graph is processed and compiled.
 ///
-/// It is created from JobQueue when we have fully assembled the crate graph
+/// It is created from `JobQueue` when we have fully assembled the crate graph
 /// (i.e., all package dependencies are known).
 struct DrainState<'gctx> {
     // This is the length of the DependencyQueue when starting out
@@ -265,9 +265,9 @@ struct ErrorToHandle {
     /// care about individually reporting every thread that it broke; just the
     /// first is enough.
     ///
-    /// The exception where print_always is true is that we do report every
+    /// The exception where `print_always` is true is that we do report every
     /// instance of a rustc invocation that failed with diagnostics. This
-    /// corresponds to errors from Message::Finish.
+    /// corresponds to errors from `Message::Finish`.
     print_always: bool,
 }
 

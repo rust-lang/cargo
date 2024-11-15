@@ -199,7 +199,7 @@ fn attach_std_deps(
 }
 
 /// Compute all the dependencies of the given root units.
-/// The result is stored in state.unit_dependencies.
+/// The result is stored in `state.unit_dependencies`.
 fn deps_of_roots(roots: &[Unit], state: &mut State<'_, '_>) -> CargoResult<()> {
     for unit in roots.iter() {
         // Dependencies of tests/benches should not have `panic` set.

@@ -137,7 +137,7 @@ pub const SEE_CHANNELS: &str =
     "See https://doc.rust-lang.org/book/appendix-07-nightly-rust.html for more information \
      about Rust release channels.";
 
-/// Value of [`allow-features`](CliUnstable::allow_features]
+/// Value of [`allow-features`](CliUnstable::allow_features)
 pub type AllowFeatures = BTreeSet<String>;
 
 /// The edition of the compiler ([RFC 2052])

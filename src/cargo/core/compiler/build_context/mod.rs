@@ -121,10 +121,10 @@ impl<'a, 'gctx> BuildContext<'a, 'gctx> {
 
     /// Gets the host architecture triple.
     ///
-    /// For example, x86_64-unknown-linux-gnu, would be
-    /// - machine: x86_64,
-    /// - hardware-platform: unknown,
-    /// - operating system: linux-gnu.
+    /// For example, `x86_64-unknown-linux-gnu`, would be
+    /// - machine: `x86_64`,
+    /// - hardware-platform: `unknown`,
+    /// - operating system: `linux-gnu`.
     pub fn host_triple(&self) -> InternedString {
         self.target_data.rustc.host
     }

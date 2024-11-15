@@ -93,7 +93,7 @@ fn now() -> SystemTime {
 }
 
 /// Helper for simulating running cargo in the past. Use with the
-/// __CARGO_TEST_LAST_USE_NOW environment variable.
+/// `__CARGO_TEST_LAST_USE_NOW` environment variable.
 fn days_ago_unix(n: u64) -> String {
     days_ago(n)
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -103,7 +103,7 @@ fn days_ago_unix(n: u64) -> String {
 }
 
 /// Helper for simulating running cargo in the past. Use with the
-/// __CARGO_TEST_LAST_USE_NOW environment variable.
+/// `__CARGO_TEST_LAST_USE_NOW` environment variable.
 fn months_ago_unix(n: u64) -> String {
     days_ago_unix(n * 30)
 }

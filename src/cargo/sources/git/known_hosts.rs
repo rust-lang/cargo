@@ -7,9 +7,9 @@
 //! messages, guiding them to understand the issue and how to resolve it.
 //!
 //! Note that there are a lot of limitations here. This reads OpenSSH
-//! known_hosts files from well-known locations, but it does not read OpenSSH
+//! `known_hosts` files from well-known locations, but it does not read OpenSSH
 //! config files. The config file can change the behavior of how OpenSSH
-//! handles known_hosts files. For example, some things we don't handle:
+//! handles `known_hosts` files. For example, some things we don't handle:
 //!
 //! - `GlobalKnownHostsFile` — Changes the location of the global host file.
 //! - `UserKnownHostsFile` — Changes the location of the user's host file.
@@ -516,7 +516,7 @@ fn known_host_files(gctx: &GlobalContext) -> Vec<PathBuf> {
     result
 }
 
-/// The location of the user's known_hosts file.
+/// The location of the user's `known_hosts` file.
 fn user_known_host_location() -> Option<PathBuf> {
     // NOTE: This is a potentially inaccurate prediction of what the user
     // actually wants. The actual location depends on several factors:
@@ -619,7 +619,7 @@ fn hashed_hostname_matches(host: &str, hashed: &str) -> bool {
     hashed_host == &result[..]
 }
 
-/// Loads an OpenSSH known_hosts file.
+/// Loads an OpenSSH `known_hosts` file.
 fn load_hostfile(path: &Path) -> Result<Vec<KnownHost>, anyhow::Error> {
     let contents = cargo_util::paths::read(path)?;
     Ok(load_hostfile_contents(path, &contents))

@@ -176,7 +176,7 @@ impl Dependency {
         self.public
     }
 
-    /// Get the SourceID for this dependency.
+    /// Get the `SourceID` for this dependency.
     pub fn source_id(&self, gctx: &GlobalContext) -> CargoResult<MaybeWorkspace<SourceId>> {
         match &self.source.as_ref() {
             Some(Source::Registry(_)) | None => {
@@ -903,7 +903,7 @@ impl PathSource {
         self
     }
 
-    /// Get the SourceID for this dependency.
+    /// Get the `SourceID` for this dependency.
     pub fn source_id(&self) -> CargoResult<SourceId> {
         SourceId::for_path(&self.path)
     }
@@ -967,7 +967,7 @@ impl GitSource {
         self
     }
 
-    /// Get the SourceID for this dependency.
+    /// Get the `SourceID` for this dependency.
     pub fn source_id(&self) -> CargoResult<SourceId> {
         let git_url = self.git.parse::<url::Url>()?;
         let git_ref = self.git_ref();

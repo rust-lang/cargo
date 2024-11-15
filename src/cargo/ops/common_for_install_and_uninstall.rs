@@ -98,7 +98,7 @@ pub struct CrateListingV1 {
 }
 
 impl InstallTracker {
-    /// Create an InstallTracker from information on disk.
+    /// Create an `InstallTracker` from information on disk.
     pub fn load(gctx: &GlobalContext, root: &Filesystem) -> CargoResult<InstallTracker> {
         let v1_lock =
             root.open_rw_exclusive_create(Path::new(".crates.toml"), gctx, "crate metadata")?;
@@ -153,7 +153,7 @@ impl InstallTracker {
     /// Returns a tuple `(freshness, map)`. `freshness` indicates if the
     /// package should be built (`Dirty`) or if it is already up-to-date
     /// (`Fresh`) and should be skipped. The map maps binary names to the
-    /// PackageId that installed it (which is None if not known).
+    /// `PackageId` that installed it (which is `None` if not known).
     ///
     /// If there are no duplicates, then it will be considered `Dirty` (i.e.,
     /// it is OK to build/install).
@@ -250,7 +250,7 @@ impl InstallTracker {
     /// Check if any executables are already installed.
     ///
     /// Returns a map of duplicates, the key is the executable name and the
-    /// value is the PackageId that is already installed. The PackageId is
+    /// value is the `PackageId` that is already installed. The `PackageId` is
     /// None if it is an untracked executable.
     fn find_duplicates(
         &self,
@@ -762,7 +762,7 @@ where
     }
 }
 
-/// Helper to convert features to a BTreeSet.
+/// Helper to convert features to a `BTreeSet`.
 fn feature_set(features: &Rc<BTreeSet<FeatureValue>>) -> BTreeSet<String> {
     features.iter().map(|s| s.to_string()).collect()
 }

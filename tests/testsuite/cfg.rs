@@ -1,4 +1,4 @@
-//! Tests for cfg() expressions.
+//! Tests for `cfg()` expressions.
 
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;

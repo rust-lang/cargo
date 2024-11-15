@@ -1,5 +1,5 @@
 //! Tests for when multiple artifacts have the same output filename.
-//! See https://github.com/rust-lang/cargo/issues/6313 for more details.
+//! See <https://github.com/rust-lang/cargo/issues/6313> for more details.
 //! Ideally these should never happen, but I don't think we'll ever be able to
 //! prevent all collisions.
 

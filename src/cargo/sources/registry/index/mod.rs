@@ -531,7 +531,7 @@ impl Summaries {
     ///
     /// * `root` --- this is the root argument passed to `load`
     /// * `name` --- the name of the package.
-    /// * `source_id` --- the registry's SourceId used when parsing JSON blobs
+    /// * `source_id` --- the registry's `SourceId` used when parsing JSON blobs
     ///   to create summaries.
     /// * `load` --- the actual index implementation which may be very slow to
     ///   call. We avoid this if we can.

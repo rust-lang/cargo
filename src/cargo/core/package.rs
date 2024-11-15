@@ -290,7 +290,7 @@ pub struct PackageSet<'gctx> {
     sources: RefCell<SourceMap<'gctx>>,
     gctx: &'gctx GlobalContext,
     multi: Multi,
-    /// Used to prevent reusing the PackageSet to download twice.
+    /// Used to prevent reusing the `PackageSet` to download twice.
     downloading: Cell<bool>,
     /// Whether or not to use curl HTTP/2 multiplexing.
     multiplexing: bool,
