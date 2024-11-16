@@ -14,9 +14,9 @@ $ ./hello
 Hello, world!
 ```
 
-Note that the above command required that we specify the file name
-explicitly. If we were to directly use `rustc` to compile a different program,
-a different command line invocation would be required. If we needed to specify
+Note that the above command required that you specify the file name
+explicitly. If you were to directly use `rustc` to compile a different program,
+a different command line invocation would be required. If you needed to specify
 any specific compiler flags or include external dependencies, then the
 needed command would be even more specific (and complex).
 
@@ -26,7 +26,7 @@ dependencies. Obtaining the correct versions of all the necessary dependencies
 and keeping them up to date would be hard and error-prone if done by
 hand.
 
-Rather than work only with crates and `rustc`, we can avoid the difficulties
+Rather than work only with crates and `rustc`, you can avoid the difficulties
 involved with performing the above tasks by introducing a higher-level
 ["*package*"][def-package] abstraction and by using a
 [*package manager*][def-package-manager].
@@ -49,11 +49,11 @@ To a large extent, Cargo normalizes the commands needed to build a given
 program or library; this is one aspect to the above mentioned conventions. As
 we show later, the same command can be used to build different
 [*artifacts*][def-artifact], regardless of their names. Rather than invoke
-`rustc` directly, we can instead invoke something generic such as `cargo
+`rustc` directly, you can instead invoke something generic such as `cargo
 build` and let cargo worry about constructing the correct `rustc`
 invocation. Furthermore, Cargo will automatically fetch any dependencies
-we have defined for our artifact from a [*registry*][def-registry],
-and arrange for them to be added into our build as needed.
+you have defined for your artifact from a [*registry*][def-registry],
+and arrange for them to be added into your build as needed.
 
 It is only a slight exaggeration to say that once you know how to build one
 Cargo-based project, you know how to build *all* of them.

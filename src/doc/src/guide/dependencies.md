@@ -26,7 +26,7 @@ the options you have here.
 
 [SemVer]: https://semver.org
 
-If we also wanted to add a dependency on the `regex` crate, we would not need
+If you also wanted to add a dependency on the `regex` crate, you would not need
 to add `[dependencies]` for each crate listed. Here's what your whole
 `Cargo.toml` file would look like with dependencies on the `time` and `regex`
 crates:
@@ -63,11 +63,11 @@ $ cargo build
      Compiling hello_world v0.1.0 (file:///path/to/package/hello_world)
 ```
 
-Our `Cargo.lock` contains the exact information about which revision of all of
-these dependencies we used.
+`Cargo.lock` contains the exact information about which revision was used
+for all of these dependencies.
 
-Now, if `regex` gets updated, we will still build with the same revision until
-we choose to run `cargo update`.
+Now, if `regex` gets updated, you will still build with the same revision until
+you choose to run `cargo update`.
 
 You can now use the `regex` library in `main.rs`.
 

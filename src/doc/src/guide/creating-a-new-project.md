@@ -47,7 +47,7 @@ fn main() {
 }
 ```
 
-Cargo generated a “hello world” program for us, otherwise known as a
+Cargo generated a “hello world” program for you, otherwise known as a
 [*binary crate*][def-crate]. Let’s compile it:
 
 ```console
@@ -62,7 +62,7 @@ $ ./target/debug/hello_world
 Hello, world!
 ```
 
-We can also use `cargo run` to compile and then run it, all in one step (You
+You can also use `cargo run` to compile and then run it, all in one step (You
 won't see the `Compiling` line if you have not made any changes since you last
 compiled):
 
@@ -73,8 +73,8 @@ $ cargo run
 Hello, world!
 ```
 
-You’ll now notice a new file, `Cargo.lock`. It contains information about our
-dependencies. Since we don’t have any yet, it’s not very interesting.
+You’ll now notice a new file, `Cargo.lock`. It contains information about your
+dependencies. Since there are none yet, it’s not very interesting.
 
 Once you’re ready for release, you can use `cargo build --release` to compile
 your files with optimizations turned on:
