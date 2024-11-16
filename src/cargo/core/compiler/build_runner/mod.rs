@@ -27,7 +27,7 @@ use super::{
 
 mod compilation_files;
 use self::compilation_files::CompilationFiles;
-pub use self::compilation_files::{Metadata, OutputFile};
+pub use self::compilation_files::{Metadata, OutputFile, UnitHash};
 
 /// Collection of all the stuff that is needed to perform a build.
 ///
@@ -86,7 +86,7 @@ pub struct BuildRunner<'a, 'gctx> {
     /// Set of metadata of Docscrape units that fail before completion, e.g.
     /// because the target has a type error. This is in an Arc<Mutex<..>>
     /// because it is continuously updated as the job progresses.
-    pub failed_scrape_units: Arc<Mutex<HashSet<Metadata>>>,
+    pub failed_scrape_units: Arc<Mutex<HashSet<UnitHash>>>,
 }
 
 impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
@@ -435,15 +435,15 @@ impl<'a, 'gctx> BuildRunner<'a, 'gctx> {
     /// the given unit.
     ///
     /// If the package does not have a build script, this returns None.
-    pub fn find_build_script_metadata(&self, unit: &Unit) -> Option<Metadata> {
+    pub fn find_build_script_metadata(&self, unit: &Unit) -> Option<UnitHash> {
         let script_unit = self.find_build_script_unit(unit)?;
         Some(self.get_run_build_script_metadata(&script_unit))
     }
 
     /// Returns the metadata hash for a `RunCustomBuild` unit.
-    pub fn get_run_build_script_metadata(&self, unit: &Unit) -> Metadata {
+    pub fn get_run_build_script_metadata(&self, unit: &Unit) -> UnitHash {
         assert!(unit.mode.is_run_custom_build());
-        self.files().metadata(unit)
+        self.files().metadata(unit).unit_id()
     }
 
     pub fn is_primary_package(&self, unit: &Unit) -> bool {

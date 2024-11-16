@@ -1,4 +1,4 @@
-use crate::core::compiler::{Compilation, CompileKind, Doctest, Metadata, Unit, UnitOutput};
+use crate::core::compiler::{Compilation, CompileKind, Doctest, Unit, UnitHash, UnitOutput};
 use crate::core::profiles::PanicStrategy;
 use crate::core::shell::ColorChoice;
 use crate::core::shell::Verbosity;
@@ -355,7 +355,7 @@ fn cmd_builds(
     cwd: &Path,
     unit: &Unit,
     path: &PathBuf,
-    script_meta: &Option<Metadata>,
+    script_meta: &Option<UnitHash>,
     test_args: &[&str],
     compilation: &Compilation<'_>,
     exec_type: &str,

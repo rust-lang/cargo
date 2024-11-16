@@ -25,6 +25,22 @@ use crate::util::{self, CargoResult, StableHasher};
 /// use the same rustc version.
 const METADATA_VERSION: u8 = 2;
 
+/// Uniquely identify a [`Unit`] under specific circumstances, see [`Metadata`] for more.
+#[derive(Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
+pub struct UnitHash(u64);
+
+impl fmt::Display for UnitHash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:016x}", self.0)
+    }
+}
+
+impl fmt::Debug for UnitHash {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "UnitHash({:016x})", self.0)
+    }
+}
+
 /// The `Metadata` is a hash used to make unique file names for each unit in a
 /// build. It is also used for symbol mangling.
 ///
@@ -68,30 +84,27 @@ const METADATA_VERSION: u8 = 2;
 ///
 /// Note that the `Fingerprint` is in charge of tracking everything needed to determine if a
 /// rebuild is needed.
-#[derive(Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
-pub struct Metadata(u64);
-
-impl fmt::Display for Metadata {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:016x}", self.0)
-    }
-}
-
-impl fmt::Debug for Metadata {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Metadata({:016x})", self.0)
-    }
-}
-
-/// Information about the metadata hashes used for a `Unit`.
-struct MetaInfo {
-    /// The symbol hash to use.
-    meta_hash: Metadata,
-    /// Whether or not the `-C extra-filename` flag is used to generate unique
-    /// output filenames for this `Unit`.
-    ///
-    /// If this is `true`, the `meta_hash` is used for the filename.
+#[derive(Copy, Clone, Debug)]
+pub struct Metadata {
+    meta_hash: UnitHash,
     use_extra_filename: bool,
+}
+
+impl Metadata {
+    /// A hash to identify a given [`Unit`] in the build graph
+    pub fn unit_id(&self) -> UnitHash {
+        self.meta_hash
+    }
+
+    /// A hash to add to symbol naming through `-C metadata`
+    pub fn c_metadata(&self) -> UnitHash {
+        self.meta_hash
+    }
+
+    /// A hash to add to file names through `-C extra-filename`
+    pub fn c_extra_filename(&self) -> Option<UnitHash> {
+        self.use_extra_filename.then_some(self.meta_hash)
+    }
 }
 
 /// Collection of information about the files emitted by the compiler, and the
@@ -108,7 +121,7 @@ pub struct CompilationFiles<'a, 'gctx> {
     roots: Vec<Unit>,
     ws: &'a Workspace<'gctx>,
     /// Metadata hash to use for each unit.
-    metas: HashMap<Unit, MetaInfo>,
+    metas: HashMap<Unit, Metadata>,
     /// For each Unit, a list all files produced.
     outputs: HashMap<Unit, LazyCell<Arc<Vec<OutputFile>>>>,
 }
@@ -177,13 +190,7 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     ///
     /// [`fingerprint`]: super::super::fingerprint#fingerprints-and-metadata
     pub fn metadata(&self, unit: &Unit) -> Metadata {
-        self.metas[unit].meta_hash
-    }
-
-    /// Returns whether or not `-C extra-filename` is used to extend the
-    /// output filenames to make them unique.
-    pub fn use_extra_filename(&self, unit: &Unit) -> bool {
-        self.metas[unit].use_extra_filename
+        self.metas[unit]
     }
 
     /// Gets the short hash based only on the `PackageId`.
@@ -224,9 +231,9 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
     /// taken in those cases!
     fn pkg_dir(&self, unit: &Unit) -> String {
         let name = unit.pkg.package_id().name();
-        let meta = &self.metas[unit];
-        if meta.use_extra_filename {
-            format!("{}-{}", name, meta.meta_hash)
+        let meta = self.metas[unit];
+        if let Some(c_extra_filename) = meta.c_extra_filename() {
+            format!("{}-{}", name, c_extra_filename)
         } else {
             format!("{}-{}", name, self.target_short_hash(unit))
         }
@@ -467,7 +474,11 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
                 // The file name needs to be stable across Cargo sessions.
                 // This originally used unit.buildkey(), but that isn't stable,
                 // so we use metadata instead (prefixed with name for debugging).
-                let file_name = format!("{}-{}.examples", unit.pkg.name(), self.metadata(unit));
+                let file_name = format!(
+                    "{}-{}.examples",
+                    unit.pkg.name(),
+                    self.metadata(unit).unit_id()
+                );
                 let path = self.deps_dir(unit).join(file_name);
                 vec![OutputFile {
                     path,
@@ -523,8 +534,8 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
         // Convert FileType to OutputFile.
         let mut outputs = Vec::new();
         for file_type in file_types {
-            let meta = &self.metas[unit];
-            let meta_opt = meta.use_extra_filename.then(|| meta.meta_hash.to_string());
+            let meta = self.metas[unit];
+            let meta_opt = meta.c_extra_filename().map(|h| h.to_string());
             let path = out_dir.join(file_type.output_filename(&unit.target, meta_opt.as_deref()));
 
             // If, the `different_binary_name` feature is enabled, the name of the hardlink will
@@ -558,8 +569,8 @@ impl<'a, 'gctx: 'a> CompilationFiles<'a, 'gctx> {
 fn metadata_of<'a>(
     unit: &Unit,
     build_runner: &BuildRunner<'_, '_>,
-    metas: &'a mut HashMap<Unit, MetaInfo>,
-) -> &'a MetaInfo {
+    metas: &'a mut HashMap<Unit, Metadata>,
+) -> &'a Metadata {
     if !metas.contains_key(unit) {
         let meta = compute_metadata(unit, build_runner, metas);
         metas.insert(unit.clone(), meta);
@@ -574,8 +585,8 @@ fn metadata_of<'a>(
 fn compute_metadata(
     unit: &Unit,
     build_runner: &BuildRunner<'_, '_>,
-    metas: &mut HashMap<Unit, MetaInfo>,
-) -> MetaInfo {
+    metas: &mut HashMap<Unit, Metadata>,
+) -> Metadata {
     let bcx = &build_runner.bcx;
     let mut hasher = StableHasher::new();
 
@@ -669,9 +680,9 @@ fn compute_metadata(
         target_configs_are_different.hash(&mut hasher);
     }
 
-    MetaInfo {
-        meta_hash: Metadata(hasher.finish()),
-        use_extra_filename: should_use_metadata(bcx, unit),
+    Metadata {
+        meta_hash: UnitHash(hasher.finish()),
+        use_extra_filename: use_extra_filename(bcx, unit),
     }
 }
 
@@ -717,8 +728,8 @@ fn hash_rustc_version(bcx: &BuildContext<'_, '_>, hasher: &mut StableHasher, uni
     // between different backends without recompiling.
 }
 
-/// Returns whether or not this unit should use a metadata hash.
-fn should_use_metadata(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
+/// Returns whether or not this unit should use a hash in the filename to make it unique.
+fn use_extra_filename(bcx: &BuildContext<'_, '_>, unit: &Unit) -> bool {
     if unit.mode.is_doc_test() || unit.mode.is_doc() {
         // Doc tests do not have metadata.
         return false;

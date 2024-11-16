@@ -9,7 +9,7 @@ use cargo_util::{paths, ProcessBuilder};
 
 use crate::core::compiler::apply_env_config;
 use crate::core::compiler::BuildContext;
-use crate::core::compiler::{CompileKind, Metadata, Unit};
+use crate::core::compiler::{CompileKind, Unit, UnitHash};
 use crate::core::Package;
 use crate::util::{context, CargoResult, GlobalContext};
 
@@ -45,7 +45,7 @@ pub struct Doctest {
     /// The script metadata, if this unit's package has a build script.
     ///
     /// This is used for indexing [`Compilation::extra_env`].
-    pub script_meta: Option<Metadata>,
+    pub script_meta: Option<UnitHash>,
 
     /// Environment variables to set in the rustdoc process.
     pub env: HashMap<String, OsString>,
@@ -61,7 +61,7 @@ pub struct UnitOutput {
     /// The script metadata, if this unit's package has a build script.
     ///
     /// This is used for indexing [`Compilation::extra_env`].
-    pub script_meta: Option<Metadata>,
+    pub script_meta: Option<UnitHash>,
 }
 
 /// A structure returning the result of a compilation.
@@ -101,7 +101,7 @@ pub struct Compilation<'gctx> {
     ///
     /// The key is the build script metadata for uniquely identifying the
     /// `RunCustomBuild` unit that generated these env vars.
-    pub extra_env: HashMap<Metadata, Vec<(String, String)>>,
+    pub extra_env: HashMap<UnitHash, Vec<(String, String)>>,
 
     /// Libraries to test with rustdoc.
     pub to_doc_test: Vec<Doctest>,
@@ -197,7 +197,7 @@ impl<'gctx> Compilation<'gctx> {
     pub fn rustdoc_process(
         &self,
         unit: &Unit,
-        script_meta: Option<Metadata>,
+        script_meta: Option<UnitHash>,
     ) -> CargoResult<ProcessBuilder> {
         let mut rustdoc = ProcessBuilder::new(&*self.gctx.rustdoc()?);
         if self.gctx.extra_verbose() {
@@ -256,7 +256,7 @@ impl<'gctx> Compilation<'gctx> {
         cmd: T,
         kind: CompileKind,
         pkg: &Package,
-        script_meta: Option<Metadata>,
+        script_meta: Option<UnitHash>,
     ) -> CargoResult<ProcessBuilder> {
         let builder = if let Some((runner, args)) = self.target_runner(kind) {
             let mut builder = ProcessBuilder::new(runner);
@@ -285,7 +285,7 @@ impl<'gctx> Compilation<'gctx> {
         &self,
         mut cmd: ProcessBuilder,
         pkg: &Package,
-        script_meta: Option<Metadata>,
+        script_meta: Option<UnitHash>,
         kind: CompileKind,
         tool_kind: ToolKind,
     ) -> CargoResult<ProcessBuilder> {
