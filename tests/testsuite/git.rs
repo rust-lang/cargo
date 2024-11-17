@@ -4087,7 +4087,10 @@ Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]
 
 Caused by:
-  process didn't exit successfully: `git fetch --no-tags --force --update-head-ok 'https://github.com/rust-lang/bitflags.git' '+11111b376b93484341c68fbca3ca110ae5cd2790:refs/commit/11111b376b93484341c68fbca3ca110ae5cd2790'` ([EXIT_STATUS]: 128)
+  revision 11111b376b93484341c68fbca3ca110ae5cd2790 not found
+
+Caused by:
+  process didn't exit successfully: `git fetch --no-tags --force --update-head-ok [..]
 
 "#]])
         .run();
@@ -4125,6 +4128,9 @@ Caused by:
 
 Caused by:
   failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]
+
+Caused by:
+  revision 11111b376b93484341c68fbca3ca110ae5cd2790 not found
 ...
 "#]])
         .run();

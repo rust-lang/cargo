@@ -944,6 +944,9 @@ pub fn fetch(
 
     let shallow = remote_kind.to_shallow_setting(repo.is_shallow(), gctx);
 
+    // Flag to keep track if the rev is a full commit hash
+    let mut fast_path_rev: bool = false;
+
     let oid_to_fetch = match github_fast_path(repo, remote_url, reference, gctx) {
         Ok(FastPathRev::UpToDate) => return Ok(()),
         Ok(FastPathRev::NeedsFetch(rev)) => Some(rev),
@@ -984,6 +987,7 @@ pub fn fetch(
             if rev.starts_with("refs/") {
                 refspecs.push(format!("+{0}:{0}", rev));
             } else if let Some(oid_to_fetch) = oid_to_fetch {
+                fast_path_rev = true;
                 refspecs.push(format!("+{0}:refs/commit/{0}", oid_to_fetch));
             } else if !matches!(shallow, gix::remote::fetch::Shallow::NoChange)
                 && rev.parse::<Oid>().is_ok()
@@ -1006,13 +1010,20 @@ pub fn fetch(
         }
     }
 
-    if let Some(true) = gctx.net_config()?.git_fetch_with_cli {
+    let result = if let Some(true) = gctx.net_config()?.git_fetch_with_cli {
         fetch_with_cli(repo, remote_url, &refspecs, tags, gctx)
     } else if gctx.cli_unstable().gitoxide.map_or(false, |git| git.fetch) {
         fetch_with_gitoxide(repo, remote_url, refspecs, tags, shallow, gctx)
     } else {
         fetch_with_libgit2(repo, remote_url, refspecs, tags, shallow, gctx)
+    };
+
+    if fast_path_rev {
+        if let Some(oid) = oid_to_fetch {
+            return result.with_context(|| format!("revision {} not found", oid));
+        }
     }
+    result
 }
 
 /// `gitoxide` uses shallow locks to assure consistency when fetching to and to avoid races, and to write
