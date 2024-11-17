@@ -4069,6 +4069,90 @@ src/lib.rs
         .run();
 }
 
+#[cargo_test(public_network_test, requires_git)]
+fn github_fastpath_error_message() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                bitflags = { git = "https://github.com/rust-lang/bitflags.git", rev="11111b376b93484341c68fbca3ca110ae5cd2790" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("fetch")
+        .env("CARGO_NET_GIT_FETCH_WITH_CLI", "true")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `https://github.com/rust-lang/bitflags.git`
+fatal: remote [ERROR] upload-pack: not our ref 11111b376b93484341c68fbca3ca110ae5cd2790
+[ERROR] failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
+
+Caused by:
+  failed to load source for dependency `bitflags`
+
+Caused by:
+  Unable to update https://github.com/rust-lang/bitflags.git?rev=11111b376b93484341c68fbca3ca110ae5cd2790
+
+Caused by:
+  failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]
+
+Caused by:
+  revision 11111b376b93484341c68fbca3ca110ae5cd2790 not found
+
+Caused by:
+  process didn't exit successfully: `git fetch --no-tags --force --update-head-ok [..]
+
+"#]])
+        .run();
+}
+
+#[cargo_test(public_network_test)]
+fn git_fetch_libgit2_error_message() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                bitflags = { git = "https://github.com/rust-lang/bitflags.git", rev="11111b376b93484341c68fbca3ca110ae5cd2790" }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+    p.cargo("fetch")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] git repository `https://github.com/rust-lang/bitflags.git`
+...
+[ERROR] failed to get `bitflags` as a dependency of package `foo v0.1.0 ([ROOT]/foo)`
+
+Caused by:
+  failed to load source for dependency `bitflags`
+
+Caused by:
+  Unable to update https://github.com/rust-lang/bitflags.git?rev=11111b376b93484341c68fbca3ca110ae5cd2790
+
+Caused by:
+  failed to clone into: [ROOT]/home/.cargo/git/db/bitflags-[HASH]
+
+Caused by:
+  revision 11111b376b93484341c68fbca3ca110ae5cd2790 not found
+...
+"#]])
+        .run();
+}
+
 #[cargo_test]
 fn git_worktree_with_bare_original_repo() {
     let project = project().build();
