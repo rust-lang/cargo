@@ -1748,6 +1748,9 @@ When in doubt, you can discuss this in [#14520](https://github.com/rust-lang/car
 
 ## warnings
 
+* Original Issue: [#8424](https://github.com/rust-lang/cargo/issues/8424)
+* Tracking Issue: [#14802](https://github.com/rust-lang/cargo/issues/14802)
+
 The `-Z warnings` feature enables the `build.warnings` configuration option to control how
 Cargo handles warnings. If the `-Z warnings` unstable flag is not enabled, then
 the `build.warnings` config will be ignored.
