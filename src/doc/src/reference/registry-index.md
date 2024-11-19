@@ -140,26 +140,24 @@ explaining the format of the entry.
             "req": "^0.6",
             // Array of features (as strings) enabled for this dependency.
             "features": ["i128_support"],
-            // Boolean of whether or not this is an optional dependency.
+            // Boolean of whether or not this is an optional dependency. Defaults to `false` if not specified.
             "optional": false,
-            // Boolean of whether or not default features are enabled.
+            // Boolean of whether or not default features are enabled. Defaults to `true` if not specified.
             "default_features": true,
             // The target platform for the dependency.
-            // null if not a target dependency.
+            // If not specified or `null`, it is not a target dependency.
             // Otherwise, a string such as "cfg(windows)".
             "target": null,
             // The dependency kind.
             // "dev", "build", or "normal".
-            // Note: this is a required field, but a small number of entries
-            // exist in the crates.io index with either a missing or null
-            // `kind` field due to implementation bugs.
+            // If not specified or `null`, it defaults to "normal".
             "kind": "normal",
             // The URL of the index of the registry where this dependency is
-            // from as a string. If not specified or null, it is assumed the
+            // from as a string. If not specified or `null`, it is assumed the
             // dependency is in the current registry.
             "registry": null,
             // If the dependency is renamed, this is a string of the actual
-            // package name. If not specified or null, this dependency is not
+            // package name. If not specified or `null`, this dependency is not
             // renamed.
             "package": null,
         }

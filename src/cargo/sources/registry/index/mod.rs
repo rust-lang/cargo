@@ -206,6 +206,7 @@ pub struct IndexPackage<'a> {
     #[serde(borrow)]
     pub deps: Vec<RegistryDependency<'a>>,
     /// Set of features defined for the package, i.e., `[features]` table.
+    #[serde(default)]
     pub features: BTreeMap<InternedString, Vec<InternedString>>,
     /// This field contains features with new, extended syntax. Specifically,
     /// namespaced features (`dep:`) and weak dependencies (`pkg?/feat`).
@@ -268,10 +269,13 @@ pub struct RegistryDependency<'a> {
     #[serde(borrow)]
     pub req: Cow<'a, str>,
     /// Set of features enabled for this dependency.
+    #[serde(default)]
     pub features: Vec<InternedString>,
     /// Whether or not this is an optional dependency.
+    #[serde(default)]
     pub optional: bool,
     /// Whether or not default features are enabled.
+    #[serde(default = "default_true")]
     pub default_features: bool,
     /// The target platform for this dependency.
     pub target: Option<Cow<'a, str>>,
@@ -290,6 +294,10 @@ pub struct RegistryDependency<'a> {
     pub bindep_target: Option<Cow<'a, str>>,
     #[serde(default)]
     pub lib: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 impl<'gctx> RegistryIndex<'gctx> {
