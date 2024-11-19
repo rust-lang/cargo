@@ -139,10 +139,13 @@ explaining the format of the entry.
             // https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html.
             "req": "^0.6",
             // Array of features (as strings) enabled for this dependency.
+            // May be omitted since Cargo 1.84.
             "features": ["i128_support"],
-            // Boolean of whether or not this is an optional dependency. Defaults to `false` if not specified.
+            // Boolean of whether or not this is an optional dependency.
+            // Since Cargo 1.84, defaults to `false` if not specified.
             "optional": false,
-            // Boolean of whether or not default features are enabled. Defaults to `true` if not specified.
+            // Boolean of whether or not default features are enabled.
+            // Since Cargo 1.84, defaults to `true` if not specified.
             "default_features": true,
             // The target platform for the dependency.
             // If not specified or `null`, it is not a target dependency.
@@ -166,6 +169,7 @@ explaining the format of the entry.
     "cksum": "d867001db0e2b6e0496f9fac96930e2d42233ecd3ca0413e0753d4c7695d289c",
     // Set of features defined for the package.
     // Each feature maps to an array of features or dependencies it enables.
+    // May be omitted since Cargo 1.84.
     "features": {
         "extras": ["rand/simd_support"]
     },
