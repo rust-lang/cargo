@@ -1640,7 +1640,7 @@ fn cargo_target_empty_env() {
 
 "#]])
         .with_status(101)
-        .run()
+        .run();
 }
 
 #[cargo_test]

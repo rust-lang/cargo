@@ -4307,7 +4307,7 @@ fn test_hint_workspace_virtual() {
 
 "#]])
         .with_status(101)
-        .run()
+        .run();
 }
 
 #[cargo_test]

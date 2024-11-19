@@ -31,7 +31,7 @@ Caused by:
   See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#open-namespaces for more information about the status of this feature.
 
 "#]])
-        .run()
+        .run();
 }
 
 #[cargo_test]
@@ -100,7 +100,7 @@ fn implicit_lib_within_namespace() {
             .is_json(),
         )
         .with_stderr_data("")
-        .run()
+        .run();
 }
 
 #[cargo_test]
@@ -169,7 +169,7 @@ fn implicit_bin_within_namespace() {
             .is_json(),
         )
         .with_stderr_data("")
-        .run()
+        .run();
 }
 
 #[cargo_test]
@@ -256,7 +256,7 @@ fn explicit_bin_within_namespace() {
             .is_json(),
         )
         .with_stderr_data("")
-        .run()
+        .run();
 }
 
 #[cargo_test]
@@ -354,7 +354,7 @@ path+[ROOTURL]/foo#foo::bar@0.0.1
 
 "#]])
         .with_stderr_data("")
-        .run()
+        .run();
 }
 
 #[cargo_test]
@@ -384,7 +384,7 @@ fn update_spec_accepts_namespaced_name() {
 [LOCKING] 0 packages to latest compatible versions
 
 "#]])
-        .run()
+        .run();
 }
 
 #[cargo_test]
@@ -414,7 +414,7 @@ fn update_spec_accepts_namespaced_pkgid() {
 [LOCKING] 0 packages to latest compatible versions
 
 "#]])
-        .run()
+        .run();
 }
 
 #[cargo_test]

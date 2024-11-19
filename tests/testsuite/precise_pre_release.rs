@@ -39,7 +39,7 @@ if you are looking for the prerelease package it needs to be specified explicitl
 perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]])
-        .run()
+        .run();
 }
 
 #[cargo_test]

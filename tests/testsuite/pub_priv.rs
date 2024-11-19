@@ -42,7 +42,7 @@ fn exported_priv_warning() {
 src/lib.rs:3:13: [WARNING] type `FromPriv` from private dependency 'priv_dep' in public interface
 ...
 "#]])
-        .run()
+        .run();
 }
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
@@ -87,7 +87,7 @@ fn exported_pub_dep() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        .run()
+        .run();
 }
 
 #[cargo_test]
@@ -113,7 +113,7 @@ Caused by:
   See https://doc.rust-lang.org/[..]cargo/reference/unstable.html#public-dependency for more information about using this feature.
 
 "#]])
-        .run()
+        .run();
 }
 
 #[cargo_test]
@@ -151,7 +151,7 @@ fn requires_feature() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        .run()
+        .run();
 }
 
 #[cargo_test]
@@ -194,7 +194,7 @@ Caused by:
   'public' specifier can only be used on regular dependencies, not dev-dependencies
 
 "#]])
-        .run()
+        .run();
 }
 
 #[cargo_test]
@@ -233,7 +233,7 @@ fn pub_dev_dependency_without_feature() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        .run()
+        .run();
 }
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
@@ -291,7 +291,7 @@ Caused by:
   foo2 is public, but workspace dependencies cannot be public
 
 "#]])
-        .run()
+        .run();
 }
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
@@ -336,7 +336,7 @@ fn allow_priv_in_tests() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        .run()
+        .run();
 }
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
@@ -381,7 +381,7 @@ fn allow_priv_in_benchs() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        .run()
+        .run();
 }
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
@@ -427,7 +427,7 @@ fn allow_priv_in_bins() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        .run()
+        .run();
 }
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
@@ -473,7 +473,7 @@ fn allow_priv_in_examples() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        .run()
+        .run();
 }
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
@@ -520,7 +520,7 @@ fn allow_priv_in_custom_build() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        .run()
+        .run();
 }
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
@@ -576,7 +576,7 @@ fn publish_package_with_public_dependency() {
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
-        .run()
+        .run();
 }
 
 #[cargo_test(nightly, reason = "exported_private_dependencies lint is unstable")]
