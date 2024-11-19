@@ -623,12 +623,10 @@ pub fn cargo_exe() -> PathBuf {
 /// does not have access to the raw `ExitStatus` because `ProcessError` needs
 /// to be serializable (for the Rustc cache), and `ExitStatus` does not
 /// provide a constructor.
-struct RawOutput {
-    #[allow(dead_code)]
-    code: Option<i32>,
-    stdout: Vec<u8>,
-    #[allow(dead_code)]
-    stderr: Vec<u8>,
+pub struct RawOutput {
+    pub code: Option<i32>,
+    pub stdout: Vec<u8>,
+    pub stderr: Vec<u8>,
 }
 
 /// Run and verify a [`ProcessBuilder`]
@@ -1042,14 +1040,16 @@ impl Execs {
     }
 
     #[track_caller]
-    pub fn run(&mut self) {
+    pub fn run(&mut self) -> RawOutput {
         self.ran = true;
         let mut p = (&self.process_builder).clone().unwrap();
         if let Some(stdin) = self.expect_stdin.take() {
             p.stdin(stdin);
         }
-        if let Err(e) = self.match_process(&p) {
-            panic_error(&format!("test failed running {}", p), e);
+
+        match self.match_process(&p) {
+            Err(e) => panic_error(&format!("test failed running {}", p), e),
+            Ok(output) => output,
         }
     }
 
@@ -1057,19 +1057,15 @@ impl Execs {
     /// JSON object on stdout.
     #[track_caller]
     pub fn run_json(&mut self) -> serde_json::Value {
-        self.ran = true;
-        let p = (&self.process_builder).clone().unwrap();
-        match self.match_process(&p) {
-            Err(e) => panic_error(&format!("test failed running {}", p), e),
-            Ok(output) => serde_json::from_slice(&output.stdout).unwrap_or_else(|e| {
-                panic!(
-                    "\nfailed to parse JSON: {}\n\
+        let output = self.run();
+        serde_json::from_slice(&output.stdout).unwrap_or_else(|e| {
+            panic!(
+                "\nfailed to parse JSON: {}\n\
                      output was:\n{}\n",
-                    e,
-                    String::from_utf8_lossy(&output.stdout)
-                );
-            }),
-        }
+                e,
+                String::from_utf8_lossy(&output.stdout)
+            );
+        })
     }
 
     #[track_caller]
