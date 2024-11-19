@@ -3,7 +3,6 @@ use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
 use std::sync::Arc;
 
 use anyhow::Context as _;
@@ -62,10 +61,10 @@ impl EitherManifest {
 #[derive(Clone, Debug)]
 pub struct Manifest {
     // alternate forms of manifests:
-    contents: Rc<String>,
-    document: Rc<toml_edit::ImDocument<String>>,
-    original_toml: Rc<TomlManifest>,
-    normalized_toml: Rc<TomlManifest>,
+    contents: Arc<String>,
+    document: Arc<toml_edit::ImDocument<String>>,
+    original_toml: Arc<TomlManifest>,
+    normalized_toml: Arc<TomlManifest>,
     summary: Summary,
 
     // this form of manifest:
@@ -108,10 +107,10 @@ pub struct Warnings(Vec<DelayedWarning>);
 #[derive(Clone, Debug)]
 pub struct VirtualManifest {
     // alternate forms of manifests:
-    contents: Rc<String>,
-    document: Rc<toml_edit::ImDocument<String>>,
-    original_toml: Rc<TomlManifest>,
-    normalized_toml: Rc<TomlManifest>,
+    contents: Arc<String>,
+    document: Arc<toml_edit::ImDocument<String>>,
+    original_toml: Arc<TomlManifest>,
+    normalized_toml: Arc<TomlManifest>,
 
     // this form of manifest:
     replace: Vec<(PackageIdSpec, Dependency)>,
@@ -484,10 +483,10 @@ compact_debug! {
 
 impl Manifest {
     pub fn new(
-        contents: Rc<String>,
-        document: Rc<toml_edit::ImDocument<String>>,
-        original_toml: Rc<TomlManifest>,
-        normalized_toml: Rc<TomlManifest>,
+        contents: Arc<String>,
+        document: Arc<toml_edit::ImDocument<String>>,
+        original_toml: Arc<TomlManifest>,
+        normalized_toml: Arc<TomlManifest>,
         summary: Summary,
 
         default_kind: Option<CompileKind>,
@@ -726,10 +725,10 @@ impl Manifest {
 
 impl VirtualManifest {
     pub fn new(
-        contents: Rc<String>,
-        document: Rc<toml_edit::ImDocument<String>>,
-        original_toml: Rc<TomlManifest>,
-        normalized_toml: Rc<TomlManifest>,
+        contents: Arc<String>,
+        document: Arc<toml_edit::ImDocument<String>>,
+        original_toml: Arc<TomlManifest>,
+        normalized_toml: Arc<TomlManifest>,
         replace: Vec<(PackageIdSpec, Dependency)>,
         patch: HashMap<Url, Vec<Dependency>>,
         workspace: WorkspaceConfig,
