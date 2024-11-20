@@ -48,7 +48,7 @@ Members are required to always:
 
 Members are given privileges, such as:
 
-- Merge permissions (bors rights)
+- Merge permissions (GitHub permissions)
 - Issue and project management (GitHub permissions)
 - Voting and decision making (RFCs, major changes)
 - Access to private communications related to team management and security discussions

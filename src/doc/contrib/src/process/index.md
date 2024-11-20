@@ -87,12 +87,12 @@ The Cargo project uses several bots:
 * [GitHub Actions] are used to automatically run all tests for each PR.
 * [triagebot] automatically assigns reviewers for PRs, see [PR Assignment] for
   how to configure.
-* [bors] is used to merge PRs. See [The merging process].
+* [GitHub merge queue] is used to merge PRs. See [The merging process].
 * [triagebot] is used for assigning issues to non-members, see [Issue
   assignment](#issue-assignment).
 * [rfcbot] is used for making asynchronous decisions by team members.
 
-[bors]: https://buildbot2.rust-lang.org/homu/
+[GitHub merge queue]: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue
 [The merging process]: working-on-cargo.md#the-merging-process
 [GitHub Actions]: https://github.com/features/actions
 [triagebot]: https://forge.rust-lang.org/triagebot/index.html
