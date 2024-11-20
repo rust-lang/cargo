@@ -11,7 +11,7 @@
 
 set -euo pipefail
 
-# When `BASE_SHA` is missing, we assume it is from bors merge commit,
+# When `BASE_SHA` is missing, we assume it is from GitHub merge queue merge commit,
 # so hope `HEAD~` to find the previous commit on master branch.
 base_sha=$(git rev-parse "${BASE_SHA:-HEAD~1}")
 head_sha=$(git rev-parse "${HEAD_SHA:-HEAD}")
