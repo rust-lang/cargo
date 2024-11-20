@@ -4,7 +4,10 @@ use std::fs;
 
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
-use cargo_test_support::{basic_manifest, paths, project, project_in_home, rustc_host, str};
+use cargo_test_support::{
+    basic_manifest, paths, project, project_in_home, rustc_host, str, RawOutput,
+};
+use snapbox::assert_data_eq;
 
 #[cargo_test]
 fn env_rustflags_normal_source() {
@@ -1478,36 +1481,44 @@ fn env_rustflags_misspelled_build_script() {
 
 #[cargo_test]
 fn remap_path_prefix_ignored() {
-    // Ensure that --remap-path-prefix does not affect metadata hash.
-    let p = project().file("src/lib.rs", "").build();
-    p.cargo("build").run();
-    let rlibs = p
-        .glob("target/debug/deps/*.rlib")
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap();
-    assert_eq!(rlibs.len(), 1);
-    p.cargo("clean").run();
-
-    let check_metadata_same = || {
-        let rlibs2 = p
-            .glob("target/debug/deps/*.rlib")
-            .collect::<Result<Vec<_>, _>>()
-            .unwrap();
-        assert_eq!(rlibs, rlibs2);
+    let get_c_metadata_re =
+        regex::Regex::new(r".* (--crate-name [^ ]+).* (-C ?metadata=[^ ]+).*").unwrap();
+    let get_c_metadata = |output: RawOutput| {
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        let mut c_metadata = get_c_metadata_re
+            .captures_iter(&stderr)
+            .map(|c| {
+                let (_, [name, c_metadata]) = c.extract();
+                format!("{name} {c_metadata}")
+            })
+            .collect::<Vec<_>>();
+        assert!(
+            !c_metadata.is_empty(),
+            "`{get_c_metadata_re:?}` did not match:\n```\n{stderr}\n```"
+        );
+        c_metadata.sort();
+        c_metadata.join("\n")
     };
 
-    p.cargo("build")
+    let p = project().file("src/lib.rs", "").build();
+
+    let build_output = p
+        .cargo("build -v")
         .env(
             "RUSTFLAGS",
             "--remap-path-prefix=/abc=/zoo --remap-path-prefix /spaced=/zoo",
         )
         .run();
-    check_metadata_same();
+    let build_c_metadata = dbg!(get_c_metadata(build_output));
 
     p.cargo("clean").run();
-    p.cargo("rustc -- --remap-path-prefix=/abc=/zoo --remap-path-prefix /spaced=/zoo")
+
+    let rustc_output = p
+        .cargo("rustc -v -- --remap-path-prefix=/abc=/zoo --remap-path-prefix /spaced=/zoo")
         .run();
-    check_metadata_same();
+    let rustc_c_metadata = dbg!(get_c_metadata(rustc_output));
+
+    assert_data_eq!(rustc_c_metadata, build_c_metadata);
 }
 
 #[cargo_test]
