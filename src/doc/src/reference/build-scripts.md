@@ -432,11 +432,12 @@ key-value pairs. This metadata is set with the `cargo::metadata=KEY=VALUE`
 instruction.
 
 The metadata is passed to the build scripts of **dependent** packages. For
-example, if the package `bar` depends on `foo`, then if `foo` generates
-`key=value` as part of its build script metadata, then the build script of
-`bar` will have the environment variables `DEP_FOO_KEY=value`. See the ["Using
-another `sys` crate"][using-another-sys] for an example of how this can be
-used.
+example, if the package `foo` depends on `bar`, which links `baz`, then if 
+`bar` generates `key=value` as part of its build script metadata, then the
+build script of `foo` will have the environment variables `DEP_BAZ_KEY=value`
+(note that the value of the `links` key is used).
+See the ["Using another `sys` crate"][using-another-sys] for an example of 
+how this can be used.
 
 Note that metadata is only passed to immediate dependents, not transitive
 dependents.
