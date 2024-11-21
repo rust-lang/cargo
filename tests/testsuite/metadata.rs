@@ -3401,7 +3401,7 @@ fn metadata_links() {
 "#]]
             .is_json(),
         )
-        .run()
+        .run();
 }
 
 #[cargo_test]

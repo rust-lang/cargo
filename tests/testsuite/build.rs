@@ -82,7 +82,7 @@ fn build_with_symlink_to_path_dependency_with_build_script_in_git() {
     // It is necessary to have a sub-repository and to add files so there is an index.
     let repo = git::init(&root.join("original"));
     git::add(&repo);
-    cargo_process("build").run()
+    cargo_process("build").run();
 }
 
 #[cargo_test]

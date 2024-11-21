@@ -403,5 +403,5 @@ fn pkgid_json_message_metadata_consistency() {
 "#]]
             .is_json(),
         )
-        .run()
+        .run();
 }

@@ -453,5 +453,5 @@ big_update v1.0.0 has the following newer versions available: 2.0.0
 with_updates v1.0.0 has the following newer versions available: 1.0.1, 1.0.2, 3.0.1
 ...
 "#]])
-        .run()
+        .run();
 }

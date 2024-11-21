@@ -5234,7 +5234,7 @@ fn dev_dep_with_links() {
         .file("bar/build.rs", "fn main() {}")
         .file("bar/src/lib.rs", "")
         .build();
-    p.cargo("check --tests").run()
+    p.cargo("check --tests").run();
 }
 
 #[cargo_test]

@@ -3242,7 +3242,7 @@ fn protocol() {
 [ERROR] unsupported registry protocol `invalid` (defined in environment variable `CARGO_REGISTRIES_CRATES_IO_PROTOCOL`)
 
 "#]])
-        .run()
+        .run();
 }
 
 #[cargo_test]
@@ -3253,7 +3253,7 @@ fn http_requires_trailing_slash() {
 [ERROR] sparse registry url must end in a slash `/`: sparse+https://invalid.crates.io/test
 
 "#]])
-        .run()
+        .run();
 }
 
 // Limit the test to debug builds so that `__CARGO_TEST_MAX_UNPACK_SIZE` will take affect.

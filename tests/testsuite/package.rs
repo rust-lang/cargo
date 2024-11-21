@@ -3923,7 +3923,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGED] 6 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
 "#]])
-        .run()
+        .run();
 }
 
 #[cargo_test]
