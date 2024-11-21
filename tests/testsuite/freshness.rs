@@ -2527,8 +2527,7 @@ LLVM version: 9.0
         let output = p
             .cargo("check --message-format=json")
             .env("RUSTC", compiler.bin(version))
-            .exec_with_output()
-            .unwrap();
+            .run();
         // Collect the filenames generated.
         let mut artifacts: Vec<_> = std::str::from_utf8(&output.stdout)
             .unwrap()

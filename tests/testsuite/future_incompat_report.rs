@@ -252,8 +252,7 @@ The package `second-dep v0.0.2` currently triggers the following future incompat
     let output = p
         .cargo("check")
         .env("RUSTFLAGS", "-Zfuture-incompat-test")
-        .exec_with_output()
-        .unwrap();
+        .run();
 
     // Extract the 'id' from the stdout. We are looking
     // for the id in a line of the form "run `cargo report future-incompatibilities --id yZ7S`"
@@ -282,10 +281,7 @@ The package `second-dep v0.0.2` currently triggers the following future incompat
         .run();
 
     // Test without --id, and also the full output of the report.
-    let output = p
-        .cargo("report future-incompat")
-        .exec_with_output()
-        .unwrap();
+    let output = p.cargo("report future-incompat").run();
     let output = std::str::from_utf8(&output.stdout).unwrap();
     assert!(output.starts_with("The following warnings were discovered"));
     let mut lines = output

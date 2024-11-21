@@ -29,17 +29,11 @@ fn simple() {
     let rustc_output = raw_rustc_output(&p, "src/lib.rs", &[]);
 
     // -q so the output is the same as rustc (no "Compiling" or "Finished").
-    let cargo_output1 = p
-        .cargo("check -q --color=never")
-        .exec_with_output()
-        .expect("cargo to run");
+    let cargo_output1 = p.cargo("check -q --color=never").run();
     assert_eq!(rustc_output, as_str(&cargo_output1.stderr));
     assert!(cargo_output1.stdout.is_empty());
     // Check that the cached version is exactly the same.
-    let cargo_output2 = p
-        .cargo("check -q")
-        .exec_with_output()
-        .expect("cargo to run");
+    let cargo_output2 = p.cargo("check -q").run();
     assert_eq!(rustc_output, as_str(&cargo_output2.stderr));
     assert!(cargo_output2.stdout.is_empty());
 }
@@ -61,14 +55,10 @@ fn simple_short() {
 
     let cargo_output1 = p
         .cargo("check -q --color=never --message-format=short")
-        .exec_with_output()
-        .expect("cargo to run");
+        .run();
     assert_eq!(rustc_output, as_str(&cargo_output1.stderr));
     // assert!(cargo_output1.stdout.is_empty());
-    let cargo_output2 = p
-        .cargo("check -q --message-format=short")
-        .exec_with_output()
-        .expect("cargo to run");
+    let cargo_output2 = p.cargo("check -q --message-format=short").run();
     println!("{}", String::from_utf8_lossy(&cargo_output2.stdout));
     assert_eq!(rustc_output, as_str(&cargo_output2.stderr));
     assert!(cargo_output2.stdout.is_empty());
@@ -102,24 +92,15 @@ fn color() {
     assert!(!rustc_nocolor.contains("\x1b["));
 
     // First pass, non-cached, with color, should be the same.
-    let cargo_output1 = p
-        .cargo("check -q --color=always")
-        .exec_with_output()
-        .expect("cargo to run");
+    let cargo_output1 = p.cargo("check -q --color=always").run();
     compare(&rustc_color, as_str(&cargo_output1.stderr));
 
     // Replay cached, with color.
-    let cargo_output2 = p
-        .cargo("check -q --color=always")
-        .exec_with_output()
-        .expect("cargo to run");
+    let cargo_output2 = p.cargo("check -q --color=always").run();
     compare(&rustc_color, as_str(&cargo_output2.stderr));
 
     // Replay cached, no color.
-    let cargo_output_nocolor = p
-        .cargo("check -q --color=never")
-        .exec_with_output()
-        .expect("cargo to run");
+    let cargo_output_nocolor = p.cargo("check -q --color=never").run();
     compare(&rustc_nocolor, as_str(&cargo_output_nocolor.stderr));
 }
 
@@ -130,27 +111,17 @@ fn cached_as_json() {
 
     // Grab the non-cached output, feature disabled.
     // NOTE: When stabilizing, this will need to be redone.
-    let cargo_output = p
-        .cargo("check --message-format=json")
-        .exec_with_output()
-        .expect("cargo to run");
-    assert!(cargo_output.status.success());
+    let cargo_output = p.cargo("check --message-format=json").run();
     let orig_cargo_out = as_str(&cargo_output.stdout);
     assert!(orig_cargo_out.contains("compiler-message"));
     p.cargo("clean").run();
 
     // Check JSON output, not fresh.
-    let cargo_output1 = p
-        .cargo("check --message-format=json")
-        .exec_with_output()
-        .expect("cargo to run");
+    let cargo_output1 = p.cargo("check --message-format=json").run();
     assert_eq!(as_str(&cargo_output1.stdout), orig_cargo_out);
 
     // Check JSON output, fresh.
-    let cargo_output2 = p
-        .cargo("check --message-format=json")
-        .exec_with_output()
-        .expect("cargo to run");
+    let cargo_output2 = p.cargo("check --message-format=json").run();
     // The only difference should be this field.
     let fix_fresh = as_str(&cargo_output2.stdout).replace("\"fresh\":true", "\"fresh\":false");
     assert_eq!(fix_fresh, orig_cargo_out);
@@ -220,11 +191,7 @@ fn rustdoc() {
         )
         .build();
 
-    let rustdoc_output = p
-        .cargo("doc -q --color=always")
-        .exec_with_output()
-        .expect("rustdoc to run");
-    assert!(rustdoc_output.status.success());
+    let rustdoc_output = p.cargo("doc -q --color=always").run();
     let rustdoc_stderr = as_str(&rustdoc_output.stderr);
     assert!(rustdoc_stderr.contains("missing"));
     assert!(rustdoc_stderr.contains("\x1b["));
@@ -234,10 +201,7 @@ fn rustdoc() {
     );
 
     // Check the cached output.
-    let rustdoc_output = p
-        .cargo("doc -q --color=always")
-        .exec_with_output()
-        .expect("rustdoc to run");
+    let rustdoc_output = p.cargo("doc -q --color=always").run();
     assert_eq!(as_str(&rustdoc_output.stderr), rustdoc_stderr);
 }
 

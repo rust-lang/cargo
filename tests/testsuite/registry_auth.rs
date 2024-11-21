@@ -542,8 +542,7 @@ fn token_not_logged() {
         .replace_crates_io(crates_io.index_url())
         .env("CARGO_HTTP_DEBUG", "true")
         .env("CARGO_LOG", "trace")
-        .exec_with_output()
-        .unwrap();
+        .run();
     let log = String::from_utf8(output.stderr).unwrap();
     assert_e2e().eq(
         &log,

@@ -1648,7 +1648,7 @@ fn pkgid_querystring_works() {
 
     p.cargo("generate-lockfile").run();
 
-    let output = p.cargo("pkgid").arg("gitdep").exec_with_output().unwrap();
+    let output = p.cargo("pkgid").arg("gitdep").run();
     let gitdep_pkgid = String::from_utf8(output.stdout).unwrap();
     let gitdep_pkgid = gitdep_pkgid.trim();
     assert_e2e().eq(

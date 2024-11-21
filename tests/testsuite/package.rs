@@ -3143,7 +3143,7 @@ path = "src/lib.rs"
 }
 
 fn verify_packaged_status_line(
-    output: std::process::Output,
+    output: cargo_test_support::RawOutput,
     num_files: usize,
     uncompressed_size: u64,
     compressed_size: u64,
@@ -3228,7 +3228,7 @@ version = "0.0.1"
         + main_rs_contents.len()
         + cargo_toml_contents.len()
         + cargo_lock_contents.len()) as u64;
-    let output = p.cargo("package").exec_with_output().unwrap();
+    let output = p.cargo("package").run();
 
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
@@ -3333,7 +3333,7 @@ version = "0.0.1"
         + cargo_lock_contents.len()
         + bar_txt_contents.len()) as u64;
 
-    let output = p.cargo("package").exec_with_output().unwrap();
+    let output = p.cargo("package").run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
         .with_stdout_data(str![[r#"
@@ -3452,7 +3452,7 @@ version = "0.0.1"
         + cargo_lock_contents.len()
         + bar_txt_contents.len() * 2) as u64;
 
-    let output = p.cargo("package").exec_with_output().unwrap();
+    let output = p.cargo("package").run();
     assert!(p.root().join("target/package/foo-0.0.1.crate").is_file());
     p.cargo("package -l")
         .with_stdout_data(str![[r#"

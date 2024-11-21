@@ -1,8 +1,7 @@
-use std::process::Output;
-
 use cargo::core::compiler::Lto;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
+use cargo_test_support::RawOutput;
 use cargo_test_support::{basic_manifest, project, str, Project};
 
 #[cargo_test]
@@ -509,7 +508,7 @@ fn project_with_dep(crate_types: &str) -> Project {
 ///
 /// `krate_info` is extra compiler flags used to distinguish this if the same
 /// crate name is being built multiple times.
-fn verify_lto(output: &Output, krate: &str, krate_info: &str, expected_lto: Lto) {
+fn verify_lto(output: &RawOutput, krate: &str, krate_info: &str, expected_lto: Lto) {
     let stderr = std::str::from_utf8(&output.stderr).unwrap();
     let mut matches = stderr.lines().filter(|line| {
         line.contains("Running")
@@ -554,7 +553,7 @@ fn verify_lto(output: &Output, krate: &str, krate_info: &str, expected_lto: Lto)
 #[cargo_test]
 fn cdylib_and_rlib() {
     let p = project_with_dep("'cdylib', 'rlib'");
-    let output = p.cargo("build --release -v").exec_with_output().unwrap();
+    let output = p.cargo("build --release -v").run();
     // `registry` is ObjectAndBitcode because it needs Object for the
     // rlib, and Bitcode for the cdylib (which doesn't support LTO).
     verify_lto(
@@ -627,7 +626,7 @@ fn cdylib_and_rlib() {
 #[cargo_test]
 fn dylib() {
     let p = project_with_dep("'dylib'");
-    let output = p.cargo("build --release -v").exec_with_output().unwrap();
+    let output = p.cargo("build --release -v").run();
     // `registry` is OnlyObject because rustc doesn't support LTO with dylibs.
     verify_lto(&output, "registry", "--crate-type lib", Lto::OnlyObject);
     // `registry_shared` is both because it is needed by both bar (Object) and
@@ -860,7 +859,7 @@ fn dylib_rlib_bin() {
         .file("src/bin/ferret.rs", "fn main() { foo::foo(); }")
         .build();
 
-    let output = p.cargo("build --release -v").exec_with_output().unwrap();
+    let output = p.cargo("build --release -v").run();
     verify_lto(
         &output,
         "foo",
