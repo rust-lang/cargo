@@ -133,7 +133,7 @@ fn overlay_version_wins() {
 }
 
 #[cargo_test]
-fn version_collision() {
+fn version_precedence() {
     let (reg, alt_path) = setup();
     let p = project()
         .file(
@@ -161,16 +161,13 @@ fn version_collision() {
 
     p.cargo("check")
         .overlay_registry(&reg.index_url(), &alt_path)
-        .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `sparse+http://127.0.0.1:[..]/index/` index
-[ERROR] failed to get `baz` as a dependency of package `foo v0.0.1 ([ROOT]/foo)`
-
-Caused by:
-  failed to query replaced source registry `crates-io`
-
-Caused by:
-  found a package in the remote registry and the local overlay: baz@0.1.1
+[LOCKING] 1 package to latest compatible version
+[UNPACKING] baz v0.1.1 (registry `[ROOT]/alternative-registry`)
+[CHECKING] baz v0.1.1
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
         .run();

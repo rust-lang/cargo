@@ -6056,20 +6056,21 @@ fn workspace_with_local_dep_already_published_nightly() {
     p.cargo("package -Zpackage-workspace")
         .masquerade_as_nightly_cargo(&["package-workspace"])
         .replace_crates_io(reg.index_url())
-        .with_status(101)
         .with_stderr_data(
             str![[r#"
 [PACKAGING] dep v0.1.0 ([ROOT]/foo/dep)
 [PACKAGING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] crates.io index
-[ERROR] failed to prepare local package for uploading
-
-Caused by:
-  failed to get `dep` as a dependency of package `main v0.0.1 ([ROOT]/foo/main)`
-
-Caused by:
-  found a package in the remote registry and the local overlay: dep@0.1.0
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
+[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[VERIFYING] main v0.0.1 ([ROOT]/foo/main)
+[UNPACKING] dep v0.1.0 (registry `[ROOT]/foo/target/package/tmp-registry`)
+[COMPILING] dep v0.1.0
+[COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]
             .unordered(),
