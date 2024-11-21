@@ -3,6 +3,7 @@
 use cargo_test_support::prelude::*;
 use cargo_test_support::project;
 use cargo_test_support::registry::{Package, RegistryBuilder, TestRegistry};
+use cargo_test_support::str;
 
 fn setup() -> (TestRegistry, String) {
     let alt = RegistryBuilder::new().alternative().build();
@@ -77,17 +78,16 @@ fn registry_version_wins() {
 
     p.cargo("check")
         .overlay_registry(&reg.index_url(), &alt_path)
-        .with_stderr_data(
-            "\
-[UPDATING] [..]
+        .with_stderr_data(str![[r#"
+[UPDATING] `sparse+http://127.0.0.1:[..]/index/` index
 [LOCKING] 1 package to latest compatible version
 [DOWNLOADING] crates ...
-[DOWNLOADED] baz v0.1.1 (registry [..])
+[DOWNLOADED] baz v0.1.1 (registry `sparse+http://127.0.0.1:[..]/index/`)
 [CHECKING] baz v0.1.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-",
-        )
+
+"#]])
         .run();
 }
 
@@ -120,21 +120,20 @@ fn overlay_version_wins() {
 
     p.cargo("check")
         .overlay_registry(&reg.index_url(), &alt_path)
-        .with_stderr_data(
-            "\
-[UPDATING] [..]
+        .with_stderr_data(str![[r#"
+[UPDATING] `sparse+http://127.0.0.1:[..]/index/` index
 [LOCKING] 1 package to latest compatible version
-[UNPACKING] baz v0.1.1 (registry [..])
+[UNPACKING] baz v0.1.1 (registry `[ROOT]/alternative-registry`)
 [CHECKING] baz v0.1.1
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-",
-        )
+
+"#]])
         .run();
 }
 
 #[cargo_test]
-fn version_collision() {
+fn version_precedence() {
     let (reg, alt_path) = setup();
     let p = project()
         .file(
@@ -162,19 +161,15 @@ fn version_collision() {
 
     p.cargo("check")
         .overlay_registry(&reg.index_url(), &alt_path)
-        .with_status(101)
-        .with_stderr_data(
-            "\
-[UPDATING] [..]
-[ERROR] failed to get `baz` [..]
+        .with_stderr_data(str![[r#"
+[UPDATING] `sparse+http://127.0.0.1:[..]/index/` index
+[LOCKING] 1 package to latest compatible version
+[UNPACKING] baz v0.1.1 (registry `[ROOT]/alternative-registry`)
+[CHECKING] baz v0.1.1
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-Caused by:
-  failed to query replaced source registry `crates-io`
-
-Caused by:
-  found a package in the remote registry and the local overlay: baz@0.1.1
-",
-        )
+"#]])
         .run();
 }
 
@@ -248,22 +243,21 @@ fn registry_dep_depends_on_new_local_package() {
 
     p.cargo("check")
         .overlay_registry(&reg.index_url(), &alt_path)
-        .with_stderr_data(
-            "\
-[UPDATING] [..]
+        .with_stderr_data(str![[r#"
+[UPDATING] `sparse+http://127.0.0.1:[..]/index/` index
 [LOCKING] 3 packages to latest compatible versions
 [ADDING] workspace-package v0.0.1 (available: v0.1.1)
 [DOWNLOADING] crates ...
-[UNPACKING] [..]
-[DOWNLOADED] [..]
-[DOWNLOADED] [..]
+[UNPACKING] workspace-package v0.1.1 (registry `[ROOT]/alternative-registry`)
+[DOWNLOADED] registry-package v0.1.0 (registry `sparse+http://127.0.0.1:[..]/index/`)
+[DOWNLOADED] workspace-package v0.0.1 (registry `sparse+http://127.0.0.1:[..]/index/`)
 [CHECKING] workspace-package v0.1.1
 [CHECKING] workspace-package v0.0.1
 [CHECKING] registry-package v0.1.0
-[CHECKING] foo v0.0.1 [..]
+[CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-",
-        )
+
+"#]])
         .run();
 }
 
