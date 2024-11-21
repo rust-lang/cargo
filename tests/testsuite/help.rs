@@ -7,7 +7,7 @@ use std::str::from_utf8;
 use cargo_test_support::prelude::*;
 use cargo_test_support::registry::Package;
 use cargo_test_support::str;
-use cargo_test_support::{basic_manifest, cargo_exe, cargo_process, paths, process, project};
+use cargo_test_support::{basic_manifest, cargo_process, paths, project};
 
 #[cargo_test]
 fn help() {
@@ -83,13 +83,9 @@ fn help_with_man_and_path(
         .unwrap()
     };
 
-    let output = process(&cargo_exe())
-        .arg("help")
-        .arg(subcommand)
+    let output = cargo_process(&format!("help {subcommand}"))
         .env("PATH", path)
-        .exec_with_output()
-        .unwrap();
-    assert!(output.status.success());
+        .run();
     let stderr = from_utf8(&output.stderr).unwrap();
     if display_command.is_empty() {
         assert_eq!(stderr, "");
@@ -101,13 +97,9 @@ fn help_with_man_and_path(
 }
 
 fn help_with_stdout_and_path(subcommand: &str, path: &Path) -> String {
-    let output = process(&cargo_exe())
-        .arg("help")
-        .arg(subcommand)
+    let output = cargo_process(&format!("help {subcommand}"))
         .env("PATH", path)
-        .exec_with_output()
-        .unwrap();
-    assert!(output.status.success());
+        .run();
     let stderr = from_utf8(&output.stderr).unwrap();
     assert_eq!(stderr, "");
     let stdout = from_utf8(&output.stdout).unwrap();

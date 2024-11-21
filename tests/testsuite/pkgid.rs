@@ -301,7 +301,7 @@ fn pkgid_json_message_metadata_consistency() {
 
     p.cargo("generate-lockfile").run();
 
-    let output = p.cargo("pkgid").arg("foo").exec_with_output().unwrap();
+    let output = p.cargo("pkgid").arg("foo").run();
     let pkgid = String::from_utf8(output.stdout).unwrap();
     let pkgid = pkgid.trim();
     assert_e2e().eq(pkgid, str!["path+[ROOTURL]/foo#0.5.0"]);

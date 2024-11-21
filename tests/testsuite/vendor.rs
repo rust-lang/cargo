@@ -130,11 +130,7 @@ fn vendor_path_specified() {
         "deps/.vendor"
     };
 
-    let output = p
-        .cargo("vendor --respect-source-config")
-        .arg(path)
-        .exec_with_output()
-        .unwrap();
+    let output = p.cargo("vendor --respect-source-config").arg(path).run();
     // Assert against original output to ensure that
     // path is normalized by `ops::vendor` on Windows.
     assert_eq!(
@@ -1425,10 +1421,7 @@ fn git_complex() {
         .file("src/lib.rs", "")
         .build();
 
-    let output = p
-        .cargo("vendor --respect-source-config")
-        .exec_with_output()
-        .unwrap();
+    let output = p.cargo("vendor --respect-source-config").run();
     let output = String::from_utf8(output.stdout).unwrap();
     p.change_file(".cargo/config.toml", &output);
 
@@ -1505,10 +1498,7 @@ fn git_deterministic() {
         .file("src/lib.rs", "")
         .build();
 
-    let output = p
-        .cargo("vendor --respect-source-config")
-        .exec_with_output()
-        .unwrap();
+    let output = p.cargo("vendor --respect-source-config").run();
     let output = String::from_utf8(output.stdout).unwrap();
     p.change_file(".cargo/config.toml", &output);
 
@@ -1744,10 +1734,7 @@ fn config_instructions_works() {
         )
         .file("src/lib.rs", "")
         .build();
-    let output = p
-        .cargo("vendor --respect-source-config")
-        .exec_with_output()
-        .unwrap();
+    let output = p.cargo("vendor --respect-source-config").run();
     let output = String::from_utf8(output.stdout).unwrap();
     p.change_file(".cargo/config.toml", &output);
 

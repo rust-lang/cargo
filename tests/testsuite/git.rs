@@ -3396,7 +3396,7 @@ fn historical_lockfile_works_with_vendor() {
         .file("src/lib.rs", "")
         .build();
 
-    let output = project.cargo("vendor").exec_with_output().unwrap();
+    let output = project.cargo("vendor").run();
     project.change_file(
         ".cargo/config.toml",
         str::from_utf8(&output.stdout).unwrap(),

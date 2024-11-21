@@ -5452,9 +5452,7 @@ fn same_metadata_different_directory() {
         .file("Cargo.toml", &basic_bin_manifest("foo"))
         .file("src/foo.rs", &main_file(r#""i am foo""#, &[]))
         .build();
-    let output = t!(String::from_utf8(
-        t!(p.cargo("build -v").exec_with_output()).stderr,
-    ));
+    let output = t!(String::from_utf8(p.cargo("build -v").run().stderr,));
     let metadata = output
         .split_whitespace()
         .find(|arg| arg.starts_with("metadata="))
