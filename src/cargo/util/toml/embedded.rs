@@ -189,15 +189,15 @@ fn sanitize_name(name: &str) -> String {
 }
 
 #[derive(Debug)]
-struct Source<'s> {
+struct ScriptSource<'s> {
     shebang: Option<&'s str>,
     info: Option<&'s str>,
     frontmatter: Option<&'s str>,
     content: &'s str,
 }
 
-fn split_source(input: &str) -> CargoResult<Source<'_>> {
-    let mut source = Source {
+fn split_source(input: &str) -> CargoResult<ScriptSource<'_>> {
+    let mut source = ScriptSource {
         shebang: None,
         info: None,
         frontmatter: None,
