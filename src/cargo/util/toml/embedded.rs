@@ -21,7 +21,7 @@ pub(super) fn expand_manifest(
     path: &std::path::Path,
     gctx: &GlobalContext,
 ) -> CargoResult<String> {
-    let source = split_source(content)?;
+    let source = ScriptSource::parse(content)?;
     if let Some(frontmatter) = source.frontmatter {
         match source.info {
             Some("cargo") | None => {}
@@ -196,87 +196,89 @@ struct ScriptSource<'s> {
     content: &'s str,
 }
 
-fn split_source(input: &str) -> CargoResult<ScriptSource<'_>> {
-    let mut source = ScriptSource {
-        shebang: None,
-        info: None,
-        frontmatter: None,
-        content: input,
-    };
+impl<'s> ScriptSource<'s> {
+    fn parse(input: &'s str) -> CargoResult<Self> {
+        let mut source = Self {
+            shebang: None,
+            info: None,
+            frontmatter: None,
+            content: input,
+        };
 
-    // See rust-lang/rust's compiler/rustc_lexer/src/lib.rs's `strip_shebang`
-    // Shebang must start with `#!` literally, without any preceding whitespace.
-    // For simplicity we consider any line starting with `#!` a shebang,
-    // regardless of restrictions put on shebangs by specific platforms.
-    if let Some(rest) = source.content.strip_prefix("#!") {
-        // Ok, this is a shebang but if the next non-whitespace token is `[`,
-        // then it may be valid Rust code, so consider it Rust code.
-        if rest.trim_start().starts_with('[') {
-            return Ok(source);
+        // See rust-lang/rust's compiler/rustc_lexer/src/lib.rs's `strip_shebang`
+        // Shebang must start with `#!` literally, without any preceding whitespace.
+        // For simplicity we consider any line starting with `#!` a shebang,
+        // regardless of restrictions put on shebangs by specific platforms.
+        if let Some(rest) = source.content.strip_prefix("#!") {
+            // Ok, this is a shebang but if the next non-whitespace token is `[`,
+            // then it may be valid Rust code, so consider it Rust code.
+            if rest.trim_start().starts_with('[') {
+                return Ok(source);
+            }
+
+            // No other choice than to consider this a shebang.
+            let newline_end = source
+                .content
+                .find('\n')
+                .map(|pos| pos + 1)
+                .unwrap_or(source.content.len());
+            let (shebang, content) = source.content.split_at(newline_end);
+            source.shebang = Some(shebang);
+            source.content = content;
         }
 
-        // No other choice than to consider this a shebang.
-        let newline_end = source
-            .content
-            .find('\n')
-            .map(|pos| pos + 1)
+        const FENCE_CHAR: char = '-';
+
+        let mut trimmed_content = source.content;
+        while !trimmed_content.is_empty() {
+            let c = trimmed_content;
+            let c = c.trim_start_matches([' ', '\t']);
+            let c = c.trim_start_matches(['\r', '\n']);
+            if c == trimmed_content {
+                break;
+            }
+            trimmed_content = c;
+        }
+        let fence_end = trimmed_content
+            .char_indices()
+            .find_map(|(i, c)| (c != FENCE_CHAR).then_some(i))
             .unwrap_or(source.content.len());
-        let (shebang, content) = source.content.split_at(newline_end);
-        source.shebang = Some(shebang);
+        let (fence_pattern, rest) = match fence_end {
+            0 => {
+                return Ok(source);
+            }
+            1 | 2 => {
+                anyhow::bail!(
+                    "found {fence_end} `{FENCE_CHAR}` in rust frontmatter, expected at least 3"
+                )
+            }
+            _ => trimmed_content.split_at(fence_end),
+        };
+        let (info, content) = rest.split_once("\n").unwrap_or((rest, ""));
+        let info = info.trim();
+        if !info.is_empty() {
+            source.info = Some(info);
+        }
         source.content = content;
-    }
 
-    const FENCE_CHAR: char = '-';
+        let Some((frontmatter, content)) = source.content.split_once(fence_pattern) else {
+            anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
+        };
+        source.frontmatter = Some(frontmatter);
+        source.content = content;
 
-    let mut trimmed_content = source.content;
-    while !trimmed_content.is_empty() {
-        let c = trimmed_content;
-        let c = c.trim_start_matches([' ', '\t']);
-        let c = c.trim_start_matches(['\r', '\n']);
-        if c == trimmed_content {
-            break;
+        let (line, content) = source
+            .content
+            .split_once("\n")
+            .unwrap_or((source.content, ""));
+        let line = line.trim();
+        if !line.is_empty() {
+            anyhow::bail!("unexpected trailing content on closing fence: `{line}`");
         }
-        trimmed_content = c;
-    }
-    let fence_end = trimmed_content
-        .char_indices()
-        .find_map(|(i, c)| (c != FENCE_CHAR).then_some(i))
-        .unwrap_or(source.content.len());
-    let (fence_pattern, rest) = match fence_end {
-        0 => {
-            return Ok(source);
-        }
-        1 | 2 => {
-            anyhow::bail!(
-                "found {fence_end} `{FENCE_CHAR}` in rust frontmatter, expected at least 3"
-            )
-        }
-        _ => trimmed_content.split_at(fence_end),
-    };
-    let (info, content) = rest.split_once("\n").unwrap_or((rest, ""));
-    let info = info.trim();
-    if !info.is_empty() {
-        source.info = Some(info);
-    }
-    source.content = content;
+        source.content = content;
 
-    let Some((frontmatter, content)) = source.content.split_once(fence_pattern) else {
-        anyhow::bail!("no closing `{fence_pattern}` found for frontmatter");
-    };
-    source.frontmatter = Some(frontmatter);
-    source.content = content;
-
-    let (line, content) = source
-        .content
-        .split_once("\n")
-        .unwrap_or((source.content, ""));
-    let line = line.trim();
-    if !line.is_empty() {
-        anyhow::bail!("unexpected trailing content on closing fence: `{line}`");
+        Ok(source)
     }
-    source.content = content;
-
-    Ok(source)
 }
 
 #[cfg(test)]
@@ -291,7 +293,7 @@ mod test_expand {
     fn assert_source(source: &str, expected: impl IntoData) {
         use std::fmt::Write as _;
 
-        let actual = match split_source(source) {
+        let actual = match ScriptSource::parse(source) {
             Ok(actual) => actual,
             Err(err) => panic!("unexpected err: {err}"),
         };
@@ -497,7 +499,7 @@ content: "\nfn main() {}"
     #[test]
     fn split_too_few_dashes() {
         assert_err(
-            split_source(
+            ScriptSource::parse(
                 r#"#!/usr/bin/env cargo
 --
 [dependencies]
@@ -513,7 +515,7 @@ fn main() {}
     #[test]
     fn split_mismatched_dashes() {
         assert_err(
-            split_source(
+            ScriptSource::parse(
                 r#"#!/usr/bin/env cargo
 ---
 [dependencies]
@@ -529,7 +531,7 @@ fn main() {}
     #[test]
     fn split_missing_close() {
         assert_err(
-            split_source(
+            ScriptSource::parse(
                 r#"#!/usr/bin/env cargo
 ---
 [dependencies]
