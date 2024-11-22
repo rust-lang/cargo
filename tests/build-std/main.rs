@@ -386,15 +386,7 @@ fn test_proc_macro() {
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH])
-dyld[[..]]: Library not loaded: @rpath/libstd-[HASH].dylib
-  Referenced from: <[..]> [ROOT]/foo/target/debug/deps/foo-[HASH]
-  Reason: tried: '[ROOT]/foo/target/debug/deps/libstd-[HASH].dylib' (no such file), '[ROOT]/foo/target/debug/libstd-[HASH].dylib' (no such file), '/usr/local/lib/libstd-[HASH].dylib' (no such file), '/usr/lib/libstd-[HASH].dylib' (no such file, not in dyld cache)
-[ERROR] test failed, to rerun pass `--lib`
-
-Caused by:
-  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/foo-[HASH]` ([..])
 
 "#]])
-        .with_status(101)
         .run();
 }
