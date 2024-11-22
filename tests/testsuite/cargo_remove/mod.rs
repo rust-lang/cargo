@@ -25,6 +25,8 @@ mod optional_dep_feature_formatting;
 mod optional_feature;
 mod package;
 mod remove_basic;
+mod script;
+mod script_last;
 mod skip_gc_glob_profile;
 mod target;
 mod target_build;
