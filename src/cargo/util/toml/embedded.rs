@@ -22,8 +22,8 @@ pub(super) fn expand_manifest(
     gctx: &GlobalContext,
 ) -> CargoResult<String> {
     let source = ScriptSource::parse(content)?;
-    if let Some(frontmatter) = source.frontmatter {
-        match source.info {
+    if let Some(frontmatter) = source.frontmatter() {
+        match source.info() {
             Some("cargo") | None => {}
             Some(other) => {
                 if let Some(remainder) = other.strip_prefix("cargo,") {
@@ -50,7 +50,7 @@ pub(super) fn expand_manifest(
             )
             .into_path_unlocked();
         let mut hacked_source = String::new();
-        if let Some(shebang) = source.shebang {
+        if let Some(shebang) = source.shebang() {
             writeln!(hacked_source, "{shebang}")?;
         }
         writeln!(hacked_source)?; // open
@@ -58,7 +58,7 @@ pub(super) fn expand_manifest(
             writeln!(hacked_source)?;
         }
         writeln!(hacked_source)?; // close
-        writeln!(hacked_source, "{}", source.content)?;
+        writeln!(hacked_source, "{}", source.content())?;
         if let Some(parent) = hacked_path.parent() {
             cargo_util::paths::create_dir_all(parent)?;
         }
@@ -279,6 +279,22 @@ impl<'s> ScriptSource<'s> {
 
         Ok(source)
     }
+
+    fn shebang(&self) -> Option<&'s str> {
+        self.shebang
+    }
+
+    fn info(&self) -> Option<&'s str> {
+        self.info
+    }
+
+    fn frontmatter(&self) -> Option<&'s str> {
+        self.frontmatter
+    }
+
+    fn content(&self) -> &'s str {
+        self.content
+    }
 }
 
 #[cfg(test)]
@@ -299,10 +315,10 @@ mod test_expand {
         };
 
         let mut rendered = String::new();
-        write_optional_field(&mut rendered, "shebang", actual.shebang);
-        write_optional_field(&mut rendered, "info", actual.info);
-        write_optional_field(&mut rendered, "frontmatter", actual.frontmatter);
-        writeln!(&mut rendered, "content: {:?}", actual.content).unwrap();
+        write_optional_field(&mut rendered, "shebang", actual.shebang());
+        write_optional_field(&mut rendered, "info", actual.info());
+        write_optional_field(&mut rendered, "frontmatter", actual.frontmatter());
+        writeln!(&mut rendered, "content: {:?}", actual.content()).unwrap();
         assert_data_eq!(rendered, expected.raw());
     }
 
