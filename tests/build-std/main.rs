@@ -360,3 +360,41 @@ fn remap_path_scope() {
         )
         .run();
 }
+
+#[cargo_test(build_std_real)]
+fn test_proc_macro() {
+    // See rust-lang/cargo#14735
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2021"
+
+                [lib]
+                proc-macro = true
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("test --lib")
+        .env_remove(cargo_util::paths::dylib_path_envvar())
+        .build_std()
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.0 ([ROOT]/foo)
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH])
+dyld[[..]]: Library not loaded: @rpath/libstd-[HASH].dylib
+  Referenced from: <[..]> [ROOT]/foo/target/debug/deps/foo-[HASH]
+  Reason: tried: '[ROOT]/foo/target/debug/deps/libstd-[HASH].dylib' (no such file), '[ROOT]/foo/target/debug/libstd-[HASH].dylib' (no such file), '/usr/local/lib/libstd-[HASH].dylib' (no such file), '/usr/lib/libstd-[HASH].dylib' (no such file, not in dyld cache)
+[ERROR] test failed, to rerun pass `--lib`
+
+Caused by:
+  process didn't exit successfully: `[ROOT]/foo/target/debug/deps/foo-[HASH]` ([..])
+
+"#]])
+        .with_status(101)
+        .run();
+}
