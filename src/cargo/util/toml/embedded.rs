@@ -189,7 +189,7 @@ fn sanitize_name(name: &str) -> String {
 }
 
 #[derive(Debug)]
-struct ScriptSource<'s> {
+pub struct ScriptSource<'s> {
     shebang: Option<&'s str>,
     info: Option<&'s str>,
     frontmatter: Option<&'s str>,
@@ -197,7 +197,7 @@ struct ScriptSource<'s> {
 }
 
 impl<'s> ScriptSource<'s> {
-    fn parse(input: &'s str) -> CargoResult<Self> {
+    pub fn parse(input: &'s str) -> CargoResult<Self> {
         let mut source = Self {
             shebang: None,
             info: None,
@@ -280,19 +280,19 @@ impl<'s> ScriptSource<'s> {
         Ok(source)
     }
 
-    fn shebang(&self) -> Option<&'s str> {
+    pub fn shebang(&self) -> Option<&'s str> {
         self.shebang
     }
 
-    fn info(&self) -> Option<&'s str> {
+    pub fn info(&self) -> Option<&'s str> {
         self.info
     }
 
-    fn frontmatter(&self) -> Option<&'s str> {
+    pub fn frontmatter(&self) -> Option<&'s str> {
         self.frontmatter
     }
 
-    fn content(&self) -> &'s str {
+    pub fn content(&self) -> &'s str {
         self.content
     }
 }

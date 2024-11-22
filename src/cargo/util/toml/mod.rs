@@ -39,6 +39,8 @@ mod targets;
 
 use self::targets::to_targets;
 
+pub use embedded::ScriptSource;
+
 /// See also `bin/cargo/commands/run.rs`s `is_manifest_command`
 pub fn is_embedded(path: &Path) -> bool {
     let ext = path.extension();
