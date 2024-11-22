@@ -72,6 +72,17 @@ pub fn resolve_std<'gctx>(
             .warn("-Zbuild-std does not currently fully support --build-plan")?;
     }
 
+    // check that targets support building std
+    if crates.contains(&"std".to_string()) {
+        let unsupported_targets = target_data.get_unsupported_std_targets();
+        if !unsupported_targets.is_empty() {
+            anyhow::bail!(
+                "building std is not supported on the following targets: {}",
+                unsupported_targets.join(", ")
+            )
+        }
+    }
+
     let src_path = detect_sysroot_src_path(target_data)?;
     let std_ws_manifest_path = src_path.join("Cargo.toml");
     let gctx = ws.gctx();

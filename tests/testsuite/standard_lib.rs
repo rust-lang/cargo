@@ -390,6 +390,32 @@ fn check_core() {
 }
 
 #[cargo_test(build_std_mock)]
+fn test_std_on_unsupported_target() {
+    let setup = setup();
+
+    let p = project()
+        .file(
+            "src/main.rs",
+            r#"
+        fn main() {
+            println!("hello");
+        }
+        "#,
+        )
+        .build();
+
+    p.cargo("build")
+        .arg("--target=aarch64-unknown-none")
+        .arg("--target=x86_64-unknown-none")
+        .build_std(&setup)
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] building std is not supported on the following targets: [..]
+"#]])
+        .run();
+}
+
+#[cargo_test(build_std_mock)]
 fn depend_same_as_std() {
     let setup = setup();
 

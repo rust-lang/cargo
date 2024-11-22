@@ -43,6 +43,8 @@ pub struct TargetInfo {
     crate_types: RefCell<HashMap<CrateType, Option<(String, String)>>>,
     /// `cfg` information extracted from `rustc --print=cfg`.
     cfg: Vec<Cfg>,
+    /// `supports_std` information extracted from `rustc --print=target-spec-json`
+    pub supports_std: Option<bool>,
     /// Supported values for `-Csplit-debuginfo=` flag, queried from rustc
     support_split_debuginfo: Vec<String>,
     /// Path to the sysroot.
@@ -294,6 +296,44 @@ impl TargetInfo {
                 gctx.shell().warn("non-trivial mutual dependency between target-specific configuration and RUSTFLAGS")?;
             }
 
+            let mut supports_std: Option<bool> = None;
+
+            // The '--print=target-spec-json' is an unstable option of rustc, therefore only
+            // try to fetch this information if rustc allows nightly features. Additionally,
+            // to avoid making two rustc queries when not required, only try to fetch the
+            // target-spec when the '-Zbuild-std' option is passed.
+            if gctx.cli_unstable().build_std.is_some() {
+                let mut target_spec_process = rustc.workspace_process();
+                apply_env_config(gctx, &mut target_spec_process)?;
+                target_spec_process
+                    .arg("--print=target-spec-json")
+                    .arg("-Zunstable-options")
+                    .args(&rustflags)
+                    .env_remove("RUSTC_LOG");
+
+                if let CompileKind::Target(target) = kind {
+                    target_spec_process
+                        .arg("--target")
+                        .arg(target.rustc_target());
+                }
+
+                #[derive(Deserialize)]
+                struct Metadata {
+                    pub std: Option<bool>,
+                }
+
+                #[derive(Deserialize)]
+                struct TargetSpec {
+                    pub metadata: Metadata,
+                }
+
+                if let Ok(output) = target_spec_process.output() {
+                    if let Ok(spec) = serde_json::from_slice::<TargetSpec>(&output.stdout) {
+                        supports_std = spec.metadata.std;
+                    }
+                }
+            }
+
             return Ok(TargetInfo {
                 crate_type_process,
                 crate_types: RefCell::new(map),
@@ -310,6 +350,7 @@ impl TargetInfo {
                 )?
                 .into(),
                 cfg,
+                supports_std,
                 support_split_debuginfo,
             });
         }
@@ -1025,6 +1066,16 @@ impl<'gctx> RustcTargetData<'gctx> {
             CompileKind::Host => &self.host_config,
             CompileKind::Target(s) => &self.target_config[&s],
         }
+    }
+
+    pub fn get_unsupported_std_targets(&self) -> Vec<&str> {
+        let mut unsupported = Vec::new();
+        for (target, target_info) in &self.target_info {
+            if target_info.supports_std == Some(false) {
+                unsupported.push(target.short_name());
+            }
+        }
+        unsupported
     }
 }
 
