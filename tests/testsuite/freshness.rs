@@ -601,14 +601,7 @@ feature on
 fn rebuild_tests_if_lib_changes() {
     let p = project()
         .file("src/lib.rs", "pub fn foo() {}")
-        .file(
-            "tests/foo.rs",
-            r#"
-                extern crate foo;
-                #[test]
-                fn test() { foo::foo(); }
-            "#,
-        )
+        .file("tests/foo-test.rs", "extern crate foo;")
         .build();
 
     p.cargo("build").run();
@@ -617,18 +610,15 @@ fn rebuild_tests_if_lib_changes() {
     sleep_ms(1000);
     p.change_file("src/lib.rs", "");
 
-    p.cargo("build -v").run();
-    p.cargo("test -v")
-        .with_status(101)
+    p.cargo("build").run();
+    p.cargo("test -v --test foo-test")
         .with_stderr_data(str![[r#"
 [DIRTY] foo v0.0.1 ([ROOT]/foo): the dependency foo was rebuilt ([TIME_DIFF_AFTER_LAST_BUILD])
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]
-[RUNNING] `rustc --crate-name foo [..]
-error[E0425]: cannot find function `foo` in crate `foo`
-...
-[ERROR] could not compile `foo` (test "foo") due to 1 previous error
-...
+[RUNNING] `rustc --crate-name foo_test [..]`
+[FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+[RUNNING] `[ROOT]/foo/target/debug/deps/foo_test-[HASH][EXE]`
+
 "#]])
         .run();
 }

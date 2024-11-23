@@ -243,7 +243,8 @@ fn registry_dep_depends_on_new_local_package() {
 
     p.cargo("check")
         .overlay_registry(&reg.index_url(), &alt_path)
-        .with_stderr_data(str![[r#"
+        .with_stderr_data(
+            str![[r#"
 [UPDATING] `sparse+http://127.0.0.1:[..]/index/` index
 [LOCKING] 3 packages to latest compatible versions
 [ADDING] workspace-package v0.0.1 (available: v0.1.1)
@@ -257,7 +258,9 @@ fn registry_dep_depends_on_new_local_package() {
 [CHECKING] foo v0.0.1 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
-"#]])
+"#]]
+            .unordered(),
+        )
         .run();
 }
 
