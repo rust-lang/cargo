@@ -1,8 +1,8 @@
-<svg width="740px" height="254px" xmlns="http://www.w3.org/2000/svg">
+<svg width="740px" height="128px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
-    .fg-red { fill: #AA0000 }
+    .fg-green { fill: #00AA00 }
     .fg-yellow { fill: #AA5500 }
     .container {
       padding: 0 10px;
@@ -21,29 +21,15 @@
   <text xml:space="preserve" class="container fg">
     <tspan x="10px" y="28px"><tspan class="fg-yellow bold">warning</tspan><tspan class="bold">:</tspan><tspan> `package.edition` is unspecified, defaulting to `[..]`</tspan>
 </tspan>
-    <tspan x="10px" y="46px"><tspan class="fg-red bold">error</tspan><tspan class="bold">:</tspan><tspan> Unable to parse Cargo.toml</tspan>
+    <tspan x="10px" y="46px"><tspan class="fg-green bold">    Updating</tspan><tspan> `dummy-registry` index</tspan>
 </tspan>
-    <tspan x="10px" y="64px">
+    <tspan x="10px" y="64px"><tspan class="fg-green bold">      Adding</tspan><tspan> my-package v99999.0.0 to dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="82px"><tspan>Caused by:</tspan>
+    <tspan x="10px" y="82px"><tspan class="fg-yellow bold">warning</tspan><tspan class="bold">:</tspan><tspan> `package.edition` is unspecified, defaulting to `[..]`</tspan>
 </tspan>
-    <tspan x="10px" y="100px"><tspan>  Manifest not valid TOML</tspan>
+    <tspan x="10px" y="100px"><tspan class="fg-green bold">     Locking</tspan><tspan> 1 package to latest [..]compatible version</tspan>
 </tspan>
     <tspan x="10px" y="118px">
-</tspan>
-    <tspan x="10px" y="136px"><tspan>Caused by:</tspan>
-</tspan>
-    <tspan x="10px" y="154px"><tspan>  TOML parse error at line 3, column 4</tspan>
-</tspan>
-    <tspan x="10px" y="172px"><tspan>    |</tspan>
-</tspan>
-    <tspan x="10px" y="190px"><tspan>  3 | fn main() {}</tspan>
-</tspan>
-    <tspan x="10px" y="208px"><tspan>    |    ^</tspan>
-</tspan>
-    <tspan x="10px" y="226px"><tspan>  expected `.`, `=`</tspan>
-</tspan>
-    <tspan x="10px" y="244px">
 </tspan>
   </text>
 

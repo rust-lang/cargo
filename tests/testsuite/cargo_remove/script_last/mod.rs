@@ -22,7 +22,7 @@ fn case() {
         .arg_line("--manifest-path cargo-remove-test-fixture.rs docopt")
         .current_dir(cwd)
         .assert()
-        .failure()
+        .success()
         .stdout_eq(str![""])
         .stderr_eq(file!["stderr.term.svg"]);
 

@@ -1252,6 +1252,8 @@ mod tests {
         let mut local = LocalManifest {
             path: crate_root.clone(),
             manifest,
+            embedded: None,
+            raw: toml.to_owned(),
         };
         assert_eq!(local.manifest.to_string(), toml);
         let gctx = GlobalContext::default().unwrap();

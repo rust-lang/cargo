@@ -31,7 +31,7 @@ fn case() {
         .arg_line("--manifest-path cargo-test-fixture.rs my-package")
         .current_dir(cwd)
         .assert()
-        .failure()
+        .success()
         .stdout_eq(str![""])
         .stderr_eq(file!["stderr.term.svg"]);
 

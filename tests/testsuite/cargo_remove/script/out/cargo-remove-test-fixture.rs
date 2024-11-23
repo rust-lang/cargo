@@ -5,7 +5,6 @@ edition = "2015"
 semver = "0.1.0"
 
 [dependencies]
-docopt = "0.6"
 rustc-serialize = "0.4"
 semver = "0.1"
 toml = "0.1"
