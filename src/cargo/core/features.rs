@@ -162,6 +162,7 @@ pub type AllowFeatures = BTreeSet<String>;
 /// - Set [`LATEST_UNSTABLE`] to None.
 /// - Set [`LATEST_STABLE`] to the new version.
 /// - Update [`is_stable`] to `true`.
+/// - Set [`first_version`] to the version it will be released.
 /// - Set the editionNNNN feature to stable in the [`features!`] macro invocation below.
 /// - Update any tests that are affected.
 /// - Update the man page for the `--edition` flag.
@@ -178,6 +179,7 @@ pub type AllowFeatures = BTreeSet<String>;
 /// [`LATEST_UNSTABLE`]: Edition::LATEST_UNSTABLE
 /// [`LATEST_STABLE`]: Edition::LATEST_STABLE
 /// [this example]: https://github.com/rust-lang/cargo/blob/3ebb5f15a940810f250b68821149387af583a79e/src/doc/src/reference/unstable.md?plain=1#L1238-L1264
+/// [`first_version`]: Edition::first_version
 /// [`is_stable`]: Edition::is_stable
 /// [`toml`]: crate::util::toml
 /// [`features!`]: macro.features.html
