@@ -748,7 +748,8 @@ fn path_field<'a>(
     } else {
         Cow::Borrowed(crate_root)
     };
-    let relpath = pathdiff::diff_paths(&source.path, relative_to).expect("both paths are absolute");
+    let relpath = pathdiff::diff_paths(&source.path, relative_to)
+        .expect("PathSource::path and workspace path must be absolute");
     let relpath = relpath.to_str().unwrap().replace('\\', "/");
     Ok(relpath)
 }
