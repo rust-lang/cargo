@@ -97,6 +97,7 @@ sha2 = "0.10.8"
 shell-escape = "0.1.5"
 similar = "2.6.0"
 supports-hyperlinks = "3.0.0"
+supports-unicode = "3.0.0"
 snapbox = { version = "0.6.20", features = ["diff", "dir", "term-svg", "regex", "json"] }
 tar = { version = "0.4.42", default-features = false }
 tempfile = "3.10.1"
@@ -203,6 +204,7 @@ serde_json = { workspace = true, features = ["raw_value"] }
 sha1.workspace = true
 shell-escape.workspace = true
 supports-hyperlinks.workspace = true
+supports-unicode.workspace = true
 tar.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
@@ -215,7 +217,6 @@ unicase.workspace = true
 unicode-width.workspace = true
 url.workspace = true
 walkdir.workspace = true
-supports-unicode = "3.0.0"
 
 [target.'cfg(target_has_atomic = "64")'.dependencies]
 tracing-chrome.workspace = true
