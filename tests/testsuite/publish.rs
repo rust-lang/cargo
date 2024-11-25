@@ -160,7 +160,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[WARNING] no edition set: defaulting to the 2015 edition while the latest is 2021
+[WARNING] no edition set: defaulting to the 2015 edition while the latest is 2024
 [COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)

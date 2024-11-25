@@ -151,12 +151,12 @@ examples, etc.
 ```toml
 [package]
 # ...
-edition = '2021'
+edition = '2024'
 ```
 
 Most manifests have the `edition` field filled in automatically by [`cargo new`]
 with the latest stable edition. By default `cargo new` creates a manifest with
-the 2021 edition currently.
+the 2024 edition currently.
 
 If the `edition` field is not present in `Cargo.toml`, then the 2015 edition is
 assumed for backwards compatibility. Note that all manifests

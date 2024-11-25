@@ -494,7 +494,7 @@ fn install_lock_file_path_must_present() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn run_embed() {
     let lockfile_path = "mylockfile/Cargo.lock";
     let invalid_lockfile = "Cargo.lock";
@@ -525,7 +525,7 @@ fn run_embed() {
         .arg("src/main.rs")
         .with_status(101)
         .with_stderr_data(str![[
-            r#"[WARNING] `package.edition` is unspecified, defaulting to `2021`
+            r#"[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [ERROR] failed to parse lock file at: [ROOT]/foo/Cargo.lock
 
 ...

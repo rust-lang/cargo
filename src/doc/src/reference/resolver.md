@@ -507,7 +507,7 @@ resolver = "2"
 - `"2"` ([`edition = "2021"`](manifest.md#the-edition-field) default): Introduces changes in [feature
 unification](#features). See the [features chapter][features-2] for more
 details.
-- `"3"` (requires Rust 1.84+): Change the default for [`resolver.incompatible-rust-versions`] from `allow` to `fallback`
+- `"3"` ([`edition = "2024"`](manifest.md#the-edition-field) default, requires Rust 1.84+): Change the default for [`resolver.incompatible-rust-versions`] from `allow` to `fallback`
 
 The resolver is a global option that affects the entire workspace. The
 `resolver` version in dependencies is ignored, only the value in the top-level

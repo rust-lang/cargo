@@ -831,14 +831,12 @@ fn dev_dependencies2() {
 "#]]).run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 is not stable")]
+#[cargo_test]
 fn dev_dependencies2_2024() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["edition2024"]
-
                 [package]
                 name = "foo"
                 version = "0.1.0"
@@ -861,7 +859,6 @@ fn dev_dependencies2_2024() {
         .file("a/src/lib.rs", "")
         .build();
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -949,14 +946,12 @@ fn build_dependencies2() {
 "#]]).run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 is not stable")]
+#[cargo_test]
 fn build_dependencies2_2024() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["edition2024"]
-
                 [package]
                 name = "foo"
                 version = "0.1.0"
@@ -979,7 +974,6 @@ fn build_dependencies2_2024() {
         .file("a/src/lib.rs", "")
         .build();
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -1060,14 +1054,12 @@ fn lib_crate_type2() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 is not stable")]
+#[cargo_test]
 fn lib_crate_type2_2024() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["edition2024"]
-
                 [package]
                 name = "foo"
                 version = "0.5.0"
@@ -1082,7 +1074,6 @@ fn lib_crate_type2_2024() {
         .file("src/lib.rs", "pub fn foo() {}")
         .build();
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -1154,14 +1145,12 @@ fn bin_crate_type2() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 is not stable")]
+#[cargo_test]
 fn bin_crate_type2_2024() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["edition2024"]
-
                 [package]
                 name = "foo"
                 version = "0.5.0"
@@ -1177,7 +1166,6 @@ fn bin_crate_type2_2024() {
         .file("src/main.rs", "fn main() {}")
         .build();
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -1268,14 +1256,12 @@ fn examples_crate_type2() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 is not stable")]
+#[cargo_test]
 fn examples_crate_type2_2024() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["edition2024"]
-
                 [package]
                 name = "foo"
                 version = "0.5.0"
@@ -1307,7 +1293,6 @@ fn examples_crate_type2_2024() {
         )
         .build();
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -1411,7 +1396,7 @@ fn cargo_platform_build_dependencies2() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 is not stable")]
+#[cargo_test]
 fn cargo_platform_build_dependencies2_2024() {
     let host = rustc_host();
     let p = project()
@@ -1419,8 +1404,6 @@ fn cargo_platform_build_dependencies2_2024() {
             "Cargo.toml",
             &format!(
                 r#"
-                    cargo-features = ["edition2024"]
-
                     [package]
                     name = "foo"
                     version = "0.5.0"
@@ -1444,7 +1427,6 @@ fn cargo_platform_build_dependencies2_2024() {
         .build();
 
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -1543,7 +1525,7 @@ fn cargo_platform_dev_dependencies2() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 is not stable")]
+#[cargo_test]
 fn cargo_platform_dev_dependencies2_2024() {
     let host = rustc_host();
     let p = project()
@@ -1551,8 +1533,6 @@ fn cargo_platform_dev_dependencies2_2024() {
             "Cargo.toml",
             &format!(
                 r#"
-                    cargo-features = ["edition2024"]
-
                     [package]
                     name = "foo"
                     version = "0.5.0"
@@ -1575,7 +1555,6 @@ fn cargo_platform_dev_dependencies2_2024() {
         .build();
 
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -1675,14 +1654,12 @@ fn default_features2() {
 "#]]).run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 is not stable")]
+#[cargo_test]
 fn default_features2_2024() {
     let p = project()
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["edition2024"]
-
                 [package]
                 name = "foo"
                 version = "0.1.0"
@@ -1712,7 +1689,6 @@ fn default_features2_2024() {
         .build();
 
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -1852,7 +1828,7 @@ fn workspace_default_features2() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 is not stable")]
+#[cargo_test]
 fn workspace_default_features2_2024() {
     let p = project()
         .file(
@@ -1869,8 +1845,6 @@ fn workspace_default_features2_2024() {
         .file(
             "workspace_only/Cargo.toml",
             r#"
-                cargo-features = ["edition2024"]
-
                 [package]
                 name = "workspace_only"
                 version = "0.1.0"
@@ -1885,8 +1859,6 @@ fn workspace_default_features2_2024() {
         .file(
             "dep_workspace_only/Cargo.toml",
             r#"
-                cargo-features = ["edition2024"]
-
                 [package]
                 name = "dep_workspace_only"
                 version = "0.1.0"
@@ -1898,8 +1870,6 @@ fn workspace_default_features2_2024() {
         .file(
             "package_only/Cargo.toml",
             r#"
-                cargo-features = ["edition2024"]
-
                 [package]
                 name = "package_only"
                 version = "0.1.0"
@@ -1914,8 +1884,6 @@ fn workspace_default_features2_2024() {
         .file(
             "dep_package_only/Cargo.toml",
             r#"
-                cargo-features = ["edition2024"]
-
                 [package]
                 name = "dep_package_only"
                 version = "0.1.0"
@@ -1927,7 +1895,6 @@ fn workspace_default_features2_2024() {
         .build();
 
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to load manifest for workspace member `[ROOT]/foo/workspace_only`
@@ -1972,14 +1939,12 @@ fn lib_proc_macro2() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 is not stable")]
+#[cargo_test]
 fn lib_proc_macro2_2024() {
     let foo = project()
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["edition2024"]
-
                 [package]
                 name = "foo"
                 version = "0.1.0"
@@ -1992,7 +1957,6 @@ fn lib_proc_macro2_2024() {
         .build();
 
     foo.cargo("check")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -2063,14 +2027,12 @@ fn bin_proc_macro2() {
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 is not stable")]
+#[cargo_test]
 fn bin_proc_macro2_2024() {
     let foo = project()
         .file(
             "Cargo.toml",
             r#"
-                cargo-features = ["edition2024"]
-
                 [package]
                 name = "foo"
                 version = "0.5.0"
@@ -2087,7 +2049,6 @@ fn bin_proc_macro2_2024() {
         .build();
 
     foo.cargo("check")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`

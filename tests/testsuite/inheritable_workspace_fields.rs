@@ -1549,7 +1549,7 @@ fn warn_inherit_def_feat_true_member_def_feat_false() {
 "#]]).run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 is not stable")]
+#[cargo_test]
 fn warn_inherit_def_feat_true_member_def_feat_false_2024_edition() {
     Package::new("dep", "0.1.0")
         .feature("default", &["fancy_dep"])
@@ -1563,8 +1563,6 @@ fn warn_inherit_def_feat_true_member_def_feat_false_2024_edition() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition2024"]
-
             [package]
             name = "bar"
             version = "0.2.0"
@@ -1583,7 +1581,6 @@ fn warn_inherit_def_feat_true_member_def_feat_false_2024_edition() {
         .build();
 
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
@@ -1644,7 +1641,7 @@ fn warn_inherit_simple_member_def_feat_false() {
 "#]]).run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 is not stable")]
+#[cargo_test]
 fn warn_inherit_simple_member_def_feat_false_2024_edition() {
     Package::new("dep", "0.1.0")
         .feature("default", &["fancy_dep"])
@@ -1658,8 +1655,6 @@ fn warn_inherit_simple_member_def_feat_false_2024_edition() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition2024"]
-
             [package]
             name = "bar"
             version = "0.2.0"
@@ -1678,7 +1673,6 @@ fn warn_inherit_simple_member_def_feat_false_2024_edition() {
         .build();
 
     p.cargo("check")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`

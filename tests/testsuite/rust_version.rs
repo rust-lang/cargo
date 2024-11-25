@@ -515,18 +515,18 @@ higher v0.0.1 ([ROOT]/foo)
         .run();
 }
 
-#[cargo_test(nightly, reason = "edition2024 in rustc is unstable")]
+#[cargo_test]
 fn resolve_edition2024() {
     Package::new("only-newer", "1.6.0")
-        .rust_version("1.65.0")
+        .rust_version("1.90.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
     Package::new("newer-and-older", "1.5.0")
-        .rust_version("1.55.0")
+        .rust_version("1.80.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
     Package::new("newer-and-older", "1.6.0")
-        .rust_version("1.65.0")
+        .rust_version("1.90.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
 
@@ -534,14 +534,12 @@ fn resolve_edition2024() {
         .file(
             "Cargo.toml",
             r#"
-            cargo-features = ["edition2024"]
-
             [package]
             name = "foo"
             version = "0.0.1"
             edition = "2024"
             authors = []
-            rust-version = "1.60.0"
+            rust-version = "1.85.0"
 
             [dependencies]
             only-newer = "1.0.0"
@@ -553,17 +551,15 @@ fn resolve_edition2024() {
 
     // Edition2024 should resolve for MSRV
     p.cargo("generate-lockfile")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
-[ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.65.0)
-[ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
+[LOCKING] 2 packages to latest Rust 1.85.0 compatible versions
+[ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.90.0)
+[ADDING] only-newer v1.6.0 (requires Rust 1.90.0)
 
 "#]])
         .run();
     p.cargo("tree")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stdout_data(str![[r#"
 foo v0.0.1 ([ROOT]/foo)
 ├── newer-and-older v1.5.0
@@ -577,12 +573,12 @@ foo v0.0.1 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
+[ADDING] newer-and-older v1.6.0 (requires Rust 1.90.0)
+[ADDING] only-newer v1.6.0 (requires Rust 1.90.0)
 
 "#]])
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .run();
     p.cargo("tree")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stdout_data(str![[r#"
 foo v0.0.1 ([ROOT]/foo)
 ├── newer-and-older v1.6.0
@@ -597,12 +593,12 @@ foo v0.0.1 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
+[ADDING] newer-and-older v1.6.0 (requires Rust 1.90.0)
+[ADDING] only-newer v1.6.0 (requires Rust 1.90.0)
 
 "#]])
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .run();
     p.cargo("tree")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stdout_data(str![[r#"
 foo v0.0.1 ([ROOT]/foo)
 ├── newer-and-older v1.6.0
@@ -615,15 +611,15 @@ foo v0.0.1 ([ROOT]/foo)
 #[cargo_test]
 fn resolve_v3() {
     Package::new("only-newer", "1.6.0")
-        .rust_version("1.65.0")
+        .rust_version("1.90.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
     Package::new("newer-and-older", "1.5.0")
-        .rust_version("1.55.0")
+        .rust_version("1.80.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
     Package::new("newer-and-older", "1.6.0")
-        .rust_version("1.65.0")
+        .rust_version("1.90.0")
         .file("src/lib.rs", "fn other_stuff() {}")
         .publish();
 
@@ -636,7 +632,7 @@ fn resolve_v3() {
             version = "0.0.1"
             edition = "2015"
             authors = []
-            rust-version = "1.60.0"
+            rust-version = "1.85.0"
             resolver = "3"
 
             [dependencies]
@@ -651,9 +647,9 @@ fn resolve_v3() {
     p.cargo("generate-lockfile")
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[LOCKING] 2 packages to latest Rust 1.60.0 compatible versions
-[ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.65.0)
-[ADDING] only-newer v1.6.0 (requires Rust 1.65.0)
+[LOCKING] 2 packages to latest Rust 1.85.0 compatible versions
+[ADDING] newer-and-older v1.5.0 (available: v1.6.0, requires Rust 1.90.0)
+[ADDING] only-newer v1.6.0 (requires Rust 1.90.0)
 
 "#]])
         .run();
@@ -671,6 +667,8 @@ foo v0.0.1 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
+[ADDING] newer-and-older v1.6.0 (requires Rust 1.90.0)
+[ADDING] only-newer v1.6.0 (requires Rust 1.90.0)
 
 "#]])
         .run();
@@ -689,6 +687,8 @@ foo v0.0.1 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [LOCKING] 2 packages to latest compatible versions
+[ADDING] newer-and-older v1.6.0 (requires Rust 1.90.0)
+[ADDING] only-newer v1.6.0 (requires Rust 1.90.0)
 
 "#]])
         .run();
@@ -942,45 +942,6 @@ fn cargo_install_ignores_resolver_v3_msrv_change() {
         .publish();
 
     cargo_process("install foo")
-        .with_stderr_data(str![[r#"
-[UPDATING] `dummy-registry` index
-[DOWNLOADING] crates ...
-[DOWNLOADED] foo v0.0.1 (registry `dummy-registry`)
-[INSTALLING] foo v0.0.1
-[LOCKING] 1 package to latest compatible version
-[DOWNLOADING] crates ...
-[DOWNLOADED] dep v1.1.0 (registry `dummy-registry`)
-[COMPILING] dep v1.1.0
-[COMPILING] foo v0.0.1
-[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-[INSTALLING] [ROOT]/home/.cargo/bin/foo[EXE]
-[INSTALLED] package `foo v0.0.1` (executable `foo[EXE]`)
-[WARNING] be sure to add `[ROOT]/home/.cargo/bin` to your PATH to be able to run the installed binaries
-
-"#]])
-        .run();
-}
-
-#[cargo_test(nightly, reason = "edition2024 in rustc is unstable")]
-fn cargo_install_ignores_edition_2024_msrv_change() {
-    Package::new("dep", "1.0.0")
-        .rust_version("1.50")
-        .file("src/lib.rs", "fn hello() {}")
-        .publish();
-    Package::new("dep", "1.1.0")
-        .rust_version("1.70")
-        .file("src/lib.rs", "fn hello() {}")
-        .publish();
-    Package::new("foo", "0.0.1")
-        .rust_version("1.60")
-        .cargo_feature("edition2024")
-        .edition("2024")
-        .file("src/main.rs", "fn main() {}")
-        .dep("dep", "1")
-        .publish();
-
-    cargo_process("install foo")
-        .masquerade_as_nightly_cargo(&["edition2024"])
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [DOWNLOADING] crates ...

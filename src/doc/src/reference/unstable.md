@@ -100,7 +100,6 @@ Each new feature described below should explain how to use it.
     * [codegen-backend](#codegen-backend) --- Select the codegen backend used by rustc.
     * [per-package-target](#per-package-target) --- Sets the `--target` to use for each individual package.
     * [artifact dependencies](#artifact-dependencies) --- Allow build artifacts to be included into other build artifacts and build them for different targets.
-    * [Edition 2024](#edition-2024) — Adds support for the 2024 Edition.
     * [Profile `trim-paths` option](#profile-trim-paths-option) --- Control the sanitization of file paths in build outputs.
     * [`[lints.cargo]`](#lintscargo) --- Allows configuring lints for Cargo.
     * [path bases](#path-bases) --- Named base directories for path dependencies.
@@ -1363,32 +1362,6 @@ Differences between `cargo run --manifest-path <path>` and `cargo <path>`
 
 ### Documentation Updates
 
-## Edition 2024
-* Tracking Issue: (none created yet)
-* RFC: [rust-lang/rfcs#3501](https://github.com/rust-lang/rfcs/pull/3501)
-
-Support for the 2024 [edition] can be enabled by adding the `edition2024`
-unstable feature to the top of `Cargo.toml`:
-
-```toml
-cargo-features = ["edition2024"]
-
-[package]
-name = "my-package"
-version = "0.1.0"
-edition = "2024"
-```
-
-If you want to transition an existing project from a previous edition, then
-`cargo fix --edition` can be used on the nightly channel. After running `cargo
-fix`, you can switch the edition to 2024 as illustrated above.
-
-This feature is very unstable, and is only intended for early testing and
-experimentation. Future nightly releases may introduce changes for the 2024
-edition that may break your build.
-
-[edition]: ../../edition-guide/index.html
-
 ## Profile `trim-paths` option
 
 * Tracking Issue: [rust-lang/cargo#12137](https://github.com/rust-lang/cargo/issues/12137)
@@ -2013,3 +1986,10 @@ default behavior.
 
 See the [build script documentation](build-scripts.md#rustc-check-cfg) for information
 about specifying custom cfgs.
+
+## Edition 2024
+
+The 2024 edition has been stabilized in the 1.85 release.
+See the [`edition` field](manifest.md#the-edition-field) for more information on setting the edition.
+See [`cargo fix --edition`](../commands/cargo-fix.md) and [The Edition Guide](../../edition-guide/index.html) for more information on migrating existing projects.
+

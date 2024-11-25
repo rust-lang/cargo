@@ -25,7 +25,7 @@ fn path() -> Vec<std::path::PathBuf> {
     std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()).collect()
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn basic_rs() {
     let p = cargo_test_support::project()
         .file("echo.rs", ECHO_SCRIPT)
@@ -39,7 +39,7 @@ args: []
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] echo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]`
@@ -48,7 +48,7 @@ args: []
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn basic_path() {
     let p = cargo_test_support::project()
         .file("echo", ECHO_SCRIPT)
@@ -62,7 +62,7 @@ args: []
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] echo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]`
@@ -94,7 +94,7 @@ fn path_required() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 #[cfg(unix)]
 fn manifest_precedence_over_plugins() {
     let p = cargo_test_support::project()
@@ -116,7 +116,7 @@ args: []
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] echo v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/echo[EXE]`
@@ -125,7 +125,7 @@ args: []
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 #[cfg(unix)]
 fn warn_when_plugin_masks_manifest_on_stable() {
     let p = cargo_test_support::project()
@@ -182,7 +182,7 @@ fn requires_z_flag() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn clean_output_with_edition() {
     let script = r#"#!/usr/bin/env cargo
 ---
@@ -212,7 +212,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn warning_without_edition() {
     let script = r#"#!/usr/bin/env cargo
 ---
@@ -233,7 +233,7 @@ Hello world!
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
@@ -242,7 +242,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn rebuild() {
     let script = r#"#!/usr/bin/env cargo-eval
 
@@ -261,7 +261,7 @@ msg = undefined
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
@@ -277,7 +277,7 @@ msg = undefined
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
 
@@ -293,7 +293,7 @@ msg = hello
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
@@ -302,7 +302,7 @@ msg = hello
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn use_cargo_home_config() {
     let script = ECHO_SCRIPT;
     let _ = cargo_test_support::project()
@@ -366,7 +366,7 @@ Caused by:
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn default_programmatic_verbosity() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -384,7 +384,7 @@ args: ["-NotAnArg"]
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn quiet() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -402,7 +402,7 @@ args: ["-NotAnArg"]
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn test_line_numbering_preserved() {
     let script = r#"#!/usr/bin/env cargo
 
@@ -421,7 +421,7 @@ line: 4
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
@@ -430,7 +430,7 @@ line: 4
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn test_escaped_hyphen_arg() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -445,7 +445,7 @@ args: ["-NotAnArg"]
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] -NotAnArg`
@@ -454,7 +454,7 @@ args: ["-NotAnArg"]
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn test_unescaped_hyphen_arg() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -469,7 +469,7 @@ args: ["-NotAnArg"]
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] -NotAnArg`
@@ -478,7 +478,7 @@ args: ["-NotAnArg"]
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn test_same_flags() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -493,7 +493,7 @@ args: ["--help"]
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] --help`
@@ -502,7 +502,7 @@ args: ["--help"]
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn test_name_has_weird_chars() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -517,7 +517,7 @@ args: []
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] s-h-w-c- v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/s-h-w-c-[EXE]`
@@ -526,7 +526,7 @@ args: []
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn test_name_has_leading_number() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -541,7 +541,7 @@ args: []
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] answer v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/answer[EXE]`
@@ -550,7 +550,7 @@ args: []
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn test_name_is_number() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project().file("42.rs", script).build();
@@ -563,7 +563,7 @@ args: []
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] package v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/package[EXE]`
@@ -686,7 +686,7 @@ fn did_you_mean_command_stable() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn test_name_same_as_dependency() {
     Package::new("script", "1.0.0").publish();
     let script = r#"#!/usr/bin/env cargo
@@ -709,9 +709,9 @@ Hello world!
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [UPDATING] `dummy-registry` index
-[LOCKING] 1 package to latest compatible version
+[LOCKING] 1 package to latest Rust [..] compatible version
 [DOWNLOADING] crates ...
 [DOWNLOADED] script v1.0.0 (registry `dummy-registry`)
 [COMPILING] script v1.0.0
@@ -723,7 +723,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn test_path_dep() {
     let script = r#"#!/usr/bin/env cargo
 ---
@@ -748,8 +748,8 @@ Hello world!
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
-[LOCKING] 1 package to latest compatible version
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
+[LOCKING] 1 package to latest Rust [..] compatible version
 [COMPILING] bar v0.0.1 ([ROOT]/foo/bar)
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -759,7 +759,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn test_no_build_rs() {
     let script = r#"#!/usr/bin/env cargo
 
@@ -778,7 +778,7 @@ Hello world!
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] --help`
@@ -787,7 +787,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn test_no_autobins() {
     let script = r#"#!/usr/bin/env cargo
 
@@ -806,7 +806,7 @@ Hello world!
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] --help`
@@ -815,7 +815,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn test_no_autolib() {
     let script = r#"#!/usr/bin/env cargo
 
@@ -834,7 +834,7 @@ Hello world!
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE] --help`
@@ -843,7 +843,7 @@ Hello world!
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn implicit_target_dir() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -858,7 +858,7 @@ args: []
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
@@ -867,7 +867,7 @@ args: []
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn no_local_lockfile() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -885,7 +885,7 @@ args: []
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
@@ -931,7 +931,7 @@ fn cmd_check_requires_z_flag() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn cmd_check_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -942,7 +942,7 @@ fn cmd_check_with_embedded() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [CHECKING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -980,7 +980,7 @@ fn cmd_check_with_missing_script() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn cmd_build_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -991,7 +991,7 @@ fn cmd_build_with_embedded() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -999,7 +999,7 @@ fn cmd_build_with_embedded() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn cmd_test_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1018,7 +1018,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests script.rs ([ROOT]/home/.cargo/target/[HASH]/debug/deps/script-[HASH][EXE])
@@ -1027,7 +1027,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn cmd_clean_with_embedded() {
     let script = ECHO_SCRIPT;
     let p = cargo_test_support::project()
@@ -1043,7 +1043,7 @@ fn cmd_clean_with_embedded() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [REMOVED] [FILE_NUM] files, [FILE_SIZE]B total
 
 "#]])
@@ -1061,7 +1061,7 @@ fn cmd_generate_lockfile_with_embedded() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 
 "#]])
         .run();
@@ -1088,7 +1088,7 @@ fn cmd_metadata_with_embedded() {
       "dependencies": [],
       "description": null,
       "documentation": null,
-      "edition": "2021",
+      "edition": "2024",
       "features": {},
       "homepage": null,
       "id": "path+[ROOTURL]/foo#script@0.0.0",
@@ -1111,7 +1111,7 @@ fn cmd_metadata_with_embedded() {
           ],
           "doc": true,
           "doctest": false,
-          "edition": "2021",
+          "edition": "2024",
           "kind": [
             "bin"
           ],
@@ -1148,7 +1148,7 @@ fn cmd_metadata_with_embedded() {
             .is_json(),
         )
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 
 "#]])
         .run();
@@ -1172,7 +1172,7 @@ fn cmd_read_manifest_with_embedded() {
   "dependencies": [],
   "description": null,
   "documentation": null,
-  "edition": "2021",
+  "edition": "2024",
   "features": {},
   "homepage": null,
   "id": "path+[ROOTURL]/foo#script@0.0.0",
@@ -1195,7 +1195,7 @@ fn cmd_read_manifest_with_embedded() {
       ],
       "doc": true,
       "doctest": false,
-      "edition": "2021",
+      "edition": "2024",
       "kind": [
         "bin"
       ],
@@ -1210,13 +1210,13 @@ fn cmd_read_manifest_with_embedded() {
             .is_json(),
         )
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 
 "#]])
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn cmd_run_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
@@ -1230,7 +1230,7 @@ args: []
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`
@@ -1252,7 +1252,7 @@ script v0.0.0 ([ROOT]/foo)
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 
 "#]])
         .run();
@@ -1268,7 +1268,7 @@ fn cmd_update_with_embedded() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_stdout_data("")
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 
 "#]])
         .run();
@@ -1291,7 +1291,7 @@ fn cmd_verify_project_with_embedded() {
             .is_json(),
         )
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 
 "#]])
         .run();
@@ -1307,7 +1307,7 @@ fn cmd_pkgid_with_embedded() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [ERROR] [ROOT]/foo/script.rs is unsupported by `cargo pkgid`
 
 "#]])
@@ -1324,7 +1324,7 @@ fn cmd_package_with_embedded() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [ERROR] [ROOT]/foo/script.rs is unsupported by `cargo package`
 
 "#]])
@@ -1341,14 +1341,14 @@ fn cmd_publish_with_embedded() {
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [ERROR] [ROOT]/foo/script.rs is unsupported by `cargo publish`
 
 "#]])
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn manifest_path_env() {
     let p = cargo_test_support::project()
         .file(
@@ -1369,7 +1369,7 @@ CARGO_MANIFEST_PATH: [ROOT]/foo/script.rs
 
 "#]])
         .with_stderr_data(str![[r#"
-[WARNING] `package.edition` is unspecified, defaulting to `2021`
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 [COMPILING] script v0.0.0 ([ROOT]/foo)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] `[ROOT]/home/.cargo/target/[HASH]/debug/script[EXE]`

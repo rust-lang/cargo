@@ -567,7 +567,7 @@ autoexamples = false
 autolib = false
 autotests = false
 build = false
-edition = "2021"
+edition = "2024"
 name = "test-"
 
 [profile.release]
@@ -605,7 +605,7 @@ autoexamples = false
 autolib = false
 autotests = false
 build = false
-edition = "2021"
+edition = "2024"
 name = "test-"
 
 [profile.release]

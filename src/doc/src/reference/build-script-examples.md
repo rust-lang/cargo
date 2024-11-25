@@ -49,7 +49,7 @@ Here we can see that we have a `build.rs` build script and our binary in
 [package]
 name = "hello-from-generated-code"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 ```
 
 Let’s see what’s inside the build script:
@@ -148,7 +148,7 @@ Pretty similar to before! Next, the manifest:
 [package]
 name = "hello-world-from-c"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 ```
 
 For now we’re not going to use any build dependencies, so let’s take a look at
@@ -298,7 +298,7 @@ with `pkg-config` installed. Let's start by setting up the manifest:
 [package]
 name = "libz-sys"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 links = "z"
 
 [build-dependencies]
@@ -385,7 +385,7 @@ Here's an example:
 [package]
 name = "zuser"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 libz-sys = "1.0.25"
