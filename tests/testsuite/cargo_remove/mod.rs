@@ -15,6 +15,7 @@ mod invalid_section;
 mod invalid_section_dep;
 mod invalid_target;
 mod invalid_target_dep;
+mod last_dep;
 mod multiple_deps;
 mod multiple_dev;
 mod no_arg;

@@ -1,0 +1,13 @@
+[package]
+name = "cargo-remove-test-fixture"
+version = "0.1.0"
+edition = "2015"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[dependencies]
+docopt = "0.6"
+
+[features]
