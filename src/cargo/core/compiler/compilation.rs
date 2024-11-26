@@ -315,7 +315,10 @@ impl<'gctx> Compilation<'gctx> {
             // libs from the sysroot that ships with rustc. This may not be
             // required (at least I cannot craft a situation where it
             // matters), but is here to be safe.
-            if self.gctx.cli_unstable().build_std.is_none() {
+            if self.gctx.cli_unstable().build_std.is_none() ||
+                // Proc macros dynamically link to std, so set it anyway.
+                pkg.proc_macro()
+            {
                 search_path.push(self.sysroot_target_libdir[&kind].clone());
             }
         }
