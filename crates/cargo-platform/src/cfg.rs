@@ -10,6 +10,8 @@ pub enum CfgExpr {
     All(Vec<CfgExpr>),
     Any(Vec<CfgExpr>),
     Value(Cfg),
+    True,
+    False,
 }
 
 /// A cfg value.
@@ -87,7 +89,32 @@ impl CfgExpr {
             CfgExpr::All(ref e) => e.iter().all(|e| e.matches(cfg)),
             CfgExpr::Any(ref e) => e.iter().any(|e| e.matches(cfg)),
             CfgExpr::Value(ref e) => cfg.contains(e),
+            CfgExpr::True => true,
+            CfgExpr::False => false,
         }
+    }
+
+    /// Walk over all the `CfgExpr`s of the given `CfgExpr`, recursing into `not(...)`, `all(...)`,
+    /// `any(...)` and stopping at the first error and returning that error.
+    pub fn walk_expr<E>(&self, mut f: impl FnMut(&CfgExpr) -> Result<(), E>) -> Result<(), E> {
+        fn walk_expr_inner<E>(
+            cfg_expr: &CfgExpr,
+            f: &mut impl FnMut(&CfgExpr) -> Result<(), E>,
+        ) -> Result<(), E> {
+            f(cfg_expr)?;
+            match *cfg_expr {
+                CfgExpr::Not(ref e) => walk_expr_inner(e, &mut *f),
+                CfgExpr::All(ref e) | CfgExpr::Any(ref e) => {
+                    for e in e {
+                        let _ = walk_expr_inner(e, &mut *f)?;
+                    }
+                    Ok(())
+                }
+                CfgExpr::Value(_) | CfgExpr::True | CfgExpr::False => Ok(()),
+            }
+        }
+
+        walk_expr_inner(self, &mut f)
     }
 }
 
@@ -114,6 +141,8 @@ impl fmt::Display for CfgExpr {
             CfgExpr::All(ref e) => write!(f, "all({})", CommaSep(e)),
             CfgExpr::Any(ref e) => write!(f, "any({})", CommaSep(e)),
             CfgExpr::Value(ref e) => write!(f, "{}", e),
+            CfgExpr::True => write!(f, "true"),
+            CfgExpr::False => write!(f, "false"),
         }
     }
 }
@@ -168,7 +197,11 @@ impl<'a> Parser<'a> {
                 self.eat(&Token::RightParen)?;
                 Ok(CfgExpr::Not(Box::new(e)))
             }
-            Some(Ok(..)) => self.cfg().map(CfgExpr::Value),
+            Some(Ok(..)) => self.cfg().map(|v| match v {
+                Cfg::Name(n) if n == "true" => CfgExpr::True,
+                Cfg::Name(n) if n == "false" => CfgExpr::False,
+                v => CfgExpr::Value(v),
+            }),
             Some(Err(..)) => Err(self.t.next().unwrap().err().unwrap()),
             None => Err(ParseError::new(
                 self.t.orig,

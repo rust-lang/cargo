@@ -521,3 +521,259 @@ error[E0463]: can't find crate for `bar`
 "#]])
         .run();
 }
+
+#[cargo_test]
+fn cfg_booleans_gate() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [target.'cfg(true)'.dependencies]
+                b = { path = 'b' }
+                
+                [target.'cfg(false)'.dependencies]
+                c = { path = 'c' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .file("c/Cargo.toml", &basic_manifest("c", "0.0.1"))
+        .file("c/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[ERROR] failed to parse manifest at `[ROOT]/foo/Cargo.toml`
+
+Caused by:
+  feature `cfg-boolean-literals` is required
+
+  The package requires the Cargo feature called `cfg-boolean-literals`, but that feature is not stabilized in this version of Cargo (1.[..]).
+  Consider trying a newer version of Cargo (this may require the nightly release).
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#cfg-boolean-literals for more information about the status of this feature.
+
+"#]])
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn cfg_booleans_gate_config() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [target.'cfg(true)']
+                rustflags = []
+            "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[ERROR] `-Zcfg-boolean-literals` should be used to enable cfg boolean literals in `.cargo/config.toml`
+
+"#]])
+        .with_status(101)
+        .run();
+}
+
+#[cargo_test]
+fn cfg_booleans() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["cfg-boolean-literals"]
+
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [target.'cfg(true)'.dependencies]
+                b = { path = 'b' }
+                
+                [target.'cfg(false)'.dependencies]
+                c = { path = 'c' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .file("c/Cargo.toml", &basic_manifest("c", "0.0.1"))
+        .file("c/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["cfg-boolean-literals feature"])
+        .with_stderr_data(str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+[CHECKING] b v0.0.1 ([ROOT]/foo/b)
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cfg_booleans_config() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file(
+            ".cargo/config.toml",
+            r#"
+                [target.'cfg(true)']
+                rustflags = []
+            "#,
+        )
+        .build();
+
+    p.cargo("check -Zcfg-boolean-literals")
+        .masquerade_as_nightly_cargo(&["cfg-boolean-literals feature"])
+        .with_stderr_data(str![[r#"
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cfg_booleans_not() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["cfg-boolean-literals"]
+
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [target.'cfg(not(false))'.dependencies]
+                b = { path = 'b' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["cfg-boolean-literals feature"])
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[CHECKING] b v0.0.1 ([ROOT]/foo/b)
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cfg_booleans_combinators() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["cfg-boolean-literals"]
+
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [target.'cfg(all(any(true), not(false), true))'.dependencies]
+                b = { path = 'b' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["cfg-boolean-literals feature"])
+        .with_stderr_data(str![[r#"
+[LOCKING] 1 package to latest compatible version
+[CHECKING] b v0.0.1 ([ROOT]/foo/b)
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cfg_booleans_rustflags_no_effect() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["cfg-boolean-literals"]
+
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+                authors = []
+
+                [target.'cfg(true)'.dependencies]
+                b = { path = 'b' }
+                
+                [target.'cfg(false)'.dependencies]
+                c = { path = 'c' }
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .file("b/Cargo.toml", &basic_manifest("b", "0.0.1"))
+        .file("b/src/lib.rs", "")
+        .file("c/Cargo.toml", &basic_manifest("c", "0.0.1"))
+        .file("c/src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .masquerade_as_nightly_cargo(&["cfg-boolean-literals feature"])
+        .with_stderr_data(str![[r#"
+[LOCKING] 2 packages to latest compatible versions
+[CHECKING] b v0.0.1 ([ROOT]/foo/b)
+[CHECKING] a v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .env("RUSTFLAGS", "--cfg false")
+        .run();
+}

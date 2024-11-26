@@ -97,6 +97,7 @@ impl Platform {
                         ))
                     },
                 }
+                CfgExpr::True | CfgExpr::False => {},
             }
         }
 
