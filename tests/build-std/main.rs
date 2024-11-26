@@ -379,6 +379,9 @@ fn test_proc_macro() {
         .file("src/lib.rs", "")
         .build();
 
+    // Download dependencies first,
+    // so we can compare  `cargo test` output without any wildcard
+    p.cargo("fetch").build_std().run();
     p.cargo("test --lib")
         .env_remove(cargo_util::paths::dylib_path_envvar())
         .build_std()
