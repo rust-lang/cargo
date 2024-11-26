@@ -1101,9 +1101,8 @@ fn fetch_with_cli(
         .args(refspecs)
         // If cargo is run by git (for example, the `exec` command in `git
         // rebase`), the GIT_DIR is set by git and will point to the wrong
-        // location (this takes precedence over the cwd). Make sure this is
-        // unset so git will look at cwd for the repo.
-        .env_remove("GIT_DIR")
+        // location. This makes sure GIT_DIR is always the repository path.
+        .env("GIT_DIR", repo.path())
         // The reset of these may not be necessary, but I'm including them
         // just to be extra paranoid and avoid any issues.
         .env_remove("GIT_WORK_TREE")
