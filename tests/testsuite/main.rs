@@ -136,6 +136,7 @@ mod package_features;
 mod patch;
 mod path;
 mod paths;
+mod pgo;
 mod pkgid;
 mod precise_pre_release;
 mod proc_macro;
