@@ -161,8 +161,7 @@ fn parse_section(args: &ArgMatches) -> DepTable {
 /// Clean up the workspace.dependencies, profile, patch, and replace sections of the root manifest
 /// by removing dependencies which no longer have a reference to them.
 fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
-    let mut manifest: toml_edit::DocumentMut =
-        cargo_util::paths::read(workspace.root_manifest())?.parse()?;
+    let mut workspace_manifest = LocalManifest::try_new(workspace.root_manifest())?;
     let mut is_modified = true;
 
     let members = workspace
@@ -177,8 +176,8 @@ fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
 
     let mut dependencies = members
         .into_iter()
-        .flat_map(|(manifest, unstable_features)| {
-            manifest
+        .flat_map(|(member_manifest, unstable_features)| {
+            member_manifest
                 .get_sections()
                 .into_iter()
                 .flat_map(move |(_, table)| {
@@ -190,7 +189,7 @@ fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
                             Dependency::from_toml(
                                 workspace.gctx(),
                                 workspace.root(),
-                                &manifest.path,
+                                &member_manifest.path,
                                 &unstable_features,
                                 key,
                                 item,
@@ -203,7 +202,8 @@ fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
 
     // Clean up the workspace.dependencies section and replace instances of
     // workspace dependencies with their definitions
-    if let Some(toml_edit::Item::Table(deps_table)) = manifest
+    if let Some(toml_edit::Item::Table(deps_table)) = workspace_manifest
+        .data
         .get_mut("workspace")
         .and_then(|t| t.get_mut("dependencies"))
     {
@@ -246,7 +246,9 @@ fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
     // Example tables:
     // - profile.dev.package.foo
     // - profile.release.package."foo:2.1.0"
-    if let Some(toml_edit::Item::Table(profile_section_table)) = manifest.get_mut("profile") {
+    if let Some(toml_edit::Item::Table(profile_section_table)) =
+        workspace_manifest.data.get_mut("profile")
+    {
         profile_section_table.set_implicit(true);
 
         for (_, item) in profile_section_table.iter_mut() {
@@ -280,7 +282,7 @@ fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
     }
 
     // Clean up the replace section
-    if let Some(toml_edit::Item::Table(table)) = manifest.get_mut("replace") {
+    if let Some(toml_edit::Item::Table(table)) = workspace_manifest.data.get_mut("replace") {
         table.set_implicit(true);
 
         for (key, item) in table.iter_mut() {
@@ -296,10 +298,7 @@ fn gc_workspace(workspace: &Workspace<'_>) -> CargoResult<()> {
     }
 
     if is_modified {
-        cargo_util::paths::write_atomic(
-            workspace.root_manifest(),
-            manifest.to_string().as_bytes(),
-        )?;
+        workspace_manifest.write()?;
     }
 
     Ok(())
@@ -340,12 +339,13 @@ fn spec_has_match(
 
 /// Removes unused patches from the manifest
 fn gc_unused_patches(workspace: &Workspace<'_>, resolve: &Resolve) -> CargoResult<bool> {
-    let mut manifest: toml_edit::DocumentMut =
-        cargo_util::paths::read(workspace.root_manifest())?.parse()?;
+    let mut workspace_manifest = LocalManifest::try_new(workspace.root_manifest())?;
     let mut modified = false;
 
     // Clean up the patch section
-    if let Some(toml_edit::Item::Table(patch_section_table)) = manifest.get_mut("patch") {
+    if let Some(toml_edit::Item::Table(patch_section_table)) =
+        workspace_manifest.data.get_mut("patch")
+    {
         patch_section_table.set_implicit(true);
 
         for (_, item) in patch_section_table.iter_mut() {
@@ -383,7 +383,7 @@ fn gc_unused_patches(workspace: &Workspace<'_>, resolve: &Resolve) -> CargoResul
     }
 
     if modified {
-        cargo_util::paths::write(workspace.root_manifest(), manifest.to_string().as_bytes())?;
+        workspace_manifest.write()?;
     }
 
     Ok(modified)
