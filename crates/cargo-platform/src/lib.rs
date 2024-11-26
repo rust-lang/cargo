@@ -11,13 +11,14 @@
 //!
 //! [`Platform`]: enum.Platform.html
 
-use std::fmt;
 use std::str::FromStr;
+use std::{fmt, path::Path};
 
 mod cfg;
 mod error;
 
-pub use cfg::{Cfg, CfgExpr};
+use cfg::KEYWORDS;
+pub use cfg::{Cfg, CfgExpr, Ident};
 pub use error::{ParseError, ParseErrorKind};
 
 /// Platform definition.
@@ -102,6 +103,50 @@ impl Platform {
 
         if let Platform::Cfg(cfg) = self {
             check_cfg_expr(cfg, warnings);
+        }
+    }
+
+    pub fn check_cfg_keywords(&self, warnings: &mut Vec<String>, path: &Path) {
+        fn check_cfg_expr(expr: &CfgExpr, warnings: &mut Vec<String>, path: &Path) {
+            match *expr {
+                CfgExpr::Not(ref e) => check_cfg_expr(e, warnings, path),
+                CfgExpr::All(ref e) | CfgExpr::Any(ref e) => {
+                    for e in e {
+                        check_cfg_expr(e, warnings, path);
+                    }
+                }
+                CfgExpr::Value(ref e) => match e {
+                    Cfg::Name(name) | Cfg::KeyPair(name, _) => {
+                        if !name.raw && KEYWORDS.contains(&name.as_str()) {
+                            if name.as_str() == "true" || name.as_str() == "false" {
+                                warnings.push(format!(
+                                    "[{}] future-incompatibility: the meaning of `cfg({e})` will change in the future\n \
+                                     | Cargo is erroneously allowing `cfg(true)` and `cfg(false)`, but both forms are interpreted as false unless manually overridden with `--cfg`.\n \
+                                     | In the future these will be built-in defines that will have the corresponding true/false value.\n \
+                                     | It is recommended to avoid using these configs until they are properly supported.\n \
+                                     | See <https://github.com/rust-lang/rust/issues/131204> for more information.\n \
+                                     |\n \
+                                     | help: use raw-idents instead: `cfg(r#{name})`",
+                                    path.display()
+                                ));
+                            } else {
+                                warnings.push(format!(
+                                    "[{}] future-incompatibility: `cfg({e})` is deprecated as `{name}` is a keyword \
+                                     and not an identifier and should not have have been accepted in this position.\n \
+                                     | this was previously accepted by Cargo but is being phased out; it will become a hard error in a future release!\n \
+                                     |\n \
+                                     | help: use raw-idents instead: `cfg(r#{name})`",
+                                     path.display()
+                                ));
+                            }
+                        }
+                    }
+                },
+            }
+        }
+
+        if let Platform::Cfg(cfg) = self {
+            check_cfg_expr(cfg, warnings, path);
         }
     }
 }

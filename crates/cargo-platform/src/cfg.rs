@@ -1,5 +1,6 @@
 use crate::error::{ParseError, ParseErrorKind::*};
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::iter;
 use std::str::{self, FromStr};
 
@@ -16,20 +17,40 @@ pub enum CfgExpr {
 #[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Clone, Debug)]
 pub enum Cfg {
     /// A named cfg value, like `unix`.
-    Name(String),
+    Name(Ident),
     /// A key/value cfg pair, like `target_os = "linux"`.
-    KeyPair(String, String),
+    KeyPair(Ident, String),
+}
+
+/// A identifier
+#[derive(Eq, Ord, PartialOrd, Clone, Debug)]
+pub struct Ident {
+    /// The identifier
+    pub name: String,
+    /// Is this a raw ident: `r#async`
+    ///
+    /// It's mainly used for display and doesn't take
+    /// part in the hash or equality (`foo` == `r#foo`).
+    pub raw: bool,
 }
 
 #[derive(PartialEq)]
 enum Token<'a> {
     LeftParen,
     RightParen,
-    Ident(&'a str),
+    Ident(bool, &'a str),
     Comma,
     Equals,
     String(&'a str),
 }
+
+/// The list of keywords.
+///
+/// We should consider all the keywords, but some are conditional on
+/// the edition so for now we just consider true/false.
+///
+/// <https://doc.rust-lang.org/reference/keywords.html>
+pub(crate) const KEYWORDS: &[&str; 2] = &["true", "false"];
 
 #[derive(Clone)]
 struct Tokenizer<'a> {
@@ -39,6 +60,45 @@ struct Tokenizer<'a> {
 
 struct Parser<'a> {
     t: Tokenizer<'a>,
+}
+
+impl Ident {
+    pub fn as_str(&self) -> &str {
+        &self.name
+    }
+}
+
+impl Hash for Ident {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+    }
+}
+
+impl PartialEq<str> for Ident {
+    fn eq(&self, other: &str) -> bool {
+        self.name == other
+    }
+}
+
+impl PartialEq<&str> for Ident {
+    fn eq(&self, other: &&str) -> bool {
+        self.name == *other
+    }
+}
+
+impl PartialEq<Ident> for Ident {
+    fn eq(&self, other: &Ident) -> bool {
+        self.name == other.name
+    }
+}
+
+impl fmt::Display for Ident {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.raw {
+            f.write_str("r#")?;
+        }
+        f.write_str(&*self.name)
+    }
 }
 
 impl FromStr for Cfg {
@@ -144,7 +204,8 @@ impl<'a> Parser<'a> {
 
     fn expr(&mut self) -> Result<CfgExpr, ParseError> {
         match self.peek() {
-            Some(Ok(Token::Ident(op @ "all"))) | Some(Ok(Token::Ident(op @ "any"))) => {
+            Some(Ok(Token::Ident(false, op @ "all")))
+            | Some(Ok(Token::Ident(false, op @ "any"))) => {
                 self.t.next();
                 let mut e = Vec::new();
                 self.eat(&Token::LeftParen)?;
@@ -161,7 +222,7 @@ impl<'a> Parser<'a> {
                     Ok(CfgExpr::Any(e))
                 }
             }
-            Some(Ok(Token::Ident("not"))) => {
+            Some(Ok(Token::Ident(false, "not"))) => {
                 self.t.next();
                 self.eat(&Token::LeftParen)?;
                 let e = self.expr()?;
@@ -179,7 +240,7 @@ impl<'a> Parser<'a> {
 
     fn cfg(&mut self) -> Result<Cfg, ParseError> {
         match self.t.next() {
-            Some(Ok(Token::Ident(name))) => {
+            Some(Ok(Token::Ident(raw, name))) => {
                 let e = if self.r#try(&Token::Equals) {
                     let val = match self.t.next() {
                         Some(Ok(Token::String(s))) => s,
@@ -197,9 +258,18 @@ impl<'a> Parser<'a> {
                             return Err(ParseError::new(self.t.orig, IncompleteExpr("a string")))
                         }
                     };
-                    Cfg::KeyPair(name.to_string(), val.to_string())
+                    Cfg::KeyPair(
+                        Ident {
+                            name: name.to_string(),
+                            raw,
+                        },
+                        val.to_string(),
+                    )
                 } else {
-                    Cfg::Name(name.to_string())
+                    Cfg::Name(Ident {
+                        name: name.to_string(),
+                        raw,
+                    })
                 };
                 Ok(e)
             }
@@ -279,14 +349,44 @@ impl<'a> Iterator for Tokenizer<'a> {
                     return Some(Err(ParseError::new(self.orig, UnterminatedString)));
                 }
                 Some((start, ch)) if is_ident_start(ch) => {
+                    let (start, raw) = if ch == 'r' {
+                        if let Some(&(_pos, '#')) = self.s.peek() {
+                            // starts with `r#` is a raw ident
+                            self.s.next();
+                            if let Some((start, ch)) = self.s.next() {
+                                if is_ident_start(ch) {
+                                    (start, true)
+                                } else {
+                                    // not a starting ident character
+                                    return Some(Err(ParseError::new(
+                                        self.orig,
+                                        UnexpectedChar(ch),
+                                    )));
+                                }
+                            } else {
+                                // not followed by a ident, error out
+                                return Some(Err(ParseError::new(
+                                    self.orig,
+                                    IncompleteExpr("identifier"),
+                                )));
+                            }
+                        } else {
+                            // starts with `r` but not does continue with `#`
+                            // cannot be a raw ident
+                            (start, false)
+                        }
+                    } else {
+                        // do not start with `r`, cannot be a raw ident
+                        (start, false)
+                    };
                     while let Some(&(end, ch)) = self.s.peek() {
                         if !is_ident_rest(ch) {
-                            return Some(Ok(Token::Ident(&self.orig[start..end])));
+                            return Some(Ok(Token::Ident(raw, &self.orig[start..end])));
                         } else {
                             self.s.next();
                         }
                     }
-                    return Some(Ok(Token::Ident(&self.orig[start..])));
+                    return Some(Ok(Token::Ident(raw, &self.orig[start..])));
                 }
                 Some((_, ch)) => {
                     return Some(Err(ParseError::new(self.orig, UnexpectedChar(ch))));
