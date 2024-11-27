@@ -2447,6 +2447,95 @@ edition = "2021"
 }
 
 #[cargo_test]
+fn migrate_removes_project_for_script() {
+    let p = project()
+        .file(
+            "foo.rs",
+            r#"
+---
+# Before package
+[ package ] # After package header
+# After package header line
+name = "foo"
+edition = "2021"
+# After package table
+
+# Before project
+[ project ] # After project header
+# After project header line
+name = "foo"
+edition = "2021"
+# After project table
+---
+
+fn main() {
+}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript fix --edition --allow-no-vcs --manifest-path foo.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stderr_data(str![[r#"
+[MIGRATING] foo.rs from 2021 edition to 2024
+[FIXED] foo.rs (1 fix)
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[WARNING] `foo.rs` is already on the latest edition (2024), unable to migrate further
+
+If you are trying to migrate from the previous edition (2021), the
+process requires following these steps:
+
+1. Start with `edition = "2021"` in `Cargo.toml`
+2. Run `cargo fix --edition`
+3. Modify `Cargo.toml` to set `edition = "2024"`
+4. Run `cargo build` or `cargo test` to verify the fixes worked
+
+More details may be found at
+https://doc.rust-lang.org/edition-guide/editions/transitioning-an-existing-project-to-a-new-edition.html
+
+[ERROR] expected item, found `[`
+ --> foo.rs:1:1
+  |
+1 | [[bin]]
+  | ^ expected item
+  |
+  = [NOTE] for a full list of items that can appear in modules, see <https://doc.rust-lang.org/reference/items.html>
+
+[ERROR] could not compile `foo` (bin "foo" test) due to 1 previous error
+[WARNING] build failed, waiting for other jobs to finish...
+[ERROR] could not compile `foo` (bin "foo") due to 1 previous error
+
+"#]])
+        .with_status(101)
+        .run();
+    assert_e2e().eq(
+        p.read_file("foo.rs"),
+        str![[r#"
+[[bin]]
+name = "foo"
+path = "[ROOT]/home/.cargo/target/[HASH]/foo.rs"
+
+[package]
+autobenches = false
+autobins = false
+autoexamples = false
+autolib = false
+autotests = false
+build = false
+edition = "2021"
+name = "foo"
+
+[profile.release]
+strip = true
+
+[workspace]
+
+"#]],
+    );
+}
+
+#[cargo_test]
 fn migrate_rename_underscore_fields() {
     let p = project()
         .file(
