@@ -2447,6 +2447,65 @@ edition = "2021"
 }
 
 #[cargo_test]
+fn migrate_removes_project_for_script() {
+    let p = project()
+        .file(
+            "foo.rs",
+            r#"
+---
+# Before package
+[ package ] # After package header
+# After package header line
+name = "foo"
+edition = "2021"
+# After package table
+
+# Before project
+[ project ] # After project header
+# After project header line
+name = "foo"
+edition = "2021"
+# After project table
+---
+
+fn main() {
+}
+"#,
+        )
+        .build();
+
+    p.cargo("-Zscript fix --edition --allow-no-vcs --manifest-path foo.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stderr_data(str![[r#"
+[MIGRATING] foo.rs from 2021 edition to 2024
+[FIXED] foo.rs (1 fix)
+[CHECKING] foo v0.0.0 ([ROOT]/foo)
+[MIGRATING] [ROOT]/home/.cargo/target/[HASH]/foo.rs from 2021 edition to 2024
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    assert_e2e().eq(
+        p.read_file("foo.rs"),
+        str![[r#"
+
+---
+# Before package
+[ package ] # After package header
+# After package header line
+name = "foo"
+edition = "2021"
+# After project table
+---
+
+fn main() {
+}
+
+"#]],
+    );
+}
+
+#[cargo_test]
 fn migrate_rename_underscore_fields() {
     let p = project()
         .file(
