@@ -61,6 +61,7 @@ use crate::ops::resolve::WorkspaceResolve;
 use crate::ops::{self, CompileOptions};
 use crate::util::diagnostic_server::{Message, RustfixDiagnosticServer};
 use crate::util::errors::CargoResult;
+use crate::util::toml_mut::manifest::LocalManifest;
 use crate::util::GlobalContext;
 use crate::util::{existing_vcs_repo, LockServer, LockServerClient};
 use crate::{drop_eprint, drop_eprintln};
@@ -272,7 +273,8 @@ fn migrate_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
             MaybePackage::Virtual(manifest) => manifest.original_toml(),
         };
         if Edition::Edition2024 <= prepare_for_edition {
-            let mut document = pkg.manifest().document().clone().into_mut();
+            let mut manifest_mut = LocalManifest::try_new(pkg.manifest_path())?;
+            let document = &mut manifest_mut.data;
             let mut fixes = 0;
 
             let root = document.as_table_mut();
@@ -335,9 +337,7 @@ fn migrate_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
                 let msg = format!("{file} ({fixes} {verb})");
                 ws.gctx().shell().status("Fixed", msg)?;
 
-                let s = document.to_string();
-                let new_contents_bytes = s.as_bytes();
-                cargo_util::paths::write_atomic(pkg.manifest_path(), new_contents_bytes)?;
+                manifest_mut.write()?;
             }
         }
     }
