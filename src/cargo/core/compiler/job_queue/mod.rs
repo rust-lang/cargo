@@ -1125,13 +1125,21 @@ impl<'gctx> DrainState<'gctx> {
                 debug!("Finished unit: {:?}", unit);
                 if unit.mode.is_doc() {
                     self.documented.insert(unit.pkg.package_id());
-                    build_runner.bcx.gctx.shell().status("Documented", &unit.pkg)?;
+                    build_runner
+                        .bcx
+                        .gctx
+                        .shell()
+                        .status("Documented", &unit.pkg)?;
                 } else if unit.mode.is_doc_scrape() {
                     self.scraped.insert(unit.pkg.package_id());
                     build_runner.bcx.gctx.shell().status("Scraped", &unit.pkg)?;
                 } else {
                     self.compiled.insert(unit.pkg.package_id());
-                    build_runner.bcx.gctx.shell().status("Compiled", &unit.pkg)?;
+                    build_runner
+                        .bcx
+                        .gctx
+                        .shell()
+                        .status("Compiled", &unit.pkg)?;
                 }
             }
             Artifact::Metadata => self.timings.unit_rmeta_finished(id, unlocked),
