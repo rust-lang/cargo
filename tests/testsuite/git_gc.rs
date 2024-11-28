@@ -90,7 +90,7 @@ fn run_test(path_env: Option<&OsStr>) {
     );
 }
 
-#[cargo_test(requires_git)]
+#[cargo_test(requires = "git")]
 fn use_git_gc() {
     run_test(None);
 }
