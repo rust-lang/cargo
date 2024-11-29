@@ -80,9 +80,32 @@ macro_rules! t {
 }
 
 pub use cargo_util::ProcessBuilder;
-pub use snapbox::file;
 pub use snapbox::str;
-pub use snapbox::utils::current_dir;
+
+/// Find the directory for your source file
+#[macro_export]
+macro_rules! current_dir {
+    () => {{
+        let root = ::std::path::Path::new(::std::env!("CARGO_MANIFEST_DIR"));
+        let file = ::std::file!();
+        let rel_path = ::std::path::Path::new(file).parent().unwrap();
+        root.join(rel_path)
+    }};
+}
+
+/// Declare an expected value for an assert from a file
+///
+/// This is relative to the source file the macro is run from
+///
+/// Output type: [`snapbox::Data`]
+#[macro_export]
+macro_rules! file {
+    [$path:literal] => {{
+        let mut path = $crate::current_dir!();
+        path.push($path);
+        ::snapbox::Data::read_from(&path, None)
+    }};
+}
 
 /// `panic!`, reporting the specified error , see also [`t!`]
 #[track_caller]

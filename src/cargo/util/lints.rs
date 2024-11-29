@@ -610,6 +610,7 @@ mod tests {
     use itertools::Itertools;
     use snapbox::ToDebug;
     use std::collections::HashSet;
+    use std::path::Path;
 
     #[test]
     fn ensure_sorted_lints() {
@@ -647,7 +648,7 @@ mod tests {
 
     #[test]
     fn ensure_updated_lints() {
-        let path = snapbox::utils::current_rs!();
+        let path = Path::new(std::env!("CARGO_MANIFEST_DIR")).join(file!());
         let expected = std::fs::read_to_string(&path).unwrap();
         let expected = expected
             .lines()
@@ -686,7 +687,7 @@ mod tests {
 
     #[test]
     fn ensure_updated_lint_groups() {
-        let path = snapbox::utils::current_rs!();
+        let path = Path::new(std::env!("CARGO_MANIFEST_DIR")).join(file!());
         let expected = std::fs::read_to_string(&path).unwrap();
         let expected = expected
             .lines()
