@@ -1,7 +1,7 @@
 [package]
 name = "cargo-util"
-version = "0.2.17"
-rust-version = "1.82"  # MSRV:1
+version = "0.2.18"
+rust-version = "1.83"  # MSRV:1
 edition.workspace = true
 license.workspace = true
 homepage.workspace = true
