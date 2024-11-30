@@ -23,13 +23,10 @@ fn llvm_profdata() -> Option<PathBuf> {
 }
 
 #[cargo_test]
+// macOS may emit different LLVM PGO warnings.
+// Windows LLVM has different requirements.
+#[cfg_attr(not(target_os = "linux"), ignore = "linux only")]
 fn pgo_works() {
-    if cfg!(not(target_os = "linux")) {
-        // macOS may emit different LLVM PGO warnings.
-        // Windows LLVM has different requirements.
-        return;
-    }
-
     let Some(llvm_profdata) = llvm_profdata() else {
         return;
     };
