@@ -5,7 +5,7 @@ use cargo_test_support::prelude::*;
 use cargo_test_support::str;
 use cargo_test_support::Project;
 
-#[cargo_test(requires_hg)]
+#[cargo_test(requires = "hg")]
 fn case() {
     let project = Project::from_template(current_dir!().join("in"));
     let project_root = &project.root();

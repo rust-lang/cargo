@@ -2917,7 +2917,7 @@ fn failed_submodule_checkout() {
     t.join().unwrap();
 }
 
-#[cargo_test(requires_git)]
+#[cargo_test(requires = "git")]
 fn use_the_cli() {
     let project = project();
     let git_project = git::new("dep1", |project| {
@@ -3028,7 +3028,7 @@ fn templatedir_doesnt_cause_problems() {
     p.cargo("check").run();
 }
 
-#[cargo_test(requires_git)]
+#[cargo_test(requires = "git")]
 fn git_with_cli_force() {
     // Supports a force-pushed repo.
     let git_project = git::new("dep1", |project| {
@@ -3095,7 +3095,7 @@ two
         .run();
 }
 
-#[cargo_test(requires_git)]
+#[cargo_test(requires = "git")]
 fn git_fetch_cli_env_clean() {
     // This tests that git-fetch-with-cli works when GIT_DIR environment
     // variable is set (for whatever reason).
@@ -4069,7 +4069,7 @@ src/lib.rs
         .run();
 }
 
-#[cargo_test(public_network_test, requires_git)]
+#[cargo_test(public_network_test, requires = "git")]
 fn github_fastpath_error_message() {
     let p = project()
         .file(

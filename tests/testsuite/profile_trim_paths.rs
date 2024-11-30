@@ -445,17 +445,17 @@ mod object_works {
             .stdout
     }
 
-    #[cargo_test(requires_nm, nightly, reason = "-Zremap-path-scope is unstable")]
+    #[cargo_test(requires = "nm", nightly, reason = "-Zremap-path-scope is unstable")]
     fn with_split_debuginfo_off() {
         object_works_helper("off", inspect_debuginfo);
     }
 
-    #[cargo_test(requires_nm, nightly, reason = "-Zremap-path-scope is unstable")]
+    #[cargo_test(requires = "nm", nightly, reason = "-Zremap-path-scope is unstable")]
     fn with_split_debuginfo_packed() {
         object_works_helper("packed", inspect_debuginfo);
     }
 
-    #[cargo_test(requires_nm, nightly, reason = "-Zremap-path-scope is unstable")]
+    #[cargo_test(requires = "nm", nightly, reason = "-Zremap-path-scope is unstable")]
     fn with_split_debuginfo_unpacked() {
         object_works_helper("unpacked", inspect_debuginfo);
     }
@@ -475,17 +475,29 @@ mod object_works {
             .stdout
     }
 
-    #[cargo_test(requires_readelf, nightly, reason = "-Zremap-path-scope is unstable")]
+    #[cargo_test(
+        requires = "readelf",
+        nightly,
+        reason = "-Zremap-path-scope is unstable"
+    )]
     fn with_split_debuginfo_off() {
         object_works_helper("off", inspect_debuginfo);
     }
 
-    #[cargo_test(requires_readelf, nightly, reason = "-Zremap-path-scope is unstable")]
+    #[cargo_test(
+        requires = "readelf",
+        nightly,
+        reason = "-Zremap-path-scope is unstable"
+    )]
     fn with_split_debuginfo_packed() {
         object_works_helper("packed", inspect_debuginfo);
     }
 
-    #[cargo_test(requires_readelf, nightly, reason = "-Zremap-path-scope is unstable")]
+    #[cargo_test(
+        requires = "readelf",
+        nightly,
+        reason = "-Zremap-path-scope is unstable"
+    )]
     fn with_split_debuginfo_unpacked() {
         object_works_helper("unpacked", inspect_debuginfo);
     }
@@ -676,7 +688,7 @@ fn custom_build_env_var_trim_paths() {
 }
 
 #[cfg(unix)]
-#[cargo_test(requires_lldb, nightly, reason = "-Zremap-path-scope is unstable")]
+#[cargo_test(requires = "lldb", nightly, reason = "-Zremap-path-scope is unstable")]
 fn lldb_works_after_trimmed() {
     use cargo_test_support::compare::assert_e2e;
     use cargo_util::is_ci;

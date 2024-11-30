@@ -34,8 +34,8 @@ use std::sync::Once;
 ///   This is useful for tests that use unstable options in `rustc` or `rustdoc`.
 ///   These tests are run in Cargo's CI, but are disabled in rust-lang/rust's CI due to the difficulty of updating both repos simultaneously.
 ///   A `reason` field is required to explain why it is nightly-only.
-/// * `requires_<cmd>` --- This indicates a command that is required to be installed to be run.
-///   For example, `requires_rustfmt` means the test will only run if the executable `rustfmt` is installed.
+/// * `requires = "<cmd>"` --- This indicates a command that is required to be installed to be run.
+///   For example, `requires = "rustfmt"` means the test will only run if the executable `rustfmt` is installed.
 ///   These tests are *always* run on CI.
 ///   This is mainly used to avoid requiring contributors from having every dependency installed.
 /// * `build_std_real` --- This is a "real" `-Zbuild-std` test (in the `build_std` integration test).
@@ -133,8 +133,18 @@ pub fn cargo_test(attr: TokenStream, item: TokenStream) -> TokenStream {
                     "rustup or stable toolchain not installed"
                 );
             }
-            s if s.starts_with("requires_") => {
+            s if s.starts_with("requires=") => {
                 let command = &s[9..];
+                let Ok(literal) = command.parse::<Literal>() else {
+                    panic!("expect a string literal, found: {command}");
+                };
+                let literal = literal.to_string();
+                let Some(command) = literal
+                    .strip_prefix('"')
+                    .and_then(|lit| lit.strip_suffix('"'))
+                else {
+                    panic!("expect a quoted string literal, found: {literal}");
+                };
                 set_ignore!(!has_command(command), "{command} not installed");
             }
             s if s.starts_with(">=1.") => {

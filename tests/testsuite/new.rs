@@ -114,7 +114,7 @@ fn simple_git() {
     cargo_process("build").cwd(&paths::root().join("foo")).run();
 }
 
-#[cargo_test(requires_hg)]
+#[cargo_test(requires = "hg")]
 fn simple_hg() {
     cargo_process("new --lib foo --edition 2015 --vcs hg").run();
 
