@@ -5,7 +5,7 @@ use cargo_util_schemas::core::PackageIdSpec;
 
 pub fn cli() -> Command {
     Command::new("info")
-        .about("Display information about a package in the registry")
+        .about("Display information about a package")
         .arg(
             Arg::new("package")
                 .required(true)

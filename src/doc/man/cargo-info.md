@@ -2,7 +2,7 @@
 
 ## NAME
 
-cargo-info --- Display information about a package in the registry. Default registry is crates.io
+cargo-info --- Display information about a package.
 
 ## SYNOPSIS
 
@@ -10,7 +10,7 @@ cargo-info --- Display information about a package in the registry. Default regi
 
 ## DESCRIPTION
 
-This command displays information about a package in the registry. It fetches data from the package's Cargo.toml file
+This command displays information about a package. It fetches data from the package's Cargo.toml file
 and presents it in a human-readable format.
 
 ## OPTIONS
@@ -60,7 +60,7 @@ selected based on the Minimum Supported Rust Version (MSRV).
         cargo info serde@1.0.0
 3. Inspect the `serde` package form the local registry:
 
-        cargo info serde --registry my-registry 
+        cargo info serde --registry my-registry
 
 ## SEE ALSO
 

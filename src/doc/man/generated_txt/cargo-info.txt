@@ -1,16 +1,15 @@
 CARGO-INFO(1)
 
 NAME
-       cargo-info — Display information about a package in the registry.
-       Default registry is crates.io
+       cargo-info — Display information about a package.
 
 SYNOPSIS
        cargo info [options] spec
 
 DESCRIPTION
-       This command displays information about a package in the registry. It
-       fetches data from the package’s Cargo.toml file and presents it in a
-       human-readable format.
+       This command displays information about a package. It fetches data from
+       the package’s Cargo.toml file and presents it in a human-readable
+       format.
 
 OPTIONS
    Info Options
@@ -149,7 +148,7 @@ EXAMPLES
 
        3. Inspect the serde package form the local registry:
 
-               cargo info serde --registry my-registry 
+               cargo info serde --registry my-registry
 
 SEE ALSO
        cargo(1), cargo-search(1)
