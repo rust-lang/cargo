@@ -86,7 +86,7 @@ What Rust versions to support is a trade off between
 Users of your package are most likely to track their supported Rust versions to:
 - Their Rust toolchain vendor's support policy, e.g. The Rust Project or a Linux distribution
   - Note: the Rust Project only offers bug fixes and security updates for the latest version.
-- A fixed schedule for users to re-verify their packages with the new toolchain, e.g. the first release of the year, every 
+- A fixed schedule for users to re-verify their packages with the new toolchain, e.g. the first release of the year, every 5 releases.
 
 In addition, users are unlikely to be using the new Rust version immediately but need time to notice and re-verify or might not be aligned on the exact same schedule..
 
