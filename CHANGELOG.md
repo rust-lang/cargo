@@ -111,6 +111,9 @@
 - cargo-vendor: trusts the crate version only when it originates from registries.
   This causes git dependencies to be re-vendored even if they haven't changed.
   [#14530](https://github.com/rust-lang/cargo/pull/14530)
+- cargo-publish: Downgrade version-exists error to warning on dry-run
+  [#14742](https://github.com/rust-lang/cargo/pull/14742)
+  [#14744](https://github.com/rust-lang/cargo/pull/14744)
 
 ### Nightly only
 
