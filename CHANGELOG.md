@@ -1,5 +1,66 @@
 # Changelog
 
+## Cargo 1.85 (2025-02-20)
+[66221abd...rust-1.84.0](https://github.com/rust-lang/cargo/compare/66221abd...rust-1.84.0)
+
+### Added
+
+- 🎉 Cargo now supports the 2024 edition.
+  More information is available in the [edition guide](https://doc.rust-lang.org/nightly/edition-guide/rust-2024/index.html).
+  [#14828](https://github.com/rust-lang/cargo/pull/14828)
+
+### Changed
+
+- Added a future-incompatibility warning for keywords in `cfg`s in Cargo.toml
+  and Cargo configuration. `cfg`s with keywords like `cfg(true)` and `cfg(false)`
+  were incorrectly accepted. For backward compatibility, support for raw
+  identifiers has been introduced; for example, use `cfg(r#true)` instead.
+  [#14671](https://github.com/rust-lang/cargo/pull/14671)
+
+### Fixed
+
+- Set `GIT_DIR` to ensure compatibility with bare repositories
+  for `net.git-fetch-with-cli=true`.
+  [#14860](https://github.com/rust-lang/cargo/pull/14860)
+
+### Nightly only
+
+- `-Zbuild-std`: Check if build target supports `std`.
+  [#14183](https://github.com/rust-lang/cargo/pull/14183)
+- `-Zbuild-std`: always link to std when testing proc-macros.
+  [#14850](https://github.com/rust-lang/cargo/pull/14850)
+  [#14861](https://github.com/rust-lang/cargo/pull/14861)
+- `-Zpackage-workspace`: Allow dry-run of a non-bumped workspace.
+  [#14847](https://github.com/rust-lang/cargo/pull/14847)
+- `-Zscript`: Allow adding/removing dependencies from cargo scripts
+  [#14857](https://github.com/rust-lang/cargo/pull/14857)
+- `-Zscript`: Migrate cargo script manifests across editions
+  [#14864](https://github.com/rust-lang/cargo/pull/14864)
+
+### Documentation
+
+- Clarify how `cargo::metadata` env var is selected.
+  [#14842](https://github.com/rust-lang/cargo/pull/14842)
+- cargo-info: Remove references to the default registry in `cargo-info` docs
+  [#14880](https://github.com/rust-lang/cargo/pull/14880)
+
+### Internal
+
+- cargo-test-support: `requires` attribute accepts string literals for cmds
+  [#14875](https://github.com/rust-lang/cargo/pull/14875)
+- cargo-test-support: Switch from 'exec_with_output' to 'run'
+  [#14848](https://github.com/rust-lang/cargo/pull/14848)
+- test: Verify `-Cmetadata` directly, not through `-Cextra-filename`
+  [#14846](https://github.com/rust-lang/cargo/pull/14846)
+- test: ensure PGO works
+  [#14859](https://github.com/rust-lang/cargo/pull/14859)
+  [#14874](https://github.com/rust-lang/cargo/pull/14874)
+- Update dependencies.
+  [#14867](https://github.com/rust-lang/cargo/pull/14867)
+  [#14871](https://github.com/rust-lang/cargo/pull/14871)
+  [#14878](https://github.com/rust-lang/cargo/pull/14878)
+  [#14879](https://github.com/rust-lang/cargo/pull/14879)
+
 ## Cargo 1.84 (2025-01-09)
 [15fbd2f6...rust-1.84.0](https://github.com/rust-lang/cargo/compare/15fbd2f6...rust-1.84.0)
 
