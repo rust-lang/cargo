@@ -2682,6 +2682,8 @@ edition = "2021"
 
     p.cargo("fix --edition --allow-no-vcs")
         .with_stderr_data(str![[r#"
+[MIGRATING] Cargo.toml from 2021 edition to 2024
+[FIXED] Cargo.toml (1 fix)
 [MIGRATING] foo/Cargo.toml from 2021 edition to 2024
 [CHECKING] foo v0.0.0 ([ROOT]/foo/foo)
 [MIGRATING] foo/src/lib.rs from 2021 edition to 2024
@@ -2699,7 +2701,7 @@ resolver = "2"
 
 [workspace.dependencies]
 # Before default_features
-a = {path = "a", default_features = false}  # After default_features value
+a = {path = "a", default-features = false}  # After default_features value
 # After default_features line
 
 "#]],
