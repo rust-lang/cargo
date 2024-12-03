@@ -268,15 +268,15 @@ fn migrate_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
             format!("{file} from {existing_edition} edition to {prepare_for_edition}"),
         )?;
 
+        let mut manifest_mut = LocalManifest::try_new(pkg.manifest_path())?;
+        let document = &mut manifest_mut.data;
+        let mut fixes = 0;
+
         let ws_original_toml = match ws.root_maybe() {
             MaybePackage::Package(package) => package.manifest().original_toml(),
             MaybePackage::Virtual(manifest) => manifest.original_toml(),
         };
         if Edition::Edition2024 <= prepare_for_edition {
-            let mut manifest_mut = LocalManifest::try_new(pkg.manifest_path())?;
-            let document = &mut manifest_mut.data;
-            let mut fixes = 0;
-
             let root = document.as_table_mut();
 
             if let Some(workspace) = root
@@ -331,14 +331,14 @@ fn migrate_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
                     ws_original_toml,
                 );
             }
+        }
 
-            if 0 < fixes {
-                let verb = if fixes == 1 { "fix" } else { "fixes" };
-                let msg = format!("{file} ({fixes} {verb})");
-                ws.gctx().shell().status("Fixed", msg)?;
+        if 0 < fixes {
+            let verb = if fixes == 1 { "fix" } else { "fixes" };
+            let msg = format!("{file} ({fixes} {verb})");
+            ws.gctx().shell().status("Fixed", msg)?;
 
-                manifest_mut.write()?;
-            }
+            manifest_mut.write()?;
         }
     }
 
