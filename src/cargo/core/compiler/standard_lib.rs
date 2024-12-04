@@ -81,12 +81,10 @@ pub fn resolve_std<'gctx>(
     // `[dev-dependencies]`. No need for us to generate a `Resolve` which has
     // those included because we'll never use them anyway.
     std_ws.set_require_optional_deps(false);
-    // `sysroot` is not in the default set because it is optional, but it needs
-    // to be part of the resolve in case we do need it or `libtest`.
-    let mut spec_pkgs: Vec<String> = crates.iter().map(|s| s.to_string()).collect();
-    spec_pkgs.push("sysroot".to_string());
-    let spec = Packages::Packages(spec_pkgs);
-    let specs = spec.to_package_id_specs(&std_ws)?;
+    // `sysroot` + the default feature set below should give us a good default
+    // Resolve, which includes `libtest` as well.
+    let specs = Packages::Packages(vec!["sysroot".into()]);
+    let specs = specs.to_package_id_specs(&std_ws)?;
     let features = match &gctx.cli_unstable().build_std_features {
         Some(list) => list.clone(),
         None => vec![
