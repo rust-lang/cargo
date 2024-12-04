@@ -1148,7 +1148,8 @@ impl CliUnstable {
             }
         }
 
-        fn parse_features(value: Option<&str>) -> Vec<String> {
+        /// Parse a comma-separated list
+        fn parse_list(value: Option<&str>) -> Vec<String> {
             match value {
                 None => Vec::new(),
                 Some("") => Vec::new(),
@@ -1197,7 +1198,7 @@ impl CliUnstable {
         match k {
             // Permanently unstable features
             // Sorted alphabetically:
-            "allow-features" => self.allow_features = Some(parse_features(v).into_iter().collect()),
+            "allow-features" => self.allow_features = Some(parse_list(v).into_iter().collect()),
             "print-im-a-teapot" => self.print_im_a_teapot = parse_bool(k, v)?,
 
             // Stabilized features
@@ -1216,7 +1217,7 @@ impl CliUnstable {
                 // until we feel confident to remove entirely.
                 //
                 // See rust-lang/cargo#11168
-                let feats = parse_features(v);
+                let feats = parse_list(v);
                 let stab_is_not_empty = feats.iter().any(|feat| {
                     matches!(
                         feat.as_str(),
@@ -1259,7 +1260,7 @@ impl CliUnstable {
             "build-std" => {
                 self.build_std = Some(crate::core::compiler::standard_lib::parse_unstable_flag(v))
             }
-            "build-std-features" => self.build_std_features = Some(parse_features(v)),
+            "build-std-features" => self.build_std_features = Some(parse_list(v)),
             "cargo-lints" => self.cargo_lints = parse_empty(k, v)?,
             "codegen-backend" => self.codegen_backend = parse_empty(k, v)?,
             "config-include" => self.config_include = parse_empty(k, v)?,
