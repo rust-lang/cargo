@@ -924,7 +924,8 @@ fn yanks_in_lockfiles_are_ok_http() {
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] no matching package named `bar` found
+[ERROR] no matching versions for `bar` found
+  version 0.0.1 is yanked
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
 
@@ -941,7 +942,8 @@ fn yanks_in_lockfiles_are_ok_git() {
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] no matching package named `bar` found
+[ERROR] no matching versions for `bar` found
+  version 0.0.1 is yanked
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
 
@@ -993,7 +995,8 @@ fn yanks_in_lockfiles_are_ok_for_other_update_http() {
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] no matching package named `bar` found
+[ERROR] no matching versions for `bar` found
+  version 0.0.1 is yanked
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
 
@@ -1016,7 +1019,8 @@ fn yanks_in_lockfiles_are_ok_for_other_update_git() {
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] no matching package named `bar` found
+[ERROR] no matching versions for `bar` found
+  version 0.0.1 is yanked
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
 
@@ -3225,7 +3229,8 @@ fn unknown_index_version_error() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] no matching package named `bar` found
+[ERROR] no matching versions for `bar` found
+  version 1.0.1 requires a Cargo version that supports index version 4294967295
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.1.0 ([ROOT]/foo)`
 
