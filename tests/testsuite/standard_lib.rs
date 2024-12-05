@@ -395,12 +395,13 @@ fn test_std_on_unsupported_target() {
 
     let p = project()
         .file(
-            "src/main.rs",
+            "src/lib.rs",
             r#"
-        fn main() {
-            println!("hello");
-        }
-        "#,
+                #![no_std]
+                pub fn foo() {
+                    assert_eq!(u8::MIN, 0);
+                }
+            "#,
         )
         .build();
 
