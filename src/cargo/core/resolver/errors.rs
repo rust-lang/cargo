@@ -1,4 +1,5 @@
 use std::fmt;
+use std::fmt::Write as _;
 use std::task::Poll;
 
 use crate::core::{Dependency, PackageId, Registry, Summary};
@@ -325,12 +326,10 @@ pub(super) fn activation_error(
             .collect();
         name_candidates.sort_by_key(|o| o.0);
 
-        let mut msg: String;
+        let mut msg = String::new();
         if !name_candidates.is_empty() {
-            msg = format!(
-                "no matching package found\nsearched package name: `{}`\n",
-                dep.package_name()
-            );
+            let _ = writeln!(&mut msg, "no matching package found",);
+            let _ = writeln!(&mut msg, "searched package name: `{}`", dep.package_name());
             let mut names = name_candidates
                 .iter()
                 .take(3)
@@ -342,18 +341,21 @@ pub(super) fn activation_error(
             }
             // Vertically align first suggestion with missing crate name
             // so a typo jumps out at you.
-            msg.push_str("perhaps you meant:      ");
-            msg.push_str(&names.iter().enumerate().fold(
-                String::default(),
-                |acc, (i, el)| match i {
+            let suggestions = names
+                .iter()
+                .enumerate()
+                .fold(String::default(), |acc, (i, el)| match i {
                     0 => acc + el,
                     i if names.len() - 1 == i && name_candidates.len() <= 3 => acc + " or " + el,
                     _ => acc + ", " + el,
-                },
-            ));
-            msg.push('\n');
+                });
+            let _ = writeln!(&mut msg, "perhaps you meant:      {suggestions}");
         } else {
-            msg = format!("no matching package named `{}` found\n", dep.package_name());
+            let _ = writeln!(
+                &mut msg,
+                "no matching package named `{}` found",
+                dep.package_name()
+            );
         }
 
         let mut location_searched_msg = registry.describe_source(dep.source_id());
@@ -361,12 +363,12 @@ pub(super) fn activation_error(
             location_searched_msg = format!("{}", dep.source_id());
         }
 
-        msg.push_str(&format!("location searched: {}\n", location_searched_msg));
-        msg.push_str("required by ");
-        msg.push_str(&describe_path_in_context(
-            resolver_ctx,
-            &parent.package_id(),
-        ));
+        let _ = writeln!(&mut msg, "location searched: {}", location_searched_msg);
+        let _ = write!(
+            &mut msg,
+            "required by {}",
+            describe_path_in_context(resolver_ctx, &parent.package_id()),
+        );
 
         msg
     };
