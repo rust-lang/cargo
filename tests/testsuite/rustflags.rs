@@ -1522,25 +1522,6 @@ fn remap_path_prefix_works() {
 
 #[cargo_test]
 fn remap_path_prefix_ignored() {
-    let get_c_metadata_re =
-        regex::Regex::new(r".* (--crate-name [^ ]+).* (-C ?metadata=[^ ]+).*").unwrap();
-    let get_c_metadata = |output: RawOutput| {
-        let stderr = String::from_utf8(output.stderr).unwrap();
-        let mut c_metadata = get_c_metadata_re
-            .captures_iter(&stderr)
-            .map(|c| {
-                let (_, [name, c_metadata]) = c.extract();
-                format!("{name} {c_metadata}")
-            })
-            .collect::<Vec<_>>();
-        assert!(
-            !c_metadata.is_empty(),
-            "`{get_c_metadata_re:?}` did not match:\n```\n{stderr}\n```"
-        );
-        c_metadata.sort();
-        c_metadata.join("\n")
-    };
-
     let p = project().file("src/lib.rs", "").build();
 
     let build_output = p
@@ -1560,6 +1541,26 @@ fn remap_path_prefix_ignored() {
     let rustc_c_metadata = dbg!(get_c_metadata(rustc_output));
 
     assert_data_eq!(rustc_c_metadata, build_c_metadata);
+}
+
+fn get_c_metadata(output: RawOutput) -> String {
+    let get_c_metadata_re =
+        regex::Regex::new(r".* (--crate-name [^ ]+).* (-C ?metadata=[^ ]+).*").unwrap();
+
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    let mut c_metadata = get_c_metadata_re
+        .captures_iter(&stderr)
+        .map(|c| {
+            let (_, [name, c_metadata]) = c.extract();
+            format!("{name} {c_metadata}")
+        })
+        .collect::<Vec<_>>();
+    assert!(
+        !c_metadata.is_empty(),
+        "`{get_c_metadata_re:?}` did not match:\n```\n{stderr}\n```"
+    );
+    c_metadata.sort();
+    c_metadata.join("\n")
 }
 
 #[cargo_test]
