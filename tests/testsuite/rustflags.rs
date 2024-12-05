@@ -1521,7 +1521,7 @@ fn remap_path_prefix_works() {
 }
 
 #[cargo_test]
-fn remap_path_prefix_ignored() {
+fn rustflags_remap_path_prefix_ignored_for_c_metadata() {
     let p = project().file("src/lib.rs", "").build();
 
     let build_output = p
@@ -1531,16 +1531,89 @@ fn remap_path_prefix_ignored() {
             "--remap-path-prefix=/abc=/zoo --remap-path-prefix /spaced=/zoo",
         )
         .run();
-    let build_c_metadata = dbg!(get_c_metadata(build_output));
+    let first_c_metadata = dbg!(get_c_metadata(build_output));
 
     p.cargo("clean").run();
 
-    let rustc_output = p
+    let build_output = p
+        .cargo("build -v")
+        .env(
+            "RUSTFLAGS",
+            "--remap-path-prefix=/def=/zoo --remap-path-prefix /earth=/zoo",
+        )
+        .run();
+    let second_c_metadata = dbg!(get_c_metadata(build_output));
+
+    assert_data_eq!(first_c_metadata, second_c_metadata);
+}
+
+#[cargo_test]
+fn rustc_remap_path_prefix_ignored_for_c_metadata() {
+    let p = project().file("src/lib.rs", "").build();
+
+    let build_output = p
         .cargo("rustc -v -- --remap-path-prefix=/abc=/zoo --remap-path-prefix /spaced=/zoo")
         .run();
-    let rustc_c_metadata = dbg!(get_c_metadata(rustc_output));
+    let first_c_metadata = dbg!(get_c_metadata(build_output));
 
-    assert_data_eq!(rustc_c_metadata, build_c_metadata);
+    p.cargo("clean").run();
+
+    let build_output = p
+        .cargo("rustc -v -- --remap-path-prefix=/def=/zoo --remap-path-prefix /earth=/zoo")
+        .run();
+    let second_c_metadata = dbg!(get_c_metadata(build_output));
+
+    assert_data_eq!(first_c_metadata, second_c_metadata);
+}
+
+// `--remap-path-prefix` is meant to take two different binaries and make them the same but the
+// rlib name, including `-Cextra-filename`, can still end up in the binary so it can't change
+#[cargo_test]
+fn rustflags_remap_path_prefix_ignored_for_c_extra_filename() {
+    let p = project().file("src/lib.rs", "").build();
+
+    let build_output = p
+        .cargo("build -v")
+        .env(
+            "RUSTFLAGS",
+            "--remap-path-prefix=/abc=/zoo --remap-path-prefix /spaced=/zoo",
+        )
+        .run();
+    let first_c_extra_filename = dbg!(get_c_extra_filename(build_output));
+
+    p.cargo("clean").run();
+
+    let build_output = p
+        .cargo("build -v")
+        .env(
+            "RUSTFLAGS",
+            "--remap-path-prefix=/def=/zoo --remap-path-prefix /earth=/zoo",
+        )
+        .run();
+    let second_c_extra_filename = dbg!(get_c_extra_filename(build_output));
+
+    assert_data_eq!(first_c_extra_filename, second_c_extra_filename);
+}
+
+// `--remap-path-prefix` is meant to take two different binaries and make them the same but the
+// rlib name, including `-Cextra-filename`, can still end up in the binary so it can't change
+#[cargo_test]
+fn rustc_remap_path_prefix_ignored_for_c_extra_filename() {
+    let p = project().file("src/lib.rs", "").build();
+
+    let build_output = p
+        .cargo("rustc -v -- --remap-path-prefix=/abc=/zoo --remap-path-prefix /spaced=/zoo")
+        .run();
+    let first_c_extra_filename = dbg!(get_c_extra_filename(build_output));
+
+    p.cargo("clean").run();
+
+    let build_output = p
+        .cargo("rustc -v -- --remap-path-prefix=/def=/zoo --remap-path-prefix /earth=/zoo")
+        .run();
+    let second_c_extra_filename = dbg!(get_c_extra_filename(build_output));
+
+    assert_data_eq!(first_c_extra_filename, second_c_extra_filename);
 }
 
 fn get_c_metadata(output: RawOutput) -> String {
@@ -1561,6 +1634,26 @@ fn get_c_metadata(output: RawOutput) -> String {
     );
     c_metadata.sort();
     c_metadata.join("\n")
+}
+
+fn get_c_extra_filename(output: RawOutput) -> String {
+    let get_c_extra_filename_re =
+        regex::Regex::new(r".* (--crate-name [^ ]+).* (-C ?extra-filename=[^ ]+).*").unwrap();
+
+    let stderr = String::from_utf8(output.stderr).unwrap();
+    let mut c_extra_filename = get_c_extra_filename_re
+        .captures_iter(&stderr)
+        .map(|c| {
+            let (_, [name, c_extra_filename]) = c.extract();
+            format!("{name} {c_extra_filename}")
+        })
+        .collect::<Vec<_>>();
+    assert!(
+        !c_extra_filename.is_empty(),
+        "`{get_c_extra_filename_re:?}` did not match:\n```\n{stderr}\n```"
+    );
+    c_extra_filename.sort();
+    c_extra_filename.join("\n")
 }
 
 #[cargo_test]
