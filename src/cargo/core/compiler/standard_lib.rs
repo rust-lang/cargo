@@ -15,12 +15,12 @@ use std::path::PathBuf;
 
 use super::BuildConfig;
 
-fn std_crates<'a>(crates: &'a [String], units: &[Unit]) -> HashSet<&'a str> {
+fn std_crates<'a>(crates: &'a [String], default: &'static str, units: &[Unit]) -> HashSet<&'a str> {
     let mut crates = HashSet::from_iter(crates.iter().map(|s| s.as_str()));
     // This is a temporary hack until there is a more principled way to
     // declare dependencies in Cargo.toml.
     if crates.is_empty() {
-        crates.insert("std");
+        crates.insert(default);
     }
     if crates.contains("std") {
         crates.insert("core");
@@ -113,14 +113,52 @@ pub fn generate_std_roots(
     profiles: &Profiles,
     target_data: &RustcTargetData<'_>,
 ) -> CargoResult<HashMap<CompileKind, Vec<Unit>>> {
-    let std_ids = std_crates(crates, units)
+    // Generate a map of Units for each kind requested.
+    let mut ret = HashMap::new();
+    let (core_only, maybe_std): (Vec<&CompileKind>, Vec<_>) = kinds.iter().partition(|kind|
+        // Only include targets that explicitly don't support std
+        target_data.info(**kind).supports_std == Some(false));
+    for (default_crate, kinds) in [("core", core_only), ("std", maybe_std)] {
+        if kinds.is_empty() {
+            continue;
+        }
+        generate_roots(
+            &mut ret,
+            default_crate,
+            crates,
+            units,
+            std_resolve,
+            std_features,
+            &kinds,
+            package_set,
+            interner,
+            profiles,
+            target_data,
+        )?;
+    }
+
+    Ok(ret)
+}
+
+fn generate_roots(
+    ret: &mut HashMap<CompileKind, Vec<Unit>>,
+    default: &'static str,
+    crates: &[String],
+    units: &[Unit],
+    std_resolve: &Resolve,
+    std_features: &ResolvedFeatures,
+    kinds: &[&CompileKind],
+    package_set: &PackageSet<'_>,
+    interner: &UnitInterner,
+    profiles: &Profiles,
+    target_data: &RustcTargetData<'_>,
+) -> CargoResult<()> {
+    let std_ids = std_crates(crates, default, units)
         .iter()
         .map(|crate_name| std_resolve.query(crate_name))
         .collect::<CargoResult<Vec<PackageId>>>()?;
-    // Convert PackageId to Package.
     let std_pkgs = package_set.get_many(std_ids)?;
-    // Generate a map of Units for each kind requested.
-    let mut ret = HashMap::new();
+
     for pkg in std_pkgs {
         let lib = pkg
             .targets()
@@ -133,25 +171,26 @@ pub fn generate_std_roots(
         let mode = CompileMode::Build;
         let features = std_features.activated_features(pkg.package_id(), FeaturesFor::NormalOrDev);
         for kind in kinds {
-            let list = ret.entry(*kind).or_insert_with(Vec::new);
-            let unit_for = UnitFor::new_normal(*kind);
+            let kind = **kind;
+            let list = ret.entry(kind).or_insert_with(Vec::new);
+            let unit_for = UnitFor::new_normal(kind);
             let profile = profiles.get_profile(
                 pkg.package_id(),
                 /*is_member*/ false,
                 /*is_local*/ false,
                 unit_for,
-                *kind,
+                kind,
             );
             list.push(interner.intern(
                 pkg,
                 lib,
                 profile,
-                *kind,
+                kind,
                 mode,
                 features.clone(),
-                target_data.info(*kind).rustflags.clone(),
-                target_data.info(*kind).rustdocflags.clone(),
-                target_data.target_config(*kind).links_overrides.clone(),
+                target_data.info(kind).rustflags.clone(),
+                target_data.info(kind).rustdocflags.clone(),
+                target_data.target_config(kind).links_overrides.clone(),
                 /*is_std*/ true,
                 /*dep_hash*/ 0,
                 IsArtifact::No,
@@ -159,7 +198,7 @@ pub fn generate_std_roots(
             ));
         }
     }
-    Ok(ret)
+    Ok(())
 }
 
 fn detect_sysroot_src_path(target_data: &RustcTargetData<'_>) -> CargoResult<PathBuf> {
