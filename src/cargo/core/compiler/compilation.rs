@@ -361,6 +361,7 @@ impl<'gctx> Compilation<'gctx> {
         // consider adding the corresponding properties to the hash
         // in BuildContext::target_metadata()
         let rust_version = pkg.rust_version().as_ref().map(ToString::to_string);
+        let edition = pkg.edition();
         cmd.env("CARGO_MANIFEST_DIR", pkg.root())
             .env("CARGO_MANIFEST_PATH", pkg.manifest_path())
             .env("CARGO_PKG_VERSION_MAJOR", &pkg.version().major.to_string())
@@ -390,6 +391,7 @@ impl<'gctx> Compilation<'gctx> {
                 metadata.license_file.as_ref().unwrap_or(&String::new()),
             )
             .env("CARGO_PKG_AUTHORS", &pkg.authors().join(":"))
+            .env("CARGO_PKG_EDITION", edition.to_string())
             .env(
                 "CARGO_PKG_RUST_VERSION",
                 &rust_version.as_deref().unwrap_or_default(),

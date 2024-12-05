@@ -536,6 +536,12 @@ pub fn cargo_pkg_license_file() -> Option<PathBuf> {
     to_opt(var_or_panic("CARGO_PKG_LICENSE_FILE")).map(to_path)
 }
 
+/// The Rust language edition from the manifest of your package.
+#[track_caller]
+pub fn cargo_pkg_edition() -> Option<String> {
+    to_opt(var_or_panic("CARGO_PKG_EDITION")).map(to_string)
+}
+
 /// The Rust version from the manifest of your package. Note that this is the
 /// minimum Rust version supported by the package, not the current Rust version.
 #[track_caller]
