@@ -9,54 +9,40 @@ use crate::core::resolver::HasDevUnits;
 use crate::core::{PackageId, PackageSet, Resolve, Workspace};
 use crate::ops::{self, Packages};
 use crate::util::errors::CargoResult;
-use crate::GlobalContext;
+
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
 use super::BuildConfig;
 
-/// Parse the `-Zbuild-std` flag.
-pub fn parse_unstable_flag(value: Option<&str>) -> Vec<String> {
+fn std_crates<'a>(crates: &'a [String], units: Option<&[Unit]>) -> HashSet<&'a str> {
+    let mut crates = HashSet::from_iter(crates.iter().map(|s| s.as_str()));
     // This is a temporary hack until there is a more principled way to
     // declare dependencies in Cargo.toml.
-    let value = value.unwrap_or("std");
-    let mut crates: HashSet<&str> = value.split(',').collect();
+    if crates.is_empty() {
+        crates.insert("std");
+    }
     if crates.contains("std") {
         crates.insert("core");
         crates.insert("alloc");
         crates.insert("proc_macro");
         crates.insert("panic_unwind");
         crates.insert("compiler_builtins");
+        // Only build libtest if it looks like it is needed (libtest depends on libstd)
+        // If we know what units we're building, we can filter for libtest depending on the jobs.
+        if let Some(units) = units {
+            if units
+                .iter()
+                .any(|unit| unit.mode.is_rustc_test() && unit.target.harness())
+            {
+                crates.insert("test");
+            }
+        }
     } else if crates.contains("core") {
         crates.insert("compiler_builtins");
     }
-    crates.into_iter().map(|s| s.to_string()).collect()
-}
 
-pub(crate) fn std_crates(gctx: &GlobalContext, units: Option<&[Unit]>) -> Option<Vec<String>> {
-    let crates = gctx.cli_unstable().build_std.as_ref()?.clone();
-
-    // Only build libtest if it looks like it is needed.
-    let mut crates = crates.clone();
-    // If we know what units we're building, we can filter for libtest depending on the jobs.
-    if let Some(units) = units {
-        if units
-            .iter()
-            .any(|unit| unit.mode.is_rustc_test() && unit.target.harness())
-        {
-            // Only build libtest when libstd is built (libtest depends on libstd)
-            if crates.iter().any(|c| c == "std") && !crates.iter().any(|c| c == "test") {
-                crates.push("test".to_string());
-            }
-        }
-    } else {
-        // We don't know what jobs are going to be run, so download libtest just in case.
-        if !crates.iter().any(|c| c == "test") {
-            crates.push("test".to_string())
-        }
-    }
-
-    Some(crates)
+    crates
 }
 
 /// Resolve the standard library dependencies.
@@ -66,6 +52,8 @@ pub fn resolve_std<'gctx>(
     build_config: &BuildConfig,
     crates: &[String],
 ) -> CargoResult<(PackageSet<'gctx>, Resolve, ResolvedFeatures)> {
+    let crates = std_crates(crates, None);
+
     if build_config.build_plan {
         ws.gctx()
             .shell()
@@ -73,7 +61,7 @@ pub fn resolve_std<'gctx>(
     }
 
     // check that targets support building std
-    if crates.contains(&"std".to_string()) {
+    if crates.contains("std") {
         let unsupported_targets = target_data.get_unsupported_std_targets();
         if !unsupported_targets.is_empty() {
             anyhow::bail!(
@@ -95,7 +83,7 @@ pub fn resolve_std<'gctx>(
     std_ws.set_require_optional_deps(false);
     // `sysroot` is not in the default set because it is optional, but it needs
     // to be part of the resolve in case we do need it or `libtest`.
-    let mut spec_pkgs = Vec::from(crates);
+    let mut spec_pkgs: Vec<String> = crates.iter().map(|s| s.to_string()).collect();
     spec_pkgs.push("sysroot".to_string());
     let spec = Packages::Packages(spec_pkgs);
     let specs = spec.to_package_id_specs(&std_ws)?;
@@ -128,11 +116,13 @@ pub fn resolve_std<'gctx>(
     ))
 }
 
-/// Generate a list of root `Unit`s for the standard library.
+/// Generates a map of root units for the standard library for each kind requested.
 ///
-/// The given slice of crate names is the root set.
+/// * `crates` is the arg value from `-Zbuild-std`.
+/// * `units` is the root units of the build.
 pub fn generate_std_roots(
     crates: &[String],
+    units: &[Unit],
     std_resolve: &Resolve,
     std_features: &ResolvedFeatures,
     kinds: &[CompileKind],
@@ -141,8 +131,7 @@ pub fn generate_std_roots(
     profiles: &Profiles,
     target_data: &RustcTargetData<'_>,
 ) -> CargoResult<HashMap<CompileKind, Vec<Unit>>> {
-    // Generate the root Units for the standard library.
-    let std_ids = crates
+    let std_ids = std_crates(crates, Some(units))
         .iter()
         .map(|crate_name| std_resolve.query(crate_name))
         .collect::<CargoResult<Vec<PackageId>>>()?;

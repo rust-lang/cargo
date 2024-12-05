@@ -398,10 +398,11 @@ pub fn create_bcx<'a, 'gctx>(
         Vec::new()
     };
 
-    let std_roots = if let Some(crates) = standard_lib::std_crates(gctx, Some(&units)) {
+    let std_roots = if let Some(crates) = gctx.cli_unstable().build_std.as_ref() {
         let (std_resolve, std_features) = std_resolve_features.as_ref().unwrap();
         standard_lib::generate_std_roots(
             &crates,
+            &units,
             std_resolve,
             std_features,
             &explicit_host_kinds,
