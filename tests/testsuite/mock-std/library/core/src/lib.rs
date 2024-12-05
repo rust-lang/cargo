@@ -1,3 +1,4 @@
+#![no_std]
 #![feature(staged_api)]
 #![stable(since = "1.0.0", feature = "dummy")]
 
