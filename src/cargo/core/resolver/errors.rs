@@ -362,12 +362,23 @@ pub(super) fn activation_error(
                         let _ = writeln!(&mut msg, "  version {} is not cached", summary.version());
                     }
                     IndexSummary::Unsupported(summary, schema_version) => {
-                        let _ = writeln!(
+                        if let Some(rust_version) = summary.rust_version() {
+                            // HACK: technically its unsupported and we shouldn't make assumptions
+                            // about the entry but this is limited and for diagnostics purposes
+                            let _ = writeln!(
+                                &mut msg,
+                                "  version {} requires cargo {}",
+                                summary.version(),
+                                rust_version
+                            );
+                        } else {
+                            let _ = writeln!(
                             &mut msg,
                             "  version {} requires a Cargo version that supports index version {}",
                             summary.version(),
                             schema_version
                         );
+                        }
                     }
                 }
             }
