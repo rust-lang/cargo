@@ -804,7 +804,7 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                                 dep.matches(s.as_summary())
                             }
                         }
-                        QueryKind::Alternatives => true,
+                        QueryKind::AlternativeNames => true,
                         QueryKind::Normalized => true,
                     };
                     if !matched {
@@ -839,7 +839,7 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                 return Poll::Ready(Ok(()));
             }
             let mut any_pending = false;
-            if kind == QueryKind::Alternatives || kind == QueryKind::Normalized {
+            if kind == QueryKind::AlternativeNames || kind == QueryKind::Normalized {
                 // Attempt to handle misspellings by searching for a chain of related
                 // names to the original name. The resolver will later
                 // reject any candidates that have the wrong name, and with this it'll
@@ -859,7 +859,7 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                         .query_inner(name_permutation, &req, &mut *self.ops, &mut |s| {
                             if !s.is_yanked() {
                                 f(s);
-                            } else if kind == QueryKind::Alternatives {
+                            } else if kind == QueryKind::AlternativeNames {
                                 f(s);
                             }
                         })?
