@@ -66,7 +66,7 @@
 //! -------------------------------------------|-------------|----------
 //! rustc                                      | ✓           | ✓
 //! [`Profile`]                                | ✓           | ✓
-//! `cargo rustc` extra args                   | ✓           | ✓
+//! `cargo rustc` extra args                   | ✓           |
 //! [`CompileMode`]                            | ✓           | ✓
 //! Target Name                                | ✓           | ✓
 //! `TargetKind` (bin/lib/etc.)                | ✓           | ✓
