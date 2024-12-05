@@ -183,6 +183,13 @@ pub enum QueryKind {
     /// Each source gets to define what `close` means for it.
     ///
     /// Path/Git sources may return all dependencies that are at that URI,
+    /// whereas an `Registry` source may return dependencies that are yanked or invalid.
+    AlternativeVersions,
+    /// A query for packages close to the given dependency requirement.
+    ///
+    /// Each source gets to define what `close` means for it.
+    ///
+    /// Path/Git sources may return all dependencies that are at that URI,
     /// whereas an `Registry` source may return dependencies that have the same
     /// canonicalization.
     AlternativeNames,

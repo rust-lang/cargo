@@ -4,6 +4,7 @@ use std::task::Poll;
 
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::sources::source::QueryKind;
+use crate::sources::IndexSummary;
 use crate::util::edit_distance::edit_distance;
 use crate::util::{GlobalContext, OptVersionReq, VersionExt};
 use anyhow::Error;
@@ -302,6 +303,19 @@ pub(super) fn activation_error(
 
         msg
     } else {
+        // Maybe something is wrong with the available versions
+        let mut version_candidates = loop {
+            match registry.query_vec(&new_dep, QueryKind::AlternativeVersions) {
+                Poll::Ready(Ok(candidates)) => break candidates,
+                Poll::Ready(Err(e)) => return to_resolve_err(e),
+                Poll::Pending => match registry.block_until_ready() {
+                    Ok(()) => continue,
+                    Err(e) => return to_resolve_err(e),
+                },
+            }
+        };
+        version_candidates.sort_unstable_by_key(|a| a.as_summary().version().clone());
+
         // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
         // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
         let name_candidates = loop {
@@ -327,7 +341,37 @@ pub(super) fn activation_error(
         name_candidates.sort_by_key(|o| o.0);
 
         let mut msg = String::new();
-        if !name_candidates.is_empty() {
+        if !version_candidates.is_empty() {
+            let _ = writeln!(
+                &mut msg,
+                "no matching versions for `{}` found",
+                dep.package_name()
+            );
+            for candidate in version_candidates {
+                match candidate {
+                    IndexSummary::Candidate(summary) => {
+                        // HACK: If this was a real candidate, we wouldn't hit this case.
+                        // so it must be a patch which get normalized to being a candidate
+                        let _ =
+                            writeln!(&mut msg, "  version {} is unavailable", summary.version());
+                    }
+                    IndexSummary::Yanked(summary) => {
+                        let _ = writeln!(&mut msg, "  version {} is yanked", summary.version());
+                    }
+                    IndexSummary::Offline(summary) => {
+                        let _ = writeln!(&mut msg, "  version {} is not cached", summary.version());
+                    }
+                    IndexSummary::Unsupported(summary, schema_version) => {
+                        let _ = writeln!(
+                            &mut msg,
+                            "  version {} requires a Cargo version that supports index version {}",
+                            summary.version(),
+                            schema_version
+                        );
+                    }
+                }
+            }
+        } else if !name_candidates.is_empty() {
             let _ = writeln!(&mut msg, "no matching package found",);
             let _ = writeln!(&mut msg, "searched package name: `{}`", dep.package_name());
             let mut names = name_candidates
