@@ -326,9 +326,7 @@ pub(super) fn activation_error(
         name_candidates.sort_by_key(|o| o.0);
 
         let mut msg: String;
-        if name_candidates.is_empty() {
-            msg = format!("no matching package named `{}` found\n", dep.package_name());
-        } else {
+        if !name_candidates.is_empty() {
             msg = format!(
                 "no matching package found\nsearched package name: `{}`\n",
                 dep.package_name()
@@ -354,6 +352,8 @@ pub(super) fn activation_error(
                 },
             ));
             msg.push('\n');
+        } else {
+            msg = format!("no matching package named `{}` found\n", dep.package_name());
         }
 
         let mut location_searched_msg = registry.describe_source(dep.source_id());
