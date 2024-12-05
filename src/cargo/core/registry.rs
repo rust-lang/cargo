@@ -733,8 +733,8 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
                             return;
                         }
                     }
-                    let summary = summary.into_summary();
-                    f(IndexSummary::Candidate(lock(locked, all_patches, summary)))
+                    let summary = summary.map_summary(|summary| lock(locked, all_patches, summary));
+                    f(summary)
                 };
                 return source.query(dep, kind, callback);
             }
