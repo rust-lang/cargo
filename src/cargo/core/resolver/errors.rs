@@ -313,12 +313,10 @@ pub(super) fn activation_error(
                 },
             }
         };
-
         let mut name_candidates: Vec<_> = name_candidates
             .into_iter()
             .map(|s| s.into_summary())
             .collect();
-
         name_candidates.sort_unstable_by_key(|a| a.name());
         name_candidates.dedup_by(|a, b| a.name() == b.name());
         let mut name_candidates: Vec<_> = name_candidates
@@ -326,6 +324,7 @@ pub(super) fn activation_error(
             .filter_map(|n| Some((edit_distance(&*new_dep.package_name(), &*n.name(), 3)?, n)))
             .collect();
         name_candidates.sort_by_key(|o| o.0);
+
         let mut msg: String;
         if name_candidates.is_empty() {
             msg = format!("no matching package named `{}` found\n", dep.package_name());
