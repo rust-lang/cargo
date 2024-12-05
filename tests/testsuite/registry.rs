@@ -3239,6 +3239,43 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
 }
 
 #[cargo_test]
+fn unknown_index_version_with_msrv_error() {
+    // If the version field is not understood, it is ignored.
+    Package::new("bar", "1.0.1")
+        .schema_version(u32::MAX)
+        .rust_version("1.2345")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.1.0"
+                edition = "2015"
+
+                [dependencies]
+                bar = "1.0"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] no matching versions for `bar` found
+  version 1.0.1 requires a Cargo version that supports index version 4294967295
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `foo v0.1.0 ([ROOT]/foo)`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn protocol() {
     cargo_process("install bar")
         .with_status(101)
