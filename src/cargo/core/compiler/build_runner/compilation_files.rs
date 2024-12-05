@@ -703,14 +703,19 @@ fn compute_metadata(
     // Avoid trashing the caches on RUSTFLAGS changing via `c_extra_filename`
     //
     // Limited to `c_extra_filename` to help with reproducible build / PGO issues.
-    build_runner
-        .bcx
-        .extra_args_for(unit)
-        .hash(&mut c_extra_filename_hasher);
+    let default = Vec::new();
+    let extra_args = build_runner.bcx.extra_args_for(unit).unwrap_or(&default);
+    if !has_remap_path_prefix(&extra_args) {
+        extra_args.hash(&mut c_extra_filename_hasher);
+    }
     if unit.mode.is_doc() || unit.mode.is_doc_scrape() {
-        unit.rustdocflags.hash(&mut c_extra_filename_hasher);
+        if !has_remap_path_prefix(&unit.rustdocflags) {
+            unit.rustdocflags.hash(&mut c_extra_filename_hasher);
+        }
     } else {
-        unit.rustflags.hash(&mut c_extra_filename_hasher);
+        if !has_remap_path_prefix(&unit.rustflags) {
+            unit.rustflags.hash(&mut c_extra_filename_hasher);
+        }
     }
 
     let c_metadata = UnitHash(c_metadata_hasher.finish());
@@ -724,6 +729,20 @@ fn compute_metadata(
         c_metadata,
         c_extra_filename,
     }
+}
+
+/// HACK: Detect the *potential* presence of `--remap-path-prefix`
+///
+/// As CLI parsing is contextual and dependent on the CLI definition to understand the context, we
+/// can't say for sure whether `--remap-path-prefix` is present, so we guess if anything looks like
+/// it.
+/// If we could, we'd strip it out for hashing.
+/// Instead, we use this to avoid hashing rustflags if it might be present to avoid the risk of taking
+/// a flag that is trying to make things reproducible and making things less reproducible by the
+/// `-Cextra-filename` showing up in the rlib, even with `split-debuginfo`.
+fn has_remap_path_prefix(args: &[String]) -> bool {
+    args.iter()
+        .any(|s| s.starts_with("--remap-path-prefix=") || s == "--remap-path-prefix")
 }
 
 /// Hash the version of rustc being used during the build process.

@@ -1592,7 +1592,7 @@ fn rustflags_remap_path_prefix_ignored_for_c_extra_filename() {
         .run();
     let second_c_extra_filename = dbg!(get_c_extra_filename(build_output));
 
-    assert_ne!(first_c_extra_filename, second_c_extra_filename);
+    assert_data_eq!(first_c_extra_filename, second_c_extra_filename);
 }
 
 // `--remap-path-prefix` is meant to take two different binaries and make them the same but the
@@ -1613,7 +1613,7 @@ fn rustc_remap_path_prefix_ignored_for_c_extra_filename() {
         .run();
     let second_c_extra_filename = dbg!(get_c_extra_filename(build_output));
 
-    assert_ne!(first_c_extra_filename, second_c_extra_filename);
+    assert_data_eq!(first_c_extra_filename, second_c_extra_filename);
 }
 
 fn get_c_metadata(output: RawOutput) -> String {

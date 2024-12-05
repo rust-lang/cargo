@@ -68,7 +68,7 @@
 //! -------------------------------------------|-------------|---------------------|------------------------|----------
 //! rustc                                      | ✓           | ✓                   | ✓                      | ✓
 //! [`Profile`]                                | ✓           | ✓                   | ✓                      | ✓
-//! `cargo rustc` extra args                   | ✓           | ✓                   |                        | ✓
+//! `cargo rustc` extra args                   | ✓           | ✓[^7]               |                        | ✓[^7]
 //! [`CompileMode`]                            | ✓           | ✓                   | ✓                      | ✓
 //! Target Name                                | ✓           | ✓                   | ✓                      | ✓
 //! `TargetKind` (bin/lib/etc.)                | ✓           | ✓                   | ✓                      | ✓
@@ -83,7 +83,7 @@
 //! Target flags (test/bench/for_host/edition) | ✓           |                     |                        |
 //! -C incremental=… flag                      | ✓           |                     |                        |
 //! mtime of sources                           | ✓[^3]       |                     |                        |
-//! RUSTFLAGS/RUSTDOCFLAGS                     | ✓           | ✓                   |                        | ✓
+//! RUSTFLAGS/RUSTDOCFLAGS                     | ✓           | ✓[^7]               |                        | ✓[^7]
 //! [`Lto`] flags                              | ✓           | ✓                   | ✓                      | ✓
 //! config settings[^5]                        | ✓           |                     |                        |
 //! `is_std`                                   |             | ✓                   | ✓                      | ✓
@@ -101,6 +101,9 @@
 //!       Currently, this is only `doc.extern-map`.
 //!
 //! [^6]: Via [`Manifest::lint_rustflags`][crate::core::Manifest::lint_rustflags]
+//!
+//! [^7]: extra-flags and RUSTFLAGS are conditionally excluded when `--remap-path-prefix` is
+//!       present to avoid breaking build reproducibility while we wait for trim-paths
 //!
 //! When deciding what should go in the Metadata vs the Fingerprint, consider
 //! that some files (like dylibs) do not have a hash in their filename. Thus,
