@@ -252,6 +252,59 @@ fn check_version_control(gctx: &GlobalContext, opts: &FixOptions) -> CargoResult
 }
 
 fn migrate_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
+    // HACK: Duplicate workspace migration logic between virtual manifests and real manifests to
+    // reduce multiple Migrating messages being reported for the same file to the user
+    if matches!(ws.root_maybe(), MaybePackage::Virtual(_)) {
+        // Warning: workspaces do not have an edition so this should only include changes needed by
+        // packages that preserve the behavior of the workspace on all editions
+        let highest_edition = pkgs
+            .iter()
+            .map(|p| p.manifest().edition())
+            .max()
+            .unwrap_or_default();
+        let prepare_for_edition = highest_edition.saturating_next();
+        if highest_edition == prepare_for_edition
+            || (!prepare_for_edition.is_stable() && !ws.gctx().nightly_features_allowed)
+        {
+            //
+        } else {
+            let mut manifest_mut = LocalManifest::try_new(ws.root_manifest())?;
+            let document = &mut manifest_mut.data;
+            let mut fixes = 0;
+
+            if Edition::Edition2024 <= prepare_for_edition {
+                let root = document.as_table_mut();
+
+                if let Some(workspace) = root
+                    .get_mut("workspace")
+                    .and_then(|t| t.as_table_like_mut())
+                {
+                    // strictly speaking, the edition doesn't apply to this table but it should be safe
+                    // enough
+                    fixes += rename_dep_fields_2024(workspace, "dependencies");
+                }
+            }
+
+            if 0 < fixes {
+                // HACK: As workspace migration is a special case, only report it if something
+                // happened
+                let file = ws.root_manifest();
+                let file = file.strip_prefix(ws.root()).unwrap_or(file);
+                let file = file.display();
+                ws.gctx().shell().status(
+                    "Migrating",
+                    format!("{file} from {highest_edition} edition to {prepare_for_edition}"),
+                )?;
+
+                let verb = if fixes == 1 { "fix" } else { "fixes" };
+                let msg = format!("{file} ({fixes} {verb})");
+                ws.gctx().shell().status("Fixed", msg)?;
+
+                manifest_mut.write()?;
+            }
+        }
+    }
+
     for pkg in pkgs {
         let existing_edition = pkg.manifest().edition();
         let prepare_for_edition = existing_edition.saturating_next();
@@ -268,15 +321,15 @@ fn migrate_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
             format!("{file} from {existing_edition} edition to {prepare_for_edition}"),
         )?;
 
+        let mut manifest_mut = LocalManifest::try_new(pkg.manifest_path())?;
+        let document = &mut manifest_mut.data;
+        let mut fixes = 0;
+
         let ws_original_toml = match ws.root_maybe() {
             MaybePackage::Package(package) => package.manifest().original_toml(),
             MaybePackage::Virtual(manifest) => manifest.original_toml(),
         };
         if Edition::Edition2024 <= prepare_for_edition {
-            let mut manifest_mut = LocalManifest::try_new(pkg.manifest_path())?;
-            let document = &mut manifest_mut.data;
-            let mut fixes = 0;
-
             let root = document.as_table_mut();
 
             if let Some(workspace) = root
@@ -331,14 +384,14 @@ fn migrate_manifests(ws: &Workspace<'_>, pkgs: &[&Package]) -> CargoResult<()> {
                     ws_original_toml,
                 );
             }
+        }
 
-            if 0 < fixes {
-                let verb = if fixes == 1 { "fix" } else { "fixes" };
-                let msg = format!("{file} ({fixes} {verb})");
-                ws.gctx().shell().status("Fixed", msg)?;
+        if 0 < fixes {
+            let verb = if fixes == 1 { "fix" } else { "fixes" };
+            let msg = format!("{file} ({fixes} {verb})");
+            ws.gctx().shell().status("Fixed", msg)?;
 
-                manifest_mut.write()?;
-            }
+            manifest_mut.write()?;
         }
     }
 

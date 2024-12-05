@@ -2644,6 +2644,81 @@ a = {path = "a", default-features = false}
 }
 
 #[cargo_test]
+fn migrate_rename_underscore_fields_in_virtual_manifest() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+[workspace]
+members = ["foo"]
+resolver = "2"
+
+[workspace.dependencies]
+# Before default_features
+a = {path = "a", default_features = false}  # After default_features value
+# After default_features line
+"#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+[package]
+name = "foo"
+edition = "2021"
+"#,
+        )
+        .file("foo/src/lib.rs", "")
+        .file(
+            "a/Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.0.1"
+                edition = "2015"
+            "#,
+        )
+        .file("a/src/lib.rs", "")
+        .build();
+
+    p.cargo("fix --edition --allow-no-vcs")
+        .with_stderr_data(str![[r#"
+[MIGRATING] Cargo.toml from 2021 edition to 2024
+[FIXED] Cargo.toml (1 fix)
+[MIGRATING] foo/Cargo.toml from 2021 edition to 2024
+[CHECKING] foo v0.0.0 ([ROOT]/foo/foo)
+[MIGRATING] foo/src/lib.rs from 2021 edition to 2024
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    assert_e2e().eq(
+        p.read_file("Cargo.toml"),
+        str![[r#"
+
+[workspace]
+members = ["foo"]
+resolver = "2"
+
+[workspace.dependencies]
+# Before default_features
+a = {path = "a", default-features = false}  # After default_features value
+# After default_features line
+
+"#]],
+    );
+    assert_e2e().eq(
+        p.read_file("foo/Cargo.toml"),
+        str![[r#"
+
+[package]
+name = "foo"
+edition = "2021"
+
+"#]],
+    );
+}
+
+#[cargo_test]
 fn remove_ignored_default_features() {
     Package::new("dep_simple", "0.1.0").publish();
     Package::new("dep_df_true", "0.1.0").publish();
