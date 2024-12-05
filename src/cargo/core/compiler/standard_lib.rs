@@ -15,7 +15,7 @@ use std::path::PathBuf;
 
 use super::BuildConfig;
 
-fn std_crates<'a>(crates: &'a [String], units: Option<&[Unit]>) -> HashSet<&'a str> {
+fn std_crates<'a>(crates: &'a [String], units: &[Unit]) -> HashSet<&'a str> {
     let mut crates = HashSet::from_iter(crates.iter().map(|s| s.as_str()));
     // This is a temporary hack until there is a more principled way to
     // declare dependencies in Cargo.toml.
@@ -30,13 +30,11 @@ fn std_crates<'a>(crates: &'a [String], units: Option<&[Unit]>) -> HashSet<&'a s
         crates.insert("compiler_builtins");
         // Only build libtest if it looks like it is needed (libtest depends on libstd)
         // If we know what units we're building, we can filter for libtest depending on the jobs.
-        if let Some(units) = units {
-            if units
-                .iter()
-                .any(|unit| unit.mode.is_rustc_test() && unit.target.harness())
-            {
-                crates.insert("test");
-            }
+        if units
+            .iter()
+            .any(|unit| unit.mode.is_rustc_test() && unit.target.harness())
+        {
+            crates.insert("test");
         }
     } else if crates.contains("core") {
         crates.insert("compiler_builtins");
@@ -50,25 +48,11 @@ pub fn resolve_std<'gctx>(
     ws: &Workspace<'gctx>,
     target_data: &mut RustcTargetData<'gctx>,
     build_config: &BuildConfig,
-    crates: &[String],
 ) -> CargoResult<(PackageSet<'gctx>, Resolve, ResolvedFeatures)> {
-    let crates = std_crates(crates, None);
-
     if build_config.build_plan {
         ws.gctx()
             .shell()
             .warn("-Zbuild-std does not currently fully support --build-plan")?;
-    }
-
-    // check that targets support building std
-    if crates.contains("std") {
-        let unsupported_targets = target_data.get_unsupported_std_targets();
-        if !unsupported_targets.is_empty() {
-            anyhow::bail!(
-                "building std is not supported on the following targets: {}",
-                unsupported_targets.join(", ")
-            )
-        }
     }
 
     let src_path = detect_sysroot_src_path(target_data)?;
@@ -129,7 +113,7 @@ pub fn generate_std_roots(
     profiles: &Profiles,
     target_data: &RustcTargetData<'_>,
 ) -> CargoResult<HashMap<CompileKind, Vec<Unit>>> {
-    let std_ids = std_crates(crates, Some(units))
+    let std_ids = std_crates(crates, units)
         .iter()
         .map(|crate_name| std_resolve.query(crate_name))
         .collect::<CargoResult<Vec<PackageId>>>()?;

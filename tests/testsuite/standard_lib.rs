@@ -389,8 +389,29 @@ fn check_core() {
         .run();
 }
 
-#[cargo_test(build_std_mock)]
-fn test_std_on_unsupported_target() {
+#[cargo_test(build_std_mock, requires = "rustup")]
+fn build_std_with_no_arg_for_core_only_target() {
+    let has_rustup_aarch64_unknown_none = std::process::Command::new("rustup")
+        .args(["target", "list", "--installed"])
+        .output()
+        .ok()
+        .map(|output| {
+            String::from_utf8(output.stdout)
+                .map(|stdout| stdout.contains("aarch64-unknown-none"))
+                .unwrap_or_default()
+        })
+        .unwrap_or_default();
+    if !has_rustup_aarch64_unknown_none {
+        let msg =
+            "to run this test, run `rustup target add aarch64-unknown-none --toolchain nightly`";
+        if cargo_util::is_ci() {
+            panic!("{msg}");
+        } else {
+            eprintln!("{msg}");
+        }
+        return;
+    }
+
     let setup = setup();
 
     let p = project()
@@ -405,13 +426,14 @@ fn test_std_on_unsupported_target() {
         )
         .build();
 
-    p.cargo("build")
+    p.cargo("build -v")
         .arg("--target=aarch64-unknown-none")
-        .arg("--target=x86_64-unknown-none")
         .build_std(&setup)
         .with_status(101)
         .with_stderr_data(str![[r#"
-[ERROR] building std is not supported on the following targets: [..]
+...
+error[E0463]: can't find crate for `std`
+...
 "#]])
         .run();
 }
