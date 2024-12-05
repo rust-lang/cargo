@@ -303,7 +303,7 @@ pub(super) fn activation_error(
     } else {
         // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
         // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
-        let candidates = loop {
+        let name_candidates = loop {
             match registry.query_vec(&new_dep, QueryKind::AlternativeNames) {
                 Poll::Ready(Ok(candidates)) => break candidates,
                 Poll::Ready(Err(e)) => return to_resolve_err(e),
@@ -314,30 +314,33 @@ pub(super) fn activation_error(
             }
         };
 
-        let mut candidates: Vec<_> = candidates.into_iter().map(|s| s.into_summary()).collect();
+        let mut name_candidates: Vec<_> = name_candidates
+            .into_iter()
+            .map(|s| s.into_summary())
+            .collect();
 
-        candidates.sort_unstable_by_key(|a| a.name());
-        candidates.dedup_by(|a, b| a.name() == b.name());
-        let mut candidates: Vec<_> = candidates
+        name_candidates.sort_unstable_by_key(|a| a.name());
+        name_candidates.dedup_by(|a, b| a.name() == b.name());
+        let mut name_candidates: Vec<_> = name_candidates
             .iter()
             .filter_map(|n| Some((edit_distance(&*new_dep.package_name(), &*n.name(), 3)?, n)))
             .collect();
-        candidates.sort_by_key(|o| o.0);
+        name_candidates.sort_by_key(|o| o.0);
         let mut msg: String;
-        if candidates.is_empty() {
+        if name_candidates.is_empty() {
             msg = format!("no matching package named `{}` found\n", dep.package_name());
         } else {
             msg = format!(
                 "no matching package found\nsearched package name: `{}`\n",
                 dep.package_name()
             );
-            let mut names = candidates
+            let mut names = name_candidates
                 .iter()
                 .take(3)
                 .map(|c| c.1.name().as_str())
                 .collect::<Vec<_>>();
 
-            if candidates.len() > 3 {
+            if name_candidates.len() > 3 {
                 names.push("...");
             }
             // Vertically align first suggestion with missing crate name
@@ -347,7 +350,7 @@ pub(super) fn activation_error(
                 String::default(),
                 |acc, (i, el)| match i {
                     0 => acc + el,
-                    i if names.len() - 1 == i && candidates.len() <= 3 => acc + " or " + el,
+                    i if names.len() - 1 == i && name_candidates.len() <= 3 => acc + " or " + el,
                     _ => acc + ", " + el,
                 },
             ));
