@@ -150,3 +150,4 @@ mod vers;
 mod workspace_name;
 mod workspace_path;
 mod workspace_path_dev;
+mod yanked;
