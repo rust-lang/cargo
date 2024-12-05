@@ -304,7 +304,7 @@ pub(super) fn activation_error(
         // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
         // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
         let candidates = loop {
-            match registry.query_vec(&new_dep, QueryKind::Alternatives) {
+            match registry.query_vec(&new_dep, QueryKind::AlternativeNames) {
                 Poll::Ready(Ok(candidates)) => break candidates,
                 Poll::Ready(Err(e)) => return to_resolve_err(e),
                 Poll::Pending => match registry.block_until_ready() {
