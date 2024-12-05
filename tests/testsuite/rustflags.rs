@@ -1480,6 +1480,47 @@ fn env_rustflags_misspelled_build_script() {
 }
 
 #[cargo_test]
+fn remap_path_prefix_works() {
+    // Check that remap-path-prefix works.
+    Package::new("bar", "0.1.0")
+        .file("src/lib.rs", "pub fn f() -> &'static str { file!() }")
+        .publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "foo"
+            version = "0.1.0"
+
+            [dependencies]
+            bar = "0.1"
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+            fn main() {
+                println!("{}", bar::f());
+            }
+            "#,
+        )
+        .build();
+
+    p.cargo("run")
+        .env(
+            "RUSTFLAGS",
+            format!("--remap-path-prefix={}=/foo", paths::root().display()),
+        )
+        .with_stdout_data(str![[r#"
+/foo/home/.cargo/registry/src/-[HASH]/bar-0.1.0/src/lib.rs
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn remap_path_prefix_ignored() {
     let get_c_metadata_re =
         regex::Regex::new(r".* (--crate-name [^ ]+).* (-C ?metadata=[^ ]+).*").unwrap();
@@ -1519,47 +1560,6 @@ fn remap_path_prefix_ignored() {
     let rustc_c_metadata = dbg!(get_c_metadata(rustc_output));
 
     assert_data_eq!(rustc_c_metadata, build_c_metadata);
-}
-
-#[cargo_test]
-fn remap_path_prefix_works() {
-    // Check that remap-path-prefix works.
-    Package::new("bar", "0.1.0")
-        .file("src/lib.rs", "pub fn f() -> &'static str { file!() }")
-        .publish();
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            r#"
-            [package]
-            name = "foo"
-            version = "0.1.0"
-
-            [dependencies]
-            bar = "0.1"
-            "#,
-        )
-        .file(
-            "src/main.rs",
-            r#"
-            fn main() {
-                println!("{}", bar::f());
-            }
-            "#,
-        )
-        .build();
-
-    p.cargo("run")
-        .env(
-            "RUSTFLAGS",
-            format!("--remap-path-prefix={}=/foo", paths::root().display()),
-        )
-        .with_stdout_data(str![[r#"
-/foo/home/.cargo/registry/src/-[HASH]/bar-0.1.0/src/lib.rs
-
-"#]])
-        .run();
 }
 
 #[cargo_test]
