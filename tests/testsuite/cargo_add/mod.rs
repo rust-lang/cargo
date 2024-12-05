@@ -75,6 +75,7 @@ mod normalize_name_path;
 mod normalize_name_path_existing;
 mod normalize_name_registry;
 mod normalize_name_registry_existing;
+mod normalize_name_registry_yanked;
 mod normalize_name_workspace_dep;
 mod offline_empty_cache;
 mod optional;
