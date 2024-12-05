@@ -856,7 +856,13 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                     }
                     any_pending |= self
                         .index
-                        .query_inner(name_permutation, &req, &mut *self.ops, f)?
+                        .query_inner(name_permutation, &req, &mut *self.ops, &mut |s| {
+                            if !s.is_yanked() {
+                                f(s);
+                            } else if kind == QueryKind::Alternatives {
+                                f(s);
+                            }
+                        })?
                         .is_pending();
                 }
             }

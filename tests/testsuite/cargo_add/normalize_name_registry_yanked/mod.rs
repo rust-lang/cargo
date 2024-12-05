@@ -23,7 +23,7 @@ fn case() {
         .arg_line("linked_hash_map")
         .current_dir(cwd)
         .assert()
-        .failure()
+        .success()
         .stdout_eq(str![""])
         .stderr_eq(file!["stderr.term.svg"]);
 

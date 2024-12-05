@@ -1,9 +1,8 @@
-<svg width="740px" height="92px" xmlns="http://www.w3.org/2000/svg">
+<svg width="740px" height="110px" xmlns="http://www.w3.org/2000/svg">
   <style>
     .fg { fill: #AAAAAA }
     .bg { background: #000000 }
     .fg-green { fill: #00AA00 }
-    .fg-red { fill: #AA0000 }
     .fg-yellow { fill: #AA5500 }
     .container {
       padding: 0 10px;
@@ -24,9 +23,11 @@
 </tspan>
     <tspan x="10px" y="46px"><tspan class="fg-yellow bold">warning</tspan><tspan class="bold">:</tspan><tspan> translating `linked_hash_map` to `linked-hash-map`</tspan>
 </tspan>
-    <tspan x="10px" y="64px"><tspan class="fg-red bold">error</tspan><tspan class="bold">:</tspan><tspan> the crate `linked-hash-map@0.6.0` could not be found in registry index.</tspan>
+    <tspan x="10px" y="64px"><tspan class="fg-green bold">      Adding</tspan><tspan> linked-hash-map v0.5.4 to dependencies</tspan>
 </tspan>
-    <tspan x="10px" y="82px">
+    <tspan x="10px" y="82px"><tspan class="fg-green bold">     Locking</tspan><tspan> 1 package to latest compatible version</tspan>
+</tspan>
+    <tspan x="10px" y="100px">
 </tspan>
   </text>
 
