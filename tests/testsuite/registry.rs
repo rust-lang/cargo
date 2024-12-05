@@ -3267,7 +3267,7 @@ fn unknown_index_version_with_msrv_error() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] no matching versions for `bar` found
-  version 1.0.1 requires a Cargo version that supports index version 4294967295
+  version 1.0.1 requires cargo 1.2345
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.1.0 ([ROOT]/foo)`
 
