@@ -47,46 +47,48 @@
 //! reliable and reproducible builds at the cost of being complex, slow, and
 //! platform-dependent.
 //!
-//! ## Fingerprints and Metadata
+//! ## Fingerprints and [`UnitHash`]s
 //!
-//! The [`Metadata`] hash is a hash added to the output filenames to isolate
-//! each unit. See its documentationfor more details.
+//! [`Metadata`] tracks several [`UnitHash`]s, including
+//! [`Metadata::unit_id`], [`Metadata::c_metadata`], and [`Metadata::c_extra_filename`].
+//! See its documentation for more details.
+//!
 //! NOTE: Not all output files are isolated via filename hashes (like dylibs).
 //! The fingerprint directory uses a hash, but sometimes units share the same
 //! fingerprint directory (when they don't have Metadata) so care should be
 //! taken to handle this!
 //!
-//! Fingerprints and Metadata are similar, and track some of the same things.
-//! The Metadata contains information that is required to keep Units separate.
+//! Fingerprints and [`UnitHash`]s are similar, and track some of the same things.
+//! [`UnitHash`]s contains information that is required to keep Units separate.
 //! The Fingerprint includes additional information that should cause a
 //! recompile, but it is desired to reuse the same filenames. A comparison
 //! of what is tracked:
 //!
-//! Value                                      | Fingerprint | Metadata
-//! -------------------------------------------|-------------|----------
-//! rustc                                      | ✓           | ✓
-//! [`Profile`]                                | ✓           | ✓
-//! `cargo rustc` extra args                   | ✓           |
-//! [`CompileMode`]                            | ✓           | ✓
-//! Target Name                                | ✓           | ✓
-//! `TargetKind` (bin/lib/etc.)                | ✓           | ✓
-//! Enabled Features                           | ✓           | ✓
-//! Declared Features                          | ✓           |
-//! Immediate dependency’s hashes              | ✓[^1]       | ✓
-//! [`CompileKind`] (host/target)              | ✓           | ✓
-//! `__CARGO_DEFAULT_LIB_METADATA`[^4]         |             | ✓
-//! `package_id`                               |             | ✓
-//! authors, description, homepage, repo       | ✓           |
-//! Target src path relative to ws             | ✓           |
-//! Target flags (test/bench/for_host/edition) | ✓           |
-//! -C incremental=… flag                      | ✓           |
-//! mtime of sources                           | ✓[^3]       |
-//! RUSTFLAGS/RUSTDOCFLAGS                     | ✓           |
-//! [`Lto`] flags                              | ✓           | ✓
-//! config settings[^5]                        | ✓           |
-//! `is_std`                                   |             | ✓
-//! `[lints]` table[^6]                        | ✓           |
-//! `[lints.rust.unexpected_cfgs.check-cfg]`   | ✓           |
+//! Value                                      | Fingerprint | `Metadata::unit_id` | `Metadata::c_metadata` | `Metadata::c_extra_filename`
+//! -------------------------------------------|-------------|---------------------|------------------------|----------
+//! rustc                                      | ✓           | ✓                   | ✓                      | ✓
+//! [`Profile`]                                | ✓           | ✓                   | ✓                      | ✓
+//! `cargo rustc` extra args                   | ✓           | ✓[^7]               |                        | ✓[^7]
+//! [`CompileMode`]                            | ✓           | ✓                   | ✓                      | ✓
+//! Target Name                                | ✓           | ✓                   | ✓                      | ✓
+//! `TargetKind` (bin/lib/etc.)                | ✓           | ✓                   | ✓                      | ✓
+//! Enabled Features                           | ✓           | ✓                   | ✓                      | ✓
+//! Declared Features                          | ✓           |                     |                        |
+//! Immediate dependency’s hashes              | ✓[^1]       | ✓                   | ✓                      | ✓
+//! [`CompileKind`] (host/target)              | ✓           | ✓                   | ✓                      | ✓
+//! `__CARGO_DEFAULT_LIB_METADATA`[^4]         |             | ✓                   | ✓                      | ✓
+//! `package_id`                               |             | ✓                   | ✓                      | ✓
+//! authors, description, homepage, repo       | ✓           |                     |                        |
+//! Target src path relative to ws             | ✓           |                     |                        |
+//! Target flags (test/bench/for_host/edition) | ✓           |                     |                        |
+//! -C incremental=… flag                      | ✓           |                     |                        |
+//! mtime of sources                           | ✓[^3]       |                     |                        |
+//! RUSTFLAGS/RUSTDOCFLAGS                     | ✓           | ✓[^7]               |                        | ✓[^7]
+//! [`Lto`] flags                              | ✓           | ✓                   | ✓                      | ✓
+//! config settings[^5]                        | ✓           |                     |                        |
+//! `is_std`                                   |             | ✓                   | ✓                      | ✓
+//! `[lints]` table[^6]                        | ✓           |                     |                        |
+//! `[lints.rust.unexpected_cfgs.check-cfg]`   | ✓           |                     |                        |
 //!
 //! [^1]: Build script and bin dependencies are not included.
 //!
@@ -99,6 +101,9 @@
 //!       Currently, this is only `doc.extern-map`.
 //!
 //! [^6]: Via [`Manifest::lint_rustflags`][crate::core::Manifest::lint_rustflags]
+//!
+//! [^7]: extra-flags and RUSTFLAGS are conditionally excluded when `--remap-path-prefix` is
+//!       present to avoid breaking build reproducibility while we wait for trim-paths
 //!
 //! When deciding what should go in the Metadata vs the Fingerprint, consider
 //! that some files (like dylibs) do not have a hash in their filename. Thus,
@@ -348,6 +353,10 @@
 //!
 //! [`check_filesystem`]: Fingerprint::check_filesystem
 //! [`Metadata`]: crate::core::compiler::Metadata
+//! [`Metadata::unit_id`]: crate::core::compiler::Metadata::unit_id
+//! [`Metadata::c_metadata`]: crate::core::compiler::Metadata::c_metadata
+//! [`Metadata::c_extra_filename`]: crate::core::compiler::Metadata::c_extra_filename
+//! [`UnitHash`]: crate::core::compiler::UnitHash
 //! [`Profile`]: crate::core::profiles::Profile
 //! [`CompileMode`]: crate::core::compiler::CompileMode
 //! [`Lto`]: crate::core::compiler::Lto
