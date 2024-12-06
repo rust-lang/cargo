@@ -9,6 +9,7 @@ fn main() {
 fn smoke_test_inputs() {
     use build_rs::input::*;
     dbg!(cargo());
+    dbg!(cargo_cfg_feature());
     dbg!(cargo_cfg("careful"));
     #[cfg(feature = "unstable")]
     dbg!(cargo_cfg_fmt_debug());
