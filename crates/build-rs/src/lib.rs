@@ -40,6 +40,20 @@ MSRV: Respected as of "#,
     };
 }
 
+macro_rules! requires_msrv {
+    ($ver:literal) => {
+        concat!(
+            r#"<div class="warning">
+
+MSRV: Requires "#,
+            $ver,
+            r#".
+
+</div>"#
+        )
+    };
+}
+
 mod ident;
 
 pub mod input;
