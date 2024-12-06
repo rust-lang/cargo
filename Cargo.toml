@@ -24,7 +24,7 @@ anstyle = "1.0.8"
 anyhow = "1.0.86"
 base64 = "0.22.1"
 blake3 = "1.5.2"
-build-rs = { version = "0.2.0", path = "crates/build-rs" }
+build-rs = { version = "0.3.0", path = "crates/build-rs" }
 bytesize = "1.3"
 cargo = { path = "" }
 cargo-credential = { version = "0.4.2", path = "credential/cargo-credential" }
