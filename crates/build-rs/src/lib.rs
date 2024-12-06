@@ -26,7 +26,7 @@ macro_rules! unstable {
     };
 }
 
-macro_rules! msrv {
+macro_rules! respected_msrv {
     ($ver:literal) => {
         concat!("> MSRV: Respected as of ", $ver, ".")
     };

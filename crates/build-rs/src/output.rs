@@ -301,7 +301,7 @@ pub fn rustc_cfg_value(key: &str, value: &str) {
 /// and other mistakes.
 ///
 /// [`unexpected_cfgs`]: https://doc.rust-lang.org/rustc/lints/listing/warn-by-default.html#unexpected-cfgs
-#[doc = msrv!("1.80")]
+#[doc = respected_msrv!("1.80")]
 #[track_caller]
 pub fn rustc_check_cfgs(keys: &[&str]) {
     if keys.is_empty() {
@@ -332,7 +332,7 @@ pub fn rustc_check_cfgs(keys: &[&str]) {
 /// and other mistakes.
 ///
 /// [`unexpected_cfgs`]: https://doc.rust-lang.org/rustc/lints/listing/warn-by-default.html#unexpected-cfgs
-#[doc = msrv!("1.80")]
+#[doc = respected_msrv!("1.80")]
 #[track_caller]
 pub fn rustc_check_cfg_values(key: &str, values: &[&str]) {
     if !is_ident(key) {
