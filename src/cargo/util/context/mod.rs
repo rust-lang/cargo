@@ -2749,6 +2749,7 @@ pub struct TermConfig {
 pub struct ProgressConfig {
     pub when: ProgressWhen,
     pub width: Option<usize>,
+    pub taskbar: Option<bool>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -2781,10 +2782,12 @@ where
                 "auto" => Ok(Some(ProgressConfig {
                     when: ProgressWhen::Auto,
                     width: None,
+                    taskbar: None,
                 })),
                 "never" => Ok(Some(ProgressConfig {
                     when: ProgressWhen::Never,
                     width: None,
+                    taskbar: None,
                 })),
                 "always" => Err(E::custom("\"always\" progress requires a `width` key")),
                 _ => Err(E::unknown_variant(s, &["auto", "never"])),
@@ -2806,6 +2809,7 @@ where
             if let ProgressConfig {
                 when: ProgressWhen::Always,
                 width: None,
+                ..
             } = pc
             {
                 return Err(serde::de::Error::custom(
