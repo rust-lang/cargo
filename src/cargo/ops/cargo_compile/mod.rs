@@ -699,6 +699,7 @@ fn traverse_and_share(
         canonical_profile.debuginfo = canonical_debuginfo;
         let unit_probe = interner.intern(
             &unit.pkg,
+            unit.replaced_source,
             &unit.target,
             canonical_profile,
             to_host.unwrap(),
@@ -727,6 +728,7 @@ fn traverse_and_share(
 
     let new_unit = interner.intern(
         &unit.pkg,
+        unit.replaced_source,
         &unit.target,
         profile,
         canonical_kind,
@@ -891,6 +893,7 @@ fn override_rustc_crate_types(
         target.set_kind(f(crate_types));
         interner.intern(
             &unit.pkg,
+            unit.replaced_source,
             &target,
             unit.profile.clone(),
             unit.kind,
