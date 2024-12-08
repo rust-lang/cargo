@@ -161,6 +161,8 @@ jobs:
     - run: rustup update --no-self-update stable
     - run: rustup update --no-self-update ${{ matrix.rust }} && rustup default ${{ matrix.rust }}
     - run: rustup target add ${{ matrix.other }}
+    - run: rustup target add aarch64-unknown-none # need this for build-std mock tests
+      if: startsWith(matrix.rust, 'nightly')
     - run: rustup component add rustc-dev llvm-tools-preview rust-docs
       if: startsWith(matrix.rust, 'nightly')
     - run: sudo apt update -y && sudo apt install lldb gcc-multilib libsecret-1-0 libsecret-1-dev -y
