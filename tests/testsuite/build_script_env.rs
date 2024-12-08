@@ -383,3 +383,151 @@ fn rustc_cfg_with_and_without_value() {
     );
     check.run();
 }
+
+#[cargo_test]
+fn env_config_rerun_if_changed() {
+    let p = project()
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                println!("cargo::rerun-if-env-changed=FOO");
+            }
+        "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+            [env]
+            FOO = "foo"
+            "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+
+    p.change_file(
+        ".cargo/config.toml",
+        r#"
+        [env]
+        FOO = "bar"
+        "#,
+    );
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    // This identical cargo invocation is to ensure no rebuild happen.
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cfg(windows)]
+#[cargo_test]
+fn insensitive_env_config_rerun_if_changed() {
+    let p = project()
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            r#"
+        fn main() {
+            println!("cargo::rerun-if-env-changed=FOO");
+        }
+    "#,
+        )
+        .file(
+            ".cargo/config.toml",
+            r#"
+        [env]
+        Foo = "foo"
+        "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    p.change_file(
+        ".cargo/config.toml",
+        r#"
+        [env]
+        Foo = "bar"
+        "#,
+    );
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    // This identical cargo invocation is to ensure no rebuild happen.
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn env_config_newly_added_rerun() {
+    let p = project()
+        .file("src/main.rs", "fn main() {}")
+        .file(
+            "build.rs",
+            r#"
+            fn main() {
+                println!("cargo::rerun-if-env-changed=FOO");
+            }
+        "#,
+        )
+        .build();
+
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    p.change_file(
+        ".cargo/config.toml",
+        r#"
+        [env]
+        FOO = "foo"
+        "#,
+    );
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[COMPILING] foo v0.0.1 ([ROOT]/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    // This identical cargo invocation is to ensure no rebuild happen.
+    p.cargo("check")
+        .with_stderr_data(str![[r#"
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+}
