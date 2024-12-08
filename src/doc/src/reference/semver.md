@@ -81,6 +81,7 @@ considered incompatible.
         * [Minor: generalizing a type to use generics (with identical types)](#generic-generalize-identical)
         * [Major: generalizing a type to use generics (with possibly different types)](#generic-generalize-different)
         * [Minor: changing a generic type to a more generic type](#generic-more-generic)
+        * [Major: capturing more generic parameters in RPIT](#generic-rpit-capture)
     * Functions
         * [Major: adding/removing function parameters](#fn-change-arity)
         * [Possibly-breaking: introducing a new function type parameter](#fn-generic-new)
@@ -1615,6 +1616,49 @@ fn main() {
     let s: Foo<f32> = Foo(1.0, 2.0);
 }
 ```
+
+### Major: capturing more generic parameters in RPIT {#generic-rpit-capture}
+
+It is a breaking change to capture additional generic parameters in an [RPIT] (return-position impl trait).
+
+```rust,ignore
+// MAJOR CHANGE
+
+///////////////////////////////////////////////////////////
+// Before
+pub fn f<'a, 'b>(x: &'a str, y: &'b str) -> impl Iterator<Item = char> + use<'a> {
+    x.chars()
+}
+
+///////////////////////////////////////////////////////////
+// After
+pub fn f<'a, 'b>(x: &'a str, y: &'b str) -> impl Iterator<Item = char> + use<'a, 'b> {
+    x.chars().chain(y.chars())
+}
+
+///////////////////////////////////////////////////////////
+// Example usage that will break.
+fn main() {
+    let a = String::new();
+    let b = String::new();
+    let iter = updated_crate::f(&a, &b);
+    drop(b); // Error: cannot move out of `b` because it is borrowed
+}
+```
+
+Adding generic parameters to an RPIT places additional constraints on how the resulting type may be used.
+
+Note that there are implicit captures when the `use<>` syntax is not specified. In Rust 2021 and earlier editions, the lifetime parameters are only captured if they appear syntactically within a bound in the RPIT type signature. Starting in Rust 2024, all lifetime parameters are unconditionally captured. This means that starting in Rust 2024, the default is maximally compatible, requiring you to be explicit when you want to capture less, which is a SemVer commitment.
+
+See the [edition guide][rpit-capture-guide] and the [reference][rpit-reference] for more information on RPIT capturing.
+
+It is a minor change to capture fewer generic parameters in an RPIT.
+
+> Note: All in-scope type and const generic parameters must be either implicitly captured (no `+ use<…>` specified) or explicitly captured (must be listed in `+ use<…>`), and thus currently it is not allowed to change what is captured of those kinds of generics.
+
+[RPIT]: ../../reference/types/impl-trait.md#abstract-return-types
+[rpit-capture-guide]: ../../edition-guide/rust-2024/rpit-lifetime-capture.html
+[rpit-reference]: ../../reference/types/impl-trait.md#capturing
 
 ### Major: adding/removing function parameters {#fn-change-arity}
 
