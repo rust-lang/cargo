@@ -1654,6 +1654,8 @@ See the [edition guide][rpit-capture-guide] and the [reference][rpit-reference] 
 
 It is a minor change to capture fewer generic parameters in an RPIT.
 
+> Note: All in-scope type and const generic parameters must be either implicitly captured (no `+ use<…>` specified) or explicitly captured (must be listed in `+ use<…>`), and thus currently it is not allowed to change what is captured of those kinds of generics.
+
 [RPIT]: ../../reference/types/impl-trait.md#abstract-return-types
 [rpit-capture-guide]: ../../edition-guide/rust-2024/rpit-lifetime-capture.html
 [rpit-reference]: ../../reference/types/impl-trait.md#capturing
