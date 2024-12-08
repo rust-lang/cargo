@@ -28,7 +28,7 @@ fn lib() {
     p.cargo("rustc --lib -v -- -C debug-assertions=off")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..]-C debug-assertions=off[..]-C metadata=[..] [..]--out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..]-C metadata=[..] [..]--out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps[..]-C debug-assertions=off[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -46,7 +46,7 @@ fn build_main_and_allow_unstable_options() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps`
-[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link[..]-C debuginfo=2 [..]-C debug-assertions[..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps --extern foo=[ROOT]/foo/target/debug/deps/libfoo-[HASH].rlib`
+[RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]--crate-type bin --emit=[..]link[..]-C debuginfo=2 [..]-C metadata=[..] --out-dir [ROOT]/foo/target/debug/deps -L dependency=[ROOT]/foo/target/debug/deps --extern foo=[ROOT]/foo/target/debug/deps/libfoo-[HASH].rlib[..]-C debug-assertions[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -83,7 +83,7 @@ fn build_with_args_to_one_of_multiple_binaries() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..]-C metadata=[..] --out-dir [..]`
-[RUNNING] `rustc --crate-name bar --edition=2015 src/bin/bar.rs [..]--crate-type bin --emit=[..]link[..]-C debuginfo=2 [..]-C debug-assertions [..]`
+[RUNNING] `rustc --crate-name bar --edition=2015 src/bin/bar.rs [..]--crate-type bin --emit=[..]link[..]-C debuginfo=2 [..]-C debug-assertions[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -358,7 +358,7 @@ fn build_with_args_to_one_of_multiple_tests() {
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
 [RUNNING] `rustc --crate-name foo --edition=2015 src/lib.rs [..]--crate-type lib --emit=[..]link[..]-C debuginfo=2 [..]-C metadata=[..] --out-dir [..]`
-[RUNNING] `rustc --crate-name bar --edition=2015 tests/bar.rs [..]--emit=[..]link[..]-C debuginfo=2 [..]-C debug-assertions --test[..]`
+[RUNNING] `rustc --crate-name bar --edition=2015 tests/bar.rs [..]--emit=[..]link[..]-C debuginfo=2 [..]--test[..]-C debug-assertions[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -395,7 +395,7 @@ fn build_foo_with_bar_dependency() {
 [COMPILING] bar v0.1.0 ([ROOT]/bar)
 [RUNNING] `rustc --crate-name bar [..] -C debuginfo=2[..]`
 [COMPILING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..] -C debuginfo=2 [..]-C debug-assertions [..]`
+[RUNNING] `rustc --crate-name foo [..] -C debuginfo=2 [..]-C debug-assertions[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -430,7 +430,7 @@ fn build_only_bar_dependency() {
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [COMPILING] bar v0.1.0 ([ROOT]/bar)
-[RUNNING] `rustc --crate-name bar [..]--crate-type lib [..] -C debug-assertions [..]`
+[RUNNING] `rustc --crate-name bar [..]--crate-type lib [..] -C debug-assertions[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -599,7 +599,7 @@ fn rustc_fingerprint() {
     p.cargo("rustc -v -- -C debug-assertions")
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name foo [..]-C debug-assertions [..]`
+[RUNNING] `rustc --crate-name foo [..]-C debug-assertions[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -657,7 +657,7 @@ fn rustc_test_with_implicit_bin() {
         .with_stderr_data(
             str![[r#"
 [COMPILING] foo v0.5.0 ([ROOT]/foo)
-[RUNNING] `rustc --crate-name test1 --edition=2015 tests/test1.rs [..] --cfg foo [..]`
+[RUNNING] `rustc --crate-name test1 --edition=2015 tests/test1.rs [..] --cfg foo[..]`
 [RUNNING] `rustc --crate-name foo --edition=2015 src/main.rs [..]`
 ...
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -816,42 +816,11 @@ fn precedence() {
 
     p.cargo("rustc --release -v -- --cfg cargo_rustc -C strip=symbols")
         .env("RUSTFLAGS", "--cfg from_rustflags")
-        .masquerade_as_nightly_cargo(&["cargo-rustc-precedence"])
         .with_stderr_data(str![[r#"
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [RUNNING] `rustc [..]-C strip=debuginfo [..]--cfg cargo_rustc -C strip=symbols --cfg from_rustflags`
 [FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
 
 "#]])
-        .run();
-
-    // Ensure the short-live env var to work
-    p.cargo("clean").run();
-    p.cargo("rustc --release -v -- --cfg cargo_rustc -C strip=symbols")
-        .env("RUSTFLAGS", "--cfg from_rustflags")
-        .env("__CARGO_RUSTC_ORIG_ARGS_PRIO", "1")
-        .masquerade_as_nightly_cargo(&["cargo-rustc-precedence"])
-        .with_stderr_data(
-            str![[r#"
-[COMPILING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc [..]--cfg cargo_rustc -C strip=symbols [..]-C strip=debuginfo [..]--cfg from_rustflags`
-[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-
-"#]]
-        )
-        .run();
-
-    // Ensure non-nightly to work as before
-    p.cargo("clean").run();
-    p.cargo("rustc --release -v -- --cfg cargo_rustc -C strip=symbols")
-        .env("RUSTFLAGS", "--cfg from_rustflags")
-        .with_stderr_data(
-            str![[r#"
-[COMPILING] foo v0.0.0 ([ROOT]/foo)
-[RUNNING] `rustc [..]--cfg cargo_rustc -C strip=symbols [..]-C strip=debuginfo [..]--cfg from_rustflags`
-[FINISHED] `release` profile [optimized] target(s) in [ELAPSED]s
-
-"#]]
-        )
         .run();
 }

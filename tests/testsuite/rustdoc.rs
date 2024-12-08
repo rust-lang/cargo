@@ -106,7 +106,7 @@ fn rustdoc_args() {
     p.cargo("rustdoc -v -- --cfg=foo")
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustdoc [..] --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc [..] --cfg=foo -C metadata=[..] -L dependency=[ROOT]/foo/target/debug/deps [..]`
+[RUNNING] `rustdoc [..] --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc [..]-C metadata=[..] -L dependency=[ROOT]/foo/target/debug/deps [..]--cfg=foo[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
@@ -159,7 +159,7 @@ fn rustdoc_foo_with_bar_dependency() {
 [CHECKING] bar v0.0.1 ([ROOT]/bar)
 [RUNNING] `rustc [..] [ROOT]/bar/src/lib.rs [..]`
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustdoc [..] --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc [..] --cfg=foo -C metadata=[..] -L dependency=[ROOT]/foo/target/debug/deps --extern [..]`
+[RUNNING] `rustdoc [..] --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc [..]-C metadata=[..] -L dependency=[ROOT]/foo/target/debug/deps --extern [..]--cfg=foo[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
@@ -195,7 +195,7 @@ fn rustdoc_only_bar_dependency() {
         .with_stderr_data(str![[r#"
 [LOCKING] 1 package to latest compatible version
 [DOCUMENTING] bar v0.0.1 ([ROOT]/bar)
-[RUNNING] `rustdoc [..] --crate-name bar [ROOT]/bar/src/lib.rs -o [ROOT]/foo/target/doc [..] --cfg=foo -C metadata=[..] -L dependency=[ROOT]/foo/target/debug/deps [..]`
+[RUNNING] `rustdoc [..] --crate-name bar [ROOT]/bar/src/lib.rs -o [ROOT]/foo/target/doc [..]-C metadata=[..] -L dependency=[ROOT]/foo/target/debug/deps [..]--cfg=foo[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/bar/index.html
 
@@ -213,7 +213,7 @@ fn rustdoc_same_name_documents_lib() {
     p.cargo("rustdoc -v -- --cfg=foo")
         .with_stderr_data(str![[r#"
 [DOCUMENTING] foo v0.0.1 ([ROOT]/foo)
-[RUNNING] `rustdoc [..] --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc [..] --cfg=foo -C metadata=[..] -L dependency=[ROOT]/foo/target/debug/deps [..]`
+[RUNNING] `rustdoc [..] --crate-name foo src/lib.rs -o [ROOT]/foo/target/doc [..]-C metadata=[..] -L dependency=[ROOT]/foo/target/debug/deps [..]--cfg=foo[..]`
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [GENERATED] [ROOT]/foo/target/doc/foo/index.html
 
