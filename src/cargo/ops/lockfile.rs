@@ -66,6 +66,14 @@ pub fn write_pkg_lockfile(ws: &Workspace<'_>, resolve: &mut Resolve) -> CargoRes
         );
     }
 
+    if ws.is_locked() {
+        anyhow::bail!(
+            "Attempted to write to the standard library's lockfile.\n\
+            This most likely means the lockfile has been previously modified by mistake.\
+            Try removing and readding the `rust-src` component."
+        );
+    }
+
     // While we're updating the lock file anyway go ahead and update its
     // encoding to whatever the latest default is. That way we can slowly roll
     // out lock file updates as they're otherwise already updated, and changes
