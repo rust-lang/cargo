@@ -102,6 +102,13 @@ mod cfg {
     // those disabled with #[cfg(any())] don't seem meaningfully useful
     // but we list all cfg that are default known to check-cfg
 
+    /// Each activated feature of the package being built
+    #[doc = requires_msrv!("1.85")]
+    #[track_caller]
+    pub fn cargo_cfg_feature() -> Vec<String> {
+        to_strings(var_or_panic(&cargo_cfg_var("target_feature")), ',')
+    }
+
     #[cfg(any())]
     #[track_caller]
     pub fn cargo_cfg_clippy() -> bool {
