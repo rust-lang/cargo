@@ -1,0 +1,41 @@
+{
+  "features": [],
+  "format_version": 1,
+  "name": "foo",
+  "package_id": "path+[ROOTURL]/foo#0.5.0",
+  "packages": [],
+  "profile": {
+    "codegen_backend": null,
+    "codegen_units": null,
+    "debug_assertions": true,
+    "debuginfo": 2,
+    "incremental": false,
+    "lto": "false",
+    "name": "dev",
+    "opt_level": "0",
+    "overflow_checks": true,
+    "panic": "unwind",
+    "rpath": false,
+    "split_debuginfo": null
+  },
+  "rustc": {
+    "commit_hash": "[..]",
+    "host": "[HOST_TARGET]",
+    "verbose_version": "{...}",
+    "version": "[..]",
+    "workspace_wrapper": null,
+    "wrapper": null
+  },
+  "source": "[ROOT]/foo",
+  "target": {
+    "crate_types": [
+      "bin"
+    ],
+    "edition": "2015",
+    "kind": [
+      "bin"
+    ],
+    "name": "foo"
+  },
+  "version": "0.5.0"
+}
