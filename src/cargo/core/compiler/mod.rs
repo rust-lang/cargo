@@ -1310,10 +1310,16 @@ fn trim_paths_args(
 /// This remap logic aligns with rustc:
 /// <https://github.com/rust-lang/rust/blob/c2ef3516/src/bootstrap/src/lib.rs#L1113-L1116>
 fn sysroot_remap(build_runner: &BuildRunner<'_, '_>, unit: &Unit) -> OsString {
-    let sysroot = &build_runner.bcx.target_data.info(unit.kind).sysroot;
     let mut remap = OsString::from("--remap-path-prefix=");
-    remap.push(sysroot);
-    remap.push("/lib/rustlib/src/rust"); // See also `detect_sysroot_src_path()`.
+    remap.push({
+        // See also `detect_sysroot_src_path()`.
+        let mut sysroot = build_runner.bcx.target_data.info(unit.kind).sysroot.clone();
+        sysroot.push("lib");
+        sysroot.push("rustlib");
+        sysroot.push("src");
+        sysroot.push("rust");
+        sysroot
+    });
     remap.push("=");
     remap.push("/rustc/");
     if let Some(commit_hash) = build_runner.bcx.rustc().commit_hash.as_ref() {
