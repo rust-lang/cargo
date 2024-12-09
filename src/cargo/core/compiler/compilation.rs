@@ -527,3 +527,98 @@ fn target_linker(bcx: &BuildContext<'_, '_>, kind: CompileKind) -> CargoResult<O
     }
     Ok(matching_linker.map(|(_k, linker)| linker.val.clone().resolve_program(bcx.gctx)))
 }
+
+/// This tracks environment variables Cargo sets to rustc when building a crate.
+///
+/// This only inclues variables with statically known keys.
+/// For environment variable keys that vary like `CARG_BIN_EXE_<name>` or
+/// `-Zbindeps` related env vars, we compare only their prefixes to determine
+/// if they are internal.
+/// See [`is_env_set_by_cargo`] and
+/// <https://doc.rust-lang.org/nightly/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-crates>.
+const ENV_VARS_SET_FOR_CRATES: [&str; 23] = [
+    crate::CARGO_ENV,
+    "CARGO_MANIFEST_DIR",
+    "CARGO_MANIFEST_PATH",
+    "CARGO_PKG_VERSION",
+    "CARGO_PKG_VERSION_MAJOR",
+    "CARGO_PKG_VERSION_MINOR",
+    "CARGO_PKG_VERSION_PATCH",
+    "CARGO_PKG_VERSION_PRE",
+    "CARGO_PKG_AUTHORS",
+    "CARGO_PKG_NAME",
+    "CARGO_PKG_DESCRIPTION",
+    "CARGO_PKG_HOMEPAGE",
+    "CARGO_PKG_REPOSITORY",
+    "CARGO_PKG_LICENSE",
+    "CARGO_PKG_LICENSE_FILE",
+    "CARGO_PKG_RUST_VERSION",
+    "CARGO_PKG_README",
+    "CARGO_CRATE_NAME",
+    "CARGO_BIN_NAME",
+    "OUT_DIR",
+    "CARGO_PRIMARY_PACKAGE",
+    "CARGO_TARGET_TMPDIR",
+    paths::dylib_path_envvar(),
+];
+/// Asserts if the given env vars are controlled by Cargo.
+///
+/// This is only for reminding Cargo developer to keep newly added environment
+/// variables in sync with [`ENV_VARS_SET_FOR_CRATES`].
+#[cfg(debug_assertions)]
+pub(crate) fn assert_only_envs_set_by_cargo<'a>(
+    keys: impl Iterator<Item = impl AsRef<str>>,
+    env_config: &HashMap<String, OsString>,
+) {
+    for key in keys {
+        let key = key.as_ref();
+        // When running Cargo's test suite,
+        // we're fine if it is from the `[env]` table
+        if env_config.contains_key(key) {
+            continue;
+        }
+        assert!(
+            is_env_set_by_cargo(key),
+            "`{key}` is not tracked as an environment variable set by Cargo\n\
+            Add it to `ENV_VARS_SET_FOR_CRATES` if you intend to introduce a new one"
+        );
+    }
+}
+
+/// True if the given env var is controlled or set by Cargo.
+/// See [`ENV_VARS_SET_FOR_CRATES`].
+pub(crate) fn is_env_set_by_cargo(key: &str) -> bool {
+    ENV_VARS_SET_FOR_CRATES.contains(&key)
+        || key.starts_with("CARGO_BIN_EXE_")
+        || key.starts_with("__CARGO") // internal/test-only envs
+        || key == "RUSTC_BOOTSTRAP" // for -Zbuild-std
+        || is_artifact_dep_env_vars(key)
+}
+
+/// Whether an env var is set because of `-Zbindeps`.
+fn is_artifact_dep_env_vars(key: &str) -> bool {
+    let Some(key) = key.strip_prefix("CARGO_") else {
+        return false;
+    };
+    let Some(key) = key
+        .strip_prefix("BIN_")
+        .or_else(|| key.strip_prefix("CDYLIB_"))
+        .or_else(|| key.strip_prefix("STATICLIB_"))
+    else {
+        return false;
+    };
+    key.starts_with("FILE_") || key.starts_with("DIR_")
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use super::ENV_VARS_SET_FOR_CRATES;
+
+    #[test]
+    fn ensure_env_vars_set_for_crates_unique() {
+        let set: HashSet<&str> = HashSet::from_iter(ENV_VARS_SET_FOR_CRATES);
+        assert_eq!(ENV_VARS_SET_FOR_CRATES.len(), set.len());
+    }
+}

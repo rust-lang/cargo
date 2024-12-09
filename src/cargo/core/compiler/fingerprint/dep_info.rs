@@ -19,6 +19,7 @@ use cargo_util::paths;
 use cargo_util::ProcessBuilder;
 use cargo_util::Sha256;
 
+use crate::core::compiler::is_env_set_by_cargo;
 use crate::CargoResult;
 use crate::CARGO_ENV;
 
@@ -334,7 +335,13 @@ pub fn translate_dep_info(
     //
     // For cargo#13280, We trace env vars that are defined in the `[env]` config table.
     on_disk_info.env.retain(|(key, _)| {
-        env_config.contains_key(key) || !rustc_cmd.get_envs().contains_key(key) || key == CARGO_ENV
+        if env_config.contains_key(key) && !is_env_set_by_cargo(key) {
+            return true;
+        }
+        if !rustc_cmd.get_envs().contains_key(key) {
+            return true;
+        }
+        key == CARGO_ENV
     });
 
     let serialize_path = |file| {
