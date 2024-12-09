@@ -55,7 +55,11 @@ trigger_files = [
 ]
 
 [autolabel."A-build-scripts"]
-trigger_files = ["src/cargo/core/compiler/custom_build.rs"]
+trigger_files = [
+  "crates/build-rs-test-lib/",
+  "crates/build-rs/",
+  "src/cargo/core/compiler/custom_build.rs",
+]
 
 [autolabel."A-cache-messages"]
 trigger_files = ["src/cargo/util/rustc.rs"]
