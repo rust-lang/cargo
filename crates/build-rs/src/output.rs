@@ -403,6 +403,26 @@ pub fn warning(message: &str) {
     emit("warning", message);
 }
 
+/// The `error` instruction tells Cargo to display an error after the build script has finished
+/// running, and then fail the build.
+///
+/// <div class="warning">
+///
+/// Build script libraries should carefully consider if they want to use [`error`] versus
+/// returning a `Result`. It may be better to return a `Result`, and allow the caller to decide if the
+/// error is fatal or not. The caller can then decide whether or not to display the `Err` variant
+/// using [`error`].
+///
+/// </div>
+#[doc = respected_msrv!("1.84")]
+#[track_caller]
+pub fn error(message: &str) {
+    if message.contains('\n') {
+        panic!("cannot emit warning: message contains newline");
+    }
+    emit("error", message);
+}
+
 /// Metadata, used by `links` scripts.
 #[track_caller]
 pub fn metadata(key: &str, val: &str) {
