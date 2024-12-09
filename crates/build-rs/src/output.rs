@@ -6,8 +6,11 @@
 //!
 //! Reference: <https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script>
 
+use std::ffi::OsStr;
+use std::path::Path;
+use std::{fmt::Display, fmt::Write as _};
+
 use crate::ident::{is_ascii_ident, is_ident};
-use std::{ffi::OsStr, fmt::Display, fmt::Write, path::Path, str};
 
 fn emit(directive: &str, value: impl Display) {
     println!("cargo::{}={}", directive, value);
