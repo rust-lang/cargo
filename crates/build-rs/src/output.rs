@@ -6,10 +6,7 @@
 //!
 //! Reference: <https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script>
 
-use crate::{
-    allow_use,
-    ident::{is_ascii_ident, is_ident},
-};
+use crate::ident::{is_ascii_ident, is_ident};
 use std::{ffi::OsStr, fmt::Display, fmt::Write, path::Path, str};
 
 fn emit(directive: &str, value: impl Display) {
@@ -309,13 +306,11 @@ pub fn rustc_check_cfgs(keys: &[&str]) {
         }
     }
 
-    if allow_use::check_cfg() {
-        let mut directive = keys[0].to_string();
-        for key in &keys[1..] {
-            write!(directive, ", {key}").expect("writing to string should be infallible");
-        }
-        emit("rustc-check-cfg", format_args!("cfg({directive})"));
+    let mut directive = keys[0].to_string();
+    for key in &keys[1..] {
+        write!(directive, ", {key}").expect("writing to string should be infallible");
     }
+    emit("rustc-check-cfg", format_args!("cfg({directive})"));
 }
 
 /// Add to the list of expected config names that is used when checking the
@@ -339,17 +334,15 @@ pub fn rustc_check_cfg_values(key: &str, values: &[&str]) {
         return;
     }
 
-    if allow_use::check_cfg() {
-        let mut directive = format!("\"{}\"", values[0].escape_default());
-        for value in &values[1..] {
-            write!(directive, ", \"{}\"", value.escape_default())
-                .expect("writing to string should be infallible");
-        }
-        emit(
-            "rustc-check-cfg",
-            format_args!("cfg({key}, values({directive}))"),
-        );
+    let mut directive = format!("\"{}\"", values[0].escape_default());
+    for value in &values[1..] {
+        write!(directive, ", \"{}\"", value.escape_default())
+            .expect("writing to string should be infallible");
     }
+    emit(
+        "rustc-check-cfg",
+        format_args!("cfg({key}, values({directive}))"),
+    );
 }
 
 /// The `rustc-env` instruction tells Cargo to set the given environment variable

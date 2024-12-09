@@ -40,7 +40,6 @@ MSRV: Respected as of "#,
     };
 }
 
-mod allow_use;
 mod ident;
 
 pub mod input;
