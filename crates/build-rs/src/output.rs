@@ -13,11 +13,7 @@ use crate::{
 use std::{ffi::OsStr, fmt::Display, fmt::Write, path::Path, str};
 
 fn emit(directive: &str, value: impl Display) {
-    if allow_use::double_colon_directives() {
-        println!("cargo::{}={}", directive, value);
-    } else {
-        println!("cargo:{}={}", directive, value);
-    }
+    println!("cargo::{}={}", directive, value);
 }
 
 /// The `rerun-if-changed` instruction tells Cargo to re-run the build script if the
@@ -421,9 +417,5 @@ pub fn metadata(key: &str, val: &str) {
         panic!("cannot emit metadata: invalid value {val:?}");
     }
 
-    if allow_use::double_colon_directives() {
-        emit("metadata", format_args!("{}={}", key, val));
-    } else {
-        emit(key, val);
-    }
+    emit("metadata", format_args!("{}={}", key, val));
 }
