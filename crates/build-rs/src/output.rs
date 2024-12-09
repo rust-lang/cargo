@@ -171,7 +171,7 @@ pub fn rustc_link_arg_benches(flag: &str) {
 /// to the symbols from the given lib, and the binary should access them through
 /// the library target’s public API.
 ///
-/// The optional `KIND` may be one of dylib, static, or framework. See the
+/// The optional `KIND` may be one of `dylib`, `static`, or `framework`. See the
 /// [rustc book][-l] for more detail.
 ///
 /// [-l]: https://doc.rust-lang.org/stable/rustc/command-line-arguments.html#option-l-link-lib
