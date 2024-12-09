@@ -183,6 +183,7 @@ fn generate_roots(
             );
             list.push(interner.intern(
                 pkg,
+                pkg.package_id().source_id(),
                 lib,
                 profile,
                 kind,
