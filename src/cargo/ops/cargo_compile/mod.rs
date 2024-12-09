@@ -289,9 +289,9 @@ pub fn create_bcx<'a, 'gctx>(
         resolved_features,
     } = resolve;
 
-    let std_resolve_features = if let Some(crates) = &gctx.cli_unstable().build_std {
+    let std_resolve_features = if gctx.cli_unstable().build_std.is_some() {
         let (std_package_set, std_resolve, std_features) =
-            standard_lib::resolve_std(ws, &mut target_data, &build_config, crates)?;
+            standard_lib::resolve_std(ws, &mut target_data, &build_config)?;
         pkg_set.add_set(std_package_set);
         Some((std_resolve, std_features))
     } else {
@@ -398,10 +398,11 @@ pub fn create_bcx<'a, 'gctx>(
         Vec::new()
     };
 
-    let std_roots = if let Some(crates) = standard_lib::std_crates(gctx, Some(&units)) {
+    let std_roots = if let Some(crates) = gctx.cli_unstable().build_std.as_ref() {
         let (std_resolve, std_features) = std_resolve_features.as_ref().unwrap();
         standard_lib::generate_std_roots(
             &crates,
+            &units,
             std_resolve,
             std_features,
             &explicit_host_kinds,
