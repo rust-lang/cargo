@@ -418,7 +418,7 @@ pub fn warning(message: &str) {
 #[track_caller]
 pub fn error(message: &str) {
     if message.contains('\n') {
-        panic!("cannot emit warning: message contains newline");
+        panic!("cannot emit error: message contains newline");
     }
     emit("error", message);
 }
