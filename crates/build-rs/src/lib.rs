@@ -26,13 +26,20 @@ macro_rules! unstable {
     };
 }
 
-macro_rules! msrv {
+macro_rules! respected_msrv {
     ($ver:literal) => {
-        concat!("> MSRV: Respected as of ", $ver, ".")
+        concat!(
+            r#"<div class="warning">
+
+MSRV: Respected as of "#,
+            $ver,
+            r#".
+
+</div>"#
+        )
     };
 }
 
-mod allow_use;
 mod ident;
 
 pub mod input;

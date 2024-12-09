@@ -339,11 +339,11 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
     for cfg in bcx.target_data.cfg(unit.kind) {
         match *cfg {
             Cfg::Name(ref n) => {
-                cfg_map.insert(n.clone(), Vec::new());
+                cfg_map.insert(n.as_str(), Vec::new());
             }
             Cfg::KeyPair(ref k, ref v) => {
-                let values = cfg_map.entry(k.clone()).or_default();
-                values.push(v.clone());
+                let values = cfg_map.entry(k.as_str()).or_default();
+                values.push(v.as_str());
             }
         }
     }
@@ -355,7 +355,7 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
         }
         // FIXME: We should handle raw-idents somehow instead of predenting they
         // don't exist here
-        let k = format!("CARGO_CFG_{}", super::envify(k.as_str()));
+        let k = format!("CARGO_CFG_{}", super::envify(k));
         cmd.env(&k, v.join(","));
     }
 

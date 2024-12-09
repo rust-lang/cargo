@@ -6,18 +6,14 @@
 //!
 //! Reference: <https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script>
 
-use crate::{
-    allow_use,
-    ident::{is_ascii_ident, is_ident},
-};
-use std::{ffi::OsStr, fmt::Display, fmt::Write, path::Path, str};
+use std::ffi::OsStr;
+use std::path::Path;
+use std::{fmt::Display, fmt::Write as _};
+
+use crate::ident::{is_ascii_ident, is_ident};
 
 fn emit(directive: &str, value: impl Display) {
-    if allow_use::double_colon_directives() {
-        println!("cargo::{}={}", directive, value);
-    } else {
-        println!("cargo:{}={}", directive, value);
-    }
+    println!("cargo::{}={}", directive, value);
 }
 
 /// The `rerun-if-changed` instruction tells Cargo to re-run the build script if the
@@ -171,7 +167,7 @@ pub fn rustc_link_arg_benches(flag: &str) {
 /// to the symbols from the given lib, and the binary should access them through
 /// the library target’s public API.
 ///
-/// The optional `KIND` may be one of dylib, static, or framework. See the
+/// The optional `KIND` may be one of `dylib`, `static`, or `framework`. See the
 /// [rustc book][-l] for more detail.
 ///
 /// [-l]: https://doc.rust-lang.org/stable/rustc/command-line-arguments.html#option-l-link-lib
@@ -301,7 +297,7 @@ pub fn rustc_cfg_value(key: &str, value: &str) {
 /// and other mistakes.
 ///
 /// [`unexpected_cfgs`]: https://doc.rust-lang.org/rustc/lints/listing/warn-by-default.html#unexpected-cfgs
-#[doc = msrv!("1.80")]
+#[doc = respected_msrv!("1.80")]
 #[track_caller]
 pub fn rustc_check_cfgs(keys: &[&str]) {
     if keys.is_empty() {
@@ -313,13 +309,11 @@ pub fn rustc_check_cfgs(keys: &[&str]) {
         }
     }
 
-    if allow_use::check_cfg() {
-        let mut directive = keys[0].to_string();
-        for key in &keys[1..] {
-            write!(directive, ", {key}").expect("writing to string should be infallible");
-        }
-        emit("rustc-check-cfg", format_args!("cfg({directive})"));
+    let mut directive = keys[0].to_string();
+    for key in &keys[1..] {
+        write!(directive, ", {key}").expect("writing to string should be infallible");
     }
+    emit("rustc-check-cfg", format_args!("cfg({directive})"));
 }
 
 /// Add to the list of expected config names that is used when checking the
@@ -332,7 +326,7 @@ pub fn rustc_check_cfgs(keys: &[&str]) {
 /// and other mistakes.
 ///
 /// [`unexpected_cfgs`]: https://doc.rust-lang.org/rustc/lints/listing/warn-by-default.html#unexpected-cfgs
-#[doc = msrv!("1.80")]
+#[doc = respected_msrv!("1.80")]
 #[track_caller]
 pub fn rustc_check_cfg_values(key: &str, values: &[&str]) {
     if !is_ident(key) {
@@ -343,17 +337,15 @@ pub fn rustc_check_cfg_values(key: &str, values: &[&str]) {
         return;
     }
 
-    if allow_use::check_cfg() {
-        let mut directive = format!("\"{}\"", values[0].escape_default());
-        for value in &values[1..] {
-            write!(directive, ", \"{}\"", value.escape_default())
-                .expect("writing to string should be infallible");
-        }
-        emit(
-            "rustc-check-cfg",
-            format_args!("cfg({key}, values({directive}))"),
-        );
+    let mut directive = format!("\"{}\"", values[0].escape_default());
+    for value in &values[1..] {
+        write!(directive, ", \"{}\"", value.escape_default())
+            .expect("writing to string should be infallible");
     }
+    emit(
+        "rustc-check-cfg",
+        format_args!("cfg({key}, values({directive}))"),
+    );
 }
 
 /// The `rustc-env` instruction tells Cargo to set the given environment variable
@@ -411,6 +403,26 @@ pub fn warning(message: &str) {
     emit("warning", message);
 }
 
+/// The `error` instruction tells Cargo to display an error after the build script has finished
+/// running, and then fail the build.
+///
+/// <div class="warning">
+///
+/// Build script libraries should carefully consider if they want to use [`error`] versus
+/// returning a `Result`. It may be better to return a `Result`, and allow the caller to decide if the
+/// error is fatal or not. The caller can then decide whether or not to display the `Err` variant
+/// using [`error`].
+///
+/// </div>
+#[doc = respected_msrv!("1.84")]
+#[track_caller]
+pub fn error(message: &str) {
+    if message.contains('\n') {
+        panic!("cannot emit warning: message contains newline");
+    }
+    emit("error", message);
+}
+
 /// Metadata, used by `links` scripts.
 #[track_caller]
 pub fn metadata(key: &str, val: &str) {
@@ -421,9 +433,5 @@ pub fn metadata(key: &str, val: &str) {
         panic!("cannot emit metadata: invalid value {val:?}");
     }
 
-    if allow_use::double_colon_directives() {
-        emit("metadata", format_args!("{}={}", key, val));
-    } else {
-        emit(key, val);
-    }
+    emit("metadata", format_args!("{}={}", key, val));
 }
