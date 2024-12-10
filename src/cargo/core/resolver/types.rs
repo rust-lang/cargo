@@ -1,10 +1,11 @@
 use super::features::{CliFeatures, RequestedFeatures};
-use crate::core::{Dependency, PackageId, Summary};
+use crate::core::{Dependency, PackageId, SourceId, Summary};
 use crate::util::errors::CargoResult;
 use crate::util::interning::InternedString;
 use crate::util::GlobalContext;
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
+use std::num::NonZeroU64;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
@@ -160,6 +161,39 @@ impl ResolveOpts {
 
     pub fn new(dev_deps: bool, features: RequestedFeatures) -> ResolveOpts {
         ResolveOpts { dev_deps, features }
+    }
+}
+
+/// A key that when stord in a hash map ensures that there is only one
+/// semver compatible version of each crate.
+/// Find the activated version of a crate based on the name, source, and semver compatibility.
+pub type ActivationsKey = (InternedString, SourceId, SemverCompatibility);
+
+/// A type that represents when cargo treats two Versions as compatible.
+/// Versions `a` and `b` are compatible if their left-most nonzero digit is the
+/// same.
+#[derive(Clone, Copy, Eq, PartialEq, Hash, Debug, PartialOrd, Ord)]
+pub enum SemverCompatibility {
+    Major(NonZeroU64),
+    Minor(NonZeroU64),
+    Patch(u64),
+}
+
+impl From<&semver::Version> for SemverCompatibility {
+    fn from(ver: &semver::Version) -> Self {
+        if let Some(m) = NonZeroU64::new(ver.major) {
+            return SemverCompatibility::Major(m);
+        }
+        if let Some(m) = NonZeroU64::new(ver.minor) {
+            return SemverCompatibility::Minor(m);
+        }
+        SemverCompatibility::Patch(ver.patch)
+    }
+}
+
+impl PackageId {
+    pub fn as_activations_key(self) -> ActivationsKey {
+        (self.name(), self.source_id(), self.version().into())
     }
 }
 
