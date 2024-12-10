@@ -2192,8 +2192,8 @@ credential-provider = ['c', 'd']
         .unwrap()
         .credential_provider
         .unwrap();
-    assert_eq!(provider.path.raw_value(), "a");
-    assert_eq!(provider.args, ["b", "c", "d"]);
+    assert_eq!(provider.path.raw_value(), "c");
+    assert_eq!(provider.args, ["d"]);
 }
 
 #[cargo_test]

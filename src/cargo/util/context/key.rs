@@ -93,6 +93,16 @@ impl ConfigKey {
     pub fn is_root(&self) -> bool {
         self.parts.is_empty()
     }
+
+    /// Returns whether or not the given key string matches this key.
+    /// Use * to match any key part.
+    pub fn matches(&self, pattern: &str) -> bool {
+        let mut parts = self.parts();
+        pattern
+            .split('.')
+            .all(|pat| parts.next() == Some(pat) || pat == "*")
+            && parts.next().is_none()
+    }
 }
 
 impl fmt::Display for ConfigKey {

@@ -1,4 +1,4 @@
-use super::{GlobalContext, UnmergedStringList, Value};
+use super::{GlobalContext, StringList, Value};
 use serde::{de::Error, Deserialize};
 use std::path::PathBuf;
 
@@ -53,6 +53,10 @@ impl ConfigRelativePath {
 ///
 /// Typically you should use `ConfigRelativePath::resolve_program` on the path
 /// to get the actual program.
+///
+/// **Note**: Any usage of this type in config needs to be listed in
+/// the `util::context::is_nonmergable_list` check to prevent list merging
+/// from multiple config files.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PathAndArgs {
     pub path: ConfigRelativePath,
@@ -64,7 +68,7 @@ impl<'de> serde::Deserialize<'de> for PathAndArgs {
     where
         D: serde::Deserializer<'de>,
     {
-        let vsl = Value::<UnmergedStringList>::deserialize(deserializer)?;
+        let vsl = Value::<StringList>::deserialize(deserializer)?;
         let mut strings = vsl.val.0;
         if strings.is_empty() {
             return Err(D::Error::invalid_length(0, &"at least one element"));
