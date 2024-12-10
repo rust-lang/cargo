@@ -6,10 +6,66 @@
 //!
 //! Reference: <https://doc.rust-lang.org/stable/cargo/reference/environment-variables.html#environment-variables-cargo-sets-for-build-scripts>
 
-use std::env::var_os;
 use std::path::PathBuf;
 
 use crate::ident::{is_ascii_ident, is_crate_name, is_feature_name};
+use crate::output::rerun_if_env_changed;
+
+/// [`ProcessEnv`] wrapper that implicit calls [`rerun_if_env_changed`]
+const ENV: RerunIfEnvChanged<ProcessEnv> = RerunIfEnvChanged::new();
+
+/// Abstraction over environment variables
+trait Env {
+    /// Fetches the environment variable `key`, returning `None` if the variable isn’t set or if
+    /// there is another error.
+    ///
+    /// It may return `None` if the environment variable’s name contains the equal sign character
+    /// (`=`) or the NUL character.
+    ///
+    /// Note that this function will not check if the environment variable is valid Unicode.
+    fn get(&self, key: &str) -> Option<std::ffi::OsString>;
+
+    /// Checks the environment variable `key` is present
+    ///
+    /// It may not be considered present if the environment variable’s name contains the equal sign character
+    /// (`=`) or the NUL character.
+    fn is_present(&self, key: &str) -> bool;
+}
+
+/// Fetches environment variables from the current process
+struct ProcessEnv;
+
+impl Env for ProcessEnv {
+    fn get(&self, key: &str) -> Option<std::ffi::OsString> {
+        std::env::var_os(key)
+    }
+
+    fn is_present(&self, key: &str) -> bool {
+        self.get(key).is_some()
+    }
+}
+
+/// [`Env`] wrapper that implicitly calls [`rerun_if_env_changed`]
+struct RerunIfEnvChanged<E: Env>(E);
+
+impl RerunIfEnvChanged<ProcessEnv> {
+    const fn new() -> Self {
+        Self(ProcessEnv)
+    }
+}
+
+impl<E: Env> Env for RerunIfEnvChanged<E> {
+    #[track_caller]
+    fn get(&self, key: &str) -> Option<std::ffi::OsString> {
+        rerun_if_env_changed(key);
+        self.0.get(key)
+    }
+
+    #[track_caller]
+    fn is_present(&self, key: &str) -> bool {
+        self.get(key).is_some()
+    }
+}
 
 /// Path to the `cargo` binary performing the build.
 #[track_caller]
@@ -30,7 +86,7 @@ pub fn cargo_manifest_dir() -> PathBuf {
 /// The path to the manifest of your package.
 #[track_caller]
 pub fn cargo_manifest_path() -> PathBuf {
-    var_os("CARGO_MANIFEST_PATH")
+    ENV.get("CARGO_MANIFEST_PATH")
         .map(to_path)
         .unwrap_or_else(|| {
             let mut path = cargo_manifest_dir();
@@ -42,7 +98,7 @@ pub fn cargo_manifest_path() -> PathBuf {
 /// The manifest `links` value.
 #[track_caller]
 pub fn cargo_manifest_links() -> Option<String> {
-    var_os("CARGO_MANIFEST_LINKS").map(to_string)
+    ENV.get("CARGO_MANIFEST_LINKS").map(to_string)
 }
 
 /// Contains parameters needed for Cargo’s [jobserver] implementation to parallelize
@@ -57,7 +113,7 @@ pub fn cargo_manifest_links() -> Option<String> {
 /// [jobserver]: https://www.gnu.org/software/make/manual/html_node/Job-Slots.html
 #[track_caller]
 pub fn cargo_makeflags() -> Option<String> {
-    var_os("CARGO_MAKEFLAGS").map(to_string)
+    ENV.get("CARGO_MAKEFLAGS").map(to_string)
 }
 
 /// For each activated feature of the package being built, this will be `true`.
@@ -68,7 +124,7 @@ pub fn cargo_feature(name: &str) -> bool {
     }
     let name = name.to_uppercase().replace('-', "_");
     let key = format!("CARGO_FEATURE_{name}");
-    is_present(&key)
+    ENV.is_present(&key)
 }
 
 /// For each [configuration option] of the package being built, this will contain
@@ -82,7 +138,7 @@ pub fn cargo_feature(name: &str) -> bool {
 #[track_caller]
 pub fn cargo_cfg(cfg: &str) -> Option<Vec<String>> {
     let var = cargo_cfg_var(cfg);
-    var_os(&var).map(|v| to_strings(v, ','))
+    ENV.get(&var).map(|v| to_strings(v, ','))
 }
 
 #[track_caller]
@@ -112,7 +168,7 @@ mod cfg {
     #[cfg(any())]
     #[track_caller]
     pub fn cargo_cfg_clippy() -> bool {
-        is_present("CARGO_CFG_CLIPPY")
+        ENV.is_present("CARGO_CFG_CLIPPY")
     }
 
     /// If we are compiling with debug assertions enabled.
@@ -123,25 +179,25 @@ mod cfg {
     #[cfg(any())]
     #[track_caller]
     pub fn cargo_cfg_debug_assertions() -> bool {
-        is_present("CARGO_CFG_DEBUG_ASSERTIONS")
+        ENV.is_present("CARGO_CFG_DEBUG_ASSERTIONS")
     }
 
     #[cfg(any())]
     #[track_caller]
     pub fn cargo_cfg_doc() -> bool {
-        is_present("CARGO_CFG_DOC")
+        ENV.is_present("CARGO_CFG_DOC")
     }
 
     #[cfg(any())]
     #[track_caller]
     pub fn cargo_cfg_docsrs() -> bool {
-        is_present("CARGO_CFG_DOCSRS")
+        ENV.is_present("CARGO_CFG_DOCSRS")
     }
 
     #[cfg(any())]
     #[track_caller]
     pub fn cargo_cfg_doctest() -> bool {
-        is_present("CARGO_CFG_DOCTEST")
+        ENV.is_present("CARGO_CFG_DOCTEST")
     }
 
     /// The level of detail provided by derived [`Debug`] implementations.
@@ -155,7 +211,7 @@ mod cfg {
     #[cfg(any())]
     #[track_caller]
     pub fn cargo_cfg_miri() -> bool {
-        is_present("CARGO_CFG_MIRI")
+        ENV.is_present("CARGO_CFG_MIRI")
     }
 
     /// If we are compiling with overflow checks enabled.
@@ -163,7 +219,7 @@ mod cfg {
     #[cfg(feature = "unstable")]
     #[track_caller]
     pub fn cargo_cfg_overflow_checks() -> bool {
-        is_present("CARGO_CFG_OVERFLOW_CHECKS")
+        ENV.is_present("CARGO_CFG_OVERFLOW_CHECKS")
     }
 
     /// The [panic strategy](https://doc.rust-lang.org/stable/reference/conditional-compilation.html#panic).
@@ -175,7 +231,7 @@ mod cfg {
     /// If the crate is being compiled as a procedural macro.
     #[track_caller]
     pub fn cargo_cfg_proc_macro() -> bool {
-        is_present("CARGO_CFG_PROC_MACRO")
+        ENV.is_present("CARGO_CFG_PROC_MACRO")
     }
 
     /// The target relocation model.
@@ -189,7 +245,7 @@ mod cfg {
     #[cfg(any())]
     #[track_caller]
     pub fn cargo_cfg_rustfmt() -> bool {
-        is_present("CARGO_CFG_RUSTFMT")
+        ENV.is_present("CARGO_CFG_RUSTFMT")
     }
 
     /// Sanitizers enabled for the crate being compiled.
@@ -197,7 +253,7 @@ mod cfg {
     #[cfg(feature = "unstable")]
     #[track_caller]
     pub fn cargo_cfg_sanitize() -> Option<Vec<String>> {
-        var_os("CARGO_CFG_SANITIZE").map(|v| to_strings(v, ','))
+        ENV.get("CARGO_CFG_SANITIZE").map(|v| to_strings(v, ','))
     }
 
     /// If CFI sanitization is generalizing pointers.
@@ -205,7 +261,7 @@ mod cfg {
     #[cfg(feature = "unstable")]
     #[track_caller]
     pub fn cargo_cfg_sanitizer_cfi_generalize_pointers() -> bool {
-        is_present("CARGO_CFG_SANITIZER_CFI_GENERALIZE_POINTERS")
+        ENV.is_present("CARGO_CFG_SANITIZER_CFI_GENERALIZE_POINTERS")
     }
 
     /// If CFI sanitization is normalizing integers.
@@ -213,7 +269,7 @@ mod cfg {
     #[cfg(feature = "unstable")]
     #[track_caller]
     pub fn cargo_cfg_sanitizer_cfi_normalize_integers() -> bool {
-        is_present("CARGO_CFG_SANITIZER_CFI_NORMALIZE_INTEGERS")
+        ENV.is_present("CARGO_CFG_SANITIZER_CFI_NORMALIZE_INTEGERS")
     }
 
     /// Disambiguation of the [target ABI](https://doc.rust-lang.org/stable/reference/conditional-compilation.html#target_abi)
@@ -309,7 +365,7 @@ mod cfg {
     #[cfg(feature = "unstable")]
     #[track_caller]
     pub fn cargo_cfg_target_thread_local() -> bool {
-        is_present("CARGO_CFG_TARGET_THREAD_LOCAL")
+        ENV.is_present("CARGO_CFG_TARGET_THREAD_LOCAL")
     }
 
     /// The [target vendor](https://doc.rust-lang.org/stable/reference/conditional-compilation.html#target_vendor).
@@ -321,7 +377,7 @@ mod cfg {
     #[cfg(any())]
     #[track_caller]
     pub fn cargo_cfg_test() -> bool {
-        is_present("CARGO_CFG_TEST")
+        ENV.is_present("CARGO_CFG_TEST")
     }
 
     /// If we are compiling with UB checks enabled.
@@ -329,19 +385,19 @@ mod cfg {
     #[cfg(feature = "unstable")]
     #[track_caller]
     pub fn cargo_cfg_ub_checks() -> bool {
-        is_present("CARGO_CFG_UB_CHECKS")
+        ENV.is_present("CARGO_CFG_UB_CHECKS")
     }
 
     /// Set on [unix-like platforms](https://doc.rust-lang.org/stable/reference/conditional-compilation.html#unix-and-windows).
     #[track_caller]
     pub fn cargo_cfg_unix() -> bool {
-        is_present("CARGO_CFG_UNIX")
+        ENV.is_present("CARGO_CFG_UNIX")
     }
 
     /// Set on [windows-like platforms](https://doc.rust-lang.org/stable/reference/conditional-compilation.html#unix-and-windows).
     #[track_caller]
     pub fn cargo_cfg_windows() -> bool {
-        is_present("CARGO_CFG_WINDOWS")
+        ENV.is_present("CARGO_CFG_WINDOWS")
     }
 }
 
@@ -428,7 +484,7 @@ pub fn dep_metadata(name: &str, key: &str) -> Option<String> {
     let name = name.to_uppercase().replace('-', "_");
     let key = key.to_uppercase().replace('-', "_");
     let key = format!("DEP_{name}_{key}");
-    var_os(&key).map(to_string)
+    ENV.get(&key).map(to_string)
 }
 
 /// The compiler that Cargo has resolved to use.
@@ -448,7 +504,7 @@ pub fn rustdoc() -> PathBuf {
 /// [`build.rustc-wrapper`]: https://doc.rust-lang.org/stable/cargo/reference/config.html#buildrustc-wrapper
 #[track_caller]
 pub fn rustc_wrapper() -> Option<PathBuf> {
-    var_os("RUSTC_WRAPPER").map(to_path)
+    ENV.get("RUSTC_WRAPPER").map(to_path)
 }
 
 /// The rustc wrapper, if any, that Cargo is using for workspace members. See
@@ -457,7 +513,7 @@ pub fn rustc_wrapper() -> Option<PathBuf> {
 /// [`build.rustc-workspace-wrapper`]: https://doc.rust-lang.org/stable/cargo/reference/config.html#buildrustc-workspace-wrapper
 #[track_caller]
 pub fn rustc_workspace_wrapper() -> Option<PathBuf> {
-    var_os("RUSTC_WORKSPACE_WRAPPER").map(to_path)
+    ENV.get("RUSTC_WORKSPACE_WRAPPER").map(to_path)
 }
 
 /// The linker that Cargo has resolved to use for the current target, if specified.
@@ -465,7 +521,7 @@ pub fn rustc_workspace_wrapper() -> Option<PathBuf> {
 /// [`target.*.linker`]: https://doc.rust-lang.org/stable/cargo/reference/config.html#targettriplelinker
 #[track_caller]
 pub fn rustc_linker() -> Option<PathBuf> {
-    var_os("RUSTC_LINKER").map(to_path)
+    ENV.get("RUSTC_LINKER").map(to_path)
 }
 
 /// Extra flags that Cargo invokes rustc with. See [`build.rustflags`].
@@ -561,13 +617,10 @@ pub fn cargo_pkg_readme() -> Option<PathBuf> {
     to_opt(var_or_panic("CARGO_PKG_README")).map(to_path)
 }
 
-fn is_present(key: &str) -> bool {
-    var_os(key).is_some()
-}
-
 #[track_caller]
 fn var_or_panic(key: &str) -> std::ffi::OsString {
-    var_os(key).unwrap_or_else(|| panic!("cargo environment variable `{key}` is missing"))
+    ENV.get(key)
+        .unwrap_or_else(|| panic!("cargo environment variable `{key}` is missing"))
 }
 
 fn to_path(value: std::ffi::OsString) -> PathBuf {
