@@ -168,11 +168,11 @@ impl ResolveOpts {
 /// semver compatible version of each crate.
 /// Find the activated version of a crate based on the name, source, and semver compatibility.
 #[derive(Clone, PartialEq, Eq, Debug, Ord, PartialOrd, Hash)]
-pub struct ActivationsKey(InternedString, SourceId, SemverCompatibility);
+pub struct ActivationsKey(InternedString, SemverCompatibility, SourceId);
 
 impl ActivationsKey {
-    pub fn new(name: InternedString, source_id: SourceId, ver: SemverCompatibility) -> ActivationsKey {
-        ActivationsKey(name, source_id, ver)
+    pub fn new(name: InternedString, ver: SemverCompatibility, source_id: SourceId) -> ActivationsKey {
+        ActivationsKey(name, ver, source_id)
     }
 }
 
@@ -200,7 +200,7 @@ impl From<&semver::Version> for SemverCompatibility {
 
 impl PackageId {
     pub fn as_activations_key(self) -> ActivationsKey {
-        ActivationsKey(self.name(), self.source_id(), self.version().into())
+        ActivationsKey(self.name(), self.version().into(), self.source_id())
     }
 }
 

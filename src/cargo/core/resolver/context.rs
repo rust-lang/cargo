@@ -107,7 +107,7 @@ impl ResolverContext {
                 if let Some((_, dep)) = parent {
                     if dep.source_id() != id.source_id() {
                         let key =
-                            ActivationsKey::new(id.name(), dep.source_id(), id.version().into());
+                            ActivationsKey::new(id.name(), id.version().into(), dep.source_id());
                         let prev = self.activations.insert(key, (summary.clone(), age));
                         if let Some((previous_summary, _)) = prev {
                             return Err(
