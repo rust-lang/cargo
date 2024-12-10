@@ -336,6 +336,10 @@ fn build_work(build_runner: &mut BuildRunner<'_, '_>, unit: &Unit) -> CargoResul
     }
 
     let mut cfg_map = HashMap::new();
+    cfg_map.insert(
+        "feature",
+        unit.features.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+    );
     for cfg in bcx.target_data.cfg(unit.kind) {
         match *cfg {
             Cfg::Name(ref n) => {

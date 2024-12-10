@@ -156,7 +156,7 @@ fn custom_build_env_vars() {
                 authors = ["wycats@example.com"]
 
                 [features]
-                bar_feat = ["bar/foo"]
+                bar_feat = ["bar/foo", "bar/other-feature"]
 
                 [dependencies.bar]
                 path = "bar"
@@ -176,6 +176,7 @@ fn custom_build_env_vars() {
 
                 [features]
                 foo = []
+                other-feature = []
             "#,
         )
         .file("bar/src/lib.rs", "pub fn hello() {}");
@@ -213,6 +214,8 @@ fn custom_build_env_vars() {
                 let _host = env::var("HOST").unwrap();
 
                 let _feat = env::var("CARGO_FEATURE_FOO").unwrap();
+                let feat = env::var("CARGO_CFG_FEATURE").unwrap();
+                assert_eq!(feat, "foo,other-feature");
 
                 let cargo = env::var("CARGO").unwrap();
                 if env::var_os("CHECK_CARGO_IS_RUSTC").is_some() {{
