@@ -90,12 +90,6 @@ impl InternedString {
     pub fn as_str(&self) -> &'static str {
         self.inner
     }
-
-    /// A faster implementation of hash that is completely compatible with HashMap,
-    /// but does not have a stable value between runs of the program.
-    pub fn fast_hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        std::ptr::NonNull::from(self.inner).hash(state);
-    }
 }
 
 impl Deref for InternedString {
