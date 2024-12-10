@@ -167,12 +167,20 @@ impl ResolveOpts {
 /// A key that when stord in a hash map ensures that there is only one
 /// semver compatible version of each crate.
 /// Find the activated version of a crate based on the name, source, and semver compatibility.
-#[derive(Clone, PartialEq, Eq, Debug, Ord, PartialOrd, Hash)]
+#[derive(Clone, PartialEq, Eq, Debug, Ord, PartialOrd)]
 pub struct ActivationsKey(InternedString, SemverCompatibility, SourceId);
 
 impl ActivationsKey {
     pub fn new(name: InternedString, ver: SemverCompatibility, source_id: SourceId) -> ActivationsKey {
         ActivationsKey(name, ver, source_id)
+    }
+}
+
+impl std::hash::Hash for ActivationsKey {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.fast_hash(state);
+        self.1.hash(state);
+        // self.2.hash(state); // Packages that only differ by SourceId are rare enough to not be worth hashing
     }
 }
 
