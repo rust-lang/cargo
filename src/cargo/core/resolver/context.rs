@@ -106,7 +106,8 @@ impl ResolverContext {
                 // versions came from a `[patch]` source.
                 if let Some((_, dep)) = parent {
                     if dep.source_id() != id.source_id() {
-                        let key = (id.name(), dep.source_id(), id.version().into());
+                        let key =
+                            ActivationsKey::new(id.name(), dep.source_id(), id.version().into());
                         let prev = self.activations.insert(key, (summary.clone(), age));
                         if let Some((previous_summary, _)) = prev {
                             return Err(

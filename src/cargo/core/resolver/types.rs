@@ -167,7 +167,14 @@ impl ResolveOpts {
 /// A key that when stord in a hash map ensures that there is only one
 /// semver compatible version of each crate.
 /// Find the activated version of a crate based on the name, source, and semver compatibility.
-pub type ActivationsKey = (InternedString, SourceId, SemverCompatibility);
+#[derive(Clone, PartialEq, Eq, Debug, Ord, PartialOrd, Hash)]
+pub struct ActivationsKey(InternedString, SourceId, SemverCompatibility);
+
+impl ActivationsKey {
+    pub fn new(name: InternedString, source_id: SourceId, ver: SemverCompatibility) -> ActivationsKey {
+        ActivationsKey(name, source_id, ver)
+    }
+}
 
 /// A type that represents when cargo treats two Versions as compatible.
 /// Versions `a` and `b` are compatible if their left-most nonzero digit is the
@@ -193,7 +200,7 @@ impl From<&semver::Version> for SemverCompatibility {
 
 impl PackageId {
     pub fn as_activations_key(self) -> ActivationsKey {
-        (self.name(), self.source_id(), self.version().into())
+        ActivationsKey(self.name(), self.source_id(), self.version().into())
     }
 }
 
