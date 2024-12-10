@@ -171,7 +171,11 @@ impl ResolveOpts {
 pub struct ActivationsKey(InternedString, SemverCompatibility, SourceId);
 
 impl ActivationsKey {
-    pub fn new(name: InternedString, ver: SemverCompatibility, source_id: SourceId) -> ActivationsKey {
+    pub fn new(
+        name: InternedString,
+        ver: SemverCompatibility,
+        source_id: SourceId,
+    ) -> ActivationsKey {
         ActivationsKey(name, ver, source_id)
     }
 }
