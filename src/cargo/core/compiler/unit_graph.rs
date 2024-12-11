@@ -10,7 +10,6 @@ use crate::util::interning::InternedString;
 use crate::util::CargoResult;
 use crate::GlobalContext;
 use std::collections::HashMap;
-use std::io::Write;
 
 /// The dependency graph of Units.
 pub type UnitGraph = HashMap<Unit, Vec<UnitDep>>;
@@ -121,15 +120,10 @@ pub fn emit_serialized_unit_graph(
             }
         })
         .collect();
-    let s = SerializedUnitGraph {
+
+    gctx.shell().print_json(&SerializedUnitGraph {
         version: VERSION,
         units: ser_units,
         roots,
-    };
-
-    let stdout = std::io::stdout();
-    let mut lock = stdout.lock();
-    serde_json::to_writer(&mut lock, &s)?;
-    drop(writeln!(lock));
-    Ok(())
+    })
 }
