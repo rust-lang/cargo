@@ -257,11 +257,12 @@ pub(super) fn activation_error(
             &mut msg,
             "candidate versions found which didn't match: {versions}",
         );
-        let _ = writeln!(
-            &mut msg,
-            "location searched: {}",
-            registry.describe_source(dep.source_id())
-        );
+        let mut location_searched_msg = registry.describe_source(dep.source_id());
+        if location_searched_msg.is_empty() {
+            location_searched_msg = format!("{}", dep.source_id());
+        }
+
+        let _ = writeln!(&mut msg, "location searched: {}", location_searched_msg);
         let _ = write!(
             &mut msg,
             "required by {}",
