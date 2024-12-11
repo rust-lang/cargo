@@ -222,11 +222,11 @@ pub(super) fn activation_error(
     // Maybe the user mistyped the ver_req? Like `dep="2"` when `dep="0.2"`
     // was meant. So we re-query the registry with `dep="*"` so we can
     // list a few versions that were actually found.
-    let mut new_dep = dep.clone();
-    new_dep.set_version_req(OptVersionReq::Any);
+    let mut wild_dep = dep.clone();
+    wild_dep.set_version_req(OptVersionReq::Any);
 
     let candidates = loop {
-        match registry.query_vec(&new_dep, QueryKind::Exact) {
+        match registry.query_vec(&wild_dep, QueryKind::Exact) {
             Poll::Ready(Ok(candidates)) => break candidates,
             Poll::Ready(Err(e)) => return to_resolve_err(e),
             Poll::Pending => match registry.block_until_ready() {
@@ -305,7 +305,7 @@ pub(super) fn activation_error(
     } else {
         // Maybe something is wrong with the available versions
         let mut version_candidates = loop {
-            match registry.query_vec(&new_dep, QueryKind::AlternativeVersions) {
+            match registry.query_vec(&dep, QueryKind::RejectedVersions) {
                 Poll::Ready(Ok(candidates)) => break candidates,
                 Poll::Ready(Err(e)) => return to_resolve_err(e),
                 Poll::Pending => match registry.block_until_ready() {
@@ -319,7 +319,7 @@ pub(super) fn activation_error(
         // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
         // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
         let name_candidates = loop {
-            match registry.query_vec(&new_dep, QueryKind::AlternativeNames) {
+            match registry.query_vec(&wild_dep, QueryKind::AlternativeNames) {
                 Poll::Ready(Ok(candidates)) => break candidates,
                 Poll::Ready(Err(e)) => return to_resolve_err(e),
                 Poll::Pending => match registry.block_until_ready() {
@@ -336,7 +336,7 @@ pub(super) fn activation_error(
         name_candidates.dedup_by(|a, b| a.name() == b.name());
         let mut name_candidates: Vec<_> = name_candidates
             .iter()
-            .filter_map(|n| Some((edit_distance(&*new_dep.package_name(), &*n.name(), 3)?, n)))
+            .filter_map(|n| Some((edit_distance(&*wild_dep.package_name(), &*n.name(), 3)?, n)))
             .collect();
         name_candidates.sort_by_key(|o| o.0);
 

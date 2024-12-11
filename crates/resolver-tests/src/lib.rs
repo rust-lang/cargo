@@ -143,7 +143,7 @@ pub fn resolve_with_global_context_raw(
             for summary in self.list.iter() {
                 let matched = match kind {
                     QueryKind::Exact => dep.matches(summary),
-                    QueryKind::AlternativeVersions => dep.matches(summary),
+                    QueryKind::RejectedVersions => dep.matches(summary),
                     QueryKind::AlternativeNames => true,
                     QueryKind::Normalized => true,
                 };
