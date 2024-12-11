@@ -257,17 +257,6 @@ pub(super) fn activation_error(
             &mut msg,
             "candidate versions found which didn't match: {versions}",
         );
-        let mut location_searched_msg = registry.describe_source(dep.source_id());
-        if location_searched_msg.is_empty() {
-            location_searched_msg = format!("{}", dep.source_id());
-        }
-
-        let _ = writeln!(&mut msg, "location searched: {}", location_searched_msg);
-        let _ = write!(
-            &mut msg,
-            "required by {}",
-            describe_path_in_context(resolver_ctx, &parent.package_id()),
-        );
 
         // If we have a pre-release candidate, then that may be what our user is looking for
         if let Some(pre) = candidates.iter().find(|c| c.version().is_prerelease()) {
@@ -377,19 +366,18 @@ pub(super) fn activation_error(
                 dep.package_name()
             );
         }
-
-        let mut location_searched_msg = registry.describe_source(dep.source_id());
-        if location_searched_msg.is_empty() {
-            location_searched_msg = format!("{}", dep.source_id());
-        }
-
-        let _ = writeln!(&mut msg, "location searched: {}", location_searched_msg);
-        let _ = write!(
-            &mut msg,
-            "required by {}",
-            describe_path_in_context(resolver_ctx, &parent.package_id()),
-        );
     }
+
+    let mut location_searched_msg = registry.describe_source(dep.source_id());
+    if location_searched_msg.is_empty() {
+        location_searched_msg = format!("{}", dep.source_id());
+    }
+    let _ = writeln!(&mut msg, "location searched: {}", location_searched_msg);
+    let _ = write!(
+        &mut msg,
+        "required by {}",
+        describe_path_in_context(resolver_ctx, &parent.package_id()),
+    );
 
     if let Some(gctx) = gctx {
         if gctx.offline() {
