@@ -156,6 +156,12 @@ impl ResolverContext {
             .and_then(|(s, l)| if s.package_id() == id { Some(*l) } else { None })
     }
 
+    /// If a package is active that has the same semver compatibility range
+    /// returns the `PackageId` and `ContextAge` when it was added
+    pub fn in_activation_slot(&self, id: &ActivationsKey) -> Option<(PackageId, ContextAge)> {
+        self.activations.get(id).map(|(s, l)| (s.package_id(), *l))
+    }
+
     /// Checks whether all of `parent` and the keys of `conflicting activations`
     /// are still active.
     /// If so returns the `ContextAge` when the newest one was added.

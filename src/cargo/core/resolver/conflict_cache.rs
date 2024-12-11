@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, HashMap};
 use rustc_hash::{FxHashMap, FxHashSet};
 use tracing::trace;
 
-use super::types::ConflictMap;
+use super::types::{ActivationsKey, ConflictMap};
 use crate::core::resolver::ResolverContext;
 use crate::core::{Dependency, PackageId};
 
@@ -14,7 +14,9 @@ enum ConflictStoreTrie {
     Leaf(ConflictMap),
     /// A map from an element to a subtrie where
     /// all the sets in the subtrie contains that element.
-    Node(BTreeMap<PackageId, ConflictStoreTrie>),
+    Node(
+        BTreeMap<ActivationsKey, HashMap<PackageId, ConflictStoreTrie, rustc_hash::FxBuildHasher>>,
+    ),
 }
 
 impl ConflictStoreTrie {
@@ -24,7 +26,7 @@ impl ConflictStoreTrie {
     /// one that will allow for the most jump-back.
     fn find(
         &self,
-        is_active: &impl Fn(PackageId) -> Option<usize>,
+        in_activation_slot: &impl Fn(&ActivationsKey) -> Option<(PackageId, usize)>,
         must_contain: Option<PackageId>,
         mut max_age: usize,
     ) -> Option<(&ConflictMap, usize)> {
@@ -39,23 +41,30 @@ impl ConflictStoreTrie {
             }
             ConflictStoreTrie::Node(m) => {
                 let mut out = None;
-                for (&pid, store) in must_contain
-                    .map(|f| m.range(..=f))
+                for (activations_key, map) in must_contain
+                    .map(|f| m.range(..=(f.as_activations_key())))
                     .unwrap_or_else(|| m.range(..))
                 {
-                    // If the key is active, then we need to check all of the corresponding subtrie.
-                    let Some(age_this) = is_active(pid) else {
+                    // Find the package that is active for this activation key.
+                    let Some((pid, age_this)) = in_activation_slot(&activations_key) else {
                         // Else, if it is not active then there is no way any of the corresponding
-                        // subtrie will be conflicting.
+                        // subtries will be conflicting.
                         continue;
                     };
                     if age_this >= max_age && must_contain != Some(pid) {
                         // not worth looking at, it is to old.
                         continue;
                     }
-                    let Some((o, age_o)) =
-                        store.find(is_active, must_contain.filter(|&f| f != pid), max_age)
-                    else {
+                    // If the active package has a stored conflict ...
+                    let Some(store) = map.get(&pid) else {
+                        continue;
+                    };
+                    // then we need to check the corresponding subtrie.
+                    let Some((o, age_o)) = store.find(
+                        in_activation_slot,
+                        must_contain.filter(|&f| f != pid),
+                        max_age,
+                    ) else {
                         continue;
                     };
                     let age = if must_contain == Some(pid) {
@@ -80,7 +89,9 @@ impl ConflictStoreTrie {
     fn insert(&mut self, mut iter: impl Iterator<Item = PackageId>, con: ConflictMap) {
         if let Some(pid) = iter.next() {
             if let ConflictStoreTrie::Node(p) = self {
-                p.entry(pid)
+                p.entry(pid.as_activations_key().clone())
+                    .or_default()
+                    .entry(pid)
                     .or_insert_with(|| ConflictStoreTrie::Node(BTreeMap::new()))
                     .insert(iter, con);
             }
@@ -159,13 +170,13 @@ impl ConflictCache {
     pub fn find(
         &self,
         dep: &Dependency,
-        is_active: &impl Fn(PackageId) -> Option<usize>,
+        in_activation_slot: &impl Fn(&ActivationsKey) -> Option<(PackageId, usize)>,
         must_contain: Option<PackageId>,
         max_age: usize,
     ) -> Option<&ConflictMap> {
         self.con_from_dep
             .get(dep)?
-            .find(is_active, must_contain, max_age)
+            .find(in_activation_slot, must_contain, max_age)
             .map(|(c, _)| c)
     }
     /// Finds any known set of conflicts, if any,
@@ -178,7 +189,12 @@ impl ConflictCache {
         dep: &Dependency,
         must_contain: Option<PackageId>,
     ) -> Option<&ConflictMap> {
-        let out = self.find(dep, &|id| cx.is_active(id), must_contain, usize::MAX);
+        let out = self.find(
+            dep,
+            &|id| cx.in_activation_slot(id),
+            must_contain,
+            usize::MAX,
+        );
         if cfg!(debug_assertions) {
             if let Some(c) = &out {
                 assert!(cx.is_conflicting(None, c).is_some());
@@ -197,6 +213,13 @@ impl ConflictCache {
     /// `dep` is known to be unresolvable if
     /// all the `PackageId` entries are activated.
     pub fn insert(&mut self, dep: &Dependency, con: &ConflictMap) {
+        if cfg!(debug_assertions) {
+            // Check that the iterator is sorted by activation key.
+            // `ConflictMap` is a `BTreeMap` so it is already sorted.
+            // But, if the ord on `ActivationsKey` changes to not match ord on `PackageId`, this will fail.
+            assert!(con.keys().is_sorted_by_key(|p| p.as_activations_key()))
+        }
+
         self.con_from_dep
             .entry(dep.clone())
             .or_insert_with(|| ConflictStoreTrie::Node(BTreeMap::new()))

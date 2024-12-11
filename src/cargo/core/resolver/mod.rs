@@ -857,15 +857,16 @@ fn generalize_conflicting(
                 .iter()
                 .rev() // the last one to be tried is the least likely to be in the cache, so start with that.
                 .map(|other| {
+                    let other_activations_key = other.package_id().as_activations_key();
                     past_conflicting_activations
                         .find(
                             dep,
                             &|id| {
-                                if id == other.package_id() {
+                                if id == &other_activations_key {
                                     // we are imagining that we used other instead
-                                    Some(backtrack_critical_age)
+                                    Some((other.package_id(), backtrack_critical_age))
                                 } else {
-                                    cx.is_active(id)
+                                    cx.in_activation_slot(id)
                                 }
                             },
                             Some(other.package_id()),
