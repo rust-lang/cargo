@@ -6,6 +6,7 @@ use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::sources::source::QueryKind;
 use crate::sources::IndexSummary;
 use crate::util::edit_distance::edit_distance;
+use crate::util::errors::CargoResult;
 use crate::util::{GlobalContext, OptVersionReq, VersionExt};
 use anyhow::Error;
 
@@ -218,29 +219,11 @@ pub(super) fn activation_error(
 
     // We didn't actually find any candidates, so we need to
     // give an error message that nothing was found.
-    //
-    // Maybe the user mistyped the ver_req? Like `dep="2"` when `dep="0.2"`
-    // was meant. So we re-query the registry with `dep="*"` so we can
-    // list a few versions that were actually found.
-    let mut wild_dep = dep.clone();
-    wild_dep.set_version_req(OptVersionReq::Any);
-
-    let candidates = loop {
-        match registry.query_vec(&wild_dep, QueryKind::Exact) {
-            Poll::Ready(Ok(candidates)) => break candidates,
-            Poll::Ready(Err(e)) => return to_resolve_err(e),
-            Poll::Pending => match registry.block_until_ready() {
-                Ok(()) => continue,
-                Err(e) => return to_resolve_err(e),
-            },
-        }
-    };
-
-    let mut candidates: Vec<_> = candidates.into_iter().map(|s| s.into_summary()).collect();
-
-    candidates.sort_unstable_by(|a, b| b.version().cmp(a.version()));
-
-    let mut msg = if !candidates.is_empty() {
+    let mut msg = if let Some(candidates) = alt_versions(registry, dep) {
+        let candidates = match candidates {
+            Ok(c) => c,
+            Err(e) => return to_resolve_err(e),
+        };
         let versions = {
             let mut versions = candidates
                 .iter()
@@ -303,45 +286,12 @@ pub(super) fn activation_error(
 
         msg
     } else {
-        // Maybe something is wrong with the available versions
-        let mut version_candidates = loop {
-            match registry.query_vec(&dep, QueryKind::RejectedVersions) {
-                Poll::Ready(Ok(candidates)) => break candidates,
-                Poll::Ready(Err(e)) => return to_resolve_err(e),
-                Poll::Pending => match registry.block_until_ready() {
-                    Ok(()) => continue,
-                    Err(e) => return to_resolve_err(e),
-                },
-            }
-        };
-        version_candidates.sort_unstable_by_key(|a| a.as_summary().version().clone());
-
-        // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
-        // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
-        let name_candidates = loop {
-            match registry.query_vec(&wild_dep, QueryKind::AlternativeNames) {
-                Poll::Ready(Ok(candidates)) => break candidates,
-                Poll::Ready(Err(e)) => return to_resolve_err(e),
-                Poll::Pending => match registry.block_until_ready() {
-                    Ok(()) => continue,
-                    Err(e) => return to_resolve_err(e),
-                },
-            }
-        };
-        let mut name_candidates: Vec<_> = name_candidates
-            .into_iter()
-            .map(|s| s.into_summary())
-            .collect();
-        name_candidates.sort_unstable_by_key(|a| a.name());
-        name_candidates.dedup_by(|a, b| a.name() == b.name());
-        let mut name_candidates: Vec<_> = name_candidates
-            .iter()
-            .filter_map(|n| Some((edit_distance(&*wild_dep.package_name(), &*n.name(), 3)?, n)))
-            .collect();
-        name_candidates.sort_by_key(|o| o.0);
-
         let mut msg = String::new();
-        if !version_candidates.is_empty() {
+        if let Some(version_candidates) = rejected_versions(registry, dep) {
+            let version_candidates = match version_candidates {
+                Ok(c) => c,
+                Err(e) => return to_resolve_err(e),
+            };
             let _ = writeln!(
                 &mut msg,
                 "no matching versions for `{}` found",
@@ -382,7 +332,11 @@ pub(super) fn activation_error(
                     }
                 }
             }
-        } else if !name_candidates.is_empty() {
+        } else if let Some(name_candidates) = alt_names(registry, dep) {
+            let name_candidates = match name_candidates {
+                Ok(c) => c,
+                Err(e) => return to_resolve_err(e),
+            };
             let _ = writeln!(&mut msg, "no matching package found",);
             let _ = writeln!(&mut msg, "searched package name: `{}`", dep.package_name());
             let mut names = name_candidates
@@ -440,6 +394,96 @@ pub(super) fn activation_error(
     }
 
     to_resolve_err(anyhow::format_err!("{}", msg))
+}
+
+// Maybe the user mistyped the ver_req? Like `dep="2"` when `dep="0.2"`
+// was meant. So we re-query the registry with `dep="*"` so we can
+// list a few versions that were actually found.
+fn alt_versions(
+    registry: &mut dyn Registry,
+    dep: &Dependency,
+) -> Option<CargoResult<Vec<Summary>>> {
+    let mut wild_dep = dep.clone();
+    wild_dep.set_version_req(OptVersionReq::Any);
+
+    let candidates = loop {
+        match registry.query_vec(&wild_dep, QueryKind::Exact) {
+            Poll::Ready(Ok(candidates)) => break candidates,
+            Poll::Ready(Err(e)) => return Some(Err(e)),
+            Poll::Pending => match registry.block_until_ready() {
+                Ok(()) => continue,
+                Err(e) => return Some(Err(e)),
+            },
+        }
+    };
+    let mut candidates: Vec<_> = candidates.into_iter().map(|s| s.into_summary()).collect();
+    candidates.sort_unstable_by(|a, b| b.version().cmp(a.version()));
+    if candidates.is_empty() {
+        None
+    } else {
+        Some(Ok(candidates))
+    }
+}
+
+/// Maybe something is wrong with the available versions
+fn rejected_versions(
+    registry: &mut dyn Registry,
+    dep: &Dependency,
+) -> Option<CargoResult<Vec<IndexSummary>>> {
+    let mut version_candidates = loop {
+        match registry.query_vec(&dep, QueryKind::RejectedVersions) {
+            Poll::Ready(Ok(candidates)) => break candidates,
+            Poll::Ready(Err(e)) => return Some(Err(e)),
+            Poll::Pending => match registry.block_until_ready() {
+                Ok(()) => continue,
+                Err(e) => return Some(Err(e)),
+            },
+        }
+    };
+    version_candidates.sort_unstable_by_key(|a| a.as_summary().version().clone());
+    if version_candidates.is_empty() {
+        None
+    } else {
+        Some(Ok(version_candidates))
+    }
+}
+
+/// Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
+/// was meant. So we try asking the registry for a `fuzzy` search for suggestions.
+fn alt_names(
+    registry: &mut dyn Registry,
+    dep: &Dependency,
+) -> Option<CargoResult<Vec<(usize, Summary)>>> {
+    let mut wild_dep = dep.clone();
+    wild_dep.set_version_req(OptVersionReq::Any);
+
+    let name_candidates = loop {
+        match registry.query_vec(&wild_dep, QueryKind::AlternativeNames) {
+            Poll::Ready(Ok(candidates)) => break candidates,
+            Poll::Ready(Err(e)) => return Some(Err(e)),
+            Poll::Pending => match registry.block_until_ready() {
+                Ok(()) => continue,
+                Err(e) => return Some(Err(e)),
+            },
+        }
+    };
+    let mut name_candidates: Vec<_> = name_candidates
+        .into_iter()
+        .map(|s| s.into_summary())
+        .collect();
+    name_candidates.sort_unstable_by_key(|a| a.name());
+    name_candidates.dedup_by(|a, b| a.name() == b.name());
+    let mut name_candidates: Vec<_> = name_candidates
+        .into_iter()
+        .filter_map(|n| Some((edit_distance(&*wild_dep.package_name(), &*n.name(), 3)?, n)))
+        .collect();
+    name_candidates.sort_by_key(|o| o.0);
+
+    if name_candidates.is_empty() {
+        None
+    } else {
+        Some(Ok(name_candidates))
+    }
 }
 
 /// Returns String representation of dependency chain for a particular `pkgid`
