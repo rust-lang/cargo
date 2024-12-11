@@ -193,9 +193,9 @@ impl std::hash::Hash for ActivationsKey {
 /// same.
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Debug, PartialOrd, Ord)]
 pub enum SemverCompatibility {
-    Major(NonZeroU64),
-    Minor(NonZeroU64),
     Patch(u64),
+    Minor(NonZeroU64),
+    Major(NonZeroU64),
 }
 
 impl From<&semver::Version> for SemverCompatibility {
