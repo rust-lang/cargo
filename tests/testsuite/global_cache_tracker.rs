@@ -2004,7 +2004,16 @@ fn compatible_with_older_cargo() {
     assert_eq!(get_registry_names("src"), ["middle-1.0.0", "new-1.0.0"]);
     assert_eq!(
         get_registry_names("cache"),
-        ["middle-1.0.0.crate", "new-1.0.0.crate", "old-1.0.0.crate"]
+        // Duplicate crates from two different cache location
+        // because we're changing how SourceId is hashed.
+        // This change should be reverted once rust-lang/cargo#14917 lands.
+        [
+            "middle-1.0.0.crate",
+            "middle-1.0.0.crate",
+            "new-1.0.0.crate",
+            "new-1.0.0.crate",
+            "old-1.0.0.crate"
+        ]
     );
 
     // T-0 months: Current version, make sure it can read data from stable,
@@ -2027,7 +2036,10 @@ fn compatible_with_older_cargo() {
     assert_eq!(get_registry_names("src"), ["new-1.0.0"]);
     assert_eq!(
         get_registry_names("cache"),
-        ["middle-1.0.0.crate", "new-1.0.0.crate"]
+        // Duplicate crates from two different cache location
+        // because we're changing how SourceId is hashed.
+        // This change should be reverted once rust-lang/cargo#14917 lands.
+        ["middle-1.0.0.crate", "new-1.0.0.crate", "new-1.0.0.crate"]
     );
 }
 
