@@ -111,8 +111,11 @@ so versions are considered considered [compatible](semver.md) if their left-most
 See the [Resolver] chapter for more information on how Cargo uses versions to
 resolve dependencies.
 
-This field is optional and defaults to `0.0.0`.  The field is required for publishing packages.
+This field is optional. It defaults to the value of the `CARGO_SUGGESTED_PKG_VERSION`
+environment variable. If the variable is not set or the value is invalid,
+it defaults to `0.0.0`. The field is required for publishing packages.
 
+> **MSRV:** Before 1.86, this field defaulted to `0.0.0`
 > **MSRV:** Before 1.75, this field was required
 
 [SemVer]: https://semver.org

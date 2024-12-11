@@ -17,6 +17,7 @@ use cargo_util_schemas::manifest::{RustVersion, StringOrBool};
 use itertools::Itertools;
 use lazycell::LazyCell;
 use pathdiff::diff_paths;
+use semver::Version;
 use toml_edit::ImDocument;
 use url::Url;
 
@@ -566,7 +567,16 @@ fn normalize_package_toml<'a>(
             .clone()
             .map(|value| field_inherit_with(value, "version", || inherit()?.version()))
             .transpose()?
-            .map(manifest::InheritableField::Value),
+            .map(manifest::InheritableField::Value)
+            .or_else(|| {
+                let suggestion = std::env::var("CARGO_SUGGESTED_PKG_VERSION") else {
+                    return;
+                };
+                let version = Version::parse(&suggestion.unwrap()) else {
+                    return;
+                };
+                Some(manifest::InheritableField::Value(version.unwrap()))
+            }),
         authors: original_package
             .authors
             .clone()

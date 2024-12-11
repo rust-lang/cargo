@@ -2891,6 +2891,57 @@ fn staticlib_rlib_and_bin() {
 }
 
 #[cargo_test]
+fn suggested_pkg_version() {
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [package]
+            name = "ver"
+            "#,
+        )
+        .file(
+            "src/main.rs",
+            r#"
+                static VERSION: &'static str = env!("CARGO_PKG_VERSION");
+
+                fn main() {
+                    println!("{}", VERSION);
+                }
+            "#,
+        )
+        .build();
+
+    p.cargo("build -v").run();
+    p.process(&p.bin("ver"))
+        .with_stdout_data(str![[r#"
+0.0.0
+
+"#]])
+        .run();
+
+    p.cargo("build -v")
+        .env("CARGO_SUGGESTED_PKG_VERSION", "X.Y.Z")
+        .run();
+    p.process(&p.bin("ver"))
+        .with_stdout_data(str![[r#"
+0.0.0
+
+"#]])
+        .run();
+
+    p.cargo("build -v")
+        .env("CARGO_SUGGESTED_PKG_VERSION", "1.2.3")
+        .run();
+    p.process(&p.bin("ver"))
+        .with_stdout_data(str![[r#"
+1.2.3
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn opt_out_of_bin() {
     let p = project()
         .file(
