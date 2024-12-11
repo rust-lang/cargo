@@ -221,7 +221,51 @@ pub(super) fn activation_error(
     // give an error message that nothing was found.
     let mut msg = String::new();
     let mut hints = String::new();
-    if let Some(candidates) = alt_versions(registry, dep) {
+    if let Some(version_candidates) = rejected_versions(registry, dep) {
+        let version_candidates = match version_candidates {
+            Ok(c) => c,
+            Err(e) => return to_resolve_err(e),
+        };
+        let _ = writeln!(
+            &mut msg,
+            "no matching versions for `{}` found",
+            dep.package_name()
+        );
+        for candidate in version_candidates {
+            match candidate {
+                IndexSummary::Candidate(summary) => {
+                    // HACK: If this was a real candidate, we wouldn't hit this case.
+                    // so it must be a patch which get normalized to being a candidate
+                    let _ = writeln!(&mut msg, "  version {} is unavailable", summary.version());
+                }
+                IndexSummary::Yanked(summary) => {
+                    let _ = writeln!(&mut msg, "  version {} is yanked", summary.version());
+                }
+                IndexSummary::Offline(summary) => {
+                    let _ = writeln!(&mut msg, "  version {} is not cached", summary.version());
+                }
+                IndexSummary::Unsupported(summary, schema_version) => {
+                    if let Some(rust_version) = summary.rust_version() {
+                        // HACK: technically its unsupported and we shouldn't make assumptions
+                        // about the entry but this is limited and for diagnostics purposes
+                        let _ = writeln!(
+                            &mut msg,
+                            "  version {} requires cargo {}",
+                            summary.version(),
+                            rust_version
+                        );
+                    } else {
+                        let _ = writeln!(
+                            &mut msg,
+                            "  version {} requires a Cargo version that supports index version {}",
+                            summary.version(),
+                            schema_version
+                        );
+                    }
+                }
+            }
+        }
+    } else if let Some(candidates) = alt_versions(registry, dep) {
         let candidates = match candidates {
             Ok(c) => c,
             Err(e) => return to_resolve_err(e),
@@ -285,50 +329,6 @@ pub(super) fn activation_error(
                 &mut hints,
                 "\nperhaps a crate was updated and forgotten to be re-vendored?"
             );
-        }
-    } else if let Some(version_candidates) = rejected_versions(registry, dep) {
-        let version_candidates = match version_candidates {
-            Ok(c) => c,
-            Err(e) => return to_resolve_err(e),
-        };
-        let _ = writeln!(
-            &mut msg,
-            "no matching versions for `{}` found",
-            dep.package_name()
-        );
-        for candidate in version_candidates {
-            match candidate {
-                IndexSummary::Candidate(summary) => {
-                    // HACK: If this was a real candidate, we wouldn't hit this case.
-                    // so it must be a patch which get normalized to being a candidate
-                    let _ = writeln!(&mut msg, "  version {} is unavailable", summary.version());
-                }
-                IndexSummary::Yanked(summary) => {
-                    let _ = writeln!(&mut msg, "  version {} is yanked", summary.version());
-                }
-                IndexSummary::Offline(summary) => {
-                    let _ = writeln!(&mut msg, "  version {} is not cached", summary.version());
-                }
-                IndexSummary::Unsupported(summary, schema_version) => {
-                    if let Some(rust_version) = summary.rust_version() {
-                        // HACK: technically its unsupported and we shouldn't make assumptions
-                        // about the entry but this is limited and for diagnostics purposes
-                        let _ = writeln!(
-                            &mut msg,
-                            "  version {} requires cargo {}",
-                            summary.version(),
-                            rust_version
-                        );
-                    } else {
-                        let _ = writeln!(
-                            &mut msg,
-                            "  version {} requires a Cargo version that supports index version {}",
-                            summary.version(),
-                            schema_version
-                        );
-                    }
-                }
-            }
         }
     } else if let Some(name_candidates) = alt_names(registry, dep) {
         let name_candidates = match name_candidates {

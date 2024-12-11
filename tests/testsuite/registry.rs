@@ -862,12 +862,11 @@ fn relying_on_a_yank_is_bad_http() {
     let _server = setup_http();
     relying_on_a_yank_is_bad(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] failed to select a version for the requirement `baz = "=0.0.2"`
-candidate versions found which didn't match: 0.0.1
+[ERROR] no matching versions for `baz` found
+  version 0.0.2 is yanked
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `bar v0.0.1`
     ... which satisfies dependency `bar = "*"` of package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]]);
 }
@@ -876,12 +875,11 @@ perhaps a crate was updated and forgotten to be re-vendored?
 fn relying_on_a_yank_is_bad_git() {
     relying_on_a_yank_is_bad(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] failed to select a version for the requirement `baz = "=0.0.2"`
-candidate versions found which didn't match: 0.0.1
+[ERROR] no matching versions for `baz` found
+  version 0.0.2 is yanked
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `bar v0.0.1`
     ... which satisfies dependency `bar = "*"` of package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]]);
 }
