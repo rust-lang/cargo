@@ -15,7 +15,10 @@ enum ConflictStoreTrie {
     /// A map from an element to a subtrie where
     /// all the sets in the subtrie contains that element.
     Node(
-        BTreeMap<ActivationsKey, HashMap<PackageId, ConflictStoreTrie, rustc_hash::FxBuildHasher>>,
+        BTreeMap<
+            ActivationsKey,
+            HashMap<&'static semver::Version, ConflictStoreTrie, rustc_hash::FxBuildHasher>,
+        >,
     ),
 }
 
@@ -56,7 +59,7 @@ impl ConflictStoreTrie {
                         continue;
                     }
                     // If the active package has a stored conflict ...
-                    let Some(store) = map.get(&pid) else {
+                    let Some(store) = map.get(pid.version()) else {
                         continue;
                     };
                     // then we need to check the corresponding subtrie.
@@ -91,7 +94,7 @@ impl ConflictStoreTrie {
             if let ConflictStoreTrie::Node(p) = self {
                 p.entry(pid.as_activations_key().clone())
                     .or_default()
-                    .entry(pid)
+                    .entry(pid.version())
                     .or_insert_with(|| ConflictStoreTrie::Node(BTreeMap::new()))
                     .insert(iter, con);
             }
