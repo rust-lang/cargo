@@ -141,19 +141,6 @@ fn expand_manifest_(
         toml::Value::Array(vec![toml::Value::Table(bin)]),
     );
 
-    let release = manifest
-        .entry("profile".to_owned())
-        .or_insert_with(|| toml::Value::Table(Default::default()))
-        .as_table_mut()
-        .ok_or_else(|| anyhow::format_err!("`profile` must be a table"))?
-        .entry("release".to_owned())
-        .or_insert_with(|| toml::Value::Table(Default::default()))
-        .as_table_mut()
-        .ok_or_else(|| anyhow::format_err!("`profile.release` must be a table"))?;
-    release
-        .entry("strip".to_owned())
-        .or_insert_with(|| toml::Value::Boolean(true));
-
     Ok(manifest)
 }
 
@@ -588,9 +575,6 @@ build = false
 edition = "2024"
 name = "test-"
 
-[profile.release]
-strip = true
-
 [workspace]
 
 "#]]
@@ -625,9 +609,6 @@ autotests = false
 build = false
 edition = "2024"
 name = "test-"
-
-[profile.release]
-strip = true
 
 [workspace]
 
