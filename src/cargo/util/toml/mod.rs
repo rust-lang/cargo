@@ -334,7 +334,7 @@ fn normalize_toml(
         normalized_toml.lib = targets::normalize_lib(
             original_toml.lib.as_ref(),
             package_root,
-            &original_package.name,
+            package_name,
             edition,
             original_package.autolib,
             warnings,
@@ -342,7 +342,7 @@ fn normalize_toml(
         normalized_toml.bin = Some(targets::normalize_bins(
             original_toml.bin.as_ref(),
             package_root,
-            &original_package.name,
+            package_name,
             edition,
             original_package.autobins,
             warnings,
