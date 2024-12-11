@@ -3202,6 +3202,7 @@ fn ignores_unknown_index_version(expected: impl IntoData) {
 
 #[cargo_test]
 fn unknown_index_version_error() {
+    Package::new("bar", "0.0.1").publish();
     // If the version field is not understood, it is ignored.
     Package::new("bar", "1.0.1")
         .schema_version(u32::MAX)
@@ -3238,6 +3239,7 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
 
 #[cargo_test]
 fn unknown_index_version_with_msrv_error() {
+    Package::new("bar", "0.0.1").publish();
     // If the version field is not understood, it is ignored.
     Package::new("bar", "1.0.1")
         .schema_version(u32::MAX)
