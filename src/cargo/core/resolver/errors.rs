@@ -226,10 +226,18 @@ pub(super) fn activation_error(
             Ok(c) => c,
             Err(e) => return to_resolve_err(e),
         };
+
+        let locked_version = dep
+            .version_req()
+            .locked_version()
+            .map(|v| format!(" (locked to {})", v))
+            .unwrap_or_default();
         let _ = writeln!(
             &mut msg,
-            "no matching versions for `{}` found",
-            dep.package_name()
+            "failed to select a version for the requirement `{} = \"{}\"`{}",
+            dep.package_name(),
+            dep.version_req(),
+            locked_version
         );
         for candidate in version_candidates {
             match candidate {
