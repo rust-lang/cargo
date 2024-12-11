@@ -44,31 +44,33 @@ impl ConflictStoreTrie {
                     .unwrap_or_else(|| m.range(..))
                 {
                     // If the key is active, then we need to check all of the corresponding subtrie.
-                    if let Some(age_this) = is_active(pid) {
-                        if age_this >= max_age && must_contain != Some(pid) {
-                            // not worth looking at, it is to old.
-                            continue;
-                        }
-                        if let Some((o, age_o)) =
-                            store.find(is_active, must_contain.filter(|&f| f != pid), max_age)
-                        {
-                            let age = if must_contain == Some(pid) {
-                                // all the results will include `must_contain`
-                                // so the age of must_contain is not relevant to find the best result.
-                                age_o
-                            } else {
-                                std::cmp::max(age_this, age_o)
-                            };
-                            if max_age > age {
-                                // we found one that can jump-back further so replace the out.
-                                out = Some((o, age));
-                                // and don't look at anything older
-                                max_age = age
-                            }
-                        }
+                    let Some(age_this) = is_active(pid) else {
+                        // Else, if it is not active then there is no way any of the corresponding
+                        // subtrie will be conflicting.
+                        continue;
+                    };
+                    if age_this >= max_age && must_contain != Some(pid) {
+                        // not worth looking at, it is to old.
+                        continue;
                     }
-                    // Else, if it is not active then there is no way any of the corresponding
-                    // subtrie will be conflicting.
+                    let Some((o, age_o)) =
+                        store.find(is_active, must_contain.filter(|&f| f != pid), max_age)
+                    else {
+                        continue;
+                    };
+                    let age = if must_contain == Some(pid) {
+                        // all the results will include `must_contain`
+                        // so the age of must_contain is not relevant to find the best result.
+                        age_o
+                    } else {
+                        std::cmp::max(age_this, age_o)
+                    };
+                    if max_age > age {
+                        // we found one that can jump-back further so replace the out.
+                        out = Some((o, age));
+                        // and don't look at anything older
+                        max_age = age
+                    }
                 }
                 out
             }
