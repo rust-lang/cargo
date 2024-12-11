@@ -220,6 +220,7 @@ pub(super) fn activation_error(
     // We didn't actually find any candidates, so we need to
     // give an error message that nothing was found.
     let mut msg = String::new();
+    let mut hints = String::new();
     if let Some(candidates) = alt_versions(registry, dep) {
         let candidates = match candidates {
             Ok(c) => c,
@@ -269,9 +270,9 @@ pub(super) fn activation_error(
 
         // If we have a pre-release candidate, then that may be what our user is looking for
         if let Some(pre) = candidates.iter().find(|c| c.version().is_prerelease()) {
-            let _ = write!(&mut msg, "\nif you are looking for the prerelease package it needs to be specified explicitly");
+            let _ = write!(&mut hints, "\nif you are looking for the prerelease package it needs to be specified explicitly");
             let _ = write!(
-                &mut msg,
+                &mut hints,
                 "\n    {} = {{ version = \"{}\" }}",
                 pre.name(),
                 pre.version()
@@ -283,7 +284,7 @@ pub(super) fn activation_error(
         // update`. In this case try to print a helpful error!
         if dep.source_id().is_path() && dep.version_req().is_locked() {
             let _ = write!(
-                &mut msg,
+                &mut hints,
                 "\nconsider running `cargo update` to update \
                           a path dependency's locked version",
             );
@@ -291,7 +292,7 @@ pub(super) fn activation_error(
 
         if registry.is_replaced(dep.source_id()) {
             let _ = write!(
-                &mut msg,
+                &mut hints,
                 "\nperhaps a crate was updated and forgotten to be re-vendored?"
             );
         }
@@ -392,7 +393,7 @@ pub(super) fn activation_error(
     if let Some(gctx) = gctx {
         if gctx.offline() {
             let _ = write!(
-                &mut msg,
+                &mut hints,
                 "\nAs a reminder, you're using offline mode (--offline) \
                  which can sometimes cause surprising resolution failures, \
                  if this error is too confusing you may wish to retry \
@@ -401,7 +402,7 @@ pub(super) fn activation_error(
         }
     }
 
-    to_resolve_err(anyhow::format_err!("{}", msg))
+    to_resolve_err(anyhow::format_err!("{msg}{hints}"))
 }
 
 // Maybe the user mistyped the ver_req? Like `dep="2"` when `dep="0.2"`
