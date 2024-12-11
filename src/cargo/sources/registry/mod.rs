@@ -799,7 +799,7 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                 .index
                 .query_inner(dep.package_name(), &req, &mut *self.ops, &mut |s| {
                     let matched = match kind {
-                        QueryKind::Exact | QueryKind::AlternativeVersions => {
+                        QueryKind::Exact | QueryKind::RejectedVersions => {
                             if req.is_precise() && self.gctx.cli_unstable().unstable_options {
                                 dep.matches_prerelease(s.as_summary())
                             } else {
@@ -816,7 +816,7 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                     // leak through if they're in a whitelist (aka if they were
                     // previously in `Cargo.lock`
                     match s {
-                        s @ _ if kind == QueryKind::AlternativeVersions => callback(s),
+                        s @ _ if kind == QueryKind::RejectedVersions => callback(s),
                         s @ IndexSummary::Candidate(_) => callback(s),
                         s @ IndexSummary::Yanked(_) => {
                             if self.yanked_whitelist.contains(&s.package_id()) {

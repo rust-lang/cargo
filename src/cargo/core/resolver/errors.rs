@@ -305,7 +305,7 @@ pub(super) fn activation_error(
     } else {
         // Maybe something is wrong with the available versions
         let mut version_candidates = loop {
-            match registry.query_vec(&new_dep, QueryKind::AlternativeVersions) {
+            match registry.query_vec(&new_dep, QueryKind::RejectedVersions) {
                 Poll::Ready(Ok(candidates)) => break candidates,
                 Poll::Ready(Err(e)) => return to_resolve_err(e),
                 Poll::Pending => match registry.block_until_ready() {
