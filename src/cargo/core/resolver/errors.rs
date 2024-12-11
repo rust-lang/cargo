@@ -286,71 +286,70 @@ pub(super) fn activation_error(
                 "\nperhaps a crate was updated and forgotten to be re-vendored?"
             );
         }
-    } else {
-        if let Some(version_candidates) = rejected_versions(registry, dep) {
-            let version_candidates = match version_candidates {
-                Ok(c) => c,
-                Err(e) => return to_resolve_err(e),
-            };
-            let _ = writeln!(
-                &mut msg,
-                "no matching versions for `{}` found",
-                dep.package_name()
-            );
-            for candidate in version_candidates {
-                match candidate {
-                    IndexSummary::Candidate(summary) => {
-                        // HACK: If this was a real candidate, we wouldn't hit this case.
-                        // so it must be a patch which get normalized to being a candidate
-                        let _ =
-                            writeln!(&mut msg, "  version {} is unavailable", summary.version());
-                    }
-                    IndexSummary::Yanked(summary) => {
-                        let _ = writeln!(&mut msg, "  version {} is yanked", summary.version());
-                    }
-                    IndexSummary::Offline(summary) => {
-                        let _ = writeln!(&mut msg, "  version {} is not cached", summary.version());
-                    }
-                    IndexSummary::Unsupported(summary, schema_version) => {
-                        if let Some(rust_version) = summary.rust_version() {
-                            // HACK: technically its unsupported and we shouldn't make assumptions
-                            // about the entry but this is limited and for diagnostics purposes
-                            let _ = writeln!(
-                                &mut msg,
-                                "  version {} requires cargo {}",
-                                summary.version(),
-                                rust_version
-                            );
-                        } else {
-                            let _ = writeln!(
+    } else if let Some(version_candidates) = rejected_versions(registry, dep) {
+        let version_candidates = match version_candidates {
+            Ok(c) => c,
+            Err(e) => return to_resolve_err(e),
+        };
+        let _ = writeln!(
+            &mut msg,
+            "no matching versions for `{}` found",
+            dep.package_name()
+        );
+        for candidate in version_candidates {
+            match candidate {
+                IndexSummary::Candidate(summary) => {
+                    // HACK: If this was a real candidate, we wouldn't hit this case.
+                    // so it must be a patch which get normalized to being a candidate
+                    let _ = writeln!(&mut msg, "  version {} is unavailable", summary.version());
+                }
+                IndexSummary::Yanked(summary) => {
+                    let _ = writeln!(&mut msg, "  version {} is yanked", summary.version());
+                }
+                IndexSummary::Offline(summary) => {
+                    let _ = writeln!(&mut msg, "  version {} is not cached", summary.version());
+                }
+                IndexSummary::Unsupported(summary, schema_version) => {
+                    if let Some(rust_version) = summary.rust_version() {
+                        // HACK: technically its unsupported and we shouldn't make assumptions
+                        // about the entry but this is limited and for diagnostics purposes
+                        let _ = writeln!(
+                            &mut msg,
+                            "  version {} requires cargo {}",
+                            summary.version(),
+                            rust_version
+                        );
+                    } else {
+                        let _ = writeln!(
                             &mut msg,
                             "  version {} requires a Cargo version that supports index version {}",
                             summary.version(),
                             schema_version
                         );
-                        }
                     }
                 }
             }
-        } else if let Some(name_candidates) = alt_names(registry, dep) {
-            let name_candidates = match name_candidates {
-                Ok(c) => c,
-                Err(e) => return to_resolve_err(e),
-            };
-            let _ = writeln!(&mut msg, "no matching package found",);
-            let _ = writeln!(&mut msg, "searched package name: `{}`", dep.package_name());
-            let mut names = name_candidates
-                .iter()
-                .take(3)
-                .map(|c| c.1.name().as_str())
-                .collect::<Vec<_>>();
+        }
+    } else if let Some(name_candidates) = alt_names(registry, dep) {
+        let name_candidates = match name_candidates {
+            Ok(c) => c,
+            Err(e) => return to_resolve_err(e),
+        };
+        let _ = writeln!(&mut msg, "no matching package found",);
+        let _ = writeln!(&mut msg, "searched package name: `{}`", dep.package_name());
+        let mut names = name_candidates
+            .iter()
+            .take(3)
+            .map(|c| c.1.name().as_str())
+            .collect::<Vec<_>>();
 
-            if name_candidates.len() > 3 {
-                names.push("...");
-            }
-            // Vertically align first suggestion with missing crate name
-            // so a typo jumps out at you.
-            let suggestions = names
+        if name_candidates.len() > 3 {
+            names.push("...");
+        }
+        // Vertically align first suggestion with missing crate name
+        // so a typo jumps out at you.
+        let suggestions =
+            names
                 .iter()
                 .enumerate()
                 .fold(String::default(), |acc, (i, el)| match i {
@@ -358,14 +357,13 @@ pub(super) fn activation_error(
                     i if names.len() - 1 == i && name_candidates.len() <= 3 => acc + " or " + el,
                     _ => acc + ", " + el,
                 });
-            let _ = writeln!(&mut msg, "perhaps you meant:      {suggestions}");
-        } else {
-            let _ = writeln!(
-                &mut msg,
-                "no matching package named `{}` found",
-                dep.package_name()
-            );
-        }
+        let _ = writeln!(&mut msg, "perhaps you meant:      {suggestions}");
+    } else {
+        let _ = writeln!(
+            &mut msg,
+            "no matching package named `{}` found",
+            dep.package_name()
+        );
     }
 
     let mut location_searched_msg = registry.describe_source(dep.source_id());
