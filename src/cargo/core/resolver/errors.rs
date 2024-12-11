@@ -219,7 +219,8 @@ pub(super) fn activation_error(
 
     // We didn't actually find any candidates, so we need to
     // give an error message that nothing was found.
-    let mut msg = if let Some(candidates) = alt_versions(registry, dep) {
+    let mut msg = String::new();
+    if let Some(candidates) = alt_versions(registry, dep) {
         let candidates = match candidates {
             Ok(c) => c,
             Err(e) => return to_resolve_err(e),
@@ -244,49 +245,57 @@ pub(super) fn activation_error(
             .map(|v| format!(" (locked to {})", v))
             .unwrap_or_default();
 
-        let mut msg = format!(
-            "failed to select a version for the requirement `{} = \"{}\"`{}\n\
-             candidate versions found which didn't match: {}\n\
-             location searched: {}\n",
+        let _ = writeln!(
+            &mut msg,
+            "failed to select a version for the requirement `{} = \"{}\"`{}",
             dep.package_name(),
             dep.version_req(),
             locked_version,
-            versions,
-            registry.describe_source(dep.source_id()),
         );
-        msg.push_str("required by ");
-        msg.push_str(&describe_path_in_context(
-            resolver_ctx,
-            &parent.package_id(),
-        ));
+        let _ = writeln!(
+            &mut msg,
+            "candidate versions found which didn't match: {versions}",
+        );
+        let _ = writeln!(
+            &mut msg,
+            "location searched: {}",
+            registry.describe_source(dep.source_id())
+        );
+        let _ = write!(
+            &mut msg,
+            "required by {}",
+            describe_path_in_context(resolver_ctx, &parent.package_id()),
+        );
 
         // If we have a pre-release candidate, then that may be what our user is looking for
         if let Some(pre) = candidates.iter().find(|c| c.version().is_prerelease()) {
-            msg.push_str("\nif you are looking for the prerelease package it needs to be specified explicitly");
-            msg.push_str(&format!(
+            let _ = write!(&mut msg, "\nif you are looking for the prerelease package it needs to be specified explicitly");
+            let _ = write!(
+                &mut msg,
                 "\n    {} = {{ version = \"{}\" }}",
                 pre.name(),
                 pre.version()
-            ));
+            );
         }
 
         // If we have a path dependency with a locked version, then this may
         // indicate that we updated a sub-package and forgot to run `cargo
         // update`. In this case try to print a helpful error!
         if dep.source_id().is_path() && dep.version_req().is_locked() {
-            msg.push_str(
+            let _ = write!(
+                &mut msg,
                 "\nconsider running `cargo update` to update \
                           a path dependency's locked version",
             );
         }
 
         if registry.is_replaced(dep.source_id()) {
-            msg.push_str("\nperhaps a crate was updated and forgotten to be re-vendored?");
+            let _ = write!(
+                &mut msg,
+                "\nperhaps a crate was updated and forgotten to be re-vendored?"
+            );
         }
-
-        msg
     } else {
-        let mut msg = String::new();
         if let Some(version_candidates) = rejected_versions(registry, dep) {
             let version_candidates = match version_candidates {
                 Ok(c) => c,
@@ -378,13 +387,12 @@ pub(super) fn activation_error(
             "required by {}",
             describe_path_in_context(resolver_ctx, &parent.package_id()),
         );
-
-        msg
-    };
+    }
 
     if let Some(gctx) = gctx {
         if gctx.offline() {
-            msg.push_str(
+            let _ = write!(
+                &mut msg,
                 "\nAs a reminder, you're using offline mode (--offline) \
                  which can sometimes cause surprising resolution failures, \
                  if this error is too confusing you may wish to retry \
