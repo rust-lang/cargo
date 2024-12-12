@@ -863,11 +863,10 @@ fn relying_on_a_yank_is_bad_http() {
     relying_on_a_yank_is_bad(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `baz = "=0.0.2"`
-candidate versions found which didn't match: 0.0.1
+  version 0.0.2 is yanked
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `bar v0.0.1`
     ... which satisfies dependency `bar = "*"` of package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]]);
 }
@@ -877,11 +876,10 @@ fn relying_on_a_yank_is_bad_git() {
     relying_on_a_yank_is_bad(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `baz = "=0.0.2"`
-candidate versions found which didn't match: 0.0.1
+  version 0.0.2 is yanked
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `bar v0.0.1`
     ... which satisfies dependency `bar = "*"` of package `foo v0.0.1 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]]);
 }
@@ -924,7 +922,7 @@ fn yanks_in_lockfiles_are_ok_http() {
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] no matching versions for `bar` found
+[ERROR] failed to select a version for the requirement `bar = "*"`
   version 0.0.1 is yanked
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
@@ -942,7 +940,7 @@ fn yanks_in_lockfiles_are_ok_git() {
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] no matching versions for `bar` found
+[ERROR] failed to select a version for the requirement `bar = "*"`
   version 0.0.1 is yanked
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
@@ -995,7 +993,7 @@ fn yanks_in_lockfiles_are_ok_for_other_update_http() {
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] no matching versions for `bar` found
+[ERROR] failed to select a version for the requirement `bar = "*"`
   version 0.0.1 is yanked
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
@@ -1019,7 +1017,7 @@ fn yanks_in_lockfiles_are_ok_for_other_update_git() {
 "#]],
         str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] no matching versions for `bar` found
+[ERROR] failed to select a version for the requirement `bar = "*"`
   version 0.0.1 is yanked
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.0.1 ([ROOT]/foo)`
@@ -3204,6 +3202,7 @@ fn ignores_unknown_index_version(expected: impl IntoData) {
 
 #[cargo_test]
 fn unknown_index_version_error() {
+    Package::new("bar", "0.0.1").publish();
     // If the version field is not understood, it is ignored.
     Package::new("bar", "1.0.1")
         .schema_version(u32::MAX)
@@ -3229,7 +3228,7 @@ fn unknown_index_version_error() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] no matching versions for `bar` found
+[ERROR] failed to select a version for the requirement `bar = "^1.0"`
   version 1.0.1 requires a Cargo version that supports index version 4294967295
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.1.0 ([ROOT]/foo)`
@@ -3240,6 +3239,7 @@ required by package `foo v0.1.0 ([ROOT]/foo)`
 
 #[cargo_test]
 fn unknown_index_version_with_msrv_error() {
+    Package::new("bar", "0.0.1").publish();
     // If the version field is not understood, it is ignored.
     Package::new("bar", "1.0.1")
         .schema_version(u32::MAX)
@@ -3266,7 +3266,7 @@ fn unknown_index_version_with_msrv_error() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
-[ERROR] no matching versions for `bar` found
+[ERROR] failed to select a version for the requirement `bar = "^1.0"`
   version 1.0.1 requires cargo 1.2345
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.1.0 ([ROOT]/foo)`
