@@ -6,7 +6,7 @@ use crate::core::dependency::DepKind;
 use crate::core::resolver::{features::CliFeatures, ForceAllTargets, HasDevUnits};
 use crate::core::{Package, PackageId, PackageIdSpec, PackageIdSpecQuery, Workspace};
 use crate::ops::{self, Packages};
-use crate::util::{CargoResult, GlobalContext};
+use crate::util::CargoResult;
 use crate::{drop_print, drop_println};
 use anyhow::Context as _;
 use graph::Graph;
@@ -228,14 +228,14 @@ pub fn build_and_print(ws: &Workspace<'_>, opts: &TreeOptions) -> CargoResult<()
         try to use option `--target all` first, and then narrow your search scope accordingly.",
         )?;
     } else {
-        print(ws.gctx(), opts, root_indexes, &pkgs_to_prune, &graph)?;
+        print(ws, opts, root_indexes, &pkgs_to_prune, &graph)?;
     }
     Ok(())
 }
 
 /// Prints a tree for each given root.
 fn print(
-    gctx: &GlobalContext,
+    ws: &Workspace<'_>,
     opts: &TreeOptions,
     roots: Vec<usize>,
     pkgs_to_prune: &[PackageIdSpec],
@@ -244,7 +244,7 @@ fn print(
     let format = Pattern::new(&opts.format)
         .with_context(|| format!("tree format `{}` not valid", opts.format))?;
 
-    let symbols = if gctx.shell().out_unicode() {
+    let symbols = if ws.gctx().shell().out_unicode() {
         &UTF8_SYMBOLS
     } else {
         &ASCII_SYMBOLS
@@ -256,7 +256,7 @@ fn print(
 
     for (i, root_index) in roots.into_iter().enumerate() {
         if i != 0 {
-            drop_println!(gctx);
+            drop_println!(ws.gctx());
         }
 
         // A stack of bools used to determine where | symbols should appear
@@ -267,7 +267,7 @@ fn print(
         let mut print_stack = vec![];
 
         print_node(
-            gctx,
+            ws,
             graph,
             root_index,
             &format,
@@ -287,7 +287,7 @@ fn print(
 
 /// Prints a package and all of its dependencies.
 fn print_node<'a>(
-    gctx: &GlobalContext,
+    ws: &Workspace<'_>,
     graph: &'a Graph<'_>,
     node_index: usize,
     format: &Pattern,
@@ -303,12 +303,12 @@ fn print_node<'a>(
     let new = no_dedupe || visited_deps.insert(node_index);
 
     match prefix {
-        Prefix::Depth => drop_print!(gctx, "{}", levels_continue.len()),
+        Prefix::Depth => drop_print!(ws.gctx(), "{}", levels_continue.len()),
         Prefix::Indent => {
             if let Some((last_continues, rest)) = levels_continue.split_last() {
                 for continues in rest {
                     let c = if *continues { symbols.down } else { " " };
-                    drop_print!(gctx, "{}   ", c);
+                    drop_print!(ws.gctx(), "{}   ", c);
                 }
 
                 let c = if *last_continues {
@@ -316,7 +316,7 @@ fn print_node<'a>(
                 } else {
                     symbols.ell
                 };
-                drop_print!(gctx, "{0}{1}{1} ", c, symbols.right);
+                drop_print!(ws.gctx(), "{0}{1}{1} ", c, symbols.right);
             }
         }
         Prefix::None => {}
@@ -332,7 +332,7 @@ fn print_node<'a>(
     } else {
         " (*)"
     };
-    drop_println!(gctx, "{}{}", format.display(graph, node_index), star);
+    drop_println!(ws.gctx(), "{}{}", format.display(graph, node_index), star);
 
     if !new || in_cycle {
         return;
@@ -346,7 +346,7 @@ fn print_node<'a>(
         EdgeKind::Feature,
     ] {
         print_dependencies(
-            gctx,
+            ws,
             graph,
             node_index,
             format,
@@ -366,7 +366,7 @@ fn print_node<'a>(
 
 /// Prints all the dependencies of a package for the given dependency kind.
 fn print_dependencies<'a>(
-    gctx: &GlobalContext,
+    ws: &Workspace<'_>,
     graph: &'a Graph<'_>,
     node_index: usize,
     format: &Pattern,
@@ -396,10 +396,10 @@ fn print_dependencies<'a>(
         if let Some(name) = name {
             for continues in &**levels_continue {
                 let c = if *continues { symbols.down } else { " " };
-                drop_print!(gctx, "{}   ", c);
+                drop_print!(ws.gctx(), "{}   ", c);
             }
 
-            drop_println!(gctx, "{}", name);
+            drop_println!(ws.gctx(), "{}", name);
         }
     }
 
@@ -428,7 +428,7 @@ fn print_dependencies<'a>(
     while let Some(dependency) = it.next() {
         levels_continue.push(it.peek().is_some());
         print_node(
-            gctx,
+            ws,
             graph,
             *dependency,
             format,
