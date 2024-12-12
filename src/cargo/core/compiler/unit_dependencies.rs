@@ -848,8 +848,17 @@ fn new_unit_dep_with_profile(
         _ => None,
     };
     let features = state.activated_features(pkg.package_id(), features_for);
+
+    let replaced_source = state
+        .package_set
+        .sources()
+        .get(pkg.package_id().source_id())
+        .unwrap()
+        .replaced_source_id();
+
     let unit = state.interner.intern(
         pkg,
+        replaced_source,
         target,
         profile,
         kind,
