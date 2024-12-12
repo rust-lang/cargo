@@ -1888,15 +1888,12 @@ fn depth_workspace() {
         .file("c/src/lib.rs", "")
         .build();
 
-    p.cargo("tree")
+    p.cargo("tree --depth workspace")
         .with_stdout_data(str![[r#"
 a v1.0.0 ([ROOT]/foo/a)
 
 b v0.1.0 ([ROOT]/foo/b)
-├── c v0.1.0 ([ROOT]/foo/c)
-│   ├── otherdep v1.0.0
-│   └── somedep v1.0.0
-└── somedep v1.0.0
+└── c v0.1.0 ([ROOT]/foo/c)
 
 c v0.1.0 ([ROOT]/foo/c) (*)
 

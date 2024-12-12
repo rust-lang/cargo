@@ -45,6 +45,7 @@ pub struct TreeOptions {
     pub graph_features: bool,
     /// Display depth of the dependency tree.
     /// If non-negative integer, display dependencies with that amount of max depth.
+    /// If `workspace`, display dependencies from current workspace only.
     pub display_depth: DisplayDepth,
     /// Excludes proc-macro dependencies.
     pub no_proc_macro: bool,
@@ -90,6 +91,7 @@ impl FromStr for Prefix {
 #[derive(Clone, Copy)]
 pub enum DisplayDepth {
     MaxDisplayDepth(u32),
+    Workspace,
 }
 
 impl FromStr for DisplayDepth {
@@ -97,11 +99,12 @@ impl FromStr for DisplayDepth {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
+            "workspace" => Ok(Self::Workspace),
             s => s.parse().map(Self::MaxDisplayDepth).map_err(|_| {
                 clap::Error::raw(
                     clap::error::ErrorKind::ValueValidation,
                     format!(
-                        "supported values for --depth are non-negative integers, \
+                        "supported values for --depth are non-negative integers and `workspace`, \
                                 but `{}` is unknown",
                         s
                     ),
@@ -403,8 +406,9 @@ fn print_dependencies<'a>(
         }
     }
 
-    let max_display_depth = match display_depth {
-        DisplayDepth::MaxDisplayDepth(max) => max,
+    let (max_display_depth, filter_non_workspace_member) = match display_depth {
+        DisplayDepth::MaxDisplayDepth(max) => (max, false),
+        DisplayDepth::Workspace => (u32::MAX, true),
     };
 
     // Current level exceeds maximum display depth. Skip.
@@ -418,6 +422,9 @@ fn print_dependencies<'a>(
             // Filter out packages to prune.
             match graph.node(**dep) {
                 Node::Package { package_id, .. } => {
+                    if filter_non_workspace_member && !ws.is_member_id(*package_id) {
+                        return false;
+                    }
                     !pkgs_to_prune.iter().any(|spec| spec.matches(*package_id))
                 }
                 _ => true,
