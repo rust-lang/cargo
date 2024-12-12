@@ -194,6 +194,10 @@ fn run_doc_tests(
                 CompileKind::Host => {}
                 CompileKind::Target(target) => {
                     if target.short_name() != compilation.host {
+
+                        gctx.shell().concise(|shell| {
+                            shell.warn("skipping cross-compilation doctest(s), use --verbose to see the full list in detail".to_string())
+                        })?;
                         // Skip doctests, -Zdoctest-xcompile not enabled.
                         gctx.shell().verbose(|shell| {
                             shell.note(format!(
