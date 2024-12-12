@@ -169,12 +169,7 @@ impl IndexSummary {
 
     /// Extract the package id from any variant
     pub fn package_id(&self) -> PackageId {
-        match self {
-            IndexSummary::Candidate(sum)
-            | IndexSummary::Yanked(sum)
-            | IndexSummary::Offline(sum)
-            | IndexSummary::Unsupported(sum, _) => sum.package_id(),
-        }
+        self.as_summary().package_id()
     }
 
     /// Returns `true` if the index summary is [`Yanked`].
