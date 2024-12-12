@@ -570,7 +570,7 @@ pub struct Package {
     features: FeatureMap,
     local: bool,
     alternative: bool,
-    invalid_json: bool,
+    invalid_index_line: bool,
     edition: Option<String>,
     resolver: Option<String>,
     proc_macro: bool,
@@ -1251,7 +1251,7 @@ impl Package {
             features: BTreeMap::new(),
             local: false,
             alternative: false,
-            invalid_json: false,
+            invalid_index_line: false,
             edition: None,
             resolver: None,
             proc_macro: false,
@@ -1422,8 +1422,8 @@ impl Package {
 
     /// Causes the JSON line emitted in the index to be invalid, presumably
     /// causing Cargo to skip over this version.
-    pub fn invalid_json(&mut self, invalid: bool) -> &mut Package {
-        self.invalid_json = invalid;
+    pub fn invalid_index_line(&mut self, invalid: bool) -> &mut Package {
+        self.invalid_index_line = invalid;
         self
     }
 
@@ -1496,7 +1496,7 @@ impl Package {
             let c = t!(fs::read(&self.archive_dst()));
             cksum(&c)
         };
-        let name = if self.invalid_json {
+        let name = if self.invalid_index_line {
             serde_json::json!(1)
         } else {
             serde_json::json!(self.name)

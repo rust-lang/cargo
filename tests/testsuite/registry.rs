@@ -2916,7 +2916,9 @@ fn ignore_invalid_json_lines_git() {
 
 fn ignore_invalid_json_lines() {
     Package::new("foo", "0.1.0").publish();
-    Package::new("foo", "0.1.1").invalid_json(true).publish();
+    Package::new("foo", "0.1.1")
+        .invalid_index_line(true)
+        .publish();
     Package::new("foo", "0.2.0").publish();
 
     let p = project()
