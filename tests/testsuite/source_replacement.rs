@@ -216,8 +216,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v1.0.0 (registry `alternative`)
-[COMPILING] bar v1.0.0
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] bar v1.0.0
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `crates-io`

@@ -351,8 +351,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `alternative`)
-[COMPILING] bar v0.0.1 (registry `alternative`)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] bar v0.0.1 (registry `alternative`)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `alternative`
@@ -515,7 +515,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `alternative`
@@ -596,8 +596,8 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [DOWNLOADING] crates ...
 [DOWNLOADED] bar v0.0.1 (registry `dummy-registry`)
-[COMPILING] bar v0.0.1
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] bar v0.0.1
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.1 ([ROOT]/foo)
 [UPLOADED] foo v0.0.1 to registry `alternative`

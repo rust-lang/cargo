@@ -562,8 +562,8 @@ Caused by:
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [DOWNLOADING] crates ...
 [DOWNLOADED] notyet v0.0.1 (registry `dummy-registry`)
-[COMPILING] notyet v0.0.1
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] notyet v0.0.1
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]],
@@ -591,8 +591,8 @@ Caused by:
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
 [DOWNLOADING] crates ...
 [DOWNLOADED] notyet v0.0.1 (registry `dummy-registry`)
-[COMPILING] notyet v0.0.1
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] notyet v0.0.1
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]],
