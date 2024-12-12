@@ -2943,6 +2943,97 @@ fn ignore_invalid_json_lines() {
 }
 
 #[cargo_test]
+fn invalid_json_lines_error() {
+    Package::new("foo", "0.1.0")
+        .rust_version("1.0")
+        .schema_version(2)
+        .publish();
+    Package::new("foo", "0.1.1")
+        // Bad name field, too corrupt to use
+        .invalid_index_line(true)
+        .publish();
+    Package::new("foo", "0.1.2")
+        // Bad version field, too corrupt to use
+        .index_line(
+            r#"{"cksum":"7ca5fc2301ad96ade45356faf53225aea36437d99930bbfa951155c01faecf79","deps":[],"features":{},"links":null,"name":"foo","vers":"bad","yanked":false,"rust_version":"1.2345","v":1000000000}"#,
+        )
+        .publish();
+    Package::new("foo", "0.1.3")
+        // Bad field, report rust version
+        .index_line(
+            r#"{"cksum":"7ca5fc2301ad96ade45356faf53225aea36437d99930bbfa951155c01faecf79","deps":[],"features":"bad","links":null,"name":"foo","vers":"0.1.3","yanked":false,"rust_version":"1.2345","v":1000000000}"#,
+        )
+        .publish();
+    Package::new("foo", "0.1.4")
+        // Bad field, report schema
+        .index_line(
+            r#"{"cksum":"7ca5fc2301ad96ade45356faf53225aea36437d99930bbfa951155c01faecf79","deps":[],"features":"bad","links":null,"name":"foo","vers":"0.1.4","yanked":false,"v":1000000000}"#,
+        )
+        .publish();
+    Package::new("foo", "0.1.5")
+        // Bad field, report error
+        .index_line(
+            r#"{"cksum":"7ca5fc2301ad96ade45356faf53225aea36437d99930bbfa951155c01faecf79","deps":[],"features":"bad","links":null,"name":"foo","vers":"0.1.5","yanked":false}"#,
+        )
+        .publish();
+    Package::new("foo", "0.1.6")
+        // Bad field with bad rust version, report schema
+        .index_line(
+            r#"{"cksum":"7ca5fc2301ad96ade45356faf53225aea36437d99930bbfa951155c01faecf79","deps":[],"features":"bad","links":null,"name":"foo","vers":"0.1.6","yanked":false,"rust_version":"bad","v":1000000000}"#,
+        )
+        .publish();
+    Package::new("foo", "0.1.7")
+        // Bad field with bad rust version and schema, report error
+        .index_line(
+            r#"{"cksum":"7ca5fc2301ad96ade45356faf53225aea36437d99930bbfa951155c01faecf79","deps":[],"features":"bad","links":null,"name":"foo","vers":"0.1.7","yanked":false,"rust_version":"bad","v":"bad"}"#,
+        )
+        .publish();
+    Package::new("foo", "0.2.0").publish();
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "a"
+                version = "0.5.0"
+                edition = "2015"
+                authors = []
+
+                [dependencies]
+                foo = "0.1.1"
+            "#,
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("generate-lockfile")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `foo = "^0.1.1"`
+candidate versions found which didn't match: 0.2.0, 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `a v0.5.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+        .run();
+    p.cargo("generate-lockfile")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[ERROR] failed to select a version for the requirement `foo = "^0.1.1"`
+candidate versions found which didn't match: 0.2.0, 0.1.0
+location searched: `dummy-registry` index (which is replacing registry `crates-io`)
+required by package `a v0.5.0 ([ROOT]/foo)`
+perhaps a crate was updated and forgotten to be re-vendored?
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn readonly_registry_still_works_http() {
     let _server = setup_http();
     readonly_registry_still_works();
