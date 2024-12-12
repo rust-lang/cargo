@@ -469,6 +469,7 @@ fn cross_tests() {
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/[ALT_TARGET]/debug/deps/foo-[HASH][EXE])
 [RUNNING] unittests src/bin/bar.rs (target/[ALT_TARGET]/debug/deps/bar-[HASH][EXE])
+[WARNING] skipping cross-compilation doctest(s), use --verbose to see the full list in detail.
 
 "#]])
         .with_stdout_data(str![[r#"

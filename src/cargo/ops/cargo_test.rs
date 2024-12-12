@@ -197,7 +197,7 @@ fn run_doc_tests(
                     if target.short_name() != compilation.host {
                         if !warned_once {
                             gctx.shell().concise(|shell| {
-                                shell.warn("skipping cross-compilation doctest(s), use --verbose to see the full list in detail".to_string())
+                                shell.warn("skipping cross-compilation doctest(s), use --verbose to see the full list in detail.".to_string())
                             })?;
                             warned_once = true;
                         }
