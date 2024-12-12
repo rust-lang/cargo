@@ -1752,10 +1752,9 @@ foo v0.1.0 ([ROOT]/foo)
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `bar = "^1.0"` (locked to 1.0.1)
-candidate versions found which didn't match: 1.0.0
+  version 1.0.1 requires a Cargo version that supports index version 3
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `foo v0.1.0 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]])
         .run();
