@@ -1,0 +1,128 @@
+{
+  "features": [],
+  "format_version": 1,
+  "name": "a",
+  "package_id": "path+[ROOTURL]/foo#a@0.1.0",
+  "packages": [
+    {
+      "build_type": "build",
+      "dependencies": [
+        2
+      ],
+      "extern_crate_name": "build_script_build",
+      "features": [],
+      "package": "a",
+      "package_id": "path+[ROOTURL]/foo#a@0.1.0",
+      "profile": {
+        "codegen_backend": null,
+        "codegen_units": null,
+        "debug_assertions": false,
+        "debuginfo": 2,
+        "incremental": false,
+        "lto": "false",
+        "name": "dev",
+        "opt_level": "0",
+        "overflow_checks": false,
+        "panic": "unwind",
+        "rpath": false,
+        "split_debuginfo": null
+      },
+      "version": "0.1.0"
+    },
+    {
+      "build_type": "normal",
+      "dependencies": [
+        0
+      ],
+      "extern_crate_name": "build_script_build",
+      "features": [],
+      "package": "a",
+      "package_id": "path+[ROOTURL]/foo#a@0.1.0",
+      "profile": {
+        "codegen_backend": null,
+        "codegen_units": null,
+        "debug_assertions": true,
+        "debuginfo": 0,
+        "incremental": false,
+        "lto": "false",
+        "name": "dev",
+        "opt_level": "0",
+        "overflow_checks": true,
+        "panic": "unwind",
+        "rpath": false,
+        "split_debuginfo": "{...}"
+      },
+      "version": "0.1.0"
+    },
+    {
+      "build_type": "normal",
+      "dependencies": [],
+      "extern_crate_name": "b",
+      "features": [
+        "f2"
+      ],
+      "package": "b",
+      "package_id": "path+[ROOTURL]/foo/b#0.0.1",
+      "profile": {
+        "codegen_backend": null,
+        "codegen_units": null,
+        "debug_assertions": true,
+        "debuginfo": 0,
+        "incremental": false,
+        "lto": "false",
+        "name": "dev",
+        "opt_level": "0",
+        "overflow_checks": true,
+        "panic": "unwind",
+        "rpath": false,
+        "split_debuginfo": "{...}"
+      },
+      "version": "0.0.1"
+    },
+    {
+      "build_type": "normal",
+      "dependencies": [],
+      "extern_crate_name": "b",
+      "features": [
+        "f1"
+      ],
+      "package": "b",
+      "package_id": "path+[ROOTURL]/foo/b#0.0.1",
+      "version": "0.0.1"
+    }
+  ],
+  "profile": {
+    "codegen_backend": null,
+    "codegen_units": null,
+    "debug_assertions": true,
+    "debuginfo": 2,
+    "incremental": false,
+    "lto": "false",
+    "name": "dev",
+    "opt_level": "0",
+    "overflow_checks": true,
+    "panic": "unwind",
+    "rpath": false,
+    "split_debuginfo": "{...}"
+  },
+  "rustc": {
+    "commit_hash": "[..]",
+    "host": "[..]",
+    "verbose_version": "{...}",
+    "version": "[..]",
+    "workspace_wrapper": null,
+    "wrapper": null
+  },
+  "source": "[ROOT]/foo",
+  "target": {
+    "crate_types": [
+      "bin"
+    ],
+    "edition": "2021",
+    "kind": [
+      "bin"
+    ],
+    "name": "a"
+  },
+  "version": "0.1.0"
+}
