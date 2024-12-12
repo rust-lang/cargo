@@ -259,8 +259,36 @@ pub struct IndexPackage<'a> {
     pub v: Option<u32>,
 }
 
+impl IndexPackage<'_> {
+    fn to_summary(&self, source_id: SourceId) -> CargoResult<Summary> {
+        // ****CAUTION**** Please be extremely careful with returning errors, see
+        // `IndexSummary::parse` for details
+        let pkgid = PackageId::new(self.name.into(), self.vers.clone(), source_id);
+        let deps = self
+            .deps
+            .iter()
+            .map(|dep| dep.clone().into_dep(source_id))
+            .collect::<CargoResult<Vec<_>>>()?;
+        let mut features = self.features.clone();
+        if let Some(features2) = &self.features2 {
+            for (name, values) in features2 {
+                features.entry(*name).or_default().extend(values);
+            }
+        }
+        let mut summary = Summary::new(
+            pkgid,
+            deps,
+            &features,
+            self.links,
+            self.rust_version.clone(),
+        )?;
+        summary.set_checksum(self.cksum.clone());
+        Ok(summary)
+    }
+}
+
 /// A dependency as encoded in the [`IndexPackage`] index JSON.
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct RegistryDependency<'a> {
     /// Name of the dependency. If the dependency is renamed, the original
     /// would be stored in [`RegistryDependency::package`].
@@ -706,32 +734,10 @@ impl IndexSummary {
         // between different versions that understand the index differently.
         // Make sure to consider the INDEX_V_MAX and CURRENT_CACHE_VERSION
         // values carefully when making changes here.
-        let IndexPackage {
-            name,
-            vers,
-            cksum,
-            deps,
-            mut features,
-            features2,
-            yanked,
-            links,
-            rust_version,
-            v,
-        } = serde_json::from_slice(line)?;
-        let v = v.unwrap_or(1);
-        tracing::trace!("json parsed registry {}/{}", name, vers);
-        let pkgid = PackageId::new(name.into(), vers.clone(), source_id);
-        let deps = deps
-            .into_iter()
-            .map(|dep| dep.into_dep(source_id))
-            .collect::<CargoResult<Vec<_>>>()?;
-        if let Some(features2) = features2 {
-            for (name, values) in features2 {
-                features.entry(name).or_default().extend(values);
-            }
-        }
-        let mut summary = Summary::new(pkgid, deps, &features, links, rust_version)?;
-        summary.set_checksum(cksum);
+        let index: IndexPackage<'_> = serde_json::from_slice(line)?;
+        let v = index.v.unwrap_or(1);
+        tracing::trace!("json parsed registry {}/{}", index.name, index.vers);
+        let summary = index.to_summary(source_id)?;
 
         let v_max = if bindeps {
             INDEX_V_MAX + 1
@@ -741,7 +747,7 @@ impl IndexSummary {
 
         if v_max < v {
             Ok(IndexSummary::Unsupported(summary, v))
-        } else if yanked.unwrap_or(false) {
+        } else if index.yanked.unwrap_or(false) {
             Ok(IndexSummary::Yanked(summary))
         } else {
             Ok(IndexSummary::Candidate(summary))
