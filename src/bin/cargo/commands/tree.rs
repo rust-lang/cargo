@@ -2,7 +2,7 @@ use crate::cli;
 use crate::command_prelude::*;
 use anyhow::{bail, format_err};
 use cargo::core::dependency::DepKind;
-use cargo::ops::tree::{self, EdgeKind};
+use cargo::ops::tree::{self, DisplayDepth, EdgeKind};
 use cargo::ops::Packages;
 use cargo::util::print_available_packages;
 use cargo::util::CargoResult;
@@ -162,6 +162,12 @@ pub fn exec(gctx: &mut GlobalContext, args: &ArgMatches) -> CliResult {
 
     let pkgs_to_prune = args._values_of("prune");
 
+    let display_depth = args
+        ._value_of("depth")
+        .map(|s| s.parse::<DisplayDepth>())
+        .transpose()?
+        .unwrap_or(DisplayDepth::MaxDisplayDepth(u32::MAX));
+
     let packages = args.packages_from_flags()?;
     let mut invert = args
         .get_many::<String>("invert")
@@ -222,7 +228,7 @@ subtree of the package given to -p.\n\
         duplicates: args.flag("duplicates"),
         format: args.get_one::<String>("format").cloned().unwrap(),
         graph_features,
-        max_display_depth: args.value_of_u32("depth")?.unwrap_or(u32::MAX),
+        display_depth,
         no_proc_macro,
     };
 

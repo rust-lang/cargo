@@ -591,6 +591,11 @@ impl<'gctx> Workspace<'gctx> {
         self.member_ids.contains(&pkg.package_id())
     }
 
+    /// Returns true if the given package_id is a member of the workspace.
+    pub fn is_member_id(&self, package_id: PackageId) -> bool {
+        self.member_ids.contains(&package_id)
+    }
+
     pub fn is_ephemeral(&self) -> bool {
         self.is_ephemeral
     }

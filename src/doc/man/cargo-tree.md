@@ -96,6 +96,9 @@ Prune the given package from the display of the dependency tree.
 {{#option "`--depth` _depth_" }}
 Maximum display depth of the dependency tree. A depth of 1 displays the direct
 dependencies, for example.
+
+If the given value is `workspace`, only shows the dependencies that are member
+of the current workspace, instead.
 {{/option}}
 
 {{#option "`--no-dedupe`" }}

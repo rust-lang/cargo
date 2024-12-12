@@ -91,7 +91,9 @@ subtree of the package given to <code>-p</code>.</dd>
 
 <dt class="option-term" id="option-cargo-tree---depth"><a class="option-anchor" href="#option-cargo-tree---depth"></a><code>--depth</code> <em>depth</em></dt>
 <dd class="option-desc">Maximum display depth of the dependency tree. A depth of 1 displays the direct
-dependencies, for example.</dd>
+dependencies, for example.</p>
+<p>If the given value is <code>workspace</code>, only shows the dependencies that are member
+of the current workspace, instead.</dd>
 
 
 <dt class="option-term" id="option-cargo-tree---no-dedupe"><a class="option-anchor" href="#option-cargo-tree---no-dedupe"></a><code>--no-dedupe</code></dt>

@@ -1847,6 +1847,61 @@ c v1.0.0
 }
 
 #[cargo_test]
+fn depth_workspace() {
+    Package::new("somedep", "1.0.0").publish();
+    Package::new("otherdep", "1.0.0").publish();
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+            [workspace]
+            members = ["a", "b", "c"]
+            "#,
+        )
+        .file("a/Cargo.toml", &basic_manifest("a", "1.0.0"))
+        .file("a/src/lib.rs", "")
+        .file(
+            "b/Cargo.toml",
+            r#"
+            [package]
+            name = "b"
+            version = "0.1.0"
+
+            [dependencies]
+            c = { path = "../c" }
+            somedep = "1"
+            "#,
+        )
+        .file("b/src/lib.rs", "")
+        .file(
+            "c/Cargo.toml",
+            r#"
+            [package]
+            name = "c"
+            version = "0.1.0"
+
+            [dependencies]
+            somedep = "1"
+            otherdep = "1"
+            "#,
+        )
+        .file("c/src/lib.rs", "")
+        .build();
+
+    p.cargo("tree --depth workspace")
+        .with_stdout_data(str![[r#"
+a v1.0.0 ([ROOT]/foo/a)
+
+b v0.1.0 ([ROOT]/foo/b)
+└── c v0.1.0 ([ROOT]/foo/c)
+
+c v0.1.0 ([ROOT]/foo/c) (*)
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn prune() {
     let p = make_simple_proj();
 
