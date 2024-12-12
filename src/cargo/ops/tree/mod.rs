@@ -43,8 +43,9 @@ pub struct TreeOptions {
     pub format: String,
     /// Includes features in the tree as separate nodes.
     pub graph_features: bool,
-    /// Maximum display depth of the dependency tree.
-    pub max_display_depth: u32,
+    /// Display depth of the dependency tree.
+    /// If non-negative integer, display dependencies with that amount of max depth.
+    pub display_depth: DisplayDepth,
     /// Excludes proc-macro dependencies.
     pub no_proc_macro: bool,
 }
@@ -82,6 +83,30 @@ impl FromStr for Prefix {
             "indent" => Ok(Prefix::Indent),
             "depth" => Ok(Prefix::Depth),
             _ => Err("invalid prefix"),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum DisplayDepth {
+    MaxDisplayDepth(u32),
+}
+
+impl FromStr for DisplayDepth {
+    type Err = clap::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            s => s.parse().map(Self::MaxDisplayDepth).map_err(|_| {
+                clap::Error::raw(
+                    clap::error::ErrorKind::ValueValidation,
+                    format!(
+                        "supported values for --depth are non-negative integers, \
+                                but `{}` is unknown",
+                        s
+                    ),
+                )
+            }),
         }
     }
 }
@@ -250,7 +275,7 @@ fn print(
             pkgs_to_prune,
             opts.prefix,
             opts.no_dedupe,
-            opts.max_display_depth,
+            opts.display_depth,
             &mut visited_deps,
             &mut levels_continue,
             &mut print_stack,
@@ -270,7 +295,7 @@ fn print_node<'a>(
     pkgs_to_prune: &[PackageIdSpec],
     prefix: Prefix,
     no_dedupe: bool,
-    max_display_depth: u32,
+    display_depth: DisplayDepth,
     visited_deps: &mut HashSet<usize>,
     levels_continue: &mut Vec<bool>,
     print_stack: &mut Vec<usize>,
@@ -329,7 +354,7 @@ fn print_node<'a>(
             pkgs_to_prune,
             prefix,
             no_dedupe,
-            max_display_depth,
+            display_depth,
             visited_deps,
             levels_continue,
             print_stack,
@@ -349,7 +374,7 @@ fn print_dependencies<'a>(
     pkgs_to_prune: &[PackageIdSpec],
     prefix: Prefix,
     no_dedupe: bool,
-    max_display_depth: u32,
+    display_depth: DisplayDepth,
     visited_deps: &mut HashSet<usize>,
     levels_continue: &mut Vec<bool>,
     print_stack: &mut Vec<usize>,
@@ -377,6 +402,10 @@ fn print_dependencies<'a>(
             drop_println!(gctx, "{}", name);
         }
     }
+
+    let max_display_depth = match display_depth {
+        DisplayDepth::MaxDisplayDepth(max) => max,
+    };
 
     // Current level exceeds maximum display depth. Skip.
     if levels_continue.len() + 1 > max_display_depth as usize {
@@ -407,7 +436,7 @@ fn print_dependencies<'a>(
             pkgs_to_prune,
             prefix,
             no_dedupe,
-            max_display_depth,
+            display_depth,
             visited_deps,
             levels_continue,
             print_stack,
