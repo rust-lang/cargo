@@ -779,7 +779,9 @@ impl<'gctx> Source for RegistrySource<'gctx> {
             ready!(self
                 .index
                 .query_inner(dep.package_name(), &req, &mut *self.ops, &mut |s| {
-                    if dep.matches(s.as_summary()) {
+                    if matches!(s, IndexSummary::Candidate(_) | IndexSummary::Yanked(_))
+                        && dep.matches(s.as_summary())
+                    {
                         // We are looking for a package from a lock file so we do not care about yank
                         callback(s)
                     }
@@ -797,14 +799,14 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                 .index
                 .query_inner(dep.package_name(), &req, &mut *self.ops, &mut |s| {
                     let matched = match kind {
-                        QueryKind::Exact => {
+                        QueryKind::Exact | QueryKind::RejectedVersions => {
                             if req.is_precise() && self.gctx.cli_unstable().unstable_options {
                                 dep.matches_prerelease(s.as_summary())
                             } else {
                                 dep.matches(s.as_summary())
                             }
                         }
-                        QueryKind::Alternatives => true,
+                        QueryKind::AlternativeNames => true,
                         QueryKind::Normalized => true,
                     };
                     if !matched {
@@ -813,13 +815,28 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                     // Next filter out all yanked packages. Some yanked packages may
                     // leak through if they're in a whitelist (aka if they were
                     // previously in `Cargo.lock`
-                    if !s.is_yanked() {
-                        callback(s);
-                    } else if self.yanked_whitelist.contains(&s.package_id()) {
-                        callback(s);
-                    } else if req.is_precise() {
-                        precise_yanked_in_use = true;
-                        callback(s);
+                    match s {
+                        s @ _ if kind == QueryKind::RejectedVersions => callback(s),
+                        s @ IndexSummary::Candidate(_) => callback(s),
+                        s @ IndexSummary::Yanked(_) => {
+                            if self.yanked_whitelist.contains(&s.package_id()) {
+                                callback(s);
+                            } else if req.is_precise() {
+                                precise_yanked_in_use = true;
+                                callback(s);
+                            }
+                        }
+                        IndexSummary::Unsupported(summary, v) => {
+                            tracing::debug!(
+                                "unsupported schema version {} ({} {})",
+                                v,
+                                summary.name(),
+                                summary.version()
+                            );
+                        }
+                        IndexSummary::Offline(summary) => {
+                            tracing::debug!("offline ({} {})", summary.name(), summary.version());
+                        }
                     }
                 }))?;
             if precise_yanked_in_use {
@@ -839,7 +856,7 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                 return Poll::Ready(Ok(()));
             }
             let mut any_pending = false;
-            if kind == QueryKind::Alternatives || kind == QueryKind::Normalized {
+            if kind == QueryKind::AlternativeNames || kind == QueryKind::Normalized {
                 // Attempt to handle misspellings by searching for a chain of related
                 // names to the original name. The resolver will later
                 // reject any candidates that have the wrong name, and with this it'll
@@ -859,7 +876,7 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                         .query_inner(name_permutation, &req, &mut *self.ops, &mut |s| {
                             if !s.is_yanked() {
                                 f(s);
-                            } else if kind == QueryKind::Alternatives {
+                            } else if kind == QueryKind::AlternativeNames {
                                 f(s);
                             }
                         })?

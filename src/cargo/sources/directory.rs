@@ -108,8 +108,8 @@ impl<'gctx> Source for DirectorySource<'gctx> {
         }
         let packages = self.packages.values().map(|p| &p.0);
         let matches = packages.filter(|pkg| match kind {
-            QueryKind::Exact => dep.matches(pkg.summary()),
-            QueryKind::Alternatives => true,
+            QueryKind::Exact | QueryKind::RejectedVersions => dep.matches(pkg.summary()),
+            QueryKind::AlternativeNames => true,
             QueryKind::Normalized => dep.matches(pkg.summary()),
         });
         for summary in matches.map(|pkg| pkg.summary().clone()) {

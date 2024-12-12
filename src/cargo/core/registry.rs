@@ -674,9 +674,10 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
             let patch = patches.remove(0);
             match override_summary {
                 Some(override_summary) => {
-                    let override_summary = override_summary.into_summary();
-                    self.warn_bad_override(&override_summary, &patch)?;
-                    f(IndexSummary::Candidate(self.lock(override_summary)));
+                    self.warn_bad_override(override_summary.as_summary(), &patch)?;
+                    let override_summary =
+                        override_summary.map_summary(|summary| self.lock(summary));
+                    f(override_summary);
                 }
                 None => f(IndexSummary::Candidate(patch)),
             }
@@ -733,8 +734,8 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
                             return;
                         }
                     }
-                    let summary = summary.into_summary();
-                    f(IndexSummary::Candidate(lock(locked, all_patches, summary)))
+                    let summary = summary.map_summary(|summary| lock(locked, all_patches, summary));
+                    f(summary)
                 };
                 return source.query(dep, kind, callback);
             }
@@ -760,11 +761,11 @@ impl<'gctx> Registry for PackageRegistry<'gctx> {
                         "found an override with a non-locked list"
                     )));
                 }
-                let override_summary = override_summary.into_summary();
                 if let Some(to_warn) = to_warn {
-                    self.warn_bad_override(&override_summary, to_warn.as_summary())?;
+                    self.warn_bad_override(override_summary.as_summary(), to_warn.as_summary())?;
                 }
-                f(IndexSummary::Candidate(self.lock(override_summary)));
+                let override_summary = override_summary.map_summary(|summary| self.lock(summary));
+                f(override_summary);
             }
         }
 

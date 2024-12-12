@@ -82,6 +82,7 @@ rand = "0.8.5"
 regex = "1.10.5"
 rusqlite = { version = "0.32.0", features = ["bundled"] }
 rustc-hash = "2.0.0"
+rustc-stable-hash = "0.1.1"
 rustfix = { version = "0.9.0", path = "crates/rustfix" }
 same-file = "1.0.6"
 schemars = "0.8.21"
@@ -194,6 +195,7 @@ rand.workspace = true
 regex.workspace = true
 rusqlite.workspace = true
 rustc-hash.workspace = true
+rustc-stable-hash.workspace = true
 rustfix.workspace = true
 same-file.workspace = true
 semver.workspace = true

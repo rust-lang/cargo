@@ -37,7 +37,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::str;
 use std::task::{ready, Poll};
-use tracing::{debug, info};
+use tracing::info;
 
 mod cache;
 use self::cache::CacheManager;
@@ -370,21 +370,7 @@ impl<'gctx> RegistryIndex<'gctx> {
             .filter_map(move |(k, v)| if req.matches(k) { Some(v) } else { None })
             .filter_map(move |maybe| {
                 match maybe.parse(raw_data, source_id, bindeps) {
-                    Ok(sum @ IndexSummary::Candidate(_) | sum @ IndexSummary::Yanked(_)) => {
-                        Some(sum)
-                    }
-                    Ok(IndexSummary::Unsupported(summary, v)) => {
-                        debug!(
-                            "unsupported schema version {} ({} {})",
-                            v,
-                            summary.name(),
-                            summary.version()
-                        );
-                        None
-                    }
-                    Ok(IndexSummary::Offline(_)) => {
-                        unreachable!("We do not check for off-line until later")
-                    }
+                    Ok(sum) => Some(sum),
                     Err(e) => {
                         info!("failed to parse `{}` registry package: {}", name, e);
                         None

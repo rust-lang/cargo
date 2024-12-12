@@ -1,8 +1,10 @@
 use std::fmt;
+use std::fmt::Write as _;
 use std::task::Poll;
 
 use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::sources::source::QueryKind;
+use crate::sources::IndexSummary;
 use crate::util::edit_distance::edit_distance;
 use crate::util::{GlobalContext, OptVersionReq, VersionExt};
 use anyhow::Error;
@@ -220,11 +222,11 @@ pub(super) fn activation_error(
     // Maybe the user mistyped the ver_req? Like `dep="2"` when `dep="0.2"`
     // was meant. So we re-query the registry with `dep="*"` so we can
     // list a few versions that were actually found.
-    let mut new_dep = dep.clone();
-    new_dep.set_version_req(OptVersionReq::Any);
+    let mut wild_dep = dep.clone();
+    wild_dep.set_version_req(OptVersionReq::Any);
 
     let candidates = loop {
-        match registry.query_vec(&new_dep, QueryKind::Exact) {
+        match registry.query_vec(&wild_dep, QueryKind::Exact) {
             Poll::Ready(Ok(candidates)) => break candidates,
             Poll::Ready(Err(e)) => return to_resolve_err(e),
             Poll::Pending => match registry.block_until_ready() {
@@ -301,10 +303,9 @@ pub(super) fn activation_error(
 
         msg
     } else {
-        // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
-        // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
-        let candidates = loop {
-            match registry.query_vec(&new_dep, QueryKind::Alternatives) {
+        // Maybe something is wrong with the available versions
+        let mut version_candidates = loop {
+            match registry.query_vec(&dep, QueryKind::RejectedVersions) {
                 Poll::Ready(Ok(candidates)) => break candidates,
                 Poll::Ready(Err(e)) => return to_resolve_err(e),
                 Poll::Pending => match registry.block_until_ready() {
@@ -313,45 +314,103 @@ pub(super) fn activation_error(
                 },
             }
         };
+        version_candidates.sort_unstable_by_key(|a| a.as_summary().version().clone());
 
-        let mut candidates: Vec<_> = candidates.into_iter().map(|s| s.into_summary()).collect();
-
-        candidates.sort_unstable_by_key(|a| a.name());
-        candidates.dedup_by(|a, b| a.name() == b.name());
-        let mut candidates: Vec<_> = candidates
-            .iter()
-            .filter_map(|n| Some((edit_distance(&*new_dep.package_name(), &*n.name(), 3)?, n)))
+        // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
+        // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
+        let name_candidates = loop {
+            match registry.query_vec(&wild_dep, QueryKind::AlternativeNames) {
+                Poll::Ready(Ok(candidates)) => break candidates,
+                Poll::Ready(Err(e)) => return to_resolve_err(e),
+                Poll::Pending => match registry.block_until_ready() {
+                    Ok(()) => continue,
+                    Err(e) => return to_resolve_err(e),
+                },
+            }
+        };
+        let mut name_candidates: Vec<_> = name_candidates
+            .into_iter()
+            .map(|s| s.into_summary())
             .collect();
-        candidates.sort_by_key(|o| o.0);
-        let mut msg: String;
-        if candidates.is_empty() {
-            msg = format!("no matching package named `{}` found\n", dep.package_name());
-        } else {
-            msg = format!(
-                "no matching package found\nsearched package name: `{}`\n",
+        name_candidates.sort_unstable_by_key(|a| a.name());
+        name_candidates.dedup_by(|a, b| a.name() == b.name());
+        let mut name_candidates: Vec<_> = name_candidates
+            .iter()
+            .filter_map(|n| Some((edit_distance(&*wild_dep.package_name(), &*n.name(), 3)?, n)))
+            .collect();
+        name_candidates.sort_by_key(|o| o.0);
+
+        let mut msg = String::new();
+        if !version_candidates.is_empty() {
+            let _ = writeln!(
+                &mut msg,
+                "no matching versions for `{}` found",
                 dep.package_name()
             );
-            let mut names = candidates
+            for candidate in version_candidates {
+                match candidate {
+                    IndexSummary::Candidate(summary) => {
+                        // HACK: If this was a real candidate, we wouldn't hit this case.
+                        // so it must be a patch which get normalized to being a candidate
+                        let _ =
+                            writeln!(&mut msg, "  version {} is unavailable", summary.version());
+                    }
+                    IndexSummary::Yanked(summary) => {
+                        let _ = writeln!(&mut msg, "  version {} is yanked", summary.version());
+                    }
+                    IndexSummary::Offline(summary) => {
+                        let _ = writeln!(&mut msg, "  version {} is not cached", summary.version());
+                    }
+                    IndexSummary::Unsupported(summary, schema_version) => {
+                        if let Some(rust_version) = summary.rust_version() {
+                            // HACK: technically its unsupported and we shouldn't make assumptions
+                            // about the entry but this is limited and for diagnostics purposes
+                            let _ = writeln!(
+                                &mut msg,
+                                "  version {} requires cargo {}",
+                                summary.version(),
+                                rust_version
+                            );
+                        } else {
+                            let _ = writeln!(
+                            &mut msg,
+                            "  version {} requires a Cargo version that supports index version {}",
+                            summary.version(),
+                            schema_version
+                        );
+                        }
+                    }
+                }
+            }
+        } else if !name_candidates.is_empty() {
+            let _ = writeln!(&mut msg, "no matching package found",);
+            let _ = writeln!(&mut msg, "searched package name: `{}`", dep.package_name());
+            let mut names = name_candidates
                 .iter()
                 .take(3)
                 .map(|c| c.1.name().as_str())
                 .collect::<Vec<_>>();
 
-            if candidates.len() > 3 {
+            if name_candidates.len() > 3 {
                 names.push("...");
             }
             // Vertically align first suggestion with missing crate name
             // so a typo jumps out at you.
-            msg.push_str("perhaps you meant:      ");
-            msg.push_str(&names.iter().enumerate().fold(
-                String::default(),
-                |acc, (i, el)| match i {
+            let suggestions = names
+                .iter()
+                .enumerate()
+                .fold(String::default(), |acc, (i, el)| match i {
                     0 => acc + el,
-                    i if names.len() - 1 == i && candidates.len() <= 3 => acc + " or " + el,
+                    i if names.len() - 1 == i && name_candidates.len() <= 3 => acc + " or " + el,
                     _ => acc + ", " + el,
-                },
-            ));
-            msg.push('\n');
+                });
+            let _ = writeln!(&mut msg, "perhaps you meant:      {suggestions}");
+        } else {
+            let _ = writeln!(
+                &mut msg,
+                "no matching package named `{}` found",
+                dep.package_name()
+            );
         }
 
         let mut location_searched_msg = registry.describe_source(dep.source_id());
@@ -359,12 +418,12 @@ pub(super) fn activation_error(
             location_searched_msg = format!("{}", dep.source_id());
         }
 
-        msg.push_str(&format!("location searched: {}\n", location_searched_msg));
-        msg.push_str("required by ");
-        msg.push_str(&describe_path_in_context(
-            resolver_ctx,
-            &parent.package_id(),
-        ));
+        let _ = writeln!(&mut msg, "location searched: {}", location_searched_msg);
+        let _ = write!(
+            &mut msg,
+            "required by {}",
+            describe_path_in_context(resolver_ctx, &parent.package_id()),
+        );
 
         msg
     };

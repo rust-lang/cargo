@@ -145,8 +145,8 @@ impl<'gctx> Source for PathSource<'gctx> {
         self.load()?;
         if let Some(s) = self.package.as_ref().map(|p| p.summary()) {
             let matched = match kind {
-                QueryKind::Exact => dep.matches(s),
-                QueryKind::Alternatives => true,
+                QueryKind::Exact | QueryKind::RejectedVersions => dep.matches(s),
+                QueryKind::AlternativeNames => true,
                 QueryKind::Normalized => dep.matches(s),
             };
             if matched {
@@ -332,8 +332,8 @@ impl<'gctx> Source for RecursivePathSource<'gctx> {
             .map(|p| p.summary())
         {
             let matched = match kind {
-                QueryKind::Exact => dep.matches(s),
-                QueryKind::Alternatives => true,
+                QueryKind::Exact | QueryKind::RejectedVersions => dep.matches(s),
+                QueryKind::AlternativeNames => true,
                 QueryKind::Normalized => dep.matches(s),
             };
             if matched {
