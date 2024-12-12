@@ -271,6 +271,13 @@ pub(super) fn activation_error(
                         );
                     }
                 }
+                IndexSummary::Invalid(summary) => {
+                    let _ = writeln!(
+                        &mut msg,
+                        "  version {}'s index entry is invalid",
+                        summary.version()
+                    );
+                }
             }
         }
     } else if let Some(candidates) = alt_versions(registry, dep) {

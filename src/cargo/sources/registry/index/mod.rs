@@ -135,6 +135,8 @@ pub enum IndexSummary {
     Offline(Summary),
     /// From a newer schema version and is likely incomplete or inaccurate
     Unsupported(Summary, u32),
+    /// An error was encountered despite being a supported schema version
+    Invalid(Summary),
 }
 
 impl IndexSummary {
@@ -144,7 +146,8 @@ impl IndexSummary {
             IndexSummary::Candidate(sum)
             | IndexSummary::Yanked(sum)
             | IndexSummary::Offline(sum)
-            | IndexSummary::Unsupported(sum, _) => sum,
+            | IndexSummary::Unsupported(sum, _)
+            | IndexSummary::Invalid(sum) => sum,
         }
     }
 
@@ -154,7 +157,8 @@ impl IndexSummary {
             IndexSummary::Candidate(sum)
             | IndexSummary::Yanked(sum)
             | IndexSummary::Offline(sum)
-            | IndexSummary::Unsupported(sum, _) => sum,
+            | IndexSummary::Unsupported(sum, _)
+            | IndexSummary::Invalid(sum) => sum,
         }
     }
 
@@ -164,6 +168,7 @@ impl IndexSummary {
             IndexSummary::Yanked(s) => IndexSummary::Yanked(f(s)),
             IndexSummary::Offline(s) => IndexSummary::Offline(f(s)),
             IndexSummary::Unsupported(s, v) => IndexSummary::Unsupported(f(s), v.clone()),
+            IndexSummary::Invalid(s) => IndexSummary::Invalid(f(s)),
         }
     }
 
@@ -280,6 +285,22 @@ impl IndexPackage<'_> {
         summary.set_checksum(self.cksum.clone());
         Ok(summary)
     }
+}
+
+#[derive(Deserialize, Serialize)]
+struct IndexPackageMinimum {
+    name: InternedString,
+    vers: Version,
+}
+
+#[derive(Deserialize, Serialize, Default)]
+struct IndexPackageRustVersion {
+    rust_version: Option<RustVersion>,
+}
+
+#[derive(Deserialize, Serialize, Default)]
+struct IndexPackageV {
+    v: Option<u32>,
 }
 
 /// A dependency as encoded in the [`IndexPackage`] index JSON.
@@ -729,10 +750,45 @@ impl IndexSummary {
         // between different versions that understand the index differently.
         // Make sure to consider the INDEX_V_MAX and CURRENT_CACHE_VERSION
         // values carefully when making changes here.
-        let index: IndexPackage<'_> = serde_json::from_slice(line)?;
+        let index_summary = (|| {
+            let index = serde_json::from_slice::<IndexPackage<'_>>(line)?;
+            let summary = index.to_summary(source_id)?;
+            Ok((index, summary))
+        })();
+        let (index, summary, valid) = match index_summary {
+            Ok((index, summary)) => (index, summary, true),
+            Err(err) => {
+                let Ok(IndexPackageMinimum { name, vers }) =
+                    serde_json::from_slice::<IndexPackageMinimum>(line)
+                else {
+                    // If we can't recover, prefer the original error
+                    return Err(err);
+                };
+                tracing::info!(
+                    "recoverying from failed parse of registry package {name}@{vers}: {err}"
+                );
+                let IndexPackageRustVersion { rust_version } =
+                    serde_json::from_slice::<IndexPackageRustVersion>(line).unwrap_or_default();
+                let IndexPackageV { v } =
+                    serde_json::from_slice::<IndexPackageV>(line).unwrap_or_default();
+                let index = IndexPackage {
+                    name,
+                    vers,
+                    rust_version,
+                    v,
+                    deps: Default::default(),
+                    features: Default::default(),
+                    features2: Default::default(),
+                    cksum: Default::default(),
+                    yanked: Default::default(),
+                    links: Default::default(),
+                };
+                let summary = index.to_summary(source_id)?;
+                (index, summary, false)
+            }
+        };
         let v = index.v.unwrap_or(1);
         tracing::trace!("json parsed registry {}/{}", index.name, index.vers);
-        let summary = index.to_summary(source_id)?;
 
         let v_max = if bindeps {
             INDEX_V_MAX + 1
@@ -742,6 +798,8 @@ impl IndexSummary {
 
         if v_max < v {
             Ok(IndexSummary::Unsupported(summary, v))
+        } else if !valid {
+            Ok(IndexSummary::Invalid(summary))
         } else if index.yanked.unwrap_or(false) {
             Ok(IndexSummary::Yanked(summary))
         } else {

@@ -3012,10 +3012,13 @@ fn invalid_json_lines_error() {
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `foo = "^0.1.1"`
-candidate versions found which didn't match: 0.2.0, 0.1.0
+  version 0.1.3 requires cargo 1.2345
+  version 0.1.4 requires a Cargo version that supports index version 1000000000
+  version 0.1.5's index entry is invalid
+  version 0.1.6 requires a Cargo version that supports index version 1000000000
+  version 0.1.7's index entry is invalid
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `a v0.5.0 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]])
         .run();
@@ -3024,10 +3027,13 @@ perhaps a crate was updated and forgotten to be re-vendored?
         .with_stderr_data(str![[r#"
 [UPDATING] `dummy-registry` index
 [ERROR] failed to select a version for the requirement `foo = "^0.1.1"`
-candidate versions found which didn't match: 0.2.0, 0.1.0
+  version 0.1.3 requires cargo 1.2345
+  version 0.1.4 requires a Cargo version that supports index version 1000000000
+  version 0.1.5's index entry is invalid
+  version 0.1.6 requires a Cargo version that supports index version 1000000000
+  version 0.1.7's index entry is invalid
 location searched: `dummy-registry` index (which is replacing registry `crates-io`)
 required by package `a v0.5.0 ([ROOT]/foo)`
-perhaps a crate was updated and forgotten to be re-vendored?
 
 "#]])
         .run();
