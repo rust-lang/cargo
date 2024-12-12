@@ -6,6 +6,7 @@ use crate::core::{Dependency, PackageId, Registry, Summary};
 use crate::sources::source::QueryKind;
 use crate::sources::IndexSummary;
 use crate::util::edit_distance::edit_distance;
+use crate::util::errors::CargoResult;
 use crate::util::{GlobalContext, OptVersionReq, VersionExt};
 use anyhow::Error;
 
@@ -218,29 +219,65 @@ pub(super) fn activation_error(
 
     // We didn't actually find any candidates, so we need to
     // give an error message that nothing was found.
-    //
-    // Maybe the user mistyped the ver_req? Like `dep="2"` when `dep="0.2"`
-    // was meant. So we re-query the registry with `dep="*"` so we can
-    // list a few versions that were actually found.
-    let mut wild_dep = dep.clone();
-    wild_dep.set_version_req(OptVersionReq::Any);
+    let mut msg = String::new();
+    let mut hints = String::new();
+    if let Some(version_candidates) = rejected_versions(registry, dep) {
+        let version_candidates = match version_candidates {
+            Ok(c) => c,
+            Err(e) => return to_resolve_err(e),
+        };
 
-    let candidates = loop {
-        match registry.query_vec(&wild_dep, QueryKind::Exact) {
-            Poll::Ready(Ok(candidates)) => break candidates,
-            Poll::Ready(Err(e)) => return to_resolve_err(e),
-            Poll::Pending => match registry.block_until_ready() {
-                Ok(()) => continue,
-                Err(e) => return to_resolve_err(e),
-            },
+        let locked_version = dep
+            .version_req()
+            .locked_version()
+            .map(|v| format!(" (locked to {})", v))
+            .unwrap_or_default();
+        let _ = writeln!(
+            &mut msg,
+            "failed to select a version for the requirement `{} = \"{}\"`{}",
+            dep.package_name(),
+            dep.version_req(),
+            locked_version
+        );
+        for candidate in version_candidates {
+            match candidate {
+                IndexSummary::Candidate(summary) => {
+                    // HACK: If this was a real candidate, we wouldn't hit this case.
+                    // so it must be a patch which get normalized to being a candidate
+                    let _ = writeln!(&mut msg, "  version {} is unavailable", summary.version());
+                }
+                IndexSummary::Yanked(summary) => {
+                    let _ = writeln!(&mut msg, "  version {} is yanked", summary.version());
+                }
+                IndexSummary::Offline(summary) => {
+                    let _ = writeln!(&mut msg, "  version {} is not cached", summary.version());
+                }
+                IndexSummary::Unsupported(summary, schema_version) => {
+                    if let Some(rust_version) = summary.rust_version() {
+                        // HACK: technically its unsupported and we shouldn't make assumptions
+                        // about the entry but this is limited and for diagnostics purposes
+                        let _ = writeln!(
+                            &mut msg,
+                            "  version {} requires cargo {}",
+                            summary.version(),
+                            rust_version
+                        );
+                    } else {
+                        let _ = writeln!(
+                            &mut msg,
+                            "  version {} requires a Cargo version that supports index version {}",
+                            summary.version(),
+                            schema_version
+                        );
+                    }
+                }
+            }
         }
-    };
-
-    let mut candidates: Vec<_> = candidates.into_iter().map(|s| s.into_summary()).collect();
-
-    candidates.sort_unstable_by(|a, b| b.version().cmp(a.version()));
-
-    let mut msg = if !candidates.is_empty() {
+    } else if let Some(candidates) = alt_versions(registry, dep) {
+        let candidates = match candidates {
+            Ok(c) => c,
+            Err(e) => return to_resolve_err(e),
+        };
         let versions = {
             let mut versions = candidates
                 .iter()
@@ -261,142 +298,66 @@ pub(super) fn activation_error(
             .map(|v| format!(" (locked to {})", v))
             .unwrap_or_default();
 
-        let mut msg = format!(
-            "failed to select a version for the requirement `{} = \"{}\"`{}\n\
-             candidate versions found which didn't match: {}\n\
-             location searched: {}\n",
+        let _ = writeln!(
+            &mut msg,
+            "failed to select a version for the requirement `{} = \"{}\"`{}",
             dep.package_name(),
             dep.version_req(),
             locked_version,
-            versions,
-            registry.describe_source(dep.source_id()),
         );
-        msg.push_str("required by ");
-        msg.push_str(&describe_path_in_context(
-            resolver_ctx,
-            &parent.package_id(),
-        ));
+        let _ = writeln!(
+            &mut msg,
+            "candidate versions found which didn't match: {versions}",
+        );
 
         // If we have a pre-release candidate, then that may be what our user is looking for
         if let Some(pre) = candidates.iter().find(|c| c.version().is_prerelease()) {
-            msg.push_str("\nif you are looking for the prerelease package it needs to be specified explicitly");
-            msg.push_str(&format!(
+            let _ = write!(&mut hints, "\nif you are looking for the prerelease package it needs to be specified explicitly");
+            let _ = write!(
+                &mut hints,
                 "\n    {} = {{ version = \"{}\" }}",
                 pre.name(),
                 pre.version()
-            ));
+            );
         }
 
         // If we have a path dependency with a locked version, then this may
         // indicate that we updated a sub-package and forgot to run `cargo
         // update`. In this case try to print a helpful error!
         if dep.source_id().is_path() && dep.version_req().is_locked() {
-            msg.push_str(
+            let _ = write!(
+                &mut hints,
                 "\nconsider running `cargo update` to update \
                           a path dependency's locked version",
             );
         }
 
         if registry.is_replaced(dep.source_id()) {
-            msg.push_str("\nperhaps a crate was updated and forgotten to be re-vendored?");
-        }
-
-        msg
-    } else {
-        // Maybe something is wrong with the available versions
-        let mut version_candidates = loop {
-            match registry.query_vec(&dep, QueryKind::RejectedVersions) {
-                Poll::Ready(Ok(candidates)) => break candidates,
-                Poll::Ready(Err(e)) => return to_resolve_err(e),
-                Poll::Pending => match registry.block_until_ready() {
-                    Ok(()) => continue,
-                    Err(e) => return to_resolve_err(e),
-                },
-            }
-        };
-        version_candidates.sort_unstable_by_key(|a| a.as_summary().version().clone());
-
-        // Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
-        // was meant. So we try asking the registry for a `fuzzy` search for suggestions.
-        let name_candidates = loop {
-            match registry.query_vec(&wild_dep, QueryKind::AlternativeNames) {
-                Poll::Ready(Ok(candidates)) => break candidates,
-                Poll::Ready(Err(e)) => return to_resolve_err(e),
-                Poll::Pending => match registry.block_until_ready() {
-                    Ok(()) => continue,
-                    Err(e) => return to_resolve_err(e),
-                },
-            }
-        };
-        let mut name_candidates: Vec<_> = name_candidates
-            .into_iter()
-            .map(|s| s.into_summary())
-            .collect();
-        name_candidates.sort_unstable_by_key(|a| a.name());
-        name_candidates.dedup_by(|a, b| a.name() == b.name());
-        let mut name_candidates: Vec<_> = name_candidates
-            .iter()
-            .filter_map(|n| Some((edit_distance(&*wild_dep.package_name(), &*n.name(), 3)?, n)))
-            .collect();
-        name_candidates.sort_by_key(|o| o.0);
-
-        let mut msg = String::new();
-        if !version_candidates.is_empty() {
-            let _ = writeln!(
-                &mut msg,
-                "no matching versions for `{}` found",
-                dep.package_name()
+            let _ = write!(
+                &mut hints,
+                "\nperhaps a crate was updated and forgotten to be re-vendored?"
             );
-            for candidate in version_candidates {
-                match candidate {
-                    IndexSummary::Candidate(summary) => {
-                        // HACK: If this was a real candidate, we wouldn't hit this case.
-                        // so it must be a patch which get normalized to being a candidate
-                        let _ =
-                            writeln!(&mut msg, "  version {} is unavailable", summary.version());
-                    }
-                    IndexSummary::Yanked(summary) => {
-                        let _ = writeln!(&mut msg, "  version {} is yanked", summary.version());
-                    }
-                    IndexSummary::Offline(summary) => {
-                        let _ = writeln!(&mut msg, "  version {} is not cached", summary.version());
-                    }
-                    IndexSummary::Unsupported(summary, schema_version) => {
-                        if let Some(rust_version) = summary.rust_version() {
-                            // HACK: technically its unsupported and we shouldn't make assumptions
-                            // about the entry but this is limited and for diagnostics purposes
-                            let _ = writeln!(
-                                &mut msg,
-                                "  version {} requires cargo {}",
-                                summary.version(),
-                                rust_version
-                            );
-                        } else {
-                            let _ = writeln!(
-                            &mut msg,
-                            "  version {} requires a Cargo version that supports index version {}",
-                            summary.version(),
-                            schema_version
-                        );
-                        }
-                    }
-                }
-            }
-        } else if !name_candidates.is_empty() {
-            let _ = writeln!(&mut msg, "no matching package found",);
-            let _ = writeln!(&mut msg, "searched package name: `{}`", dep.package_name());
-            let mut names = name_candidates
-                .iter()
-                .take(3)
-                .map(|c| c.1.name().as_str())
-                .collect::<Vec<_>>();
+        }
+    } else if let Some(name_candidates) = alt_names(registry, dep) {
+        let name_candidates = match name_candidates {
+            Ok(c) => c,
+            Err(e) => return to_resolve_err(e),
+        };
+        let _ = writeln!(&mut msg, "no matching package found",);
+        let _ = writeln!(&mut msg, "searched package name: `{}`", dep.package_name());
+        let mut names = name_candidates
+            .iter()
+            .take(3)
+            .map(|c| c.1.name().as_str())
+            .collect::<Vec<_>>();
 
-            if name_candidates.len() > 3 {
-                names.push("...");
-            }
-            // Vertically align first suggestion with missing crate name
-            // so a typo jumps out at you.
-            let suggestions = names
+        if name_candidates.len() > 3 {
+            names.push("...");
+        }
+        // Vertically align first suggestion with missing crate name
+        // so a typo jumps out at you.
+        let suggestions =
+            names
                 .iter()
                 .enumerate()
                 .fold(String::default(), |acc, (i, el)| match i {
@@ -404,33 +365,30 @@ pub(super) fn activation_error(
                     i if names.len() - 1 == i && name_candidates.len() <= 3 => acc + " or " + el,
                     _ => acc + ", " + el,
                 });
-            let _ = writeln!(&mut msg, "perhaps you meant:      {suggestions}");
-        } else {
-            let _ = writeln!(
-                &mut msg,
-                "no matching package named `{}` found",
-                dep.package_name()
-            );
-        }
-
-        let mut location_searched_msg = registry.describe_source(dep.source_id());
-        if location_searched_msg.is_empty() {
-            location_searched_msg = format!("{}", dep.source_id());
-        }
-
-        let _ = writeln!(&mut msg, "location searched: {}", location_searched_msg);
-        let _ = write!(
+        let _ = writeln!(&mut msg, "perhaps you meant:      {suggestions}");
+    } else {
+        let _ = writeln!(
             &mut msg,
-            "required by {}",
-            describe_path_in_context(resolver_ctx, &parent.package_id()),
+            "no matching package named `{}` found",
+            dep.package_name()
         );
+    }
 
-        msg
-    };
+    let mut location_searched_msg = registry.describe_source(dep.source_id());
+    if location_searched_msg.is_empty() {
+        location_searched_msg = format!("{}", dep.source_id());
+    }
+    let _ = writeln!(&mut msg, "location searched: {}", location_searched_msg);
+    let _ = write!(
+        &mut msg,
+        "required by {}",
+        describe_path_in_context(resolver_ctx, &parent.package_id()),
+    );
 
     if let Some(gctx) = gctx {
         if gctx.offline() {
-            msg.push_str(
+            let _ = write!(
+                &mut hints,
                 "\nAs a reminder, you're using offline mode (--offline) \
                  which can sometimes cause surprising resolution failures, \
                  if this error is too confusing you may wish to retry \
@@ -439,7 +397,97 @@ pub(super) fn activation_error(
         }
     }
 
-    to_resolve_err(anyhow::format_err!("{}", msg))
+    to_resolve_err(anyhow::format_err!("{msg}{hints}"))
+}
+
+// Maybe the user mistyped the ver_req? Like `dep="2"` when `dep="0.2"`
+// was meant. So we re-query the registry with `dep="*"` so we can
+// list a few versions that were actually found.
+fn alt_versions(
+    registry: &mut dyn Registry,
+    dep: &Dependency,
+) -> Option<CargoResult<Vec<Summary>>> {
+    let mut wild_dep = dep.clone();
+    wild_dep.set_version_req(OptVersionReq::Any);
+
+    let candidates = loop {
+        match registry.query_vec(&wild_dep, QueryKind::Exact) {
+            Poll::Ready(Ok(candidates)) => break candidates,
+            Poll::Ready(Err(e)) => return Some(Err(e)),
+            Poll::Pending => match registry.block_until_ready() {
+                Ok(()) => continue,
+                Err(e) => return Some(Err(e)),
+            },
+        }
+    };
+    let mut candidates: Vec<_> = candidates.into_iter().map(|s| s.into_summary()).collect();
+    candidates.sort_unstable_by(|a, b| b.version().cmp(a.version()));
+    if candidates.is_empty() {
+        None
+    } else {
+        Some(Ok(candidates))
+    }
+}
+
+/// Maybe something is wrong with the available versions
+fn rejected_versions(
+    registry: &mut dyn Registry,
+    dep: &Dependency,
+) -> Option<CargoResult<Vec<IndexSummary>>> {
+    let mut version_candidates = loop {
+        match registry.query_vec(&dep, QueryKind::RejectedVersions) {
+            Poll::Ready(Ok(candidates)) => break candidates,
+            Poll::Ready(Err(e)) => return Some(Err(e)),
+            Poll::Pending => match registry.block_until_ready() {
+                Ok(()) => continue,
+                Err(e) => return Some(Err(e)),
+            },
+        }
+    };
+    version_candidates.sort_unstable_by_key(|a| a.as_summary().version().clone());
+    if version_candidates.is_empty() {
+        None
+    } else {
+        Some(Ok(version_candidates))
+    }
+}
+
+/// Maybe the user mistyped the name? Like `dep-thing` when `Dep_Thing`
+/// was meant. So we try asking the registry for a `fuzzy` search for suggestions.
+fn alt_names(
+    registry: &mut dyn Registry,
+    dep: &Dependency,
+) -> Option<CargoResult<Vec<(usize, Summary)>>> {
+    let mut wild_dep = dep.clone();
+    wild_dep.set_version_req(OptVersionReq::Any);
+
+    let name_candidates = loop {
+        match registry.query_vec(&wild_dep, QueryKind::AlternativeNames) {
+            Poll::Ready(Ok(candidates)) => break candidates,
+            Poll::Ready(Err(e)) => return Some(Err(e)),
+            Poll::Pending => match registry.block_until_ready() {
+                Ok(()) => continue,
+                Err(e) => return Some(Err(e)),
+            },
+        }
+    };
+    let mut name_candidates: Vec<_> = name_candidates
+        .into_iter()
+        .map(|s| s.into_summary())
+        .collect();
+    name_candidates.sort_unstable_by_key(|a| a.name());
+    name_candidates.dedup_by(|a, b| a.name() == b.name());
+    let mut name_candidates: Vec<_> = name_candidates
+        .into_iter()
+        .filter_map(|n| Some((edit_distance(&*wild_dep.package_name(), &*n.name(), 3)?, n)))
+        .collect();
+    name_candidates.sort_by_key(|o| o.0);
+
+    if name_candidates.is_empty() {
+        None
+    } else {
+        Some(Ok(name_candidates))
+    }
 }
 
 /// Returns String representation of dependency chain for a particular `pkgid`
