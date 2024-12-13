@@ -35,11 +35,13 @@ use crate::schema::TomlValueWrapper;
 #[serde(rename_all = "kebab-case")]
 #[cfg_attr(feature = "unstable-schema", derive(schemars::JsonSchema))]
 pub struct TomlManifest {
-    // when adding new fields, be sure to check whether `requires_package` should disallow them
     pub cargo_features: Option<Vec<String>>,
+
+    // Update `requires_package` when adding new package-specific fields
     pub package: Option<Box<TomlPackage>>,
     pub project: Option<Box<TomlPackage>>,
-    pub profile: Option<TomlProfiles>,
+    pub badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
+    pub features: Option<BTreeMap<FeatureName, Vec<String>>>,
     pub lib: Option<TomlLibTarget>,
     pub bin: Option<Vec<TomlBinTarget>>,
     pub example: Option<Vec<TomlExampleTarget>>,
@@ -52,13 +54,13 @@ pub struct TomlManifest {
     pub build_dependencies: Option<BTreeMap<PackageName, InheritableDependency>>,
     #[serde(rename = "build_dependencies")]
     pub build_dependencies2: Option<BTreeMap<PackageName, InheritableDependency>>,
-    pub features: Option<BTreeMap<FeatureName, Vec<String>>>,
     pub target: Option<BTreeMap<String, TomlPlatform>>,
-    pub replace: Option<BTreeMap<String, TomlDependency>>,
-    pub patch: Option<BTreeMap<String, BTreeMap<PackageName, TomlDependency>>>,
-    pub workspace: Option<TomlWorkspace>,
-    pub badges: Option<BTreeMap<String, BTreeMap<String, String>>>,
     pub lints: Option<InheritableLints>,
+
+    pub workspace: Option<TomlWorkspace>,
+    pub profile: Option<TomlProfiles>,
+    pub patch: Option<BTreeMap<String, BTreeMap<PackageName, TomlDependency>>>,
+    pub replace: Option<BTreeMap<String, TomlDependency>>,
 
     /// Report unused keys (see also nested `_unused_keys`)
     /// Note: this is populated by the caller, rather than automatically
@@ -69,6 +71,8 @@ pub struct TomlManifest {
 impl TomlManifest {
     pub fn requires_package(&self) -> impl Iterator<Item = &'static str> {
         [
+            self.badges.as_ref().map(|_| "badges"),
+            self.features.as_ref().map(|_| "features"),
             self.lib.as_ref().map(|_| "lib"),
             self.bin.as_ref().map(|_| "bin"),
             self.example.as_ref().map(|_| "example"),
@@ -79,9 +83,7 @@ impl TomlManifest {
             self.build_dependencies()
                 .as_ref()
                 .map(|_| "build-dependencies"),
-            self.features.as_ref().map(|_| "features"),
             self.target.as_ref().map(|_| "target"),
-            self.badges.as_ref().map(|_| "badges"),
             self.lints.as_ref().map(|_| "lints"),
         ]
         .into_iter()

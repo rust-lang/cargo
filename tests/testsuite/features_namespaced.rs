@@ -1006,6 +1006,9 @@ homepage = "https://example.com/"
 readme = false
 license = "MIT"
 
+[features]
+feat = ["opt-dep1"]
+
 [lib]
 name = "foo"
 path = "src/lib.rs"
@@ -1017,9 +1020,6 @@ optional = true
 [dependencies.opt-dep2]
 version = "1.0"
 optional = true
-
-[features]
-feat = ["opt-dep1"]
 
 "##]],
         )],
@@ -1143,6 +1143,11 @@ homepage = "https://example.com/"
 readme = false
 license = "MIT"
 
+[features]
+feat1 = []
+feat2 = ["dep:bar"]
+feat3 = ["feat2"]
+
 [lib]
 name = "foo"
 path = "src/lib.rs"
@@ -1150,11 +1155,6 @@ path = "src/lib.rs"
 [dependencies.bar]
 version = "1.0"
 optional = true
-
-[features]
-feat1 = []
-feat2 = ["dep:bar"]
-feat3 = ["feat2"]
 
 "##]],
         )],

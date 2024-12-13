@@ -1479,8 +1479,17 @@ fn patch_in_virtual() {
         .file("foo/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("check").run();
-    p.cargo("check")
+    p.cargo("check -p foo")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
+[CHECKING] foo v0.1.0 ([ROOT]/foo/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    p.cargo("check -p foo")
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
@@ -3029,7 +3038,7 @@ foo v0.0.0 ([ROOT]/foo)
 }
 
 #[cargo_test]
-fn patch_with_base() {
+fn patch_in_real_with_base() {
     let bar = project()
         .at("bar")
         .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
@@ -3069,7 +3078,70 @@ fn patch_with_base() {
         .file("src/lib.rs", "use bar::hello as _;")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("tree")
         .masquerade_as_nightly_cargo(&["path-bases"])
+        .with_stdout_data(str![[r#"
+foo v0.5.0 ([ROOT]/foo)
+└── bar v0.5.0 ([ROOT]/bar)
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn patch_in_virtual_with_base() {
+    let bar = project()
+        .at("bar")
+        .file("Cargo.toml", &basic_manifest("bar", "0.5.0"))
+        .file("src/lib.rs", "pub fn hello() {}")
+        .build();
+    Package::new("bar", "0.5.0").publish();
+
+    let p = project()
+        .file(
+            ".cargo/config.toml",
+            &format!(
+                r#"
+                    [path-bases]
+                    test = '{}'
+                "#,
+                bar.root().parent().unwrap().display()
+            ),
+        )
+        .file(
+            "Cargo.toml",
+            r#"
+                cargo-features = ["path-bases"]
+
+                [workspace]
+                members = ["foo"]
+
+                [patch.crates-io]
+                bar = { base = 'test', path = 'bar' }
+            "#,
+        )
+        .file(
+            "foo/Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                version = "0.5.0"
+                authors = ["wycats@example.com"]
+                edition = "2018"
+
+                [dependencies]
+                bar = "0.5.0"
+            "#,
+        )
+        .file("foo/src/lib.rs", "use bar::hello as _;")
+        .build();
+
+    p.cargo("tree")
+        .masquerade_as_nightly_cargo(&["path-bases"])
+        .with_stdout_data(str![[r#"
+foo v0.5.0 ([ROOT]/foo/foo)
+└── bar v0.5.0 ([ROOT]/bar)
+
+"#]])
         .run();
 }
