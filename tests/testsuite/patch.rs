@@ -3138,18 +3138,9 @@ fn patch_in_virtual_with_base() {
 
     p.cargo("tree")
         .masquerade_as_nightly_cargo(&["path-bases"])
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] failed to load source for dependency `bar`
-
-Caused by:
-  Unable to update [ROOT]/foo/bar
-
-Caused by:
-  failed to read `[ROOT]/foo/bar/Cargo.toml`
-
-Caused by:
-  [NOT_FOUND]
+        .with_stdout_data(str![[r#"
+foo v0.5.0 ([ROOT]/foo/foo)
+└── bar v0.5.0 ([ROOT]/bar)
 
 "#]])
         .run();

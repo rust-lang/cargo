@@ -304,7 +304,12 @@ fn normalize_toml(
         lints: None,
         workspace: original_toml.workspace.clone(),
         profile: original_toml.profile.clone(),
-        patch: None,
+        patch: normalize_patch(
+            gctx,
+            original_toml.patch.as_ref(),
+            &workspace_root,
+            features,
+        )?,
         replace: original_toml.replace.clone(),
         _unused_keys: Default::default(),
     };
@@ -482,13 +487,6 @@ fn normalize_toml(
             );
         }
         normalized_toml.target = (!normalized_target.is_empty()).then_some(normalized_target);
-
-        normalized_toml.patch = normalize_patch(
-            gctx,
-            original_toml.patch.as_ref(),
-            &workspace_root,
-            features,
-        )?;
 
         let normalized_lints = original_toml
             .lints
@@ -1733,14 +1731,14 @@ fn to_virtual_manifest(
             root,
         };
         (
-            replace(&original_toml, &mut manifest_ctx)?,
-            patch(&original_toml, &mut manifest_ctx)?,
+            replace(&normalized_toml, &mut manifest_ctx)?,
+            patch(&normalized_toml, &mut manifest_ctx)?,
         )
     };
-    if let Some(profiles) = &original_toml.profile {
+    if let Some(profiles) = &normalized_toml.profile {
         validate_profiles(profiles, gctx.cli_unstable(), &features, warnings)?;
     }
-    let resolve_behavior = original_toml
+    let resolve_behavior = normalized_toml
         .workspace
         .as_ref()
         .and_then(|ws| ws.resolver.as_deref())
