@@ -1479,8 +1479,17 @@ fn patch_in_virtual() {
         .file("foo/src/lib.rs", r#""#)
         .build();
 
-    p.cargo("check").run();
-    p.cargo("check")
+    p.cargo("check -p foo")
+        .with_stderr_data(str![[r#"
+[UPDATING] `dummy-registry` index
+[LOCKING] 1 package to latest compatible version
+[CHECKING] bar v0.1.0 ([ROOT]/foo/bar)
+[CHECKING] foo v0.1.0 ([ROOT]/foo/foo)
+[FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
+
+"#]])
+        .run();
+    p.cargo("check -p foo")
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
