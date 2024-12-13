@@ -570,7 +570,8 @@ pub struct Package {
     features: FeatureMap,
     local: bool,
     alternative: bool,
-    invalid_json: bool,
+    invalid_index_line: bool,
+    index_line: Option<String>,
     edition: Option<String>,
     resolver: Option<String>,
     proc_macro: bool,
@@ -1251,7 +1252,8 @@ impl Package {
             features: BTreeMap::new(),
             local: false,
             alternative: false,
-            invalid_json: false,
+            invalid_index_line: false,
+            index_line: None,
             edition: None,
             resolver: None,
             proc_macro: false,
@@ -1422,8 +1424,16 @@ impl Package {
 
     /// Causes the JSON line emitted in the index to be invalid, presumably
     /// causing Cargo to skip over this version.
-    pub fn invalid_json(&mut self, invalid: bool) -> &mut Package {
-        self.invalid_json = invalid;
+    pub fn invalid_index_line(&mut self, invalid: bool) -> &mut Package {
+        self.invalid_index_line = invalid;
+        self
+    }
+
+    /// Override the auto-generated index line
+    ///
+    /// This can give more control over error cases than [`Package::invalid_index_line`]
+    pub fn index_line(&mut self, line: &str) -> &mut Package {
+        self.index_line = Some(line.to_owned());
         self
     }
 
@@ -1496,22 +1506,26 @@ impl Package {
             let c = t!(fs::read(&self.archive_dst()));
             cksum(&c)
         };
-        let name = if self.invalid_json {
-            serde_json::json!(1)
+        let line = if let Some(line) = self.index_line.clone() {
+            line
         } else {
-            serde_json::json!(self.name)
+            let name = if self.invalid_index_line {
+                serde_json::json!(1)
+            } else {
+                serde_json::json!(self.name)
+            };
+            create_index_line(
+                name,
+                &self.vers,
+                deps,
+                &cksum,
+                self.features.clone(),
+                self.yanked,
+                self.links.clone(),
+                self.rust_version.as_deref(),
+                self.v,
+            )
         };
-        let line = create_index_line(
-            name,
-            &self.vers,
-            deps,
-            &cksum,
-            self.features.clone(),
-            self.yanked,
-            self.links.clone(),
-            self.rust_version.as_deref(),
-            self.v,
-        );
 
         let registry_path = if self.alternative {
             alt_registry_path()

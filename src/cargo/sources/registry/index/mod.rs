@@ -135,6 +135,8 @@ pub enum IndexSummary {
     Offline(Summary),
     /// From a newer schema version and is likely incomplete or inaccurate
     Unsupported(Summary, u32),
+    /// An error was encountered despite being a supported schema version
+    Invalid(Summary),
 }
 
 impl IndexSummary {
@@ -144,7 +146,8 @@ impl IndexSummary {
             IndexSummary::Candidate(sum)
             | IndexSummary::Yanked(sum)
             | IndexSummary::Offline(sum)
-            | IndexSummary::Unsupported(sum, _) => sum,
+            | IndexSummary::Unsupported(sum, _)
+            | IndexSummary::Invalid(sum) => sum,
         }
     }
 
@@ -154,7 +157,8 @@ impl IndexSummary {
             IndexSummary::Candidate(sum)
             | IndexSummary::Yanked(sum)
             | IndexSummary::Offline(sum)
-            | IndexSummary::Unsupported(sum, _) => sum,
+            | IndexSummary::Unsupported(sum, _)
+            | IndexSummary::Invalid(sum) => sum,
         }
     }
 
@@ -164,17 +168,13 @@ impl IndexSummary {
             IndexSummary::Yanked(s) => IndexSummary::Yanked(f(s)),
             IndexSummary::Offline(s) => IndexSummary::Offline(f(s)),
             IndexSummary::Unsupported(s, v) => IndexSummary::Unsupported(f(s), v.clone()),
+            IndexSummary::Invalid(s) => IndexSummary::Invalid(f(s)),
         }
     }
 
     /// Extract the package id from any variant
     pub fn package_id(&self) -> PackageId {
-        match self {
-            IndexSummary::Candidate(sum)
-            | IndexSummary::Yanked(sum)
-            | IndexSummary::Offline(sum)
-            | IndexSummary::Unsupported(sum, _) => sum.package_id(),
-        }
+        self.as_summary().package_id()
     }
 
     /// Returns `true` if the index summary is [`Yanked`].
@@ -259,8 +259,52 @@ pub struct IndexPackage<'a> {
     pub v: Option<u32>,
 }
 
-/// A dependency as encoded in the [`IndexPackage`] index JSON.
+impl IndexPackage<'_> {
+    fn to_summary(&self, source_id: SourceId) -> CargoResult<Summary> {
+        // ****CAUTION**** Please be extremely careful with returning errors, see
+        // `IndexSummary::parse` for details
+        let pkgid = PackageId::new(self.name.into(), self.vers.clone(), source_id);
+        let deps = self
+            .deps
+            .iter()
+            .map(|dep| dep.clone().into_dep(source_id))
+            .collect::<CargoResult<Vec<_>>>()?;
+        let mut features = self.features.clone();
+        if let Some(features2) = &self.features2 {
+            for (name, values) in features2 {
+                features.entry(*name).or_default().extend(values);
+            }
+        }
+        let mut summary = Summary::new(
+            pkgid,
+            deps,
+            &features,
+            self.links,
+            self.rust_version.clone(),
+        )?;
+        summary.set_checksum(self.cksum.clone());
+        Ok(summary)
+    }
+}
+
 #[derive(Deserialize, Serialize)]
+struct IndexPackageMinimum {
+    name: InternedString,
+    vers: Version,
+}
+
+#[derive(Deserialize, Serialize, Default)]
+struct IndexPackageRustVersion {
+    rust_version: Option<RustVersion>,
+}
+
+#[derive(Deserialize, Serialize, Default)]
+struct IndexPackageV {
+    v: Option<u32>,
+}
+
+/// A dependency as encoded in the [`IndexPackage`] index JSON.
+#[derive(Deserialize, Serialize, Clone)]
 pub struct RegistryDependency<'a> {
     /// Name of the dependency. If the dependency is renamed, the original
     /// would be stored in [`RegistryDependency::package`].
@@ -706,32 +750,45 @@ impl IndexSummary {
         // between different versions that understand the index differently.
         // Make sure to consider the INDEX_V_MAX and CURRENT_CACHE_VERSION
         // values carefully when making changes here.
-        let IndexPackage {
-            name,
-            vers,
-            cksum,
-            deps,
-            mut features,
-            features2,
-            yanked,
-            links,
-            rust_version,
-            v,
-        } = serde_json::from_slice(line)?;
-        let v = v.unwrap_or(1);
-        tracing::trace!("json parsed registry {}/{}", name, vers);
-        let pkgid = PackageId::new(name.into(), vers.clone(), source_id);
-        let deps = deps
-            .into_iter()
-            .map(|dep| dep.into_dep(source_id))
-            .collect::<CargoResult<Vec<_>>>()?;
-        if let Some(features2) = features2 {
-            for (name, values) in features2 {
-                features.entry(name).or_default().extend(values);
+        let index_summary = (|| {
+            let index = serde_json::from_slice::<IndexPackage<'_>>(line)?;
+            let summary = index.to_summary(source_id)?;
+            Ok((index, summary))
+        })();
+        let (index, summary, valid) = match index_summary {
+            Ok((index, summary)) => (index, summary, true),
+            Err(err) => {
+                let Ok(IndexPackageMinimum { name, vers }) =
+                    serde_json::from_slice::<IndexPackageMinimum>(line)
+                else {
+                    // If we can't recover, prefer the original error
+                    return Err(err);
+                };
+                tracing::info!(
+                    "recoverying from failed parse of registry package {name}@{vers}: {err}"
+                );
+                let IndexPackageRustVersion { rust_version } =
+                    serde_json::from_slice::<IndexPackageRustVersion>(line).unwrap_or_default();
+                let IndexPackageV { v } =
+                    serde_json::from_slice::<IndexPackageV>(line).unwrap_or_default();
+                let index = IndexPackage {
+                    name,
+                    vers,
+                    rust_version,
+                    v,
+                    deps: Default::default(),
+                    features: Default::default(),
+                    features2: Default::default(),
+                    cksum: Default::default(),
+                    yanked: Default::default(),
+                    links: Default::default(),
+                };
+                let summary = index.to_summary(source_id)?;
+                (index, summary, false)
             }
-        }
-        let mut summary = Summary::new(pkgid, deps, &features, links, rust_version)?;
-        summary.set_checksum(cksum);
+        };
+        let v = index.v.unwrap_or(1);
+        tracing::trace!("json parsed registry {}/{}", index.name, index.vers);
 
         let v_max = if bindeps {
             INDEX_V_MAX + 1
@@ -741,7 +798,9 @@ impl IndexSummary {
 
         if v_max < v {
             Ok(IndexSummary::Unsupported(summary, v))
-        } else if yanked.unwrap_or(false) {
+        } else if !valid {
+            Ok(IndexSummary::Invalid(summary))
+        } else if index.yanked.unwrap_or(false) {
             Ok(IndexSummary::Yanked(summary))
         } else {
             Ok(IndexSummary::Candidate(summary))

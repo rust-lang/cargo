@@ -834,6 +834,9 @@ impl<'gctx> Source for RegistrySource<'gctx> {
                                 summary.version()
                             );
                         }
+                        IndexSummary::Invalid(summary) => {
+                            tracing::debug!("invalid ({} {})", summary.name(), summary.version());
+                        }
                         IndexSummary::Offline(summary) => {
                             tracing::debug!("offline ({} {})", summary.name(), summary.version());
                         }
