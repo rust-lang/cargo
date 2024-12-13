@@ -3078,7 +3078,12 @@ fn patch_with_base() {
         .file("src/lib.rs", "use bar::hello as _;")
         .build();
 
-    p.cargo("build -v")
+    p.cargo("tree")
         .masquerade_as_nightly_cargo(&["path-bases"])
+        .with_stdout_data(str![[r#"
+foo v0.5.0 ([ROOT]/foo)
+└── bar v0.5.0 ([ROOT]/bar)
+
+"#]])
         .run();
 }
