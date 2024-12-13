@@ -279,7 +279,8 @@ fn normalize_toml(
         cargo_features: original_toml.cargo_features.clone(),
         package: None,
         project: None,
-        profile: original_toml.profile.clone(),
+        badges: None,
+        features: None,
         lib: None,
         bin: None,
         example: None,
@@ -290,13 +291,12 @@ fn normalize_toml(
         dev_dependencies2: None,
         build_dependencies: None,
         build_dependencies2: None,
-        features: None,
         target: None,
-        replace: original_toml.replace.clone(),
-        patch: None,
-        workspace: original_toml.workspace.clone(),
-        badges: None,
         lints: None,
+        workspace: original_toml.workspace.clone(),
+        profile: original_toml.profile.clone(),
+        patch: None,
+        replace: original_toml.replace.clone(),
         _unused_keys: Default::default(),
     };
 
@@ -2820,9 +2820,11 @@ fn prepare_toml_for_publish(
 
     let all = |_d: &manifest::TomlDependency| true;
     let mut manifest = manifest::TomlManifest {
+        cargo_features: me.cargo_features.clone(),
         package: Some(package),
         project: None,
-        profile: me.profile.clone(),
+        badges: me.badges.clone(),
+        features: me.features.clone(),
         lib,
         bin,
         example,
@@ -2837,7 +2839,6 @@ fn prepare_toml_for_publish(
         dev_dependencies2: None,
         build_dependencies: map_deps(gctx, me.build_dependencies(), all)?,
         build_dependencies2: None,
-        features: me.features.clone(),
         target: match me.target.as_ref().map(|target_map| {
             target_map
                 .iter()
@@ -2863,12 +2864,11 @@ fn prepare_toml_for_publish(
             Some(Err(e)) => return Err(e),
             None => None,
         },
-        replace: None,
-        patch: None,
-        workspace: None,
-        badges: me.badges.clone(),
-        cargo_features: me.cargo_features.clone(),
         lints: me.lints.clone(),
+        workspace: None,
+        profile: me.profile.clone(),
+        patch: None,
+        replace: None,
         _unused_keys: Default::default(),
     };
     strip_features(&mut manifest);

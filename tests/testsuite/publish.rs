@@ -2015,6 +2015,20 @@ readme = false
 license = "MIT"
 repository = "foo"
 
+[features]
+foo_feature = [
+    "normal-only/cat",
+    "build-only/cat",
+    "normal-and-dev/cat",
+    "target-normal-only/cat",
+    "target-build-only/cat",
+    "target-normal-and-dev/cat",
+    "optional-dep-feature/cat",
+    "dep:optional-namespaced",
+    "optional-renamed-dep-feature10/cat",
+    "dep:optional-renamed-namespaced10",
+]
+
 [[bin]]
 name = "foo"
 path = "src/main.rs"
@@ -2056,20 +2070,6 @@ features = ["cat"]
 [build-dependencies.build-only]
 version = "1.0"
 features = ["cat"]
-
-[features]
-foo_feature = [
-    "normal-only/cat",
-    "build-only/cat",
-    "normal-and-dev/cat",
-    "target-normal-only/cat",
-    "target-build-only/cat",
-    "target-normal-and-dev/cat",
-    "optional-dep-feature/cat",
-    "dep:optional-namespaced",
-    "optional-renamed-dep-feature10/cat",
-    "dep:optional-renamed-namespaced10",
-]
 
 [target."cfg(unix)".dependencies.target-normal-and-dev]
 version = "1.0"

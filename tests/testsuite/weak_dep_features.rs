@@ -650,6 +650,10 @@ homepage = "https://example.com/"
 readme = false
 license = "MIT"
 
+[features]
+feat1 = []
+feat2 = ["bar?/feat"]
+
 [lib]
 name = "foo"
 path = "src/lib.rs"
@@ -657,10 +661,6 @@ path = "src/lib.rs"
 [dependencies.bar]
 version = "1.0"
 optional = true
-
-[features]
-feat1 = []
-feat2 = ["bar?/feat"]
 
 "##]],
         )],
