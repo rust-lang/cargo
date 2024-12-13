@@ -275,6 +275,15 @@ fn normalize_toml(
     warnings: &mut Vec<String>,
     errors: &mut Vec<String>,
 ) -> CargoResult<manifest::TomlManifest> {
+    let package_root = manifest_file.parent().unwrap();
+
+    let inherit_cell: LazyCell<InheritableFields> = LazyCell::new();
+    let inherit = || {
+        inherit_cell
+            .try_borrow_with(|| load_inheritable_fields(gctx, manifest_file, &workspace_config))
+    };
+    let workspace_root = || inherit().map(|fields| fields.ws_root().as_path());
+
     let mut normalized_toml = manifest::TomlManifest {
         cargo_features: original_toml.cargo_features.clone(),
         package: None,
@@ -299,15 +308,6 @@ fn normalize_toml(
         replace: original_toml.replace.clone(),
         _unused_keys: Default::default(),
     };
-
-    let package_root = manifest_file.parent().unwrap();
-
-    let inherit_cell: LazyCell<InheritableFields> = LazyCell::new();
-    let inherit = || {
-        inherit_cell
-            .try_borrow_with(|| load_inheritable_fields(gctx, manifest_file, &workspace_config))
-    };
-    let workspace_root = || inherit().map(|fields| fields.ws_root().as_path());
 
     if let Some(original_package) = original_toml.package() {
         let package_name = &original_package.name;
