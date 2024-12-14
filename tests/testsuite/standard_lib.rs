@@ -389,7 +389,7 @@ fn check_core() {
         .run();
 }
 
-#[cargo_test(build_std_mock, requires = "rustup")]
+#[cargo_test(build_std_mock)]
 fn build_std_with_no_arg_for_core_only_target() {
     let has_rustup_aarch64_unknown_none = std::process::Command::new("rustup")
         .args(["target", "list", "--installed"])
