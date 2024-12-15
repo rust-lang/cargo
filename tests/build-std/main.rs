@@ -418,3 +418,30 @@ fn test_proc_macro() {
 "#]])
         .run();
 }
+
+#[cargo_test(build_std_real)]
+fn test_panic_abort() {
+    // See rust-lang/cargo#14935
+    let p = project()
+        .file(
+            "Cargo.toml",
+            r#"
+                [package]
+                name = "foo"
+                edition = "2021"
+            "#,
+        )
+        .file("src/lib.rs", "#![no_std]")
+        .build();
+
+    p.cargo("check")
+        .build_std_arg("std,panic_abort")
+        .env("RUSTFLAGS", "-C panic=abort")
+        .arg("-Zbuild-std-features=panic_immediate_abort")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] package ID specification `panic_unwind` did not match any packages
+
+"#]])
+        .run();
+}
