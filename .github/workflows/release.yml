@@ -6,7 +6,7 @@ name: Release
 on:
   push:
     tags:
-      - "**"
+      - "0.*"
 
 # Prevent multiple releases from starting at the same time.
 concurrency:
