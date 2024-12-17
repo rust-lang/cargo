@@ -438,10 +438,5 @@ fn test_panic_abort() {
         .build_std_arg("std,panic_abort")
         .env("RUSTFLAGS", "-C panic=abort")
         .arg("-Zbuild-std-features=panic_immediate_abort")
-        .with_status(101)
-        .with_stderr_data(str![[r#"
-[ERROR] package ID specification `panic_unwind` did not match any packages
-
-"#]])
         .run();
 }
