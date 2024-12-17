@@ -563,12 +563,12 @@
 
 - ❗️ cargo-package: Disallow `package.license-file` and `package.readme` pointing
   to non-existent files during packaging.
+  [#13921](https://github.com/rust-lang/cargo/pull/13921)
 - ❗️ cargo-package: generated `.cargo_vcs_info.json` is always included,
   even when `--allow-dirty` is passed.
   [#13960](https://github.com/rust-lang/cargo/pull/13960)
 - ❗️ Disallow passing `--release`/`--debug` flag along with the `--profile` flag.
   [#13971](https://github.com/rust-lang/cargo/pull/13971)
-  [#13921](https://github.com/rust-lang/cargo/pull/13921)
 - ❗️ Remove `lib.plugin` key support in Cargo.toml.
   Rust plugin support has been deprecated for four years and was removed in 1.75.0.
   [#13902](https://github.com/rust-lang/cargo/pull/13902)
