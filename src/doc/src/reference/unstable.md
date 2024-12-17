@@ -359,7 +359,7 @@ This was stabilized in 1.79 in [#13608](https://github.com/rust-lang/cargo/pull/
 
 ### MSRV-aware resolver
 
-This was stabilized in 1.83 in [#14639](https://github.com/rust-lang/cargo/pull/14639).
+This was stabilized in 1.84 in [#14639](https://github.com/rust-lang/cargo/pull/14639).
 
 ### Convert `incompatible_toolchain` error into a lint
 
@@ -373,7 +373,7 @@ Unimplemented
 
 Unimplemented
 
-### Update `cargp new` template to set `package.rust-version = "toolchain"`
+### Update `cargo new` template to set `package.rust-version = "toolchain"`
 
 Unimplemented
 
