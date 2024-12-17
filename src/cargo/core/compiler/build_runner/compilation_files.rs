@@ -604,11 +604,20 @@ fn compute_metadata(
 
     METADATA_VERSION.hash(&mut shared_hasher);
 
+    let ws_root = if unit.is_std {
+        // SourceId for stdlib crates is an absolute path inside the sysroot.
+        // Pass the sysroot as workspace root so that we hash a relative path.
+        // This avoids the metadata hash changing depending on where the user installed rustc.
+        &bcx.target_data.get_info(unit.kind).unwrap().sysroot
+    } else {
+        bcx.ws.root()
+    };
+
     // Unique metadata per (name, source, version) triple. This'll allow us
     // to pull crates from anywhere without worrying about conflicts.
     unit.pkg
         .package_id()
-        .stable_hash(bcx.ws.root())
+        .stable_hash(ws_root)
         .hash(&mut shared_hasher);
 
     // Also mix in enabled features to our metadata. This'll ensure that
