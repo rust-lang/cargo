@@ -373,7 +373,7 @@ Unimplemented
 
 Unimplemented
 
-### Update `cargp new` template to set `package.rust-version = "toolchain"`
+### Update `cargo new` template to set `package.rust-version = "toolchain"`
 
 Unimplemented
 
