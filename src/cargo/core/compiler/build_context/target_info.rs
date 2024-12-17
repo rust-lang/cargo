@@ -619,6 +619,16 @@ impl TargetInfo {
             .iter()
             .any(|sup| sup.as_str() == split.as_str())
     }
+
+    /// Checks if a target maybe support std.
+    ///
+    /// If no explictly stated in target spec json, we treat it as "maybe support".
+    ///
+    /// This is only useful for `-Zbuild-std` to determine the default set of
+    /// crates it is going to build.
+    pub fn maybe_support_std(&self) -> bool {
+        matches!(self.supports_std, Some(true) | None)
+    }
 }
 
 /// Takes rustc output (using specialized command line args), and calculates the file prefix and

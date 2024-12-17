@@ -115,10 +115,10 @@ pub fn generate_std_roots(
 ) -> CargoResult<HashMap<CompileKind, Vec<Unit>>> {
     // Generate a map of Units for each kind requested.
     let mut ret = HashMap::new();
-    let (core_only, maybe_std): (Vec<&CompileKind>, Vec<_>) = kinds.iter().partition(|kind|
-        // Only include targets that explicitly don't support std
-        target_data.info(**kind).supports_std == Some(false));
-    for (default_crate, kinds) in [("core", core_only), ("std", maybe_std)] {
+    let (maybe_std, maybe_core): (Vec<&CompileKind>, Vec<_>) = kinds
+        .iter()
+        .partition(|kind| target_data.info(**kind).maybe_support_std());
+    for (default_crate, kinds) in [("core", maybe_core), ("std", maybe_std)] {
         if kinds.is_empty() {
             continue;
         }
