@@ -1297,18 +1297,25 @@ fn cmd_verify_project_with_embedded() {
         .run();
 }
 
-#[cargo_test]
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
 fn cmd_pkgid_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
         .build();
 
+    p.cargo("-Zscript script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .run();
+
+    // FIXME: It should be `path+[ROOTURL]/foo/script.rs#script@0.0.0`.
     p.cargo("-Zscript pkgid --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
-        .with_status(101)
+        .with_stdout_data(str![[r#"
+path+[ROOTURL]/foo#script@0.0.0
+
+"#]])
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
-[ERROR] [ROOT]/foo/script.rs is unsupported by `cargo pkgid`
 
 "#]])
         .run();
