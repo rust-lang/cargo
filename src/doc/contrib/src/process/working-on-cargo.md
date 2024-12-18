@@ -72,7 +72,8 @@ the directory for each compilation, this can cause different calls to `rustc`
 to use different versions. There are a few workarounds:
 
 * Don't use rustup overrides.
-* Use `rustup run target/debug/cargo` to execute `cargo`.
+* Use `rustup run <toolchain> target/debug/cargo` to specify the toolchain(rustc) to use.
+  For example, `rustup run nightly target/debug/cargo`.
 * Set the `RUSTC` environment variable to a specific `rustc` executable (not
   the rustup wrapper).
 * Create a [custom toolchain]. This is a bit of a hack, but you can create a
