@@ -11,15 +11,15 @@ enum RepoMode {
 
 #[cargo_test]
 fn gitoxide_clones_shallow_two_revs_same_deps() {
-    perform_two_revs_same_deps(true)
+    perform_two_revs_same_deps(RepoMode::Shallow)
 }
 
 #[cargo_test]
 fn two_revs_same_deps() {
-    perform_two_revs_same_deps(false)
+    perform_two_revs_same_deps(RepoMode::Complete)
 }
 
-fn perform_two_revs_same_deps(shallow: bool) {
+fn perform_two_revs_same_deps(mode: RepoMode) {
     let bar = git::new("meta-dep", |project| {
         project
             .file("Cargo.toml", &basic_manifest("bar", "0.0.0"))
@@ -97,10 +97,9 @@ fn perform_two_revs_same_deps(shallow: bool) {
         )
         .build();
 
-    let args = if shallow {
-        "build -v -Zgitoxide=fetch -Zgit=shallow-deps"
-    } else {
-        "build -v"
+    let args = match mode {
+        RepoMode::Complete => "build -v",
+        RepoMode::Shallow => "build -v -Zgitoxide=fetch -Zgit=shallow-deps",
     };
     foo.cargo(args)
         .masquerade_as_nightly_cargo(&[
