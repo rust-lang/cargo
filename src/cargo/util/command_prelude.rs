@@ -688,7 +688,14 @@ Run `{cmd}` to see possible targets."
         workspace: Option<&Workspace<'_>>,
         profile_checking: ProfileChecking,
     ) -> CargoResult<CompileOptions> {
-        let spec = self.packages_from_flags()?;
+        let w = self.flag("workspace");
+        let mut all = w || self.flag("all");
+        let package = self._values_of("package");
+        if w && !package.is_empty() {
+            all = false;
+        }
+
+        let spec = Packages::from_flags(all, self._values_of("exclude"), package)?;
         let mut message_format = None;
         let default_json = MessageFormat::Json {
             short: false,
