@@ -4,22 +4,27 @@ use cargo_test_support::{basic_manifest, git, paths, project};
 
 use crate::git_gc::find_index;
 
+enum Backend {
+    Git2,
+    Gitoxide,
+}
+
 enum RepoMode {
     Shallow,
     Complete,
 }
 
 #[cargo_test]
-fn gitoxide_clones_shallow_two_revs_same_deps() {
-    perform_two_revs_same_deps(RepoMode::Shallow)
+fn gitoxide_fetch_shallow_two_revs_same_deps() {
+    fetch_two_revs_same_deps(Backend::Gitoxide, RepoMode::Shallow)
 }
 
 #[cargo_test]
-fn two_revs_same_deps() {
-    perform_two_revs_same_deps(RepoMode::Complete)
+fn git2_fetch_complete_two_revs_same_deps() {
+    fetch_two_revs_same_deps(Backend::Git2, RepoMode::Complete)
 }
 
-fn perform_two_revs_same_deps(mode: RepoMode) {
+fn fetch_two_revs_same_deps(backend: Backend, mode: RepoMode) {
     let bar = git::new("meta-dep", |project| {
         project
             .file("Cargo.toml", &basic_manifest("bar", "0.0.0"))
@@ -97,12 +102,18 @@ fn perform_two_revs_same_deps(mode: RepoMode) {
         )
         .build();
 
+    let backend_args = match backend {
+        Backend::Git2 => "",
+        Backend::Gitoxide => "-Zgitoxide=fetch",
+    };
     let mode_args = match mode {
         RepoMode::Complete => "",
-        RepoMode::Shallow => "-Zgitoxide=fetch -Zgit=shallow-deps",
+        RepoMode::Shallow => "-Zgit=shallow-deps",
     };
     foo.cargo("check -v")
+        .arg_line(backend_args)
         .arg_line(mode_args)
+        .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0") // respect `backend`
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
 }
