@@ -9,9 +9,27 @@ enum Backend {
     Gitoxide,
 }
 
+impl Backend {
+    fn to_arg(&self) -> &'static str {
+        match self {
+            Backend::Git2 => "",
+            Backend::Gitoxide => "-Zgitoxide=fetch",
+        }
+    }
+}
+
 enum RepoMode {
     Shallow,
     Complete,
+}
+
+impl RepoMode {
+    fn to_deps_arg(&self) -> &'static str {
+        match self {
+            RepoMode::Complete => "",
+            RepoMode::Shallow => "-Zgit=shallow-deps",
+        }
+    }
 }
 
 #[cargo_test]
@@ -102,17 +120,9 @@ fn fetch_two_revs_same_deps(backend: Backend, mode: RepoMode) {
         )
         .build();
 
-    let backend_args = match backend {
-        Backend::Git2 => "",
-        Backend::Gitoxide => "-Zgitoxide=fetch",
-    };
-    let mode_args = match mode {
-        RepoMode::Complete => "",
-        RepoMode::Shallow => "-Zgit=shallow-deps",
-    };
     foo.cargo("check -v")
-        .arg_line(backend_args)
-        .arg_line(mode_args)
+        .arg_line(backend.to_arg())
+        .arg_line(mode.to_deps_arg())
         .env("__CARGO_USE_GITOXIDE_INSTEAD_OF_GIT2", "0") // respect `backend`
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
