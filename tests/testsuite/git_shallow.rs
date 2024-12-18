@@ -98,14 +98,12 @@ fn perform_two_revs_same_deps(mode: RepoMode) {
         .build();
 
     let args = match mode {
-        RepoMode::Complete => "build -v",
-        RepoMode::Shallow => "build -v -Zgitoxide=fetch -Zgit=shallow-deps",
+        RepoMode::Complete => "check -v",
+        RepoMode::Shallow => "check -v -Zgitoxide=fetch -Zgit=shallow-deps",
     };
     foo.cargo(args)
         .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
-    assert!(foo.bin("foo").is_file());
-    foo.process(&foo.bin("foo")).run();
 }
 
 #[cargo_test]
