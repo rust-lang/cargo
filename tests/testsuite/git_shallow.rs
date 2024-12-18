@@ -129,7 +129,7 @@ fn fetch_two_revs_same_deps(backend: Backend, mode: RepoMode) {
 }
 
 #[cargo_test]
-fn gitoxide_clones_registry_with_shallow_protocol_and_follow_up_with_git2_fetch(
+fn gitoxide_fetch_registry_with_shallow_protocol_and_follow_up_with_git2_fetch(
 ) -> anyhow::Result<()> {
     Package::new("bar", "1.0.0").publish();
     let p = project()
@@ -160,7 +160,7 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_follow_up_with_git2_fetch(
             .all()?
             .count(),
         1,
-        "shallow clones always start at depth of 1 to minimize download size"
+        "shallow fetch always start at depth of 1 to minimize download size"
     );
     assert!(shallow_repo.is_shallow());
 
@@ -179,14 +179,14 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_follow_up_with_git2_fetch(
             .all()?
             .count(),
         3,
-        "an entirely new repo was cloned which is never shallow"
+        "an entirely new repo was fetched which is never shallow"
     );
     assert!(!repo.is_shallow());
     Ok(())
 }
 
 #[cargo_test]
-fn gitoxide_clones_git_dependency_with_shallow_protocol_and_git2_is_used_for_followup_fetches(
+fn gitoxide_fetch_git_dependency_with_shallow_protocol_and_git2_is_used_for_followup_fetches(
 ) -> anyhow::Result<()> {
     // Example where an old lockfile with an explicit branch="master" in Cargo.toml.
     Package::new("bar", "1.0.0").publish();
@@ -245,7 +245,7 @@ fn gitoxide_clones_git_dependency_with_shallow_protocol_and_git2_is_used_for_fol
             .all()?
             .count(),
         1,
-        "db clones are shallow and have a shortened history"
+        "db fetch are shallow and have a shortened history"
     );
 
     let dep_checkout = gix::open_opts(
@@ -256,7 +256,7 @@ fn gitoxide_clones_git_dependency_with_shallow_protocol_and_git2_is_used_for_fol
     assert_eq!(
         dep_checkout.head_id()?.ancestors().all()?.count(),
         1,
-        "db checkouts are hard-linked clones with the shallow file copied separately."
+        "db checkouts are hard-linked fetches with the shallow file copied separately."
     );
 
     bar.change_file("src/lib.rs", "// another change");
@@ -324,7 +324,7 @@ fn gitoxide_clones_git_dependency_with_shallow_protocol_and_git2_is_used_for_fol
 }
 
 #[cargo_test]
-fn gitoxide_shallow_clone_followed_by_non_shallow_update() -> anyhow::Result<()> {
+fn gitoxide_shallow_fetch_followed_by_non_shallow_update() -> anyhow::Result<()> {
     Package::new("bar", "1.0.0").publish();
     let (bar, bar_repo) = git::new_repo("bar", |p| {
         p.file("Cargo.toml", &basic_manifest("bar", "1.0.0"))
@@ -381,7 +381,7 @@ fn gitoxide_shallow_clone_followed_by_non_shallow_update() -> anyhow::Result<()>
             .all()?
             .count(),
         1,
-        "db clones are shallow and have a shortened history"
+        "db fetches are shallow and have a shortened history"
     );
 
     let dep_checkout = gix::open_opts(
@@ -392,7 +392,7 @@ fn gitoxide_shallow_clone_followed_by_non_shallow_update() -> anyhow::Result<()>
     assert_eq!(
         dep_checkout.head_id()?.ancestors().all()?.count(),
         1,
-        "db checkouts are hard-linked clones with the shallow file copied separately."
+        "db checkouts are hard-linked fetches with the shallow file copied separately."
     );
 
     bar.change_file("src/lib.rs", "// another change");
@@ -463,7 +463,7 @@ fn gitoxide_shallow_clone_followed_by_non_shallow_update() -> anyhow::Result<()>
 }
 
 #[cargo_test]
-fn gitoxide_clones_registry_with_shallow_protocol_and_follow_up_fetch_maintains_shallowness(
+fn gitoxide_fetch_registry_with_shallow_protocol_and_follow_up_fetch_maintains_shallowness(
 ) -> anyhow::Result<()> {
     Package::new("bar", "1.0.0").publish();
     let p = project()
@@ -493,7 +493,7 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_follow_up_fetch_maintains_
             .all()?
             .count(),
         1,
-        "shallow clones always start at depth of 1 to minimize download size"
+        "shallow fetches always start at depth of 1 to minimize download size"
     );
     assert!(repo.is_shallow());
 
@@ -535,9 +535,9 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_follow_up_fetch_maintains_
     Ok(())
 }
 
-/// If there is shallow *and* non-shallow clones, non-shallow will naturally be returned due to sort order.
+/// If there is shallow *and* non-shallow fetches, non-shallow will naturally be returned due to sort order.
 #[cargo_test]
-fn gitoxide_clones_registry_without_shallow_protocol_and_follow_up_fetch_uses_shallowness(
+fn gitoxide_fetch_registry_without_shallow_protocol_and_follow_up_fetch_uses_shallowness(
 ) -> anyhow::Result<()> {
     Package::new("bar", "1.0.0").publish();
     let p = project()
@@ -587,7 +587,7 @@ fn gitoxide_clones_registry_without_shallow_protocol_and_follow_up_fetch_uses_sh
             .all()?
             .count(),
         1,
-        "the follow up clones an entirely new index which is now shallow and which is in its own location"
+        "the follow up fetch an entirely new index which is now shallow and which is in its own location"
     );
     assert!(shallow_repo.is_shallow());
 
@@ -630,14 +630,14 @@ fn gitoxide_clones_registry_without_shallow_protocol_and_follow_up_fetch_uses_sh
 #[cargo_test]
 fn gitoxide_git_dependencies_switch_from_branch_to_rev() -> anyhow::Result<()> {
     // db exists from previous build, then dependency changes to refer to revision that isn't
-    // available in the shallow clone.
+    // available in the shallow fetch.
 
     let (bar, bar_repo) = git::new_repo("bar", |p| {
         p.file("Cargo.toml", &basic_manifest("bar", "1.0.0"))
             .file("src/lib.rs", "")
     });
 
-    // this commit would not be available in a shallow clone.
+    // this commit would not be available in a shallow fetch.
     let first_commit_pre_change = bar_repo.head().unwrap().target().unwrap();
 
     bar.change_file("src/lib.rs", "// change");
@@ -713,7 +713,7 @@ fn shallow_deps_work_with_revisions_and_branches_mixed_on_same_dependency() -> a
             .file("src/lib.rs", "")
     });
 
-    // this commit would not be available in a shallow clone.
+    // this commit would not be available in a shallow fetch.
     let first_commit_pre_change = bar_repo.head().unwrap().target().unwrap();
 
     bar.change_file("src/lib.rs", "// change");
@@ -765,8 +765,8 @@ fn shallow_deps_work_with_revisions_and_branches_mixed_on_same_dependency() -> a
 }
 
 #[cargo_test]
-fn gitoxide_clones_registry_with_shallow_protocol_and_aborts_and_updates_again(
-) -> anyhow::Result<()> {
+fn gitoxide_fetch_registry_with_shallow_protocol_and_aborts_and_updates_again() -> anyhow::Result<()>
+{
     Package::new("bar", "1.0.0").publish();
     let p = project()
         .file(
@@ -795,11 +795,11 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_aborts_and_updates_again(
             .all()?
             .count(),
         1,
-        "shallow clones always start at depth of 1 to minimize download size"
+        "shallow fetches always start at depth of 1 to minimize download size"
     );
     assert!(repo.is_shallow());
     let shallow_lock = repo.shallow_file().with_extension("lock");
-    // adding a lock file and deleting the original simulates a left-over clone that was aborted, leaving a lock file
+    // adding a lock file and deleting the original simulates a left-over fetch that was aborted, leaving a lock file
     // in place without ever having moved it to the right location.
     std::fs::write(&shallow_lock, &[])?;
     std::fs::remove_file(repo.shallow_file())?;
@@ -819,7 +819,7 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_aborts_and_updates_again(
             .all()?
             .count(),
         1,
-        "it's a fresh shallow clone - otherwise it would have 2 commits if the previous shallow clone would still be present"
+        "it's a fresh shallow fetch - otherwise it would have 2 commits if the previous shallow fetch would still be present"
     );
 
     Ok(())
