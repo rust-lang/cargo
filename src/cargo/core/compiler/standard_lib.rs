@@ -44,10 +44,14 @@ fn std_crates<'a>(crates: &'a [String], default: &'static str, units: &[Unit]) -
 }
 
 /// Resolve the standard library dependencies.
+///
+/// * `crates` is the arg value from `-Zbuild-std`.
 pub fn resolve_std<'gctx>(
     ws: &Workspace<'gctx>,
     target_data: &mut RustcTargetData<'gctx>,
     build_config: &BuildConfig,
+    crates: &[String],
+    kinds: &[CompileKind],
 ) -> CargoResult<(PackageSet<'gctx>, Resolve, ResolvedFeatures)> {
     if build_config.build_plan {
         ws.gctx()
@@ -65,10 +69,21 @@ pub fn resolve_std<'gctx>(
     // `[dev-dependencies]`. No need for us to generate a `Resolve` which has
     // those included because we'll never use them anyway.
     std_ws.set_require_optional_deps(false);
-    // `sysroot` + the default feature set below should give us a good default
-    // Resolve, which includes `libtest` as well.
-    let specs = Packages::Packages(vec!["sysroot".into()]);
-    let specs = specs.to_package_id_specs(&std_ws)?;
+    let specs = {
+        // If there is anything looks like needing std, resolve with it.
+        // If not, we assume only `core` maye be needed, as `core the most fundamental crate.
+        //
+        // This may need a UI overhaul if `build-std` wants to fully support multi-targets.
+        let maybe_std = kinds
+            .iter()
+            .any(|kind| target_data.info(*kind).maybe_support_std());
+        let mut crates = std_crates(crates, if maybe_std { "std" } else { "core" }, &[]);
+        // `sysroot` is not in the default set because it is optional, but it needs
+        // to be part of the resolve in case we do need it or `libtest`.
+        crates.insert("sysroot");
+        let specs = Packages::Packages(crates.into_iter().map(Into::into).collect());
+        specs.to_package_id_specs(&std_ws)?
+    };
     let features = match &gctx.cli_unstable().build_std_features {
         Some(list) => list.clone(),
         None => vec![
@@ -115,10 +130,10 @@ pub fn generate_std_roots(
 ) -> CargoResult<HashMap<CompileKind, Vec<Unit>>> {
     // Generate a map of Units for each kind requested.
     let mut ret = HashMap::new();
-    let (core_only, maybe_std): (Vec<&CompileKind>, Vec<_>) = kinds.iter().partition(|kind|
-        // Only include targets that explicitly don't support std
-        target_data.info(**kind).supports_std == Some(false));
-    for (default_crate, kinds) in [("core", core_only), ("std", maybe_std)] {
+    let (maybe_std, maybe_core): (Vec<&CompileKind>, Vec<_>) = kinds
+        .iter()
+        .partition(|kind| target_data.info(**kind).maybe_support_std());
+    for (default_crate, kinds) in [("core", maybe_core), ("std", maybe_std)] {
         if kinds.is_empty() {
             continue;
         }

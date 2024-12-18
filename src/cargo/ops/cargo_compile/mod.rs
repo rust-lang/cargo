@@ -289,9 +289,14 @@ pub fn create_bcx<'a, 'gctx>(
         resolved_features,
     } = resolve;
 
-    let std_resolve_features = if gctx.cli_unstable().build_std.is_some() {
-        let (std_package_set, std_resolve, std_features) =
-            standard_lib::resolve_std(ws, &mut target_data, &build_config)?;
+    let std_resolve_features = if let Some(crates) = &gctx.cli_unstable().build_std {
+        let (std_package_set, std_resolve, std_features) = standard_lib::resolve_std(
+            ws,
+            &mut target_data,
+            &build_config,
+            crates,
+            &build_config.requested_kinds,
+        )?;
         pkg_set.add_set(std_package_set);
         Some((std_resolve, std_features))
     } else {
