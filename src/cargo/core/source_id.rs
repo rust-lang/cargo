@@ -534,17 +534,12 @@ impl SourceId {
 
     /// Hashes `self`.
     ///
-    /// For paths, remove the workspace prefix so the same source will give the
+    /// For paths, make it relative to the workspace root so the same source will give the
     /// same hash in different locations, helping reproducible builds.
     pub fn stable_hash<S: hash::Hasher>(self, workspace: &Path, into: &mut S) {
         if self.is_path() {
-            if let Ok(p) = self
-                .inner
-                .url
-                .to_file_path()
-                .unwrap()
-                .strip_prefix(workspace)
-            {
+            let path = self.inner.url.to_file_path().unwrap();
+            if let Some(p) = pathdiff::diff_paths(path, workspace) {
                 self.inner.kind.hash(into);
                 p.to_str().unwrap().hash(into);
                 return;
