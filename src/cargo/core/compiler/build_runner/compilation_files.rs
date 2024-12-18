@@ -608,6 +608,7 @@ fn compute_metadata(
     // to pull crates from anywhere without worrying about conflicts.
     unit.pkg
         .package_id()
+        .with_source_id(unit.replaced_source)
         .stable_hash(bcx.ws.root())
         .hash(&mut shared_hasher);
 

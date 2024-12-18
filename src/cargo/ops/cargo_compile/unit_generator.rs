@@ -166,6 +166,7 @@ impl<'a> UnitGenerator<'a, '_> {
                 let kind = kind.for_target(target);
                 self.interner.intern(
                     pkg,
+                    pkg.package_id().source_id(),
                     target,
                     profile,
                     kind,
@@ -671,6 +672,7 @@ Rustdoc did not scrape the following examples because they require dev-dependenc
                 }
                 None => Vec::new(),
             };
+
             if target.is_lib() || unavailable_features.is_empty() {
                 units.extend(self.new_units(pkg, target, mode));
             } else if requires_features {

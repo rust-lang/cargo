@@ -4,7 +4,7 @@ use crate::core::compiler::unit_dependencies::IsArtifact;
 use crate::core::compiler::{CompileKind, CompileMode, CompileTarget, CrateType};
 use crate::core::manifest::{Target, TargetKind};
 use crate::core::profiles::Profile;
-use crate::core::Package;
+use crate::core::{Package, SourceId};
 use crate::util::hex::short_hash;
 use crate::util::interning::InternedString;
 use crate::util::GlobalContext;
@@ -42,6 +42,7 @@ pub struct UnitInner {
     /// Information about available targets, which files to include/exclude, etc. Basically stuff in
     /// `Cargo.toml`.
     pub pkg: Package,
+    pub replaced_source: SourceId,
     /// Information about the specific target to build, out of the possible targets in `pkg`. Not
     /// to be confused with *target-triple* (or *target architecture* ...), the target arch for a
     /// build.
@@ -226,6 +227,7 @@ impl UnitInterner {
     pub fn intern(
         &self,
         pkg: &Package,
+        replaced_source: SourceId,
         target: &Target,
         profile: Profile,
         kind: CompileKind,
@@ -262,6 +264,7 @@ impl UnitInterner {
         };
         let inner = self.intern_inner(&UnitInner {
             pkg: pkg.clone(),
+            replaced_source,
             target,
             profile,
             kind,
