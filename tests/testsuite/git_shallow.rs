@@ -102,9 +102,7 @@ fn perform_two_revs_same_deps(mode: RepoMode) {
         RepoMode::Shallow => "build -v -Zgitoxide=fetch -Zgit=shallow-deps",
     };
     foo.cargo(args)
-        .masquerade_as_nightly_cargo(&[
-            "unstable features must be available for -Z gitoxide and -Z git",
-        ])
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
     assert!(foo.bin("foo").is_file());
     foo.process(&foo.bin("foo")).run();
@@ -131,9 +129,7 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_follow_up_with_git2_fetch(
     p.cargo("fetch")
         .arg("-Zgitoxide=fetch")
         .arg("-Zgit=shallow-index")
-        .masquerade_as_nightly_cargo(&[
-            "unstable features must be available for -Z gitoxide and -Z git",
-        ])
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
 
     let shallow_repo = gix::open_opts(find_index(), gix::open::Options::isolated())?;
@@ -214,9 +210,7 @@ fn gitoxide_clones_git_dependency_with_shallow_protocol_and_git2_is_used_for_fol
     p.cargo("update")
         .arg("-Zgitoxide=fetch")
         .arg("-Zgit=shallow-deps")
-        .masquerade_as_nightly_cargo(&[
-            "unstable features must be available for -Z gitoxide and -Z git",
-        ])
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
 
     let db_clone = gix::open_opts(
@@ -352,9 +346,7 @@ fn gitoxide_shallow_clone_followed_by_non_shallow_update() -> anyhow::Result<()>
     p.cargo("update")
         .arg("-Zgitoxide=fetch")
         .arg("-Zgit=shallow-deps")
-        .masquerade_as_nightly_cargo(&[
-            "unstable features must be available for -Z gitoxide and -Z git",
-        ])
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
 
     let shallow_db_clone = gix::open_opts(
@@ -398,7 +390,7 @@ fn gitoxide_shallow_clone_followed_by_non_shallow_update() -> anyhow::Result<()>
 
     p.cargo("update")
         .arg("-Zgitoxide=fetch") // shallow-deps is omitted intentionally
-        .masquerade_as_nightly_cargo(&["unstable features must be available for -Z gitoxide"])
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch"])
         .run();
 
     let db_clone = gix::open_opts(
@@ -471,9 +463,7 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_follow_up_fetch_maintains_
     p.cargo("fetch")
         .arg("-Zgitoxide=fetch")
         .arg("-Zgit=shallow-index")
-        .masquerade_as_nightly_cargo(&[
-            "unstable features must be available for -Z gitoxide and -Z git",
-        ])
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
 
     let repo = gix::open_opts(find_index(), gix::open::Options::isolated())?;
@@ -491,9 +481,7 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_follow_up_fetch_maintains_
     p.cargo("update")
         .arg("-Zgitoxide=fetch")
         .arg("-Zgit=shallow-index") // NOTE: the flag needs to be consistent or else a different index is created
-        .masquerade_as_nightly_cargo(&[
-            "unstable features must be available for -Z gitoxide and -Z git",
-        ])
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
 
     assert_eq!(
@@ -511,9 +499,7 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_follow_up_fetch_maintains_
     p.cargo("update")
         .arg("-Zgitoxide=fetch")
         .arg("-Zgit=shallow-index")
-        .masquerade_as_nightly_cargo(&[
-            "unstable features must be available for -Z gitoxide and -Z git",
-        ])
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
 
     assert_eq!(
@@ -550,7 +536,7 @@ fn gitoxide_clones_registry_without_shallow_protocol_and_follow_up_fetch_uses_sh
         .build();
     p.cargo("fetch")
         .arg("-Zgitoxide=fetch")
-        .masquerade_as_nightly_cargo(&["unstable features must be available for -Z gitoxide"])
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch"])
         .run();
 
     let repo = gix::open_opts(find_index(), gix::open::Options::isolated())?;
@@ -568,9 +554,7 @@ fn gitoxide_clones_registry_without_shallow_protocol_and_follow_up_fetch_uses_sh
     p.cargo("update")
         .arg("-Zgitoxide=fetch")
         .arg("-Zgit=shallow-index")
-        .masquerade_as_nightly_cargo(&[
-            "unstable features must be available for -Z gitoxide and -Z git",
-        ])
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
 
     let shallow_repo = gix::open_opts(
@@ -592,9 +576,7 @@ fn gitoxide_clones_registry_without_shallow_protocol_and_follow_up_fetch_uses_sh
     p.cargo("update")
         .arg("-Zgitoxide=fetch")
         .arg("-Zgit=shallow-index")
-        .masquerade_as_nightly_cargo(&[
-            "unstable features must be available for -Z gitoxide and -Z git",
-        ])
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
 
     assert_eq!(
@@ -610,7 +592,7 @@ fn gitoxide_clones_registry_without_shallow_protocol_and_follow_up_fetch_uses_sh
 
     p.cargo("update")
         .arg("-Zgitoxide=fetch")
-        .masquerade_as_nightly_cargo(&["unstable features must be available for -Z gitoxide"])
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch"])
         .run();
 
     assert_eq!(
@@ -662,9 +644,7 @@ fn gitoxide_git_dependencies_switch_from_branch_to_rev() -> anyhow::Result<()> {
     p.cargo("check")
         .arg("-Zgitoxide=fetch")
         .arg("-Zgit=shallow-deps")
-        .masquerade_as_nightly_cargo(&[
-            "unstable features must be available for -Z gitoxide and -Z git",
-        ])
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
 
     let db_clone = gix::open_opts(
@@ -695,9 +675,7 @@ fn gitoxide_git_dependencies_switch_from_branch_to_rev() -> anyhow::Result<()> {
     p.cargo("check")
         .arg("-Zgitoxide=fetch")
         .arg("-Zgit=shallow-deps")
-        .masquerade_as_nightly_cargo(&[
-            "unstable features must be available for -Z gitoxide and -Z git",
-        ])
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
 
     assert!(
@@ -746,9 +724,7 @@ fn shallow_deps_work_with_revisions_and_branches_mixed_on_same_dependency() -> a
     p.cargo("check")
         .arg("-Zgitoxide=fetch")
         .arg("-Zgit=shallow-deps")
-        .masquerade_as_nightly_cargo(&[
-            "unstable features must be available for -Z gitoxide and -Z git",
-        ])
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
         .run();
 
     let db_paths = glob::glob(paths::home().join(".cargo/git/db/bar-*").to_str().unwrap())?
@@ -789,9 +765,7 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_aborts_and_updates_again(
     p.cargo("fetch")
         .arg("-Zgitoxide=fetch")
         .arg("-Zgit=shallow-index")
-        .masquerade_as_nightly_cargo(&[
-            "unstable features must be available for -Z gitoxide and -Z git",
-        ])
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
 
     let repo = gix::open_opts(find_index(), gix::open::Options::isolated())?;
@@ -814,9 +788,7 @@ fn gitoxide_clones_registry_with_shallow_protocol_and_aborts_and_updates_again(
     p.cargo("update")
         .arg("-Zgitoxide=fetch")
         .arg("-Zgit=shallow-index")
-        .masquerade_as_nightly_cargo(&[
-            "unstable features must be available for -Z gitoxide and -Z git",
-        ])
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-index"])
         .run();
 
     assert!(!shallow_lock.is_file(), "the repository was re-initialized");
