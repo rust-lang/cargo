@@ -33,16 +33,16 @@ impl RepoMode {
 }
 
 #[cargo_test]
-fn gitoxide_fetch_shallow_two_revs_same_deps() {
-    fetch_two_revs_same_deps(Backend::Gitoxide, RepoMode::Shallow)
+fn gitoxide_fetch_shallow_dep_two_revs() {
+    fetch_dep_two_revs(Backend::Gitoxide, RepoMode::Shallow)
 }
 
 #[cargo_test]
-fn git2_fetch_complete_two_revs_same_deps() {
-    fetch_two_revs_same_deps(Backend::Git2, RepoMode::Complete)
+fn git2_fetch_complete_dep_two_revs() {
+    fetch_dep_two_revs(Backend::Git2, RepoMode::Complete)
 }
 
-fn fetch_two_revs_same_deps(backend: Backend, mode: RepoMode) {
+fn fetch_dep_two_revs(backend: Backend, mode: RepoMode) {
     let bar = git::new("meta-dep", |project| {
         project
             .file("Cargo.toml", &basic_manifest("bar", "0.0.0"))
@@ -129,7 +129,7 @@ fn fetch_two_revs_same_deps(backend: Backend, mode: RepoMode) {
 }
 
 #[cargo_test]
-fn shallow_deps_work_with_revisions_and_branches_mixed_on_same_dependency() -> anyhow::Result<()> {
+fn gitoxide_fetch_shallow_dep_branch_and_rev() -> anyhow::Result<()> {
     let (bar, bar_repo) = git::new_repo("bar", |p| {
         p.file("Cargo.toml", &basic_manifest("bar", "1.0.0"))
             .file("src/lib.rs", "")
@@ -187,7 +187,7 @@ fn shallow_deps_work_with_revisions_and_branches_mixed_on_same_dependency() -> a
 }
 
 #[cargo_test]
-fn gitoxide_git_dependencies_switch_from_branch_to_rev() -> anyhow::Result<()> {
+fn gitoxide_fetch_shallow_dep_branch_to_rev() -> anyhow::Result<()> {
     // db exists from previous build, then dependency changes to refer to revision that isn't
     // available in the shallow fetch.
 
@@ -266,8 +266,7 @@ fn gitoxide_git_dependencies_switch_from_branch_to_rev() -> anyhow::Result<()> {
 }
 
 #[cargo_test]
-fn gitoxide_fetch_registry_with_shallow_protocol_and_follow_up_with_git2_fetch(
-) -> anyhow::Result<()> {
+fn gitoxide_fetch_shallow_index_then_git2_fetch_complete() -> anyhow::Result<()> {
     Package::new("bar", "1.0.0").publish();
     let p = project()
         .file(
@@ -323,8 +322,7 @@ fn gitoxide_fetch_registry_with_shallow_protocol_and_follow_up_with_git2_fetch(
 }
 
 #[cargo_test]
-fn gitoxide_fetch_git_dependency_with_shallow_protocol_and_git2_is_used_for_followup_fetches(
-) -> anyhow::Result<()> {
+fn gitoxide_fetch_shallow_dep_then_git2_fetch_complete() -> anyhow::Result<()> {
     // Example where an old lockfile with an explicit branch="master" in Cargo.toml.
     Package::new("bar", "1.0.0").publish();
     let (bar, bar_repo) = git::new_repo("bar", |p| {
@@ -461,7 +459,7 @@ fn gitoxide_fetch_git_dependency_with_shallow_protocol_and_git2_is_used_for_foll
 }
 
 #[cargo_test]
-fn gitoxide_shallow_fetch_followed_by_non_shallow_update() -> anyhow::Result<()> {
+fn gitoxide_fetch_shallow_dep_then_gitoxide_fetch_complete() -> anyhow::Result<()> {
     Package::new("bar", "1.0.0").publish();
     let (bar, bar_repo) = git::new_repo("bar", |p| {
         p.file("Cargo.toml", &basic_manifest("bar", "1.0.0"))
@@ -600,8 +598,7 @@ fn gitoxide_shallow_fetch_followed_by_non_shallow_update() -> anyhow::Result<()>
 }
 
 #[cargo_test]
-fn gitoxide_fetch_registry_with_shallow_protocol_and_follow_up_fetch_maintains_shallowness(
-) -> anyhow::Result<()> {
+fn gitoxide_fetch_shallow_index_then_preserve_shallow() -> anyhow::Result<()> {
     Package::new("bar", "1.0.0").publish();
     let p = project()
         .file(
@@ -674,8 +671,7 @@ fn gitoxide_fetch_registry_with_shallow_protocol_and_follow_up_fetch_maintains_s
 
 /// If there is shallow *and* non-shallow fetches, non-shallow will naturally be returned due to sort order.
 #[cargo_test]
-fn gitoxide_fetch_registry_without_shallow_protocol_and_follow_up_fetch_uses_shallowness(
-) -> anyhow::Result<()> {
+fn gitoxide_fetch_complete_index_then_shallow() -> anyhow::Result<()> {
     Package::new("bar", "1.0.0").publish();
     let p = project()
         .file(
@@ -765,8 +761,7 @@ fn gitoxide_fetch_registry_without_shallow_protocol_and_follow_up_fetch_uses_sha
 }
 
 #[cargo_test]
-fn gitoxide_fetch_registry_with_shallow_protocol_and_aborts_and_updates_again() -> anyhow::Result<()>
-{
+fn gitoxide_fetch_shallow_index_then_abort_and_update() -> anyhow::Result<()> {
     Package::new("bar", "1.0.0").publish();
     let p = project()
         .file(
