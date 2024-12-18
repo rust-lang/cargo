@@ -14,6 +14,11 @@ fn gitoxide_clones_shallow_two_revs_same_deps() {
     perform_two_revs_same_deps(true)
 }
 
+#[cargo_test]
+fn two_revs_same_deps() {
+    perform_two_revs_same_deps(false)
+}
+
 fn perform_two_revs_same_deps(shallow: bool) {
     let bar = git::new("meta-dep", |project| {
         project
@@ -104,11 +109,6 @@ fn perform_two_revs_same_deps(shallow: bool) {
         .run();
     assert!(foo.bin("foo").is_file());
     foo.process(&foo.bin("foo")).run();
-}
-
-#[cargo_test]
-fn two_revs_same_deps() {
-    perform_two_revs_same_deps(false)
 }
 
 #[cargo_test]
