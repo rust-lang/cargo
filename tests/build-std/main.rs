@@ -25,9 +25,11 @@ use cargo_test_support::{basic_manifest, paths, project, rustc_host, str, Execs}
 use std::env;
 use std::path::Path;
 
-fn enable_build_std(e: &mut Execs, arg: Option<&str>) {
-    e.env_remove("CARGO_HOME");
-    e.env_remove("HOME");
+fn enable_build_std(e: &mut Execs, arg: Option<&str>, isolated: bool) {
+    if !isolated {
+        e.env_remove("CARGO_HOME");
+        e.env_remove("HOME");
+    }
 
     // And finally actually enable `build-std` for now
     let arg = match arg {
@@ -40,19 +42,41 @@ fn enable_build_std(e: &mut Execs, arg: Option<&str>) {
 
 // Helper methods used in the tests below
 trait BuildStd: Sized {
+    /// Set `-Zbuild-std` args and will download dependencies of the standard
+    /// library in users's `CARGO_HOME` (`~/.cargo/`) instead of isolated
+    /// environment `cargo-test-support` usually provides.
+    ///
+    /// The environment is not isolated is to avoid excessive network requests
+    /// and downloads. A side effect is `[BLOCKING]` will show up in stderr,
+    /// as a sign of package cahce lock contention when running other build-std
+    /// tests concurrently.
     fn build_std(&mut self) -> &mut Self;
+
+    /// Like [`BuildStd::build_std`] and is able to specify what crates to build.
     fn build_std_arg(&mut self, arg: &str) -> &mut Self;
+
+    /// Like [`BuildStd::build_std`] but use an isolated `CARGO_HOME` environment
+    /// to avoid package cache lock contention.
+    ///
+    /// Don't use this unless you really need to assert the full stderr
+    /// and avoid any `[BLOCKING]` message.
+    fn build_std_isolated(&mut self) -> &mut Self;
     fn target_host(&mut self) -> &mut Self;
 }
 
 impl BuildStd for Execs {
     fn build_std(&mut self) -> &mut Self {
-        enable_build_std(self, None);
+        enable_build_std(self, None, false);
         self
     }
 
     fn build_std_arg(&mut self, arg: &str) -> &mut Self {
-        enable_build_std(self, Some(arg));
+        enable_build_std(self, Some(arg), false);
+        self
+    }
+
+    fn build_std_isolated(&mut self) -> &mut Self {
+        enable_build_std(self, None, true);
         self
     }
 
@@ -107,9 +131,12 @@ fn basic() {
         )
         .build();
 
-    p.cargo("check").build_std().target_host().run();
+    // HACK: use an isolated the isolated CARGO_HOME environment (`build_std_isolated`)
+    // to avoid `[BLOCKING]` messages (from lock contention with other tests)
+    // from getting in this test's asserts
+    p.cargo("check").build_std_isolated().target_host().run();
     p.cargo("build")
-        .build_std()
+        .build_std_isolated()
         .target_host()
         // Importantly, this should not say [UPDATING]
         // There have been multiple bugs where every build triggers and update.
@@ -120,7 +147,7 @@ fn basic() {
 "#]])
         .run();
     p.cargo("run")
-        .build_std()
+        .build_std_isolated()
         .target_host()
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
@@ -129,7 +156,7 @@ fn basic() {
 "#]])
         .run();
     p.cargo("test")
-        .build_std()
+        .build_std_isolated()
         .target_host()
         .with_stderr_data(str![[r#"
 [COMPILING] rustc-std-workspace-std [..]
@@ -379,13 +406,11 @@ fn test_proc_macro() {
         .file("src/lib.rs", "")
         .build();
 
-    // Download dependencies first,
-    // so we can compare  `cargo test` output without any wildcard
-    p.cargo("fetch").build_std().run();
     p.cargo("test --lib")
         .env_remove(cargo_util::paths::dylib_path_envvar())
         .build_std()
         .with_stderr_data(str![[r#"
+...
 [COMPILING] foo v0.0.0 ([ROOT]/foo)
 [FINISHED] `test` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [RUNNING] unittests src/lib.rs (target/debug/deps/foo-[HASH])
