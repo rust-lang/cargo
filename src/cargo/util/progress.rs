@@ -74,6 +74,110 @@ struct Format {
     style: ProgressStyle,
     max_width: usize,
     max_print: usize,
+    taskbar: TaskbarProgress,
+}
+
+/// Taskbar progressbar
+///
+/// Outputs ANSI sequences according to the `Operating system commands`.
+struct TaskbarProgress {
+    enabled: bool,
+    error: bool,
+}
+
+/// A taskbar progress value printable as ANSI OSC 9;4 escape code
+#[cfg_attr(test, derive(PartialEq, Debug))]
+enum TaskbarValue {
+    /// No output.
+    None,
+    /// Remove progress.
+    Remove,
+    /// Progress value (0-100).
+    Value(f64),
+    /// Indeterminate state (no bar, just animation)
+    Indeterminate,
+    /// Progress value in an error state (0-100).
+    Error(f64),
+}
+
+enum ProgressOutput {
+    /// Print progress without a message
+    PrintNow,
+    /// Progress, message and taskbar progress
+    TextAndTaskbar(String, TaskbarValue),
+    /// Only taskbar progress, no message and no text progress
+    Taskbar(TaskbarValue),
+}
+
+impl TaskbarProgress {
+    #[cfg(test)]
+    fn new(enabled: bool) -> Self {
+        Self {
+            enabled,
+            error: false,
+        }
+    }
+
+    /// Create a `TaskbarProgress` from Cargo's configuration.
+    /// Autodetect support if not explicitly enabled or disabled.
+    fn from_config(gctx: &GlobalContext) -> Self {
+        let enabled = gctx
+            .progress_config()
+            .taskbar
+            .unwrap_or_else(|| gctx.shell().supports_osc9_4());
+
+        Self {
+            enabled,
+            error: false,
+        }
+    }
+
+    fn progress_state(&self, value: TaskbarValue) -> TaskbarValue {
+        match (self.enabled, self.error) {
+            (true, false) => value,
+            (true, true) => match value {
+                TaskbarValue::Value(v) => TaskbarValue::Error(v),
+                _ => TaskbarValue::Error(100.0),
+            },
+            (false, _) => TaskbarValue::None,
+        }
+    }
+
+    pub fn remove(&self) -> TaskbarValue {
+        self.progress_state(TaskbarValue::Remove)
+    }
+
+    pub fn value(&self, percent: f64) -> TaskbarValue {
+        self.progress_state(TaskbarValue::Value(percent))
+    }
+
+    pub fn indeterminate(&self) -> TaskbarValue {
+        self.progress_state(TaskbarValue::Indeterminate)
+    }
+
+    pub fn error(&mut self) {
+        self.error = true;
+    }
+}
+
+impl std::fmt::Display for TaskbarValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // From https://conemu.github.io/en/AnsiEscapeCodes.html#ConEmu_specific_OSC
+        // ESC ] 9 ; 4 ; st ; pr ST
+        // When st is 0: remove progress.
+        // When st is 1: set progress value to pr (number, 0-100).
+        // When st is 2: set error state in taskbar, pr is optional.
+        // When st is 3: set indeterminate state, pr is ignored.
+        // When st is 4: set paused state, pr is optional.
+        let (state, progress) = match self {
+            Self::None => return Ok(()), // No output
+            Self::Remove => (0, 0.0),
+            Self::Value(v) => (1, *v),
+            Self::Indeterminate => (3, 0.0),
+            Self::Error(v) => (2, *v),
+        };
+        write!(f, "\x1b]9;4;{state};{progress:.0}\x1b\\")
+    }
 }
 
 impl<'gctx> Progress<'gctx> {
@@ -126,6 +230,7 @@ impl<'gctx> Progress<'gctx> {
                     // 50 gives some space for text after the progress bar,
                     // even on narrow (e.g. 80 char) terminals.
                     max_print: 50,
+                    taskbar: TaskbarProgress::from_config(gctx),
                 },
                 name: name.to_string(),
                 done: false,
@@ -223,7 +328,7 @@ impl<'gctx> Progress<'gctx> {
     /// calling it too often.
     pub fn print_now(&mut self, msg: &str) -> CargoResult<()> {
         match &mut self.state {
-            Some(s) => s.print("", msg),
+            Some(s) => s.print(ProgressOutput::PrintNow, msg),
             None => Ok(()),
         }
     }
@@ -232,6 +337,13 @@ impl<'gctx> Progress<'gctx> {
     pub fn clear(&mut self) {
         if let Some(ref mut s) = self.state {
             s.clear();
+        }
+    }
+
+    /// Sets the taskbar progress to the error state.
+    pub fn indicate_error(&mut self) {
+        if let Some(s) = &mut self.state {
+            s.format.taskbar.error()
         }
     }
 }
@@ -269,6 +381,7 @@ impl Throttle {
 impl<'gctx> State<'gctx> {
     fn tick(&mut self, cur: usize, max: usize, msg: &str) -> CargoResult<()> {
         if self.done {
+            write!(self.gctx.shell().err(), "{}", self.format.taskbar.remove())?;
             return Ok(());
         }
 
@@ -280,21 +393,30 @@ impl<'gctx> State<'gctx> {
         // return back to the beginning of the line for the next print.
         self.try_update_max_width();
         if let Some(pbar) = self.format.progress(cur, max) {
-            self.print(&pbar, msg)?;
+            self.print(pbar, msg)?;
         }
         Ok(())
     }
 
-    fn print(&mut self, prefix: &str, msg: &str) -> CargoResult<()> {
+    fn print(&mut self, progress: ProgressOutput, msg: &str) -> CargoResult<()> {
         self.throttle.update();
         self.try_update_max_width();
 
+        let (mut line, taskbar) = match progress {
+            ProgressOutput::PrintNow => (String::new(), None),
+            ProgressOutput::TextAndTaskbar(prefix, taskbar_value) => (prefix, Some(taskbar_value)),
+            ProgressOutput::Taskbar(taskbar_value) => (String::new(), Some(taskbar_value)),
+        };
+
         // make sure we have enough room for the header
         if self.format.max_width < 15 {
+            // even if we don't have space we can still output taskbar progress
+            if let Some(tb) = taskbar {
+                write!(self.gctx.shell().err(), "{tb}\r")?;
+            }
             return Ok(());
         }
 
-        let mut line = prefix.to_string();
         self.format.render(&mut line, msg);
         while line.len() < self.format.max_width - 15 {
             line.push(' ');
@@ -305,7 +427,11 @@ impl<'gctx> State<'gctx> {
             let mut shell = self.gctx.shell();
             shell.set_needs_clear(false);
             shell.status_header(&self.name)?;
-            write!(shell.err(), "{}\r", line)?;
+            if let Some(tb) = taskbar {
+                write!(shell.err(), "{line}{tb}\r")?;
+            } else {
+                write!(shell.err(), "{line}\r")?;
+            }
             self.last_line = Some(line);
             shell.set_needs_clear(true);
         }
@@ -314,6 +440,8 @@ impl<'gctx> State<'gctx> {
     }
 
     fn clear(&mut self) {
+        // Always clear the taskbar progress
+        let _ = write!(self.gctx.shell().err(), "{}", self.format.taskbar.remove());
         // No need to clear if the progress is not currently being displayed.
         if self.last_line.is_some() && !self.gctx.shell().is_cleared() {
             self.gctx.shell().err_erase_line();
@@ -331,7 +459,7 @@ impl<'gctx> State<'gctx> {
 }
 
 impl Format {
-    fn progress(&self, cur: usize, max: usize) -> Option<String> {
+    fn progress(&self, cur: usize, max: usize) -> Option<ProgressOutput> {
         assert!(cur <= max);
         // Render the percentage at the far right and then figure how long the
         // progress bar is
@@ -339,11 +467,19 @@ impl Format {
         let pct = if !pct.is_finite() { 0.0 } else { pct };
         let stats = match self.style {
             ProgressStyle::Percentage => format!(" {:6.02}%", pct * 100.0),
-            ProgressStyle::Ratio => format!(" {}/{}", cur, max),
+            ProgressStyle::Ratio => format!(" {cur}/{max}"),
             ProgressStyle::Indeterminate => String::new(),
         };
+        let taskbar = match self.style {
+            ProgressStyle::Percentage | ProgressStyle::Ratio => self.taskbar.value(pct * 100.0),
+            ProgressStyle::Indeterminate => self.taskbar.indeterminate(),
+        };
+
         let extra_len = stats.len() + 2 /* [ and ] */ + 15 /* status header */;
         let Some(display_width) = self.width().checked_sub(extra_len) else {
+            if self.taskbar.enabled {
+                return Some(ProgressOutput::Taskbar(taskbar));
+            }
             return None;
         };
 
@@ -371,7 +507,7 @@ impl Format {
         string.push(']');
         string.push_str(&stats);
 
-        Some(string)
+        Some(ProgressOutput::TextAndTaskbar(string, taskbar))
     }
 
     fn render(&self, string: &mut String, msg: &str) {
@@ -398,7 +534,11 @@ impl Format {
 
     #[cfg(test)]
     fn progress_status(&self, cur: usize, max: usize, msg: &str) -> Option<String> {
-        let mut ret = self.progress(cur, max)?;
+        let mut ret = match self.progress(cur, max)? {
+            // Check only the variant that contains text
+            ProgressOutput::TextAndTaskbar(text, _) => text,
+            _ => return None,
+        };
         self.render(&mut ret, msg);
         Some(ret)
     }
@@ -420,6 +560,7 @@ fn test_progress_status() {
         style: ProgressStyle::Ratio,
         max_print: 40,
         max_width: 60,
+        taskbar: TaskbarProgress::new(false),
     };
     assert_eq!(
         format.progress_status(0, 4, ""),
@@ -493,6 +634,7 @@ fn test_progress_status_percentage() {
         style: ProgressStyle::Percentage,
         max_print: 40,
         max_width: 60,
+        taskbar: TaskbarProgress::new(false),
     };
     assert_eq!(
         format.progress_status(0, 77, ""),
@@ -518,6 +660,7 @@ fn test_progress_status_too_short() {
         style: ProgressStyle::Percentage,
         max_print: 25,
         max_width: 25,
+        taskbar: TaskbarProgress::new(false),
     };
     assert_eq!(
         format.progress_status(1, 1, ""),
@@ -528,6 +671,25 @@ fn test_progress_status_too_short() {
         style: ProgressStyle::Percentage,
         max_print: 24,
         max_width: 24,
+        taskbar: TaskbarProgress::new(false),
     };
     assert_eq!(format.progress_status(1, 1, ""), None);
+}
+
+#[test]
+fn test_taskbar_disabled() {
+    let taskbar = TaskbarProgress::new(false);
+    let mut out = String::new();
+    out.push_str(&taskbar.remove().to_string());
+    out.push_str(&taskbar.value(10.0).to_string());
+    out.push_str(&taskbar.indeterminate().to_string());
+    assert!(out.is_empty());
+}
+
+#[test]
+fn test_taskbar_error_state() {
+    let mut progress = TaskbarProgress::new(true);
+    assert_eq!(progress.value(10.0), TaskbarValue::Value(10.0));
+    progress.error();
+    assert_eq!(progress.value(50.0), TaskbarValue::Error(50.0));
 }
