@@ -46,7 +46,7 @@ fn simple_cross_package() {
 [PACKAGING] foo v0.0.0 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.0 ([ROOT]/foo)
-[COMPILING] foo v0.0.0 ([ROOT]/foo/target/package/foo-0.0.0)
+[CHECKING] foo v0.0.0 ([ROOT]/foo/target/package/foo-0.0.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -110,7 +110,7 @@ fn publish_with_target() {
 [PACKAGING] foo v0.0.0 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.0 ([ROOT]/foo)
-[COMPILING] foo v0.0.0 ([ROOT]/foo/target/package/foo-0.0.0)
+[CHECKING] foo v0.0.0 ([ROOT]/foo/target/package/foo-0.0.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [UPLOADING] foo v0.0.0 ([ROOT]/foo)
 [UPLOADED] foo v0.0.0 to registry `crates-io`

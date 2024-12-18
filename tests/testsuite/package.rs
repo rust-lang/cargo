@@ -40,7 +40,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -62,7 +62,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -93,7 +93,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -120,7 +120,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -147,7 +147,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -257,7 +257,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -731,7 +731,7 @@ fn ignore_nested() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -751,7 +751,7 @@ src/main.rs
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -805,7 +805,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -2381,7 +2381,7 @@ src/lib.rs
 [PACKAGING] foo v1.0.0 ([ROOT]/foo)
 [PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v1.0.0 ([ROOT]/foo)
-[COMPILING] foo v1.0.0 ([ROOT]/foo/target/package/foo-1.0.0)
+[CHECKING] foo v1.0.0 ([ROOT]/foo/target/package/foo-1.0.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -2448,7 +2448,7 @@ src/lib.rs
 [PACKAGING] foo v1.0.0 ([ROOT]/foo)
 [PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v1.0.0 ([ROOT]/foo)
-[COMPILING] foo v1.0.0 ([ROOT]/foo/target/package/foo-1.0.0)
+[CHECKING] foo v1.0.0 ([ROOT]/foo/target/package/foo-1.0.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
@@ -2501,7 +2501,7 @@ fn package_restricted_windows() {
 [PACKAGING] foo v0.1.0 ([ROOT]/foo)
 [PACKAGED] 6 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.1.0 ([ROOT]/foo)
-[COMPILING] foo v0.1.0 ([ROOT]/foo/target/package/foo-0.1.0)
+[CHECKING] foo v0.1.0 ([ROOT]/foo/target/package/foo-0.1.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]
@@ -2935,10 +2935,10 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] bar v0.0.1 ([ROOT]/foo/bar)
-[COMPILING] bar v0.0.1 ([ROOT]/foo/target/package/bar-0.0.1)
+[CHECKING] bar v0.0.1 ([ROOT]/foo/target/package/bar-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -2983,7 +2983,7 @@ fn workspace_noconflict_readme() {
 [PACKAGING] bar v0.0.1 ([ROOT]/foo/bar)
 [PACKAGED] 6 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] bar v0.0.1 ([ROOT]/foo/bar)
-[COMPILING] bar v0.0.1 ([ROOT]/foo/target/package/bar-0.0.1)
+[CHECKING] bar v0.0.1 ([ROOT]/foo/target/package/bar-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -3025,7 +3025,7 @@ fn workspace_conflict_readme() {
 [PACKAGING] bar v0.0.1 ([ROOT]/foo/bar)
 [PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] bar v0.0.1 ([ROOT]/foo/bar)
-[COMPILING] bar v0.0.1 ([ROOT]/foo/target/package/bar-0.0.1)
+[CHECKING] bar v0.0.1 ([ROOT]/foo/target/package/bar-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
@@ -3245,7 +3245,7 @@ src/main.rs
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -3350,7 +3350,7 @@ src/main.rs
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -3471,7 +3471,7 @@ src/main.rs.bak
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 7 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -3547,7 +3547,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [WARNING] ignoring test `explicitpath` as `tests/explicitpath.rs` is not included in the published package
 [PACKAGED] 8 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
@@ -3576,7 +3576,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [WARNING] ignoring test `explicitpath` as `tests/explicitpath.rs` is not included in the published package
 [PACKAGED] 8 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]).run();
@@ -3661,7 +3661,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -3683,7 +3683,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -3720,7 +3720,7 @@ See https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for
 [PACKAGING] foo v0.0.0 ([ROOT]/foo)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.0 ([ROOT]/foo)
-[COMPILING] foo v0.0.0 ([ROOT]/foo/target/package/foo-0.0.0)
+[CHECKING] foo v0.0.0 ([ROOT]/foo/target/package/foo-0.0.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -4173,7 +4173,7 @@ fn discovery_inferred_build_rs_excluded() {
 [WARNING] ignoring `package.build` as `build.rs` is not included in the published package
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -4341,7 +4341,7 @@ fn discovery_explicit_build_rs_excluded() {
 [WARNING] ignoring `package.build` as `build.rs` is not included in the published package
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -4419,7 +4419,7 @@ fn discovery_inferred_lib_included() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -4511,7 +4511,7 @@ fn discovery_inferred_lib_excluded() {
 [WARNING] ignoring library `foo` as `src/lib.rs` is not included in the published package
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -4592,7 +4592,7 @@ fn discovery_explicit_lib_included() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -4687,7 +4687,7 @@ fn discovery_explicit_lib_excluded() {
 [WARNING] ignoring library `foo` as `src/lib.rs` is not included in the published package
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -4768,7 +4768,7 @@ fn discovery_inferred_other_included() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 8 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -4884,7 +4884,7 @@ fn discovery_inferred_other_excluded() {
 [WARNING] ignoring benchmark `bench_foo` as `benches/bench_foo.rs` is not included in the published package
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -4977,7 +4977,7 @@ fn discovery_explicit_other_included() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 8 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -5105,7 +5105,7 @@ fn discovery_explicit_other_excluded() {
 [WARNING] ignoring benchmark `bench_foo` as `benches/bench_foo.rs` is not included in the published package
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -5196,7 +5196,7 @@ fn deterministic_build_targets() {
 [PACKAGING] foo v0.0.1 ([ROOT]/foo)
 [PACKAGED] 10 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] foo v0.0.1 ([ROOT]/foo)
-[COMPILING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
+[CHECKING] foo v0.0.1 ([ROOT]/foo/target/package/foo-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -5393,18 +5393,18 @@ fn workspace_with_local_deps_nightly() {
 [PACKAGING] level1 v0.0.1 ([ROOT]/foo/level1)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] level3 v0.0.1 ([ROOT]/foo/level3)
-[COMPILING] level3 v0.0.1 ([ROOT]/foo/target/package/level3-0.0.1)
+[CHECKING] level3 v0.0.1 ([ROOT]/foo/target/package/level3-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] level2 v0.0.1 ([ROOT]/foo/level2)
 [UNPACKING] level3 v0.0.1 (registry `[ROOT]/foo/target/package/tmp-registry`)
-[COMPILING] level3 v0.0.1
-[COMPILING] level2 v0.0.1 ([ROOT]/foo/target/package/level2-0.0.1)
+[CHECKING] level3 v0.0.1
+[CHECKING] level2 v0.0.1 ([ROOT]/foo/target/package/level2-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] level1 v0.0.1 ([ROOT]/foo/level1)
 [UNPACKING] level2 v0.0.1 (registry `[ROOT]/foo/target/package/tmp-registry`)
-[COMPILING] level3 v0.0.1
-[COMPILING] level2 v0.0.1
-[COMPILING] level1 v0.0.1 ([ROOT]/foo/target/package/level1-0.0.1)
+[CHECKING] level3 v0.0.1
+[CHECKING] level2 v0.0.1
+[CHECKING] level1 v0.0.1 ([ROOT]/foo/target/package/level1-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -5722,12 +5722,12 @@ fn workspace_with_local_deps_packaging_one_with_needed_deps() {
 [UPDATING] crates.io index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] level3 v0.0.1 ([ROOT]/foo/level3)
-[COMPILING] level3 v0.0.1 ([ROOT]/foo/target/package/level3-0.0.1)
+[CHECKING] level3 v0.0.1 ([ROOT]/foo/target/package/level3-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] level2 v0.0.1 ([ROOT]/foo/level2)
 [UNPACKING] level3 v0.0.1 (registry `[ROOT]/foo/target/package/tmp-registry`)
-[COMPILING] level3 v0.0.1
-[COMPILING] level2 v0.0.1 ([ROOT]/foo/target/package/level2-0.0.1)
+[CHECKING] level3 v0.0.1
+[CHECKING] level2 v0.0.1 ([ROOT]/foo/target/package/level2-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -5930,13 +5930,13 @@ fn workspace_with_local_deps_alternative_index() {
 [UPDATING] `alternative` index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] level2 v0.0.1 ([ROOT]/foo/level2)
-[COMPILING] level2 v0.0.1 ([ROOT]/foo/target/package/level2-0.0.1)
+[CHECKING] level2 v0.0.1 ([ROOT]/foo/target/package/level2-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] level1 v0.0.1 ([ROOT]/foo/level1)
 [UPDATING] `alternative` index
 [UNPACKING] level2 v0.0.1 (registry `[ROOT]/foo/target/package/tmp-registry`)
-[COMPILING] level2 v0.0.1 (registry `alternative`)
-[COMPILING] level1 v0.0.1 ([ROOT]/foo/target/package/level1-0.0.1)
+[CHECKING] level2 v0.0.1 (registry `alternative`)
+[CHECKING] level1 v0.0.1 ([ROOT]/foo/target/package/level1-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -6032,13 +6032,13 @@ fn workspace_with_local_dep_already_published() {
 [UPDATING] crates.io index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
-[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[CHECKING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] main v0.0.1 ([ROOT]/foo/main)
+[CHECKING] dep v0.1.0
+[CHECKING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
 [DOWNLOADING] crates ...
 [DOWNLOADED] dep v0.1.0
-[COMPILING] dep v0.1.0
-[COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
@@ -6064,12 +6064,12 @@ fn workspace_with_local_dep_already_published_nightly() {
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
-[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[CHECKING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] main v0.0.1 ([ROOT]/foo/main)
+[CHECKING] dep v0.1.0
+[CHECKING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
 [UNPACKING] dep v0.1.0 (registry `[ROOT]/foo/target/package/tmp-registry`)
-[COMPILING] dep v0.1.0
-[COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]]
@@ -6136,15 +6136,15 @@ fn workspace_with_local_and_remote_deps() {
 [UPDATING] crates.io index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
-[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[CHECKING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] main v0.0.1 ([ROOT]/foo/main)
+[CHECKING] dep v0.1.0
+[CHECKING] dep v0.0.1
+[CHECKING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
 [DOWNLOADING] crates ...
 [UNPACKING] dep v0.1.0 (registry `[ROOT]/foo/target/package/tmp-registry`)
 [DOWNLOADED] dep v0.0.1
-[COMPILING] dep v0.0.1
-[COMPILING] dep v0.1.0
-[COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 
@@ -6246,13 +6246,13 @@ fn registry_inferred_from_unique_option() {
 [UPDATING] `alternative` index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
-[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[CHECKING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] `alternative` index
 [UNPACKING] dep v0.1.0 (registry `[ROOT]/foo/target/package/tmp-registry`)
-[COMPILING] dep v0.1.0 (registry `alternative`)
-[COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
+[CHECKING] dep v0.1.0 (registry `alternative`)
+[CHECKING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -6341,13 +6341,13 @@ The registry `alternative` is not listed in the `package.publish` value in Cargo
 [UPDATING] `alternative` index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
-[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[CHECKING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] `alternative` index
 [UNPACKING] dep v0.1.0 (registry `[ROOT]/foo/target/package/tmp-registry`)
-[COMPILING] dep v0.1.0 (registry `alternative`)
-[COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
+[CHECKING] dep v0.1.0 (registry `alternative`)
+[CHECKING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -6414,13 +6414,13 @@ fn registry_inference_ignores_unpublishable() {
 [UPDATING] `alternative` index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
-[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[CHECKING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] `alternative` index
 [UNPACKING] dep v0.1.0 (registry `[ROOT]/foo/target/package/tmp-registry`)
-[COMPILING] dep v0.1.0 (registry `alternative`)
-[COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
+[CHECKING] dep v0.1.0 (registry `alternative`)
+[CHECKING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -6435,12 +6435,12 @@ fn registry_inference_ignores_unpublishable() {
 [UPDATING] `alternative` index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
-[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[CHECKING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] `alternative` index
-[COMPILING] dep v0.1.0 (registry `alternative`)
-[COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
+[CHECKING] dep v0.1.0 (registry `alternative`)
+[CHECKING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -6516,13 +6516,13 @@ fn registry_not_inferred_because_of_multiple_options() {
 [UPDATING] `alternative` index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
-[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[CHECKING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] `alternative` index
 [UNPACKING] dep v0.1.0 (registry `[ROOT]/foo/target/package/tmp-registry`)
-[COMPILING] dep v0.1.0 (registry `alternative`)
-[COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
+[CHECKING] dep v0.1.0 (registry `alternative`)
+[CHECKING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
@@ -6599,13 +6599,13 @@ fn registry_not_inferred_because_of_mismatch() {
 [UPDATING] `alternative` index
 [PACKAGED] 4 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [VERIFYING] dep v0.1.0 ([ROOT]/foo/dep)
-[COMPILING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
+[CHECKING] dep v0.1.0 ([ROOT]/foo/target/package/dep-0.1.0)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 [VERIFYING] main v0.0.1 ([ROOT]/foo/main)
 [UPDATING] `alternative` index
 [UNPACKING] dep v0.1.0 (registry `[ROOT]/foo/target/package/tmp-registry`)
-[COMPILING] dep v0.1.0 (registry `alternative`)
-[COMPILING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
+[CHECKING] dep v0.1.0 (registry `alternative`)
+[CHECKING] main v0.0.1 ([ROOT]/foo/target/package/main-0.0.1)
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
 
 "#]])
