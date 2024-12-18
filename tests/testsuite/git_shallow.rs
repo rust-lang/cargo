@@ -129,6 +129,143 @@ fn fetch_two_revs_same_deps(backend: Backend, mode: RepoMode) {
 }
 
 #[cargo_test]
+fn shallow_deps_work_with_revisions_and_branches_mixed_on_same_dependency() -> anyhow::Result<()> {
+    let (bar, bar_repo) = git::new_repo("bar", |p| {
+        p.file("Cargo.toml", &basic_manifest("bar", "1.0.0"))
+            .file("src/lib.rs", "")
+    });
+
+    // this commit would not be available in a shallow fetch.
+    let first_commit_pre_change = bar_repo.head().unwrap().target().unwrap();
+
+    bar.change_file("src/lib.rs", "// change");
+    git::add(&bar_repo);
+    git::commit(&bar_repo);
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    bar-renamed = {{ package = "bar", git = "{}", rev = "{}" }}
+                    bar = {{ git = "{}", branch = "master" }}
+                "#,
+                bar.url(),
+                first_commit_pre_change,
+                bar.url(),
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .arg("-Zgitoxide=fetch")
+        .arg("-Zgit=shallow-deps")
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
+        .run();
+
+    let db_paths = glob::glob(paths::home().join(".cargo/git/db/bar-*").to_str().unwrap())?
+        .map(Result::unwrap)
+        .collect::<Vec<_>>();
+    assert_eq!(
+        db_paths.len(),
+        1,
+        "only one db checkout source is used per dependency"
+    );
+    let db_clone = gix::open_opts(&db_paths[0], gix::open::Options::isolated())?;
+    assert!(
+        db_clone.is_shallow(),
+        "the repo is shallow while having all data it needs"
+    );
+
+    Ok(())
+}
+
+#[cargo_test]
+fn gitoxide_git_dependencies_switch_from_branch_to_rev() -> anyhow::Result<()> {
+    // db exists from previous build, then dependency changes to refer to revision that isn't
+    // available in the shallow fetch.
+
+    let (bar, bar_repo) = git::new_repo("bar", |p| {
+        p.file("Cargo.toml", &basic_manifest("bar", "1.0.0"))
+            .file("src/lib.rs", "")
+    });
+
+    // this commit would not be available in a shallow fetch.
+    let first_commit_pre_change = bar_repo.head().unwrap().target().unwrap();
+
+    bar.change_file("src/lib.rs", "// change");
+    git::add(&bar_repo);
+    git::commit(&bar_repo);
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    bar = {{ git = "{}", branch = "master" }}
+                "#,
+                bar.url(),
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .arg("-Zgitoxide=fetch")
+        .arg("-Zgit=shallow-deps")
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
+        .run();
+
+    let db_clone = gix::open_opts(
+        find_bar_db(RepoMode::Shallow),
+        gix::open::Options::isolated(),
+    )?;
+    assert!(db_clone.is_shallow());
+
+    let p = project()
+        .file(
+            "Cargo.toml",
+            &format!(
+                r#"
+                    [package]
+                    name = "foo"
+                    version = "0.1.0"
+
+                    [dependencies]
+                    bar = {{ git = "{}", rev = "{}" }}
+                "#,
+                bar.url(),
+                first_commit_pre_change
+            ),
+        )
+        .file("src/lib.rs", "")
+        .build();
+
+    p.cargo("check")
+        .arg("-Zgitoxide=fetch")
+        .arg("-Zgit=shallow-deps")
+        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
+        .run();
+
+    assert!(
+        db_clone.is_shallow(),
+        "we maintain shallowness and never unshallow"
+    );
+
+    Ok(())
+}
+
+#[cargo_test]
 fn gitoxide_fetch_registry_with_shallow_protocol_and_follow_up_with_git2_fetch(
 ) -> anyhow::Result<()> {
     Package::new("bar", "1.0.0").publish();
@@ -622,143 +759,6 @@ fn gitoxide_fetch_registry_without_shallow_protocol_and_follow_up_fetch_uses_sha
             .count(),
         5,
         "we can separately fetch the non-shallow index as well and it sees all commits"
-    );
-
-    Ok(())
-}
-
-#[cargo_test]
-fn gitoxide_git_dependencies_switch_from_branch_to_rev() -> anyhow::Result<()> {
-    // db exists from previous build, then dependency changes to refer to revision that isn't
-    // available in the shallow fetch.
-
-    let (bar, bar_repo) = git::new_repo("bar", |p| {
-        p.file("Cargo.toml", &basic_manifest("bar", "1.0.0"))
-            .file("src/lib.rs", "")
-    });
-
-    // this commit would not be available in a shallow fetch.
-    let first_commit_pre_change = bar_repo.head().unwrap().target().unwrap();
-
-    bar.change_file("src/lib.rs", "// change");
-    git::add(&bar_repo);
-    git::commit(&bar_repo);
-    let p = project()
-        .file(
-            "Cargo.toml",
-            &format!(
-                r#"
-                    [package]
-                    name = "foo"
-                    version = "0.1.0"
-
-                    [dependencies]
-                    bar = {{ git = "{}", branch = "master" }}
-                "#,
-                bar.url(),
-            ),
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("check")
-        .arg("-Zgitoxide=fetch")
-        .arg("-Zgit=shallow-deps")
-        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
-        .run();
-
-    let db_clone = gix::open_opts(
-        find_bar_db(RepoMode::Shallow),
-        gix::open::Options::isolated(),
-    )?;
-    assert!(db_clone.is_shallow());
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            &format!(
-                r#"
-                    [package]
-                    name = "foo"
-                    version = "0.1.0"
-
-                    [dependencies]
-                    bar = {{ git = "{}", rev = "{}" }}
-                "#,
-                bar.url(),
-                first_commit_pre_change
-            ),
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("check")
-        .arg("-Zgitoxide=fetch")
-        .arg("-Zgit=shallow-deps")
-        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
-        .run();
-
-    assert!(
-        db_clone.is_shallow(),
-        "we maintain shallowness and never unshallow"
-    );
-
-    Ok(())
-}
-
-#[cargo_test]
-fn shallow_deps_work_with_revisions_and_branches_mixed_on_same_dependency() -> anyhow::Result<()> {
-    let (bar, bar_repo) = git::new_repo("bar", |p| {
-        p.file("Cargo.toml", &basic_manifest("bar", "1.0.0"))
-            .file("src/lib.rs", "")
-    });
-
-    // this commit would not be available in a shallow fetch.
-    let first_commit_pre_change = bar_repo.head().unwrap().target().unwrap();
-
-    bar.change_file("src/lib.rs", "// change");
-    git::add(&bar_repo);
-    git::commit(&bar_repo);
-
-    let p = project()
-        .file(
-            "Cargo.toml",
-            &format!(
-                r#"
-                    [package]
-                    name = "foo"
-                    version = "0.1.0"
-
-                    [dependencies]
-                    bar-renamed = {{ package = "bar", git = "{}", rev = "{}" }}
-                    bar = {{ git = "{}", branch = "master" }}
-                "#,
-                bar.url(),
-                first_commit_pre_change,
-                bar.url(),
-            ),
-        )
-        .file("src/lib.rs", "")
-        .build();
-
-    p.cargo("check")
-        .arg("-Zgitoxide=fetch")
-        .arg("-Zgit=shallow-deps")
-        .masquerade_as_nightly_cargo(&["gitoxide=fetch", "git=shallow-deps"])
-        .run();
-
-    let db_paths = glob::glob(paths::home().join(".cargo/git/db/bar-*").to_str().unwrap())?
-        .map(Result::unwrap)
-        .collect::<Vec<_>>();
-    assert_eq!(
-        db_paths.len(),
-        1,
-        "only one db checkout source is used per dependency"
-    );
-    let db_clone = gix::open_opts(&db_paths[0], gix::open::Options::isolated())?;
-    assert!(
-        db_clone.is_shallow(),
-        "the repo is shallow while having all data it needs"
     );
 
     Ok(())
