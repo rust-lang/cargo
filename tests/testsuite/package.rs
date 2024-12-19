@@ -1157,6 +1157,144 @@ src/lib.rs
 }
 
 #[cargo_test]
+fn vcs_status_check_for_each_workspace_member() {
+    // Cargo checks VCS status separately for each workspace member.
+    // This ensure one file changed in a package won't affect the other.
+    // Since the dirty bit in .cargo_vcs_info.json is just for advisory purpose,
+    // We may change the meaning of it in the future.
+    let (p, repo) = git::new_repo("foo", |p| {
+        p.file(
+            "Cargo.toml",
+            r#"
+                [workspace]
+                members = ["isengard", "mordor"]
+            "#,
+        )
+        .file("hobbit", "...")
+        .file(
+            "isengard/Cargo.toml",
+            r#"
+                [package]
+                name = "isengard"
+                edition = "2015"
+                homepage = "saruman"
+                description = "saruman"
+                license = "MIT"
+            "#,
+        )
+        .file("isengard/src/lib.rs", "")
+        .file(
+            "mordor/Cargo.toml",
+            r#"
+                [package]
+                name = "mordor"
+                edition = "2015"
+                homepage = "sauron"
+                description = "sauron"
+                license = "MIT"
+            "#,
+        )
+        .file("mordor/src/lib.rs", "")
+    });
+    git::commit(&repo);
+
+    p.change_file(
+        "Cargo.toml",
+        r#"
+            [workspace]
+            members = ["isengard", "mordor"]
+            [workspace.package]
+            edition = "2021"
+        "#,
+    );
+    // Dirty file outside won't affect packaging.
+    p.change_file("hobbit", "changed!");
+    p.change_file("mordor/src/lib.rs", "changed!");
+    p.change_file("mordor/src/main.rs", "fn main() {}");
+
+    // Ensure dirty files be reported only for one affected package.
+    p.cargo("package --workspace --no-verify")
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[ERROR] 2 files in the working directory contain changes that were not yet committed into git:
+
+mordor/src/lib.rs
+mordor/src/main.rs
+
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+
+"#]])
+        .run();
+
+    // Ensure only dirty package be recorded as dirty.
+    p.cargo("package --workspace --no-verify --allow-dirty")
+        .with_stderr_data(str![[r#"
+[PACKAGING] isengard v0.0.0 ([ROOT]/foo/isengard)
+[PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+[PACKAGING] mordor v0.0.0 ([ROOT]/foo/mordor)
+[PACKAGED] 6 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
+
+"#]])
+        .run();
+
+    let f = File::open(&p.root().join("target/package/isengard-0.0.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "isengard-0.0.0.crate",
+        &[
+            ".cargo_vcs_info.json",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+            "Cargo.lock",
+        ],
+        [(
+            ".cargo_vcs_info.json",
+            // No change within `isengard/`, so not dirty at all.
+            str![[r#"
+{
+  "git": {
+    "sha1": "[..]"
+  },
+  "path_in_vcs": "isengard"
+}
+"#]]
+            .is_json(),
+        )],
+    );
+
+    let f = File::open(&p.root().join("target/package/mordor-0.0.0.crate")).unwrap();
+    validate_crate_contents(
+        f,
+        "mordor-0.0.0.crate",
+        &[
+            ".cargo_vcs_info.json",
+            "Cargo.toml",
+            "Cargo.toml.orig",
+            "src/lib.rs",
+            "src/main.rs",
+            "Cargo.lock",
+        ],
+        [(
+            ".cargo_vcs_info.json",
+            // Dirty bit is recorded.
+            str![[r#"
+{
+  "git": {
+    "dirty": true,
+    "sha1": "[..]"
+  },
+  "path_in_vcs": "mordor"
+}
+"#]]
+            .is_json(),
+        )],
+    );
+}
+
+#[cargo_test]
 fn issue_13695_allow_dirty_vcs_info() {
     let p = project()
         .file(
