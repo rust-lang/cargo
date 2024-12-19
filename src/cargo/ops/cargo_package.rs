@@ -94,6 +94,7 @@ struct GitVcsInfo {
 }
 
 // Builds a tarball and places it in the output directory.
+#[tracing::instrument(skip_all)]
 fn create_package(
     ws: &Workspace<'_>,
     pkg: &Package,
@@ -372,6 +373,7 @@ fn local_deps<T>(packages: impl Iterator<Item = (Package, T)>) -> LocalDependenc
 }
 
 /// Performs pre-archiving checks and builds a list of files to archive.
+#[tracing::instrument(skip_all)]
 fn prepare_archive(
     ws: &Workspace<'_>,
     pkg: &Package,
@@ -400,6 +402,7 @@ fn prepare_archive(
 }
 
 /// Builds list of files to archive.
+#[tracing::instrument(skip_all)]
 fn build_ar_list(
     ws: &Workspace<'_>,
     pkg: &Package,
@@ -730,6 +733,7 @@ fn check_metadata(pkg: &Package, gctx: &GlobalContext) -> CargoResult<()> {
 /// has not been passed, then `bail!` with an informative message. Otherwise
 /// return the sha1 hash of the current *HEAD* commit, or `None` if no repo is
 /// found.
+#[tracing::instrument(skip_all)]
 fn check_repo_state(
     p: &Package,
     src_files: &[PathBuf],

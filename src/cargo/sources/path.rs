@@ -93,6 +93,7 @@ impl<'gctx> PathSource<'gctx> {
     /// are relevant for building this package, but it also contains logic to
     /// use other methods like `.gitignore`, `package.include`, or
     /// `package.exclude` to filter the list of files.
+    #[tracing::instrument(skip_all)]
     pub fn list_files(&self, pkg: &Package) -> CargoResult<Vec<PathBuf>> {
         list_files(pkg, self.gctx)
     }
