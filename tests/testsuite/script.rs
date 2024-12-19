@@ -1303,12 +1303,69 @@ fn cmd_pkgid_with_embedded() {
         .file("script.rs", ECHO_SCRIPT)
         .build();
 
+    p.cargo("-Zscript script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .run();
+
+    // FIXME: It should be `path+[ROOTURL]/foo#script.rs@0.0.0`.
+    p.cargo("-Zscript pkgid --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![[r#"
+path+[ROOTURL]/foo#script@0.0.0
+
+"#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cmd_pkgid_with_embedded_no_lock_file() {
+    let p = cargo_test_support::project()
+        .file("script.rs", ECHO_SCRIPT)
+        .build();
+
     p.cargo("-Zscript pkgid --manifest-path script.rs")
         .masquerade_as_nightly_cargo(&["script"])
         .with_status(101)
         .with_stderr_data(str![[r#"
 [WARNING] `package.edition` is unspecified, defaulting to `2024`
-[ERROR] [ROOT]/foo/script.rs is unsupported by `cargo pkgid`
+[ERROR] a Cargo.lock must exist for this command
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
+fn cmd_pkgid_with_embedded_dep() {
+    Package::new("dep", "1.0.0").publish();
+    let script = r#"#!/usr/bin/env cargo
+---
+[dependencies]
+dep = "1.0.0"
+---
+
+fn main() {
+    println!("Hello world!");
+}"#;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .run();
+
+    p.cargo("-Zscript pkgid --manifest-path script.rs -p dep")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![[r#"
+registry+https://github.com/rust-lang/crates.io-index#dep@1.0.0
+
+"#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
 
 "#]])
         .run();
