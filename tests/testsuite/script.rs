@@ -1322,6 +1322,23 @@ path+[ROOTURL]/foo#script@0.0.0
 }
 
 #[cargo_test]
+fn cmd_pkgid_with_embedded_no_lock_file() {
+    let p = cargo_test_support::project()
+        .file("script.rs", ECHO_SCRIPT)
+        .build();
+
+    p.cargo("-Zscript pkgid --manifest-path script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
+[ERROR] a Cargo.lock must exist for this command
+
+"#]])
+        .run();
+}
+
+#[cargo_test]
 fn cmd_package_with_embedded() {
     let p = cargo_test_support::project()
         .file("script.rs", ECHO_SCRIPT)
