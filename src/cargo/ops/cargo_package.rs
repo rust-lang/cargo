@@ -780,7 +780,7 @@ fn check_repo_state(
     return Ok(None);
 
     fn git(
-        p: &Package,
+        pkg: &Package,
         src_files: &[PathBuf],
         repo: &git2::Repository,
         opts: &PackageOpts<'_>,
@@ -803,7 +803,7 @@ fn check_repo_state(
             .iter()
             .filter(|src_file| dirty_files.iter().any(|path| src_file.starts_with(path)))
             .map(|path| {
-                path.strip_prefix(p.root())
+                path.strip_prefix(pkg.root())
                     .unwrap_or(path)
                     .display()
                     .to_string()
