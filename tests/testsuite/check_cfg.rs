@@ -51,7 +51,7 @@ fn features() {
 
     p.cargo("check -v")
         .with_stderr_contains(x!("rustc" => "cfg" of "feature" with "f_a" "f_b"))
-        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
         .run();
 }
 
@@ -81,7 +81,7 @@ fn features_with_deps() {
 
     p.cargo("check -v")
         .with_stderr_contains(x!("rustc" => "cfg" of "feature" with "f_a" "f_b"))
-        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
         .run();
 }
 
@@ -112,7 +112,7 @@ fn features_with_opt_deps() {
 
     p.cargo("check -v")
         .with_stderr_contains(x!("rustc" => "cfg" of "feature" with "bar" "default" "f_a" "f_b"))
-        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
         .run();
 }
 
@@ -142,7 +142,7 @@ fn features_with_namespaced_features() {
 
     p.cargo("check -v")
         .with_stderr_contains(x!("rustc" => "cfg" of "feature" with "f_a" "f_b"))
-        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
         .run();
 }
 
@@ -232,7 +232,7 @@ fn well_known_names_values() {
 
     p.cargo("check -v")
         .with_stderr_contains(x!("rustc" => "cfg" of "feature" with))
-        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
         .run();
 }
 
@@ -257,7 +257,7 @@ fn features_test() {
 
     p.cargo("test -v")
         .with_stderr_contains(x!("rustc" => "cfg" of "feature" with "f_a" "f_b"))
-        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
         .run();
 }
 
@@ -284,8 +284,8 @@ fn features_doctest() {
     p.cargo("test -v --doc")
         .with_stderr_contains(x!("rustc" => "cfg" of "feature" with "default" "f_a" "f_b"))
         .with_stderr_contains(x!("rustdoc" => "cfg" of "feature" with "default" "f_a" "f_b"))
-        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs"))
-        .with_stderr_contains(x!("rustdoc" => "cfg" of "docsrs"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
+        .with_stderr_contains(x!("rustdoc" => "cfg" of "docsrs,test"))
         .run();
 }
 
@@ -298,7 +298,7 @@ fn well_known_names_values_test() {
 
     p.cargo("test -v")
         .with_stderr_contains(x!("rustc" => "cfg" of "feature" with))
-        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
         .run();
 }
 
@@ -312,8 +312,8 @@ fn well_known_names_values_doctest() {
     p.cargo("test -v --doc")
         .with_stderr_contains(x!("rustc" => "cfg" of "feature" with))
         .with_stderr_contains(x!("rustdoc" => "cfg" of "feature" with))
-        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs"))
-        .with_stderr_contains(x!("rustdoc" => "cfg" of "docsrs"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
+        .with_stderr_contains(x!("rustdoc" => "cfg" of "docsrs,test"))
         .run();
 }
 
@@ -339,7 +339,7 @@ fn features_doc() {
 
     p.cargo("doc -v")
         .with_stderr_contains(x!("rustdoc" => "cfg" of "feature" with "default" "f_a" "f_b"))
-        .with_stderr_contains(x!("rustdoc" => "cfg" of "docsrs"))
+        .with_stderr_contains(x!("rustdoc" => "cfg" of "docsrs,test"))
         .run();
 }
 
@@ -366,7 +366,7 @@ fn build_script_feedback() {
 
     p.cargo("check -v")
         .with_stderr_contains(x!("rustc" => "cfg" of "foo"))
-        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
         .run();
 }
 
@@ -442,7 +442,7 @@ fn build_script_override() {
     p.cargo("check -v")
         .with_stderr_contains(x!("rustc" => "cfg" of "foo"))
         .with_stderr_contains(x!("rustc" => "cfg" of "feature" with))
-        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs"))
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test"))
         .run();
 }
 
@@ -877,7 +877,7 @@ fn config_features_and_build_script() {
         .with_stderr_contains(x!("rustc" => "cfg" of "foo")) // from build.rs
         .with_stderr_contains(x!("rustc" => "cfg" of "bar")) // from config
         .with_stderr_contains(x!("rustc" => "cfg" of "feature" with "json" "serde")) // features
-        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs")) // Cargo well known
+        .with_stderr_contains(x!("rustc" => "cfg" of "docsrs,test")) // Cargo well known
         .run();
 }
 
