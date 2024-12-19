@@ -48,6 +48,8 @@ pub struct BuildConfig {
     pub future_incompat_report: bool,
     /// Which kinds of build timings to output (empty if none).
     pub timing_outputs: Vec<TimingOutput>,
+    /// Output SBOM precursor files.
+    pub sbom: bool,
 }
 
 fn default_parallelism() -> CargoResult<u32> {
@@ -99,6 +101,17 @@ impl BuildConfig {
             },
         };
 
+        // If sbom flag is set, it requires the unstable feature
+        let sbom = match (cfg.sbom, gctx.cli_unstable().sbom) {
+            (Some(sbom), true) => sbom,
+            (Some(_), false) => {
+                gctx.shell()
+                    .warn("ignoring 'sbom' config, pass `-Zsbom` to enable it")?;
+                false
+            }
+            (None, _) => false,
+        };
+
         Ok(BuildConfig {
             requested_kinds,
             jobs,
@@ -115,6 +128,7 @@ impl BuildConfig {
             export_dir: None,
             future_incompat_report: false,
             timing_outputs: Vec::new(),
+            sbom,
         })
     }
 
