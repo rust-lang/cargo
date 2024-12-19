@@ -1338,6 +1338,39 @@ fn cmd_pkgid_with_embedded_no_lock_file() {
         .run();
 }
 
+#[cargo_test(nightly, reason = "edition2024 hasn't hit stable yet")]
+fn cmd_pkgid_with_embedded_dep() {
+    Package::new("dep", "1.0.0").publish();
+    let script = r#"#!/usr/bin/env cargo
+---
+[dependencies]
+dep = "1.0.0"
+---
+
+fn main() {
+    println!("Hello world!");
+}"#;
+    let p = cargo_test_support::project()
+        .file("script.rs", script)
+        .build();
+
+    p.cargo("-Zscript script.rs")
+        .masquerade_as_nightly_cargo(&["script"])
+        .run();
+
+    p.cargo("-Zscript pkgid --manifest-path script.rs -p dep")
+        .masquerade_as_nightly_cargo(&["script"])
+        .with_stdout_data(str![[r#"
+registry+https://github.com/rust-lang/crates.io-index#dep@1.0.0
+
+"#]])
+        .with_stderr_data(str![[r#"
+[WARNING] `package.edition` is unspecified, defaulting to `2024`
+
+"#]])
+        .run();
+}
+
 #[cargo_test]
 fn cmd_package_with_embedded() {
     let p = cargo_test_support::project()
