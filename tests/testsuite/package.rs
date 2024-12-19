@@ -1220,8 +1220,8 @@ fn vcs_status_check_for_each_workspace_member() {
 [PACKAGED] 5 files, [FILE_SIZE]B ([FILE_SIZE]B compressed)
 [ERROR] 2 files in the working directory contain changes that were not yet committed into git:
 
-src/lib.rs
-src/main.rs
+mordor/src/lib.rs
+mordor/src/main.rs
 
 to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
