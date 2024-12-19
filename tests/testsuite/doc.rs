@@ -1501,7 +1501,7 @@ fn open_no_doc_crate() {
         .with_status(101)
         .with_stderr_data(str![[r#"
 [FINISHED] `dev` profile [unoptimized + debuginfo] target(s) in [ELAPSED]s
-[ERROR] requested crate documentation is not available to open
+[ERROR] cannot open specified crate's documentation: no documentation generated
 
 "#]])
         .run();
