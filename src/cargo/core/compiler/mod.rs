@@ -1391,14 +1391,17 @@ fn check_cfg_args(unit: &Unit) -> Vec<OsString> {
     }
     arg_feature.push("))");
 
-    // We also include the `docsrs` cfg from the docs.rs service. We include it here
-    // (in Cargo) instead of rustc, since there is a much closer relationship between
-    // Cargo and docs.rs than rustc and docs.rs. In particular, all users of docs.rs use
-    // Cargo, but not all users of rustc (like Rust-for-Linux) use docs.rs.
+    // In addition to the package features, we also include the `test` cfg (since
+    // compiler-team#785, as to be able to someday apply yt conditionaly), as well
+    // the `docsrs` cfg from the docs.rs service.
+    //
+    // We include `docsrs` here (in Cargo) instead of rustc, since there is a much closer
+    // relationship between Cargo and docs.rs than rustc and docs.rs. In particular, all
+    // users of docs.rs use Cargo, but not all users of rustc (like Rust-for-Linux) use docs.rs.
 
     vec![
         OsString::from("--check-cfg"),
-        OsString::from("cfg(docsrs)"),
+        OsString::from("cfg(docsrs,test)"),
         OsString::from("--check-cfg"),
         arg_feature,
     ]
