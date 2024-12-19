@@ -805,7 +805,7 @@ fn check_repo_state(
     return Ok(Some(VcsInfo { git, path_in_vcs }));
 
     fn git(
-        _pkg: &Package,
+        pkg: &Package,
         src_files: &[PathBuf],
         repo: &git2::Repository,
         opts: &PackageOpts<'_>,
@@ -816,7 +816,8 @@ fn check_repo_state(
         // - ignored (in case the user has an `include` directive that
         //   conflicts with .gitignore).
         let mut dirty_files = Vec::new();
-        collect_statuses(repo, &mut dirty_files)?;
+        let pathspec = relative_pathspec(repo, pkg.root());
+        collect_statuses(repo, &[pathspec.as_str()], &mut dirty_files)?;
         // Include each submodule so that the error message can provide
         // specifically *which* files in a submodule are modified.
         status_submodules(repo, &mut dirty_files)?;
@@ -859,16 +860,27 @@ fn check_repo_state(
         }
     }
 
+    /// Use pathspec so git only matches a certain path prefix
+    fn relative_pathspec(repo: &git2::Repository, pkg_root: &Path) -> String {
+        let workdir = repo.workdir().unwrap();
+        let relpath = pkg_root.strip_prefix(workdir).unwrap_or(Path::new(""));
+        // to unix separators
+        relpath.to_str().unwrap().replace('\\', "/")
+    }
+
     // Helper to collect dirty statuses for a single repo.
     fn collect_statuses(
         repo: &git2::Repository,
+        pathspecs: &[&str],
         dirty_files: &mut Vec<PathBuf>,
     ) -> CargoResult<()> {
         let mut status_opts = git2::StatusOptions::new();
         // Exclude submodules, as they are being handled manually by recursing
         // into each one so that details about specific files can be
         // retrieved.
-        status_opts
+        pathspecs
+            .iter()
+            .fold(&mut status_opts, git2::StatusOptions::pathspec)
             .exclude_submodules(true)
             .include_ignored(true)
             .include_untracked(true);
@@ -903,7 +915,7 @@ fn check_repo_state(
             // If its files are required, then the verification step should fail.
             if let Ok(sub_repo) = submodule.open() {
                 status_submodules(&sub_repo, dirty_files)?;
-                collect_statuses(&sub_repo, dirty_files)?;
+                collect_statuses(&sub_repo, &[], dirty_files)?;
             }
         }
         Ok(())
