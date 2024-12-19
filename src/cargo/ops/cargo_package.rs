@@ -824,7 +824,7 @@ fn check_repo_state(
         // Find the intersection of dirty in git, and the src_files that would
         // be packaged. This is a lazy n^2 check, but seems fine with
         // thousands of files.
-        let dirty_src_files: Vec<String> = src_files
+        let mut dirty_src_files: Vec<_> = src_files
             .iter()
             .filter(|src_file| dirty_files.iter().any(|path| src_file.starts_with(path)))
             .map(|path| {
@@ -847,6 +847,7 @@ fn check_repo_state(
                 dirty,
             }))
         } else {
+            dirty_src_files.sort_unstable();
             anyhow::bail!(
                 "{} files in the working directory contain changes that were \
                  not yet committed into git:\n\n{}\n\n\
