@@ -675,10 +675,7 @@ impl fmt::Display for SourceId {
 impl Hash for SourceId {
     fn hash<S: hash::Hasher>(&self, into: &mut S) {
         self.inner.kind.hash(into);
-        match self.inner.kind {
-            SourceKind::Git(_) => self.inner.canonical_url.hash(into),
-            _ => self.inner.url.as_str().hash(into),
-        }
+        self.inner.canonical_url.hash(into);
     }
 }
 
