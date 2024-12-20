@@ -28,6 +28,11 @@ label = "O-windows"
 
 [transfer]
 
+[merge-conflicts]
+remove = []
+add = ["S-waiting-on-author"]
+unless = ["S-blocked", "S-waiting-on-review"]
+
 [autolabel."S-waiting-on-review"]
 new_pr = true
 
