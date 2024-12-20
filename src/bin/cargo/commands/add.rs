@@ -146,7 +146,8 @@ This is the catch all, handling hashes to named references in remote repositorie
                 .value_name("NAME")
                 .help("Package registry for this dependency")
                 .add(clap_complete::ArgValueCandidates::new(|| {
-                    let candidates = get_registry_candidates();
+                    let cwd = std::env::current_dir();
+                    let candidates = get_registry_candidates(cwd.ok());
                     candidates.unwrap_or_default()
                 })),
         ])
