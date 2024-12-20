@@ -796,7 +796,7 @@ fn check_repo_state(
         .and_then(|p| p.to_str())
         .unwrap_or("")
         .replace("\\", "/");
-    let Some(git) = git(src_files, &repo, &opts)? else {
+    let Some(git) = git(gctx, src_files, &repo, &opts)? else {
         // If the git repo lacks essensial field like `sha1`, and since this field exists from the beginning,
         // then don't generate the corresponding file in order to maintain consistency with past behavior.
         return Ok(None);
@@ -805,6 +805,7 @@ fn check_repo_state(
     return Ok(Some(VcsInfo { git, path_in_vcs }));
 
     fn git(
+        gctx: &GlobalContext,
         src_files: &[PathBuf],
         repo: &git2::Repository,
         opts: &PackageOpts<'_>,
@@ -823,12 +824,13 @@ fn check_repo_state(
         // Find the intersection of dirty in git, and the src_files that would
         // be packaged. This is a lazy n^2 check, but seems fine with
         // thousands of files.
-        let workdir = repo.workdir().unwrap();
+        let cwd = gctx.cwd();
         let mut dirty_src_files: Vec<_> = src_files
             .iter()
             .filter(|src_file| dirty_files.iter().any(|path| src_file.starts_with(path)))
             .map(|path| {
-                path.strip_prefix(workdir)
+                pathdiff::diff_paths(path, cwd)
+                    .as_ref()
                     .unwrap_or(path)
                     .display()
                     .to_string()

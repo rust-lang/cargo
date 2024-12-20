@@ -1101,6 +1101,20 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
 
 "#]])
         .run();
+
+    // cd to `src` and cargo report relative paths.
+    p.cargo("package")
+        .cwd(p.root().join("src"))
+        .with_status(101)
+        .with_stderr_data(str![[r#"
+[ERROR] 1 files in the working directory contain changes that were not yet committed into git:
+
+../Cargo.toml
+
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+
+"#]])
+        .run();
 }
 
 #[cargo_test]
