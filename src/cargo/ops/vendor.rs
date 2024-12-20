@@ -1,9 +1,10 @@
 use crate::core::shell::Verbosity;
-use crate::core::{GitReference, Package, Workspace};
+use crate::core::{EitherManifest, GitReference, Package, Workspace};
 use crate::ops;
 use crate::sources::path::PathSource;
 use crate::sources::CRATES_IO_REGISTRY;
 use crate::util::cache_lock::CacheLockMode;
+use crate::util::toml::read_manifest;
 use crate::util::{try_canonicalize, CargoResult, GlobalContext};
 use anyhow::{bail, Context as _};
 use cargo_util::{paths, Sha256};
@@ -202,6 +203,13 @@ fn sync(
             // Eg vendor/futures
             id.name().to_string()
         };
+
+        let t = read_manifest(&src.join("Cargo.toml"), id.source_id(), gctx)?;
+        if let EitherManifest::Real(m) = t {
+            for d in m.dependencies() {
+                sources.insert(d.source_id());
+            }
+        }
 
         sources.insert(id.source_id());
         let dst = canonical_destination.join(&dst_name);
