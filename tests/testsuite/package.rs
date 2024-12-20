@@ -1109,7 +1109,7 @@ to proceed despite this and include the uncommitted changes, pass the `--allow-d
         .with_stderr_data(str![[r#"
 [ERROR] 1 files in the working directory contain changes that were not yet committed into git:
 
-Cargo.toml
+../Cargo.toml
 
 to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
 
